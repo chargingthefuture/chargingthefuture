@@ -10,7 +10,7 @@
 | **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md` |
-| **Generated** | 2026-07-01 (commit cc1e87bc) |
+| **Generated** | 2026-07-01 (hand-updated for the trust code-review fixes: throttled self-read recompute, legacy visibility-key rejection) |
 
 ---
 
@@ -58,7 +58,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - `trustStatus` is a string (`unverified`, `verified`, or `flagged`) — never a number.
 - `trustEvidence` is an array; if the seeded admin has upstream activity, at least one item is present (e.g. `"Active on N days"`).
 - No field named `score`, `trustScore`, or any numeric rank appears in the response.
-- A new `trust_signal_snapshot` row was written (recompute-on-read behaviour) — confirm by calling the route a second time and checking `updatedAt` is equal to or newer than a timestamp you noted before the first call.
+- The recompute-on-read is **throttled**: the first read (when the newest `trust_signal_snapshot` is older than 5 minutes, or none exists yet) writes a new snapshot row; a second read within the 5-minute window returns the stored extension **without** writing another snapshot. Confirm by counting `trust_signal_snapshot` rows before and after two back-to-back reads — the count increases by at most one, not one per read. This bounds the write so a forced cross-site GET cannot drive unbounded snapshot inserts.
 - A `trust.summary.read` row is written to `trust_admin_audit_trail` for this read (`policy_status = allow`, reason `self_summary_read`; metadata carries `viewerUserId`/`subjectUserId`/`surface`). A failed audit write is reported but never changes the response.
 - If the recompute had thrown internally the route would still return 200 using the last stored extension (fallback); a crash/500 here is a bug.
 
@@ -156,10 +156,12 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 **Steps:**
 1. `POST /api/trust/visibility` with body `{ "trustVisibility": "semi-public" }` and the CSRF header.
+2. `POST /api/trust/visibility` with the **legacy** body `{ "visibility": "private" }` (the old alias key, no `trustVisibility` key) and the CSRF header.
 
 **Expected:**
-- HTTP 400. Body contains an error message indicating the value is invalid.
-- `trust_user_extension` row is unchanged.
+- Step 1: HTTP 400. Body contains an error message indicating the value is invalid.
+- Step 2: HTTP 400. The undocumented legacy `visibility` key is no longer accepted — only `trustVisibility` is read — so a body missing `trustVisibility` is rejected as invalid.
+- `trust_user_extension` row is unchanged after both steps.
 
 **Result:** web ☐
 

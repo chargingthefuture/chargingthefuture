@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
-import { getTrustUserExtension, refreshTrustSignalSnapshot } from 'lib/trust/repository';
+import { getTrustUserExtension, readTrustSelfExtension } from 'lib/trust/repository';
 import type { TrustUserExtension } from 'lib/trust/types';
 import { logTrustAuditEvent } from 'lib/trust/audit';
 import { resolveRequestId } from 'lib/trust/_lib';
@@ -18,12 +18,18 @@ export async function GET(request: Request) {
   // panel reflects what they have actually done instead of a frozen snapshot that nothing ever
   // refreshed. Trust is signal-only — there is no verification status to change here.
   //
+  // This is a GET, so the recompute is throttled: readTrustSelfExtension only writes a new snapshot
+  // when the last one is older than the refresh window (or none exists yet), and otherwise returns
+  // the stored extension without a write. That keeps the panel fresh-on-load while bounding the DB
+  // writes to once per window per user, so a cross-site forced GET cannot drive unbounded snapshot
+  // inserts even though this read is not CSRF-guarded.
+  //
   // Resilience: if the recompute throws (an upstream table is briefly unavailable, the DB hiccups,
   // etc.) fall back to the last stored extension so the panel still renders the most recent good
   // evidence instead of erroring. A failed refresh must never break the member's own read.
   let extension: TrustUserExtension;
   try {
-    ({ extension } = await refreshTrustSignalSnapshot(decision.userId));
+    ({ extension } = await readTrustSelfExtension(decision.userId));
   } catch (error) {
     reportError(error, { area: 'trust', op: 'self_refresh' });
     extension = await getTrustUserExtension(decision.userId);

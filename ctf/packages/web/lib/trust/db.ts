@@ -9,6 +9,25 @@ import type {
   TrustVisibility,
 } from './types';
 
+// The Postgres driver normally parses a JSONB column into a JS array, but a raw-text fallback (some
+// driver/pool configs return JSONB as a string) would otherwise reach the client as a string and
+// render empty or break serialisation. Coerce defensively: parse a string, keep an array, drop
+// anything else to an empty list.
+function coerceTrustEvidence(value: unknown): TrustEvidenceItem[] {
+  if (Array.isArray(value)) {
+    return value as TrustEvidenceItem[];
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? (parsed as TrustEvidenceItem[]) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export async function getTrustUserExtension(userId: string): Promise<TrustUserExtension> {
   const result = await queryDb<{
     user_id: string;
@@ -33,10 +52,20 @@ export async function getTrustUserExtension(userId: string): Promise<TrustUserEx
   return {
     userId: row.user_id,
     trustStatus: row.trust_status as TrustUserExtension['trustStatus'],
-    trustEvidence: row.trust_evidence ?? [],
+    trustEvidence: coerceTrustEvidence(row.trust_evidence),
     trustVisibility: row.trust_visibility as TrustUserExtension['trustVisibility'],
     updatedAt: row.updated_at.toISOString(),
   };
+}
+
+// Most recent snapshot timestamp for a user, or null if they have never had one. Used to throttle
+// the recompute-on-read so the self GET writes at most once per window instead of on every hit.
+export async function getLatestTrustSnapshotAt(userId: string): Promise<Date | null> {
+  const result = await queryDb<{ created_at: Date }>(
+    `SELECT created_at FROM trust_signal_snapshot WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+    [userId]
+  );
+  return result.rows.length ? result.rows[0].created_at : null;
 }
 
 // === Cross-plugin signal aggregation (real-data-only) =========================================
@@ -341,7 +370,7 @@ export async function setTrustDerivedEvidence(
   return {
     userId: row.user_id,
     trustStatus: row.trust_status as TrustStatus,
-    trustEvidence: row.trust_evidence ?? [],
+    trustEvidence: coerceTrustEvidence(row.trust_evidence),
     trustVisibility: row.trust_visibility as TrustVisibility,
     updatedAt: row.updated_at.toISOString(),
   };
@@ -370,7 +399,7 @@ export async function updateTrustVisibility(
   return {
     userId: row.user_id,
     trustStatus: row.trust_status as TrustStatus,
-    trustEvidence: row.trust_evidence ?? [],
+    trustEvidence: coerceTrustEvidence(row.trust_evidence),
     trustVisibility: row.trust_visibility as TrustVisibility,
     updatedAt: row.updated_at.toISOString(),
   };
@@ -403,7 +432,7 @@ export async function applyAdminVerification(
   return {
     userId: row.user_id,
     trustStatus: row.trust_status as TrustStatus,
-    trustEvidence: row.trust_evidence ?? [],
+    trustEvidence: coerceTrustEvidence(row.trust_evidence),
     trustVisibility: row.trust_visibility as TrustVisibility,
     updatedAt: row.updated_at.toISOString(),
   };
