@@ -23,6 +23,7 @@ import type {
   TrustTransportOffer,
   TrustTransportOfferInput,
   TrustTransportPayoutRequest,
+  TrustTransportProviderTrip,
   TrustTransportRequest,
   TrustTransportRequestInput,
   TrustTransportTrip,
@@ -705,6 +706,42 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
   }
 
   return created;
+}
+
+// Trips the caller is fulfilling (provider side), with the now-revealed request location. Powers the
+// provider's "trips you're helping with" surface so they can advance the lifecycle.
+export async function listProviderTrips(providerUserId: string): Promise<TrustTransportProviderTrip[]> {
+  const result = await queryDb<{
+    trip_id: string;
+    request_id: string;
+    status: TrustTransportTrip['status'];
+    mode: TrustTransportMode;
+    pickup_city: string | null;
+    dropoff_city: string | null;
+    price_amount: string | number | null;
+    price_currency: string | null;
+    trip_created_at: Date;
+  }>(
+    `SELECT t.id AS trip_id, t.request_id, t.status, t.mode,
+            r.pickup_city, r.dropoff_city, r.price_amount, r.price_currency, t.created_at AS trip_created_at
+     FROM trust_transport_trips t
+     JOIN trust_transport_requests r ON r.id = t.request_id
+     WHERE t.provider_user_id = $1
+     ORDER BY t.created_at DESC`,
+    [providerUserId],
+  );
+
+  return result.rows.map((row) => ({
+    tripId: row.trip_id,
+    requestId: row.request_id,
+    status: row.status,
+    mode: row.mode,
+    pickupCity: row.pickup_city,
+    dropoffCity: row.dropoff_city,
+    priceCurrency: row.price_currency,
+    priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
+    createdAtIso: toIso(row.trip_created_at),
+  }));
 }
 
 export async function getTripById(tripId: string): Promise<TrustTransportTrip | null> {

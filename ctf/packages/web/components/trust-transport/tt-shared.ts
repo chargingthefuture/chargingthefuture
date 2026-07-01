@@ -90,6 +90,20 @@ export interface TtOffer {
   createdAtIso?: string;
 }
 
+// A trip the member is fulfilling (provider side), shown on the "Help out" tab so they can advance it.
+// Pickup/drop-off are present because they accepted (model B reveal).
+export interface ProviderTrip {
+  tripId: string;
+  requestId?: string;
+  status?: string;
+  mode?: string;
+  pickupCity?: string | null;
+  dropoffCity?: string | null;
+  priceCurrency?: string | null;
+  priceAmount?: number | null;
+  createdAtIso?: string;
+}
+
 // A request shown on the "Help out" tab (discovery model B): mode + settlement + age only. The pickup
 // and drop-off are deliberately absent — they're shared with a provider only after the requester accepts.
 export interface AvailableRequest {
