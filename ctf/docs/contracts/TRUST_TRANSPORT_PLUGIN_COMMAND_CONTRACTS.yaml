@@ -105,10 +105,12 @@ contracts:
       - trust_transport_trips
       - trust_transport_status_events
       - trust_transport_proof_artifacts
-      # On completion with ServiceCredits settlement, moves credits requester -> provider.
+      # On completion: ServiceCredits settlement moves credits requester -> provider; fiat/crypto
+      # settlement credits the provider's earnings ledger in that currency.
       - service_credits_wallets
       - service_credits_transfers
       - service_credits_ledger_entries
+      - trust_transport_earnings_ledger
     purpose: lifecycle_transition
     retentionClass: transactional_long_lived
     idempotency: true
@@ -123,6 +125,9 @@ contracts:
         required: true
       amount:
         type: number
+        required: true
+      currency:
+        type: string
         required: true
     outputSchema:
       payoutRequestId:

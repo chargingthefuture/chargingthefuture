@@ -874,19 +874,19 @@ export async function updateTripStatus(
     result.request.status,
   );
 
-  // Settlement (owner decision): when a trip completes and the requester chose ServiceCredits, move the
-  // credits requester -> provider. Runs after the completion is durably committed.
-  await settleServiceCreditsOnCompletion(result.trip, result.request, nextStatus);
+  // Settlement (owner decision): when a trip completes, ServiceCredits move requester -> provider, and
+  // fiat/crypto settlement credits the provider's earnings ledger. Runs after the completion is committed.
+  await settleTripOnCompletion(result.trip, result.request, nextStatus);
 
   return result;
 }
 
-// Move ServiceCredits from the requester to the provider when a trip completes with SC settlement.
-// Best-effort and idempotent by trip id: the trip is already completed and the work done, so a failure
-// here (e.g. the requester lacks balance) is logged for reconciliation rather than reverting the trip,
-// and the trip-id idempotency key means a retry can never double-pay. Only SC settlement moves value
-// here; fiat/crypto earnings and Free/Barter are out of scope for this path.
-async function settleServiceCreditsOnCompletion(
+// Settle a completed trip against the requester's chosen settlement. Best-effort and idempotent by trip
+// id: the trip is already completed and the work done, so a failure here (e.g. the requester lacks
+// balance) is logged for reconciliation rather than reverting the trip, and the trip-id key means a
+// retry can never double-pay. ServiceCredits move to the provider's wallet; fiat/crypto accrue to the
+// provider's earnings ledger in that currency (payout-able); Free/Barter move nothing.
+async function settleTripOnCompletion(
   trip: TrustTransportTrip,
   request: TrustTransportRequest,
   nextStatus: TrustTransportTripStatus,
@@ -894,39 +894,65 @@ async function settleServiceCreditsOnCompletion(
   if (nextStatus !== 'completed') {
     return;
   }
-  if (request.priceCurrency !== 'SC') {
-    return;
-  }
+  const currency = request.priceCurrency;
   const amount = request.priceAmount;
-  if (amount === null || !(amount > 0)) {
+  if (!currency || amount === null || !(amount > 0) || currency === 'FREE' || currency === 'BARTER') {
     return;
   }
 
   try {
-    const tx = await createTransfer({
-      senderUserId: request.requesterUserId,
-      recipientUserId: trip.providerUserId,
-      amount,
-      idempotencyKey: `trust-transport-settlement-${trip.id}`,
-      originPlugin: 'trust-transport',
-      reasonCode: 'trust-transport.trip.settlement',
-    });
-
-    await insertTrustTransportAudit({
-      actorId: trip.providerUserId,
-      command: 'trust-transport.trip.settlement',
-      policyStatus: 'allow',
-      reason: 'ok',
-      targetType: 'trip',
-      targetId: trip.id,
-      metadata: {
-        rail: 'service_credits',
+    if (currency === 'SC') {
+      const tx = await createTransfer({
+        senderUserId: request.requesterUserId,
+        recipientUserId: trip.providerUserId,
         amount,
-        fromUserId: request.requesterUserId,
-        toUserId: trip.providerUserId,
-        transferId: (tx as { id?: string }).id ?? null,
-      },
-    });
+        idempotencyKey: `trust-transport-settlement-${trip.id}`,
+        originPlugin: 'trust-transport',
+        reasonCode: 'trust-transport.trip.settlement',
+      });
+
+      await insertTrustTransportAudit({
+        actorId: trip.providerUserId,
+        command: 'trust-transport.trip.settlement',
+        policyStatus: 'allow',
+        reason: 'ok',
+        targetType: 'trip',
+        targetId: trip.id,
+        metadata: {
+          rail: 'service_credits',
+          currency,
+          amount,
+          fromUserId: request.requesterUserId,
+          toUserId: trip.providerUserId,
+          transferId: (tx as { id?: string }).id ?? null,
+        },
+      });
+      return;
+    }
+
+    // Fiat/crypto: credit the provider's earnings ledger in the settlement currency, idempotent by trip id
+    // so a re-completion cannot double-credit. Payouts draw from this per-currency balance.
+    const credited = await queryDb(
+      `INSERT INTO trust_transport_earnings_ledger (provider_user_id, trip_id, entry_type, amount, currency, price_currency, status, metadata)
+       SELECT $1, $2::uuid, 'credit', $3, $4, $4, 'posted', jsonb_build_object('reason', 'trip_settlement')
+       WHERE NOT EXISTS (
+         SELECT 1 FROM trust_transport_earnings_ledger
+         WHERE trip_id = $2::uuid AND entry_type = 'credit' AND (metadata->>'reason') = 'trip_settlement'
+       )`,
+      [trip.providerUserId, trip.id, amount, currency],
+    );
+
+    if ((credited.rowCount ?? 0) > 0) {
+      await insertTrustTransportAudit({
+        actorId: trip.providerUserId,
+        command: 'trust-transport.trip.settlement',
+        policyStatus: 'allow',
+        reason: 'ok',
+        targetType: 'trip',
+        targetId: trip.id,
+        metadata: { rail: 'earnings_ledger', currency, amount, toUserId: trip.providerUserId },
+      });
+    }
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'trip_settlement' });
   }
@@ -1013,14 +1039,31 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
   await syncTrustTransportRequestPresence(request.requesterUserId, orderId, 'cancelled');
 }
 
-// Public read of the caller's own available earnings balance (for the Earnings surface). Note: this is
-// a currency-blind sum of the ledger (see issue #1233); it is shown as a plain balance, not asserted as
-// a specific currency.
-export async function getMyEarningsBalance(userId: string): Promise<number> {
-  return getProviderAvailableBalance(userId);
+// The caller's available earnings balance per currency (only currencies with a nonzero balance). Powers
+// the Earnings surface and the currency-aware payout flow (issue #1233).
+export async function getEarningsBalancesByCurrency(userId: string): Promise<{ currency: string; balance: number }[]> {
+  const result = await queryDb<{ currency: string; balance: string }>(
+    `SELECT currency, COALESCE(SUM(CASE
+       WHEN entry_type IN ('credit', 'release') THEN amount
+       WHEN entry_type IN ('debit', 'hold') THEN -amount
+       ELSE 0
+     END), 0)::text AS balance
+     FROM trust_transport_earnings_ledger
+     WHERE provider_user_id = $1
+     GROUP BY currency
+     HAVING COALESCE(SUM(CASE
+       WHEN entry_type IN ('credit', 'release') THEN amount
+       WHEN entry_type IN ('debit', 'hold') THEN -amount
+       ELSE 0
+     END), 0) <> 0
+     ORDER BY currency`,
+    [userId],
+  );
+
+  return result.rows.map((row) => ({ currency: row.currency, balance: Number.parseFloat(row.balance) }));
 }
 
-async function getProviderAvailableBalance(providerUserId: string): Promise<number> {
+async function getProviderAvailableBalance(providerUserId: string, currency: string): Promise<number> {
   const result = await queryDb<{ balance: string }>(
     `SELECT COALESCE(SUM(CASE
        WHEN entry_type IN ('credit', 'release') THEN amount
@@ -1028,19 +1071,26 @@ async function getProviderAvailableBalance(providerUserId: string): Promise<numb
        ELSE 0
      END), 0)::text AS balance
      FROM trust_transport_earnings_ledger
-     WHERE provider_user_id = $1`,
-    [providerUserId],
+     WHERE provider_user_id = $1 AND currency = $2`,
+    [providerUserId, currency],
   );
 
   return Number.parseFloat(result.rows[0]?.balance ?? '0');
 }
 
-export async function requestPayout(providerUserId: string, amount: number, idempotencyKey: string): Promise<TrustTransportPayoutRequest> {
+export async function requestPayout(providerUserId: string, amount: number, currency: string, idempotencyKey: string): Promise<TrustTransportPayoutRequest> {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error('invalid_payload');
   }
 
-  const available = await getProviderAvailableBalance(providerUserId);
+  const normalizedCurrency = typeof currency === 'string' ? currency.trim() : '';
+  if (normalizedCurrency.length === 0) {
+    throw new Error('invalid_payload');
+  }
+
+  // Balance is checked against the requested currency's ledger only, and the payout + hold are stamped
+  // with that currency (issue #1233 — no more USD hard-code).
+  const available = await getProviderAvailableBalance(providerUserId, normalizedCurrency);
   if (available < amount) {
     throw new Error('insufficient_balance');
   }
@@ -1059,16 +1109,16 @@ export async function requestPayout(providerUserId: string, amount: number, idem
     }
 
     const created = await client.query<PayoutRow>(
-      `INSERT INTO trust_transport_payout_requests (provider_user_id, amount, currency, status, idempotency_key)
-       VALUES ($1, $2, 'USD', 'requested', $3)
+      `INSERT INTO trust_transport_payout_requests (provider_user_id, amount, currency, price_currency, status, idempotency_key)
+       VALUES ($1, $2, $3, $3, 'requested', $4)
        RETURNING id, provider_user_id, amount, currency, status, requested_at, decided_at, decided_by_user_id, decision_reason`,
-      [providerUserId, amount, idempotencyKey],
+      [providerUserId, amount, normalizedCurrency, idempotencyKey],
     );
 
     await client.query(
-      `INSERT INTO trust_transport_earnings_ledger (provider_user_id, entry_type, amount, currency, status, metadata)
-       VALUES ($1, 'hold', $2, 'USD', 'held', jsonb_build_object('reason', 'payout_request', 'idempotencyKey', $3))`,
-      [providerUserId, amount, idempotencyKey],
+      `INSERT INTO trust_transport_earnings_ledger (provider_user_id, entry_type, amount, currency, price_currency, status, metadata)
+       VALUES ($1, 'hold', $2, $3, $3, 'held', jsonb_build_object('reason', 'payout_request', 'idempotencyKey', $4))`,
+      [providerUserId, amount, normalizedCurrency, idempotencyKey],
     );
 
     return created.rows[0];

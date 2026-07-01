@@ -28,12 +28,13 @@ export async function POST(request: Request) {
   }
 
   const amount = typeof body.amount === 'number' ? body.amount : Number.NaN;
+  const currency = typeof body.currency === 'string' ? body.currency : '';
   const idempotencyKey = typeof body.idempotencyKey === 'string' && body.idempotencyKey.trim().length > 0
     ? body.idempotencyKey.trim()
     : `${gate.auth.userId}:${Date.now()}`;
 
   try {
-    const payout = await requestPayout(gate.auth.userId, amount, idempotencyKey);
+    const payout = await requestPayout(gate.auth.userId, amount, currency, idempotencyKey);
     await insertTrustTransportAudit({
       actorId: gate.auth.userId,
       command: 'trust-transport.payout.request',
