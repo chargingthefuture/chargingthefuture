@@ -90,7 +90,9 @@ flow is one-way, like gas-station reward points.
   the viewer, the member-safe Signal instructions copy, `githubStarAlreadyCredited` (true when the
   viewer already holds a confirmed, credit-earning github_star — the UI greys out that path), and
   `ownerSignalUrl` (the owner's Signal contact from the server-only `CONTRIBUTIONS_OWNER_SIGNAL_URL`
-  env var, or null to fall back to the instructions copy).
+  env var, or null to fall back to the instructions copy), and the live thank-you valuations
+  `creditsPerUsd` (SC per dollar) and `creditsPerActionSc` (SC for one confirmed comment or star,
+  = `nonMonetaryUnitValueUsd × creditsPerUsd`), so member copy always matches the admin settings.
 - `POST /api/contributions/banner/dismiss` — Silent banner snooze (not audited).
 - `GET /api/contributions/admin/submissions` — Admin review queue (`?status=` filter).
 - `POST /api/contributions/admin/submissions/[submissionId]/review` — Confirm/reject (body:
@@ -267,11 +269,10 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## 10. Gaps and Known Technical Debt
 
-- The member surfaces show the credit valuations (10 SC/dollar, 50 SC/action) as copy using the
-  seeded defaults; the member fundraiser route does not expose the live config, so if the owner
-  tunes those knobs the member copy can lag until that route also returns the valuations. The admin
-  settings screen is the source of truth for the live values. (Low priority — the figures are
-  framed as a thank-you, not a contract.)
+- (Resolved 2026-07-01) The member surfaces previously showed hardcoded credit valuations (10 SC per
+  dollar, 50 SC per action) that could drift from the admin config. The fundraiser route now returns
+  the live `creditsPerUsd` and `creditsPerActionSc`, and the member cards/disclaimer render those, so
+  member copy always matches the settings screen.
 - The mobile admin screen mirrors the day-to-day review path (confirm/reject) and shows drive and
   settings as read-only summaries; creating/editing a drive and editing the config knobs is done on
   the web admin dashboard. The GitHub-star brand icon is rendered with lucide's `Star` (the brand
@@ -288,6 +289,12 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-07-01: Member credit valuations now come from the live config (owner-reported bug). The member
+  cards and disclaimer showed a hardcoded "50 SC" per comment/star while the admin "Credits per comment
+  or star" setting was 10. The fundraiser route (`GET /api/contributions/fundraiser`) now returns
+  `creditsPerUsd` and `creditsPerActionSc` (= `nonMonetaryUnitValueUsd × creditsPerUsd`), and the web
+  and Android member surfaces render those instead of hardcoded defaults, so the copy always matches
+  the settings screen. Fundraiser command contract `outputSchema` updated. No schema change.
 - 2026-07-01: Trackability + Commons safety pass (owner feedback). (1) The Quora comment link and the
   GitHub profile link are now **required** on submit (web + Android) — without them the owner cannot
   find and confirm the contribution. Each field shows a help line: if you cannot find the link, ask in

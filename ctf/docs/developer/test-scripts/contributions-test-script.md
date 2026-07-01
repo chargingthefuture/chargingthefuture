@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributions-feature-inventory.md` |
-| **Generated** | 2026-07-01 (required contribution links + Commons safety copy + desktop nav trim; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-01 (live credit valuations in member copy; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -163,7 +163,9 @@ cycle is the one whose window contains now. The member drive view reflects the g
 **Expected:** The settings screen shows the resulting credits (the stored USD-equivalent ×
 `credits_per_usd`, with a live helper showing the underlying USD value) and converts back to the
 stored USD-equivalent on save, so the stored model stays the source of truth. Config knobs must save
-positive values.
+positive values. After saving, open the member contribute screen (`/apps/contributions`): the cards
+and the credits disclaimer show the **same** SC-per-comment/star and SC-per-dollar as the settings —
+no hardcoded "50 SC" when the config says otherwise.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
