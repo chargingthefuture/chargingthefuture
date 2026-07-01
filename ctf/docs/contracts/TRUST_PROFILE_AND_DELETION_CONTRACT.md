@@ -38,18 +38,18 @@ Rule 114 baseline: Trust extends the canonical profile by `user_id` and must not
     - type: uuid or text keyed to canonical identity implementation
     - nullable/default: non-null, unique, FK to canonical profile equivalent
     - purpose: plugin extension ownership key
-  - field name: `verification_status`
-    - type: enum (`verified` | `unverified` | `under_review` | `restricted`)
-    - nullable/default: default `unverified`
-    - purpose: public-safe trust state for trust badge rendering
-  - field name: `verification_label_public`
-    - type: text
-    - nullable/default: nullable
-    - purpose: short public-safe explanation string if product requires tailored display text
-  - field name: `trust_visibility_level`
-    - type: enum (`standard` | `limited` | `hidden`)
-    - nullable/default: default `standard`
-    - purpose: reduce stalking/harassment risk by limiting public trust signal detail
+  - field name: `trust_status`
+    - type: enum (`unverified` | `verified` | `flagged`)
+    - nullable/default: non-null, default `unverified`
+    - purpose: public-safe trust state for trust badge rendering (admin-controlled)
+  - field name: `trust_evidence`
+    - type: jsonb (array of evidence items: `{ type, summary, details?, createdAt, createdBy? }`)
+    - nullable/default: non-null, default `[]`
+    - purpose: qualitative, non-numeric evidence derived from real cross-plugin participation, plus admin notes
+  - field name: `trust_visibility`
+    - type: enum (`public` | `private` | `restricted`)
+    - nullable/default: non-null, default `public`
+    - purpose: reduce stalking/harassment risk by limiting who can view trust signal detail
   - field name: `member_since_at`
     - type: timestamptz
     - nullable/default: nullable, derived/backfilled from canonical account timeline when available
@@ -131,7 +131,7 @@ When user requests full account deletion:
 If user returns after service-scoped deletion:
 
 - Recreated defaults:
-  - new `trust_user_extension` with `unverified` status and `standard` visibility
+  - new `trust_user_extension` with `unverified` status and `public` visibility
   - empty or re-derived `trust_signal_snapshot`
 - Data that is not restored:
   - prior public-safe trust summary state unless re-derived from approved source systems

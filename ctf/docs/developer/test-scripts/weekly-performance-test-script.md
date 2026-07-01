@@ -103,6 +103,17 @@ allowed export writes a `weekly-performance.report.export` audit row. The export
 surfaced on the android screen (web admin only); android shows the admin badge and an export hint.
 **Result:** web ☐ — notes:
 
+### WP-A5 · Left icon-rail chrome has no dead controls
+**Role:** admin / operations · **Surfaces:** web (desktop)
+**Steps:**
+1. Open the dashboard and look at the left icon rail.
+2. Try clicking each icon top to bottom.
+**Expected:** Below the brand mark the rail shows only the shared footer controls — back to all apps,
+account and settings, and the account menu — and every one of them navigates. There are no decorative
+chart/trend/calendar glyphs that look like buttons but do nothing. (This rail is desktop-only; the
+mobile-responsive layout uses its own header.)
+**Result:** web ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Gift, MessageSquare, Star, AlertCircle } from 'lucide-react';
+import { Gift, MessageSquare, Star, AlertCircle, ChevronDown } from 'lucide-react';
 import type { GiftCardMethod } from '@/lib/contributions/types';
 import {
   ALREADY_CREDITED_NOTE,
@@ -91,7 +91,15 @@ function GiftCardForm({ t, submitting, error, onSubmit, onCancel }: { t: Contrib
 
   return (
     <div style={{ background: t.SURFACE, borderRadius: 12, padding: 20, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
-      <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 16 }}>Gift card details</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 8 }}>Gift card details</div>
+      <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, margin: '0 0 10px' }}>
+        Your gift card can be physical or digital. Don&apos;t enter the card number or code here — after you
+        submit, send the card details privately to the platform owner on Signal (you&apos;ll get the link).
+      </p>
+      <p style={{ fontSize: 12, color: '#EF4444', lineHeight: 1.6, margin: '0 0 16px' }}>
+        Never post your gift card code or details in the Commons. It&apos;s a public group chat, so if you share the
+        code there you won&apos;t receive ServiceCredits and the owner won&apos;t receive the gift.
+      </p>
       <div style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>Card type</div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -130,6 +138,7 @@ function UrlForm({
   blurb,
   fieldLabel,
   placeholder,
+  helpText,
   submitting,
   error,
   onSubmit,
@@ -140,22 +149,49 @@ function UrlForm({
   blurb: string;
   fieldLabel: string;
   placeholder: string;
+  helpText: string;
   submitting: boolean;
   error: string | null;
-  onSubmit: (url: string | undefined) => void;
+  onSubmit: (url: string) => void;
   onCancel: () => void;
 }) {
   const [url, setUrl] = useState('');
+  const [missing, setMissing] = useState(false);
+  // The link is required: without it the owner cannot find and confirm the contribution. If the
+  // member cannot find it, the help text points them to the Commons rather than letting them submit
+  // an untrackable claim.
+  function handleSubmit() {
+    const trimmed = url.trim();
+    if (!trimmed) {
+      setMissing(true);
+      return;
+    }
+    onSubmit(trimmed);
+  }
   return (
     <div style={{ background: t.SURFACE, borderRadius: 12, padding: 20, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
       <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 8 }}>{title}</div>
       <p style={{ fontSize: 13, color: t.MUTED, margin: '0 0 14px', lineHeight: 1.6 }}>{blurb}</p>
-      <div style={{ marginBottom: 18 }}>
-        <label style={labelStyle(t)}>{fieldLabel}</label>
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder={placeholder} style={inputStyle(t)} />
+      <div style={{ marginBottom: 8 }}>
+        <label style={labelStyle(t)}>
+          {fieldLabel} <span style={{ color: '#EF4444' }}>*</span>
+        </label>
+        <input
+          value={url}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            if (missing) {
+              setMissing(false);
+            }
+          }}
+          placeholder={placeholder}
+          style={inputStyle(t)}
+        />
       </div>
+      <p style={{ fontSize: 11, color: t.MUTED, margin: '0 0 14px', lineHeight: 1.6 }}>{helpText}</p>
+      {missing && <div style={{ fontSize: 12, color: '#EF4444', marginBottom: 10 }}>Please paste the link so we can find and confirm your contribution.</div>}
       <ErrorLine error={error} />
-      <FormActions t={t} submitting={submitting} onSubmit={() => onSubmit(url.trim() ? url.trim() : undefined)} onCancel={onCancel} />
+      <FormActions t={t} submitting={submitting} onSubmit={handleSubmit} onCancel={onCancel} />
     </div>
   );
 }
@@ -193,7 +229,10 @@ export function ContributionPaths({
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <h2 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 600, color: t.TITLE }}>How would you like to help?</h2>
+      <h2 style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 600, color: t.TITLE }}>How would you like to help?</h2>
+      <p style={{ margin: '0 0 14px', fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>
+        Pick one of the three ways below. A short form opens right underneath so you can submit your gift card, Quora comment, or GitHub star.
+      </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
         {paths.map(({ key, Icon, label, sub, credits }) => {
           const disabled = key === 'github_star' && githubStarAlreadyCredited;
@@ -228,18 +267,19 @@ export function ContributionPaths({
               </div>
               <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 6 }}>{disabled ? ALREADY_CREDITED_NOTE : sub}</div>
               {!disabled && <div style={{ fontSize: 11, color: t.ACCENT, fontWeight: 500 }}>As a thank-you: {credits}</div>}
+              {!disabled && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 12, fontSize: 11, fontWeight: 600, color: active ? t.ACCENT : t.MUTED }}>
+                  {active ? 'Selected — form below' : 'Choose this'}
+                  <ChevronDown size={12} style={{ transform: active ? 'rotate(180deg)' : 'none', transition: 'transform 120ms' }} />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', background: `${t.ACCENT}08`, borderRadius: 8, border: `1px solid ${t.ACCENT}20`, marginBottom: 20 }}>
-        <AlertCircle size={13} color={t.ACCENT} style={{ flexShrink: 0, marginTop: 1 }} />
-        <span style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>
-          Confirmed contributions earn ServiceCredits as a thank-you — {creditsPerUsd} SC per dollar for gift cards, and {creditsPerAction} SC for a comment or star. Credits are a thank-you; they can&apos;t be turned back into cash.
-        </span>
-      </div>
-
+      {/* The chosen path's form opens here, directly under the cards. Nothing shows until a card is
+          selected — the cards' own "Choose this" cue is the prompt. */}
       {activePath === 'gift_card' && (
         <GiftCardForm t={t} submitting={submitting} error={error} onSubmit={onSubmitGiftCard} onCancel={() => setActivePath(null)} />
       )}
@@ -247,9 +287,10 @@ export function ContributionPaths({
         <UrlForm
           t={t}
           title="Quora comment"
-          blurb="Leave a comment on a Quora post in our space. If you have the link, paste it here — if not, that's fine, we'll find it."
-          fieldLabel="Quora post URL (optional)"
+          blurb="Leave a comment on a Quora post in our space, then paste the link to your comment so we can find and confirm it."
+          fieldLabel="Link to your Quora comment"
           placeholder="https://www.quora.com/…"
+          helpText="Need help finding the link? Ask in the Commons — the group chat — and we'll help you find it."
           submitting={submitting}
           error={error}
           onSubmit={onSubmitQuora}
@@ -260,15 +301,23 @@ export function ContributionPaths({
         <UrlForm
           t={t}
           title="GitHub star"
-          blurb="Star our repository on GitHub. If you'd like to share your GitHub profile so we can confirm, paste it here — no obligation."
-          fieldLabel="GitHub profile URL (optional)"
+          blurb="Star our repository on GitHub, then paste your GitHub profile link so we can confirm it."
+          fieldLabel="Your GitHub profile URL"
           placeholder="https://github.com/your-username"
+          helpText="Need help finding the link? Ask in the Commons — the group chat — and we'll help you find it."
           submitting={submitting}
           error={error}
           onSubmit={onSubmitGithub}
           onCancel={() => setActivePath(null)}
         />
       )}
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', background: `${t.ACCENT}08`, borderRadius: 8, border: `1px solid ${t.ACCENT}20`, marginTop: 4 }}>
+        <AlertCircle size={13} color={t.ACCENT} style={{ flexShrink: 0, marginTop: 1 }} />
+        <span style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>
+          Confirmed contributions earn ServiceCredits as a thank-you — {`${creditsPerUsd} SC`} per dollar for gift cards, and {`${creditsPerAction} SC`} for a comment or star. Credits are a thank-you; they can&apos;t be turned back into cash.
+        </span>
+      </div>
     </div>
   );
 }

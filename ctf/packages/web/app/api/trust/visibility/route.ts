@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const visibility = parseVisibility(body.trustVisibility ?? body.visibility);
+  const visibility = parseVisibility(body.trustVisibility);
   if (!visibility) {
     return NextResponse.json(
       {
