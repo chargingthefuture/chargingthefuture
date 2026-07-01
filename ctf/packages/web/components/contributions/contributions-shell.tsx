@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Gift, Clock, ArrowLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
@@ -16,6 +16,7 @@ import {
 } from './contributions-shared';
 import { AppLoading } from '@/components/shared/app-loading';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
 import { goalsFromFundraiser, GoalCard, GoalRow } from './contributions-drive-progress';
 import { ContributionPaths, type SubmitGiftCardInput } from './contributions-paths';
 import { ContributionsHistoryList, ContributionsEmptyHistory } from './contributions-history';
@@ -46,6 +47,20 @@ export function ContributionsShell() {
   const [mobileTab, setMobileTab] = useState<MobileTab>('drive');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Desktop shows every section on one scrolling page, so the left nav items scroll to their
+  // section (and light up as the active one) rather than swapping the whole view. This makes
+  // "Contribute" and "My contributions" actually do something when clicked on desktop.
+  const [activeSection, setActiveSection] = useState<MobileTab>('drive');
+  const driveRef = useRef<HTMLDivElement>(null);
+  const contributeRef = useRef<HTMLDivElement>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
+  const scrollToSection = useCallback((key: MobileTab) => {
+    setActiveSection(key);
+    const target =
+      key === 'drive' ? driveRef.current : key === 'contribute' ? contributeRef.current : historyRef.current;
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   const loadData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -212,9 +227,9 @@ export function ContributionsShell() {
 
   return (
     <DesktopFrame t={t}>
-      <ContributionsSidebar t={t} active="drive" />
+      <ContributionsSidebar t={t} active={activeSection} onNavigate={scrollToSection} />
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
-        <div style={{ marginBottom: 28 }}>
+        <div ref={driveRef} style={{ marginBottom: 28, scrollMarginTop: 24 }}>
           <h1 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: t.TITLE }}>{driveTitle}</h1>
           <p style={{ margin: '0 0 18px', fontSize: 13, color: t.MUTED, lineHeight: 1.7, maxWidth: 620 }}>
             If every member who can give a little does, the platform&apos;s costs are covered — and it stays free for everyone.
@@ -225,16 +240,18 @@ export function ContributionsShell() {
             ))}
           </div>
         </div>
-        <ContributionPaths {...pathsProps} />
+        <div ref={contributeRef} style={{ scrollMarginTop: 24 }}>
+          <ContributionPaths {...pathsProps} />
+        </div>
       </div>
-      <div style={{ width: 280, background: t.SURFACE, borderLeft: `1px solid ${t.BORDER_SOLID}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <div ref={historyRef} style={{ width: 280, background: t.SURFACE, borderLeft: `1px solid ${t.BORDER_SOLID}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '18px 16px 12px', borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Clock size={14} color={t.ACCENT} />
           <span style={{ fontSize: 13, fontWeight: 600, color: t.TITLE }}>My Contributions</span>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
           {submissions.length === 0 ? (
-            <ContributionsEmptyHistory t={t} onContribute={() => undefined} />
+            <ContributionsEmptyHistory t={t} />
           ) : (
             <ContributionsHistoryList submissions={submissions} t={t} />
           )}
@@ -249,13 +266,52 @@ export function ContributionsShell() {
 function DesktopFrame({ t, children }: { t: ContributionsTokens; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, overflow: 'hidden' }}>
+      <ContributionsIconRail t={t} />
       {children}
     </div>
   );
 }
 
-function ContributionsSidebar({ t, active }: { t: ContributionsTokens; active: 'drive' | 'contribute' | 'history' }) {
-  const items: { key: string; label: string }[] = [
+// The uniform left icon rail every plugin carries: the plugin's brand mark on top, and the shared
+// footer (back to all apps, account and settings, account menu) at the bottom. Contributions was
+// missing it, so this screen had no account controls or the standard way back that sibling apps show.
+function ContributionsIconRail({ t }: { t: ContributionsTokens }) {
+  return (
+    <aside
+      style={{
+        width: 72,
+        background: t.BG,
+        borderRight: `1px solid ${t.BORDER_SOLID}`,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        paddingTop: 16,
+        paddingBottom: 16,
+        gap: 8,
+        flexShrink: 0,
+      }}
+    >
+      <div
+        style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}25`, border: `1px solid ${t.ACCENT}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}
+        aria-hidden="true"
+      >
+        <Gift size={20} color={t.ACCENT} />
+      </div>
+      <PluginRailFooter />
+    </aside>
+  );
+}
+
+function ContributionsSidebar({
+  t,
+  active,
+  onNavigate,
+}: {
+  t: ContributionsTokens;
+  active: 'drive' | 'contribute' | 'history';
+  onNavigate?: (key: 'drive' | 'contribute' | 'history') => void;
+}) {
+  const items: { key: 'drive' | 'contribute' | 'history'; label: string }[] = [
     { key: 'drive', label: 'Drive progress' },
     { key: 'contribute', label: 'Contribute' },
     { key: 'history', label: 'My contributions' },
@@ -275,9 +331,15 @@ function ContributionsSidebar({ t, active }: { t: ContributionsTokens; active: '
         {items.map(({ key, label }) => {
           const isActive = key === active;
           return (
-            <div
+            <button
               key={key}
+              type="button"
+              onClick={onNavigate ? () => onNavigate(key) : undefined}
+              aria-current={isActive ? 'true' : undefined}
               style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
                 padding: '8px 10px',
                 borderRadius: 7,
                 marginBottom: 2,
@@ -285,11 +347,14 @@ function ContributionsSidebar({ t, active }: { t: ContributionsTokens; active: '
                 background: isActive ? `${t.ACCENT}18` : 'transparent',
                 color: isActive ? t.ACCENT : t.MUTED,
                 fontWeight: isActive ? 600 : 400,
+                border: 'none',
                 borderLeft: isActive ? `3px solid ${t.ACCENT}` : '3px solid transparent',
+                cursor: onNavigate ? 'pointer' : 'default',
+                fontFamily: 'inherit',
               }}
             >
               {label}
-            </div>
+            </button>
           );
         })}
       </nav>
@@ -352,6 +417,6 @@ function ErrorState({ t, message, onRetry, isMobile }: { t: ContributionsTokens;
   return isMobile ? (
     <MobileFrame t={t}>{body}</MobileFrame>
   ) : (
-    <div style={{ display: 'flex', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT }}>{body}</div>
+    <DesktopFrame t={t}>{body}</DesktopFrame>
   );
 }
