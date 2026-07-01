@@ -28,7 +28,7 @@ export function SkillsHuntIconRail({
           <Icon size={20} />
         </button>
       ))}
-      <button type="button" aria-label="Notifications" aria-expanded={notifOpen} onClick={onToggleNotif}
+      <button type="button" aria-label="Status" aria-expanded={notifOpen} onClick={onToggleNotif}
         style={{ position: "relative", width: 44, height: 44, borderRadius: 12, background: notifOpen ? `${COLOR}20` : "transparent", border: notifOpen ? `1px solid ${COLOR}40` : "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: notifOpen ? COLOR : "#6B7280" }}>
         <Bell size={18} />
         {unreadCount > 0 && (
