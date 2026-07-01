@@ -60,7 +60,7 @@ web ☐ android ☐
 4. Leave settlement type as **Free** (the default).
 5. Submit the request.
 
-**Expected:** The request is created and appears in your request list. The settlement badge shows "Free" (never a raw currency code or a fiat equivalent). No "all drivers background-checked" claim appears anywhere. The booking subtitle refers to drivers as community members, not vetted professionals.
+**Expected:** The request is created and appears in your request list. The settlement badge shows "Free" (never a raw currency code or a fiat equivalent). No "all drivers background-checked" claim appears anywhere, and no per-request "🛡️ Background checked / ✅ ID verified" badge is shown on the Tracking list. The booking subtitle refers to drivers as community members, not vetted professionals. The post-submit confirmation says the request is now visible to community members who can offer to help — not that it is "being matched with nearby drivers" (there is no automated matching).
 
 Result: web ☐ android ☐
 

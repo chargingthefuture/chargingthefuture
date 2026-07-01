@@ -270,6 +270,14 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
   existed and are reviewed). Trip progression, proof capture, and earnings/payouts screens for Android
   remain open follow-ups under #1250.
 
+- 2026-07-01: Removed fabricated safety claims that survived on Android (completes the 2026-06-19 fix,
+  which said "mobile public copy updated to match" but only touched the signed-out `PublicState`). The
+  authenticated Book tab still said "Background-checked drivers"; the Track tab still showed a
+  "🛡️ Background checked / ✅ ID verified" badge row per request card; and the post-booking confirmation
+  said "being matched with nearby drivers" (there is no automated matching — a request goes `open` and
+  members browse it to offer help). All three corrected to honest copy consistent with web. UI copy only
+  — no schema, route, or contract change.
+
 - 2026-06-30: Fiat/crypto earnings on completion + currency-aware payouts; closes issue #1233. (1) Money
   precision migration: `trust_transport_earnings_ledger.amount` and `trust_transport_payout_requests.amount`
   widened `INTEGER → NUMERIC`, and the earnings ledger gains a `trip_id UUID` column (via `ALTER ... IF
