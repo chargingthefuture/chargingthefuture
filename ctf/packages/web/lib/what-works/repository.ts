@@ -4,6 +4,7 @@ import type {
   ReviewProductInput,
   SuggestProductInput,
   UpdateProblemInput,
+  UpdateProductInput,
   WhatWorksAdminProblem,
   WhatWorksAdminProduct,
   WhatWorksList,
@@ -395,6 +396,36 @@ export async function reviewProduct(
       WHERE id = $1
       RETURNING *`,
     [id, nextStatus, input.reviewerId, input.action === 'reject' ? input.rejectionReason ?? null : null],
+  );
+  return result.rows[0] ?? null;
+}
+
+// Correct a suggested tool's own details after the fact (admin fixes a typo, a broken link, a
+// wrong note). Status, endorsements, and the identity columns are intentionally left untouched.
+// COALESCE lets an omitted field keep its current value; the route always sends the full set.
+export async function updateProduct(
+  id: string,
+  patch: UpdateProductInput,
+): Promise<WhatWorksProductLookup | null> {
+  const result = await queryDb<WhatWorksProductLookup>(
+    `UPDATE what_works_products
+        SET emoji = COALESCE($2, emoji),
+            name = COALESCE($3, name),
+            kind = COALESCE($4, kind),
+            note = COALESCE($5, note),
+            purchase_url = COALESCE($6, purchase_url),
+            updated_at = NOW()
+      WHERE id = $1
+      RETURNING id, problem_id, emoji, name, kind, note, purchase_url, status,
+                reviewed_at, rejection_reason, created_at, updated_at`,
+    [
+      id,
+      patch.emoji ?? null,
+      patch.name ?? null,
+      patch.kind ?? null,
+      patch.note ?? null,
+      patch.purchaseUrl ?? null,
+    ],
   );
   return result.rows[0] ?? null;
 }

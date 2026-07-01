@@ -84,6 +84,13 @@ auditEvents:
     policyDecision: allow
     dataClassesAccessed: [community_content]
     targetContext: admin
+  - eventId: what-works.admin.product.update
+    pluginId: what-works
+    command: what-works.admin.product.update
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
   - eventId: what-works.admin.product.delete
     pluginId: what-works
     command: what-works.admin.product.delete
