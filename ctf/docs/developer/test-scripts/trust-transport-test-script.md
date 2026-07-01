@@ -247,11 +247,11 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as a member who has fulfilled trips and has earnings entries. Any member with earnings can request a payout — there is no provider role.
 
 **Steps:**
-1. On web, open the **Earnings** tab. Confirm the available balance shows. (On Android this runs via API/seed until the parity pass — issue #1250.)
-2. View the payout history list with per-row status.
-3. Submit a payout request with a positive amount within the available balance.
+1. On web, open the **Earnings** tab. Confirm a balance card shows for each currency you have a nonzero balance in. (On Android this runs via API/seed until the parity pass — issue #1250.)
+2. View the payout history list with per-row amount + currency + status.
+3. Pick a currency, enter a positive amount within that currency's balance, and submit.
 
-**Expected:** The payout request is created and appears in the history with a status (e.g. Requested). The available balance is shown as a plain number (no fiat equivalent is asserted). Requesting more than the balance is refused.
+**Expected:** The payout request is created and appears in the history with its currency and a status (e.g. Requested). The payout is stamped with the currency you chose (not a hard-coded USD). Requesting more than that currency's balance is refused.
 
 Result: web ☐ android ☐
 
@@ -264,9 +264,9 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as a member with an earnings balance.
 
 **Steps:**
-1. On web, open the **Earnings** tab.
+1. On web, open the **Earnings** tab and pick a currency.
 2. Enter `0` as the amount and submit.
-3. Repeat with a negative amount, and with an amount above your available balance.
+3. Repeat with a negative amount, and with an amount above that currency's balance.
 
 **Expected:** Every attempt is rejected with a clear inline error. No payout request is created in any case.
 

@@ -1374,7 +1374,7 @@ CREATE TABLE IF NOT EXISTS trust_transport_proof_artifacts (
 CREATE TABLE IF NOT EXISTS trust_transport_payout_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   provider_user_id TEXT NOT NULL,
-  amount INTEGER NOT NULL,
+  amount NUMERIC NOT NULL,
   currency TEXT NOT NULL,
   status TEXT NOT NULL,
   idempotency_key TEXT NOT NULL,
@@ -1383,8 +1383,9 @@ CREATE TABLE IF NOT EXISTS trust_transport_payout_requests (
 CREATE TABLE IF NOT EXISTS trust_transport_earnings_ledger (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   provider_user_id TEXT NOT NULL,
+  trip_id UUID,
   entry_type TEXT NOT NULL,
-  amount INTEGER NOT NULL,
+  amount NUMERIC NOT NULL,
   currency TEXT NOT NULL,
   status TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -1401,6 +1402,12 @@ UPDATE trust_transport_payout_requests SET price_currency = currency
   WHERE price_currency IS NULL AND currency IN (SELECT code FROM currencies);
 UPDATE trust_transport_earnings_ledger SET price_currency = currency
   WHERE price_currency IS NULL AND currency IN (SELECT code FROM currencies);
+-- Earnings/payout money precision + trip linkage (issue #1233): amounts must hold fractional currency
+-- (e.g. 24.50), and a settlement credit is linked to its trip for idempotency. Widen the legacy INTEGER
+-- amount columns to NUMERIC and add the earnings-ledger trip_id on existing databases.
+ALTER TABLE IF EXISTS trust_transport_earnings_ledger ADD COLUMN IF NOT EXISTS trip_id UUID;
+ALTER TABLE IF EXISTS trust_transport_earnings_ledger ALTER COLUMN amount TYPE NUMERIC USING amount::numeric;
+ALTER TABLE IF EXISTS trust_transport_payout_requests ALTER COLUMN amount TYPE NUMERIC USING amount::numeric;
 CREATE TABLE IF NOT EXISTS trust_transport_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,

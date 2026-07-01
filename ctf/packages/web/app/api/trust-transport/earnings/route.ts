@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trust-transport/_lib';
-import { getMyEarningsBalance } from 'lib/trust-transport/repository';
+import { getEarningsBalancesByCurrency } from 'lib/trust-transport/repository';
 import { reportError } from 'lib/observability/report';
 
-// The caller's own available earnings balance (what they can request a payout against). Scoped to the
-// caller's user id. The value is a plain balance from the earnings ledger — no currency is asserted.
+// The caller's own available earnings balance, per currency (only currencies with a nonzero balance),
+// which a payout can be requested against. Scoped to the caller's user id.
 export async function GET() {
   const gate = await requireTrustTransportReadAccess();
   if (!gate.allowed) {
@@ -12,8 +12,8 @@ export async function GET() {
   }
 
   try {
-    const availableBalance = await getMyEarningsBalance(gate.auth.userId);
-    return NextResponse.json({ ok: true, availableBalance }, { status: 200 });
+    const balances = await getEarningsBalancesByCurrency(gate.auth.userId);
+    return NextResponse.json({ ok: true, balances }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'earnings' });
     return trustTransportErrorResponse(error, 'Earnings balance unavailable.');

@@ -158,7 +158,7 @@ User routes:
 - `POST /api/trust-transport/trips/:tripId/chat` — Mint Stream chat credentials for the trip thread: chat channel (`channelId`/`streamChannelId`) and participant token. Text chat only — no video.
 - `POST /api/trust-transport/trips/:tripId/emergency-stop` — Safety emergency-stop control.
 - `POST /api/trust-transport/orders/:orderId/cancel` — Cancel an order.
-- `GET /api/trust-transport/earnings` — The caller's own available earnings balance (a currency-blind ledger sum; see issue #1233) that a payout can be requested against.
+- `GET /api/trust-transport/earnings` — The caller's own available earnings balance **per currency** (only currencies with a nonzero balance), each of which a payout can be requested against.
 - `GET /api/trust-transport/payouts` — Payout history.
 - `POST /api/trust-transport/payouts/requests` — Request a payout.
 - `POST /api/trust-transport/service-credits` — Cross-user ServiceCredits transfer for trip economics (rejects self-transfer; emits a `trust-transport.service-credits.transfer` audit event).
@@ -198,7 +198,7 @@ Tables owned by this plugin:
 4. `trust_transport_status_events` — Append-only event log for status transitions.
 5. `trust_transport_proof_artifacts` — Pickup/delivery proof captures (photo, code, signature references).
 6. `trust_transport_disputes` — Dispute records and adjudication state.
-7. `trust_transport_earnings_ledger` — Earnings entries per completed task.
+7. `trust_transport_earnings_ledger` — Earnings entries per completed task (`amount` is `NUMERIC`; `trip_id` links a settlement credit to its trip; balances are computed per `currency`).
 8. `trust_transport_payout_requests` — Provider payout requests and status.
 9. `trust_transport_risk_signals` — Fraud/risk signals captured for monitoring.
 10. `trust_transport_market_config` — Region/service-zone/fee/commission/capacity configuration.
@@ -254,6 +254,19 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 3. Command contract complexity should be monitored to prevent drift from UI flow logic.
 
 ## Change Log
+
+- 2026-06-30: Fiat/crypto earnings on completion + currency-aware payouts; closes issue #1233. (1) Money
+  precision migration: `trust_transport_earnings_ledger.amount` and `trust_transport_payout_requests.amount`
+  widened `INTEGER → NUMERIC`, and the earnings ledger gains a `trip_id UUID` column (via `ALTER ... IF
+  EXISTS` on existing DBs; the CREATE blocks updated for fresh DBs). This also unbreaks the seed, which
+  already inserted `trip_id` and a fractional amount. (2) On trip completion, non-SC priced settlement
+  (fiat/crypto) now credits the provider's earnings ledger in that settlement currency (`trip_id`-keyed,
+  idempotent), alongside the existing ServiceCredits move. (3) Balance + payout are now **currency-aware**:
+  `getEarningsBalancesByCurrency` returns per-currency balances, `GET /earnings` returns `{ balances: [{ currency, balance }] }`,
+  `requestPayout(userId, amount, currency, idempotencyKey)` validates against that currency's balance and
+  stamps the payout + hold with it (no more hard-coded `USD`). The payout command contract gains a required
+  `currency` input; `trip.status.update` `dataAccess` now lists `trust_transport_earnings_ledger`. (4) The
+  Earnings tab shows a balance card per currency and a currency selector on the payout form.
 
 - 2026-06-30: ServiceCredits settlement on trip completion (owner decision). When a trip transitions to
   `completed` and the requester chose **ServiceCredits** settlement (`price_currency = 'SC'` with a
