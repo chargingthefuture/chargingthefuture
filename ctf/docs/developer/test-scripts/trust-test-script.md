@@ -1,122 +1,390 @@
 # Trust — Manual Test Script
+> Generated from the Trust plugin feature inventory and contracts; this is the runnable checklist for hand-testing the Trust plugin on a real device or browser. Regenerate with:
+> `pnpm --dir ctf test-script:generate -- trust`
 
-> Walk these steps on a real device to confirm the plugin works end to end. This script is
-> generated from the plugin's feature inventory and contracts — those files are the source of
-> truth, this is the runnable checklist derived from them. Do not edit a step here to match a
-> bug; fix the code (or the inventory) and regenerate.
->
-> **How to regenerate:** `pnpm --dir ctf test-script:generate -- trust`
-
-| | |
+| Field | Value |
 |---|---|
 | **Plugin** | Trust (`trust`) |
-| **Visibility** | Internal — community reputation signal, not a member-facing screen of its own |
-| **Roles to test** | admin / internal |
-| **Surfaces** | web (internal admin surface) |
+| **Visibility** | Internal |
+| **Roles to test** | Admin only |
+| **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-01 (commit cc1e87bc) |
+
+---
 
 ## How to run this
 
-- Each case is **precondition → steps → expected**. Do it on each surface listed for the case.
-- Mark each surface box: ✅ pass · ❌ fail · ⛔ blocked/can't reach.
-- A ❌ becomes a row in the **Bug Reporting** plugin. Put the bug link in the notes line so the
-  next run knows it's already filed.
-- Run the **Core smoke** block every session. Run the full walkthrough when you changed this
-  plugin or on a pre-release sweep.
-- Trust is a derived signal computed from how members participate across other plugins. It is
-  **never** a public numeric score. No step here should read out a member's reputation as a number,
-  rank, or percentage — the signal is qualitative evidence only.
+- Mark each surface checkbox **✅ pass** or **❌ fail** after you verify it.
+- **⛔ blocked** means a hard dependency is missing; note why and skip.
+- Any **❌** becomes a row in the Bug Reporting plugin — record the case ID, surface, and what you observed vs. what was expected.
+- Run **Core smoke** at the start of every test session before anything else.
 
 ---
 
 ## Core smoke (every session)
 
-Reputation plugin — these are the can't-ship-broken checks. Admin / internal role unless noted.
+These checks confirm the plugin is alive. If any fail, stop and file a bug before continuing.
 
-1. **Snapshot recomputes.** Run `POST /api/trust/signal/snapshot` for a seeded member. It writes a
-   `trust_signal_snapshot` row and refreshes that member's evidence, without error. → web ☐
-2. **No numeric score anywhere.** Confirm the evidence panel and any admin view show qualitative
-   evidence items only — never a numeric score, rank, or percentage. → web ☐
-3. **Admin verification is admin-only.** `POST /api/trust/admin/verification` is denied for a plain
-   member and allowed for an admin. → web ☐
-4. **Sensitive activity stays private.** Confirm no evidence item exposes ClickLog, Mood,
-   GentlePulse, Unlock, or Foundation seeker-side activity. → web ☐
+1. **API reachable — self read.** As admin, call `GET /api/trust/user/self`. Expect HTTP 200 and a JSON body containing `trustStatus`, `trustEvidence` (array), and `trustVisibility`. No numeric score field should appear anywhere in the response.
+   web ☐
+
+2. **Widget renders on the right rail.** Sign in as admin, open a page that embeds the Trust right-rail card (e.g. account hub or community shell). `TrustWidgetCard` should render — ShieldCheck header visible, no crash, no blank white box.
+   web ☐
+
+3. **Android Trust screen loads.** Open the app as admin. Navigate to the Trust screen. It should reach one of the four states (loading → then populated, empty, or public) without a crash.
+   android ☐
+
+4. **Unauthenticated call blocked.** Call `GET /api/trust/user/self` with no auth header. Expect HTTP 401 or 403, never 200.
+   web ☐
 
 ---
 
 ## Admin walkthrough
 
-### TRUST-A1 · Signal snapshot from real participation
-**Role:** admin / internal · **Surfaces:** web (internal surface) · **Seed:** `seed:demo`
-**Precondition:** upstream plugins are seeded (the demo seed covers them); Trust reads their counts.
-**Steps:**
-1. For a seeded member with cross-plugin activity, call `POST /api/trust/signal/snapshot`.
-2. Read the member's refreshed evidence (e.g. via `GET /api/trust/user/self` for that member, or
-   the right-rail Trust widget).
-**Expected:** A `trust_signal_snapshot` row is written (model `cross_plugin_engagement_v3`) holding
-coarse counts only. Evidence items read as plain "verb N noun" lines (for example "Active on N
-days", "Completed N SocketRelay trades", "Received ServiceCredits from N community members"). A
-signal with zero backing rows produces **no** evidence item — nothing is fabricated. `trust_status`
-is unchanged. The mutation is CSRF-guarded and writes a `trust_admin_audit_trail` row.
-**Result:** web ☐ — notes:
+### TR-A1 — Read own trust panel (self route, refresh-on-read)
 
-### TRUST-A2 · No numeric score, sensitive plugins excluded
-**Role:** admin / internal · **Surfaces:** web (internal surface)
-**Steps:**
-1. Inspect the evidence built for a member who is active in a sensitive plugin (e.g. seeded Mood or
-   Unlock activity) as well as ordinary ones.
-**Expected:** The evidence shows qualitative items only — never a numeric score, rank, or
-percentage. ClickLog, Mood, GentlePulse, Unlock, and the Foundation seeker side are not surfaced;
-member blocking and safety reports are never surfaced. A dispute **withholds** the clean-record
-signal rather than producing a negative badge or a public dispute count.
-**Result:** web ☐ — notes:
+**Role:** Admin  
+**Surfaces:** Web API, Android  
+**Precondition:** Seed complete. Admin user has upstream activity (login events exist after seeding).
 
-### TRUST-A3 · Admin verification status change
-**Role:** admin / internal · **Surfaces:** web (internal surface)
-**Precondition:** a target member with a `trust_user_extension` row (defaults apply on first read).
 **Steps:**
-1. As admin, call `POST /api/trust/admin/verification` to set a target's status to `verified`.
-2. Repeat with `flagged`.
-3. Attempt the same call as a plain member.
-**Expected:** Admin sets the target's `trust_status` and appends one admin evidence item; bad input
-(`targetUserId` / `trustStatus`) returns 400. The plain-member attempt is denied
-(`requiredRoles: ['admin']`). Every change is CSRF-guarded and written to
-`trust_admin_audit_trail`. The snapshot route never changes `trust_status` — only this route does.
-**Result:** web ☐ — notes:
+1. As admin, call `GET /api/trust/user/self`.
+2. Inspect the response body.
 
-### TRUST-A4 · Visibility controls a cross-user read
-**Role:** admin / internal (plus a second member account) · **Surfaces:** web (internal surface)
+**Expected:**
+- HTTP 200.
+- `trustStatus` is a string (`unverified`, `verified`, or `flagged`) — never a number.
+- `trustEvidence` is an array; if the seeded admin has upstream activity, at least one item is present (e.g. `"Active on N days"`).
+- No field named `score`, `trustScore`, or any numeric rank appears in the response.
+- A new `trust_signal_snapshot` row was written (recompute-on-read behaviour) — confirm by calling the route a second time and checking `updatedAt` is equal to or newer than a timestamp you noted before the first call.
+- If the recompute had thrown internally the route would still return 200 using the last stored extension (fallback); a crash/500 here is a bug.
+
+**Result:** web ☐ android ☐
+
+---
+
+### TR-A2 — Android Trust screen: all four render states
+
+**Role:** Admin  
+**Surfaces:** Android  
+**Precondition:** Seed complete. Admin signed in on the device.
+
 **Steps:**
-1. As member A, set visibility via `POST /api/trust/visibility` to `private`.
-2. As member B (not admin, not the owner), read `GET /api/trust/user/[A's id]`.
-3. Read the same as an admin.
-**Expected:** `public` is readable by any authenticated, unlocked member; `private`/`restricted`
-are readable only by the owner or an admin, and a blocked viewer gets `403`. A target with no
-extension row defaults to `public`. The visibility update accepts only the three values (others
-return 400), is CSRF-guarded, and writes an audit row.
-**Result:** web ☐ — notes:
+1. Open the Trust screen while the network call is in-flight — note the loading state.
+2. Wait for data to arrive and observe the populated or empty state.
+3. Sign out and navigate back to the Trust screen (or any surface that shows Trust to a signed-out visitor).
+
+**Expected:**
+- **Loading state:** branded taglines visible, no crash.
+- **Populated state** (if the admin account has seeded upstream activity): evidence list items render (e.g. "Active on N days", "Completed N SocketRelay trades"); no hardcoded checklist items; no progress percentage; no "Trust Score" numeric card.
+- **Empty state** (if no upstream activity for this user): empty-state prompt renders without errors.
+- **Public/unauthenticated state:** marketing/visitor view renders (matches `MobileTrustPublic.tsx` design intent) — no private data shown.
+- In every state: no `MockTrust` data visible; `trustStatus`, `trustVisibility`, and `trustEvidence` fields come from `GET /api/trust/user/self`.
+
+**Result:** android ☐
+
+---
+
+### TR-A3 — Cross-user read: public visibility
+
+**Role:** Admin  
+**Surfaces:** Web API  
+**Precondition:** A second seeded member ("Member B") exists with `trust_visibility = public` (the default when no extension row exists).
+
+**Steps:**
+1. As admin, call `GET /api/trust/user/[memberB_userId]`.
+
+**Expected:**
+- HTTP 200.
+- Response contains `trustStatus`, `trustEvidence`, `trustVisibility`.
+- No recompute is triggered for the target (this is a plain read route); subsequent calls return the same `updatedAt`.
+
+**Result:** web ☐
+
+---
+
+### TR-A4 — Cross-user read: private/restricted visibility blocks non-owner non-admin
+
+**Role:** Admin (to set up); tested from a non-owner non-admin caller  
+**Surfaces:** Web API  
+**Precondition:** Member B's `trust_visibility` is set to `private` (set it via TR-A5 first, or directly in the DB after seeding).
+
+**Steps:**
+1. Authenticate as a **different** member (not Member B, not admin) and call `GET /api/trust/user/[memberB_userId]`.
+2. Then authenticate as admin and call the same route.
+
+**Expected:**
+- Non-owner, non-admin caller: HTTP 403.
+- Admin caller: HTTP 200 with full panel.
+
+**Result:** web ☐
+
+---
+
+### TR-A5 — Visibility update (self-scope, valid values)
+
+**Role:** Admin acting as any authenticated user  
+**Surfaces:** Web API  
+**Precondition:** Admin signed in, CSRF header available (same-origin request or replicated in the test client).
+
+**Steps:**
+1. `POST /api/trust/visibility` with body `{ "trustVisibility": "private" }` and the required CSRF header.
+2. Call `GET /api/trust/user/self` and note `trustVisibility`.
+3. `POST /api/trust/visibility` with body `{ "trustVisibility": "restricted" }`.
+4. Call `GET /api/trust/user/self` again.
+5. `POST /api/trust/visibility` with body `{ "trustVisibility": "public" }` to reset.
+
+**Expected:**
+- Each POST returns HTTP 200 with `{ userId, trustVisibility, updatedAt }` matching the value just sent.
+- Subsequent self-reads reflect the updated visibility.
+- A row is written to `trust_admin_audit_trail` for each mutation (verify by checking the table or an admin audit endpoint if exposed).
+
+**Result:** web ☐
+
+---
+
+### TR-A6 — Visibility update: invalid value rejected
+
+**Role:** Admin (or any authenticated user)  
+**Surfaces:** Web API  
+**Precondition:** Admin signed in.
+
+**Steps:**
+1. `POST /api/trust/visibility` with body `{ "trustVisibility": "semi-public" }` and the CSRF header.
+
+**Expected:**
+- HTTP 400. Body contains an error message indicating the value is invalid.
+- `trust_user_extension` row is unchanged.
+
+**Result:** web ☐
+
+---
+
+### TR-A7 — Visibility update: CSRF guard rejects cross-origin mutation
+
+**Role:** Any authenticated user  
+**Surfaces:** Web API  
+**Precondition:** Admin signed in.
+
+**Steps:**
+1. `POST /api/trust/visibility` with body `{ "trustVisibility": "private" }` but **without** the required same-origin CSRF confirmation header.
+
+**Expected:**
+- HTTP 403 or 400. The visibility is not changed.
+
+**Result:** web ☐
+
+---
+
+### TR-A8 — Signal snapshot refresh
+
+**Role:** Admin  
+**Surfaces:** Web API  
+**Precondition:** Seed complete; upstream plugin tables (`login_events`, `socket_relay_fulfillments`, etc.) contain rows for the admin user.
+
+**Steps:**
+1. `POST /api/trust/signal/snapshot` with the CSRF header as admin.
+2. Inspect the response body.
+3. Check `trust_signal_snapshot` for a new row (newest `created_at`).
+4. Check `trust_user_extension.trust_evidence` for the admin user.
+
+**Expected:**
+- HTTP 200. Response contains `snapshotId`, `generatedAt`, `metrics` object, `trustEvidence` array.
+- `metrics` contains fields like `loginDays`, `loginEvents`, `socketRelayCompletedTrades`, `socketRelayRequestsOpened`, `serviceCreditsDistinctPayers`, `serviceCreditsCompletedReceived` — all numbers, none of them a "trust score".
+- Per-plugin participation fields present (e.g. `lighthouseMatchesAccepted`, `chymeRoomsJoined`, etc.) — zero is acceptable for plugins where the admin has no activity; a zero field produces no evidence item.
+- `trustStatus` in the response equals the admin's current status and is **unchanged** by this call.
+- `trustEvidence` items each follow the "verb N noun" pattern (e.g. "Active on 5 days", "Completed 3 SocketRelay trades") — no item contains a raw count from ClickLog, Mood, GentlePulse, Unlock, or the Foundation seeker side.
+- No evidence item references a money amount or balance.
+- A row exists in `trust_admin_audit_trail` for this mutation.
+
+**Result:** web ☐
+
+---
+
+### TR-A9 — Signal snapshot: privacy exclusions are absent from evidence
+
+**Role:** Admin  
+**Surfaces:** Web API  
+**Precondition:** Seed complete. Seed data includes Mood, GentlePulse, or ClickLog activity for at least one user if possible; otherwise verify by inspection of the snapshot response.
+
+**Steps:**
+1. `POST /api/trust/signal/snapshot` as admin (or use the snapshot from TR-A8).
+2. Read through every item in `trustEvidence`.
+
+**Expected:**
+- No evidence item mentions Mood, GentlePulse, ClickLog, Unlock, Foundation seeker activity, member blocks, or safety reports.
+- No numeric trust score appears anywhere.
+
+**Result:** web ☐
+
+---
+
+### TR-A10 — Admin verification: set status to `verified`
+
+**Role:** Admin  
+**Surfaces:** Web API  
+**Precondition:** Seed complete. Member B exists. Admin signed in with CSRF header available.
+
+**Steps:**
+1. `POST /api/trust/admin/verification` with body `{ "targetUserId": "<memberB_id>", "trustStatus": "verified", "note": "Manual review passed." }`.
+2. Call `GET /api/trust/user/[memberB_userId]` as admin.
+
+**Expected:**
+- POST returns HTTP 200 with `{ userId, trustStatus: "verified", trustEvidence, updatedAt, reviewedByUserId }`.
+- `reviewedByUserId` matches the admin's user ID.
+- `trustEvidence` contains an appended admin note item reflecting "Manual review passed."
+- The subsequent GET confirms `trustStatus` is now `verified`.
+- A row is written to `trust_admin_audit_trail`.
+
+**Result:** web ☐
+
+---
+
+### TR-A11 — Admin verification: set status to `flagged`
+
+**Role:** Admin  
+**Surfaces:** Web API  
+**Precondition:** Same as TR-A10.
+
+**Steps:**
+1. `POST /api/trust/admin/verification` with body `{ "targetUserId": "<memberB_id>", "trustStatus": "flagged", "note": "Suspicious activity." }`.
+2. Call `GET /api/trust/user/[memberB_userId]` as admin.
+
+**Expected:**
+- HTTP 200; `trustStatus` is `flagged` in both the POST response and the subsequent GET.
+- Admin note appended to `trustEvidence`.
+- Audit trail row written.
+
+**Result:** web ☐
+
+---
+
+### TR-A12 — Admin verification: invalid `trustStatus` rejected
+
+**Role:** Admin  
+**Surfaces:** Web API  
+**Precondition:** Admin signed in.
+
+**Steps:**
+1. `POST /api/trust/admin/verification` with body `{ "targetUserId": "<memberB_id>", "trustStatus": "banned" }`.
+
+**Expected:**
+- HTTP 400. Error message indicates the status value is not allowed.
+- `trust_user_extension` for Member B is unchanged.
+
+**Result:** web ☐
+
+---
+
+### TR-A13 — Admin verification: missing `targetUserId` rejected
+
+**Role:** Admin  
+**Surfaces:** Web API  
+**Precondition:** Admin signed in.
+
+**Steps:**
+1. `POST /api/trust/admin/verification` with body `{ "trustStatus": "verified" }` (no `targetUserId`).
+
+**Expected:**
+- HTTP 400. Error indicates `targetUserId` is required.
+
+**Result:** web ☐
+
+---
+
+### TR-A14 — Admin verification: non-admin caller blocked
+
+**Role:** Non-admin authenticated member  
+**Surfaces:** Web API  
+**Precondition:** A non-admin member account is available.
+
+**Steps:**
+1. Authenticate as a regular member (not admin).
+2. `POST /api/trust/admin/verification` with a valid body `{ "targetUserId": "<any_id>", "trustStatus": "verified" }`.
+
+**Expected:**
+- HTTP 403. The target's `trust_user_extension` is not modified.
+
+**Result:** web ☐
+
+---
+
+### TR-A15 — Audit trail written for all mutations
+
+**Role:** Admin  
+**Surfaces:** Web API (DB check)  
+**Precondition:** TR-A5 (visibility update), TR-A8 (snapshot), TR-A10 (verification) have been run in this session.
+
+**Steps:**
+1. Query `trust_admin_audit_trail` for rows created in this session (filter by `created_at` > session start or by `actor_user_id` matching the admin).
+
+**Expected:**
+- At minimum three rows exist from this session: one for the visibility update, one for the snapshot refresh, one for the admin verification.
+- Each row has a non-null `id` (UUID), `actor_user_id`, `command`, `policy_status`, `target_user_id`, `request_id`, and `created_at`.
+- No row contains raw sensitive payloads (no credit amounts, no per-row SocketRelay detail, no PHI).
+
+**Result:** web ☐
+
+---
+
+### TR-A16 — TrustWidgetCard: no numeric score, evidence list present
+
+**Role:** Admin  
+**Surfaces:** Web  
+**Precondition:** Admin has at least one evidence item (run TR-A8 first).
+
+**Steps:**
+1. Open the page that renders `TrustWidgetCard` (account hub or community shell right rail) as admin.
+2. Inspect the card visually.
+
+**Expected:**
+- ShieldCheck header visible with the blue brand palette.
+- Evidence items render as text lines (e.g. "Active on N days") — not as a number or score gauge.
+- No "Verified" / "Unverified" status chip (the platform is signal-only; verification was dropped from the UI).
+- If the admin has no evidence yet, the empty state / onboarding prompts render instead of an error.
+- No dead component names appear (no reference to the removed `TrustEvidencePanel`, `TrustStatusBadge`, or `TrustVisibilityBadge`).
+
+**Result:** web ☐
+
+---
+
+### TR-A17 — `trust-public-shell`: signed-out marketing view
+
+**Role:** Unauthenticated visitor  
+**Surfaces:** Web  
+**Precondition:** None.
+
+**Steps:**
+1. Sign out (or open an incognito window).
+2. Navigate to any page that embeds `trust-public-shell.tsx`.
+
+**Expected:**
+- Marketing/visitor view renders without crashing.
+- No private trust data (evidence items, status) is visible.
+- No authentication error thrown to the UI.
+
+**Result:** web ☐
 
 ---
 
 ## Parity check (web ↔ android)
 
-Trust has no member-facing android surface of its own for this internal reputation/computation work
-— there is no web ↔ android parity row to check here. (A member-facing android Trust widget exists
-that reads `GET /api/trust/user/self`; the internal computation and admin verification tested above
-are web/server only.)
+The following cases must produce consistent data across surfaces since both read from the same API:
+
+| Case | What must match |
+|---|---|
+| TR-A1 | `GET /api/trust/user/self` returns the same `trustStatus`, `trustVisibility`, and `trustEvidence` content to both the web widget and the Android Trust screen for the same signed-in admin. |
+| TR-A2 / TR-A16 | Evidence items shown on Android (`Trust.tsx`) and in `TrustWidgetCard` (web) reflect the same underlying snapshot — same counts, same "verb N noun" phrasing. |
+| TR-A8 | After running `POST /api/trust/signal/snapshot` via the web API, the Android screen (on next load/refresh) shows the updated evidence list. |
 
 ---
 
 ## Known gaps — do not file these as bugs
 
-Carried from the inventory's "Gaps and Known Technical Debt" section. If you hit one of these, it is
-already tracked, not a new bug:
-
-- Trust evidence is rendered from a structured JSONB field on `trust_user_extension`; no rich-text
-  schema or attachment storage contract has been published.
-- No automated/scheduled refresh job exists — recompute is on-demand via the snapshot route (and
-  on a member's own self-read).
-- The model counts engagement but does not expose a `member_since` or active-plugin-count signal;
-  those design fields stay omitted until a backing source is wired.
+1. **No scheduled refresh job.** The derived signal is only recomputed on-demand (via the snapshot route or the self-read route). Evidence items will not update between explicit calls. This is by design until a background job is added.
+2. **`member_since` and active-plugin-count fields absent.** The design references "Member Since" and active-plugin-count stats; these are omitted because no backing API field exists yet. Do not file as a bug.
+3. **Android visibility update is display-only.** The visibility dropdown on the Android Trust screen renders but does not yet call `POST /api/trust/visibility`. The backend is implemented; the Android UI wiring is a planned follow-up. Do not file the display-only state as a bug.
+4. **Trust evidence JSONB schema unpublished.** Evidence content is structured JSONB; no rich-text schema or attachment storage contract has been published. Variations in item structure are expected.
+5. **No dedicated seed script for Trust.** Trust has no seed data of its own; it derives from upstream plugins. If upstream tables are empty the evidence list will be empty — that is correct behaviour, not a bug.
