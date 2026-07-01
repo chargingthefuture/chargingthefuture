@@ -184,7 +184,7 @@ Result: web ☐ android ☐
 1. On web, open the **Help out** tab → "Trips you're helping with"; find your active trip. (On Android this runs via API/seed until the parity pass — issue #1250.)
 2. Tap the forward action (Start trip → Mark picked up → Mark delivered → Mark complete) to advance one step.
 
-**Expected:** The trip status changes one step forward and the new state shows on the card. Transitions are forward-only and append-only — there is no control to revert to the previous state. An out-of-order transition (via the API) is refused.
+**Expected:** The trip status changes one step forward and the new state shows on the card. Transitions are forward-only and append-only — there is no control to revert to the previous state. An out-of-order transition (via the API) is refused. When you mark the trip **complete** and the requester chose ServiceCredits settlement, the credits move from the requester to you (verify in your ServiceCredits wallet) and a `trust-transport.trip.settlement` audit event is written; a completed Free/Barter trip moves no credits.
 
 Result: web ☐ android ☐
 

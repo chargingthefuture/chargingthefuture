@@ -255,6 +255,19 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+- 2026-06-30: ServiceCredits settlement on trip completion (owner decision). When a trip transitions to
+  `completed` and the requester chose **ServiceCredits** settlement (`price_currency = 'SC'` with a
+  positive `price_amount`), `updateTripStatus` now moves the credits requester → provider via the
+  service-credits `createTransfer` (rail: balance), keyed idempotently by trip id (`trust-transport-settlement-<tripId>`),
+  and writes a `trust-transport.trip.settlement` audit event. It runs after the completion commits and is
+  best-effort: a failure (e.g. the requester lacks balance) is logged for reconciliation rather than
+  reverting the completed trip, and the trip-id key means a retry cannot double-pay. `trip.status.update`
+  command `dataAccess` now lists the `service_credits_*` tables it touches on completion. No schema change.
+  **Scope:** only ServiceCredits settlement moves value here — the provider is paid to their ServiceCredits
+  wallet (not the TrustTransport earnings ledger). Fiat/crypto earnings crediting + currency-aware payouts
+  (issue #1233) are a follow-up that needs an earnings-ledger migration (`amount INTEGER → NUMERIC`, add a
+  `trip_id` column; the seed already assumes both).
+
 - 2026-06-30: Earnings + payouts surface (web). New `GET /api/trust-transport/earnings` returns the
   caller's own available earnings balance (`getMyEarningsBalance`, wrapping the existing ledger sum). A
   new "Earnings" tab shows the available balance, a "Request a payout" form (posts to the existing
