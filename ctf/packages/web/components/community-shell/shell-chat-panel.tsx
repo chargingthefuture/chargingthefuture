@@ -67,6 +67,21 @@ function formatPostTime(iso: string): string {
   return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+// Deterministic avatar tint for a signed-out community post, keyed on the author's handle, so
+// distinct members read as distinct people instead of one purple stream. Posts with no handle
+// (anonymized "Community member") share a single neutral slate tint.
+function publicAvatarBackground(authorUsername: string | null): string {
+  if (!authorUsername) {
+    return 'linear-gradient(135deg, #475569 0%, #334155 100%)';
+  }
+  let hash = 0;
+  for (let index = 0; index < authorUsername.length; index += 1) {
+    hash = (hash * 31 + authorUsername.charCodeAt(index)) >>> 0;
+  }
+  const hue = hash % 360;
+  return `linear-gradient(135deg, hsl(${hue}, 62%, 55%) 0%, hsl(${(hue + 38) % 360}, 62%, 45%) 100%)`;
+}
+
 // Signed-out Commons: community (peer) posts are public the way Quora posts are, so a not-signed-in
 // visitor reads them here — read-only and nothing else (no AI assistant, no concierge chips, no
 // composer). Posts come from the public, unauthenticated endpoint, which itself only returns posts
@@ -144,10 +159,19 @@ function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats
             const initial = post.authorUsername ? post.authorUsername.charAt(0).toUpperCase() : 'C';
             return (
               <div key={post.id} className={styles.chatRow}>
-                <div className={styles.chatAvatar} aria-hidden="true">{initial}</div>
+                <div
+                  className={styles.chatAvatar}
+                  style={{ background: publicAvatarBackground(post.authorUsername) }}
+                  aria-hidden="true"
+                >
+                  {initial}
+                </div>
                 <div className={styles.chatBubbleGroup}>
+                  {/* Sender name above the bubble, matching the signed-in stream. Without it every
+                      post read as one speaker; here each message is clearly attributed to its author. */}
+                  <span className={styles.chatSender}>{authorLabel}</span>
                   <div className={`${styles.chatBubble} ${styles.chatBubbleHub}`}>{post.body}</div>
-                  <span className={styles.chatTime}>{authorLabel} · {formatPostTime(post.createdAtIso)}</span>
+                  <span className={styles.chatTime}>{formatPostTime(post.createdAtIso)}</span>
                 </div>
               </div>
             );
