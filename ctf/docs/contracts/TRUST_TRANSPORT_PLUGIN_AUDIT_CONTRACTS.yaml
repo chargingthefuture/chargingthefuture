@@ -159,3 +159,29 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: trust-transport
+    command: trust-transport.trip.settlement
+    commandVersion: 1.0.0
+    purpose: trip_settlement_service_credits
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        settlementCurrencyCheck: pass_or_fail
+        amountValidationCheck: pass_or_fail
+    dataClassesAccessed:
+      - service_credit_transfer_metadata
+      - trip_status_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      tripId: trip_identifier
+      transferId: transfer_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

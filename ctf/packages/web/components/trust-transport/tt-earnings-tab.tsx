@@ -80,7 +80,7 @@ export function TrustTransportEarningsTab() {
     <div style={{ flex: 1, padding: "24px", overflowY: "auto", minHeight: 0 }}>
       <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 6 }}>Earnings</div>
       <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 20, lineHeight: 1.5, maxWidth: 520 }}>
-        What you&apos;ve earned by helping fulfil trips, and your payout requests. Payouts are reviewed by an admin.
+        ServiceCredits you earn are paid straight to your ServiceCredits wallet when a trip completes. This tab tracks other-currency earnings and your payout requests, which an admin reviews.
       </div>
 
       {loading ? (
