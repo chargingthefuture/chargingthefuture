@@ -146,6 +146,17 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
     return () => controller.abort();
   }, [initialProviderId]);
 
+  // "Browse All Providers" in the right rail: return to the full, unfiltered list. Just switching to
+  // the browse tab was a no-op whenever browse was already open (the default), so also clear the trade,
+  // search text, and skill filters so the button always lands the member on every provider.
+  const browseAllProviders = useCallback(() => {
+    setTab("browse");
+    setTrade("All Trades");
+    setQuery("");
+    setSkillId(null);
+    setSkillName(null);
+  }, []);
+
   // Real quote creation is two steps: open a connection thread, then request a quote on it.
   const requestQuote = useCallback(async (provider: ProviderView) => {
     setSubmitting(true);
@@ -325,7 +336,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
         </header>
         {content}
       </div>
-      <RightRail providers={providers} quoteCount={quotes.length} onBrowse={() => setTab("browse")} onSelect={setSelected} />
+      <RightRail providers={providers} quoteCount={quotes.length} onBrowse={browseAllProviders} onSelect={setSelected} />
     </div>,
   );
 }
