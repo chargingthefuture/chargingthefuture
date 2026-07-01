@@ -373,12 +373,10 @@ export const PRIVACY_DOCUMENT: PolicyDocument = {
         {
           type: 'p',
           text:
-            'We do not use Supabase to store your account, profile, or personal information; ' +
-            'by policy it is limited to document storage only. We may also disclose ' +
-            'information where the law requires it, in response to valid legal process, or ' +
-            'where we reasonably believe it is necessary to prevent imminent harm to a ' +
-            'person. If our project ever transfers to a new operator, we will protect your ' +
-            'information under terms consistent with this policy.',
+            'We may also disclose information where the law requires it, in response to ' +
+            'valid legal process, or where we reasonably believe it is necessary to prevent ' +
+            'imminent harm to a person. If our project ever transfers to a new operator, we ' +
+            'will protect your information under terms consistent with this policy.',
         },
       ],
     },
