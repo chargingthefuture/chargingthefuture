@@ -44,14 +44,16 @@ flow is one-way, like gas-station reward points.
 
 - Submit a contribution claim of one of three kinds:
   - **Gift card** (`amazon`, `apple`, or `dennys`): the member states the amount (over 0, at most
-    500 USD) and their own Signal contact (URL or phone number — reduces fraud). The gift-card
-    **code is never collected or stored anywhere** — the member sends the code to the owner over
-    Signal, outside the app. After submitting, the member sees the owner-authored Signal
-    instructions (codes go to the owner on Signal; everything else belongs in the public Hub
-    support channel).
-  - **Quora comment**: the post URL is optional, because much of the user base struggles with
-    URLs; the owner finds the comment via notifications and pastes the URL in during review.
-  - **GitHub star**: profile URL likewise optional, same reason.
+    500 USD) and their own Signal contact (URL or phone number — reduces fraud). It can be a physical
+    or a digital gift card. The gift-card **code is never collected or stored anywhere** — the member
+    sends the code to the owner over Signal, outside the app. The member is warned, on both the form
+    and the post-submit confirmation, to **never post the code in the Commons** (the single public
+    group chat): doing so means no ServiceCredits and the owner never receives the gift. Questions and
+    anything other than the code belong in the Commons.
+  - **Quora comment**: the member pastes the link to their comment — **required**, because the owner
+    needs it to find and confirm the contribution. If the member cannot find the link, the form points
+    them to the Commons (the group chat) to ask for help rather than submitting an untrackable claim.
+  - **GitHub star**: the member pastes their GitHub profile link — **required**, same reason.
 - See their own claim history and statuses (pending / confirmed / rejected).
 - See the current fundraiser cycle and collective progress (USD raised, comments, stars,
   contributor count) toward the owner-set goals.
@@ -286,6 +288,17 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-07-01: Trackability + Commons safety pass (owner feedback). (1) The Quora comment link and the
+  GitHub profile link are now **required** on submit (web + Android) — without them the owner cannot
+  find and confirm the contribution. Each field shows a help line: if you cannot find the link, ask in
+  the Commons (the group chat). (2) Corrected copy that pointed members to a non-existent "#support
+  channel in the Hub": there is one channel, the Commons. The post-submit confirmation now points
+  questions to the Commons and carries a prominent warning to **never post a gift card code in the
+  Commons** (it is a public group chat — doing so means no ServiceCredits and the owner never receives
+  the gift; codes go only to the owner on Signal). The gift-card form carries the same warning. (3) On
+  desktop, removed the "My contributions" left-nav item — the member's contributions already show
+  permanently in the right rail, so the item only scrolled to something already on screen. The mobile
+  "My history" tab is unchanged. Presentation/copy only — no route, schema, or contract change.
 - 2026-07-01: Contribute-flow copy and cleanup pass (owner feedback). (1) Fixed "50SC" running
   together in the credits disclaimer — the inline JSX interpolation dropped the space where the card
   template literals did not, so both amounts are now built as template literals (`{`${creditsPerUsd} SC`}` /

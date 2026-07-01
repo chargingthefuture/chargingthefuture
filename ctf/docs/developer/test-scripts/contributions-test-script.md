@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributions-feature-inventory.md` |
-| **Generated** | 2026-07-01 (contribute copy pass: gift-card physical/digital + Signal, credits spacing, no placeholder; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-01 (required contribution links + Commons safety copy + desktop nav trim; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -61,19 +61,25 @@ Voluntary fundraiser drives; thank-you credits, never money. Member role unless 
 2. Pick a method (Amazon / Apple / Denny's), enter an amount (over 0, at most 500 USD), and your own
    Signal contact (URL or phone number).
 3. Submit.
-**Expected:** The claim is accepted and lands `pending`. No gift-card code field exists. After
+**Expected:** The claim is accepted and lands `pending`. No gift-card code field exists. The form
+states the card can be physical or digital and warns to never post the code in the Commons. After
 submitting, the owner-authored Signal instructions show (codes go to the owner on Signal; the owner's
-Signal contact appears inline when set). An amount of 0 or over 500, or a missing Signal contact, is
-rejected.
+Signal contact appears inline when set), plus a prominent warning that posting the code in the Commons
+(the public group chat) means no ServiceCredits and the owner never receives the gift, and a "questions
+→ ask in the Commons" line. There is **no** reference to a "#support channel". An amount of 0 or over
+500, or a missing Signal contact, is rejected.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### CON-2 · Submit a Quora comment and a GitHub star
+### CON-2 · Submit a Quora comment and a GitHub star (link required)
 **Role:** member · **Surfaces:** all
 **Steps:**
-1. Submit a Quora comment claim — leave the post URL blank (it is optional).
-2. Submit a GitHub star claim — leave the profile URL blank (it is optional).
-**Expected:** Both accept with the URL omitted (much of the user base struggles with URLs; the owner
-fills it in during review). Both land `pending`.
+1. Choose the Quora comment path. Try to submit with the link field blank.
+2. Paste a link and submit.
+3. Repeat for the GitHub star path (profile link).
+**Expected:** The link field is **required** (marked with a `*`). Submitting blank does nothing except
+show "Please paste the link so we can find and confirm your contribution." Each form shows a help line:
+if you cannot find the link, ask in the Commons (the group chat). With a link pasted, both submit and
+land `pending`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CON-3 · GitHub star is creditable at most once

@@ -92,9 +92,13 @@ function GiftCardForm({ t, submitting, error, onSubmit, onCancel }: { t: Contrib
   return (
     <div style={{ background: t.SURFACE, borderRadius: 12, padding: 20, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
       <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 8 }}>Gift card details</div>
-      <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, margin: '0 0 16px' }}>
+      <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, margin: '0 0 10px' }}>
         Your gift card can be physical or digital. Don&apos;t enter the card number or code here — after you
-        submit, share the card details with the platform owner in your Signal chat.
+        submit, send the card details privately to the platform owner on Signal (you&apos;ll get the link).
+      </p>
+      <p style={{ fontSize: 12, color: '#EF4444', lineHeight: 1.6, margin: '0 0 16px' }}>
+        Never post your gift card code or details in the Commons. It&apos;s a public group chat, so if you share the
+        code there you won&apos;t receive ServiceCredits and the owner won&apos;t receive the gift.
       </p>
       <div style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>Card type</div>
@@ -134,6 +138,7 @@ function UrlForm({
   blurb,
   fieldLabel,
   placeholder,
+  helpText,
   submitting,
   error,
   onSubmit,
@@ -144,22 +149,49 @@ function UrlForm({
   blurb: string;
   fieldLabel: string;
   placeholder: string;
+  helpText: string;
   submitting: boolean;
   error: string | null;
-  onSubmit: (url: string | undefined) => void;
+  onSubmit: (url: string) => void;
   onCancel: () => void;
 }) {
   const [url, setUrl] = useState('');
+  const [missing, setMissing] = useState(false);
+  // The link is required: without it the owner cannot find and confirm the contribution. If the
+  // member cannot find it, the help text points them to the Commons rather than letting them submit
+  // an untrackable claim.
+  function handleSubmit() {
+    const trimmed = url.trim();
+    if (!trimmed) {
+      setMissing(true);
+      return;
+    }
+    onSubmit(trimmed);
+  }
   return (
     <div style={{ background: t.SURFACE, borderRadius: 12, padding: 20, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
       <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 8 }}>{title}</div>
       <p style={{ fontSize: 13, color: t.MUTED, margin: '0 0 14px', lineHeight: 1.6 }}>{blurb}</p>
-      <div style={{ marginBottom: 18 }}>
-        <label style={labelStyle(t)}>{fieldLabel}</label>
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder={placeholder} style={inputStyle(t)} />
+      <div style={{ marginBottom: 8 }}>
+        <label style={labelStyle(t)}>
+          {fieldLabel} <span style={{ color: '#EF4444' }}>*</span>
+        </label>
+        <input
+          value={url}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            if (missing) {
+              setMissing(false);
+            }
+          }}
+          placeholder={placeholder}
+          style={inputStyle(t)}
+        />
       </div>
+      <p style={{ fontSize: 11, color: t.MUTED, margin: '0 0 14px', lineHeight: 1.6 }}>{helpText}</p>
+      {missing && <div style={{ fontSize: 12, color: '#EF4444', marginBottom: 10 }}>Please paste the link so we can find and confirm your contribution.</div>}
       <ErrorLine error={error} />
-      <FormActions t={t} submitting={submitting} onSubmit={() => onSubmit(url.trim() ? url.trim() : undefined)} onCancel={onCancel} />
+      <FormActions t={t} submitting={submitting} onSubmit={handleSubmit} onCancel={onCancel} />
     </div>
   );
 }
@@ -255,9 +287,10 @@ export function ContributionPaths({
         <UrlForm
           t={t}
           title="Quora comment"
-          blurb="Leave a comment on a Quora post in our space. If you have the link, paste it here — if not, that's fine, we'll find it."
-          fieldLabel="Quora post URL (optional)"
+          blurb="Leave a comment on a Quora post in our space, then paste the link to your comment so we can find and confirm it."
+          fieldLabel="Link to your Quora comment"
           placeholder="https://www.quora.com/…"
+          helpText="Need help finding the link? Ask in the Commons — the group chat — and we'll help you find it."
           submitting={submitting}
           error={error}
           onSubmit={onSubmitQuora}
@@ -268,9 +301,10 @@ export function ContributionPaths({
         <UrlForm
           t={t}
           title="GitHub star"
-          blurb="Star our repository on GitHub. If you'd like to share your GitHub profile so we can confirm, paste it here — no obligation."
-          fieldLabel="GitHub profile URL (optional)"
+          blurb="Star our repository on GitHub, then paste your GitHub profile link so we can confirm it."
+          fieldLabel="Your GitHub profile URL"
           placeholder="https://github.com/your-username"
+          helpText="Need help finding the link? Ask in the Commons — the group chat — and we'll help you find it."
           submitting={submitting}
           error={error}
           onSubmit={onSubmitGithub}

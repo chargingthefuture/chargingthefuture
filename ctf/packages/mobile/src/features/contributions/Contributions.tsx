@@ -101,7 +101,8 @@ function GiftCardForm({ submitting, error, onSubmit, onCancel }: { submitting: b
   const [signal, setSignal] = useState('');
   return (
     <View style={st.formCard}>
-      <Text style={[st.hint, { marginBottom: 12 }]}>Your gift card can be physical or digital. Don't enter the card number or code here — after you submit, share the card details with the platform owner in your Signal chat.</Text>
+      <Text style={[st.hint, { marginBottom: 6 }]}>Your gift card can be physical or digital. Don't enter the card number or code here — after you submit, send the card details privately to the platform owner on Signal (you'll get the link).</Text>
+      <Text style={[st.warnText, { marginBottom: 12 }]}>Never post your gift card code in the Commons — it's a public group chat, so if you do you won't receive ServiceCredits and the owner won't receive the gift.</Text>
       <Text style={st.fieldLabel}>Card type</Text>
       <View style={st.chipRow}>
         {CARD_TYPES.map((c) => (
@@ -130,16 +131,42 @@ function GiftCardForm({ submitting, error, onSubmit, onCancel }: { submitting: b
   );
 }
 
-function UrlForm({ blurb, label, placeholder, submitting, error, onSubmit, onCancel }: { blurb: string; label: string; placeholder: string; submitting: boolean; error: string | null; onSubmit: (_url: string | undefined) => void; onCancel: () => void }) {
+function UrlForm({ blurb, label, placeholder, helpText, submitting, error, onSubmit, onCancel }: { blurb: string; label: string; placeholder: string; helpText: string; submitting: boolean; error: string | null; onSubmit: (_url: string) => void; onCancel: () => void }) {
   const [url, setUrl] = useState('');
+  const [missing, setMissing] = useState(false);
+  // The link is required: without it the owner cannot find and confirm the contribution.
+  function handleSubmit() {
+    const trimmed = url.trim();
+    if (!trimmed) {
+      setMissing(true);
+      return;
+    }
+    onSubmit(trimmed);
+  }
   return (
     <View style={st.formCard}>
       <Text style={st.formBlurb}>{blurb}</Text>
-      <Text style={st.fieldLabel}>{label}</Text>
-      <TextInput value={url} onChangeText={setUrl} placeholder={placeholder} placeholderTextColor={SUBTLE} autoCapitalize="none" style={st.input} />
+      <Text style={st.fieldLabel}>
+        {label} <Text style={{ color: '#EF4444' }}>*</Text>
+      </Text>
+      <TextInput
+        value={url}
+        onChangeText={(v) => {
+          setUrl(v);
+          if (missing) {
+            setMissing(false);
+          }
+        }}
+        placeholder={placeholder}
+        placeholderTextColor={SUBTLE}
+        autoCapitalize="none"
+        style={st.input}
+      />
+      <Text style={st.hint}>{helpText}</Text>
+      {missing ? <Text style={st.errorText}>Please paste the link so we can find and confirm your contribution.</Text> : null}
       {error ? <Text style={st.errorText}>{error}</Text> : null}
       <View style={st.formActions}>
-        <TouchableOpacity disabled={submitting} onPress={() => onSubmit(url.trim() ? url.trim() : undefined)} style={[st.primaryBtn, { flex: 1 }]}>
+        <TouchableOpacity disabled={submitting} onPress={handleSubmit} style={[st.primaryBtn, { flex: 1 }]}>
           <Text style={st.primaryBtnText}>{submitting ? 'Submitting…' : 'Submit'}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={onCancel} style={st.secondaryBtn}>
@@ -179,9 +206,13 @@ function Confirmation({ data, onViewHistory }: { data: FundraiserResponse; onVie
         ) : (
           <Text style={st.bodyText}>{instructions}</Text>
         )}
+        <View style={st.warnBox}>
+          <Text style={st.warnLabel}>Send the code only on Signal — never in the Commons</Text>
+          <Text style={st.warnText}>The Commons is a public group chat. If you post your gift card code or details there, you will not receive ServiceCredits and the owner will not receive the gift. The code goes only to the owner on Signal, using the link above.</Text>
+        </View>
         <View style={st.supportBox}>
-          <Text style={st.supportLabel}>Questions or anything else?</Text>
-          <Text style={st.supportLink}>Post in the #support channel in the Hub — that's the right place for anything other than sending the code.</Text>
+          <Text style={st.supportLabel}>Questions or need help?</Text>
+          <Text style={st.supportLink}>Ask in the Commons — the group chat. It's the place for anything other than sending the code.</Text>
         </View>
       </View>
 
@@ -357,23 +388,25 @@ export const Contributions: React.FC = () => {
                   )}
                   {active && p.key === 'quora_comment' && (
                     <UrlForm
-                      blurb="Leave a comment on a Quora post. Paste the URL if you have it — if not, that's fine, we'll find it."
-                      label="Quora post URL (optional)"
+                      blurb="Leave a comment on a Quora post, then paste the link to your comment so we can find and confirm it."
+                      label="Link to your Quora comment"
                       placeholder="https://www.quora.com/…"
+                      helpText="Need help finding the link? Ask in the Commons — the group chat — and we'll help you find it."
                       submitting={submitting}
                       error={submitError}
-                      onSubmit={(url) => void submit({ kind: 'quora_comment', ...(url ? { quoraPostUrl: url } : {}) }, false)}
+                      onSubmit={(url) => void submit({ kind: 'quora_comment', quoraPostUrl: url }, false)}
                       onCancel={() => setActivePath(null)}
                     />
                   )}
                   {active && p.key === 'github_star' && !disabled && (
                     <UrlForm
-                      blurb="Star our GitHub repository. If you'd like to share your profile so we can confirm, paste it — no obligation."
-                      label="GitHub profile URL (optional)"
+                      blurb="Star our GitHub repository, then paste your GitHub profile link so we can confirm it."
+                      label="Your GitHub profile URL"
                       placeholder="https://github.com/your-username"
+                      helpText="Need help finding the link? Ask in the Commons — the group chat — and we'll help you find it."
                       submitting={submitting}
                       error={submitError}
-                      onSubmit={(url) => void submit({ kind: 'github_star', ...(url ? { githubProfileUrl: url } : {}) }, false)}
+                      onSubmit={(url) => void submit({ kind: 'github_star', githubProfileUrl: url }, false)}
                       onCancel={() => setActivePath(null)}
                     />
                   )}
@@ -483,6 +516,9 @@ const st = StyleSheet.create({
   supportBox: { padding: 12, backgroundColor: BG, borderRadius: 8, borderWidth: 1, borderColor: BORDER, marginTop: 10 },
   supportLabel: { fontSize: 11, color: SUBTLE, marginBottom: 4 },
   supportLink: { fontSize: 12, color: SIGNAL_BLUE, lineHeight: 18 },
+  warnBox: { padding: 12, backgroundColor: '#EF44440F', borderRadius: 8, borderWidth: 1, borderColor: '#EF444440', marginTop: 10 },
+  warnLabel: { fontSize: 11, color: '#EF4444', fontWeight: '600' as const, marginBottom: 4 },
+  warnText: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
   pendingCard: { padding: 14, backgroundColor: `${COLOR}08`, borderRadius: 10, borderWidth: 1, borderColor: `${COLOR}20`, marginBottom: 20 },
   pendingTitle: { fontSize: 13, fontWeight: '600', color: TEXT_COLOR, marginBottom: 2 },
 });
