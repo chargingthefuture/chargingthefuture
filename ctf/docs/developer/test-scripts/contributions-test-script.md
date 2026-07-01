@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributions-feature-inventory.md` |
-| **Generated** | 2026-07-01 (banner: Contribute navigation + hidden "Not now" button; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-01 (discoverable contribute cards + form placement; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -35,12 +35,17 @@ Voluntary fundraiser drives; thank-you credits, never money. Member role unless 
 1. **Drive loads.** Open `/apps/contributions` signed in. The current cycle and collective progress
    render — USD raised, comments, stars, contributor count — toward the owner-set goals. No spinner
    stuck, no error. → web ☐ mobile ☐ android ☐
-2. **No gift-card code is ever asked for.** Start a gift-card claim. There is **no** field for the
+2. **Contributing is obvious.** Under "How would you like to help?" each of the three cards (gift
+   card, Quora comment, GitHub star) shows a clear "Choose this" cue, and a one-line instruction says
+   a form opens underneath. Click a card: its form opens **directly below the cards** (not at the
+   bottom of the page), the card reads "Selected", and there is a working Submit. Before any card is
+   chosen a short placeholder prompt sits where the form will appear. → web ☐ mobile ☐ android ☐
+3. **No gift-card code is ever asked for.** Start a gift-card claim. There is **no** field for the
    gift-card code anywhere; the screen instead points the member to send the code to the owner over
    Signal, outside the app. → web ☐ mobile ☐ android ☐
-3. **No shaming, no gating.** Confirm progress is shown only as shared totals (never a personal
+4. **No shaming, no gating.** Confirm progress is shown only as shared totals (never a personal
    bill), and that nothing in the product is locked behind contributing. → web ☐ mobile ☐ android ☐
-4. **Credits read as thank-you.** Anywhere credits appear, they are framed as a thank-you, not a
+5. **Credits read as thank-you.** Anywhere credits appear, they are framed as a thank-you, not a
    purchase, and there is no path to redeem them for real money. → web ☐ mobile ☐ android ☐
 
 ---
