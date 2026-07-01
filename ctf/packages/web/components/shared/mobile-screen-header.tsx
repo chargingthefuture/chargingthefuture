@@ -2,8 +2,10 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { resolveBackTarget } from '@/lib/nav/back-target';
 import { MobileTopActions } from './mobile-top-actions';
 
 // A uniform on-brand top bar for screens that do not build their own — chiefly the admin shells,
@@ -32,6 +34,12 @@ export function MobileScreenHeader({
   desktopBack?: boolean;
 }) {
   const isMobile = useIsMobile();
+
+  // One-level-up back destination, from the shared policy: admin area pages go to /admin, the admin
+  // directory goes home, and everything else uses the caller's fallback (/apps). This keeps the back
+  // control's destination and label consistent across every screen and breakpoint.
+  const pathname = usePathname();
+  const back = resolveBackTarget(pathname, backHref);
 
   // Derive translucent tints from the accent hex (#RRGGBB + alpha suffix). Fall back to neutral
   // surface tokens when no accent is supplied.
@@ -63,8 +71,8 @@ export function MobileScreenHeader({
         }}
       >
         <Link
-          href={backHref}
-          aria-label="Back to all apps"
+          href={back.href}
+          aria-label={back.label}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -80,7 +88,7 @@ export function MobileScreenHeader({
             fontWeight: 600,
           }}
         >
-          <ChevronLeft size={18} aria-hidden="true" /> Back to all apps
+          <ChevronLeft size={18} aria-hidden="true" /> {back.label}
         </Link>
       </div>
     );
@@ -104,8 +112,8 @@ export function MobileScreenHeader({
       }}
     >
       <Link
-        href={backHref}
-        aria-label="Back to all apps"
+        href={back.href}
+        aria-label={back.label}
         style={{
           width: 38,
           height: 38,
