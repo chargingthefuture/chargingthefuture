@@ -24,8 +24,6 @@ const TEXT_COLOR = '#F9FAFB';
 const SUBTLE = '#6B7280';
 const SIGNAL_BLUE = '#38BDF8';
 
-const DEFAULT_CREDITS_PER_USD = 10;
-const DEFAULT_CREDITS_PER_ACTION = 50;
 const ALREADY_CREDITED_NOTE = "You've already received credits for starring the repository — thank you.";
 
 type Tab = 'drive' | 'contribute' | 'history';
@@ -315,9 +313,9 @@ export const Contributions: React.FC = () => {
   const alreadyCredited = f.githubStarAlreadyCredited;
 
   const paths: { key: 'gift_card' | 'quora_comment' | 'github_star'; label: string; sub: string; credits: string }[] = [
-    { key: 'gift_card', label: 'Gift card', sub: "Amazon, Apple, or Denny's", credits: `${DEFAULT_CREDITS_PER_USD} SC per dollar` },
-    { key: 'quora_comment', label: 'Quora comment', sub: 'Comment on a Quora post', credits: `${DEFAULT_CREDITS_PER_ACTION} SC` },
-    { key: 'github_star', label: 'GitHub star', sub: 'Star our repository', credits: `${DEFAULT_CREDITS_PER_ACTION} SC` },
+    { key: 'gift_card', label: 'Gift card', sub: "Amazon, Apple, or Denny's", credits: `${fundraiser.creditsPerUsd} SC per dollar` },
+    { key: 'quora_comment', label: 'Quora comment', sub: 'Comment on a Quora post', credits: `${fundraiser.creditsPerActionSc} SC` },
+    { key: 'github_star', label: 'GitHub star', sub: 'Star our repository', credits: `${fundraiser.creditsPerActionSc} SC` },
   ];
 
   return (
