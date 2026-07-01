@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:socket-relay` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socket-relay-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · hand-updated 2026-07-01 for the Direct Line pending-rows behavior (SR-9) |
 
 ## How to run this
 
@@ -136,6 +136,23 @@ full absolute link `…/apps/socket-relay?request=<id>` and a copy affordance. O
 device lands on the SocketRelay feed (auth-gated). On android, if `APP_URL` is unset the share control
 is simply absent (no crash). Note: the link opening the feed rather than scrolling straight to the one
 request is a known follow-up, not a bug.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### SR-9 · Direct Line list: pending requests, active conversations, no closed clutter
+**Role:** member · **Surfaces:** all
+**Precondition:** you have posted at least one still-open request that no one has claimed, one active
+fulfillment (SR-4), and one request whose fulfillment was previously cancelled/closed (SR-5).
+**Steps:**
+1. Open the Direct Line tab.
+2. Select the pending (unclaimed) request row.
+3. Select the active fulfillment row.
+**Expected:** The list shows one row per request you're waiting on or talking through: each active
+fulfillment as a live conversation plus each of your still-open, non-expired requests as a
+"Your request · Waiting for a helper" placeholder. Cancelled/closed fulfillments and claimed/closed
+requests do **not** appear. Selecting a pending row shows a "No helper yet" pane (no chat box) — it is
+not chattable until someone claims the request. Selecting an active row opens the chat. With nothing to
+show, the empty state reads "No Direct Lines yet" (never Stream's raw "No chats here yet…"), and an
+opened conversation with no messages shows the branded "No messages yet" card.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
