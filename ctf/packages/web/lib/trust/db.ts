@@ -58,6 +58,16 @@ export async function getTrustUserExtension(userId: string): Promise<TrustUserEx
   };
 }
 
+// Most recent snapshot timestamp for a user, or null if they have never had one. Used to throttle
+// the recompute-on-read so the self GET writes at most once per window instead of on every hit.
+export async function getLatestTrustSnapshotAt(userId: string): Promise<Date | null> {
+  const result = await queryDb<{ created_at: Date }>(
+    `SELECT created_at FROM trust_signal_snapshot WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+    [userId]
+  );
+  return result.rows.length ? result.rows[0].created_at : null;
+}
+
 // === Cross-plugin signal aggregation (real-data-only) =========================================
 //
 // Trust owns no participation data. It derives a qualitative signal by counting ACTUAL rows in the
