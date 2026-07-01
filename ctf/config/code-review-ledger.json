@@ -322,6 +322,14 @@
       ]
     },
     {
+      "name": "nav",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
       "name": "notifications",
       "type": "module",
       "lastReviewedAt": null,
@@ -442,10 +450,16 @@
     {
       "name": "trust",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-01T10:28:02.892Z",
+      "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/trust",
+        "ctf/packages/web/app/api/trust",
+        "ctf/packages/web/components/trust",
+        "ctf/packages/web/lib/trust"
+      ]
     },
     {
       "name": "trust-transport",
