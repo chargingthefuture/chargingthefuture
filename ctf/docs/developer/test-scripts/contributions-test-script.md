@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributions-feature-inventory.md` |
-| **Generated** | 2026-07-01 (discoverable contribute cards + form placement; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-01 (required contribution links + Commons safety copy + desktop nav trim; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -37,9 +37,11 @@ Voluntary fundraiser drives; thank-you credits, never money. Member role unless 
    stuck, no error. → web ☐ mobile ☐ android ☐
 2. **Contributing is obvious.** Under "How would you like to help?" each of the three cards (gift
    card, Quora comment, GitHub star) shows a clear "Choose this" cue, and a one-line instruction says
-   a form opens underneath. Click a card: its form opens **directly below the cards** (not at the
-   bottom of the page), the card reads "Selected", and there is a working Submit. Before any card is
-   chosen a short placeholder prompt sits where the form will appear. → web ☐ mobile ☐ android ☐
+   a form opens underneath. Before any card is chosen, nothing shows under the cards (no placeholder
+   box). Click a card: its form opens **directly below the cards** (not at the bottom of the page),
+   the card reads "Selected", and there is a working Submit. The gift-card form states the card can be
+   physical or digital and that the card details go to the owner in the Signal chat (never in the
+   form). Credit amounts read "10 SC" / "50 SC" with a space. → web ☐ mobile ☐ android ☐
 3. **No gift-card code is ever asked for.** Start a gift-card claim. There is **no** field for the
    gift-card code anywhere; the screen instead points the member to send the code to the owner over
    Signal, outside the app. → web ☐ mobile ☐ android ☐
@@ -59,19 +61,25 @@ Voluntary fundraiser drives; thank-you credits, never money. Member role unless 
 2. Pick a method (Amazon / Apple / Denny's), enter an amount (over 0, at most 500 USD), and your own
    Signal contact (URL or phone number).
 3. Submit.
-**Expected:** The claim is accepted and lands `pending`. No gift-card code field exists. After
+**Expected:** The claim is accepted and lands `pending`. No gift-card code field exists. The form
+states the card can be physical or digital and warns to never post the code in the Commons. After
 submitting, the owner-authored Signal instructions show (codes go to the owner on Signal; the owner's
-Signal contact appears inline when set). An amount of 0 or over 500, or a missing Signal contact, is
-rejected.
+Signal contact appears inline when set), plus a prominent warning that posting the code in the Commons
+(the public group chat) means no ServiceCredits and the owner never receives the gift, and a "questions
+→ ask in the Commons" line. There is **no** reference to a "#support channel". An amount of 0 or over
+500, or a missing Signal contact, is rejected.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### CON-2 · Submit a Quora comment and a GitHub star
+### CON-2 · Submit a Quora comment and a GitHub star (link required)
 **Role:** member · **Surfaces:** all
 **Steps:**
-1. Submit a Quora comment claim — leave the post URL blank (it is optional).
-2. Submit a GitHub star claim — leave the profile URL blank (it is optional).
-**Expected:** Both accept with the URL omitted (much of the user base struggles with URLs; the owner
-fills it in during review). Both land `pending`.
+1. Choose the Quora comment path. Try to submit with the link field blank.
+2. Paste a link and submit.
+3. Repeat for the GitHub star path (profile link).
+**Expected:** The link field is **required** (marked with a `*`). Submitting blank does nothing except
+show "Please paste the link so we can find and confirm your contribution." Each form shows a help line:
+if you cannot find the link, ask in the Commons (the group chat). With a link pasted, both submit and
+land `pending`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CON-3 · GitHub star is creditable at most once
