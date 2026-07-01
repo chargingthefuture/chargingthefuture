@@ -2,6 +2,7 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 import styles from './admin-landing.module.css';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +78,9 @@ export default async function AdminPage() {
 
   return (
     <div className={styles.page}>
+      {/* Consistent one-level-up back control: from the admin directory, back goes to the home hub.
+          The shared header resolves the destination from the path (see resolveBackTarget). */}
+      <MobileScreenHeader title="Admin" accent="#6366F1" icon={<ShieldCheck size={18} color="#6366F1" />} />
       <div className={styles.inner}>
         {/* Header */}
         <div className={styles.header}>

@@ -2,8 +2,10 @@
 
 import type { CSSProperties } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { ArrowLeft, Settings } from "lucide-react";
+import { resolveBackTarget } from "@/lib/nav/back-target";
 
 // The shared bottom of every plugin's left icon rail. These controls are identical on every screen —
 // only the top of the rail (the plugin's own brand mark and its tabs) changes. Keeping them in one
@@ -28,10 +30,14 @@ const ICON_BTN: CSSProperties = {
 // Render this as the last child of a plugin's rail <aside>. It includes the flexible spacer that
 // pushes itself to the bottom, so the rail's top section does not need its own spacer.
 export function PluginRailFooter() {
+  // Same one-level-up policy as the mobile/desktop header: an admin rail (comic, directory) goes back
+  // to the admin directory, a member plugin rail goes back to all apps.
+  const pathname = usePathname();
+  const back = resolveBackTarget(pathname);
   return (
     <>
       <div style={{ flex: 1 }} />
-      <Link href="/apps" aria-label="Back to all apps" title="Back to all apps" style={ICON_BTN}>
+      <Link href={back.href} aria-label={back.label} title={back.label} style={ICON_BTN}>
         <ArrowLeft size={20} />
       </Link>
       <Link href="/account" aria-label="Your account and settings" title="Your account and settings" style={ICON_BTN}>

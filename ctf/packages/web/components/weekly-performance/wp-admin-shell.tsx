@@ -113,8 +113,8 @@ export function WeeklyPerformanceAdminShell() {
   const header = isMobile ? null : (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
       <Link
-        href="/apps/weekly-performance"
-        aria-label="Back to plugin"
+        href="/admin"
+        aria-label="Back to admin"
         style={{ width: 38, height: 38, borderRadius: 10, background: `${BRAND}15`, border: `1px solid ${BRAND}30`, display: "flex", alignItems: "center", justifyContent: "center", color: BRAND, textDecoration: "none", flexShrink: 0 }}
       >
         <ChevronLeft size={20} />
