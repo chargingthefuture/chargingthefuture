@@ -247,11 +247,11 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as a member who has fulfilled trips and has earnings entries. Any member with earnings can request a payout — there is no provider role.
 
 **Steps:**
-1. Navigate to the earnings/payout surface.
-2. View payout history.
-3. Submit a payout request with a positive amount within available balance.
+1. On web, open the **Earnings** tab. Confirm the available balance shows. (On Android this runs via API/seed until the parity pass — issue #1250.)
+2. View the payout history list with per-row status.
+3. Submit a payout request with a positive amount within the available balance.
 
-**Expected:** Payout request is created and appears in payout history with a status. The amount uses the `price_currency` field (a known currency code); no fiat equivalent is shown alongside ServiceCredits amounts.
+**Expected:** The payout request is created and appears in the history with a status (e.g. Requested). The available balance is shown as a plain number (no fiat equivalent is asserted). Requesting more than the balance is refused.
 
 Result: web ☐ android ☐
 
@@ -264,11 +264,11 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as a member with an earnings balance.
 
 **Steps:**
-1. Navigate to the payout request surface.
+1. On web, open the **Earnings** tab.
 2. Enter `0` as the amount and submit.
-3. Repeat with a negative amount.
+3. Repeat with a negative amount, and with an amount above your available balance.
 
-**Expected:** Both attempts are rejected with a clear error. No payout request is created in either case.
+**Expected:** Every attempt is rejected with a clear inline error. No payout request is created in any case.
 
 Result: web ☐ android ☐
 

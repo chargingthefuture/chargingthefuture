@@ -956,6 +956,13 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
   await syncTrustTransportRequestPresence(request.requesterUserId, orderId, 'cancelled');
 }
 
+// Public read of the caller's own available earnings balance (for the Earnings surface). Note: this is
+// a currency-blind sum of the ledger (see issue #1233); it is shown as a plain balance, not asserted as
+// a specific currency.
+export async function getMyEarningsBalance(userId: string): Promise<number> {
+  return getProviderAvailableBalance(userId);
+}
+
 async function getProviderAvailableBalance(providerUserId: string): Promise<number> {
   const result = await queryDb<{ balance: string }>(
     `SELECT COALESCE(SUM(CASE
