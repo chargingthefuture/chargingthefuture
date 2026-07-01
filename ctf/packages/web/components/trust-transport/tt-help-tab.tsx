@@ -1,12 +1,105 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { HandHeart, Loader2 } from "lucide-react";
-import { COLOR, ttSettlementLabel, type AvailableRequest } from "./tt-shared";
+import { HandHeart, Loader2, Check } from "lucide-react";
+import { COLOR, ttSettlementLabel, type AvailableRequest, type ProviderTrip } from "./tt-shared";
 
 function modeLabel(mode: string | undefined): string {
   if (!mode) return "Request";
   return mode.charAt(0).toUpperCase() + mode.slice(1);
+}
+
+// The forward step a provider can take from each trip status (the happy path). Terminal states have none.
+const NEXT_STEP: Record<string, { next: string; label: string }> = {
+  assigned: { next: "en_route", label: "Start trip" },
+  en_route: { next: "picked_up", label: "Mark picked up" },
+  picked_up: { next: "delivered", label: "Mark delivered" },
+  delivered: { next: "completed", label: "Mark complete" },
+};
+
+function tripStatusLabel(s: string | undefined): string {
+  if (s === "en_route") return "En route";
+  if (s === "picked_up") return "Picked up";
+  if (s === "emergency_frozen") return "Emergency stop";
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "—";
+}
+
+// Trips the member is fulfilling, with controls to advance the lifecycle one step at a time. Renders
+// nothing until loaded and nothing when the member has no trips, so it stays out of the way otherwise.
+function ProviderTripsSection() {
+  const [loading, setLoading] = useState(true);
+  const [trips, setTrips] = useState<ProviderTrip[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/trust-transport/trips");
+      if (!res.ok) throw new Error("Could not load your trips.");
+      const data = (await res.json()) as { items?: ProviderTrip[] };
+      setTrips(Array.isArray(data.items) ? data.items : []);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Could not load your trips.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { void load(); }, []);
+
+  async function advance(tripId: string, nextStatus: string) {
+    setBusyId(tripId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/trust-transport/trips/${tripId}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ nextStatus }),
+      });
+      if (!res.ok) throw new Error("Could not update the trip.");
+      await load();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Could not update the trip.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (loading || trips.length === 0) return null;
+
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9CA3AF", marginBottom: 12 }}>Trips you&apos;re helping with</div>
+      {error && <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 10 }}>{error}</div>}
+      {trips.map((t) => {
+        const step = NEXT_STEP[t.status ?? ""];
+        const route = `${t.pickupCity ?? "—"} → ${t.dropoffCity ?? "—"}`;
+        return (
+          <div key={t.tripId} style={{ padding: "14px 16px", borderRadius: 14, background: `${COLOR}08`, border: `1px solid ${COLOR}25`, marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#F9FAFB" }}>{route}</div>
+              <span style={{ marginLeft: "auto", fontSize: 12, color: COLOR, background: `${COLOR}1A`, border: `1px solid ${COLOR}33`, borderRadius: 20, padding: "2px 10px" }}>{tripStatusLabel(t.status)}</span>
+            </div>
+            <div style={{ marginTop: 6, fontSize: 12, color: "#9CA3AF" }}>{modeLabel(t.mode)} · {ttSettlementLabel(t.priceCurrency, t.priceAmount)}</div>
+            {step ? (
+              <button
+                type="button"
+                onClick={() => void advance(t.tripId, step.next)}
+                disabled={busyId !== null}
+                style={{ marginTop: 12, width: "100%", padding: "10px 12px", borderRadius: 9, background: `${COLOR}1F`, border: `1px solid ${COLOR}40`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: busyId !== null ? "default" : "pointer", opacity: busyId !== null && busyId !== t.tripId ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+              >
+                {busyId === t.tripId ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} {step.label}
+              </button>
+            ) : (
+              <div style={{ marginTop: 10, fontSize: 12, color: "#6B7280" }}>No further action — this trip is {tripStatusLabel(t.status).toLowerCase()}.</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 // Plain relative age ("just now", "5 min ago", "2 h ago", "3 d ago") from an ISO timestamp.
@@ -145,6 +238,8 @@ export function TrustTransportHelpTab() {
         see only what kind of help is needed and how it&apos;s settled — the pickup and drop-off are shared
         with you only if the requester accepts your offer.
       </div>
+      <ProviderTripsSection />
+      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9CA3AF", marginBottom: 12 }}>Open requests</div>
       {loading ? (
         <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#6B7280", fontSize: 13 }}>
           <Loader2 size={16} className="animate-spin" /> Loading open requests…

@@ -152,6 +152,7 @@ User routes:
 - `GET /api/trust-transport/requests/:requestId/offers` — Offers on a request.
 - `POST /api/trust-transport/requests/:requestId/offers` — Make an offer on an open request (one pending offer per provider per request; re-offering updates it).
 - `POST /api/trust-transport/offers/:offerId/accept` — Accept an offer, opening a trip.
+- `GET /api/trust-transport/trips` — Trips the caller is fulfilling (provider side), with the now-revealed pickup/drop-off, so they can advance the lifecycle.
 - `POST /api/trust-transport/trips/:tripId/status` — Update trip status.
 - `POST /api/trust-transport/trips/:tripId/proof` — Capture pickup/delivery proof.
 - `POST /api/trust-transport/trips/:tripId/chat` — Mint Stream chat credentials for the trip thread: chat channel (`channelId`/`streamChannelId`) and participant token. Text chat only — no video.
@@ -252,6 +253,13 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 3. Command contract complexity should be monitored to prevent drift from UI flow logic.
 
 ## Change Log
+
+- 2026-06-30: Trip progression for the provider (web). New `GET /api/trust-transport/trips` lists the
+  trips the caller is fulfilling (joined to the request for the now-revealed pickup/drop-off — they
+  accepted, so model B allows it) via `listProviderTrips`. The "Help out" tab gains a "Trips you're
+  helping with" section showing each active trip and a one-step-forward control (Start trip → Mark
+  picked up → Mark delivered → Mark complete) that calls the existing `POST /trips/:tripId/status`.
+  No schema or contract change. Web only; Android parity tracked in #1250.
 
 - 2026-06-30: Requester can accept an offer in-app (web). The Tracking tab now loads the offers on each
   of your own open requests (`GET /requests/:requestId/offers`) and shows an Accept button per pending
