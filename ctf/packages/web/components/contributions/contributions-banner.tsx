@@ -15,6 +15,11 @@ import {
 
 const CSRF_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' } as const;
 
+// The dismiss ("Not now") control is temporarily hidden per owner request. The button markup and the
+// onDismiss snooze handler are kept in place so it can be brought back by flipping this flag to true —
+// nothing was removed.
+const SHOW_DISMISS_BUTTON: boolean = false;
+
 type BannerGoal = { label: string; current: number; target: number; unit: string; Icon: typeof DollarSign; color: string };
 
 function bannerGoals(f: FundraiserResponse['fundraiser']): BannerGoal[] {
@@ -102,9 +107,11 @@ export function ContributionsBanner() {
           <button type="button" onClick={onContribute} style={{ flex: 1, padding: '7px 0', borderRadius: 7, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
             Contribute
           </button>
-          <button type="button" onClick={() => void onDismiss()} style={{ flex: 1, padding: '7px 0', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, cursor: 'pointer' }}>
-            Not now
-          </button>
+          {SHOW_DISMISS_BUTTON && (
+            <button type="button" onClick={() => void onDismiss()} style={{ flex: 1, padding: '7px 0', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, cursor: 'pointer' }}>
+              Not now
+            </button>
+          )}
         </div>
       </div>
     );
@@ -143,9 +150,11 @@ export function ContributionsBanner() {
         <button type="button" onClick={onContribute} style={{ padding: '6px 16px', borderRadius: 7, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           Contribute
         </button>
-        <button type="button" onClick={() => void onDismiss()} style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, cursor: 'pointer' }}>
-          Not now
-        </button>
+        {SHOW_DISMISS_BUTTON && (
+          <button type="button" onClick={() => void onDismiss()} style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, cursor: 'pointer' }}>
+            Not now
+          </button>
+        )}
       </div>
     </div>
   );

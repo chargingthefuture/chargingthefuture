@@ -236,7 +236,9 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
   `components/contributions/admin/` — queue, drive management, settings. The app-wide fundraiser
   banner (`components/contributions/contributions-banner.tsx`) is integrated non-blocking at the top
   of the Hub content area for signed-in members. Desktop and phone-width layouts are both built
-  (rule 105).
+  (rule 105). The banner's "Not now" dismiss button is currently hidden (owner request) behind the
+  `SHOW_DISMISS_BUTTON` flag in that component — the button markup and the server-side snooze
+  (`/api/contributions/banner/dismiss`) are left intact so it can be re-enabled by flipping the flag.
 - Android: **shipped** at `packages/mobile/src/features/contributions/` (`Contributions.tsx`,
   `ContributionsAdmin.tsx`, `ContributionsApi.ts`) mirroring the web behavior one-to-one, including
   the greyed github-star path and the inline Signal URL on confirmation.
@@ -284,6 +286,12 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-07-01: Hid the fundraiser banner's "Not now" dismiss button on web (owner request). Gated both
+  layouts (desktop and phone-width) behind a new `SHOW_DISMISS_BUTTON` flag in
+  `components/contributions/contributions-banner.tsx`, defaulting to hidden. The button markup and the
+  `onDismiss` snooze handler (POST `/api/contributions/banner/dismiss`) are kept in place — nothing was
+  deleted — so the control can be restored by flipping the flag. Presentation only; no route, schema,
+  or contract change. The Android app has no fundraiser banner, so nothing changed there.
 - 2026-07-01: Fixed the Contribute button (fundraiser banner) landing on a 404. The banner sends
   members to `/apps/contributions`, but the dedicated page calls `notFound()` when the registry row
   is not visible, and the DB registry seed in `ctf/schema.sql` (and `ctf/schema.demo.sql`) still
