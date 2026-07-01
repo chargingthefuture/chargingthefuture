@@ -43,27 +43,6 @@ type PluginsResponse = {
 
 type LoadState = 'loading' | 'ready' | 'error';
 
-type ServiceStatus = { configured: boolean; reachable: boolean; latencyMs: number | null; detail?: string | null };
-type AiStatusResponse = { ok: true; ollama: ServiceStatus & { model: string } };
-
-function statusLabel(s: ServiceStatus): { text: string; color: string } {
-  if (!s.configured) return { text: s.detail ?? 'not configured', color: '#6B7280' };
-  if (!s.reachable) return { text: s.detail ? `unreachable · ${s.detail}` : 'unreachable', color: '#EF4444' };
-  return { text: `reachable${s.latencyMs !== null ? ` · ${s.latencyMs}ms` : ''}`, color: '#22C55E' };
-}
-
-function ServiceStatusBadge({ name, status, model }: { name: string; status: ServiceStatus; model?: string | null }) {
-  const { text, color } = statusLabel(status);
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#9CA3AF', flexWrap: 'wrap' }}>
-      <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} aria-hidden="true" />
-      <strong style={{ color: '#E5E7EB', fontWeight: 600 }}>{name}:</strong>{' '}
-      <span style={{ color, fontWeight: 600 }}>{text}</span>
-      {model ? <span style={{ color: '#4B5563' }}>· {model}</span> : null}
-    </span>
-  );
-}
-
 type ConfidenceBand = {
   label: string;
   className: string;
@@ -121,7 +100,6 @@ export function ComicReviewDashboard() {
   // Whether the detail is in edit mode (Edit & approve) vs the default approve/reject view.
   const [editing, setEditing] = useState(false);
   const [resolving, setResolving] = useState(false);
-  const [aiStatus, setAiStatus] = useState<AiStatusResponse | null>(null);
   // At-a-glance "Training examples collected" counts. Best-effort: stays null (and hidden) on failure.
   const [trainingStats, setTrainingStats] = useState<ComicTrainingStats | null>(null);
   // "Regenerate draft" in-flight + a note shown when the engine is still unreachable.
@@ -180,24 +158,8 @@ export function ComicReviewDashboard() {
     return () => window.clearInterval(intervalId);
   }, [refresh, selectedId, editing, resolving]);
 
-  // Live status of the Ollama drafting backend (a RunPod endpoint or a native Ollama host).
-  // Best-effort: a failure just leaves the badge hidden, never blocks the review queue.
-  useEffect(() => {
-    let cancelled = false;
-    void requestJson<AiStatusResponse>('/api/comic/admin/ai-status')
-      .then((payload) => {
-        if (!cancelled) setAiStatus(payload);
-      })
-      .catch(() => {
-        /* status badge is best-effort */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // At-a-glance counts of the collected training signal (owner corrections + rated answers). Same
-  // best-effort contract as the engine-status badge: a failure just leaves the counter hidden.
+  // At-a-glance counts of the collected training signal (owner corrections + rated answers).
+  // Best-effort: a failure just leaves the counter hidden, never blocks the review queue.
   useEffect(() => {
     let cancelled = false;
     void requestJson<TrainingStatsResponse>('/api/comic/admin/training-stats')
@@ -316,14 +278,16 @@ export function ComicReviewDashboard() {
     setRegenNote(null);
     setError(null);
     try {
-      const result = await requestJson<{ ok: true; attached: boolean }>(
+      const result = await requestJson<{ ok: true; attached: boolean; reason: string | null }>(
         `/api/comic/review/${selected.reviewId}/regenerate`,
         { method: 'POST', headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' } },
       );
       if (result.attached) {
         await refresh();
       } else {
-        setRegenNote('The AI engine is still unreachable, so no draft was generated. Try again once it is back up, or use Edit & approve.');
+        // Show the real reason the draft failed (timeout, model-not-found, auth, network) rather than
+        // a blanket "unreachable", then point at the two ways forward.
+        setRegenNote(`${result.reason ?? 'No draft was generated.'} Or use Edit & approve to write the answer yourself.`);
       }
     } catch (regenError) {
       setError(regenError instanceof Error ? regenError.message : 'Unable to regenerate the draft.');
@@ -366,11 +330,6 @@ export function ComicReviewDashboard() {
         <div className={styles.queueHeader}>
           <div className={styles.queueKicker}>Review Queue</div>
           <div className={styles.queueSub}>AI Assistant drafts awaiting human review</div>
-          {aiStatus ? (
-            <div style={{ margin: '8px 0 4px' }}>
-              <ServiceStatusBadge name="Chat AI engine (RunPod / Ollama)" status={aiStatus.ollama} model={aiStatus.ollama.model} />
-            </div>
-          ) : null}
           {trainingStats ? (
             <div style={{ margin: '0 0 4px' }}>
               <TrainingStatsBadge stats={trainingStats} />
@@ -558,7 +517,7 @@ export function ComicReviewDashboard() {
                       ? selected.draftBody
                       : selected.safetyCategory
                         ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.'
-                        : 'No AI draft is attached yet — it may still be generating, or drafting was unavailable. Refresh in a moment, or use Edit & approve to write the answer.'}
+                        : 'No AI draft yet — it may still be generating, or drafting was unavailable. Use Generate draft to try again, or Edit & approve to write the answer.'}
                   </div>
                 </div>
               )}
@@ -668,7 +627,14 @@ export function ComicReviewDashboard() {
                       </button>
                     ) : null}
                     <button type="button" className={styles.editBtn} disabled={resolving || regenerating} onClick={() => void regenerateSelected()}>
-                      <RotateCcw size={15} /> {regenerating ? 'Regenerating…' : selected.hasDraft ? 'Regenerate draft' : 'Generate draft'}
+                      <RotateCcw size={15} />{' '}
+                      {regenerating
+                        ? selected.hasDraft
+                          ? 'Regenerating…'
+                          : 'Generating…'
+                        : selected.hasDraft
+                          ? 'Regenerate draft'
+                          : 'Generate draft'}
                     </button>
                     <button type="button" className={styles.editBtn} disabled={resolving} onClick={() => setEditing(true)}>
                       <Pencil size={15} /> Edit &amp; approve

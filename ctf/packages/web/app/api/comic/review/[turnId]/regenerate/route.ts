@@ -35,10 +35,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ tur
       targetId: reviewId,
       result: 'success',
       errorCategory: null,
-      metadata: { attached: result.attached },
+      metadata: { attached: result.attached, failureReason: result.reason },
     });
 
-    return NextResponse.json({ ok: true, attached: result.attached }, { status: 200 });
+    return NextResponse.json({ ok: true, attached: result.attached, reason: result.reason }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'comic', op: 'review_turnid_regenerate' });
     const code = error instanceof Error ? error.message : 'unknown_error';
