@@ -67,6 +67,17 @@ function formatPostTime(iso: string): string {
   return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+// A stable hue (0–359) derived from an author's handle, so the same member always gets the same
+// color. Both the avatar and the bubble tint read from this, keeping one person's posts in one
+// consistent color family.
+function authorHue(authorUsername: string): number {
+  let hash = 0;
+  for (let index = 0; index < authorUsername.length; index += 1) {
+    hash = (hash * 31 + authorUsername.charCodeAt(index)) >>> 0;
+  }
+  return hash % 360;
+}
+
 // Deterministic avatar tint for a signed-out community post, keyed on the author's handle, so
 // distinct members read as distinct people instead of one purple stream. Posts with no handle
 // (anonymized "Community member") share a single neutral slate tint.
@@ -74,12 +85,20 @@ function publicAvatarBackground(authorUsername: string | null): string {
   if (!authorUsername) {
     return 'linear-gradient(135deg, #475569 0%, #334155 100%)';
   }
-  let hash = 0;
-  for (let index = 0; index < authorUsername.length; index += 1) {
-    hash = (hash * 31 + authorUsername.charCodeAt(index)) >>> 0;
-  }
-  const hue = hash % 360;
+  const hue = authorHue(authorUsername);
   return `linear-gradient(135deg, hsl(${hue}, 62%, 55%) 0%, hsl(${(hue + 38) % 360}, 62%, 45%) 100%)`;
+}
+
+// Deterministic bubble tint for a signed-out community post, in the same hue family as the author's
+// avatar but dark enough that the light bubble text stays readable. This is the real fix for "every
+// message looks like one person": each member's bubbles carry their own color, not a shared purple.
+// Anonymized posts (no handle) get a neutral slate bubble that matches their neutral avatar.
+function publicBubbleBackground(authorUsername: string | null): string {
+  if (!authorUsername) {
+    return 'linear-gradient(135deg, #3a4453 0%, #2b333f 100%)';
+  }
+  const hue = authorHue(authorUsername);
+  return `linear-gradient(135deg, hsl(${hue}, 45%, 34%) 0%, hsl(${hue}, 48%, 26%) 100%)`;
 }
 
 // Signed-out Commons: community (peer) posts are public the way Quora posts are, so a not-signed-in
@@ -170,7 +189,12 @@ function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats
                   {/* Sender name above the bubble, matching the signed-in stream. Without it every
                       post read as one speaker; here each message is clearly attributed to its author. */}
                   <span className={styles.chatSender}>{authorLabel}</span>
-                  <div className={`${styles.chatBubble} ${styles.chatBubbleHub}`}>{post.body}</div>
+                  <div
+                    className={`${styles.chatBubble} ${styles.chatBubbleHub}`}
+                    style={{ background: publicBubbleBackground(post.authorUsername) }}
+                  >
+                    {post.body}
+                  </div>
                   <span className={styles.chatTime}>{formatPostTime(post.createdAtIso)}</span>
                 </div>
               </div>
