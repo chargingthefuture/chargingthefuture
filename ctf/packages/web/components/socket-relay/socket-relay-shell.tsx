@@ -365,7 +365,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
               <ChevronLeft size={20} />
             </Link>
             <Share2 size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TEXT, flex: 1 }}>SocketRelay</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TEXT, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>SocketRelay</span>
             <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>{openCount} open</Badge>
             <PluginAdminButton href="/admin/socket-relay" isAdmin={isAdmin} accent={t.ACCENT} />
             <MobileTopActions />
