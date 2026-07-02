@@ -2,17 +2,23 @@ name: Security and Compliance
 
 on:
   pull_request:
+    # No paths filter on purpose: these jobs report required status checks
+    # (Dependency Review, Secret Scanning, Compliance Artifacts). With a paths
+    # filter, a PR that only touches an unlisted file (e.g. the root
+    # pnpm-lock.yaml / package.json) never triggers this workflow, so the
+    # required checks stay "Expected" forever and the PR can never merge. This
+    # mirrors ci.yml, which drops its pull_request paths filter for the same
+    # reason. The jobs here are fast, so running them on every PR is cheap.
     branches: [main]
-    paths:
-      - "ctf/**"
-      - ".claude/rules/**"
-      - ".github/workflows/**"
   push:
     branches: [main]
     paths:
       - "ctf/**"
       - ".claude/rules/**"
       - ".github/workflows/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
   schedule:
     - cron: "30 4 * * 1"
   workflow_dispatch:
