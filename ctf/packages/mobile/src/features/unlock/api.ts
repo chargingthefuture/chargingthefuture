@@ -18,7 +18,8 @@ export type UnlockStatus = {
   incentiveGrantedAt: string | null;
   hasSubmission: boolean;
   // A/B experiment: true when the member is in the early-Commons treatment bucket. Mirrored from the
-  // web status payload. The mobile Commons help link is a parity follow-up (see Android parity note).
+  // web status payload. Drives the client Unlock gate (treatment members reach the Commons) and the
+  // Commons verify prompt (UnlockVerifyBanner).
   earlyCommonsAccess?: boolean;
 };
 

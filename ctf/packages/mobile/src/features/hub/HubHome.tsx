@@ -27,6 +27,7 @@ import {
   type HubLiveConnection,
   type HubTypingUser,
 } from './live-stream';
+import { UnlockVerifyBanner } from '../unlock';
 
 // Poll cadence: the poll is the only refresh path when the live Stream connection is absent or
 // degraded. When the live connection is healthy, real-time events drive refreshes and the poll is a
@@ -439,6 +440,10 @@ export const HubHome = () => {
           <Text style={s.headerSub}>Community · Live</Text>
         </View>
       </View>
+
+      {/* Early-Commons treatment members land here without passing the Unlock screen, so prompt them to
+          verify (submit their Quora URL) right here. Self-hides for control / verified members. */}
+      {isAuthenticated ? <UnlockVerifyBanner /> : null}
 
       {loading ? (
         <View style={s.center}>
