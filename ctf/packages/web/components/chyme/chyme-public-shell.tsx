@@ -16,6 +16,7 @@ import {
 import { useEffect, useState } from 'react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import type { StreamJoinCredentials } from 'lib/chyme/stream';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { ChymeGuestListen } from '@/components/chyme/chyme-guest-listen';
 
 // Live state for the one default public Chyme room, fetched client-side from
@@ -52,6 +53,7 @@ function DesktopChymePublic({ signInUrl, verifyUrl, live }: { signInUrl: string;
       {/* Marketing banner */}
       <div style={{ background: `linear-gradient(90deg, ${ACCENT} 0%, ${ACCENT_CYAN} 100%)`, padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <PublicShellBackLink />
           <Radio size={15} color="#fff" />
           <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Chyme · live audio rooms for the survivor community</span>
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Free to listen · Sign in to speak</span>
@@ -186,6 +188,7 @@ function MobileChymePublic({ signInUrl, verifyUrl, live }: { signInUrl: string; 
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ background: `linear-gradient(90deg, ${ACCENT} 0%, ${ACCENT_CYAN} 100%)`, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <PublicShellBackLink />
         <Radio size={16} color="#fff" />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>Chyme</div>

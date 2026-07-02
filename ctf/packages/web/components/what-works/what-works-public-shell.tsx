@@ -3,6 +3,7 @@
 import { ListChecks, UserPlus, BadgeCheck, Ban, Lock, ChevronRight } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 
 // Palette from the WhatWorksPublic / MobileWhatWorksPublic design mockups.
 const BRAND = '#84CC16';
@@ -44,6 +45,7 @@ function DesktopWhatWorksPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10, flexShrink: 0, background: '#0D0F14' }}>
+        <PublicShellBackLink />
         <ListChecks size={18} color={BRAND} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>What Works</span>
         <span style={{ fontSize: 12, color: SUBTLE, marginLeft: 4 }}>· survivor-verified tools</span>
@@ -128,6 +130,7 @@ function MobileWhatWorksPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
     <div style={{ width: '100%', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '12px 16px', background: '#0D0F14', borderBottom: `1px solid ${BORDER}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <PublicShellBackLink />
         <ListChecks size={17} color={BRAND} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>What Works</span>
         <a href={verifyUrl ?? signInUrl} style={{ marginLeft: 'auto', padding: '6px 13px', borderRadius: 8, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign In'}</a>

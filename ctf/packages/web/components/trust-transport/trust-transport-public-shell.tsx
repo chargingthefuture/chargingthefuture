@@ -3,6 +3,7 @@
 import { Car, Lock, Package, Utensils } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 
 // Palette from the TrustTransportPublic / MobileTrustTransportPublic mockups.
 const BG = '#0F1117';
@@ -21,6 +22,7 @@ function DesktopTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: stri
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
+        <PublicShellBackLink />
         <Car size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>TrustTransport</span>
         <div style={{ marginLeft: 'auto' }}>
@@ -105,6 +107,7 @@ function MobileTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: strin
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <PublicShellBackLink />
           <Car size={20} color={COLOR} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>TrustTransport</span>
         </div>

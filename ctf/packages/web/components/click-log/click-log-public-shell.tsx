@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Lock, ShieldCheck, Clock, FileText, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 
 // Palette from the ClickLogPublic / MobileClickLogPublic design mockups.
@@ -19,6 +20,7 @@ function DesktopClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
+        <PublicShellBackLink />
         <AlertTriangle size={18} color={BRAND} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>ClickLog</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
@@ -109,6 +111,7 @@ function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
       <div style={{ padding: '12px 16px', background: `${BRAND}10`, borderBottom: `1px solid ${BRAND}25`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <PublicShellBackLink />
             <AlertTriangle size={18} color={BRAND} />
             <div style={{ fontSize: 16, fontWeight: 700 }}>ClickLog</div>
           </div>

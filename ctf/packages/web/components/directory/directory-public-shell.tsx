@@ -2,6 +2,7 @@
 
 import { BookOpen, Lock, Search, MapPin } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 
 // Palette from the DirectoryPublic / MobileDirectoryPublic design mockups.
@@ -17,6 +18,7 @@ function DesktopDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
+        <PublicShellBackLink />
         <BookOpen size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Directory</span>
         <div style={{ marginLeft: 'auto' }}>
@@ -104,6 +106,7 @@ function MobileDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '20px 20px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <PublicShellBackLink />
           <BookOpen size={20} color={COLOR} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>Directory</span>
         </div>

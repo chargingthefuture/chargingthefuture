@@ -3,6 +3,7 @@
 import { BarChart2, Lock, UserPlus, LogIn } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 
 // Palette from the WeeklyPerformancePublic / MobileWeeklyPerformancePublic design mockups.
 const BRAND = '#6366F1';
@@ -38,6 +39,7 @@ function DesktopWeeklyPerformancePublic({ signInUrl, verifyUrl }: { signInUrl: s
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
+        <PublicShellBackLink />
         <BarChart2 size={18} color={BRAND} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Weekly Performance</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
@@ -131,6 +133,7 @@ function MobileWeeklyPerformancePublic({ signInUrl, verifyUrl }: { signInUrl: st
       <div style={{ padding: '12px 16px', background: `${BRAND}10`, borderBottom: `1px solid ${BRAND}25`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <PublicShellBackLink />
             <BarChart2 size={18} color={BRAND} />
             <div style={{ fontSize: 16, fontWeight: 700 }}>Weekly Performance</div>
           </div>
