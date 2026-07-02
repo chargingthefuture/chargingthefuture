@@ -20,6 +20,24 @@ import { reportError } from 'lib/observability/report';
 
 const CALL_TYPE = 'default';
 
+// Scoped to `.pp-participant-tile` so it only affects our cohort video tiles, not the rest of the app.
+// The Stream SDK's own stylesheet (which would normally do this) is not imported here, so we size the
+// participant wrapper and its <video> to fill the tile and center-crop instead of overflowing at native
+// resolution. `!important` overrides the inline width/height Stream sets on the video element itself.
+const PARTICIPANT_TILE_CSS = `
+.pp-participant-tile,
+.pp-participant-tile .str-video__participant-view {
+  width: 100%;
+  height: 100%;
+}
+.pp-participant-tile video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  object-position: center;
+}
+`;
+
 export type PeerProgrammingSessionCredentials = {
   cohortId: string;
   displayName: string;
@@ -138,12 +156,17 @@ function PeerProgrammingSessionStage({ onLeave }: { onLeave: () => void }) {
 
   return (
     <div>
+      {/* This app does not import the Stream video SDK stylesheet, so ParticipantView's inner <video>
+          has no size and renders at the camera's native resolution — the tile's overflow:hidden then
+          crops it to a corner, which looks "zoomed in". Size the video (and Stream's wrapper) to the
+          tile and center-crop it so each participant is framed like a normal video-call tile. */}
+      <style>{PARTICIPANT_TILE_CSS}</style>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#6B7280', textTransform: 'uppercase', marginBottom: 14 }}>
         Live · {uniqueParticipants.length} {uniqueParticipants.length === 1 ? 'participant' : 'participants'}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
         {uniqueParticipants.map((participant) => (
-          <div key={participant.sessionId} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${COLOR}25`, background: '#000', aspectRatio: '4 / 3' }}>
+          <div key={participant.sessionId} className="pp-participant-tile" style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${COLOR}25`, background: '#000', aspectRatio: '4 / 3' }}>
             <ParticipantView participant={participant} />
           </div>
         ))}

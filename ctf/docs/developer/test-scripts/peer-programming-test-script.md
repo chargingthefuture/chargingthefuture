@@ -91,10 +91,23 @@ hidden.
 **Steps:**
 1. Open the Session tab and tap "Join Session".
 **Expected:** A live per-cohort video call joins — one tile per participant, with mute/camera/leave
-controls. A member with no cohort sees a "you're not in a cohort yet" notice (404). When Stream is not
-configured, a "live video unavailable" notice (503) shows instead. A listener viewing another cohort
-sees a read-only note, not a join button. (Live video needs a real device build, not Expo Go.)
+controls. Each participant's video fills its tile and is centered (center-cropped), **not** zoomed into
+a corner or a magnified fragment. A member with no cohort sees a "you're not in a cohort yet" notice
+(404). When Stream is not configured, a "live video unavailable" notice (503) shows instead. A listener
+viewing another cohort sees a read-only note, not a join button. (Live video needs a real device build,
+not Expo Go.)
 **Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### PP-7 · Desktop sidebar shows only "How It Works"
+**Role:** member · **Surfaces:** web (desktop)
+**Steps:**
+1. On the desktop web layout, look at the left sidebar next to the icon rail.
+**Expected:** The sidebar shows the "How It Works" info panel only. There is **no** cohort filter list
+(All Cohorts / My Cohort / Forming / Active / By Skill) and **no** "Search cohorts…" box — those were
+removed because they were never wired (see inventory change log; future implementation tracked in issue
+\#1306). The mobile-responsive web layout and android use their own top tab bar and never show this
+sidebar.
+**Result:** web ☐ mobile — android — — notes:
 
 ### PP-6 · Submit feedback
 **Role:** member · **Surfaces:** all
