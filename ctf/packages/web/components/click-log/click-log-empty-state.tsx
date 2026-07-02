@@ -2,7 +2,8 @@
 
 // STATE: Authenticated, no incidents logged yet. Ported from
 // design/.../survivor-hub/ClickLogEmpty.tsx.
-import { AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, ChevronLeft } from "lucide-react";
 import { BG, BORDER, BRAND, SUBTLE, SURFACE, TEXT } from "./click-log-shared";
 
 const STEPS = [
@@ -14,7 +15,17 @@ const STEPS = [
 export function ClickLogEmptyState({ onLog }: { onLog: () => void }) {
   return (
     <div style={{ width: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter',system-ui", color: TEXT, display: "flex", flexDirection: "column" }}>
-      <div style={{ height: 56, borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "0 28px", gap: 12, background: "#0D0F14", flexShrink: 0 }}>
+      <div style={{ height: 56, borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "0 16px", gap: 12, background: "#0D0F14", flexShrink: 0 }}>
+        {/* Back to /apps — the empty state renders full-screen before the shell's
+            own back chrome, so without this a member with no incidents (common on
+            mobile) has no way back to the launcher. */}
+        <Link
+          href="/apps"
+          aria-label="Back to apps"
+          style={{ width: 38, height: 38, borderRadius: 10, background: `${BRAND}20`, border: `1px solid ${BRAND}40`, display: "flex", alignItems: "center", justifyContent: "center", color: BRAND, textDecoration: "none", flexShrink: 0 }}
+        >
+          <ChevronLeft size={20} />
+        </Link>
         <AlertTriangle size={18} color={BRAND} />
         <div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>ClickLog</div>
