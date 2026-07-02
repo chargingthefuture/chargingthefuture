@@ -48,6 +48,9 @@ export type TrustTransportRequest = {
   status: TrustTransportRequestStatus;
   priceCurrency: string | null;
   priceAmount: number | null;
+  // The trip id once an offer has been accepted. Chat is keyed by trip id, not the request id; null
+  // until a trip exists.
+  tripId: string | null;
   createdAtIso: string;
   updatedAtIso: string;
 };

@@ -11,7 +11,7 @@
 | **Surfaces** | web (`/apps/trust-transport`, `/admin/trust-transport`) · android (`TrustTransport.tsx`, `AdminTrustTransport.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:trust-transport` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md` |
-| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin) |
+| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, and chat shipped — TT-8/TT-9 added to the parity table and the stale "service delete endpoint not live" gap removed) |
 
 ---
 
@@ -115,7 +115,7 @@ Result: web ☐ android ☐
 2. Confirm the offers list shows pending offers (a community member, optional note, optional proposed amount).
 3. Accept one offer.
 
-**Expected:** The offer is accepted and a trip is created. The request moves to an accepted state. Per model B, the pickup/drop-off is now available to the accepted provider through the trip. The trip ID is visible (the sidebar/detail shows it, not "— → —"). On web, the Direct Line opens for that trip. Android has no chat screen wired up yet (see Known gaps) — this is a separate, pre-existing gap, not a defect in the accept flow you just tested.
+**Expected:** The offer is accepted and a trip is created. The request moves to an accepted state. Per model B, the pickup/drop-off is now available to the accepted provider through the trip. The trip ID is visible (the sidebar/detail shows it, not "— → —"). A "Chat" control opens the trip's Direct Line on both web and android.
 
 Result: web ☐ android ☐
 
@@ -181,7 +181,7 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as the member assigned to fulfil a trip (the driver/courier). Seed has a trip assigned to them that is not yet complete. There is no separate "provider" role — any member can fulfil a trip.
 
 **Steps:**
-1. On web, open the **Help out** tab → "Trips you're helping with"; find your active trip. (On Android this runs via API/seed until the parity pass — issue #1250.)
+1. Open the **Help out** tab → "Trips you're helping with"; find your active trip.
 2. Tap the forward action (Start trip → Mark picked up → Mark delivered → Mark complete) to advance one step.
 
 **Expected:** The trip status changes one step forward and the new state shows on the card. Transitions are forward-only and append-only — there is no control to revert to the previous state. An out-of-order transition (via the API) is refused. When you mark the trip **complete** and the requester chose ServiceCredits settlement, the credits move from the requester to you (verify in your ServiceCredits wallet) and a `trust-transport.trip.settlement` audit event is written; a completed Free/Barter trip moves no credits.
@@ -197,7 +197,7 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as the member fulfilling the trip. Seed has a trip in a state that requires proof (package or food delivery pickup/dropoff).
 
 **Steps:**
-1. On web, open the **Help out** tab → "Trips you're helping with" → your active trip → "Add pickup/delivery proof". (On Android this runs via API/seed until the parity pass — issue #1250.)
+1. Open the **Help out** tab → "Trips you're helping with" → your active trip → "Add pickup/delivery proof".
 2. Pick a proof type (Photo / Code / Note), enter a short redacted reference, and Save.
 
 **Expected:** The proof saves ("Proof saved") and is associated with this trip. The value is a redacted reference (no raw image). An empty value is rejected with an inline message. No crash or generic error.
@@ -491,6 +491,8 @@ These cases must produce the same observable outcome on both surfaces. Run both 
 | TT-11 | Explicit confirmation prompt before cancel |
 | TT-17 | Right panel shows "Good to know" reminders; no fabricated safety claims |
 | TT-18 | Discovery list shows only mode + settlement + age; offer sends and confirms |
+| TT-8 | Forward status control advances the trip one step; ServiceCredits settlement moves credits on completion |
+| TT-9 | Proof capture saves a redacted reference; empty value rejected |
 | TT-A1 | Incident resolved after native/web confirmation prompt |
 | TT-A2 | Market config update persists after reload |
 | TT-A4 | Restrict and restore require confirmation; platform-wide signal written |
@@ -502,12 +504,9 @@ These cases must produce the same observable outcome on both surfaces. Run both 
 
 The following are documented limitations from the inventory's "Gaps and Known Technical Debt" section. Do not open Bug Reporting rows for them.
 
-1. **Status vocabulary across three modes** — the canonical status names for ride, package, and food trips may be inconsistent or incomplete. This is a known open design question, not a defect.
-2. **Audit storage growth** — the `trust_transport_admin_audit_trail` has no archival or retention policy yet. High event volume in seeded or load-test environments is expected and not a bug.
-3. **Command contract drift** — the contract schemas are authoritative but UI flows may not yet fully mirror every contract field. Drift between UI and contract is tracked separately, not a manual-test finding.
-4. **Nearby Drivers list absent** — no backend endpoint exists for available driver discovery; this data is intentionally omitted from both web and android per the real-data-only rule. The missing list is not a bug.
-5. **Driver ratings, ETAs, and vehicle info absent** — none of these fields are returned by any `trust-transport` API endpoint; their absence from the UI is correct behavior.
-6. **No admin trip-approval queue** — the design mockup shows an "approve/reject trip request queue" but no admin trip-approval route exists; the incident queue is what the API exposes and is what the admin surface renders.
-7. **Service delete endpoint not yet live** — `DELETE /api/account/trust-transport-profile` is listed as planned in the deletion contract; its absence is not a bug to file now.
-8. **Trip progression, proof capture, and earnings/payouts UI: web shipped, Android deferred** — the web "Help out" tab has "Trips you're helping with" (forward status controls) and proof capture, and the web "Earnings" tab has per-currency balances and payout requests. The Android equivalents ship in follow-up passes (Parity Ticket #1250); on Android, exercise these via the API/seed until then. (Make-an-offer/discovery and view-offers/accept UI shipped on both platforms — see TT-18 and TT-4.)
-9. **Android has no chat screen wired up** — `TrustTransportStreamTab.tsx` exists in the mobile feature directory but is not imported or registered anywhere in the app; there is no navigation path to it. A trip cannot be chatted with on Android today. This predates and is separate from the #1250 provider-marketplace parity work (web's chat tab already existed); do not file it as caused by any of the #1250 changes.
+1. **Audit storage growth** — the `trust_transport_admin_audit_trail` has no archival or retention policy yet, and no other plugin in this codebase has one either. Building a bespoke retention job requires a retention-period decision (how long, and under what compliance requirement) that has not been made; high event volume in seeded or load-test environments is expected and not a bug until that policy exists.
+2. **Command contract drift** — mitigated by CI: the `check-inventory-drift` gate fails a PR that adds a schema table or API route undocumented in every plugin inventory, and the plugin contract templates (rules 200–203) constrain new command/policy/audit definitions. Full field-by-field matching of contract YAML against the inventory text is still manual, not a live gap.
+3. **Nearby Drivers list absent** — no backend endpoint exists for available driver discovery; this data is intentionally omitted from both web and android per the real-data-only rule. The missing list is not a bug.
+4. **Driver ratings, ETAs, and vehicle info absent** — none of these fields are returned by any `trust-transport` API endpoint; their absence from the UI is correct behavior. Ratings of people are never shown anywhere in this plugin, by design — reputation is completion history only (completed vs. not), never a score.
+5. **No admin trip-approval queue** — the design mockup shows an "approve/reject trip request queue" but no admin trip-approval route exists; the incident queue is what the API exposes and is what the admin surface renders. The mockup is outdated, not a missing feature.
+6. **Earnings/payouts UI: web shipped, Android deferred** — the web "Earnings" tab has per-currency balances and payout requests. The Android equivalent ships in a follow-up pass (Parity Ticket #1250); on Android, exercise this via the API/seed until then. (Make-an-offer/discovery, view-offers/accept, trip progression, proof capture, and chat are shipped on both platforms — see TT-18, TT-4, TT-8, TT-9.)

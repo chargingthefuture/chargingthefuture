@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { HandHeart, Loader2, Check } from "lucide-react";
-import { COLOR, ttSettlementLabel, type AvailableRequest, type ProviderTrip } from "./tt-shared";
+import { HandHeart, Loader2, Check, MessageCircle } from "lucide-react";
+import { COLOR, ttSettlementLabel, type AvailableRequest, type ChatCreds, type ProviderTrip } from "./tt-shared";
+import { StreamChatPanel } from "../shared/stream-chat-panel";
 
 function modeLabel(mode: string | undefined): string {
   if (!mode) return "Request";
@@ -80,6 +81,59 @@ function ProofForm({ tripId, onDone }: { tripId: string; onDone: () => void }) {
   );
 }
 
+// "Chat" toggle for a trip thread, shown to either party once a trip exists. Fetches Stream
+// credentials on first open and renders the same panel the requester's Direct Line tab uses.
+function TripChat({ tripId }: { tripId: string }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [creds, setCreds] = useState<ChatCreds | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function openChat() {
+    setOpen(true);
+    if (creds) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/trust-transport/trips/${tripId}/chat`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
+      if (!res.ok) throw new Error("Could not load chat.");
+      const data = (await res.json()) as ChatCreds;
+      if (!data.ok) throw new Error(data.message ?? "Could not load chat.");
+      setCreds(data);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Could not load chat.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => void openChat()} style={{ marginTop: 8, width: "100%", padding: "8px 12px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <MessageCircle size={14} /> Chat
+      </button>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 10, height: 360, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.10)" }}>
+      {loading ? (
+        <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9CA3AF", fontSize: 13 }}>Loading chat…</div>
+      ) : error ? (
+        <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontSize: 13, padding: 16, textAlign: "center" }}>{error}</div>
+      ) : creds?.streamChannelId ? (
+        <StreamChatPanel
+          streamApiKey={creds.streamApiKey}
+          streamToken={creds.streamToken}
+          streamUserId={creds.streamUserId}
+          streamChannelId={creds.streamChannelId}
+          accentColor={COLOR}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function ProviderTripCard({ trip, busyId, onAdvance }: { trip: ProviderTrip; busyId: string | null; onAdvance: (tripId: string, next: string) => void }) {
   const [proofOpen, setProofOpen] = useState(false);
   const [proofDone, setProofDone] = useState(false);
@@ -112,6 +166,7 @@ function ProviderTripCard({ trip, busyId, onAdvance }: { trip: ProviderTrip; bus
           </button>
         )
       )}
+      <TripChat tripId={trip.tripId} />
     </div>
   );
 }
