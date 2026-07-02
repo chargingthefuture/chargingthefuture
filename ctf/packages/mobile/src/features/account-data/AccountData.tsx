@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,6 +27,7 @@ import {
   View,
 } from 'react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
+import { getApiBaseUrl } from '../../auth/authedFetch';
 import {
   fetchAccountServices,
   deleteServiceData,
@@ -34,6 +36,28 @@ import {
 } from './api';
 
 const CONFIRM_PHRASE = 'delete my account';
+
+// Public Terms and Privacy Policy page. Prefer the configured app origin so it
+// follows the current environment; fall back to the canonical hosted URL when
+// APP_URL is not set (getApiBaseUrl throws in that case).
+const TERMS_FALLBACK_URL = 'https://app.chargingthefuture.com/terms';
+
+function termsUrl(): string {
+  try {
+    return `${getApiBaseUrl()}/terms`;
+  } catch {
+    return TERMS_FALLBACK_URL;
+  }
+}
+
+async function openTerms(): Promise<void> {
+  const url = termsUrl();
+  try {
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert('Unable to open', 'We could not open the Terms and Privacy Policy page.');
+  }
+}
 
 const SERVICE_GLYPH: Record<string, string> = {
   chyme: '💬', directory: '📇', 'feed-announcements': '📣', foundation: '🪛', mood: '🌿',
@@ -270,6 +294,17 @@ export function AccountData() {
         ) : (
           <DangerZone s={s} tokens={tokens} serviceCount={totalServices} onContinue={() => setConfirmOpen(true)} />
         )}
+
+        <View style={s.legalFooter}>
+          <TouchableOpacity
+            onPress={openTerms}
+            style={s.legalLink}
+            accessibilityRole="link"
+            accessibilityLabel="Open the Terms and Privacy Policy"
+          >
+            <Text style={s.legalLinkText}>Terms &amp; Privacy Policy</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -558,5 +593,8 @@ function makeStyles(t: ThemeTokens, brand: string) {
     errSub: { fontSize: 13, color: t.textSecondary, textAlign: 'center', marginBottom: 16 },
     retryBtn: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: r, backgroundColor: t.isComic ? `${t.border}15` : `${brand}15`, borderWidth: 1, borderColor: t.isComic ? t.border : `${brand}30` },
     retryText: { color: t.isComic ? t.textPrimary : brand, fontSize: 14, fontWeight: '600' },
+    legalFooter: { marginTop: 6, paddingTop: 16, borderTopWidth: 1, borderTopColor: t.border, alignItems: 'center' },
+    legalLink: { paddingVertical: 8, paddingHorizontal: 12 },
+    legalLinkText: { fontSize: 12, color: t.textSecondary, textDecorationLine: 'underline', letterSpacing: t.isComic ? 0.4 : 0 },
   });
 }
