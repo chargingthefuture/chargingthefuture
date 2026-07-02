@@ -3,15 +3,35 @@
  * seed:demo — populates the `demo` Postgres schema with a rich, coherent scenario
  * for the demo participant identified by DEMO_OWNER_ID.
  *
+ * Two-sided testing (DEMO_SECOND_OWNER_ID, optional):
+ *   The platform is a two-sided marketplace — TrustTransport (requester/provider),
+ *   SocketRelay (requester/fulfiller), Foundation (two-party thread), Lighthouse
+ *   (seeker/host). By default the "other side" of each flow is a synthetic user
+ *   (demo-peer-*, demo-host-*) that nobody can sign in as, so only one side can be
+ *   tested. Set DEMO_SECOND_OWNER_ID to a SECOND real Clerk user id and the seed
+ *   makes that user the real counterparty to DEMO_OWNER_ID: it gives them a member
+ *   profile and wires up both-sided data (open requests each can act on, a shared
+ *   Foundation thread, a Lighthouse seeker↔host match, a co-enrolment, etc.), so
+ *   two real accounts can each test both sides. Leave it unset for the original
+ *   single-owner behaviour (unchanged).
+ *
+ *   Access note: the seed grants the approved_full unlock tier to both real owners
+ *   (an unlock_verification_submissions row), so neither needs the
+ *   feature-unlock-quora-onboarding Unleash flag. The second user still needs the
+ *   `demo-mode` Unleash flag targeted to their Clerk id — that flag is what routes
+ *   them to the `demo` schema, and only the running app can evaluate it (the seed
+ *   cannot set it).
+ *
  * Prerequisites:
  *   - `pnpm migrate:demo-schema` has been run (demo schema exists)
  *   - DATABASE_URL_DIRECT (or DATABASE_URL as fallback) points to the database
  *
  * Usage:
- *   DEMO_OWNER_ID=<clerk-user-id> DATABASE_URL_DIRECT=<url> node scripts/seedDemo.mjs
+ *   DEMO_OWNER_ID=<clerk-user-id> [DEMO_SECOND_OWNER_ID=<clerk-user-id>] \
+ *     DATABASE_URL_DIRECT=<url> node scripts/seedDemo.mjs
  *
  * The seed is idempotent (ON CONFLICT DO UPDATE / DO NOTHING throughout).
- * Re-run freely to refresh or to seed a new DEMO_OWNER_ID.
+ * Re-run freely to refresh or to seed a new DEMO_OWNER_ID / DEMO_SECOND_OWNER_ID.
  */
 
 import { Pool } from 'pg';
@@ -24,6 +44,13 @@ function requireEnv(name) {
 }
 
 const OWNER = requireEnv('DEMO_OWNER_ID');
+
+// Optional second REAL Clerk user — the counterparty for two-sided marketplace
+// testing. When unset, the seed behaves exactly as the single-owner version.
+const OWNER2 = (process.env.DEMO_SECOND_OWNER_ID || '').trim() || null;
+if (OWNER2 && OWNER2 === OWNER) {
+  throw new Error('DEMO_SECOND_OWNER_ID must be a different Clerk id than DEMO_OWNER_ID');
+}
 
 // Supporting synthetic users — social/relational data
 const PEER_1 = 'demo-peer-001';
@@ -74,6 +101,30 @@ function sha256id(...parts) {
 }
 
 const WEEK_START = '2026-05-19';
+
+async function seedUnlock(c) {
+  // Grant the approved_full unlock tier to the REAL demo owner(s) so they can use
+  // every plugin in the demo schema. Without a row here, access depends entirely on
+  // the feature-unlock-quora-onboarding Unleash flag being targeted at each id; the
+  // row makes the demo self-sufficient (the app's DB fallback reads this tier).
+  // The second owner still needs the `demo-mode` Unleash flag to be routed to this
+  // schema in the first place — only the running app can evaluate that.
+  const realOwners = OWNER2 ? [OWNER, OWNER2] : [OWNER];
+  for (const uid of realOwners) {
+    await c.query(
+      `INSERT INTO unlock_verification_submissions
+         (user_id, access_tier, review_status, quora_profile_url, quora_profile_url_normalized,
+          unlock_window_expires_at, reviewed_by_user_id, reviewed_at)
+       VALUES ($1, 'approved_full', 'approved', $2, $3, NOW() + INTERVAL '365 days', $4, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET
+         access_tier = EXCLUDED.access_tier,
+         review_status = EXCLUDED.review_status,
+         updated_at = NOW()`,
+      [uid, `https://quora.com/profile/demo-${uid}`, `quora.com/profile/demo-${uid}`, ADMIN],
+    );
+  }
+  console.log(`  ✓ unlock (approved_full for ${realOwners.length} demo owner${realOwners.length > 1 ? 's' : ''})`);
+}
 
 async function seedServiceCredits(c) {
   const wallets = [
@@ -132,6 +183,26 @@ async function seedServiceCredits(c) {
      ON CONFLICT (id) DO NOTHING`,
     [govId, JSON.stringify({ policy: 'demo-allocation-v1', version: '1.0' })],
   );
+
+  if (OWNER2) {
+    // The second real user needs a wallet to move credits and to deposit into a
+    // Level-Up cohort. Plus a real member↔member transfer both can see.
+    await c.query(
+      `INSERT INTO service_credits_wallets (user_id, available_balance, escrow_balance, updated_at)
+       VALUES ($1, 500, 0, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET
+         available_balance = EXCLUDED.available_balance, updated_at = NOW()`,
+      [OWNER2],
+    );
+    const xfer2 = sha256id(OWNER, OWNER2, '40');
+    await c.query(
+      `INSERT INTO service_credits_transfers
+       (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, completed_at)
+       VALUES ($1, $2, $3, 40, 'completed', $4, NOW())
+       ON CONFLICT (id) DO NOTHING`,
+      [xfer2, OWNER, OWNER2, `demo-transfer-${OWNER}-${OWNER2}`],
+    );
+  }
 
   console.log('  ✓ service-credits');
 }
@@ -245,6 +316,19 @@ async function seedLevelUp(c) {
     [ID.enrollmentOwner, ID.cohort, OWNER, TRAINER],
   );
 
+  if (OWNER2) {
+    // Second participant in the same cohort — conflict on the natural key
+    // (cohort_id, user_id), with a per-owner id so it never collides on the pk.
+    await c.query(
+      `INSERT INTO level_up_enrollments
+       (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
+       VALUES ($1::uuid, $2::uuid, $3, 'active', 300, $4)
+       ON CONFLICT (cohort_id, user_id) DO UPDATE SET
+         status = EXCLUDED.status, credits_deposited = EXCLUDED.credits_deposited`,
+      [sha256id('lu-enrollment', OWNER2), ID.cohort, OWNER2, TRAINER],
+    );
+  }
+
   console.log('  ✓ level-up');
 }
 
@@ -354,6 +438,40 @@ async function seedLighthouse(c) {
     [ID.match, OWNER, HOST, ID.property1],
   );
 
+  if (OWNER2) {
+    // Second owner is a host with their own property; owner (a seeker) has a
+    // pending match on it — so both real users can work opposite sides.
+    await c.query(
+      `INSERT INTO lighthouse_profiles
+       (user_id, profile_type, bio, phone_number, signal_url, is_active, has_property, desired_country)
+       VALUES ($1, 'host', 'Second demo participant hosting a spare unit for the community.',
+         '+10000000077', 'https://signal.me/#demo-owner2', true, true, 'US')
+       ON CONFLICT (user_id) DO UPDATE SET bio = EXCLUDED.bio, updated_at = NOW()`,
+      [OWNER2],
+    );
+    const prop2 = sha256id('lh-property', OWNER2);
+    await c.query(
+      `INSERT INTO lighthouse_properties
+       (id, host_user_id, title, description, property_type, city, state, country,
+        bedrooms, bathrooms, monthly_rent, amenities, house_rules, photos,
+        is_active, created_by_user_id, updated_by_user_id)
+       VALUES ($1::uuid, $2, 'Sunny Room in a Shared Home',
+         'Demo property owned by the second demo participant.', 'apartment',
+         'Berkeley', 'CA', 'US', 1, 1.0, 1200,
+         '["wifi","laundry"]'::jsonb, '["no-smoking"]'::jsonb, '[]'::jsonb,
+         true, $2, $2)
+       ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, updated_at = NOW()`,
+      [prop2, OWNER2],
+    );
+    await c.query(
+      `INSERT INTO lighthouse_matches
+       (id, seeker_user_id, host_user_id, property_id, status, message)
+       VALUES ($1::uuid, $2, $3, $4::uuid, 'pending', 'Demo two-sided match — owner (seeker) ↔ second owner (host).')
+       ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
+      [sha256id('lh-match', OWNER, OWNER2), OWNER, OWNER2, prop2],
+    );
+  }
+
   console.log('  ✓ lighthouse');
 }
 
@@ -389,6 +507,31 @@ async function seedDirectory(c) {
     );
   }
 
+  if (OWNER2) {
+    // A per-owner id (not a fixed ID.* constant) so a second real user gets their
+    // own profile row instead of overwriting / stealing another owner's.
+    await c.query(
+      `INSERT INTO directory_profiles
+       (id, claimed_by_user_id, first_name, last_name, headline, bio, is_active, source)
+       VALUES ($1::uuid, $2, 'Demo', 'Counterpart', 'Community Member',
+         'Second demo participant — the other side of the marketplace.', true, 'self')
+       ON CONFLICT (id) DO UPDATE SET
+         claimed_by_user_id = EXCLUDED.claimed_by_user_id,
+         first_name = EXCLUDED.first_name,
+         last_name = EXCLUDED.last_name,
+         headline = EXCLUDED.headline,
+         bio = EXCLUDED.bio,
+         updated_at = NOW()`,
+      [sha256id('dir-profile', OWNER2), OWNER2],
+    );
+    await c.query(
+      `INSERT INTO directory_user_extension (user_id, updated_at)
+       VALUES ($1, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()`,
+      [OWNER2],
+    );
+  }
+
   console.log('  ✓ directory');
 }
 
@@ -410,6 +553,18 @@ async function seedWorkforce(c) {
          skill_level = EXCLUDED.skill_level, recruited_state = EXCLUDED.recruited_state,
          updated_at = NOW()`,
       [uid, ID.occupation, recruited],
+    );
+  }
+
+  if (OWNER2) {
+    await c.query(
+      `INSERT INTO workforce_profiles
+       (user_id, occupation_id, skill_level, region, recruited_state, updated_by_user_id)
+       VALUES ($1, $2::uuid, 'mid', 'us-east', false, $1)
+       ON CONFLICT (user_id) DO UPDATE SET
+         skill_level = EXCLUDED.skill_level, recruited_state = EXCLUDED.recruited_state,
+         updated_at = NOW()`,
+      [OWNER2, ID.occupation],
     );
   }
 
@@ -464,6 +619,21 @@ async function seedTrust(c) {
        updated_at = NOW()`,
     [OWNER],
   );
+
+  if (OWNER2) {
+    await c.query(
+      `INSERT INTO trust_user_extension
+       (user_id, trust_status, trust_evidence, trust_visibility, updated_at)
+       VALUES ($1, 'peer_verified',
+         '[{"type":"demo_second_owner","date":"2026-05-19","source":"demo-two-sided"}]'::jsonb,
+         'public', NOW())
+       ON CONFLICT (user_id) DO UPDATE SET
+         trust_status = EXCLUDED.trust_status,
+         trust_evidence = EXCLUDED.trust_evidence,
+         updated_at = NOW()`,
+      [OWNER2],
+    );
+  }
 
   console.log('  ✓ trust');
 }
@@ -558,6 +728,22 @@ async function seedFoundation(c) {
     [ID.thread, threadKey, OWNER],
   );
 
+  if (OWNER2) {
+    // A real two-party thread between the two demo owners (distinct id + a
+    // thread_key derived from the sorted pair, which the UNIQUE(thread_key)
+    // index requires be different from the owner↔peer thread above).
+    const threadKey2 = [OWNER, OWNER2].sort().join(':');
+    await c.query(
+      `INSERT INTO foundation_connection_threads (id, thread_key, created_by_user_id)
+       VALUES ($1::uuid, $2, $3)
+       ON CONFLICT (id) DO UPDATE SET
+         thread_key = EXCLUDED.thread_key,
+         created_by_user_id = EXCLUDED.created_by_user_id,
+         updated_at = NOW()`,
+      [sha256id('foundation-thread', OWNER, OWNER2), threadKey2, OWNER],
+    );
+  }
+
   console.log('  ✓ foundation');
 }
 
@@ -594,6 +780,16 @@ async function seedChyme(c) {
     );
   }
 
+  if (OWNER2) {
+    await c.query(
+      `INSERT INTO chyme_room_members
+       (room_id, user_id, username, role, joined_at, last_seen_at)
+       VALUES ($1::uuid, $2, 'demo_counterpart', 'speaker', NOW() - INTERVAL '3 minutes', NOW())
+       ON CONFLICT (room_id, user_id) DO UPDATE SET last_seen_at = NOW()`,
+      [ID.room, OWNER2],
+    );
+  }
+
   console.log('  ✓ chyme');
 }
 
@@ -619,6 +815,27 @@ async function seedTrustTransport(c) {
      ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
     [ID.ttOffer, ID.ttRequest, PEER_2],
   );
+
+  if (OWNER2) {
+    // Two OPEN requests, one owned by each real user. The marketplace shows a
+    // request as "available" when status='open' AND requester <> me, so each user
+    // sees the OTHER's request and can make a provider offer on it — exercising
+    // both the requester and provider sides with two real accounts.
+    const openReqs = [
+      [sha256id('tt-open-req', OWNER), OWNER, 'Ride to the pharmacy', 'Need a lift to pick up a prescription.', 'Berkeley', 'Oakland'],
+      [sha256id('tt-open-req', OWNER2), OWNER2, 'Ride to a job interview', 'Interview across town — need reliable transport.', 'San Francisco', 'Daly City'],
+    ];
+    for (const [id, uid, title, details, pickup, dropoff] of openReqs) {
+      await c.query(
+        `INSERT INTO trust_transport_requests
+         (id, requester_user_id, mode, title, details, pickup_city, dropoff_city,
+          pickup_geo_redacted, dropoff_geo_redacted, status)
+         VALUES ($1::uuid, $2, 'rideshare', $3, $4, $5, $6, $7, $8, 'open')
+         ON CONFLICT (id) DO UPDATE SET status = 'open', title = EXCLUDED.title`,
+        [id, uid, title, details, pickup, dropoff, `${pickup}, CA (redacted)`, `${dropoff}, CA (redacted)`],
+      );
+    }
+  }
 
   console.log('  ✓ trust-transport');
 }
@@ -650,6 +867,15 @@ async function seedPeerProgramming(c) {
        VALUES ($1::uuid, $2)
        ON CONFLICT (cohort_id, user_id) DO NOTHING`,
       [ID.ppCohort, uid],
+    );
+  }
+
+  if (OWNER2) {
+    await c.query(
+      `INSERT INTO peer_programming_cohort_members (cohort_id, user_id)
+       VALUES ($1::uuid, $2)
+       ON CONFLICT (cohort_id, user_id) DO NOTHING`,
+      [ID.ppCohort, OWNER2],
     );
   }
 
@@ -726,6 +952,34 @@ async function seedSocketRelay(c) {
     [ID.srFulfillment, ID.srRequest, PEER_1, OWNER],
   );
 
+  if (OWNER2) {
+    await c.query(
+      `INSERT INTO socket_relay_user_extension
+       (user_id, bio, relay_preferences, presence_opt_in)
+       VALUES ($1, 'Second demo participant — open to helping and being helped.',
+         '{"notifications":"all"}'::jsonb, true)
+       ON CONFLICT (user_id) DO UPDATE SET
+         presence_opt_in = true, service_deleted_at = NULL, updated_at = NOW()`,
+      [OWNER2],
+    );
+    // One OPEN request owned by each real user (distinct id AND distinct
+    // owner+idempotency_key), so each can browse and fulfill the other's request.
+    const openRelay = [
+      [sha256id('sr-open-req', OWNER), OWNER, 'demo-sr-open-owner', 'Need a hand assembling furniture', 'Flat-pack wardrobe — could use a second pair of hands for an hour.'],
+      [sha256id('sr-open-req', OWNER2), OWNER2, 'demo-sr-open-owner2', 'Ride to the community centre', 'Looking for someone headed downtown on Saturday morning.'],
+    ];
+    for (const [id, uid, idem, title, details] of openRelay) {
+      await c.query(
+        `INSERT INTO socket_relay_requests
+         (id, owner_user_id, title, details, category, city, is_public, status, idempotency_key, reopened_count)
+         VALUES ($1::uuid, $2, $3, $4, 'logistics', 'Oakland', true, 'open', $5, 0)
+         ON CONFLICT (owner_user_id, idempotency_key) DO UPDATE SET
+           status = 'open', title = EXCLUDED.title`,
+        [id, uid, title, details, idem],
+      );
+    }
+  }
+
   console.log('  ✓ socket-relay');
 }
 
@@ -780,17 +1034,29 @@ async function seedWhatWorks(c) {
 
   let sortOrder = 0;
   for (const problem of problems) {
-    const problemId = sha256id('what-works-problem', problem.slug);
-    await c.query(
+    // Upsert on the natural key (slug) — the table has a UNIQUE(slug) index, and a
+    // row for this slug may already exist with a different id (e.g. from the
+    // standalone seedWhatWorks.mjs, which mints ids a different way). Conflicting
+    // on id alone missed that and crashed the whole seed on the slug constraint.
+    // RETURNING id gives us the row's ACTUAL id to hang products off, whether the
+    // row was just inserted or already existed.
+    const problemRes = await c.query(
       `INSERT INTO what_works_problems (id, slug, emoji, title, context, sort_order, is_active, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)
-       ON CONFLICT (id) DO NOTHING`,
-      [problemId, problem.slug, problem.emoji, problem.title, problem.context, sortOrder, OWNER],
+       ON CONFLICT (slug) DO UPDATE SET
+         emoji = EXCLUDED.emoji, title = EXCLUDED.title, context = EXCLUDED.context,
+         sort_order = EXCLUDED.sort_order, is_active = TRUE, updated_at = NOW()
+       RETURNING id`,
+      [sha256id('what-works-problem', problem.slug), problem.slug, problem.emoji, problem.title, problem.context, sortOrder, OWNER],
     );
+    const problemId = problemRes.rows[0].id;
     sortOrder += 1;
 
     for (const product of problem.products) {
-      const productId = sha256id('what-works-product', problem.slug, product.name);
+      // Products have no natural unique key, so insert on the deterministic id and
+      // then read back the row's actual id by (problem_id, name) — this stays
+      // correct even if a product already exists under a different id.
+      const productId = sha256id('what-works-product', problemId, product.name);
       await c.query(
         `INSERT INTO what_works_products
            (id, problem_id, emoji, name, kind, note, purchase_url, status, suggested_by, reviewed_by, reviewed_at)
@@ -798,12 +1064,19 @@ async function seedWhatWorks(c) {
          ON CONFLICT (id) DO NOTHING`,
         [productId, problemId, product.emoji, product.name, product.kind, product.note, `https://duckduckgo.com/?q=${encodeURIComponent(product.name)}`, endorsers[0], OWNER],
       );
+      const productRes = await c.query(
+        `SELECT id FROM what_works_products WHERE problem_id = $1 AND name = $2 ORDER BY created_at LIMIT 1`,
+        [problemId, product.name],
+      );
+      const canonicalProductId = productRes.rows[0]?.id ?? productId;
       for (let index = 0; index < product.verified; index += 1) {
+        // Endorsements are unique on (product_id, user_id) — conflict on that
+        // natural key, not the id, so a re-run is a clean no-op.
         await c.query(
           `INSERT INTO what_works_endorsements (id, product_id, user_id)
            VALUES ($1, $2, $3)
-           ON CONFLICT (id) DO NOTHING`,
-          [sha256id('what-works-endorsement', productId, endorsers[index % endorsers.length]), productId, endorsers[index % endorsers.length]],
+           ON CONFLICT (product_id, user_id) DO NOTHING`,
+          [sha256id('what-works-endorsement', canonicalProductId, endorsers[index % endorsers.length]), canonicalProductId, endorsers[index % endorsers.length]],
         );
       }
     }
@@ -826,10 +1099,14 @@ async function main() {
 
   const client = await pool.connect();
   console.log(`Seeding demo schema for owner: ${OWNER}`);
+  if (OWNER2) {
+    console.log(`Two-sided counterparty (DEMO_SECOND_OWNER_ID): ${OWNER2}`);
+  }
 
   try {
     await client.query('BEGIN');
 
+    await seedUnlock(client);
     await seedServiceCredits(client);
     await seedGdp(client);
     await seedWeeklyPerformance(client);
@@ -853,6 +1130,12 @@ async function main() {
 
     await client.query('COMMIT');
     console.log(`\nDemo schema seeded successfully for ${OWNER}.`);
+    if (OWNER2) {
+      console.log(
+        `Second owner ${OWNER2} wired as the two-sided counterparty. ` +
+        `Reminder: target the \`demo-mode\` Unleash flag at ${OWNER2} so the app routes them to the demo schema.`,
+      );
+    }
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     throw err;
