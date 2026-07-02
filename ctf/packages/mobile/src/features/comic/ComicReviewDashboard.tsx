@@ -134,7 +134,7 @@ function TrainingStatsLine({ stats }: { stats: ComicTrainingStats | null }) {
         <Text style={styles.trainingStatsStrong}>Training examples collected: </Text>
         <Text style={styles.trainingStatsStrong}>{stats.trainingExamplesTotal}</Text>
         <Text style={styles.trainingStatsDim}>
-          {` (${pending} pending · ${exported} exported · ${stats.ratedAnswersTotal} rated answers)`}
+          {` (${pending} awaiting export · ${exported} exported · ${stats.ratedAnswersTotal} rated answers)`}
         </Text>
       </Text>
     </View>

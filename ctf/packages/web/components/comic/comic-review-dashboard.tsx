@@ -27,7 +27,7 @@ function TrainingStatsBadge({ stats }: { stats: ComicTrainingStats }) {
       <strong style={{ color: '#E5E7EB', fontWeight: 600 }}>Training examples collected:</strong>{' '}
       <span style={{ color: '#E5E7EB', fontWeight: 600 }}>{stats.trainingExamplesTotal}</span>
       <span style={{ color: '#4B5563' }}>
-        ({pending} pending · {exported} exported · {stats.ratedAnswersTotal} rated answers)
+        ({pending} awaiting export · {exported} exported · {stats.ratedAnswersTotal} rated answers)
       </span>
     </span>
   );
