@@ -11,7 +11,7 @@
 | **Surfaces** | web (`/apps/trust-transport`, `/admin/trust-transport`) · android (`TrustTransport.tsx`, `AdminTrustTransport.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:trust-transport` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md` |
-| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, and chat shipped — TT-8/TT-9 added to the parity table and the stale "service delete endpoint not live" gap removed) |
+| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed) |
 
 ---
 
@@ -247,7 +247,7 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as a member who has fulfilled trips and has earnings entries. Any member with earnings can request a payout — there is no provider role.
 
 **Steps:**
-1. On web, open the **Earnings** tab. Confirm a balance card shows for each currency you have a nonzero balance in. (On Android this runs via API/seed until the parity pass — issue #1250.)
+1. Open the **Earnings** tab. Confirm a balance card shows for each currency you have a nonzero balance in.
 2. View the payout history list with per-row amount + currency + status.
 3. Pick a currency, enter a positive amount within that currency's balance, and submit.
 
@@ -264,7 +264,7 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as a member with an earnings balance.
 
 **Steps:**
-1. On web, open the **Earnings** tab and pick a currency.
+1. Open the **Earnings** tab and pick a currency.
 2. Enter `0` as the amount and submit.
 3. Repeat with a negative amount, and with an amount above that currency's balance.
 
@@ -493,6 +493,8 @@ These cases must produce the same observable outcome on both surfaces. Run both 
 | TT-18 | Discovery list shows only mode + settlement + age; offer sends and confirms |
 | TT-8 | Forward status control advances the trip one step; ServiceCredits settlement moves credits on completion |
 | TT-9 | Proof capture saves a redacted reference; empty value rejected |
+| TT-13 | Balance card per currency; payout request created with the chosen currency; over-balance refused |
+| TT-14 | Zero/negative/over-balance payout attempts all rejected with inline error |
 | TT-A1 | Incident resolved after native/web confirmation prompt |
 | TT-A2 | Market config update persists after reload |
 | TT-A4 | Restrict and restore require confirmation; platform-wide signal written |
@@ -509,4 +511,3 @@ The following are documented limitations from the inventory's "Gaps and Known Te
 3. **Nearby Drivers list absent** — no backend endpoint exists for available driver discovery; this data is intentionally omitted from both web and android per the real-data-only rule. The missing list is not a bug.
 4. **Driver ratings, ETAs, and vehicle info absent** — none of these fields are returned by any `trust-transport` API endpoint; their absence from the UI is correct behavior. Ratings of people are never shown anywhere in this plugin, by design — reputation is completion history only (completed vs. not), never a score.
 5. **No admin trip-approval queue** — the design mockup shows an "approve/reject trip request queue" but no admin trip-approval route exists; the incident queue is what the API exposes and is what the admin surface renders. The mockup is outdated, not a missing feature.
-6. **Earnings/payouts UI: web shipped, Android deferred** — the web "Earnings" tab has per-currency balances and payout requests. The Android equivalent ships in a follow-up pass (Parity Ticket #1250); on Android, exercise this via the API/seed until then. (Make-an-offer/discovery, view-offers/accept, trip progression, proof capture, and chat are shipped on both platforms — see TT-18, TT-4, TT-8, TT-9.)

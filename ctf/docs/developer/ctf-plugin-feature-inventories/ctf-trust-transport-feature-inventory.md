@@ -237,16 +237,21 @@ at a fiat equivalent.
 
 `web+android complete` (functional). Web surface lives under `/apps/trust-transport`; Android surface lives under `packages/mobile/src/features/trust-transport`. Booking, tracking, completion, safety controls, and deletion behave consistently across platforms. Web pixel pass complete: the shell (`trust-transport-shell.tsx` + `tt-*` sub-components) is aligned to `design/.../survivor-hub/TrustTransport.tsx` and decomposed within rule-116 limits; per the real-data-only rule it binds real `/api/trust-transport/modes` + `requests` + per-trip Stream chat and omits the design's mock driver/stat figures. Android pixel pass complete (2026-05-31): `TrustTransport.tsx` rewritten to align with `design/.../survivor-hub/MobileTrustTransport*.tsx` mockups for all four states (loading, public/unauthenticated, empty, main). Binds real `/api/trust-transport/requests` (list + create) via the existing `api.ts`. Omissions per real-data-only rule: "Nearby Drivers" list (no backend endpoint for available driver discovery), driver ratings/ETAs/vehicle info, and online driver count stat — none of these fields are returned by any `trust-transport` API endpoint. Mock file (`MockTrustTransport.tsx`) retired (content cleared). `AuthProvider` export preserved via `auth-context.tsx` re-export; `TrustTransport` export maintained in `index.ts`.
 
-Provider/marketplace parity (2026-07-01 through 2026-07-02, issue #1250): the Android app gained a "Help"
-tab (`TrustTransportHelpTab.tsx`) mirroring the web "Help out" tab's discovery model B — it browses open
-requests via `GET /requests/available` (mode + settlement + age only, never a location), submits an offer
-via `POST /requests/:requestId/offers`, and (2026-07-02) shows "Trips you're helping with" with the same
-forward status controls and proof capture the web Help tab has, using the existing `listProviderTrips`,
-`updateTripStatus`, and `captureProof` API client functions. A "Chat" button on both the requester's Track
-tab (once a request has an accepted trip) and the provider's Help tab trips opens `TrustTransportStreamTab`
-in a full-screen modal (`TrustTransportChatButton.tsx`) — this was previously orphaned scaffold, never
-imported anywhere in the app; it is now wired for both parties. Only earnings/payouts UI on Android remains
-open under #1250; see the Change Log for the full shipped list.
+Provider/marketplace parity (2026-07-01 through 2026-07-02, issue #1250 — complete): the Android app
+gained a "Help" tab (`TrustTransportHelpTab.tsx`) mirroring the web "Help out" tab's discovery model B —
+it browses open requests via `GET /requests/available` (mode + settlement + age only, never a location),
+submits an offer via `POST /requests/:requestId/offers`, and shows "Trips you're helping with" with the
+same forward status controls and proof capture the web Help tab has, using the existing
+`listProviderTrips`, `updateTripStatus`, and `captureProof` API client functions. A "Chat" button on both
+the requester's Track tab (once a request has an accepted trip) and the provider's Help tab trips opens
+`TrustTransportStreamTab` in a full-screen modal (`TrustTransportChatButton.tsx`) — this was previously
+orphaned scaffold, never imported anywhere in the app; it is now wired for both parties. An "Earnings" tab
+(`TrustTransportEarningsTab.tsx`) mirrors the web Earnings tab: per-currency balance cards
+(`getEarningsBalances`), a payout request form scoped to the selected currency
+(`requestPayout(amount, currency)`), and payout history (`listPayouts`). Every endpoint used across all of
+the above already existed (no schema/route/contract change); see the Change Log for the full shipped list.
+Issue #1250 is now closed out — Android has full parity with web across discovery/offer, view-offers/accept,
+trip progression, proof capture, chat, and earnings/payouts.
 
 While wiring Android chat, the same gap was found on web: the "Help out" tab's provider trip cards had no
 chat access either — only the requester's "Direct Line" tab could open a trip's chat. `tt-help-tab.tsx`
@@ -275,18 +280,23 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
    undocumented schema table or API route) and the plugin contract templates (rules 200–203). Full
    field-by-field matching of contract YAML against inventory prose is still a manual review step, not an
    automated gate.
-3. Earnings/payouts UI is web-only; the Android equivalent is the one remaining item under issue #1250
-   (Parity Ticket). Trip progression, proof capture, discovery/offer, and chat are shipped on both
-   platforms as of 2026-07-02.
-4. No admin trip-approval queue: the `design/` mockup shows an "approve/reject trip request queue" but no
+3. No admin trip-approval queue: the `design/` mockup shows an "approve/reject trip request queue" but no
    backend route exists for it. The incident queue is the real, shipped moderation surface; the mockup
    predates the incident-queue design and is stale, not a missing feature.
-5. Nearby Drivers list, driver ratings, ETAs, and vehicle info are intentionally absent from both
+4. Nearby Drivers list, driver ratings, ETAs, and vehicle info are intentionally absent from both
    platforms — no backend endpoint returns any of these fields, per the real-data-only rule. Ratings of
    people specifically are never shown anywhere in this plugin: reputation is transparent completion
    history only (completed vs. not), never a score, by owner directive.
 
 ## Change Log
+
+- 2026-07-02: Android earnings + payouts screen (parity with web slice 6, issue #1250). New
+  `TrustTransportEarningsTab.tsx` — an "Earnings" tab in the bottom nav with per-currency balance cards
+  (`getEarningsBalances`), a payout request form scoped to whichever currency is selected
+  (`requestPayout(amount, currency)`), and payout history (`listPayouts`) — all reusing the existing
+  mobile API client functions from the #1233 currency migration. No schema/route/contract change (every
+  endpoint already existed and was reviewed). This was the last Android gap tracked under #1250; trip
+  progression, proof capture, discovery/offer, view-offers/accept, and chat now all have Android parity.
 
 - 2026-07-02: Android trip progression + proof capture (parity with web slices 4–5, issue #1250), plus
   chat wiring on both platforms. `TrustTransportHelpTab.tsx` gained a "Trips you're helping with" section
