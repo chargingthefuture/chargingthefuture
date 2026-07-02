@@ -63,6 +63,28 @@ it reaches the Commons (the Hub home) where they can ask for help. A control mem
 With the flag off everywhere, no member sees the link (default state).
 **Result:** web ☐ android ☐ — notes:
 
+### UNLOCK-M2 · Verify prompt on the Commons (A/B treatment)
+**Role:** member (not yet verified) · **Surfaces:** web + mobile-responsive (Commons / home)
+**Precondition:** the `feature-unlock-early-commons-access` flag is enabled and the test member is in
+the treatment bucket, so they land on the Commons instead of being redirected to the Unlock screen.
+Test with both a member who has no submission and one with a pending submission.
+**Steps:**
+1. As an unverified treatment member with **no** submission, open the home page (the Commons).
+2. Confirm a "Verify your account to unlock full access" banner shows at the top of the content area,
+   with a Quora URL input, a "Submit for verification" button, and a note to ask for help in the
+   Commons chat below.
+3. Paste a valid Quora profile URL and submit.
+4. Confirm the banner switches to an "under review" note without a full reload.
+5. Reload; confirm the banner still shows the "under review" note (pending submission).
+6. Repeat as a control member (flag off / control bucket): confirm they are redirected to
+   `/plugin/unlock` and never see this banner.
+**Expected:** A treatment member who lands on the Commons is clearly prompted to submit their Quora
+URL inline (posting to `POST /api/unlock/submission`) and told to ask in the Commons if stuck; after
+submitting they see the pending note and keep Commons access. A support-only or control member does
+not see this banner. Inert when the flag is off. The native-android equivalent of this Commons prompt
+is a follow-up (#1315); this row is web + mobile-responsive.
+**Result:** web ☐ — notes:
+
 ---
 
 ## Admin walkthrough

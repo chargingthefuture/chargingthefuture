@@ -16,8 +16,18 @@ import { ShellChatPanel } from './shell-chat-panel';
 import { ShellAppsPanel } from './shell-apps-panel';
 import { ShellRightRail } from './shell-right-rail';
 import { ContributionsBanner } from '../contributions/contributions-banner';
+import { UnlockVerifyBanner } from './unlock-verify-banner';
 import { HelpControl } from '../bug-reports/help-control';
+import type { UnlockReviewStatus } from '../../lib/unlock/types';
 import styles from './community-shell.module.css';
+
+// Verification state for a signed-in member who has not yet completed Quora verification but reaches
+// the Commons (notably the early-Commons A/B treatment bucket). Null/undefined when the member is
+// verified, an admin, or signed out — in which case no verify banner is shown.
+export type ShellVerification = {
+  hasSubmission: boolean;
+  reviewStatus: UnlockReviewStatus | null;
+};
 
 type CommunityShellProps = {
   initialPlugins: PluginRegistryItem[];
@@ -28,6 +38,7 @@ type CommunityShellProps = {
   isAuthenticated?: boolean;
   isAdmin?: boolean;
   signInUrl?: string;
+  verification?: ShellVerification | null;
 };
 
 type PluginsApiPayload = {
@@ -117,7 +128,7 @@ function sortPluginsForUi(
   });
 }
 
-export function CommunityShell({ initialPlugins, shellStats, currentUser, trust, initialSection = 'chat', isAuthenticated = false, isAdmin = false, signInUrl = '/sign-in' }: CommunityShellProps) {
+export function CommunityShell({ initialPlugins, shellStats, currentUser, trust, initialSection = 'chat', isAuthenticated = false, isAdmin = false, signInUrl = '/sign-in', verification = null }: CommunityShellProps) {
   const [section, setSection] = useState<ShellSection>(initialSection);
   const [query, setQuery] = useState('');
   const [plugins, setPlugins] = useState(initialPlugins);
@@ -332,6 +343,11 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           {/* App-wide fundraiser banner — non-blocking, top of the content area, signed-in only.
               The banner self-hides unless a drive is active and visible for this member. */}
           {isAuthenticated ? <ContributionsBanner /> : null}
+          {/* Not-yet-verified members (notably the early-Commons A/B treatment bucket) get a persistent
+              prompt to submit their Quora URL right here, with a nudge to ask in the Commons if stuck. */}
+          {isAuthenticated && verification ? (
+            <UnlockVerifyBanner hasSubmission={verification.hasSubmission} reviewStatus={verification.reviewStatus} />
+          ) : null}
           {loadError ? (
             <section className={styles.usernameAlert} role="alert">{loadError}</section>
           ) : null}
