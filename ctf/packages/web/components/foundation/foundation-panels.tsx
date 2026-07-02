@@ -16,6 +16,11 @@ const EMPTY_STEPS = [
   "Accept a quote and pay with ServiceCredits",
 ];
 
+// How many skills a provider's browse card shows before collapsing the rest behind
+// a "+N more" chip (the full list is on the profile). Keeps a many-skill provider
+// from dominating the list on mobile.
+const SKILL_PREVIEW_CAP = 6;
+
 export function BrowsePanel({
   providers, viewerUserId = null, onSelect, activeSkillId = null, activeSkillName = null, onSkillFilter,
 }: {
@@ -56,18 +61,41 @@ export function BrowsePanel({
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {providers.map((p) => (
-              <div key={p.profileId} role="button" tabIndex={0} onClick={() => onSelect(p)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(p); } }} style={{ width: "100%", textAlign: "left", padding: "18px 20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${COLOR}18`, cursor: "pointer", display: "flex", gap: 16, alignItems: "flex-start" }}>
-                <Avatar style={{ width: 52, height: 52, flexShrink: 0 }}>
-                  <AvatarFallback style={{ background: `${COLOR}20`, color: COLOR, fontSize: 18, fontWeight: 800 }}>{initials(p.displayName)}</AvatarFallback>
-                </Avatar>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", marginBottom: 4 }}>{p.displayName}</div>
-                  {p.headline && <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 6 }}>{p.headline}</div>}
-                  {p.bio && <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", marginBottom: 8 }}>{p.bio}</div>}
+            {providers.map((p) => {
+              // Cap the skills shown on the card so a provider with many skills doesn't
+              // dominate the list — the full set lives on the profile. Keep the actively
+              // filtered skill first (it's why this provider matched), and always show a
+              // "+N more" affordance when some are hidden, so a member who searched for a
+              // skill they don't see here knows there are more behind View Profile.
+              const orderedSkills = activeSkillId
+                ? [...p.offeredSkills].sort((a, b) =>
+                    a.id === activeSkillId ? -1 : b.id === activeSkillId ? 1 : 0,
+                  )
+                : p.offeredSkills;
+              const visibleSkills = orderedSkills.slice(0, SKILL_PREVIEW_CAP);
+              const hiddenSkillCount = orderedSkills.length - visibleSkills.length;
+              return (
+                <div key={p.profileId} role="button" tabIndex={0} onClick={() => onSelect(p)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(p); } }} style={{ width: "100%", textAlign: "left", padding: "18px 20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${COLOR}18`, cursor: "pointer", display: "flex", flexDirection: "column", gap: 12 }}>
+                  {/* Header row: identity on the left, primary action (View Profile) on the right. */}
+                  <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                    <Avatar style={{ width: 52, height: 52, flexShrink: 0 }}>
+                      <AvatarFallback style={{ background: `${COLOR}20`, color: COLOR, fontSize: 18, fontWeight: 800 }}>{initials(p.displayName)}</AvatarFallback>
+                    </Avatar>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", marginBottom: 4 }}>{p.displayName}</div>
+                      {p.headline && <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 6 }}>{p.headline}</div>}
+                      {p.bio && <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{p.bio}</div>}
+                    </div>
+                    <span style={{ padding: "7px 16px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
+                      View Profile
+                    </span>
+                  </div>
+
+                  {/* Skills use the full card width and wrap into a compact cloud, capped
+                      with a "+N more" chip that opens the full profile. */}
                   {p.offeredSkills.length > 0 ? (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {p.offeredSkills.map((s) => {
+                      {visibleSkills.map((s) => {
                         const active = s.id === activeSkillId;
                         return (
                           <span
@@ -76,29 +104,36 @@ export function BrowsePanel({
                             tabIndex={0}
                             onClick={(e) => { e.stopPropagation(); onSkillFilter?.(active ? null : s.id, active ? null : s.name); }}
                             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onSkillFilter?.(active ? null : s.id, active ? null : s.name); } }}
-                            style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11.5, fontWeight: 600, cursor: "pointer", background: active ? COLOR : `${COLOR}12`, color: active ? "#1a1205" : COLOR, border: `1px solid ${active ? COLOR : COLOR + "30"}` }}
+                            style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11.5, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", background: active ? COLOR : `${COLOR}12`, color: active ? "#1a1205" : COLOR, border: `1px solid ${active ? COLOR : COLOR + "30"}` }}
                           >
                             {s.name}
                           </span>
                         );
                       })}
+                      {hiddenSkillCount > 0 ? (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`View ${hiddenSkillCount} more ${hiddenSkillCount === 1 ? "skill" : "skills"} on ${p.displayName}'s profile`}
+                          onClick={(e) => { e.stopPropagation(); onSelect(p); }}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onSelect(p); } }}
+                          style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11.5, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", background: "rgba(255,255,255,0.04)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.14)" }}
+                        >
+                          +{hiddenSkillCount} more
+                        </span>
+                      ) : null}
                     </div>
                   ) : null}
+
+                  {/* 1:1 call availability — one of the key signals for a member deciding who to reach. */}
                   {canOfferConnectNow(p, viewerUserId) ? (
-                    <div style={{ marginTop: 10 }}>
-                      <ConnectNowButton provider={p} compact />
-                    </div>
+                    <ConnectNowButton provider={p} compact />
                   ) : acceptsInstantCalls(p) ? (
-                    <div style={{ marginTop: 10 }}>
-                      <InstantCallAvailabilityBadge provider={p} compact />
-                    </div>
+                    <InstantCallAvailabilityBadge provider={p} compact />
                   ) : null}
                 </div>
-                <span style={{ padding: "7px 16px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
-                  View Profile
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
