@@ -13,7 +13,6 @@ const OPTIONS: { value: ThemeName; label: string }[] = [
 // Data settings surface.
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const activeText = theme === 'comic' ? '#0d0d0d' : '#ffffff';
 
   return (
     <div
@@ -44,7 +43,7 @@ export function ThemeToggle() {
               border: 'none',
               cursor: 'pointer',
               background: active ? 'var(--ctf-brand)' : 'transparent',
-              color: active ? activeText : 'var(--ctf-text-subtle)',
+              color: active ? 'var(--ctf-brand-text)' : 'var(--ctf-text-subtle)',
             }}
           >
             {option.label}
