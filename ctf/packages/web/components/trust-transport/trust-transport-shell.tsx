@@ -249,7 +249,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
               <ChevronLeft size={20} />
             </Link>
             <Car size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>TrustTransport</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>TrustTransport</span>
             <PluginAdminButton href="/admin/trust-transport" isAdmin={isAdmin} accent={t.ACCENT} />
             <MobileTopActions />
           </div>
