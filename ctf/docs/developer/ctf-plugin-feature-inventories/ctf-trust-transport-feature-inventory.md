@@ -237,12 +237,22 @@ at a fiat equivalent.
 
 `web+android complete` (functional). Web surface lives under `/apps/trust-transport`; Android surface lives under `packages/mobile/src/features/trust-transport`. Booking, tracking, completion, safety controls, and deletion behave consistently across platforms. Web pixel pass complete: the shell (`trust-transport-shell.tsx` + `tt-*` sub-components) is aligned to `design/.../survivor-hub/TrustTransport.tsx` and decomposed within rule-116 limits; per the real-data-only rule it binds real `/api/trust-transport/modes` + `requests` + per-trip Stream chat and omits the design's mock driver/stat figures. Android pixel pass complete (2026-05-31): `TrustTransport.tsx` rewritten to align with `design/.../survivor-hub/MobileTrustTransport*.tsx` mockups for all four states (loading, public/unauthenticated, empty, main). Binds real `/api/trust-transport/requests` (list + create) via the existing `api.ts`. Omissions per real-data-only rule: "Nearby Drivers" list (no backend endpoint for available driver discovery), driver ratings/ETAs/vehicle info, and online driver count stat — none of these fields are returned by any `trust-transport` API endpoint. Mock file (`MockTrustTransport.tsx`) retired (content cleared). `AuthProvider` export preserved via `auth-context.tsx` re-export; `TrustTransport` export maintained in `index.ts`.
 
-Provider/marketplace parity (2026-07-01, in progress — issue #1250): the Android app gains a "Help" tab
-(`TrustTransportHelpTab.tsx`) mirroring the web "Help out" tab's discovery model B — it browses open
-requests via `GET /requests/available` (mode + settlement + age only, never a location) and submits an
-offer via `POST /requests/:requestId/offers`. Trip progression, proof capture, and earnings/payouts UI on
-Android are tracked as follow-up passes under the same issue; see the Change Log for what has shipped so
-far.
+Provider/marketplace parity (2026-07-01 through 2026-07-02, issue #1250): the Android app gained a "Help"
+tab (`TrustTransportHelpTab.tsx`) mirroring the web "Help out" tab's discovery model B — it browses open
+requests via `GET /requests/available` (mode + settlement + age only, never a location), submits an offer
+via `POST /requests/:requestId/offers`, and (2026-07-02) shows "Trips you're helping with" with the same
+forward status controls and proof capture the web Help tab has, using the existing `listProviderTrips`,
+`updateTripStatus`, and `captureProof` API client functions. A "Chat" button on both the requester's Track
+tab (once a request has an accepted trip) and the provider's Help tab trips opens `TrustTransportStreamTab`
+in a full-screen modal (`TrustTransportChatButton.tsx`) — this was previously orphaned scaffold, never
+imported anywhere in the app; it is now wired for both parties. Only earnings/payouts UI on Android remains
+open under #1250; see the Change Log for the full shipped list.
+
+While wiring Android chat, the same gap was found on web: the "Help out" tab's provider trip cards had no
+chat access either — only the requester's "Direct Line" tab could open a trip's chat. `tt-help-tab.tsx`
+gained an inline "Chat" toggle (`TripChat`) using the same `StreamChatPanel` and the same
+`/api/trust-transport/trips/:tripId/chat` route (which already authorized either party) — no backend change
+needed, only the missing UI.
 
 Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (exported from `index.ts`, registered in `App.tsx` as the `trust-transport-admin` feature) now matches the shipped web admin at `/admin/trust-transport`. It is admin-gated server-side (every admin route runs `requireTrustTransportAdminAccess`); a 401/403 surfaces an "available to admins only" notice. It binds the same existing admin endpoints with no new backend: incident queue with resolve, market controls (max concurrent trips, proof-on-delivery, emergency freeze), account restrict/restore, and the admin audit trail. Every state-changing action (resolve, market-config update, restrict, restore) asks for confirmation via a native `Alert` before sending, and mutations carry the `x-ctf-csrf: '1'` header. The web admin page is already mobile-responsive: it is a single-column flow (`max-w-5xl` content with a `grid-cols-1` → `sm:grid-cols-2` → `lg:grid-cols-4` stat grid and full-width stacked cards), so no responsive rework was required.
 
@@ -256,12 +266,49 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Gaps and Known Technical Debt
 
-1. Status vocabulary design across three modes (ride/package/food) may need refinement based on real operational needs.
-2. Event volume and audit storage growth will require archival/retention policy once deployed at scale.
-3. Command contract complexity should be monitored to prevent drift from UI flow logic.
-4. Android has no chat screen wired up: `TrustTransportStreamTab.tsx` exists in the mobile feature directory but is not imported or registered anywhere in the app, so there is no navigation path to it and a trip cannot be chatted with on Android today. Predates and is separate from the #1250 provider-marketplace parity work; needs its own fix.
+1. Audit storage growth: `trust_transport_admin_audit_trail` has no archival or retention policy. No
+   plugin in this codebase has one yet either — building a bespoke retention job for this table alone
+   would require a retention-period decision (how long, under what compliance requirement) that has not
+   been made at the product or platform level. Not blocking; flagged for a cross-plugin retention policy
+   decision, not a per-plugin fix.
+2. Command contract drift: mitigated by the `check-inventory-drift` CI gate (fails a PR that adds an
+   undocumented schema table or API route) and the plugin contract templates (rules 200–203). Full
+   field-by-field matching of contract YAML against inventory prose is still a manual review step, not an
+   automated gate.
+3. Earnings/payouts UI is web-only; the Android equivalent is the one remaining item under issue #1250
+   (Parity Ticket). Trip progression, proof capture, discovery/offer, and chat are shipped on both
+   platforms as of 2026-07-02.
+4. No admin trip-approval queue: the `design/` mockup shows an "approve/reject trip request queue" but no
+   backend route exists for it. The incident queue is the real, shipped moderation surface; the mockup
+   predates the incident-queue design and is stale, not a missing feature.
+5. Nearby Drivers list, driver ratings, ETAs, and vehicle info are intentionally absent from both
+   platforms — no backend endpoint returns any of these fields, per the real-data-only rule. Ratings of
+   people specifically are never shown anywhere in this plugin: reputation is transparent completion
+   history only (completed vs. not), never a score, by owner directive.
 
 ## Change Log
+
+- 2026-07-02: Android trip progression + proof capture (parity with web slices 4–5, issue #1250), plus
+  chat wiring on both platforms. `TrustTransportHelpTab.tsx` gained a "Trips you're helping with" section
+  (`listProviderTrips`, `updateTripStatus`, `captureProof` — all already-existing API client functions) with
+  the same forward-only status controls and redacted-reference proof capture as web. New
+  `TrustTransportChatButton.tsx` (button + full-screen RN `Modal`, mirroring the `ChymeTipModal.tsx`
+  pattern since this app has no react-navigation) wraps the previously-orphaned `TrustTransportStreamTab`
+  and is now shown on the Track tab's own-trip cards (once `tripId` is present — the mobile
+  `TrustTransportRequest` type gained a `tripId` field mirroring web's, sourced from the same
+  `listRequests` join that already returned it) and on Help-tab provider trip cards. Also found and fixed
+  the same gap on web: `tt-help-tab.tsx`'s provider trip cards had no chat access (only the requester's
+  Direct Line tab did) — added an inline `TripChat` toggle using the existing `StreamChatPanel` and the
+  existing chat route (which already authorized either party). No schema/route/contract change — every
+  endpoint used already existed and was reviewed. Corrected the `TRUST_TRANSPORT_PROFILE_AND_DELETION_CONTRACT.md`
+  doc, which described a never-built `DELETE /api/account/trust-transport-profile` endpoint and four
+  table names that never existed; service-scoped deletion has actually been live via the generic
+  `DELETE /api/account/services/:slug` route since the `trust-transport` entry shipped in
+  `deletion-registry.ts` — the doc now matches the real tables and their real delete/soft-delete/retain
+  treatment. Documentation only for that file. Resolved the "Gaps and Known Technical Debt" list down to
+  the items that are genuinely still open or intentionally not built (see that section) — closed the
+  status-vocabulary item (the three-mode vocabulary has been stable and consistent throughout the shipped
+  code; nothing concrete has needed a change) and the stale service-delete-endpoint item.
 
 - 2026-07-01: Android view-offers + accept (parity with web slice 3, issue #1250). New
   `TrustTransportOffersSection.tsx` — shown on each of the caller's own **open** requests in the Track

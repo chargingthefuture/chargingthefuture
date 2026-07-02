@@ -12,6 +12,7 @@ import { useAuth } from './auth-context';
 import { TrustTransportLoadingState } from './TrustTransportLoadingState';
 import { TrustTransportOffersSection } from './TrustTransportOffersSection';
 import { TrustTransportHelpTab } from './TrustTransportHelpTab';
+import { TrustTransportChatButton } from './TrustTransportChatButton';
 import {
   createRequest,
   listRequests,
@@ -295,6 +296,7 @@ function TrackTab({
             {req.status === 'open' ? (
               <TrustTransportOffersSection requestId={req.id} onAccepted={onRefresh} />
             ) : null}
+            {req.tripId ? <TrustTransportChatButton tripId={req.tripId} /> : null}
           </View>
         </React.Fragment>
       ))}

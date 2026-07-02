@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { listAvailableRequests, createOffer } from './api';
-import { ttSettlementLabel, type TrustTransportAvailableRequest } from './types';
+import { listAvailableRequests, createOffer, listProviderTrips, updateTripStatus, captureProof } from './api';
+import { ttSettlementLabel, type TrustTransportAvailableRequest, type TrustTransportProviderTrip } from './types';
+import { TrustTransportChatButton } from './TrustTransportChatButton';
 
 const COLOR = '#38BDF8';
 const TEXT = '#F9FAFB';
@@ -10,6 +11,185 @@ const SUBTLE = '#9CA3AF';
 
 function modeLabel(mode: string): string {
   return mode.charAt(0).toUpperCase() + mode.slice(1);
+}
+
+// The forward step a provider can take from each trip status (the happy path). Terminal states have none.
+const NEXT_STEP: Record<string, { next: 'en_route' | 'picked_up' | 'delivered' | 'completed'; label: string }> = {
+  assigned: { next: 'en_route', label: 'Start trip' },
+  en_route: { next: 'picked_up', label: 'Mark picked up' },
+  picked_up: { next: 'delivered', label: 'Mark delivered' },
+  delivered: { next: 'completed', label: 'Mark complete' },
+};
+
+function tripStatusLabel(s: string): string {
+  if (s === 'en_route') return 'En route';
+  if (s === 'picked_up') return 'Picked up';
+  if (s === 'emergency_frozen') return 'Emergency stop';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+const PROOF_TYPES: { key: 'photo' | 'code' | 'note'; label: string; placeholder: string }[] = [
+  { key: 'photo', label: 'Photo', placeholder: 'Photo reference or short description' },
+  { key: 'code', label: 'Code', placeholder: 'Confirmation code' },
+  { key: 'note', label: 'Note', placeholder: 'Short note' },
+];
+
+// Capture pickup/delivery proof as a redacted reference (no raw images) for dispute evidence.
+function ProofForm({ tripId, onDone }: { tripId: string; onDone: () => void }) {
+  const [type, setType] = useState<'photo' | 'code' | 'note'>('photo');
+  const [value, setValue] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    if (!value.trim()) {
+      setError('Add a short reference, code, or note.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      await captureProof(tripId, type, value.trim());
+      onDone();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not add proof.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const active = PROOF_TYPES.find((p) => p.key === type) ?? PROOF_TYPES[0];
+
+  return (
+    <View style={styles.proofForm}>
+      <View style={styles.proofTypeRow}>
+        {PROOF_TYPES.map((p) => (
+          <TouchableOpacity
+            key={p.key}
+            style={[styles.proofTypeBtn, type === p.key && styles.proofTypeBtnActive]}
+            onPress={() => setType(p.key)}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.proofTypeBtnText, type === p.key && styles.proofTypeBtnTextActive]}>{p.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <TextInput
+        value={value}
+        onChangeText={setValue}
+        placeholder={active.placeholder}
+        placeholderTextColor={MUTED}
+        maxLength={500}
+        style={styles.proofInput}
+        accessibilityLabel="Proof value"
+      />
+      <Text style={styles.proofHint}>
+        Stored as a redacted reference for dispute evidence — don&apos;t paste sensitive personal detail.
+      </Text>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      <TouchableOpacity
+        style={[styles.saveProofBtn, submitting && styles.sendBtnDisabled]}
+        onPress={() => { void submit(); }}
+        disabled={submitting}
+        accessibilityRole="button"
+      >
+        {submitting ? <ActivityIndicator size="small" color={COLOR} /> : <Text style={styles.sendBtnText}>Save proof</Text>}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function ProviderTripCard({ trip, busyId, onAdvance }: { trip: TrustTransportProviderTrip; busyId: string | null; onAdvance: (_tripId: string, _next: 'en_route' | 'picked_up' | 'delivered' | 'completed') => void }) {
+  const [proofOpen, setProofOpen] = useState(false);
+  const [proofDone, setProofDone] = useState(false);
+  const step = NEXT_STEP[trip.status];
+  const route = `${trip.pickupCity ?? '—'} → ${trip.dropoffCity ?? '—'}`;
+  const terminal = ['completed', 'cancelled', 'disputed', 'emergency_frozen'].includes(trip.status);
+
+  return (
+    <View style={styles.tripCard}>
+      <View style={styles.tripCardRow}>
+        <Text style={styles.tripRoute}>{route}</Text>
+        <View style={styles.tripStatusBadge}>
+          <Text style={styles.tripStatusBadgeText}>{tripStatusLabel(trip.status)}</Text>
+        </View>
+      </View>
+      <Text style={styles.tripMeta}>{modeLabel(trip.mode)} · {ttSettlementLabel(trip.priceCurrency, trip.priceAmount)}</Text>
+      {step ? (
+        <TouchableOpacity
+          style={[styles.advanceBtn, busyId !== null && styles.sendBtnDisabled]}
+          onPress={() => onAdvance(trip.tripId, step.next)}
+          disabled={busyId !== null}
+          accessibilityRole="button"
+        >
+          {busyId === trip.tripId ? <ActivityIndicator size="small" color={COLOR} /> : <Text style={styles.advanceBtnText}>✓ {step.label}</Text>}
+        </TouchableOpacity>
+      ) : (
+        <Text style={styles.noStepText}>No further action — this trip is {tripStatusLabel(trip.status).toLowerCase()}.</Text>
+      )}
+      {!terminal ? (
+        proofDone ? (
+          <Text style={styles.proofDoneText}>Proof saved.</Text>
+        ) : proofOpen ? (
+          <ProofForm tripId={trip.tripId} onDone={() => { setProofDone(true); setProofOpen(false); }} />
+        ) : (
+          <TouchableOpacity style={styles.addProofBtn} onPress={() => setProofOpen(true)} accessibilityRole="button">
+            <Text style={styles.addProofBtnText}>Add pickup/delivery proof</Text>
+          </TouchableOpacity>
+        )
+      ) : null}
+      <TrustTransportChatButton tripId={trip.tripId} />
+    </View>
+  );
+}
+
+// Trips the member is fulfilling, with controls to advance the lifecycle one step at a time. Renders
+// nothing until loaded and nothing when the member has no trips, so it stays out of the way otherwise.
+function ProviderTripsSection() {
+  const [loading, setLoading] = useState(true);
+  const [trips, setTrips] = useState<TrustTransportProviderTrip[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const items = await listProviderTrips();
+      setTrips(items);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not load your trips.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { void load(); }, []);
+
+  async function advance(tripId: string, nextStatus: 'en_route' | 'picked_up' | 'delivered' | 'completed') {
+    setBusyId(tripId);
+    setError(null);
+    try {
+      await updateTripStatus(tripId, nextStatus);
+      await load();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not update the trip.');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (loading || trips.length === 0) return null;
+
+  return (
+    <View style={styles.tripsSection}>
+      <Text style={styles.tripsSectionTitle}>Trips you&apos;re helping with</Text>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {trips.map((t) => (
+        <ProviderTripCard key={t.tripId} trip={t} busyId={busyId} onAdvance={(id, next) => { void advance(id, next); }} />
+      ))}
+    </View>
+  );
 }
 
 // Plain relative age ("just now", "5 min ago", "2 h ago", "3 d ago") from an ISO timestamp.
@@ -139,6 +319,7 @@ export function TrustTransportHelpTab() {
         Open requests from the community you can offer to help with. To protect people&apos;s safety, you
         see only what kind of help is needed and how it&apos;s settled.
       </Text>
+      <ProviderTripsSection />
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={COLOR} />
@@ -226,4 +407,81 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: { opacity: 0.6 },
   sendBtnText: { fontSize: 13, fontWeight: '600', color: COLOR },
+  tripsSection: { marginBottom: 20 },
+  tripsSectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: SUBTLE, marginBottom: 10 },
+  tripCard: {
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: `${COLOR}08`,
+    borderWidth: 1,
+    borderColor: `${COLOR}25`,
+    marginBottom: 12,
+  },
+  tripCardRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  tripRoute: { fontSize: 14, fontWeight: '700', color: TEXT, flexShrink: 1 },
+  tripStatusBadge: {
+    marginLeft: 'auto',
+    backgroundColor: `${COLOR}1A`,
+    borderWidth: 1,
+    borderColor: `${COLOR}33`,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+  },
+  tripStatusBadgeText: { fontSize: 12, color: COLOR, fontWeight: '600' },
+  tripMeta: { fontSize: 12, color: SUBTLE, marginTop: 6 },
+  advanceBtn: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 9,
+    backgroundColor: `${COLOR}1F`,
+    borderWidth: 1,
+    borderColor: `${COLOR}40`,
+    alignItems: 'center',
+  },
+  advanceBtnText: { fontSize: 13, fontWeight: '600', color: COLOR },
+  noStepText: { fontSize: 12, color: MUTED, marginTop: 10 },
+  addProofBtn: {
+    marginTop: 8,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+  },
+  addProofBtnText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
+  proofDoneText: { marginTop: 10, fontSize: 12, color: COLOR, fontWeight: '600' },
+  proofForm: { marginTop: 10, gap: 8 },
+  proofTypeRow: { flexDirection: 'row', gap: 6 },
+  proofTypeBtn: {
+    flex: 1,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    alignItems: 'center',
+  },
+  proofTypeBtnActive: { backgroundColor: `${COLOR}20`, borderColor: `${COLOR}40` },
+  proofTypeBtnText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
+  proofTypeBtnTextActive: { color: COLOR },
+  proofInput: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderRadius: 8,
+    fontSize: 13,
+    color: '#E8EAF0',
+    padding: 10,
+  },
+  proofHint: { fontSize: 11, color: MUTED },
+  saveProofBtn: {
+    padding: 9,
+    borderRadius: 8,
+    backgroundColor: `${COLOR}1F`,
+    borderWidth: 1,
+    borderColor: `${COLOR}40`,
+    alignItems: 'center',
+  },
 });
