@@ -43,6 +43,19 @@ function isPublishingAudio(participant: StreamVideoParticipant): boolean {
   return participant.publishedTracks.includes(SfuModels.TrackType.AUDIO);
 }
 
+// Live audio needs WebRTC (`RTCPeerConnection`). Safari's Lockdown Mode and some hardened/older
+// browsers remove that global, so the Stream Video SDK throws "Can't find variable:
+// RTCPeerConnection" on join. Read it off `window` (property access, never a bare reference, so this
+// can't itself throw) so we can detect it up front and degrade gracefully instead of crashing.
+// Exported so the guest listen path shares the exact same detection.
+export function isWebRtcAvailable(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  const w = window as unknown as { RTCPeerConnection?: unknown; webkitRTCPeerConnection?: unknown };
+  return typeof w.RTCPeerConnection !== 'undefined' || typeof w.webkitRTCPeerConnection !== 'undefined';
+}
+
 type ChymeAudioRoomProps = {
   joinInfo: ChymeJoinResponse;
   currentUser: CurrentUser;
@@ -59,10 +72,19 @@ type ChymeAudioRoomProps = {
 export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isMobile, onLeave, raisedHandUserIds }: ChymeAudioRoomProps) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
-  const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
+  const [status, setStatus] = useState<'connecting' | 'joined' | 'error' | 'unsupported'>('connecting');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    // If the browser has no WebRTC (Safari Lockdown Mode, some hardened/older browsers), the Stream
+    // Video SDK can't connect. Detect it before creating the client and show a clear, actionable
+    // message instead of a raw "Can't find variable: RTCPeerConnection" — chat still works. This is an
+    // expected environment state, not a fault, so we don't report it to Sentry.
+    if (!isWebRtcAvailable()) {
+      setStatus('unsupported');
+      return;
+    }
+
     let cancelled = false;
 
     const videoClient = new StreamVideoClient({
@@ -139,6 +161,30 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [status]);
+
+  if (status === 'unsupported') {
+    return (
+      <ChymeAudioFrame
+        showChat={showChat}
+        chatPanel={chatPanel}
+        isMobile={isMobile}
+        onLeave={onLeave}
+        stage={
+          <div style={{ fontSize: 14, lineHeight: 1.6, maxWidth: 460 }}>
+            <div style={{ color: '#FBBF24', fontWeight: 700, marginBottom: 6 }}>
+              Live audio isn’t available in this browser
+            </div>
+            <div style={{ color: '#9CA3AF' }}>
+              The audio room needs WebRTC, which this browser has turned off. On iPhone or iPad this
+              usually means Safari <strong>Lockdown Mode</strong> is on. You can still read and send chat
+              here. To listen or speak, turn off Lockdown Mode for this site (Safari address bar →{' '}
+              <strong>aA</strong> → Website Settings) or open the room in another browser.
+            </div>
+          </div>
+        }
+      />
+    );
+  }
 
   if (status !== 'joined' || !client || !call) {
     return (
