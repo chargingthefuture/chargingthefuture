@@ -53,17 +53,19 @@ export function LighthouseBrowse({
                     ) : null}
                   </div>
                 ) : null}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 8 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     {(() => {
                       const rent = formatRent(p, currencies);
                       if (rent === null) return null;
                       if (rent === "Free") return <div style={{ fontSize: 18, fontWeight: 800, color: COLOR }}>Free</div>;
-                      return <div style={{ fontSize: 18, fontWeight: 800, color: COLOR }}>{rent}<span style={{ fontSize: 11, color: "#6B7280", fontWeight: 400 }}>/mo</span></div>;
+                      // overflowWrap lets a long currency label (e.g. "ServiceCredits") wrap inside the
+                      // card instead of pushing "/mo" and the View button past the clipped card edge.
+                      return <div style={{ fontSize: 18, fontWeight: 800, color: COLOR, lineHeight: 1.2, overflowWrap: "anywhere" }}>{rent}<span style={{ fontSize: 11, color: "#6B7280", fontWeight: 400 }}>/mo</span></div>;
                     })()}
-                    {listingAcceptsCredits(p) && <div style={{ fontSize: 10, color: "#F59E0B" }}>Credits ✓</div>}
+                    {listingAcceptsCredits(p) && <div style={{ fontSize: 10, color: "#F59E0B", marginTop: 2 }}>Credits ✓</div>}
                   </div>
-                  <button onClick={() => onSelect(p)} style={{ padding: "8px 16px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>View</button>
+                  <button onClick={() => onSelect(p)} style={{ padding: "8px 16px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>View</button>
                 </div>
               </div>
             </div>
