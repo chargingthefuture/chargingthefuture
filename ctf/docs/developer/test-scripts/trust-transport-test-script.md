@@ -60,7 +60,7 @@ web ☐ android ☐
 4. Leave settlement type as **Free** (the default).
 5. Submit the request.
 
-**Expected:** The request is created and appears in your request list. The settlement badge shows "Free" (never a raw currency code or a fiat equivalent). No "all drivers background-checked" claim appears anywhere. The booking subtitle refers to drivers as community members, not vetted professionals.
+**Expected:** The request is created and appears in your request list. The settlement badge shows "Free" (never a raw currency code or a fiat equivalent). No "all drivers background-checked" claim appears anywhere, and no per-request "🛡️ Background checked / ✅ ID verified" badge is shown on the Tracking list. The booking subtitle refers to drivers as community members, not vetted professionals. The post-submit confirmation says the request is now visible to community members who can offer to help — not that it is "being matched with nearby drivers" (there is no automated matching).
 
 Result: web ☐ android ☐
 
@@ -320,6 +320,23 @@ Result: web ☐ android ☐
 
 ---
 
+### TT-18 — Browse open requests and make an offer (discovery model B)
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member. Seed has at least one open request created by a different member.
+
+**Steps:**
+1. Open the **Help out** tab.
+2. Confirm the open-requests list shows mode, settlement, and a relative age for each — and nothing else.
+3. Tap "Make an offer" on one, optionally add a note and a proposed amount, and send it.
+
+**Expected:** The list never shows a pickup/drop-off location, a title, or the requester's identity — only mode + settlement + age (discovery model B). This is correct behavior, not a missing feature. The offer sends and the card confirms it ("Offer sent..."). Submitting a second offer on the same request updates your existing pending offer rather than creating a duplicate.
+
+Result: web ☐ android ☐
+
+---
+
 ## Admin walkthrough
 
 ### TT-A1 — Incident queue loads and an incident can be resolved
@@ -473,6 +490,7 @@ These cases must produce the same observable outcome on both surfaces. Run both 
 | TT-7 | Read-only chat after terminal state |
 | TT-11 | Explicit confirmation prompt before cancel |
 | TT-17 | Right panel shows "Good to know" reminders; no fabricated safety claims |
+| TT-18 | Discovery list shows only mode + settlement + age; offer sends and confirms |
 | TT-A1 | Incident resolved after native/web confirmation prompt |
 | TT-A2 | Market config update persists after reload |
 | TT-A4 | Restrict and restore require confirmation; platform-wide signal written |

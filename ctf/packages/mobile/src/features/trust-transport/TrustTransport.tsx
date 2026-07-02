@@ -11,6 +11,7 @@ import {
 import { useAuth } from './auth-context';
 import { TrustTransportLoadingState } from './TrustTransportLoadingState';
 import { TrustTransportOffersSection } from './TrustTransportOffersSection';
+import { TrustTransportHelpTab } from './TrustTransportHelpTab';
 import {
   createRequest,
   listRequests,
@@ -28,7 +29,7 @@ const TEXT = '#F9FAFB';
 const MUTED = '#6B7280';
 const SUBTLE = '#9CA3AF';
 
-type Tab = 'ride' | 'package' | 'track';
+type Tab = 'ride' | 'package' | 'track' | 'help';
 
 // ---------------------------------------------------------------------------
 // Header
@@ -61,6 +62,7 @@ const NAV_ITEMS: { label: string; key: Tab; emoji: string }[] = [
   { label: 'Ride', key: 'ride', emoji: '🚗' },
   { label: 'Package', key: 'package', emoji: '📦' },
   { label: 'Track', key: 'track', emoji: '📍' },
+  { label: 'Help', key: 'help', emoji: '🤝' },
 ];
 
 function BottomNav({ active, onPress }: { active: Tab; onPress: (_t: Tab) => void }) {
@@ -149,7 +151,7 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
       <View style={styles.bookedBox}>
         <Text style={styles.bookedTitle}>Request submitted!</Text>
         <Text style={styles.bookedDesc}>
-          Your request is being matched with nearby drivers.
+          Your request is now visible to community members who can offer to help.
         </Text>
         <TouchableOpacity
           style={styles.secondaryBtn}
@@ -164,9 +166,9 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
   return (
     <View style={styles.bookSection}>
       <View style={styles.sectionBox}>
-        <Text style={styles.sectionTitle}>Book a Safe {modeName}</Text>
+        <Text style={styles.sectionTitle}>Book a {modeName}</Text>
         <Text style={styles.sectionDesc}>
-          Background-checked drivers · Trauma-informed · ServiceCredits OK
+          Fellow community members · Trauma-informed · ServiceCredits OK
         </Text>
       </View>
       <View style={styles.inputGroup}>
@@ -290,10 +292,6 @@ function TrackTab({
               <Text style={styles.requestLocation}>To: {req.dropoffCity}</Text>
             ) : null}
             <Text style={styles.requestSettle}>{ttSettlementLabel(req.priceCurrency, req.priceAmount)}</Text>
-            <View style={styles.safetyRow}>
-              <Text style={styles.safetyItem}>🛡️ Background checked</Text>
-              <Text style={styles.safetyItem}>✅ ID verified</Text>
-            </View>
             {req.status === 'open' ? (
               <TrustTransportOffersSection requestId={req.id} onAccepted={onRefresh} />
             ) : null}
@@ -393,6 +391,8 @@ export const TrustTransport = () => {
       <ScrollView style={styles.scroll}>
         {tab === 'track' ? (
           <TrackTab requests={requests} loading={requestsLoading} onRefresh={() => { void loadRequests(); }} />
+        ) : tab === 'help' ? (
+          <TrustTransportHelpTab />
         ) : (
           <BookTab mode={bookMode} onSubmitted={() => { void loadRequests(); }} />
         )}
@@ -575,8 +575,6 @@ const styles = StyleSheet.create({
   requestLocation: { fontSize: 13, color: SUBTLE, marginBottom: 2 },
   requestSettle: { fontSize: 12, fontWeight: '700', color: '#22C55E', marginTop: 2, marginBottom: 2 },
   settleLabel: { fontSize: 13, color: MUTED, marginTop: 10, marginBottom: 6 },
-  safetyRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  safetyItem: { fontSize: 11, color: MUTED },
   publicContent: { padding: 20 },
   publicHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   publicTitle: { fontSize: 20, fontWeight: '800', color: TEXT },
