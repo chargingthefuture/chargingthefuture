@@ -36,6 +36,7 @@
 
   /* Accents and state. */
   --ctf-brand: #e91e8c;
+  --ctf-brand-text: #ffffff; /* text/icon color that sits on a --ctf-brand fill */
   --ctf-gold: #38bdf8;
   --ctf-danger: #b91c1c;
   --ctf-success: #22c55e;
@@ -74,6 +75,7 @@
 
   /* Account/data destructive zone is danger-red; warm gold is the economy accent. */
   --ctf-brand: #c8a84b;
+  --ctf-brand-text: #0d0d0d; /* text/icon color that sits on a --ctf-brand fill */
   --ctf-gold: #c8a84b;
   --ctf-danger: #b91c1c;
   --ctf-success: #22c55e;
