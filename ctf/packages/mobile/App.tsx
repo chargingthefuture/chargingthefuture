@@ -217,7 +217,13 @@ function AppShell() {
       const status = await fetchUnlockStatus();
       if (seq !== fetchSeq.current) return;
       const tier: UnlockAccessTier | null = status.accessTier;
-      const passes = tier === 'approved_full' || tier === 'locked_support_only';
+      // A/B experiment: a treatment-bucket member (earlyCommonsAccess) reaches the Commons before
+      // verifying, mirroring the web redirect exception in app/page.tsx. The server already admits them
+      // to the Commons (support-only widening in server-authz), and the Commons shows a verify prompt
+      // (UnlockVerifyBanner). Without this, a treatment member would be walled to the Unlock screen and
+      // never get the early Commons access the experiment grants.
+      const passes =
+        tier === 'approved_full' || tier === 'locked_support_only' || status.earlyCommonsAccess === true;
       setUnlockGate({ loading: false, walled: !passes });
     } catch (error) {
       // Fail open: never lock out an approved member because of a flaky status

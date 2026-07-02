@@ -64,11 +64,12 @@ With the flag off everywhere, no member sees the link (default state).
 **Result:** web ☐ android ☐ — notes:
 
 ### UNLOCK-M2 · Verify prompt on the Commons (A/B treatment)
-**Role:** member (not yet verified) · **Surfaces:** web + mobile-responsive (Commons / home)
+**Role:** member (not yet verified) · **Surfaces:** web + mobile-responsive (Commons / home), android (mobile Commons / HubHome)
 **Precondition:** the `feature-unlock-early-commons-access` flag is enabled and the test member is in
-the treatment bucket, so they land on the Commons instead of being redirected to the Unlock screen.
-Test with both a member who has no submission and one with a pending submission.
-**Steps:**
+the treatment bucket, so they land on the Commons instead of being redirected to (web) / walled to
+(android) the Unlock screen. Test with both a member who has no submission and one with a pending
+submission.
+**Steps (web):**
 1. As an unverified treatment member with **no** submission, open the home page (the Commons).
 2. Confirm a "Verify your account to unlock full access" banner shows at the top of the content area,
    with a Quora URL input, a "Submit for verification" button, and a note to ask for help in the
@@ -78,12 +79,18 @@ Test with both a member who has no submission and one with a pending submission.
 5. Reload; confirm the banner still shows the "under review" note (pending submission).
 6. Repeat as a control member (flag off / control bucket): confirm they are redirected to
    `/plugin/unlock` and never see this banner.
+**Steps (android):**
+1. As an unverified treatment member, open the app: confirm you are **not** walled to the Unlock
+   screen — you land on the plugin navigator with the Commons (`HubHome`) shown.
+2. Confirm the same verify banner shows at the top of `HubHome` with the Quora URL input and submit.
+3. Submit a valid URL; confirm it switches to the "under review" note.
+4. Confirm a control member (flag off) is still walled to the Unlock screen and never sees the banner.
 **Expected:** A treatment member who lands on the Commons is clearly prompted to submit their Quora
 URL inline (posting to `POST /api/unlock/submission`) and told to ask in the Commons if stuck; after
 submitting they see the pending note and keep Commons access. A support-only or control member does
-not see this banner. Inert when the flag is off. The native-android equivalent of this Commons prompt
-is a follow-up (#1315); this row is web + mobile-responsive.
-**Result:** web ☐ — notes:
+not see this banner. On android the client Unlock gate lets a treatment member through to `HubHome`
+(instead of walling them) and the banner behaves the same. Inert when the flag is off everywhere.
+**Result:** web ☐ android ☐ — notes:
 
 ---
 
