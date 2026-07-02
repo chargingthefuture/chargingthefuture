@@ -7,6 +7,11 @@ on:
         description: "Your Clerk user ID (find it in the Clerk dashboard)"
         required: true
         type: string
+      demo_second_owner_id:
+        description: "Optional: a SECOND Clerk user ID to be the two-sided marketplace counterparty (for testing both sides). Also target the demo-mode Unleash flag at this ID."
+        required: false
+        type: string
+        default: ""
 
 jobs:
   seed:
@@ -56,6 +61,7 @@ jobs:
           DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DEMO_OWNER_ID: ${{ inputs.demo_owner_id }}
+          DEMO_SECOND_OWNER_ID: ${{ inputs.demo_second_owner_id }}
         run: |
           if [ -z "$DATABASE_URL_DIRECT" ] && [ -z "$DATABASE_URL" ]; then
             echo "DATABASE_URL_DIRECT or DATABASE_URL secret is not set."
@@ -64,3 +70,6 @@ jobs:
           cd ctf
           node scripts/seedDemo.mjs
           echo "Demo schema seeded for $DEMO_OWNER_ID."
+          if [ -n "$DEMO_SECOND_OWNER_ID" ]; then
+            echo "Two-sided counterparty seeded: $DEMO_SECOND_OWNER_ID (also target the demo-mode Unleash flag at this ID)."
+          fi
