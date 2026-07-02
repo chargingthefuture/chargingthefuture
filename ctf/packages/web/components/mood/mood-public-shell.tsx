@@ -3,6 +3,7 @@
 import { Smile, Shield } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 
 // Palette from the MoodPublic / MobileMoodPublic design mockups.
 const BG = '#0F1117';
@@ -33,6 +34,7 @@ function DesktopMoodPublic({ signInUrl, verifyUrl }: { signInUrl: string; verify
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
+        <PublicShellBackLink />
         <Smile size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Mood</span>
         <div style={{ marginLeft: 'auto' }}>
@@ -91,6 +93,11 @@ function DesktopMoodPublic({ signInUrl, verifyUrl }: { signInUrl: string; verify
 function MobileMoodPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
+      {/* This mobile layout is a centered hero with no header row, so the back
+          control sits alone at the top-left — it is the only navigation here. */}
+      <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px' }}>
+        <PublicShellBackLink />
+      </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 40px', gap: 20, textAlign: 'center' }}>
         <div style={{ width: 64, height: 64, borderRadius: 32, background: COLOR + '20', border: `2px solid ${COLOR}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Smile size={28} color={COLOR} />

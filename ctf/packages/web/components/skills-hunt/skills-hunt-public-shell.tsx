@@ -3,6 +3,7 @@
 import { Search, Lock } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 
 // Palette from the SkillsHuntPublic / MobileSkillsHuntPublic design mockups.
 const BG = '#0F1117';
@@ -45,6 +46,7 @@ function DesktopSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; 
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
+        <PublicShellBackLink />
         <Search size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>SkillsHunt</span>
         <div style={{ marginLeft: 'auto' }}>
@@ -148,6 +150,7 @@ function MobileSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       {/* Header */}
       <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <PublicShellBackLink />
         <Search size={20} color={COLOR} />
         <span style={{ fontSize: 20, fontWeight: 800 }}>SkillsHunt</span>
       </div>

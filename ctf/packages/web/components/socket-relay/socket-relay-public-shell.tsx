@@ -6,6 +6,7 @@ import {
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { getAppAccent } from '@/lib/theme/theme-tokens';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 
 // Palette from the SocketRelayPublic / MobileSocketRelayPublic mockups.
 const BG = '#0F1117';
@@ -31,6 +32,7 @@ function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string;
       {/* Marketing banner */}
       <div style={{ background: `linear-gradient(90deg, ${ACCENT} 0%, ${ACCENT_CYAN} 100%)`, padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <PublicShellBackLink />
           <Share2 size={15} color="#fff" />
           <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>SocketRelay · Mutual aid, free forever</span>
         </div>
@@ -178,6 +180,7 @@ function MobileSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string; 
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <PublicShellBackLink />
           <Share2 size={20} color={COLOR} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>Socket Relay</span>
         </div>

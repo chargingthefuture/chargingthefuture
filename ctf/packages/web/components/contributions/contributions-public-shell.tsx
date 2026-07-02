@@ -1,6 +1,7 @@
 'use client';
 
 import { Gift, DollarSign, MessageSquare, Star, Lock, ChevronRight } from 'lucide-react';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
@@ -96,6 +97,7 @@ function DesktopPublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyU
     <div style={{ display: 'flex', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ maxWidth: 580, width: '100%', padding: '48px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
+          <PublicShellBackLink />
           <div style={{ width: 36, height: 36, borderRadius: 10, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Gift size={18} color="#fff" />
           </div>
@@ -136,6 +138,7 @@ function MobilePublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUr
     <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+          <PublicShellBackLink />
           <div style={{ width: 36, height: 36, borderRadius: 10, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Gift size={18} color="#fff" />
           </div>

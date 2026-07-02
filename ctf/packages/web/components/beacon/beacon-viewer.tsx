@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Radio, Lock } from 'lucide-react';
 import type Hls from 'hls.js';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { BEACON_COLOR } from 'lib/beacon/constants';
 
@@ -157,6 +158,7 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
   return (
     <main style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px', color: TEXT }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        {!isMember && <PublicShellBackLink />}
         <Radio size={22} style={{ color: BEACON_COLOR }} />
         <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Beacon</h1>
       </div>

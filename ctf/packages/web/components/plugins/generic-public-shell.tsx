@@ -1,4 +1,5 @@
 import { LogIn } from 'lucide-react';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 
 const BG = '#0F1117';
@@ -59,9 +60,12 @@ export function GenericPublicShell({ pluginName, signInUrl, verifyUrl }: PublicV
         >
           Public preview
         </div>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: TEXT, margin: '0 0 8px', lineHeight: 1.3 }}>
-          {pluginName}
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <PublicShellBackLink />
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: TEXT, margin: '0 0 8px', lineHeight: 1.3 }}>
+            {pluginName}
+          </h1>
+        </div>
         <p style={{ fontSize: 14, color: SUBTLE, margin: '0 0 24px', lineHeight: 1.6 }}>
           Sign in to join the survivor community and use {pluginName}. Listening and browsing are open
           where a public view exists; taking part requires a free account.

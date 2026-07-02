@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { BookOpen, Lock, ChevronRight, UserPlus, LogIn } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
+import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 
 // Palette from the SkillsTaxonomyPublic / MobileSkillsTaxonomyPublic mockups.
 const BRAND = '#818CF8';
@@ -85,6 +86,7 @@ function DesktopSkillsTaxonomyPublic({ signInUrl, verifyUrl, counts }: { signInU
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
+        <PublicShellBackLink />
         <BookOpen size={18} color={BRAND} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Skills Taxonomy</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
@@ -187,6 +189,7 @@ function MobileSkillsTaxonomyPublic({ signInUrl, verifyUrl, counts }: { signInUr
       <div style={{ padding: '12px 16px 12px', background: `${BRAND}10`, borderBottom: `1px solid ${BRAND}25`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <PublicShellBackLink />
             <BookOpen size={18} color={BRAND} />
             <div style={{ fontSize: 16, fontWeight: 700 }}>Skills Taxonomy</div>
           </div>

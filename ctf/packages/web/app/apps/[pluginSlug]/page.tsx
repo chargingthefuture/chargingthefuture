@@ -2,7 +2,6 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
 import { canonicalizePluginSlug, getPluginBySlug, isAdminOnlyPlugin } from 'lib/plugins/repository';
 import { getPublicVisitorShell } from '@/components/plugins/public-visitor-registry';
-import { PublicShellFrame } from '@/components/plugins/public-shell-frame';
 import { BeaconShell } from '@/components/beacon/beacon-shell';
 import { ChymeShell } from '@/components/chyme/chyme-shell';
 import { DirectoryShell } from '@/components/directory/directory-shell';
@@ -175,15 +174,15 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
       // anonymous visitor (AUTH_UNAUTHORIZED) gets no verifyUrl and sees the
       // normal sign-in / sign-up CTAs.
       const verifyUrl = decision.reason === 'unlock_required' ? '/plugin/unlock' : undefined;
+      // The back-to-/apps control lives inside each public shell's own header
+      // row (PublicShellBackLink), so no wrapping frame is needed here.
       return (
-        <PublicShellFrame>
-          <PublicVisitorShell
-            pluginSlug={selectedPlugin.slug}
-            pluginName={selectedPlugin.name}
-            signInUrl={signInUrl}
-            verifyUrl={verifyUrl}
-          />
-        </PublicShellFrame>
+        <PublicVisitorShell
+          pluginSlug={selectedPlugin.slug}
+          pluginName={selectedPlugin.name}
+          signInUrl={signInUrl}
+          verifyUrl={verifyUrl}
+        />
       );
     }
 
