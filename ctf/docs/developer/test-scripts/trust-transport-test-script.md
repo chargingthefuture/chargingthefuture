@@ -60,7 +60,7 @@ web ☐ android ☐
 4. Leave settlement type as **Free** (the default).
 5. Submit the request.
 
-**Expected:** The request is created and appears in your request list. The settlement badge shows "Free" (never a raw currency code or a fiat equivalent). No "all drivers background-checked" claim appears anywhere. The booking subtitle refers to drivers as community members, not vetted professionals.
+**Expected:** The request is created and appears in your request list. The settlement badge shows "Free" (never a raw currency code or a fiat equivalent). No "all drivers background-checked" claim appears anywhere, and no per-request "🛡️ Background checked / ✅ ID verified" badge is shown on the Tracking list. The booking subtitle refers to drivers as community members, not vetted professionals. The post-submit confirmation says the request is now visible to community members who can offer to help — not that it is "being matched with nearby drivers" (there is no automated matching).
 
 Result: web ☐ android ☐
 
@@ -111,11 +111,11 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as a member. Seed has at least one request with at least one offer on it.
 
 **Steps:**
-1. Open the Tracking tab. On one of your own open requests, click "View offers".
+1. Open the Tracking tab. On one of your own open requests, click/tap "View offers".
 2. Confirm the offers list shows pending offers (a community member, optional note, optional proposed amount).
-3. Accept one offer. (On web; on Android this still runs via API/seed until the parity pass — issue #1250.)
+3. Accept one offer.
 
-**Expected:** The offer is accepted and a trip is created. The request moves to an accepted state and the Direct Line opens for that trip. Per model B, the pickup/drop-off is now available to the accepted provider through the trip. The trip ID is visible (the sidebar/detail shows it, not "— → —").
+**Expected:** The offer is accepted and a trip is created. The request moves to an accepted state. Per model B, the pickup/drop-off is now available to the accepted provider through the trip. The trip ID is visible (the sidebar/detail shows it, not "— → —"). On web, the Direct Line opens for that trip. Android has no chat screen wired up yet (see Known gaps) — this is a separate, pre-existing gap, not a defect in the accept flow you just tested.
 
 Result: web ☐ android ☐
 
@@ -320,6 +320,23 @@ Result: web ☐ android ☐
 
 ---
 
+### TT-18 — Browse open requests and make an offer (discovery model B)
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member. Seed has at least one open request created by a different member.
+
+**Steps:**
+1. Open the **Help out** tab.
+2. Confirm the open-requests list shows mode, settlement, and a relative age for each — and nothing else.
+3. Tap "Make an offer" on one, optionally add a note and a proposed amount, and send it.
+
+**Expected:** The list never shows a pickup/drop-off location, a title, or the requester's identity — only mode + settlement + age (discovery model B). This is correct behavior, not a missing feature. The offer sends and the card confirms it ("Offer sent..."). Submitting a second offer on the same request updates your existing pending offer rather than creating a duplicate.
+
+Result: web ☐ android ☐
+
+---
+
 ## Admin walkthrough
 
 ### TT-A1 — Incident queue loads and an incident can be resolved
@@ -467,11 +484,13 @@ These cases must produce the same observable outcome on both surfaces. Run both 
 | TT-1 | Ride request created; Free settlement badge shown; no fabricated driver claims |
 | TT-2 | ServiceCredits settlement badge shown; no fiat equivalent |
 | TT-3 | Submit blocked with inline error when priced amount is missing |
+| TT-4 | Offers list shows pending offers; accepting opens a trip and moves the request to accepted |
 | TT-5 | Tracking tab label and copy; no live-GPS claim |
 | TT-6 | Chat gating message before accept; text-only chat after accept; no video |
 | TT-7 | Read-only chat after terminal state |
 | TT-11 | Explicit confirmation prompt before cancel |
 | TT-17 | Right panel shows "Good to know" reminders; no fabricated safety claims |
+| TT-18 | Discovery list shows only mode + settlement + age; offer sends and confirms |
 | TT-A1 | Incident resolved after native/web confirmation prompt |
 | TT-A2 | Market config update persists after reload |
 | TT-A4 | Restrict and restore require confirmation; platform-wide signal written |
@@ -490,4 +509,5 @@ The following are documented limitations from the inventory's "Gaps and Known Te
 5. **Driver ratings, ETAs, and vehicle info absent** — none of these fields are returned by any `trust-transport` API endpoint; their absence from the UI is correct behavior.
 6. **No admin trip-approval queue** — the design mockup shows an "approve/reject trip request queue" but no admin trip-approval route exists; the incident queue is what the API exposes and is what the admin surface renders.
 7. **Service delete endpoint not yet live** — `DELETE /api/account/trust-transport-profile` is listed as planned in the deletion contract; its absence is not a bug to file now.
-8. **Make-an-offer UI: web shipped, Android deferred** — the web shell has a "Help out" tab that lists open requests (mode + settlement + age only — never pickup/drop-off, per discovery model B) and lets a member submit an offer (optional note + optional amount). The Android equivalent ships in a follow-up pass (Parity Ticket); on Android, exercise offers via the API/seed until then. The discovery list deliberately shows no location — that is correct behavior, not a bug. A provider learns the pickup/drop-off only after the requester accepts their offer.
+8. **Trip progression, proof capture, and earnings/payouts UI: web shipped, Android deferred** — the web "Help out" tab has "Trips you're helping with" (forward status controls) and proof capture, and the web "Earnings" tab has per-currency balances and payout requests. The Android equivalents ship in follow-up passes (Parity Ticket #1250); on Android, exercise these via the API/seed until then. (Make-an-offer/discovery and view-offers/accept UI shipped on both platforms — see TT-18 and TT-4.)
+9. **Android has no chat screen wired up** — `TrustTransportStreamTab.tsx` exists in the mobile feature directory but is not imported or registered anywhere in the app; there is no navigation path to it. A trip cannot be chatted with on Android today. This predates and is separate from the #1250 provider-marketplace parity work (web's chat tab already existed); do not file it as caused by any of the #1250 changes.
