@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation';
-import { CommunityShell } from '../components/community-shell/community-shell';
+import { CommunityShell, type ShellVerification } from '../components/community-shell/community-shell';
 import type { ShellCurrentUser } from '../components/community-shell/shell-types';
 import type { TrustUserExtension } from '../lib/trust/types';
 import { resolveRequestIdentity } from '../lib/auth/request-identity';
 import { getUnlockAccessTier, isUnlockEarlyCommonsEnabled } from '../lib/unlock/access';
+import { getUnlockStatusForUser } from '../lib/unlock/repository';
 import { getGdpShellStats } from '../lib/gdp/repository';
 import { listPluginRegistry } from '../lib/plugins/repository';
 import { getTrustUserExtension } from '../lib/trust/repository';
@@ -68,6 +69,23 @@ export default async function HomePage() {
     redirect('/plugin/unlock');
   }
 
+  // Early-Commons treatment members land on the Commons instead of the Unlock screen, so without a
+  // prompt here they have no idea verification is still required. Give them a persistent verify prompt
+  // in the shell to submit their Quora URL. Scoped to the treatment bucket only: submitting moves a
+  // member to `pending_readonly`, and only a treatment member stays on the Commons afterward (a
+  // support-only member would be redirected to /plugin/unlock), so we do not prompt support-only
+  // members here and create that trap.
+  let verification: ShellVerification | null = null;
+  if (earlyCommons && userId) {
+    const unlockStatus = await getUnlockStatusForUser(userId).catch(() => null);
+    if (unlockStatus) {
+      verification = {
+        hasSubmission: unlockStatus.hasSubmission,
+        reviewStatus: unlockStatus.reviewStatus,
+      };
+    }
+  }
+
   const isAuthenticated = Boolean(userId);
 
   const currentUser = userId
@@ -92,6 +110,7 @@ export default async function HomePage() {
       isAuthenticated={isAuthenticated}
       isAdmin={isAdmin}
       signInUrl={signInUrl}
+      verification={verification}
     />
   );
 }
