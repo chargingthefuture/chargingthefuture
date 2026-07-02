@@ -12,7 +12,7 @@ import {
 import { Radio } from 'lucide-react';
 import { reportError } from 'lib/observability/report';
 import type { StreamJoinCredentials } from 'lib/chyme/stream';
-import { CHYME_CALL_TYPE, toCallIdForChyme } from './chyme-audio-room';
+import { CHYME_CALL_TYPE, toCallIdForChyme, isWebRtcAvailable } from './chyme-audio-room';
 
 // Signed-out listener. Connects an ephemeral guest Stream identity to the SAME call members are in
 // and plays its audio — receive-only. The guest never publishes: camera and microphone are disabled
@@ -29,9 +29,17 @@ export function ChymeGuestListen({
 }) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
-  const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
+  const [status, setStatus] = useState<'connecting' | 'joined' | 'error' | 'unsupported'>('connecting');
 
   useEffect(() => {
+    // No WebRTC (Safari Lockdown Mode, some hardened/older browsers) → the Stream Video SDK can't
+    // connect. Detect it up front and show a clear message rather than a raw error or a misleading
+    // "try refreshing". Expected environment state, so it is not reported to Sentry.
+    if (!isWebRtcAvailable()) {
+      setStatus('unsupported');
+      return;
+    }
+
     let cancelled = false;
     const videoClient = new StreamVideoClient({
       apiKey: credentials.streamApiKey,
@@ -68,6 +76,14 @@ export function ChymeGuestListen({
     };
   }, [credentials.streamApiKey, credentials.streamToken, credentials.streamUserId, credentials.streamChannelId]);
 
+  if (status === 'unsupported') {
+    return (
+      <GuestNote
+        accent={accent}
+        text="Live audio needs WebRTC, which this browser has turned off — on iPhone or iPad this usually means Safari Lockdown Mode. Turn it off for this site (address bar → aA → Website Settings) or use another browser to listen."
+      />
+    );
+  }
   if (status === 'error') {
     return <GuestNote accent={accent} text="Couldn't connect to the live room. Try refreshing." />;
   }
