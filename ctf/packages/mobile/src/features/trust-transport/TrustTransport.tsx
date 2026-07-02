@@ -13,6 +13,7 @@ import { TrustTransportLoadingState } from './TrustTransportLoadingState';
 import { TrustTransportOffersSection } from './TrustTransportOffersSection';
 import { TrustTransportHelpTab } from './TrustTransportHelpTab';
 import { TrustTransportChatButton } from './TrustTransportChatButton';
+import { TrustTransportEarningsTab } from './TrustTransportEarningsTab';
 import {
   createRequest,
   listRequests,
@@ -30,7 +31,7 @@ const TEXT = '#F9FAFB';
 const MUTED = '#6B7280';
 const SUBTLE = '#9CA3AF';
 
-type Tab = 'ride' | 'package' | 'track' | 'help';
+type Tab = 'ride' | 'package' | 'track' | 'help' | 'earnings';
 
 // ---------------------------------------------------------------------------
 // Header
@@ -64,6 +65,7 @@ const NAV_ITEMS: { label: string; key: Tab; emoji: string }[] = [
   { label: 'Package', key: 'package', emoji: '📦' },
   { label: 'Track', key: 'track', emoji: '📍' },
   { label: 'Help', key: 'help', emoji: '🤝' },
+  { label: 'Earnings', key: 'earnings', emoji: '💰' },
 ];
 
 function BottomNav({ active, onPress }: { active: Tab; onPress: (_t: Tab) => void }) {
@@ -395,6 +397,8 @@ export const TrustTransport = () => {
           <TrackTab requests={requests} loading={requestsLoading} onRefresh={() => { void loadRequests(); }} />
         ) : tab === 'help' ? (
           <TrustTransportHelpTab />
+        ) : tab === 'earnings' ? (
+          <TrustTransportEarningsTab />
         ) : (
           <BookTab mode={bookMode} onSubmitted={() => { void loadRequests(); }} />
         )}
