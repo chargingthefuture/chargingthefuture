@@ -107,6 +107,16 @@ body {
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   background: var(--ctf-root-bg);
   color: var(--ctf-root-text);
+  /*
+   * Pin text to its authored size. iOS inflates text when the app is launched from the Home
+   * Screen (standalone display mode) but not in a normal Safari tab, so tight single-row layouts
+   * (notably the mobile plugin header) render a few pixels wider as an installed app and their
+   * trailing controls — the account menu, settings — get clipped by the root overflow guard:
+   * "content runs off in the installed app but not the browser." Locking text-size-adjust makes the
+   * installed app match the browser. Both the prefixed and unprefixed forms are set for coverage.
+   */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /*
