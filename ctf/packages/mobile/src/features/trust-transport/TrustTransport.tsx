@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useAuth } from './auth-context';
 import { TrustTransportLoadingState } from './TrustTransportLoadingState';
+import { TrustTransportOffersSection } from './TrustTransportOffersSection';
 import { TrustTransportHelpTab } from './TrustTransportHelpTab';
 import {
   createRequest,
@@ -291,6 +292,9 @@ function TrackTab({
               <Text style={styles.requestLocation}>To: {req.dropoffCity}</Text>
             ) : null}
             <Text style={styles.requestSettle}>{ttSettlementLabel(req.priceCurrency, req.priceAmount)}</Text>
+            {req.status === 'open' ? (
+              <TrustTransportOffersSection requestId={req.id} onAccepted={onRefresh} />
+            ) : null}
           </View>
         </React.Fragment>
       ))}
