@@ -52,6 +52,8 @@ export function ShareLink({
   title = "Share this link",
   className,
   iconSize = 14,
+  children,
+  triggerStyle,
 }: {
   /** Absolute or app-relative URL. Relative is resolved against the current origin before sharing. */
   url: string;
@@ -61,6 +63,11 @@ export function ShareLink({
   title?: string;
   className?: string;
   iconSize?: number;
+  /** Custom trigger content. When set, it replaces the default share icon + label entirely (e.g. a
+   * full-width link-out card); the popup behavior is unchanged. */
+  children?: React.ReactNode;
+  /** Styles for the trigger button — mainly for custom (children) triggers. */
+  triggerStyle?: React.CSSProperties;
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -142,7 +149,7 @@ export function ShareLink({
   };
 
   return (
-    <div ref={rootRef} style={{ position: "relative", display: "inline-flex" }}>
+    <div ref={rootRef} style={{ position: "relative", display: children ? "block" : "inline-flex" }}>
       <button
         ref={triggerRef}
         type="button"
@@ -155,10 +162,18 @@ export function ShareLink({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? dialogId : undefined}
-        style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "transparent", border: "none", padding: 0, margin: 0, cursor: "pointer", color: "inherit", font: "inherit" }}
+        style={
+          children
+            ? { background: "transparent", border: "none", padding: 0, margin: 0, cursor: "pointer", color: "inherit", font: "inherit", width: "100%", textAlign: "left", ...triggerStyle }
+            : { display: "inline-flex", alignItems: "center", gap: 5, background: "transparent", border: "none", padding: 0, margin: 0, cursor: "pointer", color: "inherit", font: "inherit", ...triggerStyle }
+        }
       >
-        <Share2 size={iconSize} />
-        <span>{label}</span>
+        {children ?? (
+          <>
+            <Share2 size={iconSize} />
+            <span>{label}</span>
+          </>
+        )}
       </button>
 
       {open ? (
