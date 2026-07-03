@@ -2141,6 +2141,13 @@ ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS act
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- The action vocabulary: the app's delete path writes 'delete'; the taxonomy change-ops apply engine
+-- writes 'create', 'rename', 'reparent', 'deactivate', and 'reactivate' ('update' is kept for any
+-- pre-existing rows). The live database carries an older, narrower check that predates the change-ops
+-- engine and rejects 'reparent'; drop + re-add is idempotent and keeps fresh and legacy schemas
+-- identical (same idiom as currencies_kind_check).
+ALTER TABLE IF EXISTS skills_taxonomy_change_events DROP CONSTRAINT IF EXISTS skills_taxonomy_change_events_action_check;
+ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD CONSTRAINT skills_taxonomy_change_events_action_check CHECK (action IN ('create', 'update', 'delete', 'rename', 'reparent', 'deactivate', 'reactivate'));
 
 -- === DIRECTORY MODULE ===
 -- Per-profile skills live in the normalized directory_profile_skills junction
