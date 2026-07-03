@@ -2143,16 +2143,17 @@ ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS met
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- The action vocabulary: the app's delete path writes 'delete'; the taxonomy change-ops apply engine
 -- writes 'create', 'rename', 'reparent', 'deactivate', and 'reactivate' ('update' is kept for any
--- pre-existing rows). The live database carries an older, narrower check that predates the change-ops
--- engine and rejects 'reparent'; drop + re-add is idempotent and keeps fresh and legacy schemas
--- identical (same idiom as currencies_kind_check).
+-- pre-existing rows). Both checks are added NOT VALID: the audit log is append-only and historical
+-- rows are never rewritten to fit a newer vocabulary (ledger discipline), so the checks constrain
+-- new writes only. Without NOT VALID the ADD fails on legacy rows ("violated by some row") and psql
+-- stops mid-file, leaving everything after this line unapplied — that is exactly what broke the
+-- 2026-07-03 Neon runs. Drop + re-add stays idempotent (same idiom as currencies_kind_check).
 ALTER TABLE IF EXISTS skills_taxonomy_change_events DROP CONSTRAINT IF EXISTS skills_taxonomy_change_events_action_check;
-ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD CONSTRAINT skills_taxonomy_change_events_action_check CHECK (action IN ('create', 'update', 'delete', 'rename', 'reparent', 'deactivate', 'reactivate'));
+ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD CONSTRAINT skills_taxonomy_change_events_action_check CHECK (action IN ('create', 'update', 'delete', 'rename', 'reparent', 'deactivate', 'reactivate')) NOT VALID;
 -- target_type vocabulary shared by both writers ('job-title' with a hyphen, matching the app's
--- delete path). The live database carries this check but schema.sql previously did not declare it,
--- which hid the vocabulary from code review; declare it explicitly with the same drop + re-add idiom.
+-- delete path). Declared explicitly so no live-only vocabulary hides from code review.
 ALTER TABLE IF EXISTS skills_taxonomy_change_events DROP CONSTRAINT IF EXISTS skills_taxonomy_change_events_target_type_check;
-ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD CONSTRAINT skills_taxonomy_change_events_target_type_check CHECK (target_type IN ('sector', 'job-title', 'skill'));
+ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD CONSTRAINT skills_taxonomy_change_events_target_type_check CHECK (target_type IN ('sector', 'job-title', 'skill')) NOT VALID;
 
 -- === DIRECTORY MODULE ===
 -- Per-profile skills live in the normalized directory_profile_skills junction
