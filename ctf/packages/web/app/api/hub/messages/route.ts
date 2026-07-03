@@ -5,6 +5,7 @@ import type { FeedTimelineItem } from 'lib/feed/types';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import {
   createFeedCommunityPost,
+  feedAuthorHandle,
   listFeedTimeline,
   parsePaginationParams,
   validateFeedCommunityPostInput,
@@ -25,7 +26,7 @@ function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
   // the pseudonymous "Community member" / "Survivor Hub" labels.
   const authorUsername = isCommunity ? item.community?.authorUsername ?? null : null;
   const displayName = isCommunity
-    ? (authorUsername ? `@${authorUsername}` : 'Community member')
+    ? feedAuthorHandle(authorUsername, authorUserId)
     : 'Survivor Hub';
 
   // Announcements lead with their title; questions/community posts are body-only.
@@ -173,7 +174,7 @@ export async function POST(request: Request) {
       id: result.postId,
       userId: gate.identity.userId,
       username: authorUsername,
-      displayName: authorUsername ? `@${authorUsername}` : 'Community member',
+      displayName: feedAuthorHandle(authorUsername, gate.identity.userId),
       avatarUrl: null,
       text,
       sentAtIso: result.createdAtIso,

@@ -7,6 +7,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { PublicCommunityPost } from '../../lib/feed/types';
 import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
+import { feedAuthorHandle } from '../../lib/feed/author-handle';
 import type { ChatMessage, ComicStreamItem, ShellCurrentUser, ShellStats } from './shell-types';
 import { useHomeChat } from './use-home-chat';
 import { ComicAnswerCard, ComicPendingCard } from './comic-cards';
@@ -292,6 +293,12 @@ function ChatReactionRow({
 function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedChatPanelProps) {
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
   const opportunityValue = Math.max(ECONOMY_TARGET_USD - (stats.gdpValueUsd ?? 0), 0);
+  // A member who hasn't set a username posts under a stable per-user handle
+  // (matching the server's feedAuthorHandle and Chyme), so they stay recognizable
+  // and accountable across posts instead of blending into a shared label. We nudge
+  // them to set a real username below.
+  const ownHandle = feedAuthorHandle(currentUser.username, currentUser.userId);
+  const needsUsername = !currentUser.username;
   const {
     messages,
     comicItems,
@@ -428,6 +435,12 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         </section>
       ) : null}
 
+      {needsUsername ? (
+        <section className={styles.usernameAlert} role="status">
+          You&apos;re posting as <strong>{ownHandle}</strong>. Set a username from your account menu (top-right) so members recognize you.
+        </section>
+      ) : null}
+
       <div className={styles.chatMessages}>
         {isLoading && !hasContent ? (
           <p className={styles.chatFootnote}>Loading live messages…</p>
@@ -479,7 +492,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           // The author shown above the bubble. Your own messages are attributed to you (handle when
           // we have it) so every message has a visible author, not just other people's — peer posts
           // were rendering with no name on the sender's own side.
-          const ownLabel = currentUser.username ? `@${currentUser.username}` : currentUser.displayName;
+          const ownLabel = ownHandle;
           const senderName = msg.from === 'user' ? ownLabel : (msg.senderLabel ?? 'Survivor Hub');
           // A peer post (it carries a community post id) can be replied to Signal-style.
           const canReply = Boolean(msg.communityPostId);
