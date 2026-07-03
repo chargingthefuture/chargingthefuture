@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, X } from "lucide-react";
+import { X } from "lucide-react";
 import { getDirectoryTokens } from "./shared";
+import { DirectorySkillsPicker } from "./directory-skills-picker";
 import { useTheme } from "@/hooks/useTheme";
 import { DIRECTORY_MAX_PROPOSED_SKILL_LENGTH, DIRECTORY_MAX_PROPOSED_SKILLS } from "@/lib/directory/constants";
 
@@ -98,23 +99,23 @@ export function DirectoryProfileEdit({
   const [skills, setSkills] = useState<SkillOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  // Free-text filter for the specializations list. Empty = show the full scrollable list, so a
-  // member who prefers to scroll the whole table for maximum exposure still can; typing narrows it.
-  const [skillQuery, setSkillQuery] = useState("");
   // Draft text for the "skill not listed" box, before it is committed to form.proposedSkills.
   const [proposedInput, setProposedInput] = useState("");
 
-  // Load the current profile plus the taxonomy option lists. Skills load unfiltered so the
-  // profile's existing skill IDs always resolve to names regardless of their job title.
+  // Load the current profile plus the full taxonomy option lists in one shot. Sectors, job titles,
+  // and skills all load unfiltered so the skills picker can group every skill by sector (the
+  // accordion) and by profession (the prefill shortcut), and so the profile's existing skill IDs
+  // always resolve to names regardless of their job title.
   useEffect(() => {
     const controller = new AbortController();
 
     async function load() {
       setLoadState({ kind: "loading" });
       try {
-        const [profileRes, sectorsRes, skillsRes] = await Promise.all([
+        const [profileRes, sectorsRes, jobTitlesRes, skillsRes] = await Promise.all([
           fetch("/api/directory/profile", { signal: controller.signal }),
           fetch("/api/directory/sectors", { signal: controller.signal }),
+          fetch("/api/directory/job-titles", { signal: controller.signal }),
           fetch("/api/directory/skills", { signal: controller.signal }),
         ]);
 
@@ -127,32 +128,17 @@ export function DirectoryProfileEdit({
 
         const profileData = (await profileRes.json()) as { profile?: OwnProfile | null };
         const sectorsData = sectorsRes.ok ? ((await sectorsRes.json()) as { items?: TaxonomyOption[] }) : { items: [] };
+        const jobTitlesData = jobTitlesRes.ok ? ((await jobTitlesRes.json()) as { items?: JobTitleOption[] }) : { items: [] };
         const skillsData = skillsRes.ok ? ((await skillsRes.json()) as { items?: SkillOption[] }) : { items: [] };
 
         if (controller.signal.aborted) return;
 
         setSectors(sectorsData.items ?? []);
+        setJobTitles(jobTitlesData.items ?? []);
         setSkills(skillsData.items ?? []);
 
         const p = profileData.profile ?? null;
         const sectorId = p?.sectorId ?? "";
-
-        // Load the job titles for the profile's sector so the dropdown can show the current pick.
-        if (sectorId) {
-          try {
-            const jtRes = await fetch(`/api/directory/job-titles?sectorId=${encodeURIComponent(sectorId)}`, {
-              signal: controller.signal,
-            });
-            if (jtRes.ok && !controller.signal.aborted) {
-              const jtData = (await jtRes.json()) as { items?: JobTitleOption[] };
-              setJobTitles(jtData.items ?? []);
-            }
-          } catch {
-            // Leave job titles empty; the current value is still preserved on save.
-          }
-        }
-
-        if (controller.signal.aborted) return;
 
         setForm({
           firstName: p?.firstName ?? "",
@@ -181,20 +167,10 @@ export function DirectoryProfileEdit({
     return () => controller.abort();
   }, []);
 
-  // When the member changes sector, refresh the job-title options and clear a now-invalid pick.
-  async function handleSectorChange(nextSectorId: string) {
+  // Changing sector clears a now-invalid job-title pick. The job-title dropdown is filtered from the
+  // already-loaded full list client-side, so no refetch is needed.
+  function handleSectorChange(nextSectorId: string) {
     setForm((prev) => ({ ...prev, sectorId: nextSectorId, jobTitleId: "" }));
-    setJobTitles([]);
-    if (!nextSectorId) return;
-    try {
-      const res = await fetch(`/api/directory/job-titles?sectorId=${encodeURIComponent(nextSectorId)}`);
-      if (res.ok) {
-        const data = (await res.json()) as { items?: JobTitleOption[] };
-        setJobTitles(data.items ?? []);
-      }
-    } catch {
-      // Leave job titles empty.
-    }
   }
 
   function toggleSkill(id: string) {
@@ -204,6 +180,17 @@ export function DirectoryProfileEdit({
         ? prev.skillIds.filter((s) => s !== id)
         : [...prev.skillIds, id],
     }));
+  }
+
+  // Prefill shortcut: add every skill of a chosen profession, skipping any already selected.
+  function addOccupationSkills(ids: string[]) {
+    setForm((prev) => {
+      const merged = [...prev.skillIds];
+      for (const id of ids) {
+        if (!merged.includes(id)) merged.push(id);
+      }
+      return { ...prev, skillIds: merged };
+    });
   }
 
   // Commit the "skill not listed" draft as a free-text proposed skill. Skips blanks, anything past
@@ -224,8 +211,6 @@ export function DirectoryProfileEdit({
   function removeProposedSkill(label: string) {
     setForm((prev) => ({ ...prev, proposedSkills: prev.proposedSkills.filter((s) => s !== label) }));
   }
-
-  const proposedFull = form.proposedSkills.length >= DIRECTORY_MAX_PROPOSED_SKILLS;
 
   async function handleSave() {
     setSaving(true);
@@ -273,13 +258,9 @@ export function DirectoryProfileEdit({
   const fieldGap = { marginBottom: 18 };
   const canSave = form.firstName.trim().length > 0 && !saving;
 
-  // Filter the taxonomy skills by the typed query (case-insensitive substring). Selection state
-  // lives in form.skillIds, so a chip filtered out of view stays selected and reappears, still
-  // highlighted, the moment the query is cleared — searching never drops a pick.
-  const normalizedSkillQuery = skillQuery.trim().toLowerCase();
-  const filteredSkills = normalizedSkillQuery
-    ? skills.filter((s) => s.name.toLowerCase().includes(normalizedSkillQuery))
-    : skills;
+  // Job titles are loaded for every sector at once; the dropdown shows only those under the
+  // currently selected sector.
+  const sectorJobTitles = jobTitles.filter((j) => j.sectorId === form.sectorId);
 
   return (
     <div
@@ -346,7 +327,7 @@ export function DirectoryProfileEdit({
 
               <div style={fieldGap}>
                 <label style={labelStyle} htmlFor="dpe-sector">Sector</label>
-                <select id="dpe-sector" value={form.sectorId} onChange={(e) => { void handleSectorChange(e.target.value); }} style={{ ...inputStyle, cursor: "pointer" }}>
+                <select id="dpe-sector" value={form.sectorId} onChange={(e) => handleSectorChange(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
                   <option value="">Not set</option>
                   {sectors.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
@@ -358,119 +339,28 @@ export function DirectoryProfileEdit({
                 <label style={labelStyle} htmlFor="dpe-jobtitle">Job title</label>
                 <select id="dpe-jobtitle" value={form.jobTitleId} onChange={(e) => setForm((p) => ({ ...p, jobTitleId: e.target.value }))} disabled={!form.sectorId} style={{ ...inputStyle, cursor: form.sectorId ? "pointer" : "not-allowed", opacity: form.sectorId ? 1 : 0.6 }}>
                   <option value="">{form.sectorId ? "Not set" : "Choose a sector first"}</option>
-                  {jobTitles.map((j) => (
+                  {sectorJobTitles.map((j) => (
                     <option key={j.id} value={j.id}>{j.name}</option>
                   ))}
                 </select>
               </div>
 
               <div style={fieldGap}>
-                <label style={labelStyle}>
-                  Specializations
-                  {form.skillIds.length > 0 && (
-                    <span style={{ marginLeft: 8, color: t.ACCENT, fontWeight: 700 }}>{form.skillIds.length} selected</span>
-                  )}
-                </label>
-                {skills.length === 0 ? (
-                  <div style={{ fontSize: 12, color: t.FAINT }}>No skills available to select.</div>
-                ) : (
-                  <>
-                    {/* Type to filter; clear the box to get the full scrollable list back. */}
-                    <div style={{ position: "relative", marginBottom: 8 }}>
-                      <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: t.MUTED, pointerEvents: "none" }} />
-                      <input
-                        type="search"
-                        value={skillQuery}
-                        onChange={(e) => setSkillQuery(e.target.value)}
-                        aria-label="Search specializations"
-                        placeholder="Search specializations…"
-                        style={{ ...inputStyle, padding: "8px 12px 8px 32px" }}
-                      />
-                    </div>
-                    {filteredSkills.length === 0 ? (
-                      <div style={{ fontSize: 12, color: t.FAINT, padding: "6px 2px", lineHeight: 1.5 }}>
-                        No specialization matches “{skillQuery.trim()}”.
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", maxHeight: 180, overflowY: "auto", padding: 2 }}>
-                        {filteredSkills.map((s) => {
-                          const active = form.skillIds.includes(s.id);
-                          return (
-                            <button
-                              key={s.id}
-                              type="button"
-                              onClick={() => toggleSkill(s.id)}
-                              aria-pressed={active}
-                              style={{
-                                padding: "5px 12px", borderRadius: 14, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                                background: active ? `${t.ACCENT}20` : "transparent",
-                                border: `1px solid ${active ? `${t.ACCENT}50` : t.BORDER_HI}`,
-                                color: active ? t.ACCENT : t.SUBTLE,
-                              }}
-                            >
-                              {s.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <div style={fieldGap}>
-                <label style={labelStyle} htmlFor="dpe-proposed">Your skill not listed? Add it</label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input
-                    id="dpe-proposed"
-                    value={proposedInput}
-                    onChange={(e) => setProposedInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addProposedSkill(); } }}
-                    maxLength={DIRECTORY_MAX_PROPOSED_SKILL_LENGTH}
-                    disabled={proposedFull}
-                    aria-label="Add a skill that is not in the list"
-                    placeholder="e.g. Game design, Game development…"
-                    style={{ ...inputStyle, opacity: proposedFull ? 0.6 : 1 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={addProposedSkill}
-                    disabled={proposedFull || proposedInput.trim().length === 0}
-                    style={{
-                      padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
-                      background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}50`, color: t.ACCENT,
-                      cursor: proposedFull || proposedInput.trim().length === 0 ? "not-allowed" : "pointer",
-                      opacity: proposedFull || proposedInput.trim().length === 0 ? 0.5 : 1,
-                    }}
-                  >
-                    Add
-                  </button>
-                </div>
-                <div style={{ fontSize: 11, color: t.FAINT, marginTop: 6, lineHeight: 1.5 }}>
-                  {proposedFull
-                    ? `That's the most you can add (${DIRECTORY_MAX_PROPOSED_SKILLS}). Remove one to add another.`
-                    : "Not in the list above? Type it here. It shows on your profile as “pending review” until an admin adds it to the official list."}
-                </div>
-                {form.proposedSkills.length > 0 && (
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-                    {form.proposedSkills.map((s) => (
-                      <span
-                        key={s}
-                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 14, fontSize: 13, fontWeight: 600, background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.32)", color: "#FBBF24" }}
-                      >
-                        {s}
-                        <button
-                          type="button"
-                          aria-label={`Remove ${s}`}
-                          onClick={() => removeProposedSkill(s)}
-                          style={{ background: "none", border: "none", color: "#FBBF24", cursor: "pointer", padding: 0, lineHeight: 1, display: "flex" }}
-                        >
-                          <X size={12} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <DirectorySkillsPicker
+                  tokens={t}
+                  sectors={sectors}
+                  jobTitles={jobTitles}
+                  skills={skills}
+                  loading={false}
+                  selectedSkillIds={form.skillIds}
+                  proposedSkills={form.proposedSkills}
+                  proposedInput={proposedInput}
+                  onToggleSkill={toggleSkill}
+                  onAddOccupationSkills={addOccupationSkills}
+                  onProposedInputChange={setProposedInput}
+                  onAddProposed={addProposedSkill}
+                  onRemoveProposed={removeProposedSkill}
+                />
               </div>
 
               <div style={{ margin: "8px 0 14px", fontSize: 12, fontWeight: 700, color: t.MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>Payment addresses</div>
