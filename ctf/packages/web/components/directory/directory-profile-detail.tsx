@@ -6,7 +6,6 @@ import { ChevronLeft, ExternalLink, Pencil, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/useTheme";
-import { useExternalLink } from "@/components/hooks/useExternalLink";
 import { getDirectoryTokens, initials, type Member } from "./shared";
 import { DirectoryProfileEdit } from "./directory-profile-edit";
 import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
@@ -52,10 +51,6 @@ export function DirectoryProfileDetail({
   const p = member;
   const { theme } = useTheme();
   const t = getDirectoryTokens(theme);
-  // Outbound links go through the shared confirmation (you are about to leave for an external site,
-  // with a copy-URL option) — required for accessibility and trauma-informed practice, so nobody is
-  // sent off-app to Quora without a clear, dismissible heads-up.
-  const { openExternal, ExternalLinkDialog } = useExternalLink();
   const [attachInput, setAttachInput] = useState("");
   const [attaching, setAttaching] = useState(false);
   const [attachError, setAttachError] = useState<string | null>(null);
@@ -211,31 +206,44 @@ export function DirectoryProfileDetail({
           )}
 
           {/* Quora profile — every directory profile is sourced from Quora, so this is the social
-              proof and the way to learn more before bartering, trading, or exchanging credits. */}
-          <button
-            type="button"
-            onClick={() => { if (profileUrl) openExternal(profileUrl); }}
-            disabled={!profileUrl}
-            aria-label={profileUrl ? "View Quora profile — opens a confirmation before leaving for the external site" : "Quora profile not linked yet"}
-            style={{
-              display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderRadius: 12,
-              background: profileUrl ? `${t.ACCENT}12` : "rgba(255,255,255,0.02)",
-              border: `1px solid ${profileUrl ? `${t.ACCENT}35` : t.BORDER}`,
-              color: t.TEXT, marginBottom: 24, width: "100%", textAlign: "left",
-              cursor: profileUrl ? "pointer" : "default", opacity: profileUrl ? 1 : 0.6,
-            }}
-          >
-            <ExternalLink size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: profileUrl ? t.ACCENT : t.MUTED }}>
-                {profileUrl ? "View Quora profile" : "Quora profile not linked yet"}
-              </div>
-              <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>
-                {profileUrl ? "Their Quora profile is the social proof — read more before you reach out." : "This profile has no Quora link on file."}
+              proof and the way to learn more before bartering, trading, or exchanging credits.
+              The card is a ShareLink trigger (the one app-wide link popup, rule 130): the popup
+              shows the full URL with Copy link and Open in new tab, so nobody is sent off-app to
+              Quora without seeing exactly where the link goes. */}
+          {profileUrl ? (
+            <div style={{ marginBottom: 24 }}>
+              <ShareLink
+                url={profileUrl}
+                title="Their Quora profile (external site)"
+                triggerStyle={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderRadius: 12,
+                  background: `${t.ACCENT}12`, border: `1px solid ${t.ACCENT}35`, color: t.TEXT,
+                }}
+              >
+                <ExternalLink size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: t.ACCENT }}>View Quora profile</div>
+                  <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>
+                    Their Quora profile is the social proof — read more before you reach out.
+                  </div>
+                </div>
+              </ShareLink>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderRadius: 12,
+                background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}`,
+                color: t.TEXT, marginBottom: 24, opacity: 0.6,
+              }}
+            >
+              <ExternalLink size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: t.MUTED }}>Quora profile not linked yet</div>
+                <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>This profile has no Quora link on file.</div>
               </div>
             </div>
-          </button>
-          <ExternalLinkDialog />
+          )}
 
           {/* About */}
           {bio && (
