@@ -96,6 +96,10 @@ has run against the live DB.
 occupation's other skills (Inventory control, Supplier negotiation, Demand forecasting). Skills are added
 by appending an op to `ctf/scripts/lib/taxonomyChangeOps.mjs` and applying against the **live** taxonomy
 (there is no legacy backfill — the legacy dataset and its sync were removed), so a re-apply keeps the skill.
+The apply run is one transaction: if it fails (for example on an audit-log constraint), nothing partial
+appears in the app — every op lands together or not at all, and each applied mutation leaves an audit
+row whose `action` is one of `create`, `update`, `delete`, `rename`, `reparent`, `deactivate`,
+`reactivate`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
