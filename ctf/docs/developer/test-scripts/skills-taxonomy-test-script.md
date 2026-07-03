@@ -105,7 +105,12 @@ run's error output is itself testable evidence: reparent conflicts are reported 
 read-only pre-flight (with each blocking row's active state and member-holder counts), and the
 taxonomy is unchanged after any failed run. Occupation merges use the merge-aware consolidate op,
 which cannot collide: a same-named row at the target absorbs the moving copy, so after an applied
-merge the surviving occupation shows one active row per skill name.
+merge the surviving occupation shows one active row per skill name. After the owner-picked thinning
+of the marketing near-duplicates, "Marketing Specialists" shows the survivors — Marketing, Social
+Media Marketing, Search Engine Optimization (SEO), Email Marketing, Copywriting, Market research and
+segmentation, Campaign planning (digital & offline), Content strategy and analytics, Brand
+Management — and none of the deactivated labels (Market Research; SEO/SEM and paid-media management;
+Content Marketing; Brand strategy and positioning).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

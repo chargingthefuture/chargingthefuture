@@ -125,6 +125,13 @@ export const TAXONOMY_CHANGE_OPS = [
   // the audit row records the live member-holder count at apply time).
   { id: 35, op: 'deactivateSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', skill: 'Market Research', acknowledgedImpact: 'Near-duplicate of "Market research and segmentation", the owner-picked survivor of the pair. Members holding this row stop seeing the chip until they re-pick the surviving skill; the audit metadata records how many were holding it.' },
   { id: 36, op: 'deactivateSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', skill: 'SEO/SEM and paid-media management', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Search Engine Optimization (SEO)", the owner-picked survivor of the pair. Members holding this row stop seeing the chip until they re-pick the surviving skill; the audit metadata records how many were holding it.' },
+
+  // Ops 37-38 (owner-approved 2026-07-03): thin the last two near-duplicate pairs left by the
+  // Marketing Specialists merge. The owner picked the survivors: "Content strategy and analytics"
+  // (op 37 deactivates "Content Marketing") and "Brand Management" (op 38 deactivates "Brand
+  // strategy and positioning"). Reversible; each audit row records the live member-holder count.
+  { id: 37, op: 'deactivateSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', skill: 'Content Marketing', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Content strategy and analytics", the owner-picked survivor of the pair. Members holding this row stop seeing the chip until they re-pick the surviving skill; the audit metadata records how many were holding it.' },
+  { id: 38, op: 'deactivateSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', skill: 'Brand strategy and positioning', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Brand Management", the owner-picked survivor of the pair. Members holding this row stop seeing the chip until they re-pick the surviving skill; the audit metadata records how many were holding it.' },
 ];
 
 // ---------------------------------------------------------------------------
