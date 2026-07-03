@@ -36,8 +36,11 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useTheme } from "@/hooks/useTheme";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
+import { getDirectoryTokens } from "./shared";
+import { DirectorySkillsPicker } from "./directory-skills-picker";
 
 const COLOR = "#93C5FD";
 const COMMUNITY = "#A855F7";
@@ -86,7 +89,12 @@ type EditForm = {
   headline: string;
   bio: string;
   profileUrl: string;
+  skillIds: string[];
 };
+
+type TaxonomyOption = { id: string; name: string };
+type JobTitleOption = { id: string; name: string; sectorId: string };
+type SkillOption = { id: string; name: string; jobTitleId: string };
 
 function fullName(p: { firstName: string; lastName: string | null }): string {
   return [p.firstName, p.lastName].filter((s) => s && s.trim().length > 0).join(" ").trim();
@@ -120,22 +128,31 @@ function toForm(p: AdminDirectoryProfile): EditForm {
     headline: p.headline ?? "",
     bio: p.bio ?? "",
     profileUrl: p.profileUrl ?? "",
+    skillIds: (p.skills ?? []).map((s) => s.id),
   };
 }
 
 export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }) {
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const pickerTokens = getDirectoryTokens(theme);
   const [profiles, setProfiles] = useState<AdminDirectoryProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKey>("All");
   const [query, setQuery] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<EditForm>({ firstName: "", lastName: "", headline: "", bio: "", profileUrl: "" });
+  const [form, setForm] = useState<EditForm>({ firstName: "", lastName: "", headline: "", bio: "", profileUrl: "", skillIds: [] });
   const [assignInput, setAssignInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
   const [drawerNotice, setDrawerNotice] = useState<string | null>(null);
+  // Full taxonomy option lists backing the skills picker in the edit drawer (same lists the member
+  // self-edit form loads; the picker groups them by sector/profession client-side).
+  const [sectors, setSectors] = useState<TaxonomyOption[]>([]);
+  const [jobTitles, setJobTitles] = useState<JobTitleOption[]>([]);
+  const [skills, setSkills] = useState<SkillOption[]>([]);
+  const [taxonomyLoading, setTaxonomyLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -158,6 +175,36 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Load the taxonomy once for the skills picker. A failed fetch leaves the lists empty; the picker
+  // shows its unavailable note and existing picks are preserved on save.
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const [sectorsRes, jobTitlesRes, skillsRes] = await Promise.all([
+          fetch("/api/directory/sectors"),
+          fetch("/api/directory/job-titles"),
+          fetch("/api/directory/skills"),
+        ]);
+        if (!active) return;
+        const sectorsData = sectorsRes.ok ? ((await sectorsRes.json()) as { items?: TaxonomyOption[] }) : { items: [] };
+        const jobTitlesData = jobTitlesRes.ok ? ((await jobTitlesRes.json()) as { items?: JobTitleOption[] }) : { items: [] };
+        const skillsData = skillsRes.ok ? ((await skillsRes.json()) as { items?: SkillOption[] }) : { items: [] };
+        if (!active) return;
+        setSectors(sectorsData.items ?? []);
+        setJobTitles(jobTitlesData.items ?? []);
+        setSkills(skillsData.items ?? []);
+      } catch {
+        // Leave the lists empty.
+      } finally {
+        if (active) setTaxonomyLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -205,11 +252,11 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
           headline: form.headline.trim() || null,
           bio: form.bio.trim() || null,
           profileUrl: form.profileUrl.trim() || null,
-          // Preserve existing taxonomy selections so an edit of the text fields
-          // does not wipe the profile's sector/job-title/skills.
+          // Preserve the sector/job-title classification so an edit here does not
+          // wipe it; skills are editable through the picker in this drawer.
           sectorId: editing.sectorId,
           jobTitleId: editing.jobTitleId,
-          skillIds: editing.skills.map((s) => s.id),
+          skillIds: form.skillIds,
         }),
       });
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; profile?: AdminDirectoryProfile; message?: string };
@@ -283,7 +330,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
   }
 
   // ── Shared edit drawer body ───────────────────────────────────────────────
-  const fields: { label: string; key: keyof EditForm; placeholder: string }[] = [
+  const fields: { label: string; key: Exclude<keyof EditForm, "skillIds">; placeholder: string }[] = [
     { label: "First name", key: "firstName", placeholder: "First name" },
     { label: "Last name", key: "lastName", placeholder: "Last name" },
     { label: "Headline", key: "headline", placeholder: "Role or specialty" },
@@ -314,17 +361,32 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
           </div>
         ))}
 
-        {/* Skills are read-only here — editing the taxonomy needs the picker UI. */}
-        {p.skills.length > 0 && (
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: SUBTLE, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Skills</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {p.skills.map((s) => (
-                <span key={s.id} style={{ fontSize: 12, padding: "3px 9px", borderRadius: 6, background: `${COLOR}12`, color: COLOR, border: `1px solid ${COLOR}25` }}>{s.name}</span>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Skills use the same structured picker as the member self-edit form and SkillsHunt.
+            Free-text proposed skills are member-owned, so the picker's proposed section is omitted
+            (the admin update contract has no proposedSkills). */}
+        <DirectorySkillsPicker
+          tokens={pickerTokens}
+          sectors={sectors}
+          jobTitles={jobTitles}
+          skills={skills}
+          loading={taxonomyLoading}
+          selectedSkillIds={form.skillIds}
+          onToggleSkill={(id) =>
+            setForm((f) => ({
+              ...f,
+              skillIds: f.skillIds.includes(id) ? f.skillIds.filter((s) => s !== id) : [...f.skillIds, id],
+            }))
+          }
+          onAddOccupationSkills={(ids) =>
+            setForm((f) => {
+              const merged = [...f.skillIds];
+              for (const id of ids) {
+                if (!merged.includes(id)) merged.push(id);
+              }
+              return { ...f, skillIds: merged };
+            })
+          }
+        />
 
         {/* Assign / attach an unclaimed profile to a user account. */}
         {isUnclaimed && (
