@@ -69,15 +69,6 @@ This folder contains the rewrite monorepo scaffold for:
   - `DATABASE_URL=... pnpm run schema:report-live-drift`
 - This command exits non-zero when drift exists, so it can be used as a pre-deploy gate.
 
-## Workforce Incremental Sync Baseline
-
-- Use incremental sync as the primary freshness path for Workforce recruited-state derivation.
-- Internal sync endpoint: `POST /api/workforce/internal/sync`.
-- Required header for internal sync: `x-workforce-sync-token`.
-- Configure `WORKFORCE_SYNC_TOKEN` in environments that run scheduled sync jobs.
-- Optional JSON body: `{ "batchSize": number }` to bound per-run delta processing volume.
-- Keep `POST /api/workforce/admin/recompute` as backfill/repair only.
-
 ## Foundation Phase-1 Baseline
 
 - Provider discovery reads Directory projections only (`directory_profiles`) and does not mutate Directory.

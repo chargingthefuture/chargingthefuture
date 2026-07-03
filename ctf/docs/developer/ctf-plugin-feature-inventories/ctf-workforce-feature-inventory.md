@@ -47,7 +47,7 @@ Workforce is a **read-only live tracker** of how the skills/talent of a populati
 
 ### 1.3 Workforce Reporting
 
-1. Current-state report views (summary, sector, skill-level, per-occupation gaps), all derived live.
+1. Current-state report views (sector, skill-level, per-occupation gaps), all derived live. The top-line summary numbers come from the dashboard endpoint; there is no separate summary report route (removed 2026-07-03 — it had no caller).
 2. No exporting and no report-running: exporting was removed and there are no stored snapshots or weekly historical buckets — everything is computed live on read.
 
 ### 1.4 Workforce Occupations Experience
@@ -61,7 +61,7 @@ Workforce is a **read-only live tracker** of how the skills/talent of a populati
 ### 2.1 Workforce Admin Operations
 
 1. Admin route for the workforce config (the population model) plus the read-only dashboard snapshot.
-2. Operator-visible audit trail (`GET /api/workforce/admin/audit-events`).
+2. Admin audit-trail read endpoint (`GET /api/workforce/admin/audit-events`) — implemented and admin-gated, but no admin screen calls it yet (Gaps item 5).
 3. No occupation/announcement/export/sync/recompute admin surface — those were removed in the read-only model.
 
 ### 2.2 Workforce Configuration Governance
@@ -92,15 +92,14 @@ Command groups:
 3. `workforce.profile.delete` (service-scoped compliance soft delete: set `service_deleted_at`, reset preference payloads, write `workforce_deletion_events`; CSRF + ownership). Note: `workforce.profile.update` is intentionally retired — the profile is read-only.
 4. `workforce.occupations.list` (read-only over Skills Taxonomy job titles with the demand/supply overlay)
 5. `workforce.occupations.detail.fetch`
-6. `workforce.report.summary.fetch`
-7. `workforce.report.skillLevel.fetch`
-8. `workforce.report.sector.fetch`
-9. `workforce.report.occupations.fetch` (per-occupation training gaps — the LevelUp recruiting/training signal)
-10. `workforce.admin.config.fetch`
-11. `workforce.admin.config.update` (population model: population, participation rate, min/max recruitable)
-12. `workforce.admin.auditEvents.fetch`
+6. `workforce.report.skillLevel.fetch`
+7. `workforce.report.sector.fetch`
+8. `workforce.report.occupations.fetch` (per-occupation training gaps — the LevelUp recruiting/training signal)
+9. `workforce.admin.config.fetch`
+10. `workforce.admin.config.update` (population model: population, participation rate, min/max recruitable)
+11. `workforce.admin.auditEvents.fetch`
 
-Removed commands (read-only model): `workforce.occupations.admin.create` / `.update` / `.delete` (occupations are read from Skills Taxonomy, never created by Workforce), `workforce.export.job.create` / `.status.fetch` / `.result.fetch` (exporting removed), and `workforce.metric.recruited.derive` (recruited is computed live as claimed Directory profiles — no derivation/sync command).
+Removed commands (read-only model): `workforce.occupations.admin.create` / `.update` / `.delete` (occupations are read from Skills Taxonomy, never created by Workforce), `workforce.export.job.create` / `.status.fetch` / `.result.fetch` (exporting removed), `workforce.metric.recruited.derive` (recruited is computed live as claimed Directory profiles — no derivation/sync command), and `workforce.report.summary.fetch` (removed 2026-07-03: the route had no caller — the dashboard computes its own top-line summary).
 
 ### 3.2 HTTP Projection Routes
 
@@ -112,12 +111,11 @@ User routes:
 - `DELETE /api/workforce/profile` — service-scoped compliance soft delete (deletion contract sections 5/8/9): sets `service_deleted_at = NOW()` and resets `availability_preferences` / `work_preferences` to `{}` on `workforce_user_extension`, writes a `workforce_deletion_events` row, and retains `workforce_recruited_events`. Requires CSRF + ownership. Emits the `workforce.profile.delete` audit event(s).
 - `GET /api/workforce/occupations` — read-only list of Skills Taxonomy job titles with the demand/supply overlay (largest gap first), paginated
 - `GET /api/workforce/occupations/:id` — one occupation with its overlay
-- `GET /api/workforce/reports/summary`
 - `GET /api/workforce/reports/skill-level/:skillLevel` — `all` returns the breakdown; a specific level also returns `detail` (the V2 matched-member drilldown: each member's name, skills, sectors, job titles, matching occupations, and match reason).
 - `GET /api/workforce/reports/sector/:sector` — `all` returns the breakdown; a specific sector also returns `detail` (the V2 matched-member drilldown, plus the sector's matched members).
 - `GET /api/workforce/reports/occupations` — per-occupation training gaps (supports `?limit=`); the breakdown that later signals LevelUp which cohorts to stand up
 
-Removed routes (read-only model): the export routes (`POST /api/workforce/export/jobs`, `GET …/jobs/:jobId`, `GET …/jobs/:jobId/result`) and the admin occupation CRUD routes (`POST/PUT/DELETE /api/workforce/admin/occupations`). Exporting was removed and occupations are read from Skills Taxonomy, so Workforce owns no occupation write surface.
+Removed routes (read-only model): the export routes (`POST /api/workforce/export/jobs`, `GET …/jobs/:jobId`, `GET …/jobs/:jobId/result`) and the admin occupation CRUD routes (`POST/PUT/DELETE /api/workforce/admin/occupations`). Exporting was removed and occupations are read from Skills Taxonomy, so Workforce owns no occupation write surface. Also removed (2026-07-03): `GET /api/workforce/reports/summary` — it had no caller anywhere (web or mobile); the dashboard computes its own top-line summary.
 
 Admin routes:
 
@@ -189,23 +187,15 @@ Note: there is no snapshot table — the dashboard, sector/skill/occupation brea
 
 `ctf/scripts/seedWorkforce.mjs` seeds the workforce config singleton only (the population model: population 5,000,000, participation 0.5, min/max recruitable). Demand (Skills Taxonomy sectors + `workforce_share`) and supply (Directory profiles) are owned by their own plugins and seeded there, not here.
 
-## 7.5) Web and Android Delivery Status
-
-| Platform | Status | Notes |
-|---|---|---|
-| Web | ✅ Delivered | Pixel pass complete 2026-05-31. Shell rewritten to match `design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/Workforce.tsx` canonical design. Bound to real dashboard, sector-report, skill-level-report, and profile API endpoints. Fabricated stats (Employed/In Training/Seeking Work breakdown, pathways, skill counts) omitted per real-data-only policy. Loading state, empty state, 4-card hero stats, skill-level distribution bars, sector gaps table, and profile right-rail all delivered. Chat tab from mockup omitted (no backing API route). |
-| Android | ✅ Delivered | User dashboard pixel-pass 2026-05-31. Admin operations screen added 2026-06-06 (`AdminWorkforce.tsx`), mirroring the web admin page (`/admin/workforce`). |
-
-Android admin (current): `AdminWorkforce.tsx` + `admin-api.ts` under `packages/mobile/src/features/workforce`, registered as the `workforce-admin` screen in `App.tsx`. It mirrors the web admin page (`/admin/workforce`): the snapshot counts (workforce total, headcount target, recruited, directory members) and the editable config — the population model (population, participation rate, min/max recruitable) with a Save action. It binds only `GET /api/workforce/dashboard`, `GET /api/workforce/admin/config`, and `PUT /api/workforce/admin/config`. There are no sync/recompute/export/occupation actions (removed in the read-only model). Admin access is enforced server-side; a 401/403 shows an "admins only" notice; the config save sends `x-ctf-csrf: '1'`.
-
-Profile read + compliance-delete surface (2026-06-26): the profile is read-only (owner decision 2026-06-16, reaffirmed) — there is no `PUT`. `GET /api/workforce/profile` now emits a `workforce.profile.fetch` audit and reads the real extension preferences/marker; `DELETE /api/workforce/profile` is the only mutation — a service-scoped soft delete per the deletion contract. These are backend API routes; the web profile panel and the mobile `WorkforceProfileCard` remain display-only, so there is no new rendered surface and no web/mobile parity gap. A member-facing delete control can be added later against the DELETE route.
-
 ## 8) Gaps and Known Technical Debt
 
 1. Demand quality depends on `skills_taxonomy_sectors.workforce_share` being populated. If shares are null/zero, demand falls back to an even split across sectors — the dashboard still renders, but the distribution is only as accurate as the shares Skills Taxonomy carries.
 2. Per-occupation demand is split evenly across a sector's job titles (no per-occupation weight exists in Skills Taxonomy). If finer weighting is wanted, it would need a new upstream signal.
 3. Single-bucket report fetches (`/reports/sector/:sector`, `/reports/skill-level/:skillLevel` with a value other than `all`) now match the bucket case-insensitively on both routes; the dashboard only uses the `all` variant, so the single-bucket paths are lightly exercised.
 4. The retained-but-unused `workforce_occupations` / `workforce_export_jobs` tables and the vestigial `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor` tables are dead weight in the schema; `workforce_occupations` cannot be dropped until the SkillsHunt rare-skill snapshot and the demo seed stop referencing it.
+5. `GET /api/workforce/admin/audit-events` is implemented (admin-gated, paginated, self-audited) but no web or mobile admin screen calls it — the audit trail has no viewing surface yet. Acknowledged gap: build an admin audit view against the existing route, or retire the route by owner decision.
+6. `DELETE /api/workforce/profile` (the service-scoped compliance soft delete mandated by the deletion contract §9) has no member-facing control yet — no screen offers the "Delete Workforce plugin data only?" confirmation. The route is kept because the deletion contract requires it; the gap is the missing UI control. Full-account deletion is separately handled by the central deletion registry (`lib/account/deletion-registry.ts`), which soft-deletes `workforce_user_extension` directly.
+7. The profile API's `region` field is always `null` — `getOwnProfile` never populates it (no upstream region source exists). The web profile panel and mobile `WorkforceProfileCard` render the region row only when the value is present, so nothing shows today; either wire a region source or drop the field.
 
 ## 9) Web and Android Delivery Status
 
@@ -219,14 +209,17 @@ Profile read + compliance-delete surface (2026-06-26): the profile is read-only 
 
 ### Mobile Parity Summary (current)
 
-- **Real bindings:** `GET /api/workforce/dashboard` → `fetchWorkforceDashboard()`, `GET /api/workforce/reports/sector/all` → `fetchWorkforceSectorReport()`, `GET /api/workforce/reports/occupations?limit=10` → `fetchWorkforceOccupationGaps()`, `GET /api/workforce/profile` → `fetchWorkforceProfile()`.
+- **Real bindings:** `GET /api/workforce/dashboard` → `fetchWorkforceDashboard()`, `GET /api/workforce/reports/sector/all` → `fetchWorkforceSectorReport()`, `GET /api/workforce/reports/occupations?limit=10` → `fetchWorkforceOccupationGaps()`, `GET /api/workforce/profile` → `fetchWorkforceProfile()`, plus the browse/drilldown bindings — `GET /api/workforce/occupations` → `fetchAllWorkforceOccupations()`, `GET /api/workforce/occupations/:id` → `fetchWorkforceOccupation()`, `GET /api/workforce/reports/skill-level/:skillLevel` → `fetchWorkforceSkillLevelReport()` / `fetchWorkforceSkillLevelDetail()`, `GET /api/workforce/reports/sector/:sector` → `fetchWorkforceSectorDetail()` — and the admin bindings `GET/PUT /api/workforce/admin/config` (`admin-api.ts`).
 - **Delivered states:** loading, empty (no sectors/occupations and no Directory members), error, and the main authenticated dashboard.
 - **Stats shown from real data:** Population, Workforce Total, Total Headcount Target, Recruited, Directory Members. Plus Sector Gaps (recruited / target / gap) and Top Training Gaps (per occupation).
-- **Profile section:** occupation name, skill level, region, recruited state — all from `GET /api/workforce/profile`.
+- **Profile section:** occupation name, skill level, recruited state — all from `GET /api/workforce/profile`. (The API's `region` field is currently always `null` — see Gaps item 7.) The profile is rendered inline on the dashboard via `WorkforceProfileCard`; there is no standalone profile screen (the orphaned, never-mounted `WorkforceProfile.tsx` and its `Workforce.tsx` wrapper were deleted 2026-07-03).
 - **Rule 116 compliance:** dashboard logic is split across `WorkforceDashboard` (orchestration/state) plus small presentational sub-components and `WorkforceStatCard` / `WorkforceProfileCard` / `WorkforceLoading` / `WorkforceEmpty` / `WorkforcePublic`.
+
+Profile read + compliance-delete surface: the profile is read-only (owner decision 2026-06-16, reaffirmed) — there is no `PUT`. `GET /api/workforce/profile` emits a `workforce.profile.fetch` audit and reads the real extension preferences/marker; `DELETE /api/workforce/profile` is the only mutation — a service-scoped soft delete per the deletion contract. The web profile panel and the mobile `WorkforceProfileCard` remain display-only; the member-facing delete control is an open gap (Gaps item 6).
 
 ## 10) Change Log
 
+- 2026-07-03: Dead-code sweep from the plugin audit (owner directive: all code must be live and reachable in production, or recorded as a gap here / in a GitHub issue). (1) **Removed the dead in-process sync cron.** `src/cron/workforce-sync.ts` POSTed to `/api/workforce/internal/sync` every 4 hours, but that route was deliberately deleted on 2026-06-16 with the read-only model — the cron was missed then, so every scheduled run 404'd and logged an error check-in (Sentry monitor `workforce-incremental-sync`). Deleted the cron, `src/cron/init-cron.ts`, the `initializeCronJobs` call in `instrumentation.ts`, and the now-unused `node-cron` / `@types/node-cron` dependencies (the workforce cron was the only in-process cron; all other scheduled work runs as GitHub Actions workflows). Also removed the out-of-date "Workforce Incremental Sync Baseline" section from `ctf/README.md`. If a Sentry cron monitor exists for `workforce-incremental-sync`, it should be deleted in Sentry so it does not alert on missed check-ins. (2) **Removed `GET /api/workforce/reports/summary`** — no caller anywhere (web or mobile; the dashboard computes its own top-line summary). Deleted the route, `fetchSummaryReport`, the `WorkforceSummaryReport` type, the `workforce.report.summary.fetch` entries in the command and access-policy contracts, and its audit version-registry entry. (3) **Deleted the two orphaned mobile files** `Workforce.tsx` (unused wrapper) and `WorkforceProfile.tsx` (standalone profile screen; exported but never mounted in `App.tsx` — correcting the 2026-06-26 change-log claim that it was wired: the wiring was real but the screen was never reachable). The profile renders inline via `WorkforceProfileCard`. (4) **Removed the dead "Invite Members to Onboard" button** from the web empty state (`workforce-shell.tsx`) — it had no handler. Kept deliberately: `DELETE /api/workforce/profile` (mandated by the deletion contract §9; the missing member-facing control is Gaps item 6) and `GET /api/workforce/admin/audit-events` (Gaps item 5). Doc drift fixed in the same pass: merged the duplicate §7.5 delivery-status section into §9, completed the mobile "Real bindings" list (occupations browse/detail, skill-level and sector drilldowns, admin config), and recorded the always-null profile `region` (Gaps item 7). No schema change.
 - 2026-06-29: Reframed the signed-in Workforce "gap" displays as opportunity, not deficit (owner direction — the big red negative numbers read as loss when they are the outsized opportunity to fill). Across the dashboard Overview and the Sectors / Skill Level / Occupations tabbed views, on web and Android: dropped the minus sign and the red color, renamed "Sector Gaps" → "Sector Opportunities" and "Top Training Gaps" → "Top Training Opportunities", and the per-row figure now reads "{n} to fill" (or "filled" at zero) in the brand orange, with green reserved for recruited. The sector panel's target bar/legend also moved from red to orange so nothing on the panel reads as alarm; the "{n} sectors" badge is now neutral. This extends the earlier signed-out "Sectors to fill" framing to the signed-in surfaces (superseding the note that the signed-in dashboard kept the "Sector Gaps" label). Display-only; no data, API, schema, or contract change.
 - 2026-06-29: Fixed the Skill Level Breakdown bar chart (`workforce-skill-distribution.tsx`). The bars were sized by each level's `target` (demand), so the tallest bar read as if the millions-scale target had been reached. Bars now show the number of people recruited at each level (green, scaled to the largest recruited count — like V2, where the level with the most people is the tallest); the recruited count is the prominent number, and `target`/`gap` are shown as secondary context with a subtitle ("Members recruited at each skill level (bar height = people). Target shown for context."). Display-only; no data, API, or contract change.
 - 2026-06-29: Dropped "Not Recruited" from the public Workforce snapshot (UI + endpoint) and relabeled the remaining gap figure for the signed-out page. Against the 5M goal the unfilled-headcount-target figure is a multi-million number that dwarfed the Recruited bar and read as off-putting marketing on the signed-out landing. `GET /api/workforce/public-snapshot` now returns only `{recruited, sectorGaps, generatedAtIso}`, and the landing card shows just **Recruited** and **Sectors to fill** (the positive marketing label for the active-sector `sectorGaps` figure — the signed-in dashboard keeps calling it "Sector Gaps"). These unauthed pages market without lying: real numbers, opportunity framing. No schema change.

@@ -63,13 +63,6 @@ export async function register(): Promise<void> {
 
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     await initSentryForRuntime('nodejs');
-
-    try {
-      const { initializeCronJobs } = await import('./src/cron/init-cron');
-      await initializeCronJobs();
-    } catch {
-      // Cron setup should not block server startup.
-    }
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {

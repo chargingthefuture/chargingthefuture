@@ -1,11 +1,14 @@
-name: Skills Taxonomy — Seed Promotions (production)
+name: Skills Taxonomy — Apply Change Ops (production)
 
-# Applies the curated, owner-approved skill promotions to the LIVE production taxonomy by running
-# ctf/scripts/seedSkillsTaxonomy.mjs. Idempotent: each promotion looks its sector up by name in the
-# live DB (never creating sectors) and upserts the occupation/skill ON CONFLICT no-op, so re-running
-# is safe. There is no legacy backfill — the live database is the source of truth. Manual dispatch
-# only; this is how an owner-approved promotion (e.g. a SkillsHunt skill proposal) is applied to the
-# live taxonomy. The promotion list lives in ctf/scripts/lib/seedSkillsTaxonomyPromotions.mjs.
+# Applies the append-only taxonomy change-ops list (ctf/scripts/lib/taxonomyChangeOps.mjs) to the
+# LIVE production taxonomy by running ctf/scripts/seedSkillsTaxonomy.mjs. This is the ONLY path
+# that writes the taxonomy from the repo — see
+# ctf/docs/developer/SKILLS_TAXONOMY_CHANGE_GOVERNANCE_PLAN.md. Idempotent: already-applied ops
+# no-op, sectors are looked up by name (never created), there is no hard delete (deactivate +
+# reparent only), and every real mutation is recorded in skills_taxonomy_change_events. Manual
+# dispatch only — the owner runs this after an ops PR merges (the ops list is validated by the
+# taxonomy-ops-gate CI job on every PR). The run fails visibly if any op names a sector or target
+# the live database does not have.
 on:
   workflow_dispatch: {}
 
@@ -13,8 +16,8 @@ permissions:
   contents: read
 
 jobs:
-  seed-promotions:
-    name: Apply skills-taxonomy promotions to production
+  apply-change-ops:
+    name: Apply taxonomy change-ops to production
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,11 +39,15 @@ jobs:
           secret-path: /
           recursive: true
 
-      # The seed needs only the Postgres client. Install it standalone so we do not pay for a full
+      # Validate the ops list before touching the database (same check CI runs on PRs).
+      - name: Validate taxonomy change-ops list
+        run: node ctf/scripts/check-taxonomy-change-ops.mjs
+
+      # The apply needs only the Postgres client. Install it standalone so we do not pay for a full
       # monorepo install on every run.
       - name: Install Postgres client
         run: npm install --no-save pg@8
 
-      - name: Apply skills-taxonomy promotions
+      - name: Apply taxonomy change-ops
         # DATABASE_URL is injected by the Infisical step above.
         run: node ctf/scripts/seedSkillsTaxonomy.mjs

@@ -36,6 +36,7 @@
     "schema:report-live-drift": "bash ./scripts/audit_schema_drift.sh",
     "schema:audit-queries": "node ./scripts/audit-schema-queries.mjs",
     "check:inventory-drift": "node ./scripts/check-inventory-drift.mjs",
+    "check:taxonomy-ops": "node ./scripts/check-taxonomy-change-ops.mjs",
     "check:test-script-drift": "node ./scripts/check-test-script-drift.mjs",
     "formance:fetch:standalone": "node ./scripts/fetchFormanceStandalone.mjs",
     "formance:up:standalone": "pnpm run formance:fetch:standalone && docker compose -f ./ops/formance/upstream-standalone/docker-compose.yml up -d",

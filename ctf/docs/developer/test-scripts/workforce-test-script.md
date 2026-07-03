@@ -111,7 +111,8 @@ reason (job title, skill, or sector). Recruited in a bucket can exceed the physi
 **Role:** member · **Surfaces:** all
 **Precondition:** the member has a claimed Directory profile.
 **Steps:**
-1. Open the Workforce profile view; read occupation, skill level, region, recruited state.
+1. Open the Workforce profile view; read occupation, skill level, recruited state. (No region row
+   renders — the profile API's `region` field is always empty; see the tracked gaps below.)
 2. Find the only member write — the service-scoped delete — and read its notice (do not complete a
    destructive delete in a shared seed DB unless it is your own throwaway account).
 **Expected:** The profile is derived live from the member's own claimed Directory profile and is
@@ -200,3 +201,13 @@ of these, it is already tracked, not a new bug:
   `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor`) are unused
   dead weight in the schema, kept only because the SkillsHunt rare-skill snapshot and the demo seed
   still reference `workforce_occupations`.
+- The admin audit-trail read endpoint (`GET /api/workforce/admin/audit-events`) has no admin screen
+  yet, so there is nothing to test from the UI.
+- The member-facing control for the service-scoped delete (WF-7 step 2) is not built yet — the
+  endpoint exists per the deletion contract, but no screen offers the confirmation; verify the
+  read-only profile and skip the delete until the control ships.
+- The profile API's `region` field is always empty (no upstream source); both profile surfaces hide
+  the row when it is absent, so seeing no region is correct, not a bug.
+- (2026-07-03 sweep) The unused summary report endpoint, an in-process sync cron that failed on
+  every run, two never-shown mobile screens, and a button with no action were removed; no test case
+  covered them, so no case changes — recorded here so the script and inventory move together.

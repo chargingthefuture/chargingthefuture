@@ -94,8 +94,11 @@ field is never blanked. The save goes through `PUT /api/directory/profile` with 
 skills picker matches the SkillsHunt picker: removable selected chips, a one-open-at-a-time sector
 accordion with per-sector "N selected" badges, and a profession prefill that bulk-adds a profession's
 skills. There is no hard cap on taxonomy skills. The free-text label persists (capped at 10 labels of
-at most 40 characters) and round-trips back as a yellow "pending review" chip. On android this case
-is **blocked** — there is no member self-edit screen yet.
+at most 40 characters) and round-trips back as a yellow "pending review" chip. (The pending chip later
+becomes a real taxonomy chip only after the owner approves the label — an `addSkill` entry in the
+taxonomy change list applied by the owner-run workflow, which auto-attaches the official skill to
+every proposing profile; that approval step is owner-side and outside this script.) On android this
+case is **blocked** — there is no member self-edit screen yet.
 **Result:** web ☐ mobile ☐ android ⛔ — notes:
 
 ### DIR-5 · Read announcements

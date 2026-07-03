@@ -181,3 +181,7 @@ of these, it is already tracked, not a new bug:
 - URL liveness verification is best-effort; a stronger service-level guarantee has not been finalized.
 - Team-leaderboard aggregation by profession depends on Skills Taxonomy sign-off on the grouping
   rules.
+- Proposed-skill promotion is owner-side and not testable from the app UI: proposals become GitHub
+  issues on a schedule, and an approved skill enters the taxonomy through the taxonomy change list
+  applied by the owner-run workflow (which also flips the proposal to "promoted"). In-app you can
+  only verify the nomination/proposal capture, not the promotion itself.

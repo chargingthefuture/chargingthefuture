@@ -117,27 +117,6 @@ contracts:
     idempotency: true
 
   - pluginId: workforce
-    command: workforce.report.summary.fetch
-    version: 2.0.0
-    description: Fetch the workforce summary (population, workforce total, headcount target, members, recruited).
-    inputSchema:
-      scope:
-        type: object
-    outputSchema:
-      summary:
-        type: object
-    dataAccess:
-      - directory_profiles
-      - directory_profile_skills
-      - skills_taxonomy_sectors
-      - skills_taxonomy_job_titles
-      - skills_taxonomy_skills
-      - workforce_config
-    purpose: workforce_reporting
-    retentionClass: derived_short_lived
-    idempotency: true
-
-  - pluginId: workforce
     command: workforce.report.skillLevel.fetch
     version: 2.0.0
     description: >-

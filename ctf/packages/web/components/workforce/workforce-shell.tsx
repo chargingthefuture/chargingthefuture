@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BarChart2, ChevronLeft, Target, Plus } from 'lucide-react';
+import { BarChart2, ChevronLeft, Target } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
@@ -148,24 +148,6 @@ function WorkforceEmptyState({ t }: { t: WorkforceTokens }) {
           No sector data — gaps populate as workforce profiles are submitted and sectors assigned.
         </div>
       </div>
-      <button
-        type="button"
-        style={{
-          padding: '12px 28px',
-          borderRadius: 12,
-          background: t.ACCENT,
-          border: 'none',
-          color: '#fff',
-          fontSize: 14,
-          fontWeight: 700,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <Plus size={16} /> Invite Members to Onboard
-      </button>
     </div>
   );
 }

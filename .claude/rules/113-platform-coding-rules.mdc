@@ -66,6 +66,32 @@ Set implementation standards for readability, modularity, and safe feature deliv
 - Stub, scaffold, placeholder, or partial task implementations in production code.
 - "Not implemented" code paths for planned work in merged code.
 
+## All Code Live and Reachable (Critical — owner directive, 2026-07-03)
+
+Every piece of merged code must be live and reachable in production. A capability that exists but
+cannot be reached is a defect, not a feature. This applies app-wide, to every plugin and package.
+
+Not allowed in merged code, unless explicitly recorded (see below):
+
+- **Orphaned endpoints** — an API route no client, screen, scheduled workflow, or registered caller uses.
+- **Orphaned components/screens** — exported but never routed, mounted, or rendered by anything.
+- **Dead controls** — a rendered button/tab/link with no handler or no backing behavior.
+- **Callers of nothing** — a cron, workflow, or client calling a route that does not exist.
+- **Backend-only capability with a required surface missing** — e.g. an admin action or a
+  contract-mandated user action with no screen that can trigger it.
+
+The only two ways an exception may exist:
+
+1. **Recorded in the plugin's feature inventory** — as a numbered entry in "Gaps and Known Technical
+   Debt" stating what is unreachable and what resolves it (build the surface, or remove the code).
+2. **Recorded in an open GitHub issue** — linked from the inventory when plugin-scoped.
+
+Unrecorded dead or unreachable code found during any task must be flagged to the owner, then (on
+owner direction) deleted or recorded. When deleting an endpoint, delete its command/access-policy/audit
+contract entries and inventory route entries in the same change. Never delete a compliance-mandated
+path (e.g. a deletion-contract endpoint) to satisfy this rule — record the missing surface as the gap
+instead; compliance constraints take precedence.
+
 ## Type Safety — Avoiding `any`
 
 - The use of `any`, `as any`, and `any[]` type annotations is strictly prohibited in all TypeScript code.
