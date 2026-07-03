@@ -67,6 +67,10 @@ export function ShareLink({
   // The popup opens above the trigger by default, but flips below when the trigger sits near the top
   // of the viewport — otherwise the popup is clipped behind the header (the "modal doesn't fit" bug).
   const [placement, setPlacement] = useState<"top" | "bottom">("top");
+  // Same idea horizontally: the popup grows rightward from the trigger's left edge by default, but a
+  // trigger near the right edge of the viewport (the usual header position) would push it off-screen
+  // and force the whole page into horizontal scroll — so it flips to grow leftward instead.
+  const [align, setAlign] = useState<"left" | "right">("left");
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const urlRef = useRef<HTMLInputElement>(null);
@@ -79,8 +83,14 @@ export function ShareLink({
     // Decide which way to open: if there isn't room for the popup above the trigger, open below.
     // ~190px covers the popup (title + URL field + two rows + padding).
     const POPUP_HEIGHT = 190;
-    const triggerTop = triggerRef.current?.getBoundingClientRect().top ?? POPUP_HEIGHT + 1;
+    const POPUP_WIDTH = 280;
+    const rect = triggerRef.current?.getBoundingClientRect();
+    const triggerTop = rect?.top ?? POPUP_HEIGHT + 1;
     setPlacement(triggerTop < POPUP_HEIGHT + 16 ? "bottom" : "top");
+    // And which way to grow: right-align the popup when growing rightward would cross the viewport's
+    // right edge (which forces the page into horizontal scroll on a phone).
+    const triggerLeft = rect?.left ?? 0;
+    setAlign(triggerLeft + POPUP_WIDTH > window.innerWidth - 16 ? "right" : "left");
     // Focus the URL field so a keyboard/AT user lands on the link itself.
     urlRef.current?.focus();
     urlRef.current?.select();
@@ -162,7 +172,7 @@ export function ShareLink({
             ...(placement === "top"
               ? { bottom: "calc(100% + 8px)" }
               : { top: "calc(100% + 8px)" }),
-            left: 0,
+            ...(align === "right" ? { right: 0 } : { left: 0 }),
             zIndex: 50,
             width: 280,
             maxWidth: "80vw",
