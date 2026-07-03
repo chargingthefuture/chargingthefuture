@@ -191,7 +191,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             [sectorId, occupation],
           );
           await recordChangeEvent(client, {
-            targetType: 'job_title', targetId: inserted.rows[0].id, action: 'create',
+            targetType: 'job-title', targetId: inserted.rows[0].id, action: 'create',
             reason: `change-op ${op.id}: addOccupation`, metadata: meta,
           });
           summary.occupationsCreated += 1;
@@ -252,7 +252,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             [from.id, normalizeTaxonomyName(op.to)],
           );
           await recordChangeEvent(client, {
-            targetType: 'job_title', targetId: from.id, action: 'rename',
+            targetType: 'job-title', targetId: from.id, action: 'rename',
             reason: `change-op ${op.id}: renameOccupation "${op.from}" -> "${op.to}"`, metadata: meta,
           });
           summary.renames += 1;
@@ -374,7 +374,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             [jobTitle.id],
           );
           await recordChangeEvent(client, {
-            targetType: 'job_title', targetId: jobTitle.id, action: 'deactivate',
+            targetType: 'job-title', targetId: jobTitle.id, action: 'deactivate',
             reason: `change-op ${op.id}: ${op.acknowledgedImpact}`, metadata: meta,
           });
           summary.deactivations += 1;
@@ -428,7 +428,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             [jobTitle.id],
           );
           await recordChangeEvent(client, {
-            targetType: 'job_title', targetId: jobTitle.id, action: 'reactivate',
+            targetType: 'job-title', targetId: jobTitle.id, action: 'reactivate',
             reason: `change-op ${op.id}: reactivateOccupation`, metadata: meta,
           });
           summary.reactivations += 1;

@@ -2148,6 +2148,11 @@ ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS cre
 -- identical (same idiom as currencies_kind_check).
 ALTER TABLE IF EXISTS skills_taxonomy_change_events DROP CONSTRAINT IF EXISTS skills_taxonomy_change_events_action_check;
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD CONSTRAINT skills_taxonomy_change_events_action_check CHECK (action IN ('create', 'update', 'delete', 'rename', 'reparent', 'deactivate', 'reactivate'));
+-- target_type vocabulary shared by both writers ('job-title' with a hyphen, matching the app's
+-- delete path). The live database carries this check but schema.sql previously did not declare it,
+-- which hid the vocabulary from code review; declare it explicitly with the same drop + re-add idiom.
+ALTER TABLE IF EXISTS skills_taxonomy_change_events DROP CONSTRAINT IF EXISTS skills_taxonomy_change_events_target_type_check;
+ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD CONSTRAINT skills_taxonomy_change_events_target_type_check CHECK (target_type IN ('sector', 'job-title', 'skill'));
 
 -- === DIRECTORY MODULE ===
 -- Per-profile skills live in the normalized directory_profile_skills junction
