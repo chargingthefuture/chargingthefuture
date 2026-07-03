@@ -110,7 +110,9 @@ of the marketing near-duplicates, "Marketing Specialists" shows the survivors �
 Media Marketing, Search Engine Optimization (SEO), Email Marketing, Copywriting, Market research and
 segmentation, Campaign planning (digital & offline), Content strategy and analytics, Brand
 Management — and none of the deactivated labels (Market Research; SEO/SEM and paid-media management;
-Content Marketing; Brand strategy and positioning).
+Content Marketing; Brand strategy and positioning). Under Food & Agriculture › Agribusiness
+Managers, "Marketing and market analysis" no longer appears (deactivated by op 39) — a member with
+marketing skills is matched to Professional & Business Services in Workforce, not Food & Agriculture.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

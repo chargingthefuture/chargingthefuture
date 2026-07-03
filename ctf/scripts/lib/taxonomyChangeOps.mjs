@@ -132,6 +132,13 @@ export const TAXONOMY_CHANGE_OPS = [
   // strategy and positioning"). Reversible; each audit row records the live member-holder count.
   { id: 37, op: 'deactivateSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', skill: 'Content Marketing', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Content strategy and analytics", the owner-picked survivor of the pair. Members holding this row stop seeing the chip until they re-pick the surviving skill; the audit metadata records how many were holding it.' },
   { id: 38, op: 'deactivateSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', skill: 'Brand strategy and positioning', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Brand Management", the owner-picked survivor of the pair. Members holding this row stop seeing the chip until they re-pick the surviving skill; the audit metadata records how many were holding it.' },
+
+  // Op 39 (owner-approved 2026-07-03): the change that started the whole governance effort. The
+  // generic marketing skill under the Food & Agriculture occupation funneled every holder into that
+  // sector in the Workforce match (its job_title_id was the skill's only parent). Marketing now
+  // lives under Professional & Business Services > Marketing Specialists; the sole known holder
+  // ("00") re-picked their skills there before this op was appended.
+  { id: 39, op: 'deactivateSkill', sector: 'Food & Agriculture', occupation: 'Agribusiness Managers', skill: 'Marketing and market analysis', occupationExisting: true, skillExisting: true, acknowledgedImpact: 'Generic marketing skill parented under a Food & Agriculture occupation pulled every holder into that sector in the Workforce match. The marketing skillset now lives under Marketing Specialists (Professional & Business Services), and the sole known holder re-picked their skills there before this op was appended; the audit metadata records the live holder count at apply time.' },
 ];
 
 // ---------------------------------------------------------------------------
