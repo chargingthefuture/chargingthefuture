@@ -162,6 +162,39 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
   try {
     await client.query('BEGIN');
 
+    // Pre-flight: check every reparentSkill op against the live state and report ALL collisions in
+    // one error, with the blocking row's active state and both rows' member-holder counts. Without
+    // this the run dies on the first collision of possibly several, costing one dispatch per
+    // discovery. Purely read-only; the in-loop check stays as the authoritative sequential guard.
+    const collisions = [];
+    for (const op of ops) {
+      if (op.op !== 'reparentSkill') continue;
+      const toSectorId = await findSectorIdByName(client, normalizeTaxonomyName(op.toSector));
+      if (!toSectorId) continue;
+      const toTitle = await findJobTitle(client, toSectorId, normalizeTaxonomyName(op.toOccupation));
+      if (!toTitle) continue;
+      const atTarget = await findSkill(client, toTitle.id, normalizeTaxonomyName(op.skill));
+      if (!atTarget) continue;
+      const fromSectorId = await findSectorIdByName(client, normalizeTaxonomyName(op.fromSector));
+      const fromTitle = fromSectorId
+        ? await findJobTitle(client, fromSectorId, normalizeTaxonomyName(op.fromOccupation))
+        : null;
+      const atSource = fromTitle ? await findSkill(client, fromTitle.id, normalizeTaxonomyName(op.skill)) : null;
+      if (!atSource) continue; // no source row -> the in-loop handler treats it as already reparented
+      const targetHolders = await countSkillMemberReferences(client, atTarget.id);
+      const sourceHolders = await countSkillMemberReferences(client, atSource.id);
+      collisions.push(
+        `op ${op.id}: "${op.skill}" already exists under "${op.toOccupation}" `
+        + `(target row ${atTarget.is_active ? 'ACTIVE' : 'INACTIVE'}, ${targetHolders} member holder(s); `
+        + `source row under "${op.fromOccupation}" has ${sourceHolders} member holder(s)). `
+        + `A reparent cannot merge rows — correct this never-applied op (e.g. deactivate the source `
+        + `copy and, if the target row is inactive, reactivate it).`,
+      );
+    }
+    if (collisions.length > 0) {
+      throw new Error(`reparent collision pre-flight found ${collisions.length} conflict(s):\n${collisions.join('\n')}`);
+    }
+
     for (const op of ops) {
       const meta = { opId: op.id, op: op.op };
 

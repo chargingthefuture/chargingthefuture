@@ -9,8 +9,11 @@
 // applyTaxonomyChangeOps.mjs).
 //
 // Rules that keep this safe:
-// - APPEND ONLY. Never edit, delete, reorder, or renumber an existing op. To undo a change, append
-//   the reverse op (e.g. reactivateSkill after a deactivateSkill).
+// - APPEND ONLY. Never edit, delete, reorder, or renumber an op that has APPLIED to the live
+//   database. To undo an applied change, append the reverse op (e.g. reactivateSkill after a
+//   deactivateSkill). An op that has NEVER successfully applied (every run containing it failed and
+//   rolled back) may be corrected in place via a reviewed PR — like an unapplied migration, editing
+//   it cannot desync anything because it never took effect anywhere.
 // - NO HARD DELETE. There is no delete op; deactivate (is_active = false) + reparent cover every
 //   removal need and stay reversible. Member profile links point at the skill row id, so a
 //   reparented skill keeps every member's profile intact.
