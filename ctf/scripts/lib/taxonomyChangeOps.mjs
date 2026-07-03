@@ -90,6 +90,24 @@ export const TAXONOMY_CHANGE_OPS = [
   // Op 25: "Merchandising" joins the pre-existing "Supply Managers" occupation under
   // "Retail & Services" (skill proposal #1180; owner-approved 2026-06-29).
   { id: 25, op: 'addSkill', sector: 'Retail & Services', occupation: 'Supply Managers', skill: 'Merchandising', occupationExisting: true, proposalNormalizedSkills: ['merchandising'] },
+
+  // Ops 26-34 (owner-approved 2026-07-03): merge the duplicate "Marketing Specialist" (singular,
+  // created by op 1 — the exact-name occupation match missed the pre-existing plural row) into the
+  // pre-existing "Marketing Specialists" (plural, matching the sector's plural naming convention).
+  // All 8 skills move by reparent (member profile links follow the skill row ids, so nobody loses
+  // a skill); the emptied singular is then deactivated. No name collisions: the plural's five
+  // pre-existing skills (Market research and segmentation; Campaign planning (digital & offline);
+  // Brand strategy and positioning; Content strategy and analytics; SEO/SEM and paid-media
+  // management) share no exact name with the eight below.
+  { id: 26, op: 'reparentSkill', skill: 'Marketing', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 27, op: 'reparentSkill', skill: 'Social Media Marketing', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 28, op: 'reparentSkill', skill: 'Content Marketing', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 29, op: 'reparentSkill', skill: 'Search Engine Optimization (SEO)', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 30, op: 'reparentSkill', skill: 'Email Marketing', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 31, op: 'reparentSkill', skill: 'Market Research', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 32, op: 'reparentSkill', skill: 'Brand Management', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 33, op: 'reparentSkill', skill: 'Copywriting', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 34, op: 'deactivateOccupation', sector: 'Professional & Business Services', occupation: 'Marketing Specialist', acknowledgedImpact: 'Duplicate of the pre-existing "Marketing Specialists" occupation; all 8 of its skills were reparented there by ops 26-33, so no skill rows remain under it and member profile links are untouched. The apply engine refuses this op if any active skill remains.' },
 ];
 
 // ---------------------------------------------------------------------------
