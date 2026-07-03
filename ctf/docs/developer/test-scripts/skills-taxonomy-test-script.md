@@ -99,7 +99,7 @@ by appending an op to `ctf/scripts/lib/taxonomyChangeOps.mjs` and applying again
 The apply run is one transaction: if it fails (for example on an audit-log constraint), nothing partial
 appears in the app — every op lands together or not at all, and each applied mutation leaves an audit
 row whose `action` is one of `create`, `update`, `delete`, `rename`, `reparent`, `deactivate`,
-`reactivate`.
+`reactivate`, and whose `target_type` is one of `sector`, `job-title`, `skill`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
