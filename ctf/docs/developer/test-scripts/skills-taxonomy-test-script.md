@@ -100,7 +100,10 @@ The apply run is one transaction: if it fails (for example on an audit-log const
 appears in the app — every op lands together or not at all, and each applied mutation leaves an audit
 row whose `action` is one of `create`, `update`, `delete`, `rename`, `reparent`, `deactivate`,
 `reactivate`, and whose `target_type` is one of `sector`, `job-title`, `skill` (checks apply to new
-rows only — historical audit rows keep their original values and are never rewritten).
+rows only — historical audit rows keep their original values and are never rewritten). A failed apply
+run's error output is itself testable evidence: reparent conflicts are reported all at once by a
+read-only pre-flight (with each blocking row's active state and member-holder counts), and the
+taxonomy is unchanged after any failed run.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

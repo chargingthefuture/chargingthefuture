@@ -15,6 +15,9 @@ reviewed, reproducible path.
    existing `seed-skills-taxonomy.yml` pattern. Never auto-apply on merge.
 4. **The Skills Taxonomy admin write surface is retired** — last, after the ops path covers every
    operation. The in-app plugin becomes read-only for everyone; admins use the member browse view.
+5. **Append-only applies to applied history.** An op that has never successfully applied (every run
+   containing it failed and rolled back) may be corrected in place via a reviewed PR — like an
+   unapplied migration. An op that has applied is immutable; undo it by appending the reverse op.
 
 ## The flow
 
