@@ -59,14 +59,20 @@ missing sector is a mis-named op, not a creation request).
 1. **Define the ops module** — `ctf/scripts/lib/taxonomyChangeOps.mjs`: the op vocabulary, the
    append-only list, and pure validation of the list shape. Migrate the three existing
    `APPROVED_SKILL_PROMOTIONS` entries into equivalent `addOccupation`/`addSkill` ops so there is one
-   list, and keep `seedSkillsTaxonomyPromotions.mjs` as a thin shim until retirement. No dependencies.
+   list. No dependencies. **Done 2026-07-03** (ops 1–25; the promotions lib and its standalone
+   runner were deleted outright rather than shimmed — nothing called them once the seed switched,
+   and the all-code-live rule forbids an unused shim).
 2. **Apply engine** — extend the seed script to replay the ops list against the live DB:
    rename/reparent/deactivate/reactivate in addition to today's upserts, each write recorded in
-   `skills_taxonomy_change_events`, each op idempotent. Blocked by task 1.
+   `skills_taxonomy_change_events`, each op idempotent. Blocked by task 1. **Done 2026-07-03**
+   (`ctf/scripts/lib/applyTaxonomyChangeOps.mjs`; promotion side-effects preserved on `addSkill`).
 3. **CI check** — a PR job that runs the list validation (task 1) plus the static consistency rules
-   above; wire into `ci.yml`. Blocked by task 1.
+   above; wire into `ci.yml`. Blocked by task 1. **Done 2026-07-03** (`taxonomy-ops-gate` job,
+   `ctf/scripts/check-taxonomy-change-ops.mjs`, package script `check:taxonomy-ops`).
 4. **Apply workflow** — extend/replace `seed-skills-taxonomy.yml` (`workflow_dispatch` only) to run
-   the apply engine with Infisical-injected `DATABASE_URL`. Blocked by task 2.
+   the apply engine with Infisical-injected `DATABASE_URL`. Blocked by task 2. **Done 2026-07-03**
+   (renamed "Skills Taxonomy — Apply Change Ops (production)"; validates the list before applying;
+   fails visibly on missing sectors/targets).
 5. **First governed change** — the pending marketing reparent: `reparentSkill` for
    "Marketing and market analysis" from Agribusiness Managers (Food & Agriculture) to the
    Professional & Business Services occupation the owner names, plus `addSkill` ops for the

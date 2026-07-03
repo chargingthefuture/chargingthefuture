@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 
-// Seeds the skills taxonomy by applying the curated, owner-approved promotions to the LIVE database.
+// Applies the append-only taxonomy change-ops list to the LIVE database.
 //
-// The live database taxonomy is the source of truth. The old legacy platform backfill (which loaded
-// `platform/scripts/data/skills-data.ts`) has been removed along with the legacy app, so this seed no
-// longer syncs from a legacy dataset — it only upserts the curated promotions (idempotent), looking
-// each sector up by name in the live DB and never creating sectors. To add a skill, append to
-// APPROVED_SKILL_PROMOTIONS in lib/seedSkillsTaxonomyPromotions.mjs and run this.
+// The live database taxonomy is the source of truth, and the change-ops list
+// (ctf/scripts/lib/taxonomyChangeOps.mjs) is the ONLY repo path that writes it — see
+// ctf/docs/developer/SKILLS_TAXONOMY_CHANGE_GOVERNANCE_PLAN.md. To change the taxonomy, append an
+// op to that list in a PR (CI validates it), merge, then run this via the owner-dispatched
+// workflow (.github/workflows/seed-skills-taxonomy.yml). Replaying is idempotent: already-applied
+// ops no-op, and a reseed can never resurrect a deactivated row. The old curated promotions list
+// was migrated into ops 1-25.
 
 import { Pool } from 'pg';
-import { seedSkillsTaxonomyPromotions } from './lib/seedSkillsTaxonomyPromotions.mjs';
+import { applyTaxonomyChangeOps } from './lib/applyTaxonomyChangeOps.mjs';
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -26,23 +28,35 @@ const pool = new Pool({
 });
 
 async function main() {
-  // Apply curated, owner-approved skill promotions against the live taxonomy. Idempotent: each
-  // promotion looks its sector up by name (never creates one), upserts the occupation, then upserts
-  // each skill under it; re-runs are ON CONFLICT no-ops.
-  const promotions = await seedSkillsTaxonomyPromotions({ pool });
+  const summary = await applyTaxonomyChangeOps({ pool });
   console.log(
     [
-      'Skills taxonomy promotions applied.',
-      `occupations=${promotions.occupations}`,
-      `skills=${promotions.skills}`,
-      `proposalsMarkedPromoted=${promotions.proposalsMarkedPromoted}`,
-      `directoryProposalsMarkedPromoted=${promotions.directoryProposalsMarkedPromoted}`,
-      `directorySkillsAutoAttached=${promotions.directorySkillsAutoAttached}`,
-      promotions.missingSectors.length > 0
-        ? `missingSectors=${promotions.missingSectors.join('; ')}`
+      'Taxonomy change-ops applied.',
+      `applied=${summary.applied}`,
+      `noops=${summary.noops}`,
+      `occupationsCreated=${summary.occupationsCreated}`,
+      `skillsCreated=${summary.skillsCreated}`,
+      `renames=${summary.renames}`,
+      `reparents=${summary.reparents}`,
+      `deactivations=${summary.deactivations}`,
+      `reactivations=${summary.reactivations}`,
+      `proposalsMarkedPromoted=${summary.proposalsMarkedPromoted}`,
+      `directoryProposalsMarkedPromoted=${summary.directoryProposalsMarkedPromoted}`,
+      `directorySkillsAutoAttached=${summary.directorySkillsAutoAttached}`,
+      summary.missingSectors.length > 0
+        ? `missingSectors=${summary.missingSectors.join('; ')}`
         : 'missingSectors=none',
+      summary.missingTargets.length > 0
+        ? `missingTargets=${summary.missingTargets.join('; ')}`
+        : 'missingTargets=none',
     ].join(' '),
   );
+
+  // Missing sectors/targets mean an op names something the live DB does not have — surface loudly
+  // so the owner sees it in the workflow run instead of a silent skip.
+  if (summary.missingSectors.length > 0 || summary.missingTargets.length > 0) {
+    process.exitCode = 1;
+  }
 }
 
 main().catch((error) => {
