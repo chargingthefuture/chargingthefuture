@@ -9,14 +9,14 @@
 // - NO HARD DELETE. Deactivate/reactivate flip is_active; reparent moves a skill row's
 //   job_title_id (member profile links reference the skill row id, so members keep their skills).
 // - Sectors are looked up by name, never created. A missing sector is recorded in the summary and
-//   the ops that need it are skipped (matching the old promotions behavior).
+//   the ops that need it are skipped; the run then exits non-zero so the skip is visible.
 // - Every real mutation writes a skills_taxonomy_change_events audit row (actor
 //   'taxonomy-change-ops', metadata carries the op id). No-ops write nothing.
 // - Deactivations re-check the live member-reference count; the validation layer already requires
 //   an acknowledgedImpact note on the op, and the live count is recorded in the audit metadata.
-// - addSkill keeps the promotion side-effects of the retired promotions list: matching
-//   skills_hunt_proposed_skill_promotions rows are marked 'promoted', and Directory "skill not
-//   listed" proposals of the same label are auto-attached to the proposing members' profiles.
+// - addSkill carries the skill-proposal side-effects: matching skills_hunt_proposed_skill_promotions
+//   rows are marked 'promoted', and Directory "skill not listed" proposals of the same label are
+//   auto-attached to the proposing members' profiles.
 
 import { normalizeTaxonomyName } from './taxonomyNames.mjs';
 import { TAXONOMY_CHANGE_OPS, validateTaxonomyChangeOps } from './taxonomyChangeOps.mjs';
@@ -65,9 +65,9 @@ async function recordChangeEvent(client, { targetType, targetId, action, reason,
   );
 }
 
-// Promotion side-effects carried over from the retired promotions list: mark the cross-app
-// proposal tracker rows 'promoted' and resolve Directory "skill not listed" proposals (attach the
-// now-official skill to each proposing member, then mark the proposal promoted). Idempotent.
+// Skill-proposal side-effects of addSkill: mark the cross-app proposal tracker rows 'promoted'
+// and resolve Directory "skill not listed" proposals (attach the now-official skill to each
+// proposing member, then mark the proposal promoted). Idempotent.
 async function applyProposalPromotions(client, jobTitleId, normalizedSkills, summary) {
   if (!Array.isArray(normalizedSkills) || normalizedSkills.length === 0) {
     return;

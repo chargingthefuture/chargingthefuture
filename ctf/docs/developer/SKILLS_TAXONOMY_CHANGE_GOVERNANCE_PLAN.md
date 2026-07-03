@@ -8,8 +8,7 @@ reviewed, reproducible path.
 ## Owner decisions (fixed)
 
 1. **Change representation:** an append-only, ordered **change-ops list** in the repo
-   (migration-style), not a desired-state file. Matches the existing `APPROVED_SKILL_PROMOTIONS`
-   habit.
+   (migration-style), not a desired-state file.
 2. **No hard delete, ever.** Deactivate-only (`is_active = false`) plus reparent. Reversible,
    ledger-style. The existing `skills_taxonomy_change_events` audit log records every applied op.
 3. **Apply trigger:** owner-run manual dispatch (GitHub Actions `workflow_dispatch`), extending the
@@ -78,9 +77,9 @@ missing sector is a mis-named op, not a creation request).
    Professional & Business Services occupation the owner names, plus `addSkill` ops for the
    Creative & Media and Retail & Services occupations the owner names. Blocked by task 4 and the
    owner naming the target occupations (live names visible in the admin/browse screen).
-6. **Issue template + intake note** — a `taxonomy-change` issue template capturing op-shaped fields;
-   update the `skill-proposal` issue body generator to point at the ops list instead of the
-   promotions list. Blocked by task 1 (vocabulary must exist to reference).
+6. **Issue template + intake note** — a `taxonomy-change` issue template capturing op-shaped fields.
+   Blocked by task 1 (vocabulary must exist to reference). The `skill-proposal` issue body
+   generator already describes the ops path (done 2026-07-03 with task 1).
 7. **Retire the admin write surface** — remove the ST admin write routes
    (`POST/PUT/DELETE /api/skills-taxonomy/admin/{sectors,job-titles,skills}[/:id]`) and their
    command/access-policy/audit contract entries; keep every read route. The admin page's only wired
@@ -97,8 +96,8 @@ low-risk lane for 1, 3, 6, and 8.
 ## Interactions worth knowing
 
 - **Reseed safety:** because the ops list is the single write path and replays idempotently, a
-  reseed can never resurrect a deactivated skill (today's promotions list force `is_active = true`
-  on re-run — that contradiction disappears when the promotions shim retires).
+  reseed can never resurrect a deactivated skill — deactivation is itself an op in the list, so
+  every replay lands on the same end state.
 - **Workforce/LevelUp:** reparenting a skill instantly moves its holders' sector/occupation match in
   the Workforce live model (it reads `skills_taxonomy_skills.job_title_id` at request time). Gap
   numbers shift on the next read; no Workforce change needed.

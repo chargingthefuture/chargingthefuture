@@ -7,8 +7,7 @@
 // ctf/docs/developer/SKILLS_TAXONOMY_CHANGE_GOVERNANCE_PLAN.md. To change the taxonomy, append an
 // op to that list in a PR (CI validates it), merge, then run this via the owner-dispatched
 // workflow (.github/workflows/seed-skills-taxonomy.yml). Replaying is idempotent: already-applied
-// ops no-op, and a reseed can never resurrect a deactivated row. The old curated promotions list
-// was migrated into ops 1-25.
+// ops no-op, and a reseed can never resurrect a deactivated row.
 
 import { Pool } from 'pg';
 import { applyTaxonomyChangeOps } from './lib/applyTaxonomyChangeOps.mjs';

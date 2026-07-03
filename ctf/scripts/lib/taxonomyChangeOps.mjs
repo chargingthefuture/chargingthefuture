@@ -16,9 +16,7 @@
 //   reparented skill keeps every member's profile intact.
 // - SECTORS ARE FIXED. No op creates or deactivates a sector; a sector is always looked up by name
 //   in the live database. A missing sector means the op is mis-named.
-// - The first 25 ops migrate the retired APPROVED_SKILL_PROMOTIONS list (the deleted
-//   ctf/scripts/lib/seedSkillsTaxonomyPromotions.mjs), so this list is the single write path to
-//   the taxonomy.
+// - This list is the single repo write path to the taxonomy.
 //
 // Op vocabulary (all names are matched case-insensitively after whitespace normalization):
 //
@@ -59,8 +57,8 @@ export const TAXONOMY_CHANGE_OP_TYPES = [
 // The list. APPEND ONLY — see the header. Ids are 1-based and strictly sequential.
 // ---------------------------------------------------------------------------
 export const TAXONOMY_CHANGE_OPS = [
-  // Ops 1-9: migrated from APPROVED_SKILL_PROMOTIONS — "Marketing Specialist" under
-  // "Professional & Business Services" (fulfils the "Marketing" proposal, issue #681).
+  // Ops 1-9: "Marketing Specialist" under "Professional & Business Services"
+  // (fulfils the "Marketing" proposal, issue #681; owner-approved 2026-06-21).
   { id: 1, op: 'addOccupation', sector: 'Professional & Business Services', occupation: 'Marketing Specialist' },
   { id: 2, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialist', skill: 'Marketing', proposalNormalizedSkills: ['marketing'] },
   { id: 3, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialist', skill: 'Social Media Marketing' },
@@ -71,8 +69,8 @@ export const TAXONOMY_CHANGE_OPS = [
   { id: 8, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialist', skill: 'Brand Management' },
   { id: 9, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialist', skill: 'Copywriting' },
 
-  // Ops 10-24: migrated from APPROVED_SKILL_PROMOTIONS — "Game Designers / Developers" under
-  // "Creative & Media" (owner-approved 2026-06-25; no SkillsHunt proposal backs it).
+  // Ops 10-24: "Game Designers / Developers" under "Creative & Media"
+  // (owner-approved 2026-06-25; no SkillsHunt proposal backs it).
   { id: 10, op: 'addOccupation', sector: 'Creative & Media', occupation: 'Game Designers / Developers' },
   { id: 11, op: 'addSkill', sector: 'Creative & Media', occupation: 'Game Designers / Developers', skill: 'Game Design' },
   { id: 12, op: 'addSkill', sector: 'Creative & Media', occupation: 'Game Designers / Developers', skill: 'Level Design' },
@@ -89,8 +87,8 @@ export const TAXONOMY_CHANGE_OPS = [
   { id: 23, op: 'addSkill', sector: 'Creative & Media', occupation: 'Game Designers / Developers', skill: 'Game Prototyping' },
   { id: 24, op: 'addSkill', sector: 'Creative & Media', occupation: 'Game Designers / Developers', skill: 'Playtesting & QA' },
 
-  // Op 25: migrated from APPROVED_SKILL_PROMOTIONS — "Merchandising" joins the pre-existing
-  // "Supply Managers" occupation under "Retail & Services" (skill proposal #1180).
+  // Op 25: "Merchandising" joins the pre-existing "Supply Managers" occupation under
+  // "Retail & Services" (skill proposal #1180; owner-approved 2026-06-29).
   { id: 25, op: 'addSkill', sector: 'Retail & Services', occupation: 'Supply Managers', skill: 'Merchandising', occupationExisting: true, proposalNormalizedSkills: ['merchandising'] },
 ];
 
