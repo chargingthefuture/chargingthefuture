@@ -13,7 +13,6 @@ const WORKFORCE_COMMAND_VERSIONS: Record<string, string> = {
   'workforce.profile.delete': '2.0.0',
   'workforce.occupations.list': '2.0.0',
   'workforce.occupations.detail.fetch': '2.0.0',
-  'workforce.report.summary.fetch': '2.0.0',
   'workforce.report.skillLevel.fetch': '2.0.0',
   'workforce.report.sector.fetch': '2.0.0',
   'workforce.report.occupations.fetch': '1.0.0',

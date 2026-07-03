@@ -74,16 +74,6 @@ export type WorkforceConfigInput = {
   maxRecruitable: number;
 };
 
-export type WorkforceSummaryReport = {
-  population: number;
-  workforceTotal: number;
-  totalHeadcountTarget: number;
-  totalMembers: number;
-  recruitedTotal: number;
-  percentRecruited: number;
-  generatedAtIso: string;
-};
-
 // One bucket of the sector or skill-level breakdown: demand (target) vs the live Directory supply
 // (members = everyone, recruited = claimed). gap = max(0, target - recruited).
 export type WorkforceGroupedReportItem = {

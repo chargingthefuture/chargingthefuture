@@ -24,7 +24,6 @@ import type {
   WorkforceOccupationGapItem,
   WorkforcePagination,
   WorkforceProfile,
-  WorkforceSummaryReport,
 } from './types';
 
 type CountRow = { total: string };
@@ -528,19 +527,6 @@ export async function getWorkforcePublicSnapshot(): Promise<{
     recruited: dashboard.recruitedTotal,
     sectorGaps: dashboard.sectorsTotal,
     generatedAtIso: dashboard.generatedAtIso,
-  };
-}
-
-export async function fetchSummaryReport(): Promise<WorkforceSummaryReport> {
-  const model = await computeWorkforceModel();
-  return {
-    population: model.config.population,
-    workforceTotal: model.workforceTotal,
-    totalHeadcountTarget: model.totalHeadcountTarget,
-    totalMembers: model.totalMembers,
-    recruitedTotal: model.recruitedTotal,
-    percentRecruited: percentRecruited(model.recruitedTotal, model.totalHeadcountTarget),
-    generatedAtIso: model.generatedAtIso,
   };
 }
 
