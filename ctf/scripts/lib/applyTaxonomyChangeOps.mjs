@@ -361,6 +361,89 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           break;
         }
 
+        case 'consolidateSkill': {
+          const fromTitle = await resolveOccupation(client, op.fromSector, op.fromOccupation, summary, op.id);
+          const toTitle = await resolveOccupation(client, op.toSector, op.toOccupation, summary, op.id);
+          if (!toTitle) break;
+          const skillName = normalizeTaxonomyName(op.skill);
+          const atTarget = await findSkill(client, toTitle.id, skillName);
+          const atSource = fromTitle ? await findSkill(client, fromTitle.id, skillName) : null;
+          if (!atSource && !atTarget) {
+            summary.missingTargets.push(`skill "${op.skill}" under "${op.fromOccupation}" or "${op.toOccupation}" (op ${op.id})`);
+            break;
+          }
+          if (!atSource && atTarget) {
+            // Already consolidated; make sure the surviving row is active.
+            if (atTarget.is_active) {
+              summary.noops += 1;
+              break;
+            }
+            await client.query(
+              `UPDATE skills_taxonomy_skills SET is_active = true, updated_at = NOW() WHERE id = $1`,
+              [atTarget.id],
+            );
+            await recordChangeEvent(client, {
+              targetType: 'skill', targetId: atTarget.id, action: 'reactivate',
+              reason: `change-op ${op.id}: consolidateSkill "${op.skill}" — surviving row under "${op.toOccupation}" reactivated`,
+              metadata: meta,
+            });
+            summary.reactivations += 1;
+            summary.applied += 1;
+            break;
+          }
+          if (atSource && !atTarget) {
+            // No collision: plain reparent.
+            const memberReferences = await countSkillMemberReferences(client, atSource.id);
+            await client.query(
+              `UPDATE skills_taxonomy_skills SET job_title_id = $2, updated_at = NOW() WHERE id = $1`,
+              [atSource.id, toTitle.id],
+            );
+            await recordChangeEvent(client, {
+              targetType: 'skill', targetId: atSource.id, action: 'reparent',
+              reason: `change-op ${op.id}: consolidateSkill "${op.skill}" "${op.fromOccupation}" -> "${op.toOccupation}"`,
+              metadata: { ...meta, fromJobTitleId: fromTitle?.id ?? null, toJobTitleId: toTitle.id, memberReferences },
+            });
+            summary.reparents += 1;
+            summary.applied += 1;
+            break;
+          }
+          // Both exist: the target row survives, the source copy is absorbed (deactivated).
+          let consolidated = false;
+          if (atSource.is_active) {
+            const sourceHolders = await countSkillMemberReferences(client, atSource.id);
+            await client.query(
+              `UPDATE skills_taxonomy_skills SET is_active = false, updated_at = NOW() WHERE id = $1`,
+              [atSource.id],
+            );
+            await recordChangeEvent(client, {
+              targetType: 'skill', targetId: atSource.id, action: 'deactivate',
+              reason: `change-op ${op.id}: consolidateSkill "${op.skill}" — source copy under "${op.fromOccupation}" absorbed by the same-named row under "${op.toOccupation}"`,
+              metadata: { ...meta, survivingSkillId: atTarget.id, memberReferences: sourceHolders },
+            });
+            summary.deactivations += 1;
+            consolidated = true;
+          }
+          if (!atTarget.is_active) {
+            await client.query(
+              `UPDATE skills_taxonomy_skills SET is_active = true, updated_at = NOW() WHERE id = $1`,
+              [atTarget.id],
+            );
+            await recordChangeEvent(client, {
+              targetType: 'skill', targetId: atTarget.id, action: 'reactivate',
+              reason: `change-op ${op.id}: consolidateSkill "${op.skill}" — surviving row under "${op.toOccupation}" reactivated`,
+              metadata: meta,
+            });
+            summary.reactivations += 1;
+            consolidated = true;
+          }
+          if (consolidated) {
+            summary.applied += 1;
+          } else {
+            summary.noops += 1;
+          }
+          break;
+        }
+
         case 'deactivateSkill': {
           const jobTitle = await resolveOccupation(client, op.sector, op.occupation, summary, op.id);
           if (!jobTitle) break;

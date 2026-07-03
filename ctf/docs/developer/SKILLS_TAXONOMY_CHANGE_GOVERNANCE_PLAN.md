@@ -38,6 +38,9 @@ reviewed, reproducible path.
 - `renameSkill` / `renameOccupation` — old name → new name (aliases keep the old label findable).
 - `reparentSkill` — move a skill row to a different occupation. Member profile links follow the row
   (`directory_profile_skills.skill_id` is unchanged), so nobody loses a skill.
+- `consolidateSkill` — merge-aware move for occupation merges: reparent when the target occupation
+  lacks the name; absorb (deactivate the source copy, reactivate the target row if needed) when it
+  already has it. Deterministic end state whatever the live data holds.
 - `deactivateSkill` / `deactivateOccupation` — soft-off. No `delete*` op exists.
 - `reactivateSkill` / `reactivateOccupation` — the reverse, so mistakes are recoverable.
 
