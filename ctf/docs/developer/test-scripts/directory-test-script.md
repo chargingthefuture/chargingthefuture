@@ -86,7 +86,10 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
 **Expected:** The form prefills every editable field and re-sends the complete set, so an untouched
 field is never blanked. The save goes through `PUT /api/directory/profile` with the CSRF header. The
 free-text label persists (capped at 10 labels of at most 40 characters) and round-trips back as a
-"· pending review" chip. On android this case is **blocked** — there is no member self-edit screen
+"· pending review" chip. (The pending chip later becomes a real taxonomy chip only after the owner
+approves the label — an `addSkill` entry in the taxonomy change list applied by the owner-run
+workflow, which auto-attaches the official skill to every proposing profile; that approval step is
+owner-side and outside this script.) On android this case is **blocked** — there is no member self-edit screen
 yet.
 **Result:** web ☐ mobile ☐ android ⛔ — notes:
 
