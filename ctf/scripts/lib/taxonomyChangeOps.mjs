@@ -32,6 +32,12 @@
 //   { id, op: 'renameSkill', sector, occupation, from, to, occupationExisting?: true }
 //   { id, op: 'reparentSkill', skill, fromSector, fromOccupation, toSector, toOccupation,
 //     fromOccupationExisting?: true, toOccupationExisting?: true }
+//   { id, op: 'consolidateSkill', skill, fromSector, fromOccupation, toSector, toOccupation,
+//     fromOccupationExisting?: true, toOccupationExisting?: true }
+//     -- merge-aware move: if the target occupation already has a same-named row, the source copy is
+//        deactivated and the target row reactivated if needed (absorb); otherwise the source row is
+//        reparented. Use for occupation merges where the target's holdings are not known in advance;
+//        plain reparentSkill still refuses a collision.
 //   { id, op: 'deactivateSkill', sector, occupation, skill, acknowledgedImpact,
 //     occupationExisting?: true, skillExisting?: true }
 //   { id, op: 'deactivateOccupation', sector, occupation, acknowledgedImpact, occupationExisting?: true }
@@ -50,6 +56,7 @@ export const TAXONOMY_CHANGE_OP_TYPES = [
   'renameOccupation',
   'renameSkill',
   'reparentSkill',
+  'consolidateSkill',
   'deactivateSkill',
   'deactivateOccupation',
   'reactivateSkill',
@@ -97,19 +104,20 @@ export const TAXONOMY_CHANGE_OPS = [
   // Ops 26-34 (owner-approved 2026-07-03): merge the duplicate "Marketing Specialist" (singular,
   // created by op 1 — the exact-name occupation match missed the pre-existing plural row) into the
   // pre-existing "Marketing Specialists" (plural, matching the sector's plural naming convention).
-  // All 8 skills move by reparent (member profile links follow the skill row ids, so nobody loses
-  // a skill); the emptied singular is then deactivated. No name collisions: the plural's five
-  // pre-existing skills (Market research and segmentation; Campaign planning (digital & offline);
-  // Brand strategy and positioning; Content strategy and analytics; SEO/SEM and paid-media
-  // management) share no exact name with the eight below.
-  { id: 26, op: 'reparentSkill', skill: 'Marketing', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
-  { id: 27, op: 'reparentSkill', skill: 'Social Media Marketing', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
-  { id: 28, op: 'reparentSkill', skill: 'Content Marketing', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
-  { id: 29, op: 'reparentSkill', skill: 'Search Engine Optimization (SEO)', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
-  { id: 30, op: 'reparentSkill', skill: 'Email Marketing', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
-  { id: 31, op: 'reparentSkill', skill: 'Market Research', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
-  { id: 32, op: 'reparentSkill', skill: 'Brand Management', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
-  { id: 33, op: 'reparentSkill', skill: 'Copywriting', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  // The emptied singular is then deactivated. Ops 26-33 were corrected (2026-07-03, never applied —
+  // every run containing them rolled back) from reparentSkill to consolidateSkill: the live plural
+  // gained a same-named "Marketing" row after these ops were authored (admin Add Skill), a reparent
+  // refuses to merge rows by design, and consolidateSkill produces the right end state whichever of
+  // the eight names the plural now carries — absorb where a name exists at the target, reparent
+  // where it does not.
+  { id: 26, op: 'consolidateSkill', skill: 'Marketing', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 27, op: 'consolidateSkill', skill: 'Social Media Marketing', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 28, op: 'consolidateSkill', skill: 'Content Marketing', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 29, op: 'consolidateSkill', skill: 'Search Engine Optimization (SEO)', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 30, op: 'consolidateSkill', skill: 'Email Marketing', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 31, op: 'consolidateSkill', skill: 'Market Research', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 32, op: 'consolidateSkill', skill: 'Brand Management', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
+  { id: 33, op: 'consolidateSkill', skill: 'Copywriting', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
   { id: 34, op: 'deactivateOccupation', sector: 'Professional & Business Services', occupation: 'Marketing Specialist', acknowledgedImpact: 'Duplicate of the pre-existing "Marketing Specialists" occupation; all 8 of its skills were reparented there by ops 26-33, so no skill rows remain under it and member profile links are untouched. The apply engine refuses this op if any active skill remains.' },
 
   // Ops 35-36 (owner-approved 2026-07-03): thin the near-duplicate skill pairs left by the op 26-34
@@ -274,6 +282,27 @@ export function validateTaxonomyChangeOps(ops = TAXONOMY_CHANGE_OPS) {
         }
         skills.delete(fromSkillKey);
         skills.set(toSkillKey, state);
+        return;
+      }
+
+      case 'consolidateSkill': {
+        if (!isNonEmptyString(entry.skill) || !isNonEmptyString(entry.fromSector) || !isNonEmptyString(entry.fromOccupation) || !isNonEmptyString(entry.toSector) || !isNonEmptyString(entry.toOccupation)) {
+          fail(id, 'consolidateSkill requires non-empty skill, fromSector, fromOccupation, toSector, and toOccupation.');
+          return;
+        }
+        requireOccupation(id, entry.fromSector, entry.fromOccupation, entry.fromOccupationExisting, 'source');
+        const toKey = requireOccupation(id, entry.toSector, entry.toOccupation, entry.toOccupationExisting, 'target');
+        if (!toKey) return;
+        const fromSkillKey = key(entry.fromSector, entry.fromOccupation, entry.skill);
+        const toSkillKey = key(entry.toSector, entry.toOccupation, entry.skill);
+        // Unlike reparentSkill, a same-named row at the target is allowed: it absorbs the source.
+        const state = skills.get(fromSkillKey) ?? { active: true };
+        if (!state.active) {
+          fail(id, `cannot consolidate deactivated skill "${entry.skill}"; reactivate it first.`);
+          return;
+        }
+        skills.delete(fromSkillKey);
+        skills.set(toSkillKey, { active: true });
         return;
       }
 

@@ -103,7 +103,9 @@ row whose `action` is one of `create`, `update`, `delete`, `rename`, `reparent`,
 rows only — historical audit rows keep their original values and are never rewritten). A failed apply
 run's error output is itself testable evidence: reparent conflicts are reported all at once by a
 read-only pre-flight (with each blocking row's active state and member-holder counts), and the
-taxonomy is unchanged after any failed run.
+taxonomy is unchanged after any failed run. Occupation merges use the merge-aware consolidate op,
+which cannot collide: a same-named row at the target absorbs the moving copy, so after an applied
+merge the surviving occupation shows one active row per skill name.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
