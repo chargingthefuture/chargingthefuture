@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-03 (hand-updated for the unified skills picker — see DIR-4; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -82,15 +82,23 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
 **Steps:**
 1. Open your own profile; press "Edit my profile".
 2. Change the headline and one other field; leave the rest untouched and save.
-3. Add a free-text skill the taxonomy does not have through "Your skill not listed? Add it".
+3. In the specializations picker, expand a sector in the accordion (only one opens at a time) and
+   toggle a skill on and off; confirm the sector row shows an "N selected" badge and the pick appears
+   as a removable chip at the top.
+4. Use the "Know their profession? Add its skills" dropdown to pick a profession and confirm all of
+   that profession's skills are added at once as chips.
+5. Add a free-text skill the taxonomy does not have through the "Don't see what you need? Add it"
+   box, then save.
 **Expected:** The form prefills every editable field and re-sends the complete set, so an untouched
 field is never blanked. The save goes through `PUT /api/directory/profile` with the CSRF header. The
-free-text label persists (capped at 10 labels of at most 40 characters) and round-trips back as a
-"· pending review" chip. (The pending chip later becomes a real taxonomy chip only after the owner
-approves the label — an `addSkill` entry in the taxonomy change list applied by the owner-run
-workflow, which auto-attaches the official skill to every proposing profile; that approval step is
-owner-side and outside this script.) On android this case is **blocked** — there is no member self-edit screen
-yet.
+skills picker matches the SkillsHunt picker: removable selected chips, a one-open-at-a-time sector
+accordion with per-sector "N selected" badges, and a profession prefill that bulk-adds a profession's
+skills. There is no hard cap on taxonomy skills. The free-text label persists (capped at 10 labels of
+at most 40 characters) and round-trips back as a yellow "pending review" chip. (The pending chip later
+becomes a real taxonomy chip only after the owner approves the label — an `addSkill` entry in the
+taxonomy change list applied by the owner-run workflow, which auto-attaches the official skill to
+every proposing profile; that approval step is owner-side and outside this script.) On android this
+case is **blocked** — there is no member self-edit screen yet.
 **Result:** web ☐ mobile ☐ android ⛔ — notes:
 
 ### DIR-5 · Read announcements
