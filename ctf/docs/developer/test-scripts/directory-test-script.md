@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-07-03 (hand-updated for the unified skills picker — see DIR-4; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-03 (hand-updated for the unified skills picker — see DIR-4 and DIR-A1; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -135,9 +135,15 @@ android, if `APP_URL` is unset the share control is simply absent (no crash).
 1. Open the dedicated admin page; confirm a non-admin is redirected away.
 2. List every profile, filter All / Claimed / Unclaimed.
 3. Create a profile, then edit one.
+4. In the edit drawer's skills picker (web), expand a sector in the accordion and add/remove a skill,
+   or bulk-add via the profession dropdown; then save and reopen to confirm the change persisted.
 **Expected:** Server-side authorization gates the page and the admin routes (presentation hiding is
-not authorization). The list, create, and edit flows work. Each admin mutation sends the CSRF header
-and records an allow/deny audit line.
+not authorization). The list, create, and edit flows work. On web the edit drawer's skills section is
+the same structured picker as the member self-edit form (selected chips, profession prefill, sector
+accordion) minus the free-text "pending review" box (proposed skills are member-owned); saving sends
+the edited `skillIds` and preserves the sector/job-title classification. On android skills are still
+read-only in the edit screen (parity deferred). Each admin mutation sends the CSRF header and records
+an allow/deny audit line.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### DIR-A2 · Attach an unclaimed profile (two places)

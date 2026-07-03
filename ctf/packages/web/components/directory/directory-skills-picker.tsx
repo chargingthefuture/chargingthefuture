@@ -23,13 +23,16 @@ interface DirectorySkillsPickerProps {
   skills: SkillOption[];
   loading: boolean;
   selectedSkillIds: string[];
-  proposedSkills: string[];
-  proposedInput: string;
   onToggleSkill: (id: string) => void;
   onAddOccupationSkills: (ids: string[]) => void;
-  onProposedInputChange: (value: string) => void;
-  onAddProposed: () => void;
-  onRemoveProposed: (label: string) => void;
+  // Free-text "pending review" proposals are member-owned: the member self-edit form passes all of
+  // these; the admin edit form omits them (the admin update contract has no proposedSkills), which
+  // hides the free-text section entirely.
+  proposedSkills?: string[];
+  proposedInput?: string;
+  onProposedInputChange?: (value: string) => void;
+  onAddProposed?: () => void;
+  onRemoveProposed?: (label: string) => void;
 }
 
 // Group the ID-based taxonomy the way SkillsHunt groups its flattened rows: by sector for the
@@ -152,9 +155,12 @@ function SectorRow({
 // only the free-text proposed skills are capped, matching the existing rule.
 export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
   const {
-    tokens, sectors, jobTitles, skills, loading, selectedSkillIds, proposedSkills, proposedInput,
+    tokens, sectors, jobTitles, skills, loading, selectedSkillIds,
     onToggleSkill, onAddOccupationSkills, onProposedInputChange, onAddProposed, onRemoveProposed,
   } = props;
+  const proposedSkills = props.proposedSkills ?? [];
+  const proposedInput = props.proposedInput ?? "";
+  const allowProposed = Boolean(onProposedInputChange && onAddProposed && onRemoveProposed);
 
   const [openSector, setOpenSector] = useState<string | null>(null);
   const { categories, occupations } = useGroupedTaxonomy(sectors, jobTitles, skills);
@@ -186,7 +192,7 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
           {proposedSkills.map((s) => (
             <span key={s} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", fontSize: 12, color: "#FBBF24", fontWeight: 600 }}>
               {s} <span style={{ fontSize: 10, opacity: 0.7 }}>✎</span>
-              <button type="button" aria-label={`Remove ${s}`} onClick={() => onRemoveProposed(s)} style={{ background: "none", border: "none", color: "#FBBF24", cursor: "pointer", padding: 0, lineHeight: 1, display: "flex" }}>
+              <button type="button" aria-label={`Remove ${s}`} onClick={() => onRemoveProposed?.(s)} style={{ background: "none", border: "none", color: "#FBBF24", cursor: "pointer", padding: 0, lineHeight: 1, display: "flex" }}>
                 <X size={11} />
               </button>
             </span>
@@ -221,7 +227,9 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
 
       {!loading && categories.length === 0 && (
         <div style={{ fontSize: 12, color: tokens.SUBTLE, padding: "6px 0", marginBottom: 4 }}>
-          The skills list is unavailable right now — add skills as free text below.
+          {allowProposed
+            ? "The skills list is unavailable right now — add skills as free text below."
+            : "The skills list is unavailable right now. Existing picks are preserved on save."}
         </div>
       )}
 
@@ -243,41 +251,45 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
         </div>
       )}
 
-      {/* Free-text fallback for a skill the taxonomy does not have yet. */}
-      <label htmlFor="dpe-proposed" style={{ fontSize: 11, color: tokens.SUBTLE, display: "block", marginBottom: 6 }}>
-        Don&apos;t see what you need? Add it (each ≤ {DIRECTORY_MAX_PROPOSED_SKILL_LENGTH} chars)
-      </label>
-      <div style={{ display: "flex", gap: 8 }}>
-        <input
-          id="dpe-proposed"
-          value={proposedInput}
-          onChange={(e) => onProposedInputChange(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onAddProposed(); } }}
-          maxLength={DIRECTORY_MAX_PROPOSED_SKILL_LENGTH}
-          disabled={proposedFull}
-          aria-label="Add a skill that is not in the list"
-          placeholder="e.g. Game design, Kintsugi…"
-          style={{ flex: 1, padding: "9px 12px", background: tokens.INPUT_BG, border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 8, fontSize: 13, color: tokens.TEXT, outline: "none", opacity: proposedFull ? 0.6 : 1, boxSizing: "border-box" }}
-        />
-        <button
-          type="button"
-          onClick={onAddProposed}
-          disabled={proposedFull || proposedInput.trim().length === 0}
-          style={{
-            padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
-            background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", color: "#FBBF24",
-            cursor: proposedFull || proposedInput.trim().length === 0 ? "not-allowed" : "pointer",
-            opacity: proposedFull || proposedInput.trim().length === 0 ? 0.5 : 1,
-          }}
-        >
-          Add
-        </button>
-      </div>
-      <div style={{ fontSize: 11, color: tokens.FAINT, marginTop: 6, lineHeight: 1.5 }}>
-        {proposedFull
-          ? `That's the most you can add (${DIRECTORY_MAX_PROPOSED_SKILLS}). Remove one to add another.`
-          : "Yellow chips = pending review — they show on your profile until an admin adds them to the official list."}
-      </div>
+      {/* Free-text fallback for a skill the taxonomy does not have yet (member self-edit only). */}
+      {allowProposed && (
+        <>
+          <label htmlFor="dpe-proposed" style={{ fontSize: 11, color: tokens.SUBTLE, display: "block", marginBottom: 6 }}>
+            Don&apos;t see what you need? Add it (each ≤ {DIRECTORY_MAX_PROPOSED_SKILL_LENGTH} chars)
+          </label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              id="dpe-proposed"
+              value={proposedInput}
+              onChange={(e) => onProposedInputChange?.(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onAddProposed?.(); } }}
+              maxLength={DIRECTORY_MAX_PROPOSED_SKILL_LENGTH}
+              disabled={proposedFull}
+              aria-label="Add a skill that is not in the list"
+              placeholder="e.g. Game design, Kintsugi…"
+              style={{ flex: 1, padding: "9px 12px", background: tokens.INPUT_BG, border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 8, fontSize: 13, color: tokens.TEXT, outline: "none", opacity: proposedFull ? 0.6 : 1, boxSizing: "border-box" }}
+            />
+            <button
+              type="button"
+              onClick={onAddProposed}
+              disabled={proposedFull || proposedInput.trim().length === 0}
+              style={{
+                padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
+                background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", color: "#FBBF24",
+                cursor: proposedFull || proposedInput.trim().length === 0 ? "not-allowed" : "pointer",
+                opacity: proposedFull || proposedInput.trim().length === 0 ? 0.5 : 1,
+              }}
+            >
+              Add
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: tokens.FAINT, marginTop: 6, lineHeight: 1.5 }}>
+            {proposedFull
+              ? `That's the most you can add (${DIRECTORY_MAX_PROPOSED_SKILLS}). Remove one to add another.`
+              : "Yellow chips = pending review — they show on your profile until an admin adds them to the official list."}
+          </div>
+        </>
+      )}
     </div>
   );
 }
