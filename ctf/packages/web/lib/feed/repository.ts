@@ -16,8 +16,13 @@ import {
   FEED_REACTION_EMOJIS,
   isAllowedFeedReactionEmoji,
 } from './constants';
+import { feedAuthorHandle } from './author-handle';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
 import { emitFeedMembershipEventToStream } from './stream';
+
+// Re-exported so existing server callers can keep importing it from the feed
+// repository; the implementation lives in the client-safe ./author-handle module.
+export { feedAuthorHandle };
 import type {
   Announcement,
   AnnouncementDraftInput,
@@ -138,8 +143,8 @@ function buildQuoteSnippet(body: string): string {
   return `${normalized.slice(0, FEED_QUOTE_SNIPPET_MAX_LENGTH - 1).trimEnd()}…`;
 }
 
-function quotedAuthorLabel(username: string | null): string {
-  return username ? `@${username}` : 'Community member';
+function quotedAuthorLabel(username: string | null, userId: string | null): string {
+  return feedAuthorHandle(username, userId);
 }
 
 type FeedCommunityReplyRow = {
@@ -937,11 +942,12 @@ export async function listFeedTimeline(
       if (quotedIds.length > 0) {
         const quotedRows = await client.query<{
           id: string;
+          author_user_id: string | null;
           author_username: string | null;
           body: string;
         }>(
           `
-            SELECT id, author_username, body
+            SELECT id, author_user_id, author_username, body
             FROM feed_community_posts
             WHERE id = ANY($1::uuid[])
           `,
@@ -949,7 +955,7 @@ export async function listFeedTimeline(
         );
         for (const row of quotedRows.rows) {
           quotedById.set(row.id, {
-            author: quotedAuthorLabel(row.author_username),
+            author: quotedAuthorLabel(row.author_username, row.author_user_id),
             snippet: buildQuoteSnippet(row.body),
           });
         }
