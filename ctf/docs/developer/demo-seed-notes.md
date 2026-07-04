@@ -45,6 +45,15 @@ GentlePulse play event now use deterministic ids with `ON CONFLICT (id) DO NOTHI
 appends duplicate rows. Verified against a local Postgres: `chyme_messages` stays at 3 and
 `gentle_pulse_play_events` stays at 1 across repeated runs.
 
+The second-owner Level-Up enrollment conflicts on the primary key (a deterministic
+per-owner id), not on `(cohort_id, user_id)`. That composite unique is missing from the
+live `demo` schema: its backfill in `schema.sql` runs inside a `DO` block that checks
+`pg_indexes` without a `schemaname` filter, so in the demo schema (search_path
+`demo,public`) it sees the `public` schema's index and skips creating the demo one. Using
+the primary key avoids depending on a constraint the demo schema lacks. (Separate follow-up:
+fix that `DO` block to qualify the `pg_indexes` check by `schemaname` so the demo schema
+gets its own composite unique index.)
+
 The what-works seed was corrected to upsert problems on their `slug` (the table's unique
 key) and endorsements on `(product_id, user_id)`, rather than on `id`. Previously a
 pre-existing row with the same slug but a different id was not caught and aborted the whole
