@@ -3,6 +3,7 @@ import { createClerkClient } from '@clerk/backend';
 import { markFullAccountDeletionRequested } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { deleteAllAccountData } from 'lib/account/deletion-orchestrator';
+import { runWithForcedPool } from 'lib/db/postgres';
 import { getClerkSecretKey } from 'lib/auth/clerk-env';
 import { reportError } from 'lib/observability/report';
 
@@ -42,9 +43,9 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { userId?: unknown; deleteClerk?: unknown };
+  let body: { userId?: unknown; deleteClerk?: unknown; target?: unknown };
   try {
-    body = (await request.json()) as { userId?: unknown; deleteClerk?: unknown };
+    body = (await request.json()) as { userId?: unknown; deleteClerk?: unknown; target?: unknown };
   } catch {
     body = {};
   }
@@ -59,13 +60,24 @@ export async function POST(request: Request) {
   // `{ "deleteClerk": false }` to delete only the database data and keep the Clerk account.
   const deleteClerk = body.deleteClerk !== false;
 
+  // Which database schema's rows to delete. An internal call has no signed-in user, so demo-mode
+  // targeting never applies here — without this it would always hit production. `target: "demo"`
+  // pins the whole deletion to the demo schema (via runWithForcedPool) so a demo test account can be
+  // fully wiped, using the exact same registry/orchestrator flow as production. Anything other than
+  // "demo" (including the default) targets production. The Clerk identity is global (one instance),
+  // so `deleteClerk` is independent of this.
+  const target = body.target === 'demo' ? 'demo' : 'public';
+  const targetLabel = target === 'demo' ? 'demo' : 'production';
+
   // Track which step is running so a failure response can say whether the ServiceCredits reclaim
   // request or the data deletion threw — the generic 503 alone was undiagnosable from the Actions log.
   let step = 'reclaim_request';
   try {
-    const reclaim = await markFullAccountDeletionRequested(userId);
-    step = 'data_deletion';
-    const deletion = await deleteAllAccountData(userId, reclaim.requestedAtIso);
+    const deletion = await runWithForcedPool(target, async () => {
+      const reclaim = await markFullAccountDeletionRequested(userId);
+      step = 'data_deletion';
+      return deleteAllAccountData(userId, reclaim.requestedAtIso);
+    });
 
     let clerkDeleted = false;
     let clerkError: string | null = null;
@@ -91,7 +103,7 @@ export async function POST(request: Request) {
       actorId: OPERATOR_ACTOR_ID,
       status: 'allow',
       reason: 'operator_account_deletion',
-      target: { scope: 'account', userId, clerkDeleted: String(clerkDeleted) },
+      target: { scope: 'account', userId, schema: targetLabel, clerkDeleted: String(clerkDeleted) },
       result: 'success',
       errorCategory: null,
     });
@@ -100,6 +112,7 @@ export async function POST(request: Request) {
       ok: true,
       userId,
       scope: 'account',
+      schema: targetLabel,
       status: 'completed',
       tablesAffected: deletion.tables.length,
       requestedAtIso: deletion.requestedAtIso,
@@ -115,7 +128,7 @@ export async function POST(request: Request) {
       actorId: OPERATOR_ACTOR_ID,
       status: 'allow',
       reason: 'operator_account_deletion',
-      target: { scope: 'account', userId, step },
+      target: { scope: 'account', userId, schema: targetLabel, step },
       result: 'failure',
       errorCategory: 'persistence_error',
     });

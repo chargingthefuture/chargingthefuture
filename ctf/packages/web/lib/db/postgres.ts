@@ -1,7 +1,25 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg';
 
 let publicPool: Pool | null = null;
 let demoPool: Pool | null = null;
+
+// Request-scoped override that pins EVERY query in the wrapped callback to a
+// specific schema, ignoring the usual per-user demo-mode targeting. This is for
+// trusted server-only operations that must act on a chosen schema regardless of
+// (or in the absence of) a signed-in caller — e.g. the operator account-delete
+// route, which runs with a bearer secret and no Clerk session, and must be able
+// to delete a DEMO account's rows even though an internal call would otherwise
+// always resolve to the public pool. AsyncLocalStorage makes this concurrency-safe
+// (each request carries its own store) rather than a shared mutable global.
+type ForcedPoolTarget = 'demo' | 'public';
+const forcedPoolStore = new AsyncLocalStorage<ForcedPoolTarget>();
+
+// Run `fn` with every DB query pinned to the chosen schema's pool. Trusted callers
+// only — this bypasses demo-mode access control by design.
+export function runWithForcedPool<T>(target: ForcedPoolTarget, fn: () => Promise<T>): Promise<T> {
+  return forcedPoolStore.run(target, fn);
+}
 
 function getDatabaseUrl(): string {
   const databaseUrl = process.env.DATABASE_URL;
@@ -61,6 +79,16 @@ function getDemoPool(): Pool {
 // plain-node consumers (seed scripts, migrations) never pull Next-only deps into
 // their import graph; if it can't load or there is no request scope, we use public.
 async function getActivePool(): Promise<Pool> {
+  // An explicit forced target (runWithForcedPool) wins over demo-mode targeting —
+  // it is the authoritative choice made by a trusted operator path.
+  const forced = forcedPoolStore.getStore();
+  if (forced === 'demo') {
+    return getDemoPool();
+  }
+  if (forced === 'public') {
+    return getPublicPool();
+  }
+
   try {
     const { isDemoMode } = await import('../feature-flags/system');
     if (await isDemoMode()) {
