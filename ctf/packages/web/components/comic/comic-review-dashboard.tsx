@@ -1,11 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   AlertTriangle, ArrowLeft, Check, FileText, Inbox, Pencil, RotateCcw,
   ShieldCheck, Sparkles, X,
 } from 'lucide-react';
 import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
+import { resolveBackTarget } from '@/lib/nav/back-target';
 import type { ComicReviewItem, ComicTrainingStats } from '../../lib/comic/types';
 import styles from './comic-review-dashboard.module.css';
 
@@ -91,6 +94,11 @@ const REVIEWER_GUIDANCE = [
 ];
 
 export function ComicReviewDashboard() {
+  // At phone width the left icon rail (which carries "back to all apps") is hidden, so the queue
+  // list has no way out. Reuse the same one-level-up target the rail uses for a mobile-only back
+  // link in the queue header.
+  const pathname = usePathname();
+  const backTarget = resolveBackTarget(pathname);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [items, setItems] = useState<ComicReviewItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -327,6 +335,11 @@ export function ComicReviewDashboard() {
       {/* Queue sidebar */}
       <aside className={styles.queueSidebar}>
         <div className={styles.queueHeader}>
+          {/* Mobile-only: the icon rail (with its back-to-apps control) is hidden at phone width,
+              so surface the same one-level-up link here. */}
+          <Link href={backTarget.href} className={styles.mobileRailBack}>
+            <ArrowLeft size={14} /> {backTarget.label}
+          </Link>
           <div className={styles.queueKicker}>Review Queue</div>
           <div className={styles.queueSub}>AI Assistant drafts awaiting human review</div>
           {trainingStats ? (

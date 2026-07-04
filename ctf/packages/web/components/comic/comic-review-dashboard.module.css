@@ -745,6 +745,25 @@
   cursor: pointer;
 }
 
+/* Mobile-only back link in the queue-list header. Hidden on desktop, where the left
+   icon rail already carries the back-to-apps control; shown at phone width (rail hidden). */
+.mobileRailBack {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #1E2A3A;
+  color: #9CA3AF;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .visuallyHidden {
   position: absolute;
   width: 1px;
@@ -804,6 +823,10 @@
   }
 
   .mobileQueueBack {
+    display: inline-flex;
+  }
+
+  .mobileRailBack {
     display: inline-flex;
   }
 
