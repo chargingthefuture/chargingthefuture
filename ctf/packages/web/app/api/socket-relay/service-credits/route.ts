@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireSocketRelayReadAccess, ensureMutationCsrf } from 'lib/socket-relay/_lib';
 import { createTransfer } from 'lib/service-credits/repository';
+import { insertSocketRelayAudit } from 'lib/socket-relay/repository';
 import { SOCKET_RELAY_ERROR_CODE } from 'lib/socket-relay/constants';
 import { reportError } from 'lib/observability/report';
 
@@ -46,6 +47,19 @@ export async function POST(request: Request) {
       idempotencyKey,
       originPlugin: 'socket-relay',
       reasonCode: 'socket-relay.transfer',
+    });
+
+    // Audit the financial mutation at the SocketRelay boundary. The canonical ledger lives in the
+    // ServiceCredits plugin, but this route initiates the transfer, so it records who sent how much to
+    // whom from here — matching the plugin's other member mutations and the command contract.
+    await insertSocketRelayAudit({
+      actorId: gate.auth.userId,
+      command: 'socket-relay.service-credits.send',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'service_credits_transfer',
+      targetId: input.toUserId,
+      metadata: { amount: input.amount, idempotencyKey },
     });
 
     return NextResponse.json({ ok: true, transaction: tx }, { status: 200 });

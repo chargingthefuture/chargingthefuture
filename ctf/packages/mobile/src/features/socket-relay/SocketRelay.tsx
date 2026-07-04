@@ -57,6 +57,7 @@ export function SocketRelay() {
   const [activeNav, setActiveNav] = useState<NavKey>('feed');
   const [requests, setRequests] = useState<SocketRelayRequest[]>([]);
   const [myRequestIds, setMyRequestIds] = useState<string[]>([]);
+  const [myRequestsFailed, setMyRequestsFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [helped, setHelped] = useState<string[]>([]);
@@ -92,6 +93,10 @@ export function SocketRelay() {
       .then(([feed, mine]) => {
         setRequests(feed.items);
         setMyRequestIds(mine ? mine.items.map((r) => r.id) : []);
+        // Track the my-requests failure so the feed can fall back to showing expired posts. Without
+        // this, a failed my-requests load leaves myRequestIds empty and every expired post is hidden —
+        // including the owner's own, locking them out of the re-post affordance on their own posts.
+        setMyRequestsFailed(mine === null);
       })
       .catch(() => setError('Failed to load requests.'))
       .finally(() => setLoading(false));
@@ -229,8 +234,10 @@ export function SocketRelay() {
     }
     const visible = requests.filter((r) => {
       // Expired posts are inactive: hide everyone else's. The member's own expired posts stay so
-      // they can be re-posted from their card.
-      if (r.isExpired && !myRequestIds.includes(r.id)) return false;
+      // they can be re-posted from their card. If the my-requests load failed we can't tell which are
+      // the member's own, so we keep all expired posts rather than risk hiding the owner's — never lock
+      // someone out of re-posting their own request over a transient fetch failure.
+      if (r.isExpired && !myRequestsFailed && !myRequestIds.includes(r.id)) return false;
       if (
         tagFilter !== 'All' &&
         !requestTags(r).some((t) => t.toLowerCase() === tagFilter.toLowerCase())
