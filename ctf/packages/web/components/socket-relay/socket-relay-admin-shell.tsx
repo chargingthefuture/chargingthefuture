@@ -82,6 +82,11 @@ export function SocketRelayAdminShell({
 
   async function deleteRequest(id: string) {
     if (busy) return;
+    // Deleting a request is immediate and irreversible, so confirm first — matching the mobile admin,
+    // which wraps the same action in a confirm dialog. Guards against a misclick removing a request.
+    if (typeof window !== 'undefined' && !window.confirm('Remove this request? This cannot be undone.')) {
+      return;
+    }
     setBusy(true);
     setError(null);
     setMessage(null);

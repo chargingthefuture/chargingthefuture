@@ -3485,6 +3485,23 @@ UPDATE mood_submissions SET user_id = '' WHERE pseudonym IS NOT NULL AND user_id
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'mood_submissions_pseudonym_fkey' AND connamespace = current_schema()::regnamespace) THEN
+    -- Self-heal orphaned check-ins before enforcing the FK. The backfill above
+    -- severs the direct user_id link and repoints rows onto a mapping pseudonym,
+    -- so a submission whose pseudonym has no mapping row (an orphan left by
+    -- earlier data churn, or by a schema that never enforced this FK) would make
+    -- the ADD CONSTRAINT below fail on existing data. Give each orphan its own
+    -- server-controlled mapping — user_id is set to the pseudonym text, which is
+    -- always unique and can never be a real Clerk id — so no check-in is lost and
+    -- ON DELETE CASCADE still deletes it through the mapping. This runs only when
+    -- the FK is absent, so on a schema that already enforces it (steady-state
+    -- production) the whole block is skipped and no mapping rows are invented.
+    INSERT INTO mood_client_identities (pseudonym, user_id)
+    SELECT DISTINCT s.pseudonym, s.pseudonym::text
+    FROM mood_submissions s
+    LEFT JOIN mood_client_identities m ON m.pseudonym = s.pseudonym
+    WHERE s.pseudonym IS NOT NULL AND m.pseudonym IS NULL
+    ON CONFLICT DO NOTHING;
+
     ALTER TABLE mood_submissions
       ADD CONSTRAINT mood_submissions_pseudonym_fkey
       FOREIGN KEY (pseudonym) REFERENCES mood_client_identities(pseudonym) ON DELETE CASCADE;

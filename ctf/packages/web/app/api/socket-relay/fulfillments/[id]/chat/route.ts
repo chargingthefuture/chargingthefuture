@@ -24,8 +24,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const userId = gate.auth.userId;
 
   const fulfillment = await getFulfillmentById(id);
-  if (!fulfillment || (fulfillment.requesterUserId !== userId && fulfillment.fulfillerUserId !== userId)) {
-    return NextResponse.json({ ok: false, message: 'Fulfillment not found or access denied' }, { status: 404 });
+  // 404 only when it genuinely does not exist; a non-participant on an existing fulfillment gets 403.
+  // Returning 404 for the authorization failure would leak existence (a caller could tell "does not
+  // exist" from "exists but not mine"), and it would diverge from the sibling routes that return 403.
+  if (!fulfillment) {
+    return NextResponse.json({ ok: false, message: 'Fulfillment not found' }, { status: 404 });
+  }
+  if (fulfillment.requesterUserId !== userId && fulfillment.fulfillerUserId !== userId) {
+    return NextResponse.json({ ok: false, message: 'You are not a participant in this Direct Line' }, { status: 403 });
   }
 
   try {

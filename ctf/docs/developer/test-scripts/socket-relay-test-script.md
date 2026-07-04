@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:socket-relay` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socket-relay-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · hand-updated 2026-07-01 for the Direct Line pending-rows behavior (SR-9) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · hand-updated 2026-07-01 for the Direct Line pending-rows behavior (SR-9) · 2026-07-04 for the code-review fixes (403 chat refusal, ServiceCredits audit, web admin delete confirm) |
 
 ## How to run this
 
@@ -87,7 +87,8 @@ your own open requests show the Edit action.
 3. As a third unrelated member, attempt to open that fulfillment chat.
 **Expected:** The claim opens a fulfillment scoped to exactly A and B. Both participants can send while
 the fulfillment is active. The chat shows the request title and your role (your request vs you're
-helping). A non-participant is refused.
+helping). A non-participant is refused — with a 403 (forbidden), not a 404, so the chat route does not
+leak whether the fulfillment exists.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### SR-5 · Requester resolves the fulfillment
@@ -122,7 +123,8 @@ clock. A claim on an expired post is refused (`request_expired`).
 1. From a SocketRelay surface, send a small positive ServiceCredits amount to another member.
 2. Try a zero or negative amount.
 **Expected:** A positive send records a transfer in the canonical ServiceCredits ledger (SocketRelay
-keeps no ledger of its own). A non-positive amount is refused with a readable error.
+keeps no ledger of its own) and writes a `socket-relay.service-credits.send` audit row. A non-positive
+amount is refused with a readable error.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### SR-8 · Share a request
@@ -172,7 +174,8 @@ the request/fulfillment lists render from real data. A non-admin sees an "admins
 **Role:** admin · **Surfaces:** web (admin surface) · android
 **Steps:**
 1. Delete a request from the admin list (confirm the explicit prompt first).
-**Expected:** The request is removed after the confirm step. The write is CSRF-guarded and records an
+**Expected:** The request is removed after the confirm step — both web and android now show an explicit
+confirm dialog before deleting (web uses `window.confirm`). The write is CSRF-guarded and records an
 audit row. (Delete is the only request-state admin mutation — there is no approve/reject.)
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 

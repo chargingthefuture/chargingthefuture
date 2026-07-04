@@ -126,3 +126,35 @@ contracts:
     purpose: fulfillment_communication
     retentionClass: communication_medium_lived
     idempotency: true
+
+  - pluginId: socket-relay
+    command: socket-relay.service-credits.send
+    version: 1.0.0
+    description: >-
+      Send a positive ServiceCredits amount from the signed-in member to another member from a
+      SocketRelay surface. The canonical ledger lives in the ServiceCredits plugin; this command
+      initiates the transfer (via createTransfer) and is declared here so the cross-plugin data
+      access path is explicit and the mutation is audited at the SocketRelay boundary.
+    inputSchema:
+      toUserId:
+        type: string
+        required: true
+      amount:
+        type: number
+        required: true
+      message:
+        type: string
+        required: false
+      idempotencyKey:
+        type: string
+        required: false
+    outputSchema:
+      transaction:
+        type: object
+    dataAccess:
+      - service_credits_wallets
+      - service_credits_transfers
+      - service_credits_ledger_entries
+    purpose: value_transfer
+    retentionClass: transactional_long_lived
+    idempotency: true

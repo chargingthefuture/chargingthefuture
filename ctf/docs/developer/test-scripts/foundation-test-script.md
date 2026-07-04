@@ -133,11 +133,14 @@ ServiceCredits ledger — Foundation owns no credits ledger. The send is CSRF-gu
 1. Open a provider's profile, press the "Share" control in the header, copy the link
    (`/apps/foundation/provider/<id>`).
 2. While signed in (verified), open that link in a new tab.
-3. Sign out (or open the link in a private window), then open the same link.
+3. Also open the link as an **approved member who has not set a Clerk username** (shows as `user-<id>`).
+4. Sign out (or open the link in a private window), then open the same link.
 **Expected:** The Share popup shows the full absolute URL with Copy ("Copied!" feedback) and Open.
-While signed in, the link opens Foundation with that provider's profile already open (it loads by id
-even if the provider is not on the current search page). While signed out or not-yet-verified, the
-link redirects to the Foundation landing `/apps/foundation` — no provider data is shown. A bad id, or
+While signed in and verified, the link opens Foundation with that provider's profile already open (it
+loads by id even if the provider is not on the current search page) — **including** the approved
+member with no username, who must **not** be redirected (the page no longer requires a Clerk
+username). While signed out or not-yet-verified, the link redirects to the Foundation landing
+`/apps/foundation` — no provider data is shown. A bad id, or
 a profile that is no longer an active provider, shows the search view, not a profile (the fetch 404s
 and is ignored).
 **Result:** web ☐ mobile ☐ android ⛔ — notes:

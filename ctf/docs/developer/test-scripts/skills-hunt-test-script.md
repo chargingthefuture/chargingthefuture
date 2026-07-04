@@ -57,13 +57,17 @@ shows its scoring config, rules, and window. Submitting is only offered during a
 
 ### SH-2 · Submit a nomination (valid)
 **Role:** member · **Surfaces:** all
-**Precondition:** an active round; the member has a confirmed @handle.
+**Precondition:** an active round. Test with two members: one **with** a Clerk @handle, and one
+**approved but with no username** (shows as `user-<id>`).
 **Steps:**
 1. Open the Scout tab and fill the nomination form: full name (2–100 letters/digits/spaces), bio
    (≤ 280), a Quora profile URL, taxonomy-selected skills, and optional proposed (free-text) skills.
-2. Submit.
-**Expected:** The submission is accepted. The URL is normalized and pattern-checked; a confirmed
-@handle is required to submit. Skills + proposed skills are capped (≤ 10 total).
+2. Submit as the member with a @handle.
+3. Submit again as the approved member with **no** username.
+**Expected:** Both submissions are accepted — a Clerk username is **not** required to submit. The URL
+is normalized and pattern-checked; skills + proposed skills are capped (≤ 10 total). In the admin
+submissions table the first submitter shows as `@handle` and the second shows their stable
+`user-<id>` handle (not a raw id slice, and not blocked).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### SH-3 · Quality and anti-spam guards

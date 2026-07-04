@@ -62,6 +62,9 @@ export async function POST(request: Request, { params }: RouteProps) {
 
   try {
     const item = await sendFulfillmentMessage(id, gate.auth.userId, gate.auth.isAdmin, messageText, clientMessageId);
+    // Record the evidence the audit contract asks for: reaching this point means the participant
+    // membership check (in sendFulfillmentMessage) and the moderation gate (validateMessageInput,
+    // above) both passed.
     await insertSocketRelayAudit({
       actorId: gate.auth.userId,
       command: 'socket-relay.fulfillment.message.send',
@@ -69,7 +72,12 @@ export async function POST(request: Request, { params }: RouteProps) {
       reason: 'ok',
       targetType: 'fulfillment',
       targetId: id,
-      metadata: { messageId: item.id, moderationStatus: item.moderationStatus },
+      metadata: {
+        messageId: item.id,
+        moderationStatus: item.moderationStatus,
+        participantMembershipCheck: 'pass',
+        moderationCheck: 'pass',
+      },
     });
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (error) {
