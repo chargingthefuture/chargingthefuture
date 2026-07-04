@@ -39,6 +39,12 @@ The seed is safe to re-run (every statement upserts on a natural key or a determ
 id). All second-owner records use per-owner ids (`sha256id(...)`) and conflict on natural
 keys, so they never collide with the fixed demo UUIDs used for the first owner.
 
+The two remaining plain inserts were made idempotent: the demo Chyme messages and the
+GentlePulse play event now use deterministic ids with `ON CONFLICT (id) DO NOTHING`
+(both tables have only a uuid primary key, no natural unique key), so re-running no longer
+appends duplicate rows. Verified against a local Postgres: `chyme_messages` stays at 3 and
+`gentle_pulse_play_events` stays at 1 across repeated runs.
+
 The what-works seed was corrected to upsert problems on their `slug` (the table's unique
 key) and endorsements on `(product_id, user_id)`, rather than on `id`. Previously a
 pre-existing row with the same slug but a different id was not caught and aborted the whole

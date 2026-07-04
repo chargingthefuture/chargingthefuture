@@ -679,9 +679,12 @@ async function seedGentlePulse(c) {
 
   // Owner played and rated the first item
   await c.query(
-    `INSERT INTO gentle_pulse_play_events (user_id, item_id, completed)
-     VALUES ($1, $2::uuid, true)`,
-    [OWNER, ID.gpItem1],
+    // Deterministic id + ON CONFLICT so a re-run does not append another play
+    // event (the table has only a uuid pk, no natural unique key).
+    `INSERT INTO gentle_pulse_play_events (id, user_id, item_id, completed)
+     VALUES ($1::uuid, $2, $3::uuid, true)
+     ON CONFLICT (id) DO NOTHING`,
+    [sha256id('gp-play', OWNER, ID.gpItem1), OWNER, ID.gpItem1],
   );
 
   await c.query(
@@ -772,11 +775,15 @@ async function seedChyme(c) {
     [OWNER, 'Thanks! Just exploring the platform. Looks great.'],
     [PEER_1, 'Let me know if you have any questions about how it works.'],
   ];
-  for (const [uid, text] of messages) {
+  for (const [index, [uid, text]] of messages.entries()) {
+    // Deterministic id + ON CONFLICT so re-running the seed does not append a
+    // duplicate copy of each demo message every time (chyme_messages has only a
+    // uuid pk, no natural unique key).
     await c.query(
-      `INSERT INTO chyme_messages (room_id, user_id, username, text)
-       VALUES ($1::uuid, $2, $3, $4)`,
-      [ID.room, uid, memberUsernames[uid] ?? 'demo_user', text],
+      `INSERT INTO chyme_messages (id, room_id, user_id, username, text)
+       VALUES ($1::uuid, $2::uuid, $3, $4, $5)
+       ON CONFLICT (id) DO NOTHING`,
+      [sha256id('chyme-demo-msg', ID.room, String(index)), ID.room, uid, memberUsernames[uid] ?? 'demo_user', text],
     );
   }
 
