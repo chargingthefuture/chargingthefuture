@@ -5,6 +5,7 @@ import type {
   SkillsHuntSubmissionReport,
   SkillsHuntSubmissionReportStatus,
 } from "lib/skills-hunt/types";
+import { feedAuthorHandle } from "lib/feed/author-handle";
 import { COLOR } from "./sha-shared";
 
 const STATUS_FILTERS: Array<{ key: SkillsHuntSubmissionReportStatus; label: string; color: string }> = [
@@ -22,7 +23,7 @@ const RESOLUTIONS: Array<{ status: Resolution; label: string; color: string }> =
 ];
 
 function ReportCard({ report, onResolve }: { report: SkillsHuntSubmissionReport; onResolve: (id: string, status: Resolution) => void }) {
-  const reporter = report.reporterUsername ?? report.reporterUserId.slice(0, 8);
+  const reporter = feedAuthorHandle(report.reporterUsername, report.reporterUserId);
   const target = report.submissionId
     ? `submission ${report.submissionId}`
     : report.directoryProfileId

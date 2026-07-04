@@ -7,6 +7,10 @@ import { FoundationShell } from '@/components/foundation/foundation-shell';
 // unauthenticated or not-yet-verified visitor is redirected to the Foundation landing — no provider
 // data is exposed without auth, matching Foundation's gated model. The `id` segment is the
 // directory-profile id (ProviderView.profileId).
+//
+// This page does not use the viewer's username, so it does NOT require one — only that the member is
+// signed in and verified. (It previously required a Clerk username, which silently redirected an
+// approved member who had not set one away from a shared provider link.)
 export const dynamic = 'force-dynamic';
 
 export default async function FoundationProviderDeepLinkPage({
@@ -16,7 +20,7 @@ export default async function FoundationProviderDeepLinkPage({
 }) {
   const { id } = await params;
 
-  const decision = await evaluatePluginAccess({ requireUsername: true });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     redirect('/apps/foundation');
   }

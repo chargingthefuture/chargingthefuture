@@ -29,8 +29,13 @@ export async function requireSkillsHuntReadAccess(): Promise<SkillsHuntApiGate> 
   };
 }
 
+// Write access for a member (submit an entry, file a report, mark a notification read). A username is
+// NOT required: a member who has not set a Clerk username yet is attributed to their stable per-user
+// handle (`user-<id>`, the same one shown in the Commons) via the nullable `submitter_username`
+// snapshot, which display falls back to. Requiring a real username here previously blocked approved
+// members who had not set one from submitting at all.
 export async function requireSkillsHuntSubmitAccess(): Promise<SkillsHuntApiGate> {
-  const decision = await evaluatePluginAccess({ requireUsername: true });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return {
       allowed: false,
