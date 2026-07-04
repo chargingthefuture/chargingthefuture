@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { UserButton } from '@clerk/nextjs';
-import { ChevronRight, Database, Home, ShieldCheck, ShieldOff, Sparkles, UserCircle } from 'lucide-react';
+import { ChevronRight, Database, HeartHandshake, Home, ShieldCheck, ShieldOff, Sparkles, UserCircle } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { getAccountDataTokens } from '@/components/account-data/account-data-shared';
@@ -81,6 +81,21 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
           <p style={{ fontSize: 12, color: tok.SUBTLE, lineHeight: 1.6, margin: 0 }}>
             Trust is earned by taking part — completing your profile, making a transaction, and using the plugins. There is nothing to fill in here.
           </p>
+        </section>
+
+        {/* Your ongoing activities — the ties you acknowledge with other members */}
+        <section style={cardStyle}>
+          <div style={{ ...sectionLabel, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <HeartHandshake size={12} /> Your ongoing activities
+          </div>
+          <AccountLinkRow
+            href="/apps/recurring-activity"
+            icon={<HeartHandshake size={18} />}
+            title="Recurring activity"
+            desc="Acknowledge the ongoing ties you share with another member. Recognition, never a bill — and yours to keep private."
+            tok={tok}
+            last
+          />
         </section>
 
         {/* Manage each part of the profile where it lives */}

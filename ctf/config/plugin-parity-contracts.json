@@ -138,6 +138,12 @@
       "mobileFeatureDirs": ["beacon"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
+    },
+    {
+      "slug": "recurring-activity",
+      "mobileFeatureDirs": ["recurring-activity"],
+      "requiresMobileSurface": true,
+      "requiresExplicitWebShell": false
     }
   ]
 }

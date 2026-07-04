@@ -34,6 +34,7 @@ import { Unlock, AdminUnlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
 import { Beacon } from './src/features/beacon';
+import { RecurringActivity } from './src/features/recurring-activity';
 import { AccountData } from './src/features/account-data';
 import { BlockedMembers } from './src/features/blocks';
 import { AuthProvider, useAuth } from './src/features/trust-transport/auth-context';
@@ -44,6 +45,7 @@ type FeatureKey =
   | 'home'
   | 'chyme'
   | 'beacon'
+  | 'recurring-activity'
   | 'skills-taxonomy'
   | 'directory'
   | 'directory-admin'
@@ -81,6 +83,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'home', label: 'Home' },
   { key: 'chyme', label: 'Chyme' },
   { key: 'beacon', label: 'Beacon' },
+  { key: 'recurring-activity', label: 'Recurring Activity' },
   { key: 'skills-taxonomy', label: 'Skills Taxonomy' },
   { key: 'directory', label: 'Directory' },
   { key: 'directory-admin', label: 'Directory Admin' },
@@ -146,6 +149,7 @@ function buildFeatureViews(
     home: () => <HubHome />,
     chyme: () => <ChymeRoom />,
     beacon: () => <Beacon />,
+    'recurring-activity': () => <RecurringActivity />,
     'skills-taxonomy': () => <SkillsTaxonomy />,
     directory: () => <DirectoryList onNavigateToFoundation={() => setSelected('foundation')} />,
     'directory-admin': () => <AdminDirectory />,

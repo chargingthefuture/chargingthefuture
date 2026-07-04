@@ -57,6 +57,8 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   comic: { standard: '#38BDF8', comic: '#7A6A50' },
   // Account & Data uses comic-danger for its destructive zone.
   'account-data': { standard: '#D946EF', comic: '#B91C1C' },
+  // Recurring Activity: a calm teal. Recognition of everyday ties, never a bill — no red or warning tone.
+  'recurring-activity': { standard: '#2DD4BF', comic: '#0F5C54' },
 };
 
 const FALLBACK_ACCENT: AccentPair = { standard: '#6B7280', comic: '#7A6A50' };

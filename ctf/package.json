@@ -27,6 +27,7 @@
     "seed:trust-transport": "node ./scripts/seedTrustTransport.mjs",
     "seed:level-up": "node ./scripts/seedLevelUp.mjs",
     "seed:what-works": "node ./scripts/seedWhatWorks.mjs",
+    "seed:recurring-activity": "node ./scripts/seedRecurringActivityPhase0.mjs",
     "migrate:file": "node ./scripts/runMigrationFile.mjs",
     "migrate:schema": "node ./scripts/runMigrationFile.mjs --file=./schema.sql",
     "migrate:demo-schema": "node ./scripts/migrateToDemo.mjs",

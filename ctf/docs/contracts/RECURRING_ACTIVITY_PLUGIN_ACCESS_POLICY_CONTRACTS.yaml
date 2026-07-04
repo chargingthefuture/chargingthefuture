@@ -1,0 +1,175 @@
+policies:
+  - pluginId: recurring-activity
+    command: recurring-activity.list.read
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - contributor
+      - moderator
+      - admin
+    attributePolicies:
+      activeSessionRequired: true
+      selfScopeOnly: true
+    consentRequirements:
+      scopes:
+        - recurring_activity_read
+      fallbackLawfulBasis: legitimate_interest_with_safety_controls
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthenticated_session
+      - unauthorized_scope
+
+  - pluginId: recurring-activity
+    command: recurring-activity.create
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - contributor
+      - moderator
+      - admin
+    attributePolicies:
+      activeSessionRequired: true
+      ownerScopeOnly: true
+      noSelfCounterparty: enforced
+      fiatAmountForbidden: enforced
+      noFreeTextAccepted: enforced
+    consentRequirements:
+      scopes:
+        - recurring_activity_manage
+      fallbackLawfulBasis: explicit_consent_required
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - unauthenticated_session
+      - unauthorized_scope
+      - self_counterparty
+      - unknown_or_inactive_currency
+      - fiat_amount_supplied
+      - invalid_sector
+      - invalid_cadence
+
+  - pluginId: recurring-activity
+    command: recurring-activity.confirm
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - contributor
+      - moderator
+      - admin
+    attributePolicies:
+      activeSessionRequired: true
+      counterpartyScopeOnly: true
+      pendingStateRequired: true
+    consentRequirements:
+      scopes:
+        - recurring_activity_manage
+      fallbackLawfulBasis: explicit_consent_required
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - unauthenticated_session
+      - not_counterparty
+      - activity_not_pending
+      - activity_not_found
+
+  - pluginId: recurring-activity
+    command: recurring-activity.decline
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - contributor
+      - moderator
+      - admin
+    attributePolicies:
+      activeSessionRequired: true
+      counterpartyScopeOnly: true
+      pendingStateRequired: true
+    consentRequirements:
+      scopes:
+        - recurring_activity_manage
+      fallbackLawfulBasis: explicit_consent_required
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - unauthenticated_session
+      - not_counterparty
+      - activity_not_pending
+      - activity_not_found
+
+  - pluginId: recurring-activity
+    command: recurring-activity.end
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - contributor
+      - moderator
+      - admin
+    attributePolicies:
+      activeSessionRequired: true
+      partyScopeOnly: true
+    consentRequirements:
+      scopes:
+        - recurring_activity_manage
+      fallbackLawfulBasis: explicit_consent_required
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - unauthenticated_session
+      - not_a_party
+      - activity_already_ended
+      - activity_not_found
+
+  - pluginId: recurring-activity
+    command: recurring-activity.visibility.update
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - contributor
+      - moderator
+      - admin
+    attributePolicies:
+      activeSessionRequired: true
+      ownerScopeOnly: true
+      allowedVisibilityLevelsOnly: true
+    consentRequirements:
+      scopes:
+        - recurring_activity_manage
+      fallbackLawfulBasis: explicit_consent_required
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - unauthenticated_session
+      - not_owner
+      - invalid_visibility_level
+      - activity_not_found
