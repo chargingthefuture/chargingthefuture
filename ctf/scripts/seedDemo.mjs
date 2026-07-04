@@ -317,13 +317,17 @@ async function seedLevelUp(c) {
   );
 
   if (OWNER2) {
-    // Second participant in the same cohort — conflict on the natural key
-    // (cohort_id, user_id), with a per-owner id so it never collides on the pk.
+    // Second participant in the same cohort. Conflict on the primary key with a
+    // deterministic per-owner id (like the owner enrollment above), NOT on
+    // (cohort_id, user_id): that composite unique is absent from the live demo
+    // schema (its backfill DO block checks pg_indexes without a schemaname filter,
+    // so it sees the public-schema index and skips creating the demo one). The
+    // deterministic id keeps this idempotent and needs no extra constraint.
     await c.query(
       `INSERT INTO level_up_enrollments
        (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
        VALUES ($1::uuid, $2::uuid, $3, 'active', 300, $4)
-       ON CONFLICT (cohort_id, user_id) DO UPDATE SET
+       ON CONFLICT (id) DO UPDATE SET
          status = EXCLUDED.status, credits_deposited = EXCLUDED.credits_deposited`,
       [sha256id('lu-enrollment', OWNER2), ID.cohort, OWNER2, TRAINER],
     );
