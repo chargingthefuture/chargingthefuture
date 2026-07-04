@@ -37,7 +37,7 @@ function FeedbackForm({ value, onChange, onSubmit, submitting, success, error }:
   );
 }
 
-function AssignedCohort({ room, participantCount, onJoin }: { room: Room; participantCount: number; onJoin: () => void }) {
+function AssignedCohort({ room, memberCount, onJoin }: { room: Room; memberCount: number; onJoin: () => void }) {
   return (
     <div style={{ padding: "20px 24px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${COLOR}30` }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
@@ -49,7 +49,9 @@ function AssignedCohort({ room, participantCount, onJoin }: { room: Room; partic
             </span>
           </div>
           {room.topic && <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 10 }}>Topic: {room.topic}</div>}
-          <div style={{ fontSize: 12, color: "#6B7280" }}>{participantCount} participant{participantCount !== 1 ? "s" : ""}</div>
+          {/* The cohort's member count — not a live "in the call right now" number, which is only known
+              inside the Session tab. Showing members here keeps this in step with the roster below. */}
+          <div style={{ fontSize: 12, color: "#6B7280" }}>{memberCount} member{memberCount !== 1 ? "s" : ""}</div>
         </div>
         <button type="button" onClick={onJoin} style={{ padding: "10px 20px", borderRadius: 10, background: COLOR, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
           Join Session
@@ -59,28 +61,28 @@ function AssignedCohort({ room, participantCount, onJoin }: { room: Room; partic
   );
 }
 
-// One running cohort in the "listen in" list. Anyone signed in can open another cohort read-only,
-// even when they were not placed in it — the listen-in requirement. The viewer's own cohort and the
-// cohort currently open are labeled so the list reads clearly.
+// One running cohort in the "listen in" list. This list is for OTHER cohorts — the viewer's own
+// cohort is shown once at the top (the "Join Session" card) and is filtered out here, so it never
+// appears twice. Anyone signed in can open another cohort read-only (the listen-in requirement); the
+// one currently open reads "Viewing", the rest read "Listen in".
 function CohortListRow({
   cohort,
-  isMine,
   isOpen,
   onOpen,
   busy,
 }: {
   cohort: CohortSummary;
-  isMine: boolean;
   isOpen: boolean;
   onOpen: () => void;
   busy: boolean;
 }) {
+  const disabled = busy || isOpen;
+  const label = isOpen ? "Viewing" : "Listen in";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 12, background: isOpen ? `${COLOR}12` : "rgba(255,255,255,0.02)", border: `1px solid ${isOpen ? `${COLOR}40` : "rgba(255,255,255,0.06)"}` }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: "#F9FAFB" }}>Cohort {cohort.cohortLabel}</span>
-          {isMine && <span style={{ background: `${COLOR}20`, color: COLOR, border: `1px solid ${COLOR}40`, fontSize: 10, padding: "1px 7px", borderRadius: 10 }}>Your cohort</span>}
           {cohort.fallbackOpen && <span style={{ background: "rgba(234,179,8,0.15)", color: "#EAB308", border: "1px solid rgba(234,179,8,0.3)", fontSize: 10, padding: "1px 7px", borderRadius: 10 }}>Open</span>}
         </div>
         <div style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>{cohort.memberCount} member{cohort.memberCount !== 1 ? "s" : ""}</div>
@@ -88,11 +90,11 @@ function CohortListRow({
       <button
         type="button"
         onClick={onOpen}
-        disabled={busy || isOpen}
-        style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, background: isOpen ? "rgba(255,255,255,0.06)" : `${COLOR}1A`, border: `1px solid ${isOpen ? "rgba(255,255,255,0.1)" : `${COLOR}40`}`, color: isOpen ? "#6B7280" : COLOR, fontSize: 12, fontWeight: 700, cursor: busy || isOpen ? "default" : "pointer", whiteSpace: "nowrap" }}
+        disabled={disabled}
+        style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, background: isOpen ? "rgba(255,255,255,0.06)" : `${COLOR}1A`, border: `1px solid ${isOpen ? "rgba(255,255,255,0.1)" : `${COLOR}40`}`, color: isOpen ? "#6B7280" : COLOR, fontSize: 12, fontWeight: 700, cursor: disabled ? "default" : "pointer", whiteSpace: "nowrap" }}
       >
-        {isMine ? <Users size={13} /> : <Headphones size={13} />}
-        {isOpen ? "Open" : isMine ? "Open" : "Listen in"}
+        <Headphones size={13} />
+        {label}
       </button>
     </div>
   );
@@ -113,28 +115,31 @@ function RunningCohorts({
   busy: boolean;
   isAdmin: boolean;
 }) {
-  if (cohorts.length === 0) return null;
+  // Only OTHER cohorts belong here — the viewer's own cohort is already the "Join Session" card at the
+  // top, so listing it again is redundant. Filter it out; when there are no other cohorts (e.g. single
+  // standing Cohort 1 mode, where your cohort is the only one), the whole section disappears.
+  const otherCohorts = cohorts.filter((cohort) => cohort.id !== myCohortId);
+  if (otherCohorts.length === 0) return null;
   // The cohort currently open is either the explicit selection or, when none, the viewer's own.
   const openId = openCohortId ?? myCohortId;
   return (
     <div style={{ padding: "20px 24px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
         <Headphones size={16} style={{ color: COLOR }} />
-        <span style={{ fontSize: 15, fontWeight: 700, color: "#E8EAF0" }}>Running cohorts this week</span>
+        <span style={{ fontSize: 15, fontWeight: 700, color: "#E8EAF0" }}>Other running cohorts</span>
       </div>
       <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 14 }}>
         {isAdmin
-          ? "You can open any cohort to manage it. Posting is reserved for its members."
-          : "Not placed in one of these? You can still listen in — open it to read along."}
+          ? "Open any cohort to manage it. Posting is reserved for its members."
+          : "Not in one of these? You can still listen in — open it to read along."}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {cohorts.map((cohort) => (
+        {otherCohorts.map((cohort) => (
           <CohortListRow
             key={cohort.id}
             cohort={cohort}
-            isMine={cohort.id === myCohortId}
             isOpen={cohort.id === openId}
-            onOpen={() => onOpenCohort(cohort.id === myCohortId ? null : cohort.id)}
+            onOpen={() => onOpenCohort(cohort.id)}
             busy={busy}
           />
         ))}
@@ -145,7 +150,6 @@ function RunningCohorts({
 
 export function PeerProgrammingCohortsTab({
   room,
-  participantCount,
   onJoinSession,
   feedback,
   cohorts,
@@ -157,7 +161,6 @@ export function PeerProgrammingCohortsTab({
   isAdmin,
 }: {
   room: Room | null;
-  participantCount: number;
   onJoinSession: () => void;
   feedback: FeedbackFormProps;
   cohorts: CohortSummary[];
@@ -168,6 +171,9 @@ export function PeerProgrammingCohortsTab({
   switching: boolean;
   isAdmin: boolean;
 }) {
+  // True member count for the viewer's own cohort, from the cohort summary (the roster `members` is
+  // capped for display, so it is not a reliable count). Falls back to the roster length.
+  const myCohortMemberCount = cohorts.find((c) => c.id === myCohortId)?.memberCount ?? members.length;
   return (
     <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 24 }}>
       <div style={{ marginBottom: 20, padding: "18px 24px", borderRadius: 16, background: `linear-gradient(135deg,${COLOR}15 0%,rgba(139,92,246,0.05) 100%)`, border: `1px solid ${COLOR}25` }}>
@@ -184,7 +190,7 @@ export function PeerProgrammingCohortsTab({
             </div>
           </div>
         ) : room && room.cohortId ? (
-          <AssignedCohort room={room} participantCount={participantCount} onJoin={onJoinSession} />
+          <AssignedCohort room={room} memberCount={myCohortMemberCount} onJoin={onJoinSession} />
         ) : null}
 
         {members.length > 0 ? (

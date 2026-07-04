@@ -261,7 +261,6 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       {tab === "cohorts" && (
         <PeerProgrammingCohortsTab
           room={room}
-          participantCount={participants.length}
           onJoinSession={() => setTab("session")}
           feedback={{
             value: feedbackInput,
