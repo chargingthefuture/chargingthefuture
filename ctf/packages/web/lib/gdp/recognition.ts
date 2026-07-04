@@ -241,6 +241,55 @@ export const socketRelayFavorSource: RecognitionSource = {
   },
 };
 
+// The internal counting unit for fiat-denominated recurring activities. Each confirmed, active fiat
+// recurring activity contributes ONE RACT to the index (weighted by RACT's owner-curated weight,
+// default 1) — a COUNT, never a fiat amount. RACT is a hidden (is_active = FALSE) currencies row, so
+// it never appears in any member-facing selector; it exists only as this weight anchor. See schema.sql.
+export const RECURRING_ACTIVITY_COUNT_UNIT = 'RACT';
+
+/**
+ * Recurring Activity: members' self-declared, counterparty-CONFIRMED ongoing activities with one other
+ * member (issue #885). Unlike every other source, this recognizes ATTESTED recurring activity, not a
+ * settled exchange — a deliberate, owner-approved relaxation for this plugin — so it lives in its own
+ * clearly-labeled bucket and never contaminates the settled-value sources. Only `active` (confirmed)
+ * rows count. Two firewalled treatments:
+ *   - Fiat lines (currency_code <> 'SC'): counted by NUMBER of activities, one RACT each. A fiat line
+ *     carries NO amount (the schema never stores one), so the platform never holds a summable
+ *     recurring-fiat-payment total — the whole point of the plugin.
+ *   - ServiceCredits lines (currency_code = 'SC'): counted by their declared `sc_value`. ServiceCredits
+ *     is an internal utility token with no third-party reporting duty. This is a DECLARED figure, never
+ *     an executed transfer, so it never touches real balances and never double-counts the direct
+ *     ServiceCredits transfer source (which reads `service_credits_transfers`, a different table).
+ */
+export const recurringActivitySource: RecognitionSource = {
+  pluginSlug: 'recurring-activity',
+  label: 'Recurring peer activities (confirmed)',
+  async loadVolumes() {
+    const [fiatCount, scValue] = await Promise.all([
+      queryDb<{ total: string | null }>(
+        `SELECT COUNT(*)::text AS total
+           FROM recurring_activities
+          WHERE status = 'active' AND currency_code <> 'SC'`,
+      ),
+      queryDb<{ total: string | null }>(
+        `SELECT SUM(sc_value)::text AS total
+           FROM recurring_activities
+          WHERE status = 'active' AND currency_code = 'SC' AND sc_value IS NOT NULL`,
+      ),
+    ]);
+    const volumes: CurrencyVolume[] = [];
+    const fiat = Number(fiatCount.rows[0]?.total ?? 0);
+    if (Number.isFinite(fiat) && fiat > 0) {
+      volumes.push({ amount: fiat, currencyCode: RECURRING_ACTIVITY_COUNT_UNIT });
+    }
+    const sc = Number(scValue.rows[0]?.total ?? 0);
+    if (Number.isFinite(sc) && sc > 0) {
+      volumes.push({ amount: sc, currencyCode: 'SC' });
+    }
+    return volumes;
+  },
+};
+
 /**
  * Registered recognition sources, one per plugin. The policy: recognize ONLY non-incentive settled
  * value — value actually delivered/exchanged on-platform — and never an incentive (a reward, bonus,
@@ -249,10 +298,12 @@ export const socketRelayFavorSource: RecognitionSource = {
  * (the direct ServiceCredits source); plugin-mediated transfers are attributed to each plugin by
  * `origin_plugin`, so nothing is double-counted and the ledger is never blindly summed. Concretely
  * excluded today: Skills Hunt accept rewards, Unlock verification incentives, and Contributions
- * thank-you grants (all incentive mints). LightHouse rent joins here once it records a settled
- * on-platform exchange (issue #420 / issue #885) — listings and asking-prices alone are not settled
- * value. Append a source here (and document it in the GDP inventory) when a plugin starts recording
- * such settlement.
+ * thank-you grants (all incentive mints). Recurring off-platform relationships (LightHouse rent,
+ * ongoing Foundation services, standing SocketRelay favors) are captured instead by the Recurring
+ * Activity source above (issue #885): a self-declared, counterparty-confirmed activity, counted by
+ * number for fiat and by declared value for ServiceCredits — never a settled fiat amount, so the
+ * platform stays a peer-to-peer marketplace and never holds a recurring-fiat-payment record. Append a
+ * source here (and document it in the GDP inventory) when a plugin starts recording settled value.
  */
 export const RECOGNITION_SOURCES: RecognitionSource[] = [
   trustTransportSource,
@@ -261,6 +312,7 @@ export const RECOGNITION_SOURCES: RecognitionSource[] = [
   serviceCreditsDirectTransferSource,
   chymeTipSource,
   socketRelayFavorSource,
+  recurringActivitySource,
 ];
 
 /** The composite index plus the per-source contribution breakdown (label included for display). */

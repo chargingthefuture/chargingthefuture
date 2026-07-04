@@ -39,6 +39,11 @@ const RATES = [
   // requires_amount is FALSE, so free never carries a monetary amount — mutual aid still counts toward
   // the community economy without implying any price.
   { code: 'FREE', usdRate: 3 },
+  // RACT: the internal counting unit for fiat-denominated recurring activities (issue #885). One
+  // confirmed active fiat recurring activity = one RACT; this weight (default 1) is its non-binding
+  // index contribution, so "5 fiat recurring activities" adds 5 to the index — a COUNT, never a fiat
+  // amount. RACT is a hidden (is_active = FALSE) currencies row, never member-selectable.
+  { code: 'RACT', usdRate: 1 },
 ];
 
 function requireEnv(name) {

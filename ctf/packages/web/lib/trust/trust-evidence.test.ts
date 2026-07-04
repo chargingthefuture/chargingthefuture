@@ -29,6 +29,7 @@ function zeroMetrics(): TrustSignalMetrics {
     peerProgrammingCohortsJoined: 0,
     contributionsConfirmed: 0,
     foundationConnectionsAsProvider: 0,
+    recurringActivityCounterparties: 0,
   };
 }
 
@@ -97,6 +98,7 @@ describe('buildTrustEvidence', () => {
       peerProgrammingCohortsJoined: 3,
       contributionsConfirmed: 3,
       foundationConnectionsAsProvider: 3,
+      recurringActivityCounterparties: 3,
     };
     const blob = buildTrustEvidence(everything, NOW)
       .map((e) => `${e.type} ${e.summary}`)

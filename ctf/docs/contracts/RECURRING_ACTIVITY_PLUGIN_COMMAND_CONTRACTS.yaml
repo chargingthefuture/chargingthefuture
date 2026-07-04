@@ -1,0 +1,149 @@
+contracts:
+  - pluginId: recurring-activity
+    command: recurring-activity.list.read
+    version: 1.0.0
+    description: List the caller's own recurring activities (both sides they are party to), newest first, with the other party's display name resolved. Self-scope only. Implemented by GET /api/recurring-activity.
+    inputSchema: {}
+    outputSchema:
+      activities:
+        type: array
+        description: Each item is { id, ownerUserId, counterpartyUserId, sector, currencyCode, cadence, scValue, status, visibility, confirmedAt, endedAt, createdAt, role, counterpartyName }. scValue is set only for ServiceCredits lines; fiat lines never carry an amount.
+    dataAccess:
+      - recurring_activities
+    purpose: recurring_activity_display
+    retentionClass: member_scoped
+    idempotency: true
+
+  - pluginId: recurring-activity
+    command: recurring-activity.create
+    version: 1.0.0
+    description: >-
+      Declare a new PENDING recurring activity with another member. The caller is the owner. A fiat
+      (non-ServiceCredits) line MUST NOT carry an amount — the value firewall is enforced server-side,
+      not just in the UI — so the platform never holds a summable recurring-fiat-payment total. Only
+      ServiceCredits (an internal utility token) may carry a declared value, and even that is a declared
+      figure, never an executed transfer. No free-text is accepted; sector is a fixed enum. Implemented
+      by POST /api/recurring-activity.
+    inputSchema:
+      counterpartyUserId:
+        type: string
+        required: true
+      sector:
+        type: string
+        required: true
+        enum:
+          - housing
+          - service
+          - favor
+          - general
+      currencyCode:
+        type: string
+        required: true
+      cadence:
+        type: string
+        required: true
+        enum:
+          - weekly
+          - biweekly
+          - monthly
+          - quarterly
+      scValue:
+        type: number
+        required: false
+        description: Allowed only when currencyCode is ServiceCredits (SC). Rejected for any fiat currency.
+      visibility:
+        type: string
+        required: false
+        enum:
+          - private
+          - restricted
+          - public
+    outputSchema:
+      activity:
+        type: object
+    dataAccess:
+      - recurring_activities
+      - recurring_activity_audit_trail
+      - currencies
+    purpose: recurring_activity_declaration
+    retentionClass: member_scoped
+    idempotency: false
+
+  - pluginId: recurring-activity
+    command: recurring-activity.confirm
+    version: 1.0.0
+    description: The counterparty confirms a pending activity (pending -> active). Only the counterparty may confirm; the owner declaring it is not enough for it to count toward Trust or GDP. Implemented by POST /api/recurring-activity/[activityId]/confirm.
+    inputSchema:
+      activityId:
+        type: string
+        required: true
+    outputSchema:
+      activity:
+        type: object
+    dataAccess:
+      - recurring_activities
+      - recurring_activity_audit_trail
+    purpose: recurring_activity_confirmation
+    retentionClass: member_scoped
+    idempotency: true
+
+  - pluginId: recurring-activity
+    command: recurring-activity.decline
+    version: 1.0.0
+    description: The counterparty declines a pending activity (pending -> declined). Only the counterparty may decline; the non-confirmer is never named or penalized elsewhere. Implemented by POST /api/recurring-activity/[activityId]/decline.
+    inputSchema:
+      activityId:
+        type: string
+        required: true
+    outputSchema:
+      activity:
+        type: object
+    dataAccess:
+      - recurring_activities
+      - recurring_activity_audit_trail
+    purpose: recurring_activity_decline
+    retentionClass: member_scoped
+    idempotency: true
+
+  - pluginId: recurring-activity
+    command: recurring-activity.end
+    version: 1.0.0
+    description: Either party ends an ongoing (pending or active) activity (-> ended), so the index reflects reality. Implemented by POST /api/recurring-activity/[activityId]/end.
+    inputSchema:
+      activityId:
+        type: string
+        required: true
+    outputSchema:
+      activity:
+        type: object
+    dataAccess:
+      - recurring_activities
+      - recurring_activity_audit_trail
+    purpose: recurring_activity_lifecycle
+    retentionClass: member_scoped
+    idempotency: true
+
+  - pluginId: recurring-activity
+    command: recurring-activity.visibility.update
+    version: 1.0.0
+    description: The owner sets the visibility of an activity they declared (private default). Regardless of this setting, only coarse aggregate counts ever reach public surfaces. Implemented by POST /api/recurring-activity/[activityId]/visibility.
+    inputSchema:
+      activityId:
+        type: string
+        required: true
+      visibility:
+        type: string
+        required: true
+        enum:
+          - private
+          - restricted
+          - public
+    outputSchema:
+      activity:
+        type: object
+    dataAccess:
+      - recurring_activities
+      - recurring_activity_audit_trail
+    purpose: privacy_safety_preference_update
+    retentionClass: member_scoped
+    idempotency: true

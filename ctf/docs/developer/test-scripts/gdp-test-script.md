@@ -152,3 +152,16 @@ of these, it is already tracked, not a new bug:
   plugin-specific transfer-control contract is not finalized.
 - Snapshot publication timing follows operational best-effort; an explicit timing/freeze-window
   document has not been published.
+
+## Recurring Activity recognition source (2026-07-04, issue #885)
+
+Recurring peer activities now feed the Community Value Index. To test:
+
+1. Seed it: `pnpm --dir ctf seed:recurring-activity` and `pnpm --dir ctf seed:currency-usd-rates`,
+   then run the rollup `pnpm --dir ctf gdp:recognize`.
+2. A **confirmed** (`active`) fiat recurring activity contributes by COUNT (one hidden `RACT` unit,
+   weight 1) — never a fiat amount. A **confirmed ServiceCredits** activity contributes by its
+   declared `sc_value`. Confirm the index reflects both.
+3. A **pending** activity must contribute NOTHING until the counterparty confirms it.
+4. Confirm no fiat amount is ever shown or summed anywhere (fiat lines carry no amount by design),
+   and that this source does not double-count the direct ServiceCredits transfer source.

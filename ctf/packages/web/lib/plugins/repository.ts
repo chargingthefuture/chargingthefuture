@@ -226,6 +226,14 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     navRank: 230,
     isVisible: true,
   },
+  {
+    slug: 'recurring-activity',
+    name: 'Recurring Activity',
+    summary: 'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.',
+    availabilityState: 'implemented_shell',
+    navRank: 240,
+    isVisible: true,
+  },
 ];
 
 const pluginAliasMap: Record<string, string> = {

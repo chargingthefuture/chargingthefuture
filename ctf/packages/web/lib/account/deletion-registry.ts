@@ -394,6 +394,21 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
+    slug: 'recurring-activity',
+    name: 'Recurring Activity',
+    dataSummary: 'The ongoing activities you acknowledged with other members (no amounts are stored for fiat; ServiceCredits values are declared figures, never real transfers).',
+    // A recurring_activities row is a two-party relationship both members consented to. Neither party
+    // can be shown a tie the other has deleted, so removing the whole row on either party's deletion is
+    // the privacy-safe default: two entries, one per party column. Not a money ledger — no value moves
+    // here and fiat lines carry no amount — so unlike ServiceCredits these rows are hard-deleted.
+    serviceScopeSupported: true,
+    tables: [
+      del('recurring_activities', 'owner_user_id', 'Ongoing activities you recorded.'),
+      del('recurring_activities', 'counterparty_user_id', 'Ongoing activities another member recorded with you.'),
+      retain('recurring_activity_audit_trail', 'Deletion/accountability trail; retained for compliance.'),
+    ],
+  },
+  {
     slug: 'service-credits',
     name: 'ServiceCredits',
     dataSummary: 'Your ServiceCredits wallet, ledger, transfers, and escrow.',

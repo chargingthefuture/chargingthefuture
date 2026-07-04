@@ -48,6 +48,11 @@ export interface TrustSignalMetrics {
   // them. Provider-side only (clean social proof); the seeker side is never surfaced (help-seeking is
   // sensitive). Counts threads (one per survivor↔provider pair), so it reads as "connected with N members".
   foundationConnectionsAsProvider: number;
+  // Distinct OTHER members with whom this member has a CONFIRMED (active) recurring activity, either
+  // side (from recurring_activities). Distinct counterparties — not raw activity count — so a single
+  // repeated partner or a collusion ring confirming each other cannot inflate the signal. Never a
+  // money amount and never the counterparty's identity; only the coarse breadth count.
+  recurringActivityCounterparties: number;
 }
 
 export interface TrustEvidenceItem {

@@ -81,6 +81,27 @@ const SOURCES = [
             FROM socket_relay_fulfillments
             WHERE close_reason = 'successful'`,
   },
+  {
+    // Recurring Activity — fiat lines (issue #885): self-declared, counterparty-CONFIRMED ongoing peer
+    // activities denominated in a fiat currency. Counted by NUMBER, one RACT each — never a fiat amount
+    // (a fiat line stores no amount at all), so the platform never holds a recurring-fiat-payment total.
+    // RACT is a hidden currencies row whose owner-curated weight (default 1) turns the count into the
+    // index contribution. Only active (confirmed) rows count.
+    pluginSlug: 'recurring-activity',
+    sql: `SELECT 'RACT' AS currency_code, COUNT(*)::numeric AS total
+            FROM recurring_activities
+            WHERE status = 'active' AND currency_code <> 'SC'`,
+  },
+  {
+    // Recurring Activity — ServiceCredits lines (issue #885): counted by their DECLARED sc_value.
+    // ServiceCredits is an internal utility token with no third-party reporting duty. This is a declared
+    // figure, never an executed transfer, so it never touches balances and never double-counts the
+    // direct ServiceCredits transfer source (a different table). Only active (confirmed) rows count.
+    pluginSlug: 'recurring-activity',
+    sql: `SELECT 'SC' AS currency_code, SUM(sc_value)::numeric AS total
+            FROM recurring_activities
+            WHERE status = 'active' AND currency_code = 'SC' AND sc_value IS NOT NULL`,
+  },
   // Add more as approved. Keep eligible settled spend only — never incentives. A genuine peer-to-peer
   // transfer outside a plugin transaction is economic activity and is counted (service-credits above).
 ];

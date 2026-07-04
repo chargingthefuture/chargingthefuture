@@ -146,10 +146,11 @@ ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT 
 ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 100;
 ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Widen the kind check to allow 'free' (one-way, no-charge mutual aid) on legacy DBs whose constraint
--- predates it. Drop + re-add is idempotent and keeps fresh and legacy schemas identical.
+-- Widen the kind check to allow 'free' (one-way, no-charge mutual aid) and 'activity' (the internal
+-- Recurring Activity counting unit — see the RACT row below) on legacy DBs whose constraint predates
+-- them. Drop + re-add is idempotent and keeps fresh and legacy schemas identical.
 ALTER TABLE IF EXISTS currencies DROP CONSTRAINT IF EXISTS currencies_kind_check;
-ALTER TABLE IF EXISTS currencies ADD CONSTRAINT currencies_kind_check CHECK (kind IN ('token','fiat','crypto','barter','free'));
+ALTER TABLE IF EXISTS currencies ADD CONSTRAINT currencies_kind_check CHECK (kind IN ('token','fiat','crypto','barter','free','activity'));
 CREATE INDEX IF NOT EXISTS idx_currencies_active_sort ON currencies(is_active, sort_order);
 
 -- Seed the owner-curated launch set (inline + idempotent, like ctf_plugin_registry). Owner updates
@@ -184,6 +185,26 @@ ON CONFLICT (code) DO UPDATE SET
   requires_amount    = EXCLUDED.requires_amount,
   sort_order         = EXCLUDED.sort_order,
   updated_at         = NOW();
+
+-- RACT ("recurring activity" count unit) is NOT a member-selectable currency. It is the internal
+-- counting unit for the Recurring Activity plugin's GDP contribution: each confirmed, active,
+-- fiat-denominated recurring activity contributes ONE RACT to the Community Value Index (owner-tunable
+-- weight in currency_usd_rates, default 1) — a COUNT, never a fiat amount. This is the liability
+-- firewall: the platform never stores or sums a recurring-fiat-payment total (a fiat recurring activity
+-- carries no amount at all), so it never becomes a record that could look like money transmission. SC
+-- recurring activities are counted by their declared value under 'SC' instead, since ServiceCredits is
+-- an internal utility token with no third-party reporting duty. is_active = FALSE keeps RACT out of
+-- every payment/currency dropdown (listActiveCurrencies filters is_active = TRUE); it exists only as an
+-- FK-valid anchor for its contribution weight and is never stored on a recurring_activities row.
+INSERT INTO currencies (code, label, kind, is_service_credits, symbol, decimal_places, requires_amount, is_active, sort_order)
+VALUES ('RACT', 'Recurring activity', 'activity', FALSE, NULL, 0, FALSE, FALSE, 900)
+ON CONFLICT (code) DO UPDATE SET
+  label           = EXCLUDED.label,
+  kind            = EXCLUDED.kind,
+  requires_amount = EXCLUDED.requires_amount,
+  is_active       = EXCLUDED.is_active,
+  sort_order      = EXCLUDED.sort_order,
+  updated_at      = NOW();
 
 -- === weekly_performance_weeks ===
 CREATE TABLE IF NOT EXISTS weekly_performance_weeks (
@@ -2004,7 +2025,8 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('click-log',          'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
   ('what-works',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
   ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'implemented_shell', 210, TRUE),
-  ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE)
+  ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE),
+  ('recurring-activity', 'Recurring Activity',   'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.','implemented_shell', 240, TRUE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,
@@ -5159,4 +5181,82 @@ CREATE INDEX IF NOT EXISTS member_safety_reports_status_idx
   ON member_safety_reports (status, created_at DESC);
 CREATE INDEX IF NOT EXISTS member_safety_reports_reported_user_idx
   ON member_safety_reports (reported_user_id);
+
+-- === recurring_activities (Recurring Activity plugin; issue #885) =================================
+-- A member's self-declared, counterparty-confirmed ONGOING activity with one other member — the way
+-- the platform captures recurring peer relationships (rent, an ongoing service, a standing favor)
+-- WITHOUT becoming a payment processor or a recurring-payment record. Design constraints, all load-
+-- bearing (see the Recurring Activity feature inventory and issue #885):
+--   * NOT a ledger. No value ever moves here; this only records that an ongoing activity exists.
+--   * NO free-text anywhere. `sector` is a fixed dropdown (the "brief description"); there is no note
+--     column, by owner decision — a vulnerable population must not be able to over-disclose an
+--     auditable detail in free text.
+--   * Fiat carries NO amount. A fiat-denominated line stores only the currency label + cadence, never
+--     a number, so the platform never holds a summable recurring-fiat-payment total (the liability
+--     firewall). Only ServiceCredits — an internal utility token with no outside reporting duty —
+--     carries a declared value (`sc_value`), and even that is a declared figure, never an executed
+--     transfer, so it never touches real ServiceCredits balances or the SC ledger.
+--   * Two-sided. Created `pending`; it only counts toward Trust or GDP once the counterparty confirms
+--     it (`active`). Either party can end it (`ended`); the counterparty may decline it (`declined`).
+--   * Private by default. `visibility` defaults to 'private'; only coarse aggregate counts ever reach
+--     public surfaces (Trust distinct-counterparty signal, GDP count/value contribution).
+CREATE TABLE IF NOT EXISTS recurring_activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_user_id TEXT NOT NULL,
+  counterparty_user_id TEXT NOT NULL,
+  sector TEXT NOT NULL DEFAULT 'general' CHECK (sector IN ('housing','service','favor','general')),
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  cadence TEXT NOT NULL DEFAULT 'monthly' CHECK (cadence IN ('weekly','biweekly','monthly','quarterly')),
+  sc_value NUMERIC(14,2),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','ended','declined')),
+  visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private','restricted','public')),
+  confirmed_at TIMESTAMPTZ,
+  ended_at TIMESTAMPTZ,
+  ended_by_user_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT recurring_activities_no_self CHECK (owner_user_id <> counterparty_user_id)
+);
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS owner_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS counterparty_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS sector TEXT NOT NULL DEFAULT 'general';
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS currency_code TEXT;
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS cadence TEXT NOT NULL DEFAULT 'monthly';
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS sc_value NUMERIC(14,2);
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'private';
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS ended_by_user_id TEXT;
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS recurring_activities_owner_idx ON recurring_activities (owner_user_id, status);
+CREATE INDEX IF NOT EXISTS recurring_activities_counterparty_idx ON recurring_activities (counterparty_user_id, status);
+CREATE INDEX IF NOT EXISTS recurring_activities_status_currency_idx ON recurring_activities (status, currency_code);
+
+-- Append-only audit trail for every Recurring Activity mutation (create/confirm/decline/end) and for
+-- denied attempts. Mirrors trust_admin_audit_trail. No sensitive raw payload is stored — only coarse
+-- metadata (sector, currency code, cadence, status transition).
+CREATE TABLE IF NOT EXISTS recurring_activity_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_user_id TEXT,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL DEFAULT 'allow',
+  reason TEXT NOT NULL DEFAULT '',
+  activity_id UUID,
+  request_id TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS actor_user_id TEXT;
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT 'allow';
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS activity_id UUID;
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS request_id TEXT;
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS recurring_activity_audit_trail_activity_idx ON recurring_activity_audit_trail (activity_id, created_at DESC);
 COMMIT;

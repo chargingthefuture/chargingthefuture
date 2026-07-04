@@ -394,3 +394,12 @@ The following cases must produce consistent data across surfaces since both read
 3. **Android visibility update is display-only.** The visibility dropdown on the Android Trust screen renders but does not yet call `POST /api/trust/visibility`. The backend is implemented; the Android UI wiring is a planned follow-up. Do not file the display-only state as a bug.
 4. **Trust evidence JSONB schema unpublished.** Evidence content is structured JSONB; no rich-text schema or attachment storage contract has been published. Variations in item structure are expected.
 5. **No dedicated seed script for Trust.** Trust has no seed data of its own; it derives from upstream plugins. If upstream tables are empty the evidence list will be empty — that is correct behaviour, not a bug.
+
+## Recurring Activity signal (2026-07-04, issue #885; model `cross_plugin_engagement_v4`)
+
+Trust now derives one more signal from the Recurring Activity plugin. To test:
+
+1. Seed it: `pnpm --dir ctf seed:recurring-activity`, then recompute the member's signal (open the Trust panel / call `POST /api/trust/signal/snapshot`).
+2. A member with one or more **confirmed** (`active`) recurring activities should see the evidence item **"Ongoing activities with N community members"**, where N is the count of DISTINCT other members (either side), never a raw activity count.
+3. A member with only **pending** recurring activities should see NO such evidence item (pending ties do not count).
+4. Confirm no amount and no counterparty identity ever appears — only the coarse distinct-counterparty count. A repeated partner must not increase N beyond 1 for that pair.

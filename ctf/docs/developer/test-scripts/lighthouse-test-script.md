@@ -171,3 +171,11 @@ of these, it is already tracked, not a new bug:
   published.
 - LightHouse uses shared platform rate-limit defaults; a plugin-specific rate-limit and anti-scraping
   contract is a known follow-up.
+
+## Recurring rent is captured elsewhere (2026-07-04, issue #885)
+
+LightHouse rent is NOT settled in LightHouse. `monthly_rent`/`rent_currency` stay listing-only (the
+asking price), and there is no settlement step or amount recorded on a match. An ongoing rent
+relationship is recorded by the member in the separate **Recurring Activity** plugin (sector
+`housing`). When testing LightHouse, do not expect a rent amount to be captured on a completed match —
+confirm it is not, and that no settlement table exists here.

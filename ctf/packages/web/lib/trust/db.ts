@@ -89,6 +89,7 @@ export async function getLatestTrustSnapshotAt(userId: string): Promise<Date | n
 //   - peer_programming_cohort_members → PeerProgramming cohorts joined
 //   - contributions_submissions→ confirmed contributions
 //   - foundation_connection_threads → connections where the member is the PROVIDER (provider side only)
+//   - recurring_activities     → distinct members with a CONFIRMED ongoing activity (either side)
 // Only coarse COUNTs are read — never amounts, balances, or sensitive per-row detail — and no numeric
 // score is produced. Privacy-sensitive personal-wellbeing/verification plugins (ClickLog, Mood,
 // GentlePulse, Unlock) are deliberately excluded so Trust never exposes what a member is going through;
@@ -115,6 +116,7 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     peerProgramming,
     contributions,
     foundation,
+    recurringActivity,
   ] = await Promise.all([
     queryDb<{ login_days: string; login_events: string; last_login_at: Date | null }>(
       `SELECT
@@ -204,6 +206,19 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
       `SELECT COUNT(*) AS count FROM foundation_connection_threads WHERE provider_user_id = $1`,
       [userId]
     ),
+    // Distinct OTHER members with a CONFIRMED (active) recurring activity, either side. Distinct
+    // counterparties (a UNION de-duplicates the two directions) so one repeated partner — or a ring
+    // confirming each other — cannot inflate the breadth signal. No amount, no identity: only the count.
+    queryDb<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM (
+          SELECT counterparty_user_id AS other FROM recurring_activities
+            WHERE owner_user_id = $1 AND status = 'active'
+          UNION
+          SELECT owner_user_id AS other FROM recurring_activities
+            WHERE counterparty_user_id = $1 AND status = 'active'
+        ) distinct_counterparties`,
+      [userId]
+    ),
   ]);
 
   const loginRow = loginAgg.rows[0];
@@ -226,6 +241,7 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     peerProgrammingCohortsJoined: countOf(peerProgramming),
     contributionsConfirmed: countOf(contributions),
     foundationConnectionsAsProvider: countOf(foundation),
+    recurringActivityCounterparties: countOf(recurringActivity),
   };
 }
 
@@ -303,6 +319,7 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
     { count: metrics.peerProgrammingCohortsJoined, type: 'engagement-peerprogramming-cohorts', verb: 'Joined', singular: 'PeerProgramming cohort', plural: 'PeerProgramming cohorts' },
     { count: metrics.contributionsConfirmed, type: 'engagement-contributions', verb: 'Confirmed', singular: 'contribution', plural: 'contributions' },
     { count: metrics.foundationConnectionsAsProvider, type: 'engagement-foundation-provider', verb: 'Connected with', singular: 'member as a Foundation provider', plural: 'members as a Foundation provider' },
+    { count: metrics.recurringActivityCounterparties, type: 'engagement-recurring-activity', verb: 'Ongoing activities with', singular: 'community member', plural: 'community members' },
   ];
   for (const signal of participationSignals) {
     if (signal.count > 0) {
