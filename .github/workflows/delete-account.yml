@@ -10,6 +10,11 @@ name: Delete Account (manual)
 # wrong person), then Run. Set "also_delete_clerk" to false to delete only the database data and keep
 # the Clerk account.
 #
+# target: choose "prod" (default) to delete from the live schema, or "demo" to wipe a demo test
+# account from the demo schema — the deletion runs the exact same registry/orchestrator flow, just
+# pinned to the chosen schema. The Clerk identity is a single shared instance (not per-schema), so
+# also_delete_clerk removes it regardless of target; that is what frees the email for a fresh sign-up.
+#
 # What it needs (Settings → Secrets and variables → Actions):
 #   NEXT_PUBLIC_APP_URL secret — your production base URL (same secret the other workflows use).
 #   ACCOUNT_DELETE_SECRET secret — a NEW secret you generate (e.g. `openssl rand -hex 32`). Set the
@@ -33,6 +38,14 @@ on:
         description: 'Also delete the Clerk identity (set false to delete only the database data).'
         type: boolean
         default: true
+        required: false
+      target:
+        description: 'Which database to delete from: prod (default) or demo. Pick "demo" to fully wipe a demo test account. Clerk identity is shared, so also_delete_clerk removes it regardless.'
+        type: choice
+        options:
+          - prod
+          - demo
+        default: prod
         required: false
 
 permissions:
@@ -65,6 +78,7 @@ jobs:
           ACCOUNT_DELETE_SECRET: ${{ secrets.ACCOUNT_DELETE_SECRET }}
           USER_ID: ${{ github.event.inputs.user_id }}
           DELETE_CLERK: ${{ github.event.inputs.also_delete_clerk }}
+          TARGET: ${{ github.event.inputs.target }}
         run: |
           set -euo pipefail
           if [ -z "${APP_URL:-}" ]; then
@@ -75,11 +89,16 @@ jobs:
             echo "::error::ACCOUNT_DELETE_SECRET is not set in GitHub Actions secrets. Add it here AND match it in the app runtime, then re-run. Nothing was deleted."
             exit 1
           fi
+          # Normalize the target to what the route expects: "demo" wipes the demo schema, anything
+          # else (default) targets production.
+          TARGET_VALUE="prod"
+          if [ "${TARGET:-prod}" = "demo" ]; then TARGET_VALUE="demo"; fi
+          echo "Deleting from: ${TARGET_VALUE} schema"
           code=$(curl -sS -o /tmp/delete.json -w '%{http_code}' -X POST \
             "${APP_URL%/}/api/internal/account/delete" \
             -H "Authorization: Bearer ${ACCOUNT_DELETE_SECRET}" \
             -H 'Content-Type: application/json' \
-            -d "{\"userId\":\"${USER_ID}\",\"deleteClerk\":${DELETE_CLERK}}")
+            -d "{\"userId\":\"${USER_ID}\",\"deleteClerk\":${DELETE_CLERK},\"target\":\"${TARGET_VALUE}\"}")
           echo "HTTP ${code}"
           cat /tmp/delete.json
           echo
@@ -87,4 +106,4 @@ jobs:
             echo "::error::Account delete failed (HTTP ${code}). Read the JSON above: code 'account_delete_not_configured' = ACCOUNT_DELETE_SECRET missing in the app runtime; HTTP 403 = the secret here does not match the app runtime value; code 'account_delete_failed' means the deletion itself threw — its 'step' (reclaim_request | data_deletion) and 'detail' fields say why."
             exit 1
           fi
-          echo "Deleted account ${USER_ID}: $(cat /tmp/delete.json)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deleted account ${USER_ID} from ${TARGET_VALUE} schema: $(cat /tmp/delete.json)" >> "$GITHUB_STEP_SUMMARY"

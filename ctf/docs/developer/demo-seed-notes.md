@@ -39,6 +39,53 @@ The seed is safe to re-run (every statement upserts on a natural key or a determ
 id). All second-owner records use per-owner ids (`sha256id(...)`) and conflict on natural
 keys, so they never collide with the fixed demo UUIDs used for the first owner.
 
+The two remaining plain inserts were made idempotent: the demo Chyme messages and the
+GentlePulse play event now use deterministic ids with `ON CONFLICT (id) DO NOTHING`
+(both tables have only a uuid primary key, no natural unique key), so re-running no longer
+appends duplicate rows. Verified against a local Postgres: `chyme_messages` stays at 3 and
+`gentle_pulse_play_events` stays at 1 across repeated runs.
+
+The second-owner Level-Up enrollment conflicts on the primary key (a deterministic
+per-owner id), not on `(cohort_id, user_id)`. That composite unique used to be missing from
+the live `demo` schema — the root cause and its fix are described in the next section. The
+seed still conflicts on the primary key (it does not depend on any composite unique), so it
+keeps working on both old and newly-provisioned demo schemas.
+
+## Demo schema provisioning: schema-scoped existence guards
+
+`ctf/schema.sql` is applied twice against the same database: once normally (the `public`
+schema) and once for the demo copy with `search_path=demo,public` (see
+`ctf/scripts/migrateToDemo.mjs`). Several idempotency guards checked whether an index or
+constraint already existed **by name only** — e.g. `pg_indexes WHERE indexname = '…'`,
+`information_schema.check_constraints WHERE constraint_name = '…'`, `pg_constraint WHERE
+conname = '…'`. Those catalog views span every schema, and index/constraint names are only
+unique *within* a schema, so during demo provisioning the guard found the identically-named
+object already sitting in `public` and skipped creating it in `demo`. The demo tables were
+left without those indexes/constraints — which is why a demo `INSERT … ON CONFLICT (cohort_id,
+user_id)` on `level_up_enrollments` failed with "no unique or exclusion constraint matching
+the ON CONFLICT specification".
+
+Every such guard now also filters on the current schema so the check looks only at the schema
+being provisioned:
+
+- `pg_indexes` → `AND schemaname = current_schema()`
+- `information_schema.check_constraints` / `table_constraints` → `AND constraint_schema = current_schema()`
+- `pg_constraint` → `AND connamespace = current_schema()::regnamespace`
+
+`current_schema()` resolves to `demo` during demo provisioning (demo is the first existing
+schema in the search path) and `public` in a normal run, so the same file behaves correctly
+either way. This is backward-compatible: on a normal `public` run the filter matches the
+existing public object exactly as before (no re-creation, still idempotent); it only changes
+the demo run, where the demo object is now created instead of being masked by the public one.
+
+Verified against a local Postgres: provisioning `public` then `demo` from the same file leaves
+the demo schema with every previously-missing index/constraint
+(`level_up_enrollments_cohort_id_user_id_key`, `level_up_user_achievements_user_id_achievement_id_key`,
+`directory_profiles_unclaimed_handle_key`, the CHECK/FK constraints), and both a repeated demo
+run and a repeated public run are idempotent (constraint counts unchanged, no errors). The four
+`information_schema.columns` guards that already carried `table_schema = 'public'` are left
+alone — `migrateToDemo` rewrites that literal to the target schema for them.
+
 The what-works seed was corrected to upsert problems on their `slug` (the table's unique
 key) and endorsements on `(product_id, user_id)`, rather than on `id`. Previously a
 pre-existing row with the same slug but a different id was not caught and aborted the whole
@@ -46,7 +93,12 @@ seed with `duplicate key value violates unique constraint "idx_what_works_proble
 
 ## Schema impact
 
-None. These seed changes only insert into tables and columns that already exist in
+The schema-scoped guard fix above edits `ctf/schema.sql` (existence-check `WHERE` clauses
+only). It adds/removes no table, column, constraint, or index in the `public` schema and is
+backward-compatible; it only makes the demo schema receive the objects it was already supposed
+to have. Recorded here per `.claude/rules/122-schema-drift-predeployment-rules.mdc`.
+
+The seed changes only insert into tables and columns that already exist in
 `ctf/schema.sql` (`unlock_verification_submissions`, `service_credits_wallets` /
 `service_credits_transfers`, `trust_transport_requests`, `socket_relay_requests` /
 `socket_relay_user_extension`, `foundation_connection_threads`, `lighthouse_profiles` /

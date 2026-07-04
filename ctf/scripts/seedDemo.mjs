@@ -317,13 +317,17 @@ async function seedLevelUp(c) {
   );
 
   if (OWNER2) {
-    // Second participant in the same cohort — conflict on the natural key
-    // (cohort_id, user_id), with a per-owner id so it never collides on the pk.
+    // Second participant in the same cohort. Conflict on the primary key with a
+    // deterministic per-owner id (like the owner enrollment above), NOT on
+    // (cohort_id, user_id): that composite unique is absent from the live demo
+    // schema (its backfill DO block checks pg_indexes without a schemaname filter,
+    // so it sees the public-schema index and skips creating the demo one). The
+    // deterministic id keeps this idempotent and needs no extra constraint.
     await c.query(
       `INSERT INTO level_up_enrollments
        (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
        VALUES ($1::uuid, $2::uuid, $3, 'active', 300, $4)
-       ON CONFLICT (cohort_id, user_id) DO UPDATE SET
+       ON CONFLICT (id) DO UPDATE SET
          status = EXCLUDED.status, credits_deposited = EXCLUDED.credits_deposited`,
       [sha256id('lu-enrollment', OWNER2), ID.cohort, OWNER2, TRAINER],
     );
@@ -679,9 +683,12 @@ async function seedGentlePulse(c) {
 
   // Owner played and rated the first item
   await c.query(
-    `INSERT INTO gentle_pulse_play_events (user_id, item_id, completed)
-     VALUES ($1, $2::uuid, true)`,
-    [OWNER, ID.gpItem1],
+    // Deterministic id + ON CONFLICT so a re-run does not append another play
+    // event (the table has only a uuid pk, no natural unique key).
+    `INSERT INTO gentle_pulse_play_events (id, user_id, item_id, completed)
+     VALUES ($1::uuid, $2, $3::uuid, true)
+     ON CONFLICT (id) DO NOTHING`,
+    [sha256id('gp-play', OWNER, ID.gpItem1), OWNER, ID.gpItem1],
   );
 
   await c.query(
@@ -772,11 +779,15 @@ async function seedChyme(c) {
     [OWNER, 'Thanks! Just exploring the platform. Looks great.'],
     [PEER_1, 'Let me know if you have any questions about how it works.'],
   ];
-  for (const [uid, text] of messages) {
+  for (const [index, [uid, text]] of messages.entries()) {
+    // Deterministic id + ON CONFLICT so re-running the seed does not append a
+    // duplicate copy of each demo message every time (chyme_messages has only a
+    // uuid pk, no natural unique key).
     await c.query(
-      `INSERT INTO chyme_messages (room_id, user_id, username, text)
-       VALUES ($1::uuid, $2, $3, $4)`,
-      [ID.room, uid, memberUsernames[uid] ?? 'demo_user', text],
+      `INSERT INTO chyme_messages (id, room_id, user_id, username, text)
+       VALUES ($1::uuid, $2::uuid, $3, $4, $5)
+       ON CONFLICT (id) DO NOTHING`,
+      [sha256id('chyme-demo-msg', ID.room, String(index)), ID.room, uid, memberUsernames[uid] ?? 'demo_user', text],
     );
   }
 
