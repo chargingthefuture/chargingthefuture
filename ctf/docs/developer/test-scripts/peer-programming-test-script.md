@@ -82,8 +82,20 @@ reconnects.
 2. Try to post.
 **Expected:** You can read that cohort's messages. A "listening in — read-only" banner shows, and the
 composer is replaced by a "you're listening in" notice. The post path is refused server-side, not just
-hidden.
+hidden. In the list, the cohort you are currently viewing reads "Viewing" (not clickable); other
+cohorts read "Listen in."
 **Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### PP-4b · Enter your own cohort from the running list
+**Role:** member · **Surfaces:** web (desktop) · web (mobile-responsive)
+**Precondition:** signed-in member who is in a cohort (e.g. the single standing Cohort 1).
+**Steps:**
+1. In the "Running cohorts this week" list, find your own cohort (badged "Your cohort").
+2. Press its button.
+**Expected:** Its button reads **"Enter"** and is clickable (not a disabled "Open"). Pressing it takes
+you into your cohort's Direct Line conversation. This works even when your cohort is the only one and is
+already the active room.
+**Result:** web ☐ mobile ☐ android — — notes:
 
 ### PP-5 · Join the live session
 **Role:** member · **Surfaces:** all

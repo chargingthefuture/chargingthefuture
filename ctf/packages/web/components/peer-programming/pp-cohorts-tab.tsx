@@ -85,15 +85,25 @@ function CohortListRow({
         </div>
         <div style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>{cohort.memberCount} member{cohort.memberCount !== 1 ? "s" : ""}</div>
       </div>
-      <button
-        type="button"
-        onClick={onOpen}
-        disabled={busy || isOpen}
-        style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, background: isOpen ? "rgba(255,255,255,0.06)" : `${COLOR}1A`, border: `1px solid ${isOpen ? "rgba(255,255,255,0.1)" : `${COLOR}40`}`, color: isOpen ? "#6B7280" : COLOR, fontSize: 12, fontWeight: 700, cursor: busy || isOpen ? "default" : "pointer", whiteSpace: "nowrap" }}
-      >
-        {isMine ? <Users size={13} /> : <Headphones size={13} />}
-        {isOpen ? "Open" : isMine ? "Open" : "Listen in"}
-      </button>
+      {(() => {
+        // Your own cohort is always enterable — clicking takes you into its Direct Line, even when it
+        // is already the active room (that is how you "enter" it). Only another cohort you are already
+        // listening in on is a no-op ("Viewing"); any other cohort offers "Listen in".
+        const viewingOther = isOpen && !isMine;
+        const disabled = busy || viewingOther;
+        const label = isMine ? "Enter" : viewingOther ? "Viewing" : "Listen in";
+        return (
+          <button
+            type="button"
+            onClick={onOpen}
+            disabled={disabled}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, background: viewingOther ? "rgba(255,255,255,0.06)" : `${COLOR}1A`, border: `1px solid ${viewingOther ? "rgba(255,255,255,0.1)" : `${COLOR}40`}`, color: viewingOther ? "#6B7280" : COLOR, fontSize: 12, fontWeight: 700, cursor: disabled ? "default" : "pointer", whiteSpace: "nowrap" }}
+          >
+            {isMine ? <Users size={13} /> : <Headphones size={13} />}
+            {label}
+          </button>
+        );
+      })()}
     </div>
   );
 }
