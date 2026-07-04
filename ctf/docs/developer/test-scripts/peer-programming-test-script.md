@@ -86,15 +86,16 @@ hidden. In the list, the cohort you are currently viewing reads "Viewing" (not c
 cohorts read "Listen in."
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### PP-4b · Enter your own cohort from the running list
+### PP-4b · Own cohort shows once; count reads members
 **Role:** member · **Surfaces:** web (desktop) · web (mobile-responsive)
 **Precondition:** signed-in member who is in a cohort (e.g. the single standing Cohort 1).
 **Steps:**
-1. In the "Running cohorts this week" list, find your own cohort (badged "Your cohort").
-2. Press its button.
-**Expected:** Its button reads **"Enter"** and is clickable (not a disabled "Open"). Pressing it takes
-you into your cohort's Direct Line conversation. This works even when your cohort is the only one and is
-already the active room.
+1. Look at the top "Join Session" card for your cohort, then scroll to the "Other running cohorts" list.
+**Expected:** Your own cohort appears **once** — the top card — and is **not** repeated in the list
+below (no redundant second button). The list is titled "Other running cohorts" and holds only cohorts
+you are not in; when your cohort is the only one, the list section is absent. The top card's count reads
+the real member count ("2 members"), not "0 participants." You reach your cohort's conversation from the
+Direct Line tab.
 **Result:** web ☐ mobile ☐ android — — notes:
 
 ### PP-5 · Join the live session
