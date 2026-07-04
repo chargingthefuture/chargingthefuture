@@ -86,6 +86,27 @@ run and a repeated public run are idempotent (constraint counts unchanged, no er
 `information_schema.columns` guards that already carried `table_schema = 'public'` are left
 alone — `migrateToDemo` rewrites that literal to the target schema for them.
 
+### Follow-on: mood_submissions FK self-heal on the demo schema
+
+Adding the missing constraints to the existing demo schema surfaced a latent data problem the
+skipped guard had been hiding. The `mood_submissions_pseudonym_fkey` foreign key
+(`mood_submissions.pseudonym → mood_client_identities.pseudonym`) had never been enforced on
+the demo schema, and the demo `mood_submissions` table had accumulated a check-in row whose
+`pseudonym` had no matching mapping row. With the guard now schema-scoped, the `ALTER TABLE …
+ADD CONSTRAINT` finally ran on demo and failed validation against that orphan
+(`insert or update on table "mood_submissions" violates foreign key constraint …`).
+
+The mood backfill deliberately severs the direct `user_id` link and repoints each check-in onto
+a mapping pseudonym, so a row can be stranded if its mapping row is ever missing. The FK-add
+guard now self-heals first: when the constraint is absent it inserts a server-controlled mapping
+for every orphan pseudonym (`user_id` set to the pseudonym text — always unique, never a real
+Clerk id) before adding the FK, so no check-in is lost and `ON DELETE CASCADE` still deletes it
+through the mapping. The heal sits inside the `IF NOT EXISTS (… pg_constraint …)` guard, so on a
+schema that already enforces the FK (steady-state production) the whole block is skipped and no
+mapping rows are invented. Verified locally: reproducing the orphan state (FK dropped, orphan
+row inserted) and re-provisioning heals it — FK added, orphan preserved, cascade-delete works,
+idempotent on re-run.
+
 The what-works seed was corrected to upsert problems on their `slug` (the table's unique
 key) and endorsements on `(product_id, user_id)`, rather than on `id`. Previously a
 pre-existing row with the same slug but a different id was not caught and aborted the whole
