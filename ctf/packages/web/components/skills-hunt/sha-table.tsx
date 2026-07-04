@@ -1,6 +1,7 @@
 "use client";
 
 import type { SkillsHuntSubmission } from "lib/skills-hunt/types";
+import { feedAuthorHandle } from "lib/feed/author-handle";
 import { COLOR } from "./sha-shared";
 
 interface RowProps {
@@ -51,7 +52,7 @@ function SubmissionRow(props: RowProps) {
         <input type="checkbox" checked={selected} onChange={() => onToggle(s.id)} disabled={s.status !== "pending"} aria-label={`Select ${s.fullName}`} />
       </td>
       <td style={{ padding: "10px 6px" }}>
-        <div style={{ fontWeight: 600, color: "#F9FAFB" }}>{s.submitterUsername ?? s.submitterUserId.slice(0, 8)}</div>
+        <div style={{ fontWeight: 600, color: "#F9FAFB" }}>{feedAuthorHandle(s.submitterUsername, s.submitterUserId)}</div>
         <div style={{ fontSize: 11, color: "#4B5563" }}>{new Date(s.createdAtIso).toLocaleString()}</div>
       </td>
       <td style={{ padding: "10px 6px" }}>{s.fullName}</td>
