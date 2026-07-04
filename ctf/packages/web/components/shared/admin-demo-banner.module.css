@@ -1,0 +1,30 @@
+.banner {
+  /* Desktop: the admin shells own a fixed 100dvh internal scroll area (globals.css
+     locks html/body to 100vh + overflow:hidden), so the banner overlays as a fixed
+     element and never shifts that layout. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  background: #b45309;
+  color: #ffffff;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Inter', system-ui, sans-serif;
+  text-align: center;
+  line-height: 1.35;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+}
+
+/* Phones: the document scrolls and the admin shells are min-height, so the banner
+   sits in normal flow (sticky) and RESERVES its own height instead of overlaying.
+   A fixed overlay here covered the shell's header and its back button — and an
+   app saved to the Home Screen has no browser back, so there was no way out. */
+@media (max-width: 767px) {
+  .banner {
+    position: sticky;
+  }
+}
