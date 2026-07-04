@@ -334,7 +334,7 @@ DO $public_users_username_unique$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE indexname = 'users_username_lower_key'
+    WHERE indexname = 'users_username_lower_key' AND schemaname = current_schema()
   ) THEN
     BEGIN
       CREATE UNIQUE INDEX users_username_lower_key
@@ -624,7 +624,7 @@ DO $account_deletion_events_scope_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'account_deletion_events_scope_check'
+    WHERE constraint_name = 'account_deletion_events_scope_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE account_deletion_events
       ADD CONSTRAINT account_deletion_events_scope_check CHECK (scope IN ('service', 'account'));
@@ -635,7 +635,7 @@ DO $account_deletion_events_status_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'account_deletion_events_status_check'
+    WHERE constraint_name = 'account_deletion_events_status_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE account_deletion_events
       ADD CONSTRAINT account_deletion_events_status_check
@@ -1197,7 +1197,7 @@ ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS updated_at T
 -- Add unique constraint if not exists (Postgres 15+)
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE tablename = 'level_up_enrollments' AND indexname = 'level_up_enrollments_cohort_id_user_id_key'
+    SELECT 1 FROM pg_indexes WHERE tablename = 'level_up_enrollments' AND indexname = 'level_up_enrollments_cohort_id_user_id_key' AND schemaname = current_schema()
   ) THEN
     EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS level_up_enrollments_cohort_id_user_id_key ON level_up_enrollments(cohort_id, user_id)';
   END IF;
@@ -1256,7 +1256,7 @@ DO $trust_transport_requests_price_consistency$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'trust_transport_requests_price_consistency_check'
+    WHERE constraint_name = 'trust_transport_requests_price_consistency_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE trust_transport_requests
       ADD CONSTRAINT trust_transport_requests_price_consistency_check
@@ -1645,7 +1645,7 @@ DO $service_credits_credit_limits_non_negative$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'service_credits_credit_limits_credit_limit_check'
+    WHERE constraint_name = 'service_credits_credit_limits_credit_limit_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE service_credits_credit_limits
       ADD CONSTRAINT service_credits_credit_limits_credit_limit_check
@@ -2244,7 +2244,7 @@ DO $directory_profiles_source_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'directory_profiles_source_check'
+    WHERE constraint_name = 'directory_profiles_source_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE directory_profiles
@@ -2268,7 +2268,7 @@ BEGIN
   -- with the case-insensitive variant below.
   IF EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE indexname = 'directory_profiles_unclaimed_handle_key'
+    WHERE indexname = 'directory_profiles_unclaimed_handle_key' AND schemaname = current_schema()
       AND indexdef NOT ILIKE '%lower(unclaimed_handle)%'
   ) THEN
     -- A legacy DB may have created this name as a UNIQUE *constraint*
@@ -2281,7 +2281,7 @@ BEGIN
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE indexname = 'directory_profiles_unclaimed_handle_key'
+    WHERE indexname = 'directory_profiles_unclaimed_handle_key' AND schemaname = current_schema()
   ) THEN
     BEGIN
       CREATE UNIQUE INDEX directory_profiles_unclaimed_handle_key
@@ -2842,7 +2842,7 @@ ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS create
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE tablename = 'level_up_user_achievements' AND indexname = 'level_up_user_achievements_user_id_achievement_id_key'
+    SELECT 1 FROM pg_indexes WHERE tablename = 'level_up_user_achievements' AND indexname = 'level_up_user_achievements_user_id_achievement_id_key' AND schemaname = current_schema()
   ) THEN
     EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS level_up_user_achievements_user_id_achievement_id_key ON level_up_user_achievements(user_id, achievement_id)';
   END IF;
@@ -3005,7 +3005,7 @@ DO $foundation_provider_skills_skill_fk$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'foundation_provider_skills_skill_id_fkey'
+    WHERE constraint_name = 'foundation_provider_skills_skill_id_fkey' AND constraint_schema = current_schema()
       AND table_name = 'foundation_provider_skills'
       AND constraint_type = 'FOREIGN KEY'
   ) THEN
@@ -3236,7 +3236,7 @@ DO $socket_relay_requests_price_consistency$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'socket_relay_requests_price_consistency_check'
+    WHERE constraint_name = 'socket_relay_requests_price_consistency_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE socket_relay_requests
       ADD CONSTRAINT socket_relay_requests_price_consistency_check
@@ -3462,7 +3462,7 @@ UPDATE mood_submissions SET user_id = '' WHERE pseudonym IS NOT NULL AND user_id
 -- ADD CONSTRAINT IF NOT EXISTS).
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'mood_submissions_pseudonym_fkey') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'mood_submissions_pseudonym_fkey' AND connamespace = current_schema()::regnamespace) THEN
     ALTER TABLE mood_submissions
       ADD CONSTRAINT mood_submissions_pseudonym_fkey
       FOREIGN KEY (pseudonym) REFERENCES mood_client_identities(pseudonym) ON DELETE CASCADE;
@@ -4101,7 +4101,7 @@ DO $skills_hunt_submissions_url_validation_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'skills_hunt_submissions_url_validation_check'
+    WHERE constraint_name = 'skills_hunt_submissions_url_validation_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE skills_hunt_submissions
@@ -4124,7 +4124,7 @@ DO $skills_hunt_achievements_round_fk$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'skills_hunt_achievements_round_id_fkey'
+    WHERE constraint_name = 'skills_hunt_achievements_round_id_fkey' AND constraint_schema = current_schema()
       AND table_name = 'skills_hunt_achievements'
   ) THEN
     BEGIN
@@ -4428,7 +4428,7 @@ DO $comic_conversations_channel_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_conversations_channel_check'
+    WHERE constraint_name = 'comic_conversations_channel_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_conversations
@@ -4445,7 +4445,7 @@ DO $comic_conversations_status_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_conversations_status_check'
+    WHERE constraint_name = 'comic_conversations_status_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_conversations
@@ -4462,7 +4462,7 @@ DO $comic_turns_role_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_turns_role_check'
+    WHERE constraint_name = 'comic_turns_role_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_turns
@@ -4479,7 +4479,7 @@ DO $comic_turns_engine_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_turns_engine_check'
+    WHERE constraint_name = 'comic_turns_engine_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_turns
@@ -4496,7 +4496,7 @@ DO $comic_turns_nlu_confidence_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_turns_nlu_confidence_check'
+    WHERE constraint_name = 'comic_turns_nlu_confidence_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_turns
@@ -4513,7 +4513,7 @@ DO $comic_review_queue_status_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_review_queue_status_check'
+    WHERE constraint_name = 'comic_review_queue_status_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_review_queue
@@ -4530,7 +4530,7 @@ DO $comic_training_examples_status_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_training_examples_status_check'
+    WHERE constraint_name = 'comic_training_examples_status_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_training_examples
@@ -4547,7 +4547,7 @@ DO $comic_answer_ratings_rating_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_answer_ratings_rating_check'
+    WHERE constraint_name = 'comic_answer_ratings_rating_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_answer_ratings
@@ -4650,7 +4650,7 @@ DO $contributions_cycles_window_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_cycles_window_check'
+    WHERE constraint_name = 'contributions_cycles_window_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE contributions_cycles
       ADD CONSTRAINT contributions_cycles_window_check CHECK (ends_at > starts_at);
@@ -4661,7 +4661,7 @@ DO $contributions_cycles_goals_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_cycles_goals_check'
+    WHERE constraint_name = 'contributions_cycles_goals_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE contributions_cycles
       ADD CONSTRAINT contributions_cycles_goals_check
@@ -4717,7 +4717,7 @@ DO $contributions_submissions_amounts_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_submissions_amounts_check'
+    WHERE constraint_name = 'contributions_submissions_amounts_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE contributions_submissions
       ADD CONSTRAINT contributions_submissions_amounts_check
@@ -4735,7 +4735,7 @@ DO $contributions_submissions_gift_card_signal_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_submissions_gift_card_signal_check'
+    WHERE constraint_name = 'contributions_submissions_gift_card_signal_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE contributions_submissions
       ADD CONSTRAINT contributions_submissions_gift_card_signal_check
@@ -4749,7 +4749,7 @@ DO $contributions_submissions_cycle_fk$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'contributions_submissions_cycle_id_fkey'
+    WHERE constraint_name = 'contributions_submissions_cycle_id_fkey' AND constraint_schema = current_schema()
       AND constraint_type = 'FOREIGN KEY'
   ) THEN
     ALTER TABLE contributions_submissions
@@ -4786,7 +4786,7 @@ DO $contributions_runtime_config_positive_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_runtime_config_positive_check'
+    WHERE constraint_name = 'contributions_runtime_config_positive_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE contributions_runtime_config
       ADD CONSTRAINT contributions_runtime_config_positive_check
@@ -5027,7 +5027,7 @@ DO $member_blocks_unique_constraint$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'member_blocks_blocker_blocked_unique'
+    WHERE constraint_name = 'member_blocks_blocker_blocked_unique' AND constraint_schema = current_schema()
       AND table_name = 'member_blocks'
   ) THEN
     BEGIN
@@ -5044,7 +5044,7 @@ DO $member_blocks_no_self_block$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'member_blocks_no_self_block'
+    WHERE constraint_name = 'member_blocks_no_self_block' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE member_blocks
@@ -5107,7 +5107,7 @@ DO $member_safety_reports_status_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'member_safety_reports_status_check'
+    WHERE constraint_name = 'member_safety_reports_status_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE member_safety_reports
@@ -5123,7 +5123,7 @@ DO $member_safety_reports_no_self_report$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'member_safety_reports_no_self_report'
+    WHERE constraint_name = 'member_safety_reports_no_self_report' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE member_safety_reports
