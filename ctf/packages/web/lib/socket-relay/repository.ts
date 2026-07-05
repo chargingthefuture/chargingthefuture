@@ -837,7 +837,7 @@ export async function sendFulfillmentMessage(
     `INSERT INTO socket_relay_messages (fulfillment_id, sender_user_id, message_text, client_message_id, moderation_status)
      VALUES ($1::uuid, $2, $3, $4, 'accepted')
      ON CONFLICT (fulfillment_id, sender_user_id, client_message_id)
-     DO UPDATE SET message_text = EXCLUDED.message_text
+     DO UPDATE SET message_text = socket_relay_messages.message_text
      RETURNING id, fulfillment_id, sender_user_id, message_text, moderation_status, created_at`,
     [fulfillmentId, actorUserId, normalizeText(messageText), normalizeText(clientMessageId)],
   );
