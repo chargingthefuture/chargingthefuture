@@ -76,6 +76,12 @@ export const LighthousePropertyDetail: React.FC<Props> = ({ property, onBack }) 
               <Text style={styles.locationText}>{location}</Text>
             </View>
           ) : null}
+          {property.propertyType && property.propertyType.trim().length > 0 ? (
+            <View style={styles.typeChip}>
+              <Ionicons name="home-outline" size={11} color={COLOR} />
+              <Text style={styles.typeChipText}>{property.propertyType}</Text>
+            </View>
+          ) : null}
           <View style={styles.metaRow}>
             <Text style={styles.metaText}>{beds}</Text>
             {baths ? <Text style={styles.metaDivider}>·</Text> : null}
@@ -190,6 +196,25 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 12,
     color: '#9CA3AF',
+    marginLeft: 2,
+  },
+  typeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: `${COLOR}12`,
+    borderWidth: 1,
+    borderColor: `${COLOR}30`,
+    borderRadius: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    marginBottom: 12,
+  },
+  typeChipText: {
+    fontSize: 12,
+    color: COLOR,
+    fontWeight: '600',
     marginLeft: 2,
   },
   metaRow: {

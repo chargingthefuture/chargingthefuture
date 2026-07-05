@@ -1,7 +1,7 @@
 "use client";
 
 import { Bath, Bed, Heart, MapPin } from "lucide-react";
-import { COLOR, formatRent, listingAcceptsCredits, type CurrencyMap, type Property } from "./shared";
+import { COLOR, formatRentParts, listingAcceptsCredits, type CurrencyMap, type Property } from "./shared";
 
 export function LighthouseBrowse({
   properties,
@@ -56,12 +56,17 @@ export function LighthouseBrowse({
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 8 }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     {(() => {
-                      const rent = formatRent(p, currencies);
+                      const rent = formatRentParts(p, currencies);
                       if (rent === null) return null;
-                      if (rent === "Free") return <div style={{ fontSize: 18, fontWeight: 800, color: COLOR }}>Free</div>;
-                      // overflowWrap lets a long currency label (e.g. "ServiceCredits") wrap inside the
-                      // card instead of pushing "/mo" and the View button past the clipped card edge.
-                      return <div style={{ fontSize: 18, fontWeight: 800, color: COLOR, lineHeight: 1.2, overflowWrap: "anywhere" }}>{rent}<span style={{ fontSize: 11, color: "#6B7280", fontWeight: 400 }}>/mo</span></div>;
+                      // Number stays large; a long unit like "ServiceCredits" renders small so it fits
+                      // and wraps cleanly instead of breaking mid-word or spilling past the card edge.
+                      return (
+                        <div style={{ color: COLOR, lineHeight: 1.15, overflowWrap: "anywhere" }}>
+                          <span style={{ fontSize: 18, fontWeight: 800 }}>{rent.primary}</span>
+                          {rent.unit ? <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 3 }}>{rent.unit}</span> : null}
+                          {rent.perMonth ? <span style={{ fontSize: 11, color: "#6B7280", fontWeight: 400 }}>/mo</span> : null}
+                        </div>
+                      );
                     })()}
                     {listingAcceptsCredits(p) && <div style={{ fontSize: 10, color: "#F59E0B", marginTop: 2 }}>Credits ✓</div>}
                   </div>
