@@ -11,6 +11,9 @@ const MUTED = '#9CA3AF';
 // ctf/packages/web/lib/currency/types.ts.
 const SERVICE_CREDITS_CODE = 'SC';
 
+// Kinds of place a member can list — mirrors LIGHTHOUSE_PROPERTY_TYPES on the web.
+const PROPERTY_TYPES = ['House', 'Room in a house', 'Apartment', 'Camper'] as const;
+
 type HostForm = {
   title: string;
   description: string;
@@ -142,7 +145,24 @@ export const LighthouseHostForm: React.FC<Props> = ({ submitting, error, onSubmi
   return (
     <View style={styles.card}>
       <Field label="Title *" value={form.title} onChange={(v) => setField('title', v)} placeholder="Quiet 1-bed near transit" />
-      <Field label="Type" value={form.propertyType} onChange={(v) => setField('propertyType', v)} placeholder="Apartment, room, house…" />
+      <View style={styles.field}>
+        <Text style={styles.label}>Type</Text>
+        <View style={styles.chipRow}>
+          {PROPERTY_TYPES.map((type) => {
+            const selected = form.propertyType === type;
+            return (
+              <TouchableOpacity
+                key={type}
+                style={[styles.chip, selected && styles.chipOn]}
+                onPress={() => setField('propertyType', selected ? '' : type)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.chipText, selected && styles.chipTextOn]}>{type}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
       <Field
         label="Description *"
         value={form.description}
@@ -237,6 +257,31 @@ const styles = StyleSheet.create({
   textarea: {
     minHeight: 72,
     textAlignVertical: 'top',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  chipOn: {
+    backgroundColor: `${COLOR}14`,
+    borderColor: `${COLOR}40`,
+  },
+  chipText: {
+    fontSize: 13,
+    color: '#F9FAFB',
+    fontWeight: '600',
+  },
+  chipTextOn: {
+    color: COLOR,
   },
   toggle: {
     backgroundColor: 'rgba(255,255,255,0.04)',

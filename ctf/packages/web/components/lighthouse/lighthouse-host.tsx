@@ -9,7 +9,7 @@ import { CurrencySelect } from "@/components/shared/currency-select";
 import type { Currency } from "@/lib/currency/types";
 import { SERVICE_CREDITS_LABEL } from "@/lib/currency/types";
 import { sortPreferred } from "@/lib/currency/format";
-import { formatRent, getLighthouseTokens, type CurrencyMap, type Property } from "./shared";
+import { formatRent, getLighthouseTokens, LIGHTHOUSE_PROPERTY_TYPES, type CurrencyMap, type Property } from "./shared";
 
 // Member self-service hosting. A member lists their own place here; there is NO separate "host
 // profile" form — the host identity shown on a listing is composed from data we already have
@@ -321,7 +321,23 @@ export function LighthouseHost({
           <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>{editingId ? "Edit listing" : "List your place"}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
             {field("title", "Title *", { placeholder: "Quiet 1-bed near transit" })}
-            {field("propertyType", "Type", { placeholder: "Apartment, room, house…" })}
+            <div style={{ flex: "1 1 160px", minWidth: 140 }}>
+              <label style={labelStyle}>Type</label>
+              <select
+                value={form.propertyType}
+                onChange={(e) => setField("propertyType", e.target.value)}
+                style={inputStyle}
+                aria-label="Property type"
+              >
+                <option value="">Select type…</option>
+                {LIGHTHOUSE_PROPERTY_TYPES.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+                {form.propertyType && !LIGHTHOUSE_PROPERTY_TYPES.includes(form.propertyType as (typeof LIGHTHOUSE_PROPERTY_TYPES)[number]) ? (
+                  <option value={form.propertyType}>{form.propertyType}</option>
+                ) : null}
+              </select>
+            </div>
             <div style={{ flex: "1 1 100%" }}>{field("description", "Description *", { textarea: true, placeholder: "Describe the place, the neighborhood, who it suits…" })}</div>
             {field("addressLine", "Address")}
             {field("city", "City")}

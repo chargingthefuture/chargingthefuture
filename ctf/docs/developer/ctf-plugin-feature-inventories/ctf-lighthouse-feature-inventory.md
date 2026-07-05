@@ -242,6 +242,11 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-07-05: **Listing price/currency/type display polish (web + mobile-responsive).** No schema, route, or contract change:
+  - Browse card and listing detail render the rent with the amount large and a long currency label (e.g. "ServiceCredits") small, instead of the whole string at the price font size — a ServiceCredits price no longer overflows or breaks mid-word at phone width (`formatRentParts` in `shared.ts`).
+  - The listing detail now shows the full set of accepted currencies (ServiceCredits first), not just a single "Accepts ServiceCredits" badge (`acceptedCurrencyLabels`).
+  - Property **type** is now a defined picker — House, Room in a house, Apartment, Camper (`LIGHTHOUSE_PROPERTY_TYPES`) — in both the web (`lighthouse-host.tsx`) and mobile (`LighthouseHostForm.tsx`) host forms, replacing the free-text field. The type is surfaced as a chip in the web and native listing detail. Legacy free-text values still display and are preserved on edit.
+  - Native (Android) listing card/detail still show a `$`-prefixed price and no accepted-currency list; that display parity is tracked in #1376 (needs a mobile currency catalog).
 - 2026-07-04: **Recurring rent recognition moved to the Recurring Activity plugin (issue #885).** No LightHouse schema, route, or contract change. LightHouse's `monthly_rent`/`rent_currency` stay listing-only (the asking price, never a settled amount), and LightHouse does NOT gain a settlement table. Instead, an ongoing rent relationship is captured in the new `recurring-activity` plugin as a member's self-declared, counterparty-confirmed activity tagged sector `housing` — counted toward GDP by number for fiat (no amount ever stored) and by declared value for ServiceCredits. This closes #885 without LightHouse holding any recurring fiat-payment record.
 - 2026-06-27: **Code-review sweep fixes (issues #1060, #1064, #1071).** No schema or contract change:
   - The member shell's Browse tab now reads `GET /api/lighthouse/properties` (all active public listings) instead of `GET /api/lighthouse/my-properties` (the user's own listings), so a seeker with no listings of their own sees available housing. The Host tab still loads the user's own listings itself (#1071).

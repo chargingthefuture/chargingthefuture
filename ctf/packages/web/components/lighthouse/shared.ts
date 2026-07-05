@@ -4,7 +4,12 @@
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import type { Currency } from "@/lib/currency/types";
-import { formatPrice } from "@/lib/currency/format";
+import { SERVICE_CREDITS_LABEL } from "@/lib/currency/types";
+import { formatPrice, sortPreferred } from "@/lib/currency/format";
+
+// The kinds of place a member can list on LightHouse (owner: houses, rooms in a house, apartments,
+// and campers). Stored verbatim on `property_type`; also the option set for the host form picker.
+export const LIGHTHOUSE_PROPERTY_TYPES = ["House", "Room in a house", "Apartment", "Camper"] as const;
 
 export const COLOR = "#60A5FA";
 // App surface background as rendered by the mockup (the mockup's `BG`
@@ -43,6 +48,8 @@ export interface Property {
   hostUserId: string;
   img?: string;
   title: string;
+  // What kind of place this is (e.g. "House", "Apartment", "Camper"). Free-form on older rows.
+  propertyType?: string | null;
   city: string;
   state: string;
   bedrooms: number;
@@ -82,6 +89,47 @@ export function formatRent(property: Property, currencies: CurrencyMap): string 
   const currency = currencies[code];
   if (currency) return formatPrice(amount, currency);
   return `$${amount}`;
+}
+
+/**
+ * A rent split into a large primary part and a small unit label, so a long currency name like
+ * "ServiceCredits" renders small next to the number instead of at the giant price font size (which
+ * overflowed the card). `perMonth` is false for "Free" and amount-less currencies (no "/mo").
+ *   fiat        → { primary: "$1,200", unit: null,             perMonth: true  }
+ *   credits     → { primary: "20",     unit: "ServiceCredits", perMonth: true  }
+ *   free / zero → { primary: "Free",   unit: null,             perMonth: false }
+ */
+export interface RentParts {
+  primary: string;
+  unit: string | null;
+  perMonth: boolean;
+}
+
+export function formatRentParts(property: Property, currencies: CurrencyMap): RentParts | null {
+  const amount = property.monthlyRent;
+  if (!Number.isFinite(amount)) return null;
+  if (amount === 0) return { primary: "Free", unit: null, perMonth: false };
+  const code = property.rentCurrency ?? "USD";
+  const currency = currencies[code];
+  if (!currency) return { primary: `$${amount}`, unit: null, perMonth: true };
+  if (currency.kind === "barter" || !currency.requiresAmount) {
+    return { primary: currency.isServiceCredits ? SERVICE_CREDITS_LABEL : currency.label, unit: null, perMonth: false };
+  }
+  const formatted = amount.toLocaleString("en-US", {
+    minimumFractionDigits: currency.decimalPlaces,
+    maximumFractionDigits: currency.decimalPlaces,
+  });
+  if (currency.isServiceCredits) return { primary: formatted, unit: SERVICE_CREDITS_LABEL, perMonth: true };
+  if (currency.symbol) return { primary: `${currency.symbol}${formatted}`, unit: null, perMonth: true };
+  return { primary: formatted, unit: currency.code, perMonth: true };
+}
+
+/** Accepted-currency labels for a listing, ServiceCredits first, resolved via the currency catalog. */
+export function acceptedCurrencyLabels(property: Property, currencies: CurrencyMap): string[] {
+  const resolved = (property.acceptedCurrencies ?? [])
+    .map((code) => currencies[code])
+    .filter((c): c is Currency => Boolean(c));
+  return sortPreferred(resolved).map((c) => (c.isServiceCredits ? SERVICE_CREDITS_LABEL : c.label));
 }
 
 export interface Match {

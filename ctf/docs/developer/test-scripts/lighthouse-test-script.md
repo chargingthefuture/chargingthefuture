@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:lighthouse` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-lighthouse-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display) |
 
 ## How to run this
 
@@ -38,7 +38,9 @@ Member role unless noted.
    location, rent), not a spinner or error. → web ☐ mobile ☐ android ☐
 3. **Rent and ServiceCredits read correctly.** A fiat rent shows in its own currency; a listing that
    accepts ServiceCredits shows the "Accepts ServiceCredits" badge by its label — never a "$" figure
-   for ServiceCredits, never a credits↔fiat equivalence. → web ☐ mobile ☐ android ☐
+   for ServiceCredits, never a credits↔fiat equivalence. On a narrow (mobile) width the ServiceCredits
+   price stays inside its card — the amount is large, "ServiceCredits" is small, and "/mo" is not
+   clipped or broken mid-word. → web ☐ mobile ☐ android ☐
 4. **Match request is single.** Send a match request on a property, then try again on the same one.
    The second attempt is refused as a duplicate, not silently doubled. → web ☐ mobile ☐ android ☐
 
@@ -53,17 +55,22 @@ Member role unless noted.
 1. Open the browse screen and read the list.
 2. Open one property's detail view.
 **Expected:** The list shows active public listings (not only your own). Detail shows listing fields
-and host reference info on a full page, with the seeker match-request action available.
+and host reference info on a full page, with the seeker match-request action available. When the
+listing has a property type (House, Room in a house, Apartment, Camper) it shows as a chip on the
+detail (and native detail).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### LH-2 · Rent currency vs accepted currencies
 **Role:** member · **Surfaces:** all
 **Steps:**
 1. Find a listing with a fiat rent and one that accepts ServiceCredits.
-2. Read the rent and the accepted-currency badge on each.
-**Expected:** Rent renders in its own currency (0 reads as "Free", blank when unset). "Accepts
-ServiceCredits" is a separate field shown by its label, never derived from the rent currency and
-never shown as a fiat amount.
+2. Read the rent and the accepted-currency badge on each, then open the detail of a listing that
+   accepts more than one currency.
+**Expected:** Rent renders in its own currency (0 reads as "Free", blank when unset). A long currency
+label like "ServiceCredits" renders small next to a large amount and does not overflow the card.
+"Accepts ServiceCredits" is a separate field shown by its label, never derived from the rent currency
+and never shown as a fiat amount. The detail view lists the **full** set of accepted currencies
+(ServiceCredits first), not just a single badge.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### LH-3 · Send a match request
@@ -79,9 +86,10 @@ request on the same property is refused as a duplicate active/pending request.
 ### LH-4 · List your own place (self-service hosting)
 **Role:** member · **Surfaces:** web, mobile (android host tab where present)
 **Steps:**
-1. Open the "List your place" tab and fill the create-listing form: title, description, type,
-   address fields, bedrooms/bathrooms, monthly rent and rent currency, accepted currencies
-   (toggle ServiceCredits), available-from, amenities, house rules.
+1. Open the "List your place" tab and fill the create-listing form: title, description, type
+   (a picker: House, Room in a house, Apartment, Camper), address fields, bedrooms/bathrooms, monthly
+   rent and rent currency, accepted currencies (toggle ServiceCredits), available-from, amenities,
+   house rules.
 2. Save the listing, then open "Your listings".
 **Expected:** Listing is created with no separate host-profile form and no admin gate. Host identity
 shows your username, your Quora link, and the Trust widget — none re-entered. The new listing appears
