@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { LighthouseProperty } from './types';
+import { acceptedCurrencyLabels, formatRentParts, type CurrencyMap } from './currency';
 
 const COLOR = '#60A5FA';
 const BG = '#0F1117';
@@ -15,6 +16,7 @@ const DARK = '#090B0F';
 
 interface Props {
   property: LighthouseProperty;
+  currencies: CurrencyMap;
   onBack: () => void;
 }
 
@@ -42,13 +44,15 @@ const HouseRuleRow: React.FC<{ rule: string }> = ({ rule }) => (
   <Text style={styles.ruleText}>• {rule}</Text>
 );
 
-export const LighthousePropertyDetail: React.FC<Props> = ({ property, onBack }) => {
+export const LighthousePropertyDetail: React.FC<Props> = ({ property, currencies, onBack }) => {
   const location = [property.city, property.state, property.country]
     .filter(Boolean)
     .join(', ');
   const beds = formatBeds(property.bedrooms);
   const baths = property.bathrooms !== null ? `${property.bathrooms} bath` : null;
   const availability = formatAvailability(property.availableFromIso);
+  const rent = formatRentParts(property, currencies);
+  const accepted = acceptedCurrencyLabels(property, currencies);
 
   return (
     <View style={styles.container}>
@@ -92,12 +96,30 @@ export const LighthousePropertyDetail: React.FC<Props> = ({ property, onBack }) 
           {property.description ? (
             <Text style={styles.description}>{property.description}</Text>
           ) : null}
-          {property.monthlyRent !== null ? (
+          {rent ? (
             <View style={styles.priceBox}>
               <Text style={styles.price}>
-                ${property.monthlyRent.toLocaleString()}
-                <Text style={styles.priceSuffix}>/mo</Text>
+                {rent.primary}
+                {rent.unit ? <Text style={styles.priceUnit}> {rent.unit}</Text> : null}
+                {rent.perMonth ? <Text style={styles.priceSuffix}>/mo</Text> : null}
               </Text>
+              {accepted.length > 0 ? (
+                <View style={styles.acceptsRow}>
+                  <Text style={styles.acceptsLabel}>Accepts</Text>
+                  <View style={styles.acceptsChips}>
+                    {accepted.map((label) => {
+                      const isCredits = label === 'ServiceCredits';
+                      return (
+                        <View key={label} style={[styles.acceptsChip, isCredits && styles.acceptsChipCredits]}>
+                          <Text style={[styles.acceptsChipText, isCredits && styles.acceptsChipTextCredits]}>
+                            {isCredits ? '✓ ' : ''}{label}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : null}
             </View>
           ) : null}
           {property.amenities.length > 0 ? (
@@ -250,10 +272,49 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: COLOR,
   },
+  priceUnit: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLOR,
+  },
   priceSuffix: {
     fontSize: 13,
     color: '#6B7280',
     fontWeight: '400',
+  },
+  acceptsRow: {
+    marginTop: 12,
+  },
+  acceptsLabel: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  acceptsChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  acceptsChip: {
+    borderRadius: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  acceptsChipCredits: {
+    backgroundColor: '#F59E0B15',
+    borderColor: '#F59E0B30',
+  },
+  acceptsChipText: {
+    fontSize: 12,
+    color: '#D1D5DB',
+  },
+  acceptsChipTextCredits: {
+    color: '#F59E0B',
   },
   section: {
     marginBottom: 16,
