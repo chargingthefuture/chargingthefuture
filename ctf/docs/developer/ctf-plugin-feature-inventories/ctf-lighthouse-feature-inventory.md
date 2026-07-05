@@ -242,6 +242,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-07-05: **Native (Android) listing currency display parity (closes #1376).** No schema, route, or contract change. The native `LighthouseProperty` read model gained `rentCurrency` and `acceptedCurrencies` (the API already returned them); a mobile LightHouse currency helper (`currency.ts`) mirrors the web `formatRentParts`/`acceptedCurrencyLabels`. The native listing card, listing detail, and the host "Your listings" rows now render rent in its own currency (a ServiceCredits price shows "N ServiceCredits", never a "$"), and the detail lists the full accepted-currency set. The catalog comes from `GET /api/currencies` (reused mobile `fetchCurrencies`). This closes the parity item deferred on 2026-07-05.
 - 2026-07-05: **Listing price/currency/type display polish (web + mobile-responsive).** No schema, route, or contract change:
   - Browse card and listing detail render the rent with the amount large and a long currency label (e.g. "ServiceCredits") small, instead of the whole string at the price font size — a ServiceCredits price no longer overflows or breaks mid-word at phone width (`formatRentParts` in `shared.ts`).
   - The listing detail now shows the full set of accepted currencies (ServiceCredits first), not just a single "Accepts ServiceCredits" badge (`acceptedCurrencyLabels`).

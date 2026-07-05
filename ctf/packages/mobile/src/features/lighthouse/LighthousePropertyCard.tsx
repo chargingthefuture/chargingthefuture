@@ -2,11 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { LighthouseProperty } from './types';
+import { acceptedCurrencyLabels, formatRentParts, type CurrencyMap } from './currency';
 
 const COLOR = '#60A5FA';
 
 interface Props {
   property: LighthouseProperty;
+  currencies: CurrencyMap;
   onPress: (_id: string) => void;
 }
 
@@ -24,11 +26,13 @@ function formatBeds(bedrooms: number | null): string {
   return `${bedrooms}bd`;
 }
 
-export const LighthousePropertyCard: React.FC<Props> = ({ property, onPress }) => {
+export const LighthousePropertyCard: React.FC<Props> = ({ property, currencies, onPress }) => {
   const beds = formatBeds(property.bedrooms);
   const baths = property.bathrooms !== null ? `${property.bathrooms}ba` : null;
   const availability = formatAvailability(property.availableFromIso);
   const location = [property.city, property.state].filter(Boolean).join(', ');
+  const rent = formatRentParts(property, currencies);
+  const acceptsCredits = acceptedCurrencyLabels(property, currencies).includes('ServiceCredits');
 
   return (
     <TouchableOpacity
@@ -52,15 +56,17 @@ export const LighthousePropertyCard: React.FC<Props> = ({ property, onPress }) =
           </View>
         ) : null}
         <View style={styles.footer}>
-          <View>
-            {property.monthlyRent !== null ? (
+          <View style={styles.footerLeft}>
+            {rent ? (
               <Text style={styles.price}>
-                ${property.monthlyRent.toLocaleString()}
-                <Text style={styles.priceSuffix}>/mo</Text>
+                {rent.primary}
+                {rent.unit ? <Text style={styles.priceUnit}> {rent.unit}</Text> : null}
+                {rent.perMonth ? <Text style={styles.priceSuffix}>/mo</Text> : null}
               </Text>
             ) : (
               <Text style={styles.priceUnknown}>Contact host</Text>
             )}
+            {acceptsCredits ? <Text style={styles.creditsBadge}>Credits ✓</Text> : null}
             <View style={styles.metaRow}>
               {beds ? (
                 <Text style={styles.metaText}>{beds}</Text>
@@ -122,16 +128,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
+    gap: 8,
+  },
+  footerLeft: {
+    flexShrink: 1,
   },
   price: {
     fontSize: 18,
     fontWeight: '800',
     color: COLOR,
   },
+  priceUnit: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLOR,
+  },
   priceSuffix: {
     fontSize: 11,
     color: '#6B7280',
     fontWeight: '400',
+  },
+  creditsBadge: {
+    fontSize: 10,
+    color: '#F59E0B',
+    marginTop: 2,
   },
   priceUnknown: {
     fontSize: 14,

@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { fetchProperties } from './api';
 import type { LighthouseProperty } from './types';
+import { fetchCurrencies } from '../currency/api';
+import { buildCurrencyMap, type CurrencyMap } from './currency';
 import { LighthouseLoadingState } from './LighthouseLoadingState';
 import { LighthouseEmptyState } from './LighthouseEmptyState';
 import { LighthousePropertyCard } from './LighthousePropertyCard';
@@ -13,12 +15,20 @@ const BG = '#0F1117';
 export const LighthouseScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<LighthouseProperty[]>([]);
+  const [currencies, setCurrencies] = useState<CurrencyMap>({});
   const [total, setTotal] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
+    // Best-effort currency catalog so rent renders in its own currency; the list still shows
+    // without it (formatRentParts falls back to a plain "$" prefix).
+    fetchCurrencies()
+      .then((rows) => {
+        if (mounted) setCurrencies(buildCurrencyMap(rows));
+      })
+      .catch(() => undefined);
     fetchProperties(1, 20)
       .then((res) => {
         if (!mounted) return;
@@ -52,7 +62,7 @@ export const LighthouseScreen: React.FC = () => {
   if (selectedId) {
     const property = properties.find((p) => p.id === selectedId);
     if (property) {
-      return <LighthousePropertyDetail property={property} onBack={handleBack} />;
+      return <LighthousePropertyDetail property={property} currencies={currencies} onBack={handleBack} />;
     }
   }
 
@@ -67,7 +77,7 @@ export const LighthouseScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={<LighthouseListHeader total={total} />}
         renderItem={({ item }) => (
-          <LighthousePropertyCard property={item} onPress={handleSelect} />
+          <LighthousePropertyCard property={item} currencies={currencies} onPress={handleSelect} />
         )}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}

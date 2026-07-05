@@ -70,7 +70,9 @@ detail (and native detail).
 label like "ServiceCredits" renders small next to a large amount and does not overflow the card.
 "Accepts ServiceCredits" is a separate field shown by its label, never derived from the rent currency
 and never shown as a fiat amount. The detail view lists the **full** set of accepted currencies
-(ServiceCredits first), not just a single badge.
+(ServiceCredits first), not just a single badge. This holds on **android too** — the native card,
+detail, and the host "Your listings" rows show the currency price (never a hardcoded "$" for a
+ServiceCredits listing) and the native detail lists the accepted currencies.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### LH-3 · Send a match request

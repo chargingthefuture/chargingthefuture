@@ -4,7 +4,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../auth/auth-context';
 import { fetchMyProperties, createProperty } from './api';
 import type { LighthouseProperty, PropertyCreateInput } from './types';
+import { fetchCurrencies } from '../currency/api';
+import { buildCurrencyMap, formatRentParts, type CurrencyMap } from './currency';
 import { LighthouseHostForm } from './LighthouseHostForm';
+
+// Compact inline rent string for the "Your listings" rows, e.g. "20 ServiceCredits/mo" or "$1,200/mo".
+function inlineRent(property: LighthouseProperty, currencies: CurrencyMap): string {
+  const parts = formatRentParts(property, currencies);
+  if (!parts) return 'ServiceCredits / free';
+  return `${parts.primary}${parts.unit ? ` ${parts.unit}` : ''}${parts.perMonth ? '/mo' : ''}`;
+}
 
 // Member self-service hosting. A member lists their own place here; there is NO
 // separate "host profile" form — the host identity shown on a listing is composed
@@ -23,6 +32,7 @@ export const LighthouseHost: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<LighthouseProperty[]>([]);
+  const [currencies, setCurrencies] = useState<CurrencyMap>({});
   const [quoraUrl, setQuoraUrl] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -42,6 +52,12 @@ export const LighthouseHost: React.FC = () => {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
+    // Best-effort currency catalog so the listing rows render rent in its own currency.
+    fetchCurrencies()
+      .then((rows) => {
+        if (mounted) setCurrencies(buildCurrencyMap(rows));
+      })
+      .catch(() => undefined);
     loadMine().finally(() => {
       if (mounted) setLoading(false);
     });
@@ -124,7 +140,7 @@ export const LighthouseHost: React.FC = () => {
               <Text style={styles.listingTitle}>{p.title}</Text>
               <Text style={styles.listingMeta}>
                 {[p.city, p.state].filter(Boolean).join(', ') || 'Location not set'}
-                {p.monthlyRent ? ` · $${p.monthlyRent}/mo` : ' · ServiceCredits / free'}
+                {` · ${inlineRent(p, currencies)}`}
               </Text>
             </View>
           ))}

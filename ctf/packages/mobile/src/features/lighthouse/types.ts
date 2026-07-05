@@ -12,6 +12,10 @@ export type LighthouseProperty = {
   bedrooms: number | null;
   bathrooms: number | null;
   monthlyRent: number | null;
+  // Currency the rent is listed in (currencies.code). Null falls back to USD for display.
+  rentCurrency: string | null;
+  // Currency codes this listing accepts (currencies.code). Independent of rentCurrency.
+  acceptedCurrencies: string[];
   availableFromIso: string | null;
   amenities: string[];
   houseRules: string[];
