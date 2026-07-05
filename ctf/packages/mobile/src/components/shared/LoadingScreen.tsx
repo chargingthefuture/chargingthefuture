@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 /**
  * Universal app-wide loading screen. Shows the "Exit Their Economy / Exit The
@@ -8,10 +8,16 @@ import { StyleSheet, Text, View } from 'react-native';
  *
  * Guardrail from the design spec: loading screens are NOT theme-toggled. Always
  * render the canonical dark treatment (#0F1117), regardless of any app theme.
+ *
+ * When this screen is returned at the app root (before the flex:1 shell mounts),
+ * its parent chain is context providers with no laid-out height, so a bare `flex:1`
+ * collapses and the text pins to the top. `minHeight` = the window height forces the
+ * screen to fill the viewport so the tagline is centered mid-page in every case.
  */
 export function LoadingScreen() {
+  const { height } = useWindowDimensions();
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { minHeight: height }]}>
       <View style={styles.inner}>
         <Text style={[styles.line, styles.lineLead]}>EXIT THEIR ECONOMY</Text>
         <Text style={styles.line}>EXIT THE PSYOP</Text>
