@@ -1,0 +1,61 @@
+# Navigation and Back-Control Rules
+
+## Status
+
+**Decided by the owner. This is settled — do not relitigate.** Every screen must offer a way back,
+and it must be the **same on-brand control everywhere** — not a bespoke pill, text link, or arrow an
+agent invents for one screen. This has been shipped wrong more than once (a stray "Back to admin"
+pill on the AI Review Dashboard, a stacked back-bar, a screen with no back at all), so it is now a
+hard rule. Read this before adding, moving, or "fixing" any back button or screen header.
+
+## The one shared way (mandatory)
+
+There are exactly two shared pieces. Use them; never hand-roll a back control.
+
+1. **`MobileScreenHeader`** (`components/shared/mobile-screen-header.tsx`) — the standard top bar:
+   an accent-tinted rounded-square **back chevron** on the far left, the plugin's **brand icon**, the
+   **screen title**, and the shared **report-bug / settings / account** cluster (`MobileTopActions`)
+   on the right. It **self-gates on the breakpoint**: at phone width it renders the full bar; on
+   desktop it renders only a slim back bar (or nothing when `desktopBack={false}`). Drop it in
+   unconditionally and let it pick the right bar.
+2. **`PluginRailFooter`** (`components/shared/plugin-rail-footer.tsx`) — the bottom of a plugin's
+   **desktop left icon rail**: back-to-apps, account & settings, and the account menu. A screen that
+   has a desktop icon rail already gets its desktop back control from this footer.
+
+Both resolve their destination through **`resolveBackTarget(pathname)`** (`lib/nav/back-target.ts`) —
+the single one-level-up policy (an `/admin/*` page → `/admin`; `/admin` → home; `/account/*` →
+`/account`; everything else → all apps). **Never compute a back destination by hand** and never call
+`router.back()` for the in-app back control (that is browser history, not the tailored one-level-up).
+
+## How to wire it (by screen shape)
+
+- **Rail-less screen (most admin shells, simple pages):** render `<MobileScreenHeader title=… accent=…
+  icon=… />` as the first element. It carries the back control on both breakpoints. Done. Follow a
+  shipped sibling such as `socket-relay-admin-shell.tsx` or `bug-reports-admin-shell.tsx`.
+- **Screen with a desktop left icon rail (e.g. the AI Review Dashboard, community shell):** the rail's
+  `PluginRailFooter` is the desktop back, and the rail is hidden at phone width — so render
+  `<MobileScreenHeader … desktopBack={false} />` so the mobile header appears on phones and nothing
+  duplicates on desktop. When the screen is a full-height flex/grid, wrap it so the sticky header sits
+  above the content and the panes fill the remaining space (`height: 100%` of a `flex: 1` parent, not a
+  raw `100vh`/`100dvh` that would overflow by the header's height). Follow `contributions-shell.tsx`.
+- **Android (React Native):** the app already shows a persistent top navigator on every screen, so a
+  member always has a way back. Do not add a second bespoke back control there; keep parity by relying
+  on that navigator.
+
+## Forbidden (never ship these)
+
+- A hand-rolled back affordance: a custom "Back to …" pill/button, a bare arrow, a text link, or a raw
+  `<Link href="/admin">` styled as a back control, when `MobileScreenHeader` / `PluginRailFooter`
+  already cover the screen.
+- A screen with **no** way back at phone width (the icon rail is hidden on mobile — that is exactly
+  when the shared mobile header is required).
+- A second, stacked, or duplicated back control (e.g. a mobile header **and** a bespoke pill; a desktop
+  rail back **and** a desktop `MobileScreenHeader` back — use `desktopBack={false}` to opt out).
+- Inventing the back destination or label inline instead of `resolveBackTarget`.
+
+## Why this exists
+
+Members and admins are non-technical and use the app mostly on a phone (often installed to the home
+screen, where there is no browser back button). A screen with no back, or with a different-looking
+back on every screen, strands them. One shared control in one place means the way back is always in
+the same spot and looks the same everywhere — and an agent never has to design a back button again.
