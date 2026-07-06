@@ -89,9 +89,10 @@ request on the same property is refused as a duplicate active/pending request.
 **Role:** member · **Surfaces:** web, mobile (android host tab where present)
 **Steps:**
 1. Open the "List your place" tab and fill the create-listing form: title, description, type
-   (a picker: House, Room in a house, Apartment, Camper), address fields, bedrooms/bathrooms, monthly
-   rent and rent currency, accepted currencies (toggle ServiceCredits), available-from, amenities,
-   house rules.
+   (a picker: House, Room in a house, Apartment, Camper), address, city, **Country (a dropdown)** and
+   **State/region** (a US-state dropdown when Country is the United States, otherwise a free-text
+   box — web), postal code, bedrooms/bathrooms, monthly rent and rent currency, accepted currencies
+   (toggle ServiceCredits), available-from, amenities, house rules.
 2. Save the listing, then open "Your listings".
 **Expected:** Listing is created with no separate host-profile form and no admin gate. Host identity
 shows your username, your Quora link, and the Trust widget — none re-entered. The new listing appears

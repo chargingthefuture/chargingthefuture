@@ -6,6 +6,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
 import type { TrustUserExtension } from "@/lib/trust/types";
 import { CurrencySelect } from "@/components/shared/currency-select";
+import { CountrySelect, StateField } from "@/components/shared/location-select";
 import type { Currency } from "@/lib/currency/types";
 import { SERVICE_CREDITS_LABEL } from "@/lib/currency/types";
 import { sortPreferred } from "@/lib/currency/format";
@@ -341,8 +342,14 @@ export function LighthouseHost({
             <div style={{ flex: "1 1 100%" }}>{field("description", "Description *", { textarea: true, placeholder: "Describe the place, the neighborhood, who it suits…" })}</div>
             {field("addressLine", "Address")}
             {field("city", "City")}
-            {field("state", "State / region")}
-            {field("country", "Country")}
+            <div style={{ flex: "1 1 160px", minWidth: 140 }}>
+              <label style={labelStyle}>Country</label>
+              <CountrySelect value={form.country} onChange={(v) => setField("country", v)} style={inputStyle} />
+            </div>
+            <div style={{ flex: "1 1 160px", minWidth: 140 }}>
+              <label style={labelStyle}>State / region</label>
+              <StateField country={form.country} value={form.state} onChange={(v) => setField("state", v)} style={inputStyle} />
+            </div>
             {field("zipCode", "Postal code")}
             {field("bedrooms", "Bedrooms", { type: "number" })}
             {field("bathrooms", "Bathrooms", { type: "number" })}
