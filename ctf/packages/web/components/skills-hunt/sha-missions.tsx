@@ -166,7 +166,8 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
     try {
       const res = await fetch(`/api/skills-hunt/admin/rounds/${roundId}/missions/${missionId}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        // No request body on this DELETE, so no Content-Type — only the CSRF confirmation header.
+        headers: { "x-ctf-csrf": "1" },
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { message?: string } | null;

@@ -92,10 +92,19 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
 
   async function bulkReview(action: "accept" | "reject") {
     if (selected.size === 0) return;
-    const notes = action === "reject" ? promptRejectReason() : null;
-    if (action === "reject" && notes === null) return;
     const pendingIds = new Set(submissions.filter((s) => s.status === "pending").map((s) => s.id));
     const ids = Array.from(selected).filter((id) => pendingIds.has(id));
+    if (ids.length === 0) return;
+    // Confirm the mass action with the real count of affected pending submissions before firing —
+    // a bulk accept pays each scout and a bulk reject can trip the rejection-rate guard, so neither
+    // should run on a stray click.
+    const verb = action === "accept" ? "Accept" : "Reject";
+    const consequence = action === "accept"
+      ? "Each accepted nomination pays the configured reward once."
+      : "This cannot be undone.";
+    if (!window.confirm(`${verb} ${ids.length} selected submission${ids.length === 1 ? "" : "s"}? ${consequence}`)) return;
+    const notes = action === "reject" ? promptRejectReason() : null;
+    if (action === "reject" && notes === null) return;
     for (const id of ids) {
       // Sequential so the leaderboard rebuilds settle row-by-row.
       await reviewOne(id, action, notes);

@@ -11,6 +11,9 @@ export async function GET() {
   }
 
   try {
+    // Self-scope enforced here: this route always reads the authenticated user's own
+    // achievements via `gate.auth.userId` and never accepts a client-supplied user id, so the
+    // `selfScopeOnly` guarantee in the access policy cannot be widened from the request.
     const achievements = await listAchievements(gate.auth.userId);
     return NextResponse.json({ achievements }, { status: 200 });
   } catch (error) {

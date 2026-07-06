@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireSkillsHuntReadAccess } from '../../../_lib';
+import { ensureMutationCsrf, requireSkillsHuntSubmitAccess } from '../../../_lib';
 import { withDbTransaction } from 'lib/db/postgres';
 import { createReport, validateCreateReportInput, type CreateReportInput } from 'lib/skills-hunt/moderation';
 import { insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
@@ -7,7 +7,10 @@ import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
 
 export async function POST(request: Request, { params }: { params: Promise<{ submissionId: string }> }) {
-  const gate = await requireSkillsHuntReadAccess();
+  // Filing a report is an authenticated-member write, not a plain read — use the submit gate,
+  // which the access policy (`skills-hunt.submission.report`) and the _lib comment both name as
+  // the intended gate for report filing.
+  const gate = await requireSkillsHuntSubmitAccess();
   if (!gate.allowed) {
     return gate.response;
   }
