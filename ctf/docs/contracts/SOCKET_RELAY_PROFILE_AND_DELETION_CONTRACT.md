@@ -89,6 +89,19 @@ When user deletes SocketRelay usage only:
 - User-facing confirmation text:
   - “Delete SocketRelay plugin data only? Your account remains active.”
 
+### Admin request removal (moderation)
+
+When an admin removes a request (`DELETE /api/socket-relay/admin/requests/:id`), the removal runs in one
+transaction and is deterministic — the plugin's tables carry no `ON DELETE CASCADE`, so the app clears
+the dependent rows itself instead of leaving orphans:
+
+- Deleted: the `socket_relay_requests` row, its `socket_relay_fulfillments`, their
+  `socket_relay_fulfillment_participants`, and the request's `socket_relay_request_events`.
+- Retained: `socket_relay_messages` for those fulfillments — kept server-side as moderation/abuse
+  evidence per the transaction-scoped messaging retention above (rule 100). Once the fulfillment row is
+  gone they are unreachable through the participant-gated read path.
+- Audited: the removal writes a `socket-relay.admin.request.delete` row to `socket_relay_admin_audit_trail`.
+
 ## 6) Full-Account Deletion Contract
 
 When user requests full account deletion:
@@ -155,3 +168,4 @@ If user returns after service-scoped deletion:
 
 - 2026-02-25: Created initial draft.
 - 2026-05-31: Added transaction-scoped messaging retention (per rule 100): per-fulfillment 1:1 chat (`socket_relay_messages`) closes on terminal state (read-only window), retained server-side for moderation/abuse evidence; bodies hard-deleted/pseudonymized on deletion with minimal evidence/audit metadata retained per policy.
+- 2026-07-05: Documented admin request removal (moderation delete): now a single transaction that clears the request plus its fulfillments, participants, and request-events (no orphaned rows, since these tables have no FK cascade), retains `socket_relay_messages` as moderation evidence, and writes a `socket-relay.admin.request.delete` audit row.

@@ -22,6 +22,7 @@ import type {
   SocketRelayResolveOutcome,
 } from './types';
 import { ensureSocketRelayFulfillmentChannel } from './stream';
+import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
 
 // Cross-plugin presence: a SocketRelay help post (the Commons request a member created) marks its
@@ -255,7 +256,9 @@ export function validateProfileInput(input: SocketRelayProfileInput): boolean {
     return false;
   }
 
-  return input.relayPreferences && typeof input.relayPreferences === 'object' && !Array.isArray(input.relayPreferences);
+  // Wrap in Boolean(): a bare `obj && … && …` returns the object (truthy) rather than `true`, so a
+  // caller comparing `=== true` would get a false negative. Always return a genuine boolean.
+  return Boolean(input.relayPreferences && typeof input.relayPreferences === 'object' && !Array.isArray(input.relayPreferences));
 }
 
 export function validateRequestInput(input: SocketRelayRequestInput): boolean {
@@ -517,33 +520,44 @@ export async function updateRequest(requestId: string, actorUserId: string, isAd
   }
 
   const tags = normalizeTags(input.tags);
-  const result = await queryDb<RequestRow>(
-    `UPDATE socket_relay_requests
-     SET title = $2,
-         details = $3,
-         category = $4,
-         tags = $5::text[],
-         city = $6,
-         is_public = $7,
-         price_amount = $8,
-         price_currency = $9,
-         updated_at = NOW()
-     WHERE id = $1::uuid
-     RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at`,
-    [
-      requestId,
-      normalizeText(input.title),
-      normalizeText(input.details),
-      tags[0],
-      tags,
-      normalizeNullableText(input.city),
-      input.isPublic,
-      input.priceAmount,
-      input.priceCurrency,
-    ],
-  );
+  // Update the row and log a `request_updated` lifecycle event in the same transaction, so an edit
+  // leaves a `request_events` entry just like create/claim/resolve do (the lifecycle log is otherwise
+  // silent on edits).
+  const request = await withDbTransaction(async (client) => {
+    const result = await client.query<RequestRow>(
+      `UPDATE socket_relay_requests
+       SET title = $2,
+           details = $3,
+           category = $4,
+           tags = $5::text[],
+           city = $6,
+           is_public = $7,
+           price_amount = $8,
+           price_currency = $9,
+           updated_at = NOW()
+       WHERE id = $1::uuid
+       RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at`,
+      [
+        requestId,
+        normalizeText(input.title),
+        normalizeText(input.details),
+        tags[0],
+        tags,
+        normalizeNullableText(input.city),
+        input.isPublic,
+        input.priceAmount,
+        input.priceCurrency,
+      ],
+    );
 
-  const request = mapRequestRow(result.rows[0]);
+    await client.query(
+      `INSERT INTO socket_relay_request_events (request_id, actor_user_id, event_name, metadata)
+       VALUES ($1::uuid, $2, 'request_updated', '{}'::jsonb)`,
+      [requestId, actorUserId],
+    );
+
+    return mapRequestRow(result.rows[0]);
+  });
 
   // Best-effort presence sync after the durable update: keeps presence (and its label) in step with
   // the post's current status. Never breaks the update.
@@ -647,12 +661,16 @@ export async function claimRequest(requestId: string, actorUserId: string): Prom
     };
   });
 
+  // Resolve readable display names for the Stream channel instead of passing raw user UUIDs (which
+  // would show as the participants' names in chat). The requester's `@username` is denormalized on the
+  // request row; the fulfiller's handle is not known server-side here, so it falls back to a formatted
+  // short id. The chat-credentials route also upserts these names when either participant opens the chat.
   await ensureSocketRelayFulfillmentChannel({
     fulfillmentId: created.fulfillment.id,
     requesterUserId: created.fulfillment.requesterUserId,
-    requesterDisplayName: created.fulfillment.requesterUserId,
+    requesterDisplayName: buildIdentityDisplayName(created.request.ownerUsername, created.fulfillment.requesterUserId),
     fulfillerUserId: created.fulfillment.fulfillerUserId,
-    fulfillerDisplayName: created.fulfillment.fulfillerUserId,
+    fulfillerDisplayName: buildIdentityDisplayName(null, created.fulfillment.fulfillerUserId),
   });
 
   // Best-effort presence sync after the durable claim: the post left the open pool (status 'claimed'),
@@ -764,10 +782,14 @@ export async function resolveFulfillment(
     }
 
     if (reopen) {
-      // Put the request back into the open pool for other helpers (mirrors repost).
+      // Put the request back into the open pool for other helpers (mirrors repost) — including resetting
+      // the 28-day expiry clock. Without this a helper-cancelled reopen would keep the original
+      // expires_at, so a post that had aged close to (or past) expiry would come back already expired and
+      // be immediately un-claimable, forcing the owner to re-post manually.
       await client.query(
         `UPDATE socket_relay_requests
-         SET status = 'open', claimed_fulfillment_id = NULL, reopened_count = reopened_count + 1, updated_at = NOW()
+         SET status = 'open', claimed_fulfillment_id = NULL, reopened_count = reopened_count + 1,
+             expires_at = NOW() + INTERVAL '28 days', updated_at = NOW()
          WHERE id = $1::uuid`,
         [fulfillment.requestId],
       );
@@ -905,19 +927,36 @@ export async function listAdminFulfillments(): Promise<SocketRelayFulfillment[]>
 }
 
 export async function adminDeleteRequest(requestId: string): Promise<void> {
-  const result = await queryDb<RequestRow>(
-    `DELETE FROM socket_relay_requests
-     WHERE id = $1::uuid
-     RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at`,
-    [requestId],
-  );
+  // These tables carry no ON DELETE CASCADE (they are plain UUID columns, not FKs), so deleting the
+  // request alone would leave orphaned fulfillments, participants, and lifecycle events pointing at a
+  // row that no longer exists. Remove them in one transaction so the delete is deterministic. The
+  // fulfillment chat messages (`socket_relay_messages`) are deliberately NOT deleted here: per the
+  // deletion contract (rule 100) they are retained server-side as moderation/abuse evidence; once their
+  // fulfillment row is gone they are simply unreachable through the participant-gated read path.
+  const deleted = await withDbTransaction(async (client) => {
+    const result = await client.query<RequestRow>(
+      `DELETE FROM socket_relay_requests
+       WHERE id = $1::uuid
+       RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at`,
+      [requestId],
+    );
 
-  if ((result.rowCount ?? 0) === 0) {
-    throw new Error('request_not_found');
-  }
+    if ((result.rowCount ?? 0) === 0) {
+      throw new Error('request_not_found');
+    }
+
+    await client.query(
+      `DELETE FROM socket_relay_fulfillment_participants
+       WHERE fulfillment_id IN (SELECT id FROM socket_relay_fulfillments WHERE request_id = $1::uuid)`,
+      [requestId],
+    );
+    await client.query(`DELETE FROM socket_relay_fulfillments WHERE request_id = $1::uuid`, [requestId]);
+    await client.query(`DELETE FROM socket_relay_request_events WHERE request_id = $1::uuid`, [requestId]);
+
+    return mapRequestRow(result.rows[0]);
+  });
 
   // Best-effort presence clear after the post row is durably removed. Never breaks the delete.
-  const deleted = mapRequestRow(result.rows[0]);
   await clearMemberPresence({
     userId: deleted.ownerUserId,
     pluginSlug: SOCKET_RELAY_PRESENCE_SLUG,
