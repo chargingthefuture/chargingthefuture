@@ -132,12 +132,15 @@ readable "admins only" message.
 **Precondition:** a round with `reward-per-accept` set; a pending submission.
 **Steps:**
 1. Filter submissions by status; accept one, reject one, flag one — each behind a confirm gesture.
-2. Note the scoring breakdown and the Reward column / reward summary.
-3. Re-review the accepted submission.
+2. Select several pending submissions and use bulk accept, then bulk reject.
+3. Note the scoring breakdown and the Reward column / reward summary.
+4. Re-review the accepted submission.
 **Expected:** Each action records the reviewer and notes and applies the scoring breakdown (match,
-first-match, stack, rare-skill, quality). On accept the scout is minted the configured reward once —
-bounded by the per-scout round cap and the treasury budget; a re-review does not double-pay. A
-reject adds a participation point, not a reward. No fiat equivalent is shown for the reward.
+first-match, stack, rare-skill, quality). Bulk accept and bulk reject first ask you to confirm and
+show the count of affected pending submissions, so neither runs on a stray click. On accept the
+scout is minted the configured reward once — bounded by the per-scout round cap and the treasury
+budget; a re-review does not double-pay. A reject adds a participation point, not a reward. No fiat
+equivalent is shown for the reward.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### SH-A3 · Directory seeding governance

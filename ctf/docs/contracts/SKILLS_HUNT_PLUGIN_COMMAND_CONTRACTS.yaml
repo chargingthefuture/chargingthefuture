@@ -249,7 +249,7 @@ contracts:
     outputSchema:
       items:
         type: array
-      generatedAt:
+      generatedAtIso:
         type: string
     dataAccess:
       - skills_hunt_leaderboard

@@ -5,6 +5,11 @@ import { getRound, getRoundRewardSummary, listSubmissions, parsePaginationParams
 import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request, { params }: { params: Promise<{ roundId: string }> }) {
+  // Moderator (not admin) gate is deliberate: this is the moderation queue, matching the
+  // review and generate-directory-profile routes that moderators also use. The access policy
+  // for `skills-hunt.submission.list` is `ownershipScopeOrModerationRole`, so a moderator is
+  // permitted. The reward summary is shown because a moderator's accept is what pays the scout,
+  // so they need to see what a round pays and how much has been paid.
   const gate = await requireSkillsHuntModeratorAccess();
   if (!gate.allowed) {
     return gate.response;
