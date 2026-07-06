@@ -46,6 +46,7 @@ contracts:
         type: string
     dataAccess:
       - socket_relay_requests
+      - socket_relay_request_events
     purpose: request_lifecycle
     retentionClass: transactional_long_lived
     idempotency: false
