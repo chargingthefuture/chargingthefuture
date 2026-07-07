@@ -2,8 +2,8 @@
 
 import { BarChart2 } from 'lucide-react';
 import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
-
-const COLOR = '#F97316';
+import { useTheme } from '@/hooks/useTheme';
+import { getWorkforceTokens } from './workforce-shared';
 
 type Tab = 'dashboard';
 
@@ -17,12 +17,14 @@ const NAV_TABS: { icon: typeof BarChart2; key: Tab; label: string }[] = [
 ];
 
 export function WorkforceIconRail({ activeTab, onTabChange }: WorkforceIconRailProps) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   return (
     <aside
       style={{
         width: 72,
-        background: '#090B0F',
-        borderRight: '1px solid rgba(255,255,255,0.06)',
+        background: t.RAIL,
+        borderRight: `1px solid ${t.BORDER}`,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -37,15 +39,15 @@ export function WorkforceIconRail({ activeTab, onTabChange }: WorkforceIconRailP
           width: 40,
           height: 40,
           borderRadius: 12,
-          background: `${COLOR}30`,
-          border: `1px solid ${COLOR}50`,
+          background: `${t.ACCENT}30`,
+          border: `1px solid ${t.ACCENT}50`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: 12,
         }}
       >
-        <BarChart2 size={20} style={{ color: COLOR }} />
+        <BarChart2 size={20} style={{ color: t.ACCENT }} />
       </div>
 
       {NAV_TABS.map(({ icon: Icon, key, label }) => (
@@ -58,13 +60,13 @@ export function WorkforceIconRail({ activeTab, onTabChange }: WorkforceIconRailP
             width: 44,
             height: 44,
             borderRadius: 12,
-            background: activeTab === key ? `${COLOR}20` : 'transparent',
-            border: activeTab === key ? `1px solid ${COLOR}40` : '1px solid transparent',
+            background: activeTab === key ? `${t.ACCENT}20` : 'transparent',
+            border: activeTab === key ? `1px solid ${t.ACCENT}40` : '1px solid transparent',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: activeTab === key ? COLOR : '#6B7280',
+            color: activeTab === key ? t.ACCENT : t.MUTED,
           }}
         >
           <Icon size={20} />

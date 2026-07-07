@@ -323,3 +323,30 @@ hexCount | file
 7 | components/workforce/workforce-skill-distribution.tsx
 6 | components/workforce/workforce-training-gaps.tsx
 ```
+
+### Session (2026-07-07) cont. — Workforce plugin converted (reference implementation)
+- Added `components/workforce/workforce-shared.ts` exporting `getWorkforceTokens(theme)` and refactored
+  `workforce-shell.tsx` to consume it (removed its private duplicate).
+- Converted all signed-in, member-facing Workforce components to `t.*` chrome tokens (typecheck green,
+  default theme byte-identical): icon-rail, sidebar, hero-stats, training-gaps, skill-distribution,
+  sector-gaps, bucket-drilldown, member-list, profile-panel, occupations. Status/data-viz swatches
+  (#22C55E/#EF4444/#F59E0B/#6366F1/#3B82F6/#A855F7) left RAW per §F3.
+- Added `scripts/tokenize-theme.py`: the repeatable transformer used for this pass. Usage:
+  `python3 scripts/tokenize-theme.py <file.tsx> get<P>Tokens ./<p>-shared COLOR '#ACCENTHEX'`.
+  It maps chrome hex/rgba → `t.*`, rewrites the plugin accent, adds `useTheme`+getter imports, and
+  injects the `const { theme } = useTheme(); const t = get<P>Tokens(theme);` hook into each
+  PascalCase component that references `t.`. ALWAYS run `pnpm --filter @ctf/web run typecheck` after —
+  it catches the two unsafe cases (module-scope color aliases; components the detector misses).
+
+#### Deliberately deferred (NOT bugs — need an owner call, see below)
+- `workforce-public-shell.tsx` — signed-OUT visitor page. The comic theme only applies to signed-in
+  users, so converting it changes nothing visually and only adds risk. Left raw.
+- `workforce-admin-shell.tsx` — uses the **shared admin palette** (`#161B27` surface, `#1E2A3A`
+  border) that is NOT part of `getPluginShellTokens` and is common to ALL admin shells. This needs its
+  own admin token group rather than being folded into a per-plugin helper. New open question Q3.
+
+#### New open question
+- **Q3 (admin token group):** Admin shells across plugins share `#161B27`/`#1E2A3A` (matches
+  `--ctf-surface`/`--ctf-border` in globals.css). Create a single `getAdminShellTokens(theme)` (or add
+  SURFACE/BORDER to the plugin shell tokens) and convert all admin shells together, or leave admin
+  chrome as-is? Recommend a dedicated admin token helper.

@@ -3,8 +3,8 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { WorkforceProfile } from '../../lib/workforce/types';
-
-const COLOR = '#F97316';
+import { useTheme } from '@/hooks/useTheme';
+import { getWorkforceTokens } from './workforce-shared';
 
 interface WorkforceProfilePanelProps {
   profile: WorkforceProfile | null;
@@ -12,12 +12,14 @@ interface WorkforceProfilePanelProps {
 }
 
 export function WorkforceProfilePanel({ profile, loading }: WorkforceProfilePanelProps) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   return (
     <aside
       style={{
         width: 280,
         borderLeft: '1px solid rgba(255,255,255,0.06)',
-        background: '#0D0F14',
+        background: t.HEADER,
         padding: '20px 16px',
         flexShrink: 0,
       }}
@@ -27,7 +29,7 @@ export function WorkforceProfilePanel({ profile, loading }: WorkforceProfilePane
           fontSize: 11,
           fontWeight: 700,
           letterSpacing: '0.08em',
-          color: '#4B5563',
+          color: t.FAINT,
           textTransform: 'uppercase',
           marginBottom: 12,
         }}
@@ -40,8 +42,8 @@ export function WorkforceProfilePanel({ profile, loading }: WorkforceProfilePane
           style={{
             padding: '16px',
             borderRadius: 14,
-            background: `${COLOR}08`,
-            border: `1px solid ${COLOR}20`,
+            background: `${t.ACCENT}08`,
+            border: `1px solid ${t.ACCENT}20`,
             marginBottom: 16,
             textAlign: 'center',
           }}
@@ -49,8 +51,8 @@ export function WorkforceProfilePanel({ profile, loading }: WorkforceProfilePane
           <Avatar style={{ width: 52, height: 52, margin: '0 auto 10px' }}>
             <AvatarFallback
               style={{
-                background: `${COLOR}30`,
-                color: COLOR,
+                background: `${t.ACCENT}30`,
+                color: t.ACCENT,
                 fontSize: 20,
                 fontWeight: 800,
               }}
@@ -59,14 +61,14 @@ export function WorkforceProfilePanel({ profile, loading }: WorkforceProfilePane
             </AvatarFallback>
           </Avatar>
           <div
-            style={{ fontSize: 14, fontWeight: 700, color: '#F9FAFB', marginBottom: 4 }}
+            style={{ fontSize: 14, fontWeight: 700, color: t.TITLE, marginBottom: 4 }}
           >
             {profile.occupationName ?? 'No occupation set'}
           </div>
           <div
             style={{
               fontSize: 12,
-              color: '#6B7280',
+              color: t.MUTED,
               marginBottom: 8,
               textTransform: 'capitalize',
             }}
@@ -74,8 +76,8 @@ export function WorkforceProfilePanel({ profile, loading }: WorkforceProfilePane
             {profile.skillLevel !== 'unknown' ? `Skill level: ${profile.skillLevel}` : 'Skill level not set'}
           </div>
           {profile.region ? (
-            <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 8 }}>
-              Region: <span style={{ color: '#9CA3AF' }}>{profile.region}</span>
+            <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>
+              Region: <span style={{ color: t.SUBTLE }}>{profile.region}</span>
             </div>
           ) : null}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -96,7 +98,7 @@ export function WorkforceProfilePanel({ profile, loading }: WorkforceProfilePane
               <Badge
                 style={{
                   background: 'rgba(255,255,255,0.05)',
-                  color: '#6B7280',
+                  color: t.MUTED,
                   border: '1px solid rgba(255,255,255,0.08)',
                   fontSize: 11,
                   padding: '3px 10px',
@@ -118,8 +120,8 @@ export function WorkforceProfilePanel({ profile, loading }: WorkforceProfilePane
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 8 }}>No profile set up yet</div>
-          <div style={{ fontSize: 12, color: '#4B5563' }}>
+          <div style={{ fontSize: 13, color: t.MUTED, marginBottom: 8 }}>No profile set up yet</div>
+          <div style={{ fontSize: 12, color: t.FAINT }}>
             Complete your workforce profile to be included in the tracker.
           </div>
         </div>
