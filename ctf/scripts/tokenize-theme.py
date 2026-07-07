@@ -5,6 +5,7 @@ CHROME = {
     "#0F1117":"BG", "#0D0F14":"HEADER", "#090B0F":"RAIL",
     "#E8EAF0":"TEXT", "#F9FAFB":"TITLE", "#9CA3AF":"SUBTLE",
     "#6B7280":"MUTED", "#4B5563":"FAINT",
+    "#161B27":"SURFACE", "#1E2A3A":"BORDER_SOLID",
 }
 RGBA = {
     "rgba(255,255,255,0.06)":"BORDER", "rgba(255, 255, 255, 0.06)":"BORDER",

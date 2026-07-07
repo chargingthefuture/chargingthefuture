@@ -26,6 +26,11 @@ export type PluginShellTokens = {
   BORDER_STRONG: string;
   BORDER_HI: string;
   INPUT_BG: string;
+  // Admin/raised-card palette shared by every admin shell (and some member cards):
+  // solid card surface + solid structural border, distinct from the white-alpha borders.
+  // Values mirror --ctf-surface / --ctf-border(-faint) in app/globals.css for each theme.
+  SURFACE: string;
+  BORDER_SOLID: string;
 };
 
 // Build the chrome token set for a shell. `accent` is the already-resolved accent for the
@@ -46,6 +51,8 @@ export function getPluginShellTokens(accent: string, theme: ThemeName): PluginSh
       BORDER_STRONG: '#D4C49A2E',
       BORDER_HI: '#D4C49A3A',
       INPUT_BG: '#141414', // comic-surface
+      SURFACE: '#141414', // comic-surface
+      BORDER_SOLID: '#D4C49A1A', // comic-border-faint (click-log precedent for #1E2A3A)
     };
   }
   return {
@@ -62,5 +69,7 @@ export function getPluginShellTokens(accent: string, theme: ThemeName): PluginSh
     BORDER_STRONG: 'rgba(255,255,255,0.08)',
     BORDER_HI: 'rgba(255,255,255,0.1)',
     INPUT_BG: 'rgba(255,255,255,0.04)',
+    SURFACE: '#161B27',
+    BORDER_SOLID: '#1E2A3A',
   };
 }

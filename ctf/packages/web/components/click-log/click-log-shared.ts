@@ -14,17 +14,13 @@ export const SUBTLE = "#6B7280";
 export const FAINT = "#4B5563";
 
 // Theme-aware chrome tokens for the ClickLog shell. Default keeps the shipped values (accent stays
-// #EC4899); comic uses the shared comic surface tokens plus the ClickLog comic-ink accent. The shell
-// paints a solid #1E2A3A chrome border that is distinct from the shared white-alpha border, so it is
-// carried as its own BORDER_SOLID token (default #1E2A3A, comic comic-border-faint).
-export type ClickLogTokens = PluginShellTokens & { BORDER_SOLID: string };
+// #EC4899); comic uses the shared comic surface tokens plus the ClickLog comic-ink accent. The solid
+// #1E2A3A chrome border and #161B27 surface now come from the shared BORDER_SOLID/SURFACE slots.
+export type ClickLogTokens = PluginShellTokens;
 
 export function getClickLogTokens(theme: ThemeName): ClickLogTokens {
-  if (theme === "comic") {
-    const accent = getAppAccent("click-log", "comic");
-    return { ...getPluginShellTokens(accent, theme), BORDER_SOLID: "#D4C49A1A" };
-  }
-  return { ...getPluginShellTokens(BRAND, theme), BORDER_SOLID: "#1E2A3A" };
+  const accent = theme === "comic" ? getAppAccent("click-log", "comic") : BRAND;
+  return getPluginShellTokens(accent, theme);
 }
 
 export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
