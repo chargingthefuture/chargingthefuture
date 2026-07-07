@@ -368,3 +368,37 @@ hexCount | file
   weekly-performance (these have slot overrides/custom token fields — verify each shared file's exact
   hex→field map before running the transformer; do NOT assume the standard map). Plus all plugin dirs
   with NO shared getter yet (need a `<p>-shared.ts` created first, workforce-style).
+
+### Session (2026-07-07) cont. — custom-token plugins analyzed (NOT yet converted)
+The remaining shared-getter plugins (chyme, click-log, contributions, gentle-pulse, mood,
+recurring-activity, skills-taxonomy, trust-transport, unlock, weekly-performance) are a DIFFERENT and
+riskier conversion tier — do not run the standard transformer on them:
+
+- Their `*-shared.ts` exports **static named color constants** (e.g. chyme `PRIMARY`/`DARK_BG`/
+  `PANEL_BG`/`TITLE`/`BORDER`; click-log `BRAND`/`BG`/`SURFACE`/`BORDER`/`TEXT`/`SUBTLE`/`FAINT`) AND a
+  `get<P>Tokens(theme)` that overrides specific slots + adds custom fields (chyme `ACCENT_TINT_*`,
+  click-log `BORDER_SOLID`).
+- The child components mostly **import those static constants** rather than inlining hex, so they are
+  theme-blind today. Converting them means replacing each imported CONSTANT with the matching
+  `t.<FIELD>` from `get<P>Tokens(theme)` — a constant→token swap, not a hex→token swap. Requires a
+  per-plugin name map and `useTheme()` wiring in every child.
+- BLOCKER: some of these constants are the **admin-surface palette** with NO plugin-shell-token
+  equivalent (click-log `SURFACE=#161B27`, `BORDER=#1E2A3A`; contributions similar). These are exactly
+  the colors in open question **Q3**. A correct conversion needs the Q3 admin/surface-token decision
+  first, otherwise these constants must stay static (partial comic theming).
+
+Recommended next-session order once Q3 is answered:
+1. Resolve Q3 (add SURFACE/BORDER_SOLID-style slots to the shell tokens, or a `getAdminShellTokens`).
+2. Per custom plugin: build the constant→token name map from its `*-shared.ts`, wire `useTheme()` +
+   `get<P>Tokens` into each child, replace imported constants with `t.*`, keep status/data-viz raw,
+   typecheck. Then sweep the deferred `*-admin-shell` files using the Q3 helper.
+3. Plugin dirs with NO shared getter yet: create a `<p>-shared.ts` (workforce-style) first, then use
+   scripts/tokenize-theme.py for the standard-map children.
+
+### State at end of session
+- Converted + pushed (typecheck green, default byte-identical): **workforce, gdp, service-credits,
+  skills-hunt, socket-relay** (member-facing components only).
+- PR #1400 open on branch `design/brand-cohesion-theme-token-pass`.
+- Tooling committed: `scripts/tokenize-theme.py`.
+- Deferred, awaiting owner: all `*-admin-shell` + `*-public-shell`; all custom-token plugins (above);
+  data-viz colors (Q1); cross-platform reconciliation (Q2); admin/surface token group (Q3).
