@@ -350,3 +350,21 @@ hexCount | file
   `--ctf-surface`/`--ctf-border` in globals.css). Create a single `getAdminShellTokens(theme)` (or add
   SURFACE/BORDER to the plugin shell tokens) and convert all admin shells together, or leave admin
   chrome as-is? Recommend a dedicated admin token helper.
+
+### Session (2026-07-07) cont. — 4 more plugins converted (gdp, service-credits, skills-hunt, socket-relay)
+- Converted all signed-in member-facing components (24 files) to `t.*` chrome tokens via
+  `scripts/tokenize-theme.py`. typecheck green; default theme byte-identical.
+- Transformer hardened: (a) never rewrites the accent identifier inside import statements and drops it
+  from the shared import when it becomes unused; (b) handles multi-line imports; (c) balanced
+  paren/brace component detection so params containing `() => void` no longer defeat hook insertion.
+- Module-scope color usages the per-component hook cannot reach are left as the original default hex
+  (documented residuals — pixel-safe): sc-send-panel input styles, sc-wallet-tab amount color,
+  sh-missions-tab colorHex fallback, sr-feed edit button. sh-scout-tab's `fieldBorder` helper was
+  refactored to take `t` as a parameter instead.
+- Deferred (same reasons as workforce): every `*-admin-shell`, `sca-*`, `sha-*` (admin palette, Q3)
+  and every `*-public-shell` (signed-out, comic N/A). gdp-world-map (data-viz) not yet reviewed.
+- REMAINING plugins with a shared getter still to sweep: chyme, click-log, contributions,
+  gentle-pulse, mood, recurring-activity, skills-taxonomy, trust-transport, unlock,
+  weekly-performance (these have slot overrides/custom token fields — verify each shared file's exact
+  hex→field map before running the transformer; do NOT assume the standard map). Plus all plugin dirs
+  with NO shared getter yet (need a `<p>-shared.ts` created first, workforce-style).

@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import { COLOR, MAX_TAG_LENGTH, MAX_TAGS_PER_POST, SUBTLE } from "./sr-shared";
+import { MAX_TAG_LENGTH, MAX_TAGS_PER_POST, SUBTLE } from "./sr-shared";
 import { CurrencySelect } from "@/components/shared/currency-select";
 import { FormField } from "@/components/shared/form-field";
 import type { Currency } from "lib/currency/types";
+import { useTheme } from '@/hooks/useTheme';
+import { getSocketRelayTokens } from './sr-shared';
 
 export type PostDraft = {
   title: string;
@@ -36,6 +38,8 @@ function TagEditor({
   suggest: (prefix: string, exclude: string[]) => string[];
   a11y: FieldA11y;
 }) {
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
   const [input, setInput] = useState("");
   const full = tags.length >= MAX_TAGS_PER_POST;
 
@@ -55,9 +59,9 @@ function TagEditor({
     <div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: tags.length > 0 ? 8 : 0 }}>
         {tags.map((tag) => (
-          <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 14, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600 }}>
+          <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 14, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 12, fontWeight: 600 }}>
             {tag}
-            <button type="button" aria-label={`Remove tag ${tag}`} onClick={() => onChange(tags.filter((t) => t !== tag))} style={{ display: "inline-flex", background: "transparent", border: "none", padding: 0, color: COLOR, cursor: "pointer" }}>
+            <button type="button" aria-label={`Remove tag ${tag}`} onClick={() => onChange(tags.filter((t) => t !== tag))} style={{ display: "inline-flex", background: "transparent", border: "none", padding: 0, color: t.ACCENT, cursor: "pointer" }}>
               <X size={12} />
             </button>
           </span>
@@ -76,13 +80,13 @@ function TagEditor({
         onBlur={() => addTag(input)}
         placeholder={full ? `Up to ${MAX_TAGS_PER_POST} tags per post` : "Type a tag and press Enter — Food, Mail, Legal, anything"}
         disabled={full}
-        style={{ width: "100%", padding: "10px 16px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, fontSize: 14, color: "#E8EAF0", outline: "none", boxSizing: "border-box" }}
+        style={{ width: "100%", padding: "10px 16px", background: t.INPUT_BG, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, fontSize: 14, color: t.TEXT, outline: "none", boxSizing: "border-box" }}
       />
       {suggestions.length > 0 && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
           <span style={{ fontSize: 12, color: SUBTLE, alignSelf: "center" }}>In use:</span>
           {suggestions.map((tag) => (
-            <button key={tag} type="button" onClick={() => addTag(tag)} style={{ padding: "4px 10px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 12, cursor: "pointer" }}>
+            <button key={tag} type="button" onClick={() => addTag(tag)} style={{ padding: "4px 10px", borderRadius: 12, background: t.INPUT_BG, border: "1px solid rgba(255,255,255,0.1)", color: t.SUBTLE, fontSize: 12, cursor: "pointer" }}>
               {tag}
             </button>
           ))}
@@ -113,7 +117,9 @@ export function SocketRelayPost({
   onCancelEdit: () => void;
   suggest: (prefix: string, exclude: string[]) => string[];
 }) {
-  const fieldStyle = { width: "100%", padding: "10px 16px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, fontSize: 14, color: "#E8EAF0", outline: "none", boxSizing: "border-box" as const };
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
+  const fieldStyle = { width: "100%", padding: "10px 16px", background: t.INPUT_BG, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, fontSize: 14, color: t.TEXT, outline: "none", boxSizing: "border-box" as const };
   // Default false: requests start as "Free" (mutual aid), which has no amount. Picking a priced type
   // (ServiceCredits, fiat, crypto) reveals the amount. Stored on the draft so it resets with the form.
   function onCurrencyChange(code: string, currency: Currency | null) {
@@ -122,7 +128,7 @@ export function SocketRelayPost({
   }
   return (
     <div style={{ flex: 1, padding: "32px 40px", overflowY: "auto", minHeight: 0 }}>
-      <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 20 }}>{editing ? "Edit Your Request" : "Post a Request"}</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 20 }}>{editing ? "Edit Your Request" : "Post a Request"}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 620 }}>
         <FormField label="Title">
           {(a) => <input {...a} value={draft.title} onChange={(e) => onChange({ title: e.target.value })} placeholder="A short summary of what you need or can offer" style={fieldStyle} />}
@@ -155,11 +161,11 @@ export function SocketRelayPost({
         )}
         {error && <div role="alert" style={{ fontSize: 13, color: "#EF4444" }}>{error}</div>}
         {success && <div role="status" style={{ fontSize: 13, color: "#22C55E" }}>{editing ? "Saved! View it in the feed." : "Posted successfully! View it in the feed."}</div>}
-        <button onClick={onSubmit} disabled={submitting} style={{ padding: "14px", borderRadius: 12, background: submitting ? `${COLOR}66` : COLOR, border: "none", color: "#fff", fontSize: 15, fontWeight: 800, cursor: submitting ? "not-allowed" : "pointer" }}>
+        <button onClick={onSubmit} disabled={submitting} style={{ padding: "14px", borderRadius: 12, background: submitting ? `${t.ACCENT}66` : t.ACCENT, border: "none", color: "#fff", fontSize: 15, fontWeight: 800, cursor: submitting ? "not-allowed" : "pointer" }}>
           {submitting ? (editing ? "Saving…" : "Posting…") : editing ? "Save Changes" : "Post Request"}
         </button>
         {editing && (
-          <button onClick={onCancelEdit} disabled={submitting} style={{ padding: "12px", borderRadius: 12, background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+          <button onClick={onCancelEdit} disabled={submitting} style={{ padding: "12px", borderRadius: 12, background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: t.SUBTLE, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
             Cancel Edit
           </button>
         )}

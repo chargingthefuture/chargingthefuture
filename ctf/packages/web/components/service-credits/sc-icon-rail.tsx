@@ -3,7 +3,9 @@
 import { Wallet, TrendingUp, BarChart3 } from "lucide-react";
 import { Coins } from "lucide-react";
 import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
-import { COLOR, type Tab } from "./sc-shared";
+import { type Tab } from "./sc-shared";
+import { useTheme } from '@/hooks/useTheme';
+import { getServiceCreditsTokens } from './sc-shared';
 
 // Every glyph here is a real control. The Coins brand mark sits at the top once (the Wallet tab uses
 // a distinct Wallet icon so the coin no longer appears twice) and the three tabs switch the view. The
@@ -20,14 +22,16 @@ const railBtn: React.CSSProperties = {
 };
 
 export function ServiceCreditsIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
+  const { theme } = useTheme();
+  const t = getServiceCreditsTokens(theme);
   return (
-    <aside style={{ width: 72, background: "#090B0F", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
-      <div style={{ width: 40, height: 40, borderRadius: 12, background: `${COLOR}30`, border: `1px solid ${COLOR}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }} aria-hidden="true">
-        <Coins size={20} style={{ color: COLOR }} />
+    <aside style={{ width: 72, background: t.RAIL, borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
+      <div style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}30`, border: `1px solid ${t.ACCENT}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }} aria-hidden="true">
+        <Coins size={20} style={{ color: t.ACCENT }} />
       </div>
       {TABS.map(({ icon: Icon, key, label }) => (
         <button key={key} type="button" aria-label={label} aria-current={tab === key ? "page" : undefined} onClick={() => onTab(key)}
-          style={{ ...railBtn, background: tab === key ? `${COLOR}20` : "transparent", border: tab === key ? `1px solid ${COLOR}40` : "1px solid transparent", color: tab === key ? COLOR : "#6B7280" }}>
+          style={{ ...railBtn, background: tab === key ? `${t.ACCENT}20` : "transparent", border: tab === key ? `1px solid ${t.ACCENT}40` : "1px solid transparent", color: tab === key ? t.ACCENT : t.MUTED }}>
           <Icon size={20} />
         </button>
       ))}

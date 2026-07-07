@@ -2,7 +2,9 @@
 
 import { Clock, MessageCircle } from "lucide-react";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
-import { COLOR, FAINT, SUBTLE, type SrChatCredentials, type SrDirectLine, type SrFulfillment, type SrResolveOutcome } from "./sr-shared";
+import { FAINT, SUBTLE, type SrChatCredentials, type SrDirectLine, type SrFulfillment, type SrResolveOutcome } from "./sr-shared";
+import { useTheme } from '@/hooks/useTheme';
+import { getSocketRelayTokens } from './sr-shared';
 
 const RESOLVE_ACTIONS: { outcome: SrResolveOutcome; label: string; color: string }[] = [
   { outcome: "successful", label: "Mark successful", color: "#22C55E" },
@@ -26,6 +28,8 @@ function ResolveBar({
   resolving: boolean;
   onResolve: (fulfillmentId: string, outcome: SrResolveOutcome) => void;
 }) {
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
   if (selected.status !== "active") {
     return (
       <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: SUBTLE }}>
@@ -60,6 +64,8 @@ function ResolveBar({
 // The right pane for a pending request: it has no helper yet, so there is nothing to chat on. Explain
 // what happens next instead of showing an empty chat.
 function PendingPane({ title }: { title: string }) {
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -67,10 +73,10 @@ function PendingPane({ title }: { title: string }) {
         <div style={{ fontSize: 12, color: SUBTLE }}>Waiting for a helper to offer.</div>
       </div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 32, textAlign: "center" }}>
-        <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${COLOR}4D`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Clock size={20} style={{ color: `${COLOR}99` }} />
+        <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${t.ACCENT}4D`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Clock size={20} style={{ color: `${t.ACCENT}99` }} />
         </div>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "#9CA3AF" }}>No helper yet</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>No helper yet</div>
         <div style={{ fontSize: 13, color: FAINT, maxWidth: 320, lineHeight: 1.5 }}>
           This request is still open on the feed. As soon as someone offers to help, your Direct Line opens here and you can talk it through.
         </div>
@@ -96,6 +102,8 @@ function ChatPane({
   chatError: string | null;
   chatCredentials: SrChatCredentials | null;
 }) {
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
   if (!selected) return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: FAINT, fontSize: 14 }}>Pick a conversation on the left.</div>;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -114,7 +122,7 @@ function ChatPane({
             streamToken={chatCredentials.streamToken as string}
             streamUserId={chatCredentials.streamUserId as string}
             streamChannelId={chatCredentials.streamChannelId}
-            accentColor={COLOR}
+            accentColor={t.ACCENT}
           />
         ) : (
           <div style={{ flex: 1 }} />
@@ -138,6 +146,8 @@ function DirectLineRow({
   currentUserId?: string;
   onSelect: (line: SrDirectLine) => void;
 }) {
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
   const title = line.kind === "fulfillment" ? fulfillmentTitle(line.fulfillment) : line.request.title;
   const isRequester = line.kind === "fulfillment" && Boolean(currentUserId && line.fulfillment.requesterUserId === currentUserId);
   const sub =
@@ -153,9 +163,9 @@ function DirectLineRow({
       type="button"
       aria-pressed={active}
       onClick={() => onSelect(line)}
-      style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: active ? `${COLOR}18` : "transparent", border: active ? `1px solid ${COLOR}30` : "1px solid transparent", marginBottom: 4 }}
+      style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: active ? `${t.ACCENT}18` : "transparent", border: active ? `1px solid ${t.ACCENT}30` : "1px solid transparent", marginBottom: 4 }}
     >
-      <div style={{ fontSize: 13, fontWeight: 600, color: "#E8EAF0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: t.TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
       <div style={{ fontSize: 11, color: SUBTLE }}>{sub}</div>
     </button>
   );
@@ -182,13 +192,15 @@ export function SocketRelayChat({
   chatError: string | null;
   chatCredentials: SrChatCredentials | null;
 }) {
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
   if (directLines.length === 0) {
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 32 }}>
-        <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${COLOR}4D`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <MessageCircle size={20} style={{ color: `${COLOR}66` }} />
+        <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${t.ACCENT}4D`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <MessageCircle size={20} style={{ color: `${t.ACCENT}66` }} />
         </div>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "#9CA3AF" }}>No Direct Lines yet</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>No Direct Lines yet</div>
         <div style={{ fontSize: 13, color: FAINT, textAlign: "center", maxWidth: 320, lineHeight: 1.5 }}>
           Post a request or offer to help on one, and it shows up here as a private Direct Line.
         </div>
