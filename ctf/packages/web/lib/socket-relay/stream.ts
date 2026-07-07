@@ -29,28 +29,26 @@ export async function ensureSocketRelayFulfillmentChannel(input: {
     return null;
   }
 
+  // Server-side StreamChat client (built with the API secret): it holds no user connection, so there
+  // is nothing to disconnect — the client is simply let go out of scope when this function returns.
   const streamClient = new StreamChat(config.apiKey, config.apiSecret);
+  const requesterStreamUserId = await upsertStreamUser(streamClient, input.requesterUserId, input.requesterDisplayName);
+  const fulfillerStreamUserId = await upsertStreamUser(streamClient, input.fulfillerUserId, input.fulfillerDisplayName);
+
+  const streamChannelId = `socket-relay-fulfillment-${input.fulfillmentId}`;
+  const channel = streamClient.channel('messaging', streamChannelId, {
+    created_by_id: requesterStreamUserId,
+    name: 'SocketRelay Fulfillment Thread',
+  });
+
   try {
-    const requesterStreamUserId = await upsertStreamUser(streamClient, input.requesterUserId, input.requesterDisplayName);
-    const fulfillerStreamUserId = await upsertStreamUser(streamClient, input.fulfillerUserId, input.fulfillerDisplayName);
-
-    const streamChannelId = `socket-relay-fulfillment-${input.fulfillmentId}`;
-    const channel = streamClient.channel('messaging', streamChannelId, {
-      created_by_id: requesterStreamUserId,
-      name: 'SocketRelay Fulfillment Thread',
-    });
-
-    try {
-      await channel.create();
-    } catch {
-      await channel.watch();
-    }
-
-    await channel.addMembers([requesterStreamUserId, fulfillerStreamUserId]);
-    return streamChannelId;
-  } finally {
-    await streamClient.disconnectUser();
+    await channel.create();
+  } catch {
+    await channel.watch();
   }
+
+  await channel.addMembers([requesterStreamUserId, fulfillerStreamUserId]);
+  return streamChannelId;
 }
 
 export async function createSocketRelayParticipantToken(userId: string, displayName: string): Promise<SocketRelayStreamParticipantCredentials | null> {
@@ -59,16 +57,13 @@ export async function createSocketRelayParticipantToken(userId: string, displayN
     return null;
   }
 
+  // Server-side client (API secret): no user connection to tear down, so no disconnectUser call.
   const streamClient = new StreamChat(config.apiKey, config.apiSecret);
-  try {
-    const streamUserId = await upsertStreamUser(streamClient, userId, displayName);
+  const streamUserId = await upsertStreamUser(streamClient, userId, displayName);
 
-    return {
-      streamApiKey: config.apiKey,
-      streamUserId,
-      streamToken: streamClient.createToken(streamUserId),
-    };
-  } finally {
-    await streamClient.disconnectUser();
-  }
+  return {
+    streamApiKey: config.apiKey,
+    streamUserId,
+    streamToken: streamClient.createToken(streamUserId),
+  };
 }

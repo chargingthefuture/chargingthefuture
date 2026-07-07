@@ -139,6 +139,7 @@ web ☐ android ☐
 - The form pre-fills with the existing values.
 - After saving, the card in the feed shows the updated title and tags immediately.
 - Status is unchanged (still `open`).
+- A `request_updated` lifecycle event is written to `socket_relay_request_events` for the edit.
 - A different member's request does not show an Edit control.
 
 web ☐ android ☐
@@ -296,6 +297,7 @@ web ☐
 **Expected:**
 - The fulfillment is cancelled.
 - The request returns to `open` status and reappears in the feed for other members to claim.
+- The 28-day expiry clock is reset, so the re-opened request is claimable again (not immediately expired), even if it had aged close to expiry before the claim.
 - The Direct Line row for this fulfillment disappears.
 - A pending-request placeholder row appears in the Direct Line for the now-open request.
 
@@ -453,6 +455,7 @@ web ☐ android ☐
 - A confirmation dialog appears before any delete call is made (both web and Android).
 - After confirming, the request disappears from the admin list.
 - Dismissing the dialog without confirming leaves the request untouched.
+- The removal is transactional: the request's fulfillments, participants, and lifecycle events are cleared too (no orphaned rows), while fulfillment chat messages are retained server-side as moderation evidence. The removal writes a `socket-relay.admin.request.delete` audit row.
 
 web ☐ android ☐
 

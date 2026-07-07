@@ -11,6 +11,7 @@ import { LevelUpPublicShell } from '@/components/level-up/level-up-public-shell'
 import { LighthousePublicShell } from '@/components/lighthouse/lighthouse-public-shell';
 import { MoodPublicShell } from '@/components/mood/mood-public-shell';
 import { PeerProgrammingPublicShell } from '@/components/peer-programming/peer-programming-public-shell';
+import { RecurringActivityPublicShell } from '@/components/recurring-activity/recurring-activity-public-shell';
 import { ServiceCreditsPublicShell } from '@/components/service-credits/service-credits-public-shell';
 import { SkillsHuntPublicShell } from '@/components/skills-hunt/skills-hunt-public-shell';
 import { SkillsTaxonomyPublicShell } from '@/components/skills-taxonomy/skills-taxonomy-public-shell';
@@ -69,6 +70,7 @@ const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   lighthouse: LighthousePublicShell,
   mood: MoodPublicShell,
   'peer-programming': PeerProgrammingPublicShell,
+  'recurring-activity': RecurringActivityPublicShell,
   'service-credits': ServiceCreditsPublicShell,
   'skills-hunt': SkillsHuntPublicShell,
   'skills-taxonomy': SkillsTaxonomyPublicShell,

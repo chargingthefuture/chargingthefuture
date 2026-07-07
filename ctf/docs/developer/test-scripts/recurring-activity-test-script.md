@@ -21,6 +21,17 @@
    favor tie.
 2. Sign in as an approved member.
 
+## Signed-out visitor — public landing (web, desktop and mobile-responsive at 390px)
+
+1. **Signed out.** In a private/incognito window (no session), open `/apps/recurring-activity`.
+   Confirm it shows the public marketing landing — the "Recognize the ties you keep" shell with the
+   HeartHandshake mark, the three feature tiles, and **Sign In / Join Free** buttons — and does **not**
+   redirect to sign-in or 404. Confirm no per-user data appears (it is static preview copy only).
+2. **Not-yet-verified member.** Sign in as a member who has not finished Unlock verification and open
+   `/apps/recurring-activity`. Confirm the same landing shows but with a single **Finish verifying**
+   button (pointing at `/plugin/unlock`) instead of the Sign In / Join Free pair.
+3. Repeat step 1 at a 390px-wide viewport; confirm the mobile layout renders and nothing overflows.
+
 ## Member — web (desktop and mobile-responsive at 390px)
 
 1. Open `/apps/recurring-activity`. Confirm the hub loads (loading → populated), and that an empty

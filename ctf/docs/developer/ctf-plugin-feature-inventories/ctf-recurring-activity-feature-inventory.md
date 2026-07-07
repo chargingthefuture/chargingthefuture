@@ -125,6 +125,11 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
 `/apps/recurring-activity`; Android feature at `packages/mobile/src/features/recurring-activity`. Both
 bind to the same API and enforce the no-amount-for-fiat rule.
 
+A signed-out visitor (or a signed-in member not verified yet) now sees the marketing landing shell
+(`recurring-activity-public-shell.tsx`) at `/apps/recurring-activity` instead of being redirected to
+sign-in — matching every other plugin, so the URL is shareable. The shell shows only static preview
+copy (no per-user data, per rule 126) and a sign-in / "Finish verifying" call-to-action.
+
 ## Seed Coverage Status
 
 `ctf/scripts/seedRecurringActivityPhase0.mjs` (`pnpm --dir ctf seed:recurring-activity`) seeds three demo
@@ -163,6 +168,11 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
   off-platform relationships (LightHouse rent and the rest of the "settles later" bucket) are captured
   here as self-declared, confirmed activities rather than via a per-plugin settlement table, so no
   recurring fiat amount is ever stored.
+- 2026-07-04: Added the signed-out public landing shell (`recurring-activity-public-shell.tsx`) and
+  registered it in `public-visitor-registry.tsx`. The dedicated `/apps/recurring-activity` route now
+  renders it for an unauthenticated visitor (or a not-yet-verified member, with a "Finish verifying"
+  CTA) instead of redirecting to sign-in, so the URL is shareable and consistent with the other
+  plugins' public views. Marketing copy only — no per-user data (rule 126).
 
 ## Build Checklist
 
