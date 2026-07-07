@@ -112,7 +112,10 @@ export async function createReport(
   return mapReport(result.rows[0]);
 }
 
-export async function listOpenReports(
+// Lists submission reports, most recent first. A concrete `status` filters to that
+// status; `null` means "all statuses" (no filter). The admin route passes an explicit
+// status and defaults to 'open' itself, so the open queue is still the default view.
+export async function listReports(
   client: PoolClient,
   status: SkillsHuntSubmissionReportStatus | null = null,
 ): Promise<SkillsHuntSubmissionReport[]> {
@@ -121,8 +124,6 @@ export async function listOpenReports(
   if (status) {
     params.push(status);
     where = `WHERE status = $${params.length}`;
-  } else {
-    where = `WHERE status = 'open'`;
   }
   const result = await client.query<SkillsHuntSubmissionReportRow>(
     `SELECT ${REPORT_RETURN_COLS} FROM skills_hunt_submission_reports ${where}
