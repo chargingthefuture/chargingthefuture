@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Wallet, Loader2 } from "lucide-react";
-import { COLOR, type TtPayout } from "./tt-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getTrustTransportTokens, type TtPayout } from "./tt-shared";
 
 interface CurrencyBalance {
   currency: string;
@@ -21,6 +22,8 @@ function payoutStatusColor(s: string | undefined): string {
 }
 
 export function TrustTransportEarningsTab() {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<CurrencyBalance[]>([]);
@@ -89,22 +92,22 @@ export function TrustTransportEarningsTab() {
 
   return (
     <div style={{ flex: 1, padding: "24px", overflowY: "auto", minHeight: 0 }}>
-      <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 6 }}>Earnings</div>
-      <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 20, lineHeight: 1.5, maxWidth: 520 }}>
+      <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 6 }}>Earnings</div>
+      <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 20, lineHeight: 1.5, maxWidth: 520 }}>
         ServiceCredits you earn are paid straight to your ServiceCredits wallet when a trip completes. This tab tracks other-currency earnings and your payout requests, which an admin reviews.
       </div>
 
       {loading ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#6B7280", fontSize: 13 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.MUTED, fontSize: 13 }}>
           <Loader2 size={16} className="animate-spin" /> Loading earnings…
         </div>
       ) : error ? (
         <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>
       ) : (
         <>
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9CA3AF", marginBottom: 12 }}>Available balance</div>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: t.SUBTLE, marginBottom: 12 }}>Available balance</div>
           {balances.length === 0 ? (
-            <div style={{ padding: "18px 20px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", marginBottom: 20, color: "#6B7280", fontSize: 13 }}>
+            <div style={{ padding: "18px 20px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}`, marginBottom: 20, color: t.MUTED, fontSize: 13 }}>
               No withdrawable earnings yet. Fiat/crypto earnings from completed trips show up here.
             </div>
           ) : (
@@ -114,30 +117,30 @@ export function TrustTransportEarningsTab() {
                   key={b.currency}
                   type="button"
                   onClick={() => setSelectedCurrency(b.currency)}
-                  style={{ minWidth: 140, textAlign: "left", padding: "16px 18px", borderRadius: 16, background: selectedCurrency === b.currency ? `${COLOR}14` : "rgba(255,255,255,0.02)", border: `1px solid ${selectedCurrency === b.currency ? COLOR + "40" : "rgba(255,255,255,0.08)"}`, cursor: "pointer" }}
+                  style={{ minWidth: 140, textAlign: "left", padding: "16px 18px", borderRadius: 16, background: selectedCurrency === b.currency ? `${t.ACCENT}14` : "rgba(255,255,255,0.02)", border: `1px solid ${selectedCurrency === b.currency ? t.ACCENT + "40" : t.BORDER_STRONG}`, cursor: "pointer" }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Wallet size={16} style={{ color: COLOR }} />
-                    <div style={{ fontSize: 12, color: "#9CA3AF" }}>{b.currency}</div>
+                    <Wallet size={16} style={{ color: t.ACCENT }} />
+                    <div style={{ fontSize: 12, color: t.SUBTLE }}>{b.currency}</div>
                   </div>
-                  <div style={{ marginTop: 6, fontSize: 24, fontWeight: 800, color: "#F9FAFB" }}>{b.balance}</div>
+                  <div style={{ marginTop: 6, fontSize: 24, fontWeight: 800, color: t.TITLE }}>{b.balance}</div>
                 </button>
               ))}
             </div>
           )}
 
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9CA3AF", marginBottom: 12 }}>Request a payout</div>
-          {requested && <div style={{ fontSize: 13, color: COLOR, fontWeight: 600, marginBottom: 10 }}>Payout requested. You&apos;ll see it below with its status.</div>}
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: t.SUBTLE, marginBottom: 12 }}>Request a payout</div>
+          {requested && <div style={{ fontSize: 13, color: t.ACCENT, fontWeight: 600, marginBottom: 10 }}>Payout requested. You&apos;ll see it below with its status.</div>}
           {balances.length === 0 ? (
-            <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 8 }}>You can request a payout once you have a withdrawable balance.</div>
+            <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>You can request a payout once you have a withdrawable balance.</div>
           ) : (
             <>
               <div style={{ display: "flex", gap: 8, marginBottom: 8, maxWidth: 460, alignItems: "center" }}>
-                <select value={selectedCurrency ?? ""} onChange={(e) => setSelectedCurrency(e.target.value)} style={{ padding: "10px 12px", borderRadius: 9, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.10)", color: "#E8EAF0", fontSize: 14 }}>
+                <select value={selectedCurrency ?? ""} onChange={(e) => setSelectedCurrency(e.target.value)} style={{ padding: "10px 12px", borderRadius: 9, background: "rgba(255,255,255,0.03)", border: `1px solid ${t.BORDER_HI}`, color: t.TEXT, fontSize: 14 }}>
                   {balances.map((b) => <option key={b.currency} value={b.currency}>{b.currency}</option>)}
                 </select>
-                <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder={`Amount (max ${selectedBalance})`} style={{ flex: 1, padding: "10px 12px", borderRadius: 9, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.10)", color: "#E8EAF0", fontSize: 14 }} />
-                <button type="button" onClick={() => void requestPayout()} disabled={submitting} style={{ padding: "10px 18px", borderRadius: 9, background: `${COLOR}1F`, border: `1px solid ${COLOR}40`, color: COLOR, fontSize: 14, fontWeight: 600, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }}>
+                <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder={`Amount (max ${selectedBalance})`} style={{ flex: 1, padding: "10px 12px", borderRadius: 9, background: "rgba(255,255,255,0.03)", border: `1px solid ${t.BORDER_HI}`, color: t.TEXT, fontSize: 14 }} />
+                <button type="button" onClick={() => void requestPayout()} disabled={submitting} style={{ padding: "10px 18px", borderRadius: 9, background: `${t.ACCENT}1F`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 14, fontWeight: 600, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }}>
                   {submitting && <Loader2 size={14} className="animate-spin" />} Request
                 </button>
               </div>
@@ -145,13 +148,13 @@ export function TrustTransportEarningsTab() {
             </>
           )}
 
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9CA3AF", margin: "24px 0 12px" }}>Payout history</div>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: t.SUBTLE, margin: "24px 0 12px" }}>Payout history</div>
           {payouts.length === 0 ? (
-            <div style={{ padding: "24px", textAlign: "center", color: "#6B7280", fontSize: 13, border: "1px dashed rgba(255,255,255,0.10)", borderRadius: 14 }}>No payout requests yet.</div>
+            <div style={{ padding: "24px", textAlign: "center", color: t.MUTED, fontSize: 13, border: `1px dashed ${t.BORDER_HI}`, borderRadius: 14 }}>No payout requests yet.</div>
           ) : (
             payouts.map((p) => (
-              <div key={p.id} style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#F9FAFB" }}>{p.amount}{p.currency ? ` ${p.currency}` : ""}</div>
+              <div key={p.id} style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}`, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>{p.amount}{p.currency ? ` ${p.currency}` : ""}</div>
                 <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: payoutStatusColor(p.status) }}>{payoutStatusLabel(p.status)}</span>
               </div>
             ))

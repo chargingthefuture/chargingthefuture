@@ -1,7 +1,19 @@
 // Shared constants and types for the SkillsHunt admin/moderation shell.
+import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
+import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import type { SkillsHuntSubmissionStatus } from "lib/skills-hunt/types";
 
 export const COLOR = "#FBBF24";
+
+// Theme-aware chrome tokens for the SkillsHunt admin panels. Default keeps the shipped values
+// (accent stays #FBBF24); comic uses the shared comic surface tokens plus the SkillsHunt
+// comic-ink accent. Mirrors getSkillsHuntTokens in sh-shared.ts (click-log precedent).
+export type SkillsHuntAdminTokens = PluginShellTokens;
+
+export function getSkillsHuntAdminTokens(theme: ThemeName): SkillsHuntAdminTokens {
+  const accent = theme === "comic" ? getAppAccent("skills-hunt", "comic") : COLOR;
+  return getPluginShellTokens(accent, theme);
+}
 
 export const STATUS_OPTIONS: Array<{ key: SkillsHuntSubmissionStatus; label: string; color: string }> = [
   { key: "pending",  label: "Pending",  color: "#F59E0B" },

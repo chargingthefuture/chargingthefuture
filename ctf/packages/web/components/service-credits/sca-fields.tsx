@@ -5,14 +5,8 @@
 // action panel stays small (rule 116) and the confirm gesture is identical everywhere.
 // Dark admin design system (rule 131): ServiceCredits accent is #A855F7.
 import { useState, type ReactNode } from 'react';
-
-// Admin design tokens (shared dark admin look). ServiceCredits accent is purple #A855F7.
-const COLOR = '#A855F7';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+import { useTheme } from '@/hooks/useTheme';
+import { getServiceCreditsTokens } from './sc-shared';
 
 export function Field({
   label,
@@ -29,17 +23,19 @@ export function Field({
   type?: 'text' | 'number';
   hint?: string;
 }) {
+  const { theme } = useTheme();
+  const t = getServiceCreditsTokens(theme);
   return (
     <label style={{ display: 'block', fontSize: 13 }}>
-      <span style={{ display: 'block', fontWeight: 600, color: SUBTLE, fontSize: 12, marginBottom: 4 }}>{label}</span>
+      <span style={{ display: 'block', fontWeight: 600, color: t.MUTED, fontSize: 12, marginBottom: 4 }}>{label}</span>
       <input
         style={{
           width: '100%',
           boxSizing: 'border-box',
           borderRadius: 8,
-          border: `1px solid ${BORDER}`,
-          background: BG,
-          color: TEXT,
+          border: `1px solid ${t.BORDER_SOLID}`,
+          background: t.BG,
+          color: t.TITLE,
           padding: '9px 12px',
           fontSize: 13,
           outline: 'none',
@@ -50,7 +46,7 @@ export function Field({
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
       />
-      {hint ? <span style={{ display: 'block', fontSize: 11, color: SUBTLE, marginTop: 4 }}>{hint}</span> : null}
+      {hint ? <span style={{ display: 'block', fontSize: 11, color: t.MUTED, marginTop: 4 }}>{hint}</span> : null}
     </label>
   );
 }
@@ -73,6 +69,8 @@ export function ConfirmAction({
   onConfirm: () => void;
   tone?: 'default' | 'danger';
 }) {
+  const { theme } = useTheme();
+  const t = getServiceCreditsTokens(theme);
   const [armed, setArmed] = useState(false);
 
   if (!armed) {
@@ -92,8 +90,8 @@ export function ConfirmAction({
           fontWeight: 700,
           cursor: disabled || busy ? 'not-allowed' : 'pointer',
           opacity: disabled || busy ? 0.5 : 1,
-          background: isDanger ? 'rgba(239,68,68,0.1)' : COLOR,
-          border: isDanger ? '1px solid rgba(239,68,68,0.4)' : `1px solid ${COLOR}`,
+          background: isDanger ? 'rgba(239,68,68,0.1)' : t.ACCENT,
+          border: isDanger ? '1px solid rgba(239,68,68,0.4)' : `1px solid ${t.ACCENT}`,
           color: isDanger ? '#FCA5A5' : '#FFFFFF',
         }}
       >
@@ -130,8 +128,8 @@ export function ConfirmAction({
             fontWeight: 700,
             cursor: busy ? 'not-allowed' : 'pointer',
             opacity: busy ? 0.5 : 1,
-            background: COLOR,
-            border: `1px solid ${COLOR}`,
+            background: t.ACCENT,
+            border: `1px solid ${t.ACCENT}`,
             color: '#FFFFFF',
           }}
         >
@@ -151,9 +149,9 @@ export function ConfirmAction({
             fontWeight: 600,
             cursor: busy ? 'not-allowed' : 'pointer',
             opacity: busy ? 0.5 : 1,
-            background: SURFACE,
-            border: `1px solid ${BORDER}`,
-            color: SUBTLE,
+            background: t.SURFACE,
+            border: `1px solid ${t.BORDER_SOLID}`,
+            color: t.MUTED,
           }}
         >
           Cancel

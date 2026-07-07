@@ -4,35 +4,32 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Briefcase } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { getWorkforceTokens, type WorkforceTokens } from './workforce-shared';
 import type { WorkforceConfig, WorkforceDashboard } from 'lib/workforce/types';
 
-// Admin design tokens (shared admin look). Workforce accent is orange.
-const COLOR = '#F97316';
-const BG = '#0F1117';
-const PANEL = '#0D0F14';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-
-const fieldStyle = {
-  width: '100%',
-  padding: '9px 12px',
-  background: 'rgba(255,255,255,0.04)',
-  border: `1px solid ${BORDER}`,
-  borderRadius: 8,
-  fontSize: 14,
-  color: TEXT,
-  outline: 'none',
-  boxSizing: 'border-box',
-} as const;
+// Admin chrome (shared admin look) comes from the theme tokens; Workforce accent is orange.
+const fieldStyle = (t: WorkforceTokens) =>
+  ({
+    width: '100%',
+    padding: '9px 12px',
+    background: t.INPUT_BG,
+    border: `1px solid ${t.BORDER_SOLID}`,
+    borderRadius: 8,
+    fontSize: 14,
+    color: t.TITLE,
+    outline: 'none',
+    boxSizing: 'border-box',
+  }) as const;
 
 function StatBlock({ label, value, accent }: { label: string; value: number; accent?: string }) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   return (
-    <div style={{ flex: 1, minWidth: 110, padding: '12px 14px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
-      <div style={{ fontSize: 20, fontWeight: 800, color: accent ?? TEXT }}>{value.toLocaleString()}</div>
-      <div style={{ fontSize: 11, color: SUBTLE, marginTop: 2 }}>{label}</div>
+    <div style={{ flex: 1, minWidth: 110, padding: '12px 14px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <div style={{ fontSize: 20, fontWeight: 800, color: accent ?? t.TITLE }}>{value.toLocaleString()}</div>
+      <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>{label}</div>
     </div>
   );
 }
@@ -50,18 +47,20 @@ function NumberField({
   step?: string;
   onChange: (v: number) => void;
 }) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   return (
     <label style={{ display: 'block' }}>
-      <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>{label}</span>
+      <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>{label}</span>
       <input
         type="number"
         inputMode="decimal"
         step={step ?? '1'}
         value={Number.isFinite(value) ? value : ''}
         onChange={(e) => onChange(Number(e.target.value))}
-        style={fieldStyle}
+        style={fieldStyle(t)}
       />
-      {hint ? <span style={{ display: 'block', fontSize: 11, color: SUBTLE, marginTop: 4 }}>{hint}</span> : null}
+      {hint ? <span style={{ display: 'block', fontSize: 11, color: t.MUTED, marginTop: 4 }}>{hint}</span> : null}
     </label>
   );
 }
@@ -95,6 +94,8 @@ export function WorkforceAdminShell({
   config: WorkforceConfig;
 }) {
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   const router = useRouter();
   const [config, setConfig] = useState({
     population: initialConfig.population,
@@ -137,43 +138,43 @@ export function WorkforceAdminShell({
     <div
       style={{
         ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
-        background: BG,
-        color: TEXT,
+        background: t.BG,
+        color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="Workforce Admin" accent={COLOR} icon={<Briefcase size={18} color={COLOR} />} />
+      <MobileScreenHeader title="Workforce Admin" accent={t.ACCENT} icon={<Briefcase size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Briefcase size={18} color={COLOR} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Briefcase size={18} color={t.ACCENT} />
           </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800 }}>Workforce Admin</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>Population model</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Population model</div>
           </div>
           <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, color: '#6366F1', fontWeight: 700 }}>ADMIN</span>
         </div>
 
         {/* Snapshot */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-          <StatBlock label="Workforce total" value={dashboard.workforceTotal} accent={COLOR} />
+          <StatBlock label="Workforce total" value={dashboard.workforceTotal} accent={t.ACCENT} />
           <StatBlock label="Headcount target" value={dashboard.totalHeadcountTarget} accent="#EF4444" />
           <StatBlock label="Recruited" value={dashboard.recruitedTotal} accent="#22C55E" />
           <StatBlock label="Directory members" value={dashboard.totalMembers} />
         </div>
 
         {error ? <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: '#EF4444' }}>{error}</div> : null}
-        {message ? <div role="status" style={{ marginBottom: 12, fontSize: 13, color: COLOR }}>{message}</div> : null}
+        {message ? <div role="status" style={{ marginBottom: 12, fontSize: 13, color: t.ACCENT }}>{message}</div> : null}
 
         {/* Config — workforce population model. Read-only over Directory/Skills Taxonomy; only this
             workforce-owned config is editable. */}
-        <div style={{ padding: '16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
+        <div style={{ padding: '16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Config</div>
-          <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 14 }}>
+          <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 14 }}>
             Demand is population × participation rate, distributed across sectors by their Skills Taxonomy
-            workforce share. Current workforce total: <span style={{ color: TEXT, fontWeight: 700 }}>{workforceTotal.toLocaleString()}</span>.
+            workforce share. Current workforce total: <span style={{ color: t.TITLE, fontWeight: 700 }}>{workforceTotal.toLocaleString()}</span>.
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
             <NumberField label="Population" hint="Survivor population baseline" value={config.population} onChange={(v) => setConfig((c) => ({ ...c, population: v }))} />
@@ -181,7 +182,7 @@ export function WorkforceAdminShell({
             <NumberField label="Min recruitable" value={config.minRecruitable} onChange={(v) => setConfig((c) => ({ ...c, minRecruitable: v }))} />
             <NumberField label="Max recruitable" value={config.maxRecruitable} onChange={(v) => setConfig((c) => ({ ...c, maxRecruitable: v }))} />
           </div>
-          <button type="button" disabled={busy} onClick={() => void save()} style={{ padding: '11px 18px', borderRadius: 10, background: busy ? `${COLOR}66` : COLOR, border: 'none', color: '#3a1d05', fontSize: 14, fontWeight: 800, cursor: busy ? 'not-allowed' : 'pointer' }}>
+          <button type="button" disabled={busy} onClick={() => void save()} style={{ padding: '11px 18px', borderRadius: 10, background: busy ? `${t.ACCENT}66` : t.ACCENT, border: 'none', color: '#3a1d05', fontSize: 14, fontWeight: 800, cursor: busy ? 'not-allowed' : 'pointer' }}>
             {busy ? 'Saving…' : 'Save config'}
           </button>
         </div>

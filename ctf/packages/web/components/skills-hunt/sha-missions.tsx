@@ -6,13 +6,14 @@ import type {
   SkillsHuntMissionGoalType,
   SkillsHuntMissionStatus,
 } from "lib/skills-hunt/types";
-import { COLOR } from "./sha-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
 
-const field: React.CSSProperties = {
-  width: "100%", padding: "9px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.12)", color: "#E8EAF0", fontSize: 13, outline: "none", boxSizing: "border-box",
-};
-const label: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 600, color: "#9CA3AF", marginBottom: 5 };
+const fieldStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({
+  width: "100%", padding: "9px 12px", borderRadius: 8, background: t.INPUT_BG,
+  border: "1px solid rgba(255,255,255,0.12)", color: t.TEXT, fontSize: 13, outline: "none", boxSizing: "border-box",
+});
+const labelStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({ display: "block", fontSize: 12, fontWeight: 600, color: t.SUBTLE, marginBottom: 5 });
 const row: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 };
 
 const GOAL_TYPES: SkillsHuntMissionGoalType[] = [
@@ -21,7 +22,9 @@ const GOAL_TYPES: SkillsHuntMissionGoalType[] = [
 const STATUSES: SkillsHuntMissionStatus[] = ["draft", "active", "locked", "archived"];
 
 function Labeled({ id, text, children }: { id: string; text: string; children: React.ReactNode }) {
-  return <div><label style={label} htmlFor={id}>{text}</label>{children}</div>;
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
+  return <div><label style={labelStyle(t)} htmlFor={id}>{text}</label>{children}</div>;
 }
 
 function missionValidationError(title: string, goalTarget: number, isSector: boolean, sectorName: string): string | null {
@@ -39,18 +42,20 @@ function missionGoalMetadata(isSector: boolean, sectorName: string, sectorId: st
 }
 
 function MissionRow({ mission, onArchive }: { mission: SkillsHuntMission; onArchive: (id: string) => void }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderTop: `1px solid ${t.BORDER}` }}>
       {mission.colorHex && <span style={{ width: 12, height: 12, borderRadius: 3, background: mission.colorHex, flexShrink: 0 }} aria-hidden />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, color: "#F9FAFB" }}>{mission.title}</div>
-        <div style={{ fontSize: 11, color: "#6B7280" }}>
+        <div style={{ fontWeight: 600, color: t.TITLE }}>{mission.title}</div>
+        <div style={{ fontSize: 11, color: t.MUTED }}>
           {mission.goalType} · target {mission.goalTarget} · +{mission.bonusPoints} pts · {mission.status}
         </div>
       </div>
       {mission.status !== "archived" && (
         <button type="button" onClick={() => onArchive(mission.id)}
-          style={{ padding: "4px 10px", borderRadius: 6, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: "#9CA3AF", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+          style={{ padding: "4px 10px", borderRadius: 6, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: t.SUBTLE, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
           Archive
         </button>
       )}
@@ -59,6 +64,9 @@ function MissionRow({ mission, onArchive }: { mission: SkillsHuntMission; onArch
 }
 
 function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCreated: () => void; onCancel: () => void }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
+  const field = fieldStyle(t);
   const [title, setTitle] = useState("");
   const [goalType, setGoalType] = useState<SkillsHuntMissionGoalType>("count_total_accepted");
   const [goalTarget, setGoalTarget] = useState(1);
@@ -99,8 +107,8 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
   }
 
   return (
-    <div style={{ marginBottom: 18, padding: "16px 18px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${COLOR}25` }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", marginBottom: 12 }}>New mission</div>
+    <div style={{ marginBottom: 18, padding: "16px 18px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}25` }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>New mission</div>
       <div style={{ display: "grid", gap: 12 }}>
         <Labeled id="shm-title" text="Title"><input id="shm-title" style={field} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Find 5 rare skills" /></Labeled>
         <div style={row}>
@@ -120,11 +128,11 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
         {error && <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>}
         <div style={{ display: "flex", gap: 10 }}>
           <button type="button" onClick={() => void submit()} disabled={saving}
-            style={{ padding: "9px 18px", borderRadius: 8, background: COLOR, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            style={{ padding: "9px 18px", borderRadius: 8, background: t.ACCENT, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>
             {saving ? "Creating…" : "Create mission"}
           </button>
           <button type="button" onClick={onCancel} disabled={saving}
-            style={{ padding: "9px 18px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            style={{ padding: "9px 18px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
             Cancel
           </button>
         </div>
@@ -134,6 +142,8 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
 }
 
 export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
   const [missions, setMissions] = useState<SkillsHuntMission[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +190,7 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
   }
 
   if (!roundId) {
-    return <div style={{ color: "#9CA3AF", fontSize: 13 }}>Select a round above to manage its missions.</div>;
+    return <div style={{ color: t.SUBTLE, fontSize: 13 }}>Select a round above to manage its missions.</div>;
   }
 
   return (
@@ -190,18 +200,18 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
         : (
           <div style={{ marginBottom: 16 }}>
             <button type="button" onClick={() => setOpen(true)}
-              style={{ padding: "9px 16px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}35`, color: COLOR, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              style={{ padding: "9px 16px", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}35`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
               + New mission
             </button>
           </div>
         )}
       {error && <div style={{ marginBottom: 12, color: "#EF4444", fontSize: 13 }}>{error}</div>}
       {loading ? (
-        <div style={{ color: "#6B7280", fontSize: 13 }}>Loading missions…</div>
+        <div style={{ color: t.MUTED, fontSize: 13 }}>Loading missions…</div>
       ) : missions.length === 0 ? (
-        <div style={{ color: "#6B7280", fontSize: 13 }}>No missions for this round yet.</div>
+        <div style={{ color: t.MUTED, fontSize: 13 }}>No missions for this round yet.</div>
       ) : (
-        <div style={{ borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)", overflow: "hidden" }}>
+        <div style={{ borderRadius: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER_STRONG}`, overflow: "hidden" }}>
           {missions.map((m) => <MissionRow key={m.id} mission={m} onArchive={archive} />)}
         </div>
       )}
