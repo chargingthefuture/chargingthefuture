@@ -246,6 +246,13 @@ function normalizeQuoraProfileUrl(value: string): string {
   return parsedUrl.toString();
 }
 
+// Per-round duplicate key. Identity is intentionally the normalized Quora profile
+// URL plus the claimed skill set (taxonomy + proposed) — NOT fullName/bio. The URL
+// is the person's identity, so this blocks re-nominating the same profile with the
+// same skills in a round. fullName/bio are deliberately excluded: including them
+// would let a scout re-submit the same profile with a tweaked name to bypass the
+// per-round duplicate guard. Name/bio corrections go through the review 'edit'
+// action, not a fresh submission.
 function buildSignatureHash(url: string, skills: string[], proposedSkills: string[] = []): string {
   const normalizedSkills = [...skills].sort((left, right) => left.localeCompare(right));
   // Include proposedSkills in the signature so submissions differing only in
@@ -1994,25 +2001,16 @@ export async function reviewSubmission(
       await emitSubmissionRejected(client, existing.submitter_user_id, submissionId);
     }
 
-    // If an already-accepted submission was flipped to reject/flag, mission
-    // progress for this user may need to roll back. recomputeMissionProgressForUser
-    // is idempotent and reads only currently-accepted rows, so the simple
-    // path is to call it on any accepted → non-accepted transition.
+    // If an already-accepted submission was flipped to reject/flag, roll back the
+    // user's mission progress counts. recomputeMissionProgressForUser reads only
+    // currently-accepted rows, so this lowers the counts. We deliberately do NOT
+    // emit mission-complete notifications on this transition: a downward recompute
+    // can only lower progress, never newly complete a mission, so announcing a
+    // completion here would always be wrong. (Whether an already-earned completion
+    // should be revoked when progress later drops is a separate product decision;
+    // today a `completed_at` timestamp is kept sticky once earned.)
     if (existing.status === 'accepted' && status !== 'accepted') {
-      const { newlyCompleted } = await recomputeMissionProgressForUser(
-        client,
-        existing.round_id,
-        existing.submitter_user_id,
-      );
-      for (const mission of newlyCompleted) {
-        await emitMissionComplete(
-          client,
-          existing.submitter_user_id,
-          mission.id,
-          mission.title,
-          mission.bonusPoints,
-        );
-      }
+      await recomputeMissionProgressForUser(client, existing.round_id, existing.submitter_user_id);
     }
 
     return mapSubmission(updated.rows[0]);

@@ -156,10 +156,12 @@ claims it. SkillsHunt does not bypass Directory policy.
 ### SH-A4 · Missions, reports, and reward-card editor
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
-1. In the admin tabs, create/list/archive a mission.
-2. In Reports, dismiss / archive / remove a community report.
+1. In the admin tabs, create/list/archive a mission. Edit a mission and clear its color, then save.
+2. In Reports, dismiss / archive / remove a community report. Open Reports with no filter, then with each status filter.
 3. Edit and save the Directory reward card.
-**Expected:** Each tab acts on its real endpoint with the CSRF header. Reports transition only
+**Expected:** Each tab acts on its real endpoint with the CSRF header. Editing a mission to clear its
+color actually removes the color (a blank color is not silently kept). Reports open on the open queue
+by default and each status filter narrows correctly; reports transition only
 (open → dismissed / archived / removed), never delete. The reward-card edit persists and shows on the
 Directory page (SH-6).
 **Result:** web ☐ mobile ☐ android ☐ — notes:

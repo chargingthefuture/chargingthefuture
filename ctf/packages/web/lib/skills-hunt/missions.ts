@@ -371,21 +371,24 @@ export async function updateMission(
   missionId: string,
   input: MissionUpdateInput,
 ): Promise<SkillsHuntMission | null> {
-  // COALESCE pattern so callers can send partial updates without juggling SQL.
+  // Partial update. Non-nullable columns use COALESCE (a null param means "leave
+  // unchanged"). The two nullable columns an admin can intentionally clear —
+  // description and color_hex — use a "provided" boolean so passing an explicit
+  // null actually writes null rather than being swallowed by COALESCE.
   const result = await client.query<SkillsHuntMissionRow>(
     `
       UPDATE skills_hunt_missions
       SET
         title          = COALESCE($2, title),
-        description    = COALESCE($3, description),
-        goal_type      = COALESCE($4, goal_type),
-        goal_target    = COALESCE($5, goal_target),
-        goal_metadata  = COALESCE($6::jsonb, goal_metadata),
-        bonus_points   = COALESCE($7, bonus_points),
-        color_hex      = COALESCE($8, color_hex),
-        status         = COALESCE($9, status),
-        display_order  = COALESCE($10, display_order),
-        updated_by_user_id = $11,
+        description     = CASE WHEN $3::boolean THEN $4 ELSE description END,
+        goal_type      = COALESCE($5, goal_type),
+        goal_target    = COALESCE($6, goal_target),
+        goal_metadata  = COALESCE($7::jsonb, goal_metadata),
+        bonus_points   = COALESCE($8, bonus_points),
+        color_hex       = CASE WHEN $9::boolean THEN $10 ELSE color_hex END,
+        status         = COALESCE($11, status),
+        display_order  = COALESCE($12, display_order),
+        updated_by_user_id = $13,
         updated_at = NOW()
       WHERE id = $1::uuid
       RETURNING ${MISSION_RETURN_COLS}
@@ -393,11 +396,13 @@ export async function updateMission(
     [
       missionId,
       input.title?.trim() ?? null,
+      input.description !== undefined,
       input.description !== undefined ? input.description?.trim() ?? null : null,
       input.goalType ?? null,
       input.goalTarget ?? null,
       input.goalMetadata !== undefined ? JSON.stringify(input.goalMetadata) : null,
       input.bonusPoints ?? null,
+      input.colorHex !== undefined,
       input.colorHex !== undefined ? input.colorHex : null,
       input.status ?? null,
       input.displayOrder ?? null,
