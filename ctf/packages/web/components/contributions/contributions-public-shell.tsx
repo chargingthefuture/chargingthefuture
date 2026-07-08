@@ -12,51 +12,40 @@ import {
   type ContributionsTokens,
 } from './contributions-shared';
 
-// The signed-out marketing view. Per rule 126 it shows no private or per-user data — the drive
-// figures here are a static preview of the kind of progress a drive tracks, not live totals (the
-// visitor has no session to read them). The live numbers load only after sign-in.
-const PREVIEW_GOALS = [
-  { label: 'Funding raised', current: 1340, target: 2400, unit: '$', Icon: DollarSign, color: GOAL_COLORS.funding },
-  { label: 'Quora comments', current: 87, target: 200, unit: '', Icon: MessageSquare, color: GOAL_COLORS.quora },
-  { label: 'GitHub stars', current: 234, target: 500, unit: '', Icon: Star, color: GOAL_COLORS.github },
+// The signed-out marketing view. It must show NO fabricated figures: a signed-out visitor has no
+// session, so any drive name, dollar amount, count, or progress bar here would be made-up and read
+// as real live data. Instead it explains the three ways a member can help, with no numbers. The real
+// drive and its live totals load only after sign-in.
+const WAYS_TO_HELP: Array<{ Icon: typeof DollarSign; color: string; label: string; desc: string }> = [
+  { Icon: DollarSign, color: GOAL_COLORS.funding, label: 'Gift card', desc: 'Put a gift card toward the platform’s infrastructure costs.' },
+  { Icon: MessageSquare, color: GOAL_COLORS.quora, label: 'Quora comment', desc: 'Share the project in a Quora comment.' },
+  { Icon: Star, color: GOAL_COLORS.github, label: 'GitHub star', desc: 'Star the open-source repository.' },
 ];
 
 const INTRO =
   'The platform is free and will stay that way. Members who are able can help with infrastructure costs through gift cards, a Quora comment, or a GitHub star. Every contribution is private and confirmed contributions earn ServiceCredits as a thank-you.';
 
-function GoalBar({
+function WayRow({
   label,
-  current,
-  target,
-  unit,
+  desc,
   Icon,
   color,
   t,
 }: {
   label: string;
-  current: number;
-  target: number;
-  unit: string;
+  desc: string;
   Icon: typeof DollarSign;
   color: string;
   t: ContributionsTokens;
 }) {
-  const pct = Math.min(Math.round((current / target) * 100), 100);
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Icon size={12} color={color} />
-          <span style={{ fontSize: 12, color: t.MUTED }}>{label}</span>
-        </div>
-        <span style={{ fontSize: 12, fontWeight: 600, color }}>
-          {unit}
-          {current.toLocaleString()} / {unit}
-          {target.toLocaleString()}
-        </span>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 14 }}>
+      <div style={{ width: 28, height: 28, borderRadius: 8, background: `${color}1F`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Icon size={14} color={color} />
       </div>
-      <div style={{ height: 6, background: t.BORDER_SOLID, borderRadius: 99 }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 99 }} />
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE }}>{label}</div>
+        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>{desc}</div>
       </div>
     </div>
   );
@@ -110,9 +99,9 @@ function DesktopPublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyU
         <p style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.8, marginBottom: 28 }}>{INTRO}</p>
 
         <div style={{ background: t.SURFACE, borderRadius: 12, padding: 18, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 28 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 14 }}>Spring 2026 Infrastructure Drive</div>
-          {PREVIEW_GOALS.map((g) => (
-            <GoalBar key={g.label} {...g} t={t} />
+          <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 14 }}>Three ways to help</div>
+          {WAYS_TO_HELP.map((w) => (
+            <WayRow key={w.label} {...w} t={t} />
           ))}
         </div>
 
@@ -151,9 +140,9 @@ function MobilePublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUr
         <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.8, margin: '0 0 22px' }}>{INTRO}</p>
 
         <div style={{ background: t.SURFACE, borderRadius: 12, padding: 16, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 22 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 12 }}>Spring 2026 Drive</div>
-          {PREVIEW_GOALS.map((g) => (
-            <GoalBar key={g.label} {...g} t={t} />
+          <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 12 }}>Three ways to help</div>
+          {WAYS_TO_HELP.map((w) => (
+            <WayRow key={w.label} {...w} t={t} />
           ))}
         </div>
 
@@ -177,9 +166,10 @@ function MobilePublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUr
 }
 
 /**
- * Signed-out visitor view for Contributions, faithful to the ContributionsPublic /
- * MobileContributionsPublic mockups. Shows marketing copy, a static drive-progress preview, and a
- * sign-in (or finish-verifying) call to action. No private or per-user data is fetched.
+ * Signed-out visitor view for Contributions. Shows marketing copy, a non-numeric explainer of the
+ * three ways to help, and a sign-in (or finish-verifying) call to action. It fetches no private or
+ * per-user data and shows no fabricated figures — the real drive and its live totals appear only
+ * after sign-in.
  */
 export function ContributionsPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
