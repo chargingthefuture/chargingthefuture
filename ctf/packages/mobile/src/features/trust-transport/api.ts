@@ -51,6 +51,15 @@ export async function createRequest(
   return data.item;
 }
 
+// Cancel your own request (any non-terminal status). Confirmed by the caller before invoking.
+export async function cancelOrder(requestId: string): Promise<void> {
+  await authedFetchJson<{ ok: boolean }>(`${BASE}/orders/${requestId}/cancel`, {
+    method: 'POST',
+    headers: MUTATION_HEADERS,
+    body: JSON.stringify({}),
+  });
+}
+
 export async function listOffersForRequest(requestId: string): Promise<TrustTransportOffer[]> {
   const data = await authedFetchJson<{ ok: boolean; items: TrustTransportOffer[] }>(
     `${BASE}/requests/${requestId}/offers`,

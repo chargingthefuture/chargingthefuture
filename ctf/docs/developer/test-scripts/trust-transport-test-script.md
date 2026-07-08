@@ -230,11 +230,11 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as a member. A cancellable trip/order exists (seeded).
 
 **Steps:**
-1. Open a cancellable order.
-2. Initiate cancellation.
-3. Confirm the explicit confirmation prompt.
+1. Open the Tracking tab and find a non-terminal request/order you made (open, accepted, or in progress).
+2. Tap/click "Cancel request".
+3. Confirm the explicit confirmation prompt (a `window.confirm` dialog on web, a native `Alert` on android).
 
-**Expected:** The order transitions to a cancelled terminal state. The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
+**Expected:** The order transitions to a cancelled terminal state and disappears from the cancellable list (the "Cancel request" control no longer shows). The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
 
 Result: web ☐ android ☐
 

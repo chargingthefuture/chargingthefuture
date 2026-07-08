@@ -290,6 +290,17 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+- 2026-07-02: Cancel-request UI on both platforms. The `POST /api/trust-transport/orders/:orderId/cancel`
+  route and `cancelOrder()` repository function already existed and were fully authorized (requester or
+  admin only; forward-transition-checked so a completed/cancelled request can't be re-cancelled) but had
+  no caller anywhere in the app — a member had no way to cancel a request they made. Added a "Cancel
+  request" control to the Tracking tab (web `tt-tracking-tab.tsx`) and the Track tab (android
+  `TrustTransport.tsx`, new `cancelOrder()` added to the mobile API client) for any of the member's own
+  non-terminal requests (open, accepted, in progress), each behind an explicit confirmation prompt
+  (`window.confirm` on web, a native `Alert` on android) per the "explicit confirmation for irreversible
+  actions" security control. No schema/route/contract change — the endpoint already existed and was
+  reviewed.
+
 - 2026-07-02: Android earnings + payouts screen (parity with web slice 6, issue #1250). New
   `TrustTransportEarningsTab.tsx` — an "Earnings" tab in the bottom nav with per-currency balance cards
   (`getEarningsBalances`), a payout request form scoped to whichever currency is selected
