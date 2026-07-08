@@ -2,7 +2,7 @@ name: Generate — Product Update
 
 on:
   schedule:
-    - cron: "33 */12 * * *"   # every 12 hours at :33 (00:33, 12:33 UTC), offset to avoid a top-of-hour stampede
+    - cron: "33 0 */2 * *"   # every 48 hours: 00:33 UTC every other day, offset to avoid a top-of-hour stampede. (Cron has no exact "every 48h"; the */2 day-of-month step resets at the start of each month, so one interval per month can be ~24h instead of 48h.)
   workflow_dispatch:
     inputs:
       force:
