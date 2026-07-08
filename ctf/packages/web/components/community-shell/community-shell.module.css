@@ -542,7 +542,7 @@
 .chatSender {
   font-size: 11px;
   font-weight: 700;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary, #9CA3AF);
   margin-bottom: 3px;
 }
 
@@ -1794,8 +1794,8 @@
 .comicLockedComposer {
   margin-top: 12px;
   border-radius: 12px;
-  border: 1px solid #1E2A3A;
-  background: #161B27;
+  border: 1px solid var(--ctf-border-dim, #1E2A3A);
+  background: var(--ctf-surface, #161B27);
   padding: 14px 16px;
   display: flex;
   align-items: center;
