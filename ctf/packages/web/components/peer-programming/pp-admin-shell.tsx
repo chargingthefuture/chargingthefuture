@@ -13,20 +13,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Code2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import type { AssignmentRunResult, PeerProgrammingCohort, PeerProgrammingTopic, SingleOpenCohortMode } from './pp-admin-shared';
 import { ppAdminMutate } from './pp-admin-shared';
+import { getPeerProgrammingTokens } from './pp-shared';
 import { PeerProgrammingAdminTopicForm } from './pp-admin-topic-form';
 import { PeerProgrammingAdminAssignments } from './pp-admin-assignments';
 
-// Admin design tokens (shared admin look from the design system). PeerProgramming accent is mint.
-const COLOR = '#6EE7B7';
-const BG = '#0F1117';
-const PANEL = '#0D0F14';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+// Admin design tokens (shared admin look from the design system) come from the theme-aware
+// PeerProgramming tokens: accent (mint), page background, panel/header, admin card surface, and
+// the solid admin border. The default theme keeps the shipped hex values.
 
 // A cohort member surfaced in the admin roster: user id + resolved display name (null when Clerk
 // could not resolve it). Membership is not secret — an admin sees who is assigned, not just a count.
@@ -48,6 +45,8 @@ function currentWeekStartDate(now = new Date()): string {
 }
 
 export function PeerProgrammingAdminShell() {
+  const { theme } = useTheme();
+  const t = getPeerProgrammingTokens(theme);
   const isMobile = useIsMobile();
   const defaultWeekStart = useMemo(() => currentWeekStartDate(), []);
 
@@ -211,12 +210,12 @@ export function PeerProgrammingAdminShell() {
         // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
         // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
         ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
-        background: BG,
-        color: TEXT,
+        background: t.BG,
+        color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="PeerProgramming Admin" accent={COLOR} icon={<Code2 size={18} color={COLOR} />} />
+      <MobileScreenHeader title="PeerProgramming Admin" accent={t.ACCENT} icon={<Code2 size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div
@@ -226,8 +225,8 @@ export function PeerProgrammingAdminShell() {
             gap: 10,
             padding: '14px 16px',
             borderRadius: 12,
-            background: PANEL,
-            border: `1px solid ${BORDER}`,
+            background: t.HEADER,
+            border: `1px solid ${t.BORDER_SOLID}`,
             marginBottom: 16,
           }}
         >
@@ -236,19 +235,19 @@ export function PeerProgrammingAdminShell() {
               width: 36,
               height: 36,
               borderRadius: 9,
-              background: `${COLOR}20`,
-              border: `1px solid ${COLOR}35`,
+              background: `${t.ACCENT}20`,
+              border: `1px solid ${t.ACCENT}35`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <Code2 size={18} color={COLOR} />
+            <Code2 size={18} color={t.ACCENT} />
           </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800 }}>PeerProgramming Admin</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>Weekly topic &amp; cohort assignment</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Weekly topic &amp; cohort assignment</div>
           </div>
           <span
             style={{
@@ -269,7 +268,7 @@ export function PeerProgrammingAdminShell() {
         <div style={{ marginBottom: 16 }}>
           <Link
             href="/apps/peer-programming"
-            style={{ fontSize: 13, fontWeight: 600, color: COLOR, textDecoration: 'none' }}
+            style={{ fontSize: 13, fontWeight: 600, color: t.ACCENT, textDecoration: 'none' }}
           >
             Open the cohort room →
           </Link>
@@ -308,7 +307,7 @@ export function PeerProgrammingAdminShell() {
         ) : null}
 
         {loading ? (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14 }}>
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14 }}>
             Loading…
           </div>
         ) : (
@@ -318,14 +317,14 @@ export function PeerProgrammingAdminShell() {
                 marginBottom: 16,
                 padding: 16,
                 borderRadius: 12,
-                background: SURFACE,
-                border: `1px solid ${BORDER}`,
+                background: t.SURFACE,
+                border: `1px solid ${t.BORDER_SOLID}`,
               }}
             >
-              <h2 style={{ fontSize: 15, fontWeight: 800, color: TEXT, margin: '0 0 4px' }}>
+              <h2 style={{ fontSize: 15, fontWeight: 800, color: t.TITLE, margin: '0 0 4px' }}>
                 Single standing Cohort 1 mode
               </h2>
-              <p style={{ fontSize: 12, color: SUBTLE, margin: '0 0 12px', lineHeight: 1.5 }}>
+              <p style={{ fontSize: 12, color: t.MUTED, margin: '0 0 12px', lineHeight: 1.5 }}>
                 While there are too few active members to fill weekly cohorts of five, everyone shares
                 one standing, always-open Cohort 1 instead of being split into tiny rooms. Turn it off
                 to resume the weekly split into C1, C2, C3.
@@ -339,8 +338,8 @@ export function PeerProgrammingAdminShell() {
                       gap: 10,
                       padding: '10px 14px',
                       borderRadius: 10,
-                      background: PANEL,
-                      border: `1px solid ${BORDER}`,
+                      background: t.HEADER,
+                      border: `1px solid ${t.BORDER_SOLID}`,
                       marginBottom: 12,
                     }}
                   >
@@ -351,15 +350,15 @@ export function PeerProgrammingAdminShell() {
                         fontSize: 12,
                         fontWeight: 700,
                         background: mode.enabled ? 'rgba(34,197,94,0.15)' : 'rgba(107,114,128,0.18)',
-                        color: mode.enabled ? '#22C55E' : SUBTLE,
-                        border: `1px solid ${mode.enabled ? 'rgba(34,197,94,0.3)' : BORDER}`,
+                        color: mode.enabled ? '#22C55E' : t.MUTED,
+                        border: `1px solid ${mode.enabled ? 'rgba(34,197,94,0.3)' : t.BORDER_SOLID}`,
                       }}
                     >
                       {mode.enabled ? 'On' : 'Off'}
                     </span>
-                    <span style={{ fontSize: 12, color: SUBTLE }}>
+                    <span style={{ fontSize: 12, color: t.MUTED }}>
                       Source:{' '}
-                      <span style={{ color: TEXT, fontWeight: 600 }}>
+                      <span style={{ color: t.TITLE, fontWeight: 600 }}>
                         {mode.source === 'admin_setting'
                           ? 'admin setting'
                           : mode.source === 'env_flag'
@@ -380,9 +379,9 @@ export function PeerProgrammingAdminShell() {
                         fontSize: 13,
                         fontWeight: 700,
                         cursor: savingMode ? 'progress' : 'pointer',
-                        background: `${COLOR}1F`,
-                        color: COLOR,
-                        border: `1px solid ${COLOR}40`,
+                        background: `${t.ACCENT}1F`,
+                        color: t.ACCENT,
+                        border: `1px solid ${t.ACCENT}40`,
                         opacity: savingMode ? 0.7 : 1,
                       }}
                     >
@@ -420,8 +419,8 @@ export function PeerProgrammingAdminShell() {
                           fontWeight: 700,
                           cursor: savingMode ? 'progress' : 'pointer',
                           background: 'transparent',
-                          color: SUBTLE,
-                          border: `1px solid ${BORDER}`,
+                          color: t.MUTED,
+                          border: `1px solid ${t.BORDER_SOLID}`,
                           opacity: savingMode ? 0.7 : 1,
                         }}
                       >
@@ -431,7 +430,7 @@ export function PeerProgrammingAdminShell() {
                   </div>
                 </>
               ) : (
-                <p style={{ fontSize: 13, color: SUBTLE, margin: 0 }}>
+                <p style={{ fontSize: 13, color: t.MUTED, margin: 0 }}>
                   The current mode could not be read.
                 </p>
               )}
@@ -442,20 +441,20 @@ export function PeerProgrammingAdminShell() {
                 marginBottom: 16,
                 padding: 16,
                 borderRadius: 12,
-                background: SURFACE,
-                border: `1px solid ${BORDER}`,
+                background: t.SURFACE,
+                border: `1px solid ${t.BORDER_SOLID}`,
               }}
             >
               <div style={{ marginBottom: 12 }}>
-                <h2 style={{ fontSize: 15, fontWeight: 800, color: TEXT, margin: 0 }}>Weekly topic</h2>
+                <h2 style={{ fontSize: 15, fontWeight: 800, color: t.TITLE, margin: 0 }}>Weekly topic</h2>
                 {topic ? (
-                  <p style={{ fontSize: 12, color: SUBTLE, marginTop: 6, marginBottom: 0, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 12, color: t.MUTED, marginTop: 6, marginBottom: 0, lineHeight: 1.5 }}>
                     Current published topic:{' '}
-                    <span style={{ color: TEXT, fontWeight: 600 }}>{topic.title}</span> (week of{' '}
+                    <span style={{ color: t.TITLE, fontWeight: 600 }}>{topic.title}</span> (week of{' '}
                     {topic.weekStartDate}, status {topic.status}).
                   </p>
                 ) : (
-                  <p style={{ fontSize: 12, color: SUBTLE, marginTop: 6, marginBottom: 0, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 12, color: t.MUTED, marginTop: 6, marginBottom: 0, lineHeight: 1.5 }}>
                     No topic is published for the current week. Fill in the form to set one.
                   </p>
                 )}
@@ -474,11 +473,11 @@ export function PeerProgrammingAdminShell() {
                 marginBottom: 16,
                 padding: 16,
                 borderRadius: 12,
-                background: SURFACE,
-                border: `1px solid ${BORDER}`,
+                background: t.SURFACE,
+                border: `1px solid ${t.BORDER_SOLID}`,
               }}
             >
-              <h2 style={{ fontSize: 15, fontWeight: 800, color: TEXT, margin: '0 0 12px' }}>
+              <h2 style={{ fontSize: 15, fontWeight: 800, color: t.TITLE, margin: '0 0 12px' }}>
                 Weekly cohort assignment
               </h2>
               <PeerProgrammingAdminAssignments
@@ -493,19 +492,19 @@ export function PeerProgrammingAdminShell() {
                 marginBottom: 16,
                 padding: 16,
                 borderRadius: 12,
-                background: SURFACE,
-                border: `1px solid ${BORDER}`,
+                background: t.SURFACE,
+                border: `1px solid ${t.BORDER_SOLID}`,
               }}
             >
-              <h2 style={{ fontSize: 15, fontWeight: 800, color: TEXT, margin: '0 0 4px' }}>
+              <h2 style={{ fontSize: 15, fontWeight: 800, color: t.TITLE, margin: '0 0 4px' }}>
                 Cohorts
               </h2>
-              <p style={{ fontSize: 12, color: SUBTLE, margin: '0 0 12px', lineHeight: 1.5 }}>
+              <p style={{ fontSize: 12, color: t.MUTED, margin: '0 0 12px', lineHeight: 1.5 }}>
                 Every cohort you have formed, most recent first. Open any one to read along and manage
                 it — you are included in all of them.
               </p>
               {cohorts.length === 0 ? (
-                <p style={{ fontSize: 13, color: SUBTLE, margin: 0 }}>
+                <p style={{ fontSize: 13, color: t.MUTED, margin: 0 }}>
                   No cohorts have formed yet. Run the weekly assignment above to form them.
                 </p>
               ) : (
@@ -519,20 +518,20 @@ export function PeerProgrammingAdminShell() {
                         gap: 12,
                         padding: '10px 14px',
                         borderRadius: 10,
-                        background: PANEL,
-                        border: `1px solid ${BORDER}`,
+                        background: t.HEADER,
+                        border: `1px solid ${t.BORDER_SOLID}`,
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Cohort {cohort.cohortLabel}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>Cohort {cohort.cohortLabel}</span>
                           {cohort.fallbackOpen ? (
                             <span style={{ background: 'rgba(234,179,8,0.15)', color: '#EAB308', border: '1px solid rgba(234,179,8,0.3)', fontSize: 10, padding: '1px 7px', borderRadius: 10 }}>
                               Open
                             </span>
                           ) : null}
                         </div>
-                        <div style={{ fontSize: 12, color: SUBTLE, marginTop: 2 }}>
+                        <div style={{ fontSize: 12, color: t.MUTED, marginTop: 2 }}>
                           Week of {cohort.weekStartDate} · {cohort.memberCount} member{cohort.memberCount !== 1 ? 's' : ''}
                         </div>
                         {cohort.members && cohort.members.length > 0 ? (
@@ -543,7 +542,7 @@ export function PeerProgrammingAdminShell() {
                       </div>
                       <Link
                         href={`/apps/peer-programming?cohortId=${encodeURIComponent(cohort.id)}`}
-                        style={{ fontSize: 12, fontWeight: 700, color: COLOR, textDecoration: 'none', whiteSpace: 'nowrap' }}
+                        style={{ fontSize: 12, fontWeight: 700, color: t.ACCENT, textDecoration: 'none', whiteSpace: 'nowrap' }}
                       >
                         Open room →
                       </Link>

@@ -2,11 +2,15 @@ import { LogIn } from 'lucide-react';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+// Chrome colors via theme CSS variables (fallback = the exact shipped default hex, so the
+// default theme is pixel-identical). This is a server component, so CSS vars — not useTheme().
+const BG = 'var(--ctf-bg, #0F1117)';
+const SURFACE = 'var(--ctf-surface, #161B27)';
+const BORDER = 'var(--ctf-border, #1E2A3A)';
+const TEXT = 'var(--ctf-text, #F9FAFB)';
+const SUBTLE = 'var(--ctf-text-subtle, #6B7280)';
+// Status green — no sanctioned default token (design-cohesion pass §F3); also used with the
+// `${COLOR}NN` alpha-suffix trick that CSS var() cannot express. Keep raw.
 const COLOR = '#22C55E';
 
 /**

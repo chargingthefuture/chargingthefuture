@@ -19,7 +19,7 @@ const ICON_BTN: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  color: "#6B7280",
+  color: "var(--ctf-text-subtle, #6B7280)",
   background: "transparent",
   border: "1px solid transparent",
   textDecoration: "none",

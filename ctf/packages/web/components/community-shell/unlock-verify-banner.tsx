@@ -66,19 +66,19 @@ export function UnlockVerifyBanner({
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
         <ShieldCheck size={16} color="#C084FC" style={{ flexShrink: 0 }} />
-        <span style={{ fontSize: 14, fontWeight: 700, color: '#F9FAFB' }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ctf-text)' }}>
           {isPending ? 'Your verification is under review' : 'Verify your account to unlock full access'}
         </span>
       </div>
 
       {isPending ? (
-        <p style={{ fontSize: 13, color: '#9CA3AF', lineHeight: 1.6, margin: 0 }}>
+        <p style={{ fontSize: 13, color: 'var(--ctf-text-secondary)', lineHeight: 1.6, margin: 0 }}>
           Thanks — your Quora profile is submitted and a human is reviewing it. You have Commons access
           while you wait. Questions? Just send a message below in the Commons and we&apos;ll help.
         </p>
       ) : (
         <>
-          <p style={{ fontSize: 13, color: '#9CA3AF', lineHeight: 1.6, margin: '0 0 10px' }}>
+          <p style={{ fontSize: 13, color: 'var(--ctf-text-secondary)', lineHeight: 1.6, margin: '0 0 10px' }}>
             {wasRejected
               ? 'Your last submission could not be verified. Re-submit your Quora profile URL below — a human reviews every one.'
               : 'Submit your Quora profile URL so we can confirm you are a real person. A human reviews every submission.'}{' '}
@@ -99,7 +99,8 @@ export function UnlockVerifyBanner({
                 borderRadius: 10,
               }}
             >
-              <ExternalLink size={14} color="#9CA3AF" style={{ flexShrink: 0 }} />
+              {/* stroke defaults to currentColor, so the CSS color var themes the icon */}
+              <ExternalLink size={14} style={{ color: 'var(--ctf-text-secondary)', flexShrink: 0 }} />
               <input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
@@ -114,7 +115,7 @@ export function UnlockVerifyBanner({
                   border: 'none',
                   outline: 'none',
                   fontSize: 14,
-                  color: '#F9FAFB',
+                  color: 'var(--ctf-text)',
                   fontFamily: 'inherit',
                 }}
               />
@@ -131,7 +132,7 @@ export function UnlockVerifyBanner({
                 borderRadius: 10,
                 border: 'none',
                 background: url.trim().length === 0 || submitting ? 'rgba(255,255,255,0.10)' : '#C084FC',
-                color: url.trim().length === 0 || submitting ? '#9CA3AF' : '#1A1030',
+                color: url.trim().length === 0 || submitting ? 'var(--ctf-text-secondary)' : '#1A1030',
                 fontSize: 14,
                 fontWeight: 700,
                 cursor: url.trim().length === 0 || submitting ? 'default' : 'pointer',
