@@ -238,6 +238,14 @@
       "partial": false
     },
     {
+      "name": "geo",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
       "name": "health",
       "type": "module",
       "lastReviewedAt": null,
@@ -412,10 +420,16 @@
     {
       "name": "skills-hunt",
       "type": "plugin",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-07-08T09:03:30.711Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/skills-hunt",
+        "ctf/packages/web/app/api/skills-hunt",
+        "ctf/packages/web/components/skills-hunt",
+        "ctf/packages/web/lib/skills-hunt"
+      ]
     },
     {
       "name": "skills-taxonomy",
