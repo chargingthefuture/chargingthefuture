@@ -1,7 +1,8 @@
 "use client";
 
 import { BookOpen, Users } from "lucide-react";
-import { BG, BORDER, GREEN, MUTED, SUBTLE, SURFACE, TEXT, TRACK_COLORS, type Trainer } from "./lu-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getLevelUpTokens, TRACK_COLORS, type Trainer } from "./lu-shared";
 
 // Trainers screen — layout aligned to design/.../survivor-hub/LevelUpTrainers.tsx.
 // Real data only: every value comes from GET /api/level-up/trainers.
@@ -19,11 +20,13 @@ function initials(name: string): string {
 }
 
 function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
   return (
-    <div style={{ flex: 1, minWidth: 150, background: SURFACE, borderRadius: 10, padding: "14px 16px", border: `1px solid ${BORDER}` }}>
+    <div style={{ flex: 1, minWidth: 150, background: t.SURFACE, borderRadius: 10, padding: "14px 16px", border: `1px solid ${t.BORDER_SOLID}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
         <Users size={14} color={color} />
-        <span style={{ fontSize: 12, color: SUBTLE }}>{label}</span>
+        <span style={{ fontSize: 12, color: t.TEXT_SUBTLE }}>{label}</span>
       </div>
       <div style={{ fontSize: 20, fontWeight: 700, color }}>{value}</div>
     </div>
@@ -31,49 +34,53 @@ function StatCard({ label, value, color }: { label: string; value: string; color
 }
 
 function EmptyTrainers() {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: "48px 0", textAlign: "center" }}>
-      <div style={{ width: 56, height: 56, borderRadius: 14, background: `${GREEN}10`, border: `1px solid ${GREEN}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Users size={24} style={{ color: GREEN, opacity: 0.5 }} />
+      <div style={{ width: 56, height: 56, borderRadius: 14, background: `${t.ACCENT}10`, border: `1px solid ${t.ACCENT}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Users size={24} style={{ color: t.ACCENT, opacity: 0.5 }} />
       </div>
       <div>
-        <div style={{ fontSize: 15, fontWeight: 600, color: TEXT, marginBottom: 6 }}>No trainers listed yet</div>
-        <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, maxWidth: 360 }}>Trainers are survivor-advocates who lead cohorts. New trainers appear here as they join.</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT_BODY, marginBottom: 6 }}>No trainers listed yet</div>
+        <div style={{ fontSize: 13, color: t.TEXT_SUBTLE, lineHeight: 1.6, maxWidth: 360 }}>Trainers are survivor-advocates who lead cohorts. New trainers appear here as they join.</div>
       </div>
     </div>
   );
 }
 
 function TrainerCard({ trainer }: { trainer: Trainer }) {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
   const primaryTrack = trainer.tracks[0];
-  const tc = (primaryTrack && TRACK_COLORS[primaryTrack]) || GREEN;
+  const tc = (primaryTrack && TRACK_COLORS[primaryTrack]) || t.ACCENT;
   return (
-    <div style={{ background: SURFACE, borderRadius: 12, padding: "20px", border: `1px solid ${BORDER}` }}>
+    <div style={{ background: t.SURFACE, borderRadius: 12, padding: "20px", border: `1px solid ${t.BORDER_SOLID}` }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
         <div style={{ width: 44, height: 44, borderRadius: 12, background: `${tc}18`, border: `1.5px solid ${tc}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: tc, flexShrink: 0 }}>
           {initials(trainer.displayName)}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>{trainer.displayName}</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TEXT_BODY }}>{trainer.displayName}</span>
             {trainer.tracks.map((track) => {
-              const color = TRACK_COLORS[track] ?? GREEN;
+              const color = TRACK_COLORS[track] ?? t.ACCENT;
               return (
                 <span key={track} style={{ fontSize: 10, fontWeight: 600, color, background: `${color}15`, padding: "2px 7px", borderRadius: 20 }}>{track}</span>
               );
             })}
           </div>
-          {trainer.headline && <div style={{ fontSize: 12, color: SUBTLE }}>{trainer.headline}</div>}
+          {trainer.headline && <div style={{ fontSize: 12, color: t.TEXT_SUBTLE }}>{trainer.headline}</div>}
         </div>
       </div>
 
       {trainer.bio && (
-        <div style={{ padding: "10px 12px", background: BG, borderRadius: 8, border: `1px solid ${BORDER}`, marginBottom: 14, fontSize: 13, color: TEXT, lineHeight: 1.5 }}>
+        <div style={{ padding: "10px 12px", background: t.BG, borderRadius: 8, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 14, fontSize: 13, color: t.TEXT_BODY, lineHeight: 1.5 }}>
           {trainer.bio}
         </div>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: MUTED, paddingTop: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: t.FAINT, paddingTop: 4 }}>
         <BookOpen size={13} />
         {trainer.activeCohortCount} active {trainer.activeCohortCount === 1 ? "cohort" : "cohorts"}
       </div>
@@ -82,16 +89,18 @@ function TrainerCard({ trainer }: { trainer: Trainer }) {
 }
 
 export function LevelUpTrainers({ trainers }: { trainers: Trainer[] }) {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
   if (trainers.length === 0) return <EmptyTrainers />;
 
   const trackSet = new Set<string>();
-  trainers.forEach((t) => t.tracks.forEach((track) => trackSet.add(track)));
-  const totalCohorts = trainers.reduce((sum, t) => sum + t.activeCohortCount, 0);
+  trainers.forEach((tr) => tr.tracks.forEach((track) => trackSet.add(track)));
+  const totalCohorts = trainers.reduce((sum, tr) => sum + tr.activeCohortCount, 0);
 
   return (
     <div>
       <div style={{ display: "flex", gap: 12, marginBottom: 28, flexWrap: "wrap" }}>
-        <StatCard label="Trainers" value={String(trainers.length)} color={GREEN} />
+        <StatCard label="Trainers" value={String(trainers.length)} color={t.ACCENT} />
         <StatCard label="Tracks covered" value={String(trackSet.size)} color="#3B82F6" />
         <StatCard label="Active cohorts" value={String(totalCohorts)} color="#F59E0B" />
       </div>

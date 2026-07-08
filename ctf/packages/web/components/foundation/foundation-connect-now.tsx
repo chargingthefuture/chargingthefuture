@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { PhoneCall, X } from "lucide-react";
-import { COLOR, type ProviderView } from "./foundation-ui";
+import { useTheme } from "@/hooks/useTheme";
+import { getFoundationTokens, type ProviderView } from "./foundation-ui";
 import { useInstantCall } from "./foundation-instant-call";
 
 // Whole ServiceCredits per block of N minutes, e.g. "5 ServiceCredits / 10 min". ServiceCredits is
@@ -62,6 +63,8 @@ export function InstantCallAvailabilityBadge({
   provider: ProviderView;
   compact?: boolean;
 }) {
+  const { theme } = useTheme();
+  const t = getFoundationTokens(theme);
   const rate = provider.instantCallRateCredits ?? 0;
   const rateLabel = instantCallRateLabel(rate, provider.instantCallIntervalMinutes);
   return (
@@ -70,9 +73,9 @@ export function InstantCallAvailabilityBadge({
         display: "inline-flex", alignItems: "center", gap: 8,
         padding: compact ? "6px 12px" : "9px 16px",
         borderRadius: compact ? 8 : 10,
-        background: `${COLOR}12`, color: COLOR,
+        background: `${t.ACCENT}12`, color: t.ACCENT,
         fontSize: compact ? 12 : 13.5, fontWeight: 600,
-        border: `1px solid ${COLOR}30`, flexShrink: 0,
+        border: `1px solid ${t.ACCENT}30`, flexShrink: 0,
       }}
     >
       <PhoneCall size={compact ? 14 : 16} />
@@ -93,6 +96,8 @@ export function ConnectNowButton({
   provider: ProviderView;
   compact?: boolean;
 }) {
+  const { theme } = useTheme();
+  const t = getFoundationTokens(theme);
   const [open, setOpen] = useState(false);
 
   // canOfferConnectNow guarantees a numeric rate >= 1 before this renders, but narrow defensively so
@@ -112,7 +117,7 @@ export function ConnectNowButton({
           display: "inline-flex", alignItems: "center", gap: 8,
           padding: compact ? "7px 14px" : "10px 18px",
           borderRadius: compact ? 8 : 10,
-          background: COLOR, color: "#1a1205",
+          background: t.ACCENT, color: "#1a1205",
           fontSize: compact ? 12 : 14, fontWeight: 700,
           border: "none", cursor: "pointer", flexShrink: 0,
         }}
@@ -148,6 +153,8 @@ function ConnectNowDialog({
   intervalMinutes: number;
   onClose: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getFoundationTokens(theme);
   const providerName = provider.displayName;
   const rate = provider.instantCallRateCredits ?? 0;
   const [consented, setConsented] = useState(false);
@@ -201,7 +208,7 @@ function ConnectNowDialog({
         style={{
           width: "100%", maxWidth: 440,
           background: "#11131A",
-          border: `1px solid ${COLOR}30`,
+          border: `1px solid ${t.ACCENT}30`,
           borderRadius: 16,
           padding: "22px 22px 20px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
@@ -209,33 +216,33 @@ function ConnectNowDialog({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-          <PhoneCall size={18} color={COLOR} />
-          <div style={{ flex: 1, fontSize: 18, fontWeight: 800, color: "#F9FAFB" }}>Connect now</div>
+          <PhoneCall size={18} color={t.ACCENT} />
+          <div style={{ flex: 1, fontSize: 18, fontWeight: 800, color: t.TITLE }}>Connect now</div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: 4, display: "flex" }}
+            style={{ background: "none", border: "none", color: t.SUBTLE, cursor: "pointer", padding: 4, display: "flex" }}
           >
             <X size={18} />
           </button>
         </div>
 
-        <div style={{ fontSize: 13.5, color: "#9CA3AF", lineHeight: 1.6, marginBottom: 14 }}>
-          Start a live, paid 1:1 call with <strong style={{ color: "#F9FAFB" }}>{providerName}</strong> right now.
+        <div style={{ fontSize: 13.5, color: t.SUBTLE, lineHeight: 1.6, marginBottom: 14 }}>
+          Start a live, paid 1:1 call with <strong style={{ color: t.TITLE }}>{providerName}</strong> right now.
         </div>
 
-        <div style={{ padding: "14px 16px", borderRadius: 12, background: `${COLOR}10`, border: `1px solid ${COLOR}28`, marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#6B7280", textTransform: "uppercase", marginBottom: 6 }}>Rate</div>
-          <div style={{ fontSize: 17, fontWeight: 800, color: COLOR }}>{rateLabel}</div>
-          <div style={{ fontSize: 12.5, color: "#9CA3AF", marginTop: 4 }}>
+        <div style={{ padding: "14px 16px", borderRadius: 12, background: `${t.ACCENT}10`, border: `1px solid ${t.ACCENT}28`, marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.MUTED, textTransform: "uppercase", marginBottom: 6 }}>Rate</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: t.ACCENT }}>{rateLabel}</div>
+          <div style={{ fontSize: 12.5, color: t.SUBTLE, marginTop: 4 }}>
             You&apos;re charged this rate for each {intervalMinutes}-minute block. The first block is charged
             when {providerName} answers. You can end the call anytime.
           </div>
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <label htmlFor="connect-now-block-cap" style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#6B7280", textTransform: "uppercase", marginBottom: 6 }}>
+          <label htmlFor="connect-now-block-cap" style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.MUTED, textTransform: "uppercase", marginBottom: 6 }}>
             Spend limit
           </label>
           <select
@@ -244,8 +251,8 @@ function ConnectNowDialog({
             onChange={(e) => setAuthorizedBlocks(Number(e.target.value))}
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 10,
-              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)",
-              color: "#F9FAFB", fontSize: 14, fontWeight: 600, cursor: "pointer",
+              background: t.INPUT_BG, border: "1px solid rgba(255,255,255,0.12)",
+              color: t.TITLE, fontSize: 14, fontWeight: 600, cursor: "pointer",
             }}
           >
             {BLOCK_CAP_OPTIONS.map((n) => (
@@ -254,13 +261,13 @@ function ConnectNowDialog({
               </option>
             ))}
           </select>
-          <div style={{ fontSize: 12.5, color: "#9CA3AF", marginTop: 6, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12.5, color: t.SUBTLE, marginTop: 6, lineHeight: 1.5 }}>
             The call will not run past this limit. You&apos;ll be charged for at most{" "}
-            <strong style={{ color: "#F9FAFB" }}>{maxSpendLabel}</strong> ({authorizedBlocks === 1 ? "1 block" : `${authorizedBlocks} blocks`}, up to {maxMinutes} min).
+            <strong style={{ color: t.TITLE }}>{maxSpendLabel}</strong> ({authorizedBlocks === 1 ? "1 block" : `${authorizedBlocks} blocks`}, up to {maxMinutes} min).
           </div>
         </div>
 
-        <div style={{ fontSize: 12.5, color: "#9CA3AF", lineHeight: 1.7, marginBottom: 14 }}>
+        <div style={{ fontSize: 12.5, color: t.SUBTLE, lineHeight: 1.7, marginBottom: 14 }}>
           This starts a live 1:1 call. You&apos;ll be charged the provider&apos;s rate per block until you
           end it or reach your spend limit. Only start a call you mean to pay for.
         </div>
@@ -274,7 +281,7 @@ function ConnectNowDialog({
             type="checkbox"
             checked={consented}
             onChange={(e) => setConsented(e.target.checked)}
-            style={{ marginTop: 2, width: 16, height: 16, accentColor: COLOR, flexShrink: 0 }}
+            style={{ marginTop: 2, width: 16, height: 16, accentColor: t.ACCENT, flexShrink: 0 }}
           />
           <span style={{ fontSize: 13, color: "#D1D5DB", lineHeight: 1.5 }}>
             I understand this is a paid call and I agree to be charged {rateLabel}, up to {maxSpendLabel}.
@@ -290,16 +297,16 @@ function ConnectNowDialog({
             width: "100%",
             padding: "12px 18px",
             borderRadius: 10,
-            background: consented && !starting && instantCall ? COLOR : "rgba(255,255,255,0.06)",
-            color: consented && !starting && instantCall ? "#1a1205" : "#6B7280",
+            background: consented && !starting && instantCall ? t.ACCENT : t.BORDER,
+            color: consented && !starting && instantCall ? "#1a1205" : t.MUTED,
             fontSize: 14, fontWeight: 700,
-            border: consented && !starting && instantCall ? "none" : "1px solid rgba(255,255,255,0.10)",
+            border: consented && !starting && instantCall ? "none" : `1px solid ${t.BORDER_HI}`,
             cursor: consented && !starting && instantCall ? "pointer" : "not-allowed",
           }}
         >
           {starting ? "Starting…" : "Start call"}
         </button>
-        <div style={{ marginTop: 10, fontSize: 12, color: "#9CA3AF", lineHeight: 1.6, textAlign: "center" }}>
+        <div style={{ marginTop: 10, fontSize: 12, color: t.SUBTLE, lineHeight: 1.6, textAlign: "center" }}>
           The first block is charged when the provider answers. Ringing is free, and you only pay for blocks
           you use up to your limit.
         </div>

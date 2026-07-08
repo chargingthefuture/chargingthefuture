@@ -2,32 +2,34 @@
 
 import { BookOpen, Lock, Search, MapPin } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useTheme } from '@/hooks/useTheme';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
+import { getDirectoryTokens } from './shared';
 
-// Palette from the DirectoryPublic / MobileDirectoryPublic design mockups.
-const BG = '#0F1117';
-const COLOR = '#93C5FD';
+// SkillsHunt amber from the DirectoryPublic / MobileDirectoryPublic design mockups (the
+// cross-plugin reward-card accent; no shell-token slot, kept static).
 const HUNT_COLOR = '#FBBF24';
-const TEXT = '#F9FAFB';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
 function DesktopDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
+  const { theme } = useTheme();
+  const t = getDirectoryTokens(theme);
   return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
-      <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
+      <div style={{ height: 52, borderBottom: `1px solid ${t.BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
         <PublicShellBackLink />
-        <BookOpen size={18} color={COLOR} />
+        <BookOpen size={18} color={t.ACCENT} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Directory</span>
         <div style={{ marginLeft: 'auto' }}>
           {verifyUrl ? (
-            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
               Finish verifying
             </a>
           ) : (
-            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: t.BORDER_STRONG, border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
               Sign In
             </a>
           )}
@@ -37,26 +39,26 @@ function DesktopDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
       {/* Hero */}
       <div style={{ padding: '48px 64px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ padding: '4px 14px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 12, color: COLOR, fontWeight: 600 }}>Verified profiles</span>
+          <span style={{ padding: '4px 14px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 12, color: t.ACCENT, fontWeight: 600 }}>Verified profiles</span>
         </div>
         <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, lineHeight: 1.1 }}>
           Connect with verified<br />
-          <span style={{ color: COLOR }}>providers &amp; advocates</span>
+          <span style={{ color: t.ACCENT }}>providers &amp; advocates</span>
         </h1>
-        <p style={{ margin: 0, fontSize: 15, color: '#9CA3AF', maxWidth: 500 }}>
+        <p style={{ margin: 0, fontSize: 15, color: t.SUBTLE, maxWidth: 500 }}>
           Trauma-informed therapists, housing navigators, legal advocates, employment coaches, and more.
         </p>
         <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
           {verifyUrl ? (
-            <a href={verifyUrl} style={{ padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+            <a href={verifyUrl} style={{ padding: '14px 32px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
               Finish verifying
             </a>
           ) : (
             <>
-              <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+              <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
                 Join the Hub — Free
               </a>
-              <a href={signInUrl} style={{ padding: '14px 24px', borderRadius: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+              <a href={signInUrl} style={{ padding: '14px 24px', borderRadius: 10, background: t.BORDER_STRONG, border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
                 Learn more
               </a>
             </>
@@ -71,9 +73,9 @@ function DesktopDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: TEXT }}>SkillsHunt — Community Reward</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: t.TITLE }}>SkillsHunt — Community Reward</div>
           </div>
-          <div style={{ fontSize: 13, color: '#9CA3AF', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5 }}>
             Know a survivor with skills the community needs? Sign in to submit their public profile and help grow the Directory. Earn points, badges, and prizes.
           </div>
         </div>
@@ -85,14 +87,14 @@ function DesktopDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
       {/* Sign-in gate (no fabricated preview profiles) */}
       <div style={{ padding: '0 64px 64px' }}>
         <div style={{ borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)', padding: '56px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Lock size={24} color={COLOR} />
+          <div style={{ width: 56, height: 56, borderRadius: '50%', border: `2px solid ${t.ACCENT}50`, background: t.ACCENT + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Lock size={24} color={t.ACCENT} />
           </div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: TEXT, textAlign: 'center' }}>Sign in to browse the Directory</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE, textAlign: 'center' }}>Sign in to browse the Directory</div>
           <div style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', maxWidth: 320, display: 'flex', alignItems: 'center', gap: 6 }}>
             <MapPin size={13} color="#6B7280" /> Filter by specialty, location, and Service Credit acceptance.
           </div>
-          <a href={verifyUrl ?? signInUrl} style={{ padding: '12px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '12px 32px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
             {verifyUrl ? 'Finish verifying' : 'Sign in to connect'}
           </a>
         </div>
@@ -102,17 +104,19 @@ function DesktopDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
 }
 
 function MobileDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
+  const { theme } = useTheme();
+  const t = getDirectoryTokens(theme);
   return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
+    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: t.TITLE }}>
       <div style={{ padding: '20px 20px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <PublicShellBackLink />
-          <BookOpen size={20} color={COLOR} />
+          <BookOpen size={20} color={t.ACCENT} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>Directory</span>
         </div>
-        <span style={{ padding: '3px 12px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 11, color: COLOR, fontWeight: 600, width: 'fit-content' }}>Verified profiles</span>
-        <p style={{ margin: 0, fontSize: 14, color: '#9CA3AF', lineHeight: 1.5 }}>Therapists, housing navigators, legal advocates, and more — searchable by location and specialty.</p>
-        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
+        <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Verified profiles</span>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Therapists, housing navigators, legal advocates, and more — searchable by location and specialty.</p>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 
       {/* SkillsHunt pinned reward card */}
@@ -121,9 +125,9 @@ function MobileDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
           <div style={{ width: 28, height: 28, borderRadius: 8, background: `${HUNT_COLOR}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Search size={14} style={{ color: HUNT_COLOR }} />
           </div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: TEXT }}>SkillsHunt</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: t.TITLE }}>SkillsHunt</div>
         </div>
-        <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.5, marginBottom: 10 }}>
+        <div style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.5, marginBottom: 10 }}>
           Know a survivor? Sign in to submit their public profile and help grow the Directory. Earn points &amp; badges.
         </div>
         <a href={verifyUrl ?? signInUrl} style={{ display: 'block', width: '100%', padding: '11px', borderRadius: 10, background: HUNT_COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', boxSizing: 'border-box', textDecoration: 'none' }}>
@@ -134,9 +138,9 @@ function MobileDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
       {/* Sign-in gate (no fabricated preview profiles) */}
       <div style={{ flex: 1, padding: '0 16px 20px' }}>
         <div style={{ height: '100%', minHeight: 240, borderRadius: 14, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '32px 20px' }}>
-          <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={COLOR} /></div>
+          <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${t.ACCENT}50`, background: t.ACCENT + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={t.ACCENT} /></div>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center' }}>Sign in to find providers</div>
-          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </div>

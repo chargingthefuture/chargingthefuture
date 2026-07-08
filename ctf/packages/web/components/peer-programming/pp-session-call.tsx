@@ -15,7 +15,8 @@ import {
   type StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
 import { Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff } from 'lucide-react';
-import { COLOR } from './pp-shared';
+import { useTheme } from '@/hooks/useTheme';
+import { getPeerProgrammingTokens, type PeerProgrammingTokens } from './pp-shared';
 import { reportError } from 'lib/observability/report';
 
 const CALL_TYPE = 'default';
@@ -56,6 +57,8 @@ export function PeerProgrammingSessionCall({
   displayName: string;
   onLeave: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getPeerProgrammingTokens(theme);
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
@@ -103,9 +106,9 @@ export function PeerProgrammingSessionCall({
 
   if (status !== 'joined' || !client || !call) {
     return (
-      <div style={{ padding: '60px 0', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: `1px solid ${COLOR}30`, textAlign: 'center' }}>
-        <VideoIcon size={48} style={{ color: COLOR, display: 'block', margin: '0 auto 12px' }} />
-        <div style={{ fontSize: 15, color: status === 'error' ? '#F87171' : '#9CA3AF' }}>
+      <div style={{ padding: '60px 0', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: `1px solid ${t.ACCENT}30`, textAlign: 'center' }}>
+        <VideoIcon size={48} style={{ color: t.ACCENT, display: 'block', margin: '0 auto 12px' }} />
+        <div style={{ fontSize: 15, color: status === 'error' ? '#F87171' : t.SUBTLE }}>
           {status === 'error' ? (errorMessage ?? 'Could not connect to the live session.') : 'Connecting to the live session…'}
         </div>
         {status === 'error' && (
@@ -137,6 +140,8 @@ const leaveButtonStyle: React.CSSProperties = {
 };
 
 function PeerProgrammingSessionStage({ onLeave }: { onLeave: () => void }) {
+  const { theme } = useTheme();
+  const t = getPeerProgrammingTokens(theme);
   const { useParticipants, useCameraState, useMicrophoneState } = useCallStateHooks();
   const participants = useParticipants();
   const { camera, isMute: cameraOff } = useCameraState();
@@ -161,24 +166,24 @@ function PeerProgrammingSessionStage({ onLeave }: { onLeave: () => void }) {
           crops it to a corner, which looks "zoomed in". Size the video (and Stream's wrapper) to the
           tile and center-crop it so each participant is framed like a normal video-call tile. */}
       <style>{PARTICIPANT_TILE_CSS}</style>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#6B7280', textTransform: 'uppercase', marginBottom: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: t.MUTED, textTransform: 'uppercase', marginBottom: 14 }}>
         Live · {uniqueParticipants.length} {uniqueParticipants.length === 1 ? 'participant' : 'participants'}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
         {uniqueParticipants.map((participant) => (
-          <div key={participant.sessionId} className="pp-participant-tile" style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${COLOR}25`, background: '#000', aspectRatio: '4 / 3' }}>
+          <div key={participant.sessionId} className="pp-participant-tile" style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.ACCENT}25`, background: '#000', aspectRatio: '4 / 3' }}>
             <ParticipantView participant={participant} />
           </div>
         ))}
       </div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 20 }}>
-        <button type="button" onClick={() => void microphone.toggle()} aria-label={micOff ? 'Unmute' : 'Mute'} style={controlStyle(micOff)}>
+        <button type="button" onClick={() => void microphone.toggle()} aria-label={micOff ? 'Unmute' : 'Mute'} style={controlStyle(micOff, t)}>
           {micOff ? <MicOff size={18} /> : <Mic size={18} />}
         </button>
-        <button type="button" onClick={() => void camera.toggle()} aria-label={cameraOff ? 'Start camera' : 'Stop camera'} style={controlStyle(cameraOff)}>
+        <button type="button" onClick={() => void camera.toggle()} aria-label={cameraOff ? 'Start camera' : 'Stop camera'} style={controlStyle(cameraOff, t)}>
           {cameraOff ? <VideoOff size={18} /> : <VideoIcon size={18} />}
         </button>
-        <button type="button" onClick={onLeave} aria-label="Leave session" style={{ ...controlStyle(true), background: 'rgba(239,68,68,0.14)', borderColor: 'rgba(239,68,68,0.35)', color: '#F87171' }}>
+        <button type="button" onClick={onLeave} aria-label="Leave session" style={{ ...controlStyle(true, t), background: 'rgba(239,68,68,0.14)', borderColor: 'rgba(239,68,68,0.35)', color: '#F87171' }}>
           <PhoneOff size={18} />
         </button>
       </div>
@@ -186,7 +191,7 @@ function PeerProgrammingSessionStage({ onLeave }: { onLeave: () => void }) {
   );
 }
 
-function controlStyle(active: boolean): React.CSSProperties {
+function controlStyle(active: boolean, t: PeerProgrammingTokens): React.CSSProperties {
   return {
     width: 46,
     height: 46,
@@ -195,8 +200,8 @@ function controlStyle(active: boolean): React.CSSProperties {
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'pointer',
-    background: active ? 'rgba(255,255,255,0.06)' : `${COLOR}20`,
-    border: `1px solid ${active ? 'rgba(255,255,255,0.12)' : `${COLOR}40`}`,
-    color: active ? '#9CA3AF' : COLOR,
+    background: active ? t.BORDER : `${t.ACCENT}20`,
+    border: `1px solid ${active ? 'rgba(255,255,255,0.12)' : `${t.ACCENT}40`}`,
+    color: active ? t.SUBTLE : t.ACCENT,
   };
 }
