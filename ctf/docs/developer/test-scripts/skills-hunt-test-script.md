@@ -1,196 +1,653 @@
 # SkillsHunt — Manual Test Script
 
-> Walk these steps on a real device to confirm the plugin works end to end. This script is
-> generated from the plugin's feature inventory and contracts — those files are the source of
-> truth, this is the runnable checklist derived from them. Do not edit a step here to match a
-> bug; fix the code (or the inventory) and regenerate.
->
-> **How to regenerate:** `pnpm --dir ctf test-script:generate -- skills-hunt`
+> Generated from the SkillsHunt feature inventory and declared contracts; this is the runnable checklist for a human tester on a real device.
+> To regenerate: `pnpm --dir ctf test-script:generate -- skills-hunt`
 
-| | |
+| Field | Value |
 |---|---|
-| **Plugin** | SkillsHunt (`skills-hunt`) |
-| **Visibility** | Member-facing |
-| **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Plugin** | SkillsHunt |
+| **Visibility** | Member |
+| **Roles to test** | member, admin/moderator |
+| **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-08 (commit 60e49c8e) |
+
+---
 
 ## How to run this
 
-- Each case is **precondition → steps → expected**. Do it on each surface listed for the case.
-- Mark each surface box: ✅ pass · ❌ fail · ⛔ blocked/can't reach.
-- A ❌ becomes a row in the **Bug Reporting** plugin. Put the bug link in the notes line so the
-  next run knows it's already filed.
-- Run the **Core smoke** block every session. Run the full walkthrough when you changed this
-  plugin or on a pre-release sweep.
+- Run `pnpm --dir ctf seed:skills-hunt` before starting any session. The seed is idempotent — re-running it is safe.
+- Mark each surface checkbox as you confirm it: ✅ pass · ❌ fail · ⛔ blocked.
+- A ❌ on any checkbox becomes a row in the Bug Reporting plugin. Record: case ID, surface, exact step that failed, what you saw vs what was expected.
+- Run **Core smoke** at the start of every session, even if you are only testing one walkthrough section.
+- Web base URL: wherever the CTF Next.js app is running locally or on staging.
+- Android: use the installed APK on a physical or emulated Android device pointed at the same backend.
 
 ---
 
 ## Core smoke (every session)
 
-SkillsHunt moves treasury credits on accept and seeds Directory profiles — these are the
-can't-ship-broken checks. Member (scout) role unless noted.
+**CS-1 — Rounds list loads for a signed-in member**
+Open `/apps/skills-hunt` (web) and the SkillsHunt screen (Android). Confirm at least one seeded round appears with a name and status visible. No error state, no blank screen.
+web ☐ android ☐
 
-1. **Rounds list loads.** Open SkillsHunt. Active / upcoming / closed rounds render, not a spinner
-   or error. → web ☐ mobile ☐ android ☐
-2. **Submission validates.** Submit a nomination with a bad value (e.g. a name with disallowed
-   characters, or a non-Quora URL). It is rejected with a plain-language message, not a raw error. → web ☐ mobile ☐ android ☐
-3. **Accept pays once.** As admin, accept a nomination on a round that configures a reward. The scout
-   is paid the configured amount once; re-reviewing the same submission does not pay again. → web ☐ mobile ☐ android ☐
-4. **No member-to-member transfer.** Confirm there is no "send credits to another member" control in
-   SkillsHunt — the only credit movement is the treasury reward on an accepted nomination. → web ☐ mobile ☐ android ☐
+**CS-2 — Scout tab / nomination form is reachable**
+From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Full name, Bio, Quora URL, and a skills picker.
+web ☐ android ☐
+
+**CS-3 — Leaderboard tab loads**
+Switch to the Leaderboard tab on the same round. A ranked list appears (seeded data). No fabricated figures — every visible number comes from the API.
+web ☐ android ☐
+
+**CS-4 — Admin moderation shell is reachable by an admin**
+Sign in as an admin. Navigate to `/admin/skills-hunt` (web) and the `skills-hunt-admin` screen (Android). A submissions table or list renders; a round selector is visible.
+web ☐ android ☐
+
+**CS-5 — A non-admin is blocked from the admin surface**
+Sign in as a plain member. Navigate to `/admin/skills-hunt` (web). Expect a redirect, 403, or "admins only" notice — not a working admin table. On Android, attempting to reach the admin screen shows the "admins only" notice.
+web ☐ android ☐
 
 ---
 
 ## Member walkthrough
 
-### SH-1 · Round discovery and detail
-**Role:** member · **Surfaces:** all · **Seed:** `seed:skills-hunt`
-**Steps:**
-1. Open SkillsHunt and view the list of rounds.
-2. Open one round and read its rules, scoring config, and dates.
-**Expected:** Active, upcoming, and closed rounds are listed and clearly labelled. The round detail
-shows its scoring config, rules, and window. Submitting is only offered during an active window.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+### SH-1 — Round discovery: active, upcoming, and closed rounds are visible
 
-### SH-2 · Submit a nomination (valid)
-**Role:** member · **Surfaces:** all
-**Precondition:** an active round. Test with two members: one **with** a Clerk @handle, and one
-**approved but with no username** (shows as `user-<id>`).
-**Steps:**
-1. Open the Scout tab and fill the nomination form: full name (2–100 letters/digits/spaces), bio
-   (≤ 280), a Quora profile URL, taxonomy-selected skills, and optional proposed (free-text) skills.
-2. Submit as the member with a @handle.
-3. Submit again as the approved member with **no** username.
-**Expected:** Both submissions are accepted — a Clerk username is **not** required to submit. The URL
-is normalized and pattern-checked; skills + proposed skills are capped (≤ 10 total). In the admin
-submissions table the first submitter shows as `@handle` and the second shows their stable
-`user-<id>` handle (not a raw id slice, and not blocked).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Role:** member · **Surfaces:** web, android
 
-### SH-3 · Quality and anti-spam guards
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Try to submit script/HTML-like text in a free-text field.
-2. Submit the same normalized URL + skills twice in one round.
-3. Submit repeatedly past the rolling weekly cap.
-**Expected:** Script/HTML payloads are rejected; the duplicate is blocked; the rolling submission cap
-stops further submissions. Each denial is a plain message, not a raw error. (A URL that is
-unambiguously dead — 404/410 — is auto-rejected.)
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Precondition:** Seed has run. At least one active, one upcoming (draft or future start), and one closed round exist in seed data.
 
-### SH-4 · Leaderboard (individual and team)
-**Role:** member · **Surfaces:** all
 **Steps:**
-1. Open the leaderboard in individual mode, then team mode.
-2. After a review outcome lands, re-open it.
-**Expected:** Individual mode ranks by accepted points; team mode aggregates by claimed profession.
-Rank, accepted count, and rare-skill bonus impact are shown. The board refreshes after review
-outcomes (polled). If the viewer is outside the top 100, their own rank still shows.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+1. Sign in as a member.
+2. Open `/apps/skills-hunt` (web) / SkillsHunt screen (Android).
+3. Observe the round list.
 
-### SH-5 · Achievements and status panel
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Open the achievements view and the status panel (the bell, labelled "Status").
-2. Mark a status item as read.
-**Expected:** Named badges (First Finder, Diversity Champion, Rare Talent Scout, Quality Contributor,
-Leaderboard Champion) show when earned. Status items fire on status transitions and awards; marking
-one read updates it and only affects the member's own items. The panel is titled "Status", not
-"Notifications", and shows **no** unread dot or count badge on the bell (per the no-notifications
-policy); unread rows are still visually accented until read.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Expected:** All three round states are represented. Each round card shows a name and its status. Closed rounds are visible but not selectable for new submissions.
 
-### SH-6 · Feature reward card
-**Role:** member · **Surfaces:** all
+Result: web ☐ android ☐
+
+---
+
+### SH-2 — Submission: happy path with taxonomy skills
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** An active round exists (seeded). Member is signed in.
+
 **Steps:**
-1. Open the surface where the feature reward card is pinned (the Directory public page) and read it.
-**Expected:** The configurable reward card renders with its "Submit a community profile" call to
-action, opening the SkillsHunt Scout tab. If no card is configured, a sensible default card shows.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+1. Navigate to the active round → Scout tab.
+2. Fill in:
+   - Full name: `Amara Williams` (letters and spaces, within 2–100 chars)
+   - Bio: `A software engineer focused on climate tech.` (under 280 chars)
+   - Quora URL: a valid-format Quora profile URL (e.g. `https://www.quora.com/profile/seed-test-user`)
+   - Select 2 taxonomy skills from the accordion/picker.
+3. Submit.
+
+**Expected:** Submission succeeds. A confirmation message or pending status appears. The submission shows up in the My Finds tab / "My Finds" section with status "pending".
+
+Result: web ☐ android ☐
+
+---
+
+### SH-3 — Submission: member without a Clerk username can still submit
+
+**Role:** member (no Clerk username set) · **Surfaces:** web
+
+**Precondition:** A test account exists that has never set a Clerk username (username field is null). An active round exists.
+
+**Steps:**
+1. Sign in as the username-less member.
+2. Navigate to Scout tab of the active round.
+3. Fill in a valid Full name, Bio, Quora URL, and at least one taxonomy skill.
+4. Submit.
+
+**Expected:** Submission succeeds. The gate does not block for missing username. In the admin table the submitter is shown as `user-<id>` (not a blank or raw ID slice).
+
+Result: web ☐
+
+---
+
+### SH-4 — Submission validation: field length and character constraints
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Active round exists. Member is signed in.
+
+**Steps:**
+1. Navigate to the Scout tab.
+2. Attempt to submit with Full name = `A` (1 character — below 2-char minimum).
+3. Observe error.
+4. Replace with a Full name containing HTML: `<script>alert(1)</script>`.
+5. Observe error.
+6. Enter a valid Full name. Set Bio to a string longer than 280 characters.
+7. Observe that either the counter prevents submission or the server rejects it.
+
+**Expected:**
+- Step 3: error message referencing "Full name" and the character requirement.
+- Step 5: error rejecting HTML/script-like content.
+- Step 7: submission is blocked or the counter turns red beyond 280 chars.
+
+Result: web ☐ android ☐
+
+---
+
+### SH-5 — Submission validation: dead Quora URL is rejected
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Active round exists. A Quora URL that returns 404/410 is available for testing (or configure a known dead URL in the seed).
+
+**Steps:**
+1. Navigate to the Scout tab of the active round.
+2. Fill all fields validly except the Quora URL — use a URL that resolves to 404 (e.g. `https://www.quora.com/profile/does-not-exist-xyzzy99`).
+3. Submit.
+
+**Expected:** The API rejects the submission with a message indicating the profile URL could not be verified (liveness check failed). The submission is not created.
+
+Result: web ☐
+
+---
+
+### SH-6 — Submission validation: duplicate submission in same round is blocked
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Member has already submitted a nomination with a specific Quora URL + skills combination in the active round (SH-2 above satisfies this).
+
+**Steps:**
+1. Navigate to the Scout tab of the same active round.
+2. Submit the same Quora URL and the same skills as the earlier submission.
+
+**Expected:** The API returns an error indicating a duplicate submission was detected. A second submission row is not created.
+
+Result: web ☐
+
+---
+
+### SH-7 — Proposed (free-text) skills can be added alongside taxonomy skills
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Active round exists. Member is signed in.
+
+**Steps:**
+1. Navigate to the Scout tab.
+2. Select 1 taxonomy skill from the picker.
+3. Type a free-text skill not in the taxonomy (e.g. `Regenerative Finance`) into the proposed-skill input and add it.
+4. Confirm it appears as a yellow/differently-styled chip.
+5. Submit the full form.
+
+**Expected:** Submission succeeds. The proposed skill is stored and visible in My Finds as a chip. The total skills + proposed skills count does not exceed 10.
+
+Result: web ☐ android ☐
+
+---
+
+### SH-8 — Leaderboard: individual and team modes
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Seeded data includes accepted submissions with points.
+
+**Steps:**
+1. Navigate to the Leaderboard tab on an active or closed round.
+2. Confirm the default individual view shows ranked entries with: rank, handle/name, score.
+3. Switch to team mode (if the UI exposes a toggle).
+4. Confirm the team view aggregates by profession/group.
+
+**Expected:**
+- Individual mode: entries ordered by score descending, first_match_count as tie-break, no fabricated numbers.
+- Team mode: aggregated rows by profession (may be limited by taxonomy sign-off — see Known gaps).
+- If the signed-in member is in the top-100 their row is highlighted; if outside top-100, their rank still appears.
+
+Result: web ☐ android ☐
+
+---
+
+### SH-9 — Missions tab displays progress
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Seeded data includes at least one active mission with a goal.
+
+**Steps:**
+1. Navigate to the Missions tab.
+2. Observe the mission list.
+3. Each mission should show a title, progress bar, and a "Scout Now" or equivalent CTA.
+
+**Expected:** Missions load from the real API (not stubbed). Progress bars reflect actual submission counts. Archived missions are not shown.
+
+Result: web ☐ android ☐
+
+---
+
+### SH-10 — My Finds tab shows own submissions and achievements
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Member has at least one submission (from SH-2). Seeded data may include a seeded achievement.
+
+**Steps:**
+1. Navigate to the My Finds tab.
+2. Observe the submissions list: each entry shows full name, status (pending/accepted/rejected), and relative date.
+3. Observe the achievements/badges row — seeded badges (e.g. First Finder) appear if awarded.
+
+**Expected:** Only the signed-in member's own submissions appear. Statuses are accurate. Achievement codes shown match the 5 named badges: First Finder, Diversity Champion, Rare Talent Scout, Quality Contributor, Leaderboard Champion.
+
+Result: web ☐ android ☐
+
+---
+
+### SH-11 — Status panel (notifications): unread entries are accented, mark-read works
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Member has at least one notification (e.g. after an admin accepts a submission in SH-A2).
+
+**Steps:**
+1. Open the Status panel — on web: click the bell icon in the icon rail; on Android: tap the bell in the top bar.
+2. Observe that unread notifications are visually distinct (accented).
+3. Confirm there is no unread count badge/dot on the bell icon itself.
+4. Click/tap an unread notification.
+
+**Expected:**
+- The notification is marked as read (accent removed or style changes).
+- No numeric dot/count badge appears on the bell icon at any point.
+- The panel polls automatically; waiting ~30 seconds and then triggering a new notification (from admin review) should surface it without a page reload.
+
+Result: web ☐ android ☐
+
+---
+
+### SH-12 — Feature reward card is visible on the Directory page
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** The seed has run. The reward card is configured (seed should set this up) or the default card is shown.
+
+**Steps:**
+1. Navigate to the Directory page (`/apps/directory`).
+2. Look for the SkillsHunt feature reward card in the sidebar or pinned area.
+3. Click the CTA button on the card.
+
+**Expected:** The card shows a title, description, and a CTA button. Clicking the CTA navigates to `/apps/skills-hunt?tab=scout` (the Scout/nomination form).
+
+Result: web ☐
+
+---
+
+### SH-13 — Submission report: member can report a community-generated Directory profile
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** A community-generated Directory profile exists (seeded with `@community-seed01` handle). Member is signed in.
+
+**Steps:**
+1. Navigate to the seeded community-generated profile in the Directory (`/apps/directory/@community-seed01`).
+2. Locate and trigger the "Report" action.
+3. Select a reason (e.g. "inaccurate") and optionally add details.
+4. Submit the report.
+
+**Expected:** Report is accepted (200 response or success confirmation). A second identical report from the same user can be submitted (this command is not idempotent by contract).
+
+Result: web ☐
+
+---
+
+### SH-14 — Community-generated Directory profile shows correct labels
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Seeded community-generated profile exists at `@community-seed01`.
+
+**Steps:**
+1. Navigate to `/apps/directory/@community-seed01`.
+2. Observe the profile page.
+
+**Expected:**
+- A "Community-generated profile" label or pill is visible (purple, per design).
+- The `@community-seed01` handle is shown in monospace.
+- "Nominated by @<scout-handle>" attribution appears.
+- There is no placeholder headline ("SkillsHunt contributor" text does not appear).
+- Skills that are not yet in the taxonomy appear as muted "pending review" chips.
+
+Result: web ☐
+
+---
+
+### SH-15 — GDPR self-delete removes member's submissions
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Member has at least one submission (from SH-2).
+
+**Steps:**
+1. While signed in as the member, send a DELETE request to `/api/account/skills-hunt-profile` (or use the UI affordance if present).
+2. Navigate to My Finds tab.
+3. Sign in as an admin and check `/admin/skills-hunt` submissions table.
+
+**Expected:**
+- The DELETE returns a JSON body with `deleted: N` where N ≥ 1.
+- My Finds shows no submissions for the deleted member.
+- The admin table no longer shows the deleted member's submissions.
+- The audit log retains a `skills-hunt.profile.delete` entry (verifiable via the admin audit-events endpoint).
+
+Result: web ☐
 
 ---
 
 ## Admin walkthrough
 
-### SH-A1 · Round management (role-gated)
-**Role:** admin · **Surfaces:** web (admin surface)
-**Steps:**
-1. As admin, create a round (name, window, status, scoring config, and reward config —
-   reward-per-accept and the per-scout round cap).
-2. Edit the round; change only one field and save.
-3. Attempt the same as a non-admin.
-**Expected:** Create and edit succeed; an edit is a true partial update (omitted fields keep their
-stored values, not reset to defaults). The save sends the CSRF header. A non-admin is denied with a
-readable "admins only" message.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+### SH-A1 — Create a round (web only)
 
-### SH-A2 · Review and scoring (accept / reject / flag) + reward
-**Role:** admin · **Surfaces:** web (admin surface), android (moderation screen)
-**Precondition:** a round with `reward-per-accept` set; a pending submission.
-**Steps:**
-1. Filter submissions by status; accept one, reject one, flag one — each behind a confirm gesture.
-2. Select several pending submissions and use bulk accept, then bulk reject.
-3. Note the scoring breakdown and the Reward column / reward summary.
-4. Re-review the accepted submission.
-**Expected:** Each action records the reviewer and notes and applies the scoring breakdown (match,
-first-match, stack, rare-skill, quality). Bulk accept and bulk reject first ask you to confirm and
-show the count of affected pending submissions, so neither runs on a stray click. On accept the
-scout is minted the configured reward once — bounded by the per-scout round cap and the treasury
-budget; a re-review does not double-pay. A reject adds a participation point, not a reward. No fiat
-equivalent is shown for the reward.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Role:** admin · **Surfaces:** web
 
-### SH-A3 · Directory seeding governance
-**Role:** admin · **Surfaces:** web (admin surface)
-**Steps:**
-1. Generate an unclaimed Directory profile from an accepted submission.
-2. Open that generated Directory profile.
-**Expected:** The generated profile is stamped community-generated, carries "Nominated by @handle"
-attribution and a reserved `community-<hex>` handle, and stays unclaimed until a verified owner
-claims it. SkillsHunt does not bypass Directory policy.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Precondition:** Signed in as admin. On `/admin/skills-hunt`.
 
-### SH-A4 · Missions, reports, and reward-card editor
-**Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
-1. In the admin tabs, create/list/archive a mission. Edit a mission and clear its color, then save.
-2. In Reports, dismiss / archive / remove a community report. Open Reports with no filter, then with each status filter.
-3. Edit and save the Directory reward card.
-**Expected:** Each tab acts on its real endpoint with the CSRF header. Editing a mission to clear its
-color actually removes the color (a blank color is not silently kept). Reports open on the open queue
-by default and each status filter narrows correctly; reports transition only
-(open → dismissed / archived / removed), never delete. The reward-card edit persists and shows on the
-Directory page (SH-6).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+1. Navigate to the Rounds tab of the admin shell.
+2. Fill in: Name (e.g. `Test Round Alpha`), start date (today), end date (7 days from now), status `active`.
+3. Set `rewardCreditsPerAccept` to `5` and `rewardPerUserRoundCap` to `20`.
+4. Save.
+
+**Expected:** The new round appears in the admin rounds list with status `active` and the configured reward values. The member-facing `/apps/skills-hunt` rounds list also shows the new round.
+
+Result: web ☐
+
+---
+
+### SH-A2 — Update a round (partial update; only supplied fields change)
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** The round created in SH-A1 exists.
+
+**Steps:**
+1. Open the round created in SH-A1 for editing.
+2. Change only the name to `Test Round Alpha — Updated`. Leave all other fields blank/untouched in the form.
+3. Save.
+
+**Expected:** The round name changes to the new value. The start date, end date, status, and reward config remain exactly as set in SH-A1 — they are not reset to defaults.
+
+Result: web ☐
+
+---
+
+### SH-A3 — Review a submission: accept, then verify leaderboard rebuild and notification
+
+**Role:** admin/moderator · **Surfaces:** web, android
+
+**Precondition:** At least one pending submission exists (created in SH-2 or from seed). The round has `rewardCreditsPerAccept > 0` (set in SH-A1 or use a seeded paid round).
+
+**Steps:**
+1. On the admin shell (web: Moderation tab; Android: moderation screen), select the active round.
+2. Filter to "pending" submissions.
+3. Accept one submission.
+4. On web, observe the Reward column on that row.
+5. On Android, observe the accepted submission card.
+
+**Expected:**
+- The submission status changes to "accepted".
+- The row shows a "✓ Paid N ServiceCredits" indicator (where N = rewardCreditsPerAccept).
+- The leaderboard for that round rebuilds — navigate to the Leaderboard tab and verify the submitter's score increased.
+- The submitter receives a `submission-accepted` notification (check the Status panel as the member, waiting up to 30s for the next poll).
+
+Result: web ☐ android ☐
+
+---
+
+### SH-A4 — Review a submission: reject with reason
+
+**Role:** admin/moderator · **Surfaces:** web, android
+
+**Precondition:** At least one pending submission exists in the active round.
+
+**Steps:**
+1. In the admin submissions view, select a pending submission.
+2. Click/tap Reject.
+3. Select a canned reason (e.g. "inaccurate") or enter free-text.
+4. Confirm.
+
+**Expected:**
+- Submission status changes to "rejected".
+- Review notes are stored (visible in the submission detail or admin table).
+- The submitter receives a `submission-rejected` notification (check Status panel as member, up to 30s).
+- The leaderboard does not increase for this submitter; participation_points (+1) are awarded internally but the member's score reflects the reject correctly.
+
+Result: web ☐ android ☐
+
+---
+
+### SH-A5 — Bulk review: accept multiple pending submissions at once
+
+**Role:** admin/moderator · **Surfaces:** web
+
+**Precondition:** Three or more pending submissions exist in the same round.
+
+**Steps:**
+1. Navigate to the Moderation tab on `/admin/skills-hunt`.
+2. Filter to "pending".
+3. Select all visible pending submissions using the checkboxes.
+4. Click "Bulk Accept".
+5. Confirm the count shown in the confirmation dialog matches the selected submissions.
+6. Confirm.
+
+**Expected:** All selected submissions change to "accepted" status sequentially. The leaderboard reflects each accepted submission. The confirmation dialog shows the count of pending submissions before firing.
+
+Result: web ☐
+
+---
+
+### SH-A6 — Flag a submission
+
+**Role:** admin/moderator · **Surfaces:** web, android
+
+**Precondition:** A pending submission exists.
+
+**Steps:**
+1. In the admin submissions view, locate a pending submission.
+2. Use the Flag action.
+
+**Expected:** Submission status changes to "flagged". It no longer appears in the pending filter. The action requires a confirm gesture on Android.
+
+Result: web ☐ android ☐
+
+---
+
+### SH-A7 — Generate a Directory profile from an accepted submission
+
+**Role:** admin/moderator · **Surfaces:** web
+
+**Precondition:** An accepted submission exists that does not yet have a linked Directory profile.
+
+**Steps:**
+1. In the admin moderation view, locate an accepted submission.
+2. Trigger "Generate Directory Profile" (button or action on the row/detail).
+3. Navigate to the Directory and search for the generated profile.
+
+**Expected:**
+- A new unclaimed Directory profile is created with `source = 'community-generated'`.
+- The profile URL is `@community-<hex>` (reserved prefix).
+- The profile shows "Nominated by @<scout-handle>" attribution.
+- Attempting to generate a second profile for the same accepted submission returns an error (projection_already_exists).
+
+Result: web ☐
+
+---
+
+### SH-A8 — Reward banner and summary visible in admin submissions view
+
+**Role:** admin/moderator · **Surfaces:** web, android
+
+**Precondition:** A round with `rewardCreditsPerAccept > 0` exists and has at least one accepted submission that was paid.
+
+**Steps:**
+1. Open the admin submissions view for the paid round.
+2. Observe the reward banner/summary area.
+
+**Expected:**
+- Banner shows: `N ServiceCredits per accepted nomination` and the optional per-scout cap.
+- Summary shows: "Paid so far: X ServiceCredits across Y nominations" (from `totalCreditsPaid` / `rewardedSubmissionCount`).
+- Amounts are shown in full words ("ServiceCredits"), never as a fiat equivalent or bare "SC".
+
+Result: web ☐ android ☐
+
+---
+
+### SH-A9 — Admin round create/edit is web-only; Android admin has no round creation UI
+
+**Role:** admin · **Surfaces:** android
+
+**Precondition:** Signed in as admin on Android.
+
+**Steps:**
+1. Open the `skills-hunt-admin` screen on Android.
+2. Look for any "New Round" or "Create Round" button or affordance.
+3. Look for any "Delete Round" button or affordance.
+
+**Expected:** Neither a round-create nor a round-delete affordance exists on the Android admin screen. Only the moderation actions (accept/reject/flag) are available.
+
+Result: android ☐
+
+---
+
+### SH-A10 — Missions: admin can create and list missions for a round
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** An active round exists.
+
+**Steps:**
+1. Navigate to the Missions tab of the admin shell.
+2. Select the active round.
+3. Create a new mission: enter a title, a goal count, and optionally a `colorHex` value.
+4. Save.
+5. Observe the mission appears in the admin list.
+
+**Expected:** Mission is created and listed. Navigate to the member-facing Missions tab (`/apps/skills-hunt` → Missions) — the new mission appears with a progress bar at 0% and the configured color.
+
+Result: web ☐
+
+---
+
+### SH-A11 — Missions: archive (soft-delete) removes mission from member view
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** The mission created in SH-A10 exists.
+
+**Steps:**
+1. In the admin Missions tab, select the mission created in SH-A10.
+2. Archive it (DELETE/archive action).
+3. Navigate to the member-facing Missions tab.
+
+**Expected:** The archived mission no longer appears to members. It may still be visible in the admin view with `status=archived` — it is not hard-deleted.
+
+Result: web ☐
+
+---
+
+### SH-A12 — Feature reward card: admin can update it
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** Signed in as admin. On `/admin/skills-hunt`.
+
+**Steps:**
+1. Navigate to the Reward Card tab of the admin shell.
+2. Change the title to `Join the Skills Hunt`, set `isActive = true`, and save.
+3. Navigate to the Directory page as a member.
+
+**Expected:** The reward card on the Directory page now shows the updated title. The CTA still links to `/apps/skills-hunt?tab=scout`.
+
+Result: web ☐
+
+---
+
+### SH-A13 — Reports queue: admin can view and resolve reports
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** SH-13 has been run — a report exists with status `open`.
+
+**Steps:**
+1. Navigate to the Reports tab of the admin shell.
+2. Confirm the report from SH-13 appears in the open queue.
+3. Resolve it with action `dismissed` and add a short note.
+4. Confirm the queue no longer shows that report under the default (open) filter.
+
+**Expected:** The report's status changes to `dismissed`. It is still accessible by filtering by that status. The resolution notes are stored.
+
+Result: web ☐
+
+---
+
+### SH-A14 — Audit trail is readable by admins
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** Several moderation actions have been performed in the session.
+
+**Steps:**
+1. Make a GET request to `/api/skills-hunt/admin/audit-events` (or use a browser/API tool while authenticated as admin).
+2. Optionally add `?limit=10`.
+
+**Expected:** Response contains `{ events: [...] }` with entries for actions performed this session (accepts, rejects, report creation, profile delete if SH-15 was run). Each event includes a command name, actor, timestamp, and policy decision.
+
+Result: web ☐
+
+---
+
+### SH-A15 — Round-ending-soon notification cron endpoint is admin-gated
+
+**Role:** member (should fail), then admin (should succeed) · **Surfaces:** web
+
+**Precondition:** An active round ending within 24 hours exists (adjust seed dates or create one in SH-A1 with an end date set to a few hours from now).
+
+**Steps:**
+1. Signed in as a plain member, POST to `/api/skills-hunt/admin/notifications/round-ending-soon` with the CSRF header (`x-ctf-csrf: 1`).
+2. Observe the response.
+3. Sign in as admin, repeat the POST.
+4. Open the Status panel as a member who has submissions in the ending round.
+
+**Expected:**
+- Step 2: 401 or 403.
+- Step 3: 200 success.
+- Step 4: A `round-ending-soon` notification appears for relevant members (up to 30s poll delay). Each member receives this notification at most once per round (idempotent).
+
+Result: web ☐
 
 ---
 
 ## Parity check (web ↔ android)
 
-For SH-1, SH-2, SH-4, and the moderation accept/reject/flag (SH-A2), the android app and the
-mobile-responsive web layout must behave the same: same rounds, same submission validation, same
-leaderboard, same review outcome. The reward display and round/mission/report/reward-card admin
-sections are web-only for now (android moderation parity is delivered; the rest is tracked) — note
-any drift on the shared surfaces rather than filing separate bugs.
+The following cases must produce identical behavior on both surfaces. Rerun them back-to-back on web and Android and confirm they match.
 
-**Result:** matches ☐ — drift notes:
+| Case | What to match |
+|---|---|
+| SH-1 | Round list shows same rounds with same statuses |
+| SH-2 | Submission happy path succeeds and shows in My Finds |
+| SH-4 | Full name and bio validation errors fire on the same conditions |
+| SH-7 | Proposed-skill chips appear and are submitted correctly |
+| SH-8 | Leaderboard individual rankings match (same data, same order) |
+| SH-9 | Missions list shows same missions with same progress |
+| SH-10 | My Finds shows same submissions and achievement codes |
+| SH-11 | Status panel shows same notifications; mark-read works |
+| SH-A3 | Accept action changes status and triggers notification on both |
+| SH-A4 | Reject action changes status and triggers notification on both |
+| SH-A6 | Flag action changes status on both |
+| SH-A8 | Reward banner and per-submission paid indicator visible on both |
+
+**Android-only behavior that intentionally differs from web:**
+- Round creation and editing is web-only (SH-A9).
+- Missions admin CRUD, Reports tab, and Reward Card editor are web-only (issue #660).
+- Each accept/reject/flag on Android requires an explicit confirm gesture before firing.
 
 ---
 
 ## Known gaps — do not file these as bugs
 
-Carried from the inventory's "Gaps and Known Technical Debt" section at authoring time. If you hit one
-of these, it is already tracked, not a new bug:
-
-- The admin pre-approval submitter pathway is intentionally disabled in the current scope (no UI
-  affordance).
-- URL liveness verification is best-effort; a stronger service-level guarantee has not been finalized.
-- Team-leaderboard aggregation by profession depends on Skills Taxonomy sign-off on the grouping
-  rules.
-- Proposed-skill promotion is owner-side and not testable from the app UI: proposals become GitHub
-  issues on a schedule, and an approved skill enters the taxonomy through the taxonomy change list
-  applied by the owner-run workflow (which also flips the proposal to "promoted"). In-app you can
-  only verify the nomination/proposal capture, not the promotion itself.
+1. **Admin pre-approval pathway for restricted submitters is disabled.** A user whose rejection rate exceeds the threshold gets a 403 (`SKILLS_HUNT_PRE_APPROVAL_REQUIRED`) but there is no UI for an admin to manually pre-approve them. This is intentional in the current scope.
+2. **URL liveness check has no finalized SLO.** A submission with a live Quora URL that happens to time out or return a transient error may behave unpredictably. The 5-second HEAD-check is best-effort; do not file a bug if a valid URL occasionally fails the check.
+3. **Team leaderboard aggregation by profession is conditional on Skills Taxonomy sign-off.** The team mode endpoint exists but grouping semantics depend on taxonomy structure. If team mode rows look odd or collapse unexpectedly, this is a known dependency gap, not a bug.
