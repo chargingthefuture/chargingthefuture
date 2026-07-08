@@ -7,15 +7,12 @@ import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { Unlock, Key, CheckCircle, XCircle, Ban, RefreshCw, Pencil } from 'lucide-react';
 import { UNLOCK_REWARD_SLA_HOURS } from 'lib/unlock/constants';
 import type { UnlockDashboardSnapshot, UnlockExperimentBucketStat, UnlockSubmission } from 'lib/unlock/types';
+import { useTheme } from '@/hooks/useTheme';
+import { getUnlockTokens } from './unlock-shared';
 
-// Admin design tokens (shared admin look from the design system). Unlock accent is purple.
-const COLOR = '#C084FC';
-const BG = '#0F1117';
-const PANEL = '#0D0F14';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+// Admin design tokens (shared admin look from the design system) come from the theme-aware
+// Unlock tokens: accent (purple), page background, panel/header, admin card surface, and the
+// solid admin border. The default theme keeps the shipped hex values.
 
 type ReviewStatus = UnlockSubmission['reviewStatus'];
 type Tab = 'pending' | 'all';
@@ -55,10 +52,12 @@ function RewardPill({ grantedAt }: { grantedAt: string | null }) {
 }
 
 function StatBlock({ label, value, accent }: { label: string; value: number; accent?: string }) {
+  const { theme } = useTheme();
+  const t = getUnlockTokens(theme);
   return (
-    <div style={{ flex: 1, minWidth: 92, padding: '10px 12px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
-      <div style={{ fontSize: 18, fontWeight: 800, color: accent ?? TEXT }}>{value}</div>
-      <div style={{ fontSize: 11, color: SUBTLE, marginTop: 2 }}>{label}</div>
+    <div style={{ flex: 1, minWidth: 92, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: accent ?? t.TITLE }}>{value}</div>
+      <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>{label}</div>
     </div>
   );
 }
@@ -74,6 +73,8 @@ export function UnlockAdminShell({
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getUnlockTokens(theme);
   const [tab, setTab] = useState<Tab>('pending');
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -279,21 +280,21 @@ export function UnlockAdminShell({
         // document scrolls, so only set a min-height there. Matches the skills-hunt / weekly-performance
         // admin shells.
         ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
-        background: BG,
-        color: TEXT,
+        background: t.BG,
+        color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="Unlock Admin" accent={COLOR} icon={<Unlock size={18} color={COLOR} />} />
+      <MobileScreenHeader title="Unlock Admin" accent={t.ACCENT} icon={<Unlock size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Unlock size={18} color={COLOR} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Unlock size={18} color={t.ACCENT} />
           </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800 }}>Unlock Admin</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>Quora verification queue</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Quora verification queue</div>
           </div>
           <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, color: '#6366F1', fontWeight: 700 }}>ADMIN</span>
         </div>
@@ -309,13 +310,13 @@ export function UnlockAdminShell({
 
         {/* Early Commons access A/B experiment readout. Driven by the experimentBucket recorded on the
             unlock.status.get / unlock.verification.submit audit rows. Empty until the Unleash rollout is on. */}
-        <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}` }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 2 }}>Early Commons access — A/B experiment</div>
-          <div style={{ fontSize: 11, color: SUBTLE, marginBottom: 10 }}>
+        <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}` }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 2 }}>Early Commons access — A/B experiment</div>
+          <div style={{ fontSize: 11, color: t.MUTED, marginBottom: 10 }}>
             Quora-URL completion rate by bucket. Treatment members get early access to the Commons to ask for help before verifying.
           </div>
           {experimentSplit.length === 0 ? (
-            <div style={{ fontSize: 12, color: SUBTLE }}>
+            <div style={{ fontSize: 12, color: t.MUTED }}>
               No experiment data yet. Turn on the <code>feature-unlock-early-commons-access</code> rollout in Unleash (sticky on userId) to start the test.
             </div>
           ) : (
@@ -323,12 +324,12 @@ export function UnlockAdminShell({
               {experimentSplit.map((row) => {
                 const label =
                   row.bucket === 'early_commons' ? 'Early Commons (treatment)' : row.bucket === 'control' ? 'Control' : row.bucket;
-                const accent = row.bucket === 'early_commons' ? COLOR : '#9CA3AF';
+                const accent = row.bucket === 'early_commons' ? t.ACCENT : t.SUBTLE;
                 return (
-                  <div key={row.bucket} style={{ flex: 1, minWidth: 200, padding: '10px 12px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
+                  <div key={row.bucket} style={{ flex: 1, minWidth: 200, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: accent, marginBottom: 4 }}>{label}</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: TEXT }}>{row.completionPct}%</div>
-                    <div style={{ fontSize: 11, color: SUBTLE, marginTop: 2 }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE }}>{row.completionPct}%</div>
+                    <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>
                       {row.submitted} of {row.exposed} submitted
                     </div>
                   </div>
@@ -344,12 +345,12 @@ export function UnlockAdminShell({
             type="button"
             onClick={retryRewards}
             disabled={reconciling}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: `${COLOR}1A`, border: `1px solid ${COLOR}55`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: reconciling ? 'not-allowed' : 'pointer', opacity: reconciling ? 0.6 : 1 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: `${t.ACCENT}1A`, border: `1px solid ${t.ACCENT}55`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: reconciling ? 'not-allowed' : 'pointer', opacity: reconciling ? 0.6 : 1 }}
           >
             <RefreshCw size={13} /> {reconciling ? 'Retrying…' : 'Retry pending rewards'}
           </button>
           {pendingRewardCount > 0 ? (
-            <span style={{ fontSize: 12, color: SUBTLE }}>
+            <span style={{ fontSize: 12, color: t.MUTED }}>
               {pendingRewardCount} approved submission{pendingRewardCount === 1 ? '' : 's'} awaiting reward
             </span>
           ) : null}
@@ -357,15 +358,15 @@ export function UnlockAdminShell({
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          {(['pending', 'all'] as const).map((t) => (
+          {(['pending', 'all'] as const).map((tabKey) => (
             <button
-              key={t}
+              key={tabKey}
               type="button"
-              onClick={() => setTab(t)}
-              aria-pressed={tab === t}
-              style={{ padding: '6px 16px', borderRadius: 8, background: tab === t ? COLOR : SURFACE, border: `1px solid ${tab === t ? COLOR : BORDER}`, color: tab === t ? '#fff' : SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              onClick={() => setTab(tabKey)}
+              aria-pressed={tab === tabKey}
+              style={{ padding: '6px 16px', borderRadius: 8, background: tab === tabKey ? t.ACCENT : t.SURFACE, border: `1px solid ${tab === tabKey ? t.ACCENT : t.BORDER_SOLID}`, color: tab === tabKey ? '#fff' : t.MUTED, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
-              {t === 'pending' ? 'Pending' : 'All submissions'}
+              {tabKey === 'pending' ? 'Pending' : 'All submissions'}
             </button>
           ))}
         </div>
@@ -379,7 +380,7 @@ export function UnlockAdminShell({
         ) : null}
 
         {visible.length === 0 ? (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
             {tab === 'pending' ? 'No submissions waiting for review.' : 'No submissions yet.'}
           </div>
         ) : (
@@ -388,9 +389,9 @@ export function UnlockAdminShell({
             const rewardHeld = Boolean(s.rewardWithheldAt) && !s.incentiveGrantedAt && !s.rewardRevokedAt;
             const canRevoke = s.reviewStatus === 'approved' && !s.rewardRevokedAt;
             return (
-              <div key={s.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+              <div key={s.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <Key size={14} color={COLOR} />
+                  <Key size={14} color={t.ACCENT} />
                   {editingId === s.id ? (
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -400,12 +401,12 @@ export function UnlockAdminShell({
                           onChange={(e) => setEditUrl(e.target.value)}
                           aria-label="Quora profile URL"
                           disabled={savingUrl}
-                          style={{ flex: 1, minWidth: 200, padding: '6px 10px', borderRadius: 8, background: BG, border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13 }}
+                          style={{ flex: 1, minWidth: 200, padding: '6px 10px', borderRadius: 8, background: t.BG, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13 }}
                         />
-                        <button type="button" disabled={savingUrl} onClick={() => saveUrl(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: `${COLOR}1A`, border: `1px solid ${COLOR}55`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: savingUrl ? 'not-allowed' : 'pointer', opacity: savingUrl ? 0.6 : 1 }}>
+                        <button type="button" disabled={savingUrl} onClick={() => saveUrl(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: `${t.ACCENT}1A`, border: `1px solid ${t.ACCENT}55`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: savingUrl ? 'not-allowed' : 'pointer', opacity: savingUrl ? 0.6 : 1 }}>
                           <CheckCircle size={13} /> {savingUrl ? 'Saving…' : 'Save'}
                         </button>
-                        <button type="button" disabled={savingUrl} onClick={cancelEditUrl} style={{ padding: '6px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: savingUrl ? 'not-allowed' : 'pointer', opacity: savingUrl ? 0.6 : 1 }}>
+                        <button type="button" disabled={savingUrl} onClick={cancelEditUrl} style={{ padding: '6px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: savingUrl ? 'not-allowed' : 'pointer', opacity: savingUrl ? 0.6 : 1 }}>
                           Cancel
                         </button>
                       </div>
@@ -415,10 +416,10 @@ export function UnlockAdminShell({
                     </div>
                   ) : (
                     <>
-                      <a href={s.quoraProfileUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 600, color: TEXT, flex: 1, wordBreak: 'break-all' }}>
+                      <a href={s.quoraProfileUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, flex: 1, wordBreak: 'break-all' }}>
                         {s.quoraProfileUrl}
                       </a>
-                      <button type="button" aria-label="Edit URL" title="Edit URL" onClick={() => startEditUrl(s)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      <button type="button" aria-label="Edit URL" title="Edit URL" onClick={() => startEditUrl(s)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         <Pencil size={12} /> Edit
                       </button>
                       <StatusPill status={s.reviewStatus} />
@@ -442,18 +443,18 @@ export function UnlockAdminShell({
                   )}
                 </div>
                 {s.quoraProfileUrlNormalized ? (
-                  <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 4, display: 'flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 4, display: 'flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
                     <span>Normalized:</span>
-                    <a href={s.quoraProfileUrlNormalized} target="_blank" rel="noopener noreferrer" style={{ color: COLOR, fontWeight: 600, wordBreak: 'break-all' }}>
+                    <a href={s.quoraProfileUrlNormalized} target="_blank" rel="noopener noreferrer" style={{ color: t.ACCENT, fontWeight: 600, wordBreak: 'break-all' }}>
                       {s.quoraProfileUrlNormalized}
                     </a>
                     {s.quoraProfileUrlNormalized !== s.quoraProfileUrl ? (
-                      <span style={{ color: '#9CA3AF', fontStyle: 'italic' }}>(cleaned from submitted link)</span>
+                      <span style={{ color: t.SUBTLE, fontStyle: 'italic' }}>(cleaned from submitted link)</span>
                     ) : null}
                   </div>
                 ) : null}
-                <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 4 }}>User: {s.userId}</div>
-                <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 10 }}>
+                <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 4 }}>User: {s.userId}</div>
+                <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 10 }}>
                   Submitted {new Date(s.createdAt).toLocaleDateString()} · window expires {new Date(s.unlockWindowExpiresAt).toLocaleDateString()} · tier {s.accessTier}
                 </div>
                 {s.reviewStatus === 'pending' ? (
@@ -482,7 +483,7 @@ export function UnlockAdminShell({
                           <button type="button" disabled={busy} onClick={() => revoke(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#EF4444', fontSize: 13, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
                             {busy ? 'Revoking…' : 'Confirm revoke'}
                           </button>
-                          <button type="button" disabled={busy} onClick={() => setConfirmRevokeId(null)} style={{ padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                          <button type="button" disabled={busy} onClick={() => setConfirmRevokeId(null)} style={{ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
                             Cancel
                           </button>
                         </>
@@ -499,7 +500,7 @@ export function UnlockAdminShell({
           })
         )}
 
-        <p style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6, marginTop: 16 }}>
+        <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginTop: 16 }}>
           Approving grants full access and mints the ServiceCredits verification reward. Rejecting or marking spam keeps the member on support-only access. Rewards are issued on approval and the background self-heal retries any that did not land within {UNLOCK_REWARD_SLA_HOURS} hours. If a reward is still showing pending, use Retry pending rewards above to grant it now. A Quora profile earns the reward on one account: if the same profile is approved on another account, its reward is <strong>held</strong> for your determination — use <strong>Grant reward</strong> to award the account you choose, and <strong>Revoke reward</strong> to claw it back from the others (a perp impersonating a victim is exactly this case).
         </p>
       </div>

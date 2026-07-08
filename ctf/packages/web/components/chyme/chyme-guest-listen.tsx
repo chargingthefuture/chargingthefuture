@@ -10,6 +10,8 @@ import {
   type Call,
 } from '@stream-io/video-react-sdk';
 import { Radio } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
+import { getChymeTokens } from './chyme-shared';
 import { reportError } from 'lib/observability/report';
 import type { StreamJoinCredentials } from 'lib/chyme/stream';
 import { CHYME_CALL_TYPE, toCallIdForChyme, isWebRtcAvailable } from './chyme-audio-room';
@@ -101,8 +103,10 @@ export function ChymeGuestListen({
 }
 
 function GuestNote({ accent, text }: { accent: string; text: string }) {
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}12`, border: `1px solid ${accent}30`, color: '#9CA3AF', fontSize: 13 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}12`, border: `1px solid ${accent}30`, color: t.SUBTLE, fontSize: 13 }}>
       <Radio size={16} style={{ color: accent }} /> {text}
     </div>
   );
@@ -111,13 +115,15 @@ function GuestNote({ accent, text }: { accent: string; text: string }) {
 function GuestAudioSink({ accent, participantCount }: { accent: string; participantCount: number }) {
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
   // Show the authoritative server-side count (the same number the room list shows). The Stream client
   // participant list counts every connected identity — including the guest's own ephemeral session and
   // any guest sessions Stream has not yet timed out — which over-counts and is inconsistent with the
   // rest of the UI. The Stream list is still used below, but only to play each participant's audio.
   const count = participantCount;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}14`, border: `1px solid ${accent}35`, color: '#F0FDF4', fontSize: 13, fontWeight: 600 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}14`, border: `1px solid ${accent}35`, color: t.TITLE, fontSize: 13, fontWeight: 600 }}>
       <Radio size={16} style={{ color: accent }} />
       Listening live · {count} {count === 1 ? 'person' : 'people'} on stage
       {/* Headless audio sink — plays every participant's audio track. */}

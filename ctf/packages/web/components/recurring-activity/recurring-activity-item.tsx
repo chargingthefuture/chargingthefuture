@@ -132,7 +132,7 @@ export function RecurringActivityItem({
                 }}
               >
                 {VISIBILITY_ORDER.map((v) => (
-                  <option key={v} value={v} style={{ color: '#0F1117' }}>
+                  <option key={v} value={v} style={{ color: t.BG }}>
                     {VISIBILITY_LABEL[v]}
                   </option>
                 ))}
@@ -151,7 +151,7 @@ function primaryBtn(t: RecurringActivityTokens, busy: boolean): React.CSSPropert
     borderRadius: 8,
     background: t.ACCENT,
     border: 'none',
-    color: '#0F1117',
+    color: t.BG,
     fontSize: 13,
     fontWeight: 700,
     cursor: busy ? 'not-allowed' : 'pointer',

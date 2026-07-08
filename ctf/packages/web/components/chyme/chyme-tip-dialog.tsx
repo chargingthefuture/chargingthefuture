@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Coins, X } from "lucide-react";
-import { PRIMARY, requestJson } from "./chyme-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getChymeTokens, requestJson } from "./chyme-shared";
 
 // A "Tip" action shown on another participant's tile in the Chyme room. It sends ServiceCredits
 // peer-to-peer to that participant via POST /api/chyme/service-credits (origin_plugin 'chyme'),
@@ -16,6 +17,8 @@ export function ChymeTipButton({
   recipientName: string;
 }) {
   const [open, setOpen] = useState(false);
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
   return (
     <>
       <button
@@ -29,9 +32,9 @@ export function ChymeTipButton({
           marginTop: 4,
           fontSize: 10,
           fontWeight: 700,
-          color: PRIMARY,
-          background: `${PRIMARY}14`,
-          border: `1px solid ${PRIMARY}35`,
+          color: t.ACCENT,
+          background: `${t.ACCENT}14`,
+          border: `1px solid ${t.ACCENT}35`,
           borderRadius: 20,
           padding: "2px 8px",
           cursor: "pointer",
@@ -64,6 +67,8 @@ function ChymeTipDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
 
   const numeric = Number(amount);
   const canSend = !submitting && !success && amount.length > 0 && !Number.isNaN(numeric) && numeric > 0;
@@ -98,10 +103,10 @@ function ChymeTipDialog({
     width: "100%",
     padding: "10px 12px",
     background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.08)",
+    border: `1px solid ${t.BORDER_STRONG}`,
     borderRadius: 8,
     fontSize: 14,
-    color: "#E8EAF0",
+    color: t.TEXT,
     outline: "none",
     boxSizing: "border-box",
     marginBottom: 12,
@@ -126,15 +131,15 @@ function ChymeTipDialog({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ width: 320, maxWidth: "100%", background: "#041a0b", border: `1px solid ${PRIMARY}30`, borderRadius: 16, padding: 20 }}
+        style={{ width: 320, maxWidth: "100%", background: "#041a0b", border: `1px solid ${t.ACCENT}30`, borderRadius: 16, padding: 20 }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: "#F0FDF4" }}>Tip {recipientName}</div>
-          <button type="button" onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", lineHeight: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: t.TITLE }}>Tip {recipientName}</div>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", color: t.MUTED, cursor: "pointer", lineHeight: 0 }}>
             <X size={18} />
           </button>
         </div>
-        <label htmlFor="chyme-tip-amount" style={{ display: "block", fontSize: 12, color: "#9CA3AF", marginBottom: 6 }}>Amount (ServiceCredits)</label>
+        <label htmlFor="chyme-tip-amount" style={{ display: "block", fontSize: 12, color: t.SUBTLE, marginBottom: 6 }}>Amount (ServiceCredits)</label>
         <input
           id="chyme-tip-amount"
           value={amount}
@@ -146,7 +151,7 @@ function ChymeTipDialog({
           aria-label="Tip amount in ServiceCredits"
           style={fieldStyle}
         />
-        <label htmlFor="chyme-tip-message" style={{ display: "block", fontSize: 12, color: "#9CA3AF", marginBottom: 6 }}>Message (optional)</label>
+        <label htmlFor="chyme-tip-message" style={{ display: "block", fontSize: 12, color: t.SUBTLE, marginBottom: 6 }}>Message (optional)</label>
         <input
           id="chyme-tip-message"
           value={message}
@@ -156,16 +161,16 @@ function ChymeTipDialog({
           style={fieldStyle}
         />
         {error ? <div role="alert" style={{ fontSize: 12, color: "#EF4444", marginBottom: 10 }}>{error}</div> : null}
-        {success ? <div role="status" style={{ fontSize: 12, color: PRIMARY, marginBottom: 10 }}>Tip sent.</div> : null}
+        {success ? <div role="status" style={{ fontSize: 12, color: t.ACCENT, marginBottom: 10 }}>Tip sent.</div> : null}
         <button
           type="button"
           disabled={!canSend}
           onClick={() => void send()}
-          style={{ width: "100%", padding: "11px", borderRadius: 10, background: canSend ? PRIMARY : `${PRIMARY}66`, border: "none", color: "#021006", fontSize: 14, fontWeight: 800, cursor: canSend ? "pointer" : "not-allowed" }}
+          style={{ width: "100%", padding: "11px", borderRadius: 10, background: canSend ? t.ACCENT : `${t.ACCENT}66`, border: "none", color: "#021006", fontSize: 14, fontWeight: 800, cursor: canSend ? "pointer" : "not-allowed" }}
         >
           {submitting ? "Sending…" : "Send tip"}
         </button>
-        <div style={{ fontSize: 10, color: "#4B5563", marginTop: 10, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 10, color: t.FAINT, marginTop: 10, lineHeight: 1.5 }}>
           Sends ServiceCredits from your wallet to {recipientName}. No fees; not a fiat value.
         </div>
       </div>
