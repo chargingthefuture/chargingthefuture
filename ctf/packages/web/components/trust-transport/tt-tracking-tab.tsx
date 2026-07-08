@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Car, Navigation, MessageCircle, Check, Loader2 } from "lucide-react";
+import { Car, Navigation, MessageCircle, Check, X, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { COLOR, ttSettlementLabel, type TripRequest, type TtOffer } from "./tt-shared";
+
+const TERMINAL_STATUSES = new Set(["completed", "cancelled"]);
 
 // Offers on the requester's own open request, with Accept. Accepting opens a trip and (per discovery
 // model B) is the point at which the chosen provider gains the pickup/drop-off via the trip.
@@ -113,7 +115,9 @@ function TrackingEmpty({ onBook }: { onBook: () => void }) {
   );
 }
 
-function TrackingCard({ request, onChat, onAccepted }: { request: TripRequest; onChat: (r: TripRequest) => void; onAccepted: () => void }) {
+function TrackingCard({ request, onChat, onAccepted, onCancelled }: { request: TripRequest; onChat: (r: TripRequest) => void; onAccepted: () => void; onCancelled: () => void }) {
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const pickup = request.pickupCity ?? request.fromLocation ?? null;
   const dropoff = request.dropoffCity ?? request.toLocation ?? null;
   // Show the real pickup → drop-off; fall back to the request title (the API sends pickupCity /
@@ -123,6 +127,27 @@ function TrackingCard({ request, onChat, onAccepted }: { request: TripRequest; o
   // An open/pending request has no driver yet — nothing is being tracked. Only show the live-map
   // placeholder once a driver is on the way; otherwise say plainly that we're waiting for a driver.
   const awaitingDriver = /open|pending|request|search|form|wait/i.test(status);
+  const cancellable = !TERMINAL_STATUSES.has(status.toLowerCase());
+
+  async function handleCancel() {
+    if (!window.confirm("Cancel this request? This can't be undone.")) return;
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      const res = await fetch(`/api/trust-transport/orders/${request.id}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) throw new Error("Could not cancel this request.");
+      onCancelled();
+    } catch (e: unknown) {
+      setCancelError(e instanceof Error ? e.message : "Could not cancel this request.");
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   return (
     <div style={{ padding: "24px", borderRadius: 16, background: `${COLOR}08`, border: `1px solid ${COLOR}30`, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -139,9 +164,22 @@ function TrackingCard({ request, onChat, onAccepted }: { request: TripRequest; o
           : "Your driver is on the way. Status updates as they mark progress — message them on the Direct Line for specifics."}
       </div>
       {awaitingDriver && <RequestOffers requestId={request.id} onAccepted={onAccepted} />}
-      <button type="button" onClick={() => onChat(request)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+      <button type="button" onClick={() => onChat(request)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: cancellable ? 10 : 0 }}>
         <MessageCircle size={14} /> {awaitingDriver ? "Direct Line (opens when matched)" : "Direct Line"}
       </button>
+      {cancellable && (
+        <>
+          {cancelError && <div style={{ color: "#EF4444", fontSize: 12, marginBottom: 8 }}>{cancelError}</div>}
+          <button
+            type="button"
+            onClick={() => void handleCancel()}
+            disabled={cancelling}
+            style={{ width: "100%", padding: "12px", borderRadius: 10, background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444", fontSize: 13, fontWeight: 600, cursor: cancelling ? "default" : "pointer", opacity: cancelling ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+          >
+            {cancelling ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />} Cancel request
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -151,18 +189,20 @@ export function TrustTransportTrackingTab({
   onBook,
   onChat,
   onAccepted,
+  onCancelled,
 }: {
   requests: TripRequest[];
   onBook: () => void;
   onChat: (r: TripRequest) => void;
   onAccepted: () => void;
+  onCancelled: () => void;
 }) {
   return (
     <div style={{ flex: 1, padding: "24px", overflowY: "auto", minHeight: 0 }}>
       <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 20 }}>Tracking</div>
       {requests.length === 0
         ? <TrackingEmpty onBook={onBook} />
-        : requests.map((r) => <TrackingCard key={r.id} request={r} onChat={onChat} onAccepted={onAccepted} />)}
+        : requests.map((r) => <TrackingCard key={r.id} request={r} onChat={onChat} onAccepted={onAccepted} onCancelled={onCancelled} />)}
     </div>
   );
 }
