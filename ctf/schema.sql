@@ -851,7 +851,26 @@ CREATE TABLE IF NOT EXISTS announcement_revisions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Backfill every column on legacy databases (per the mandatory CREATE + ALTER-IF-NOT-EXISTS rule).
+-- A database whose announcement_revisions predates these columns keeps the old table on
+-- CREATE TABLE IF NOT EXISTS, so without these ALTERs the app's revision insert (which lists
+-- targeting/status/priority/mandatory/schedule_at/expires_at) fails and the whole "create draft"
+-- transaction rolls back with a 503. Defaults are supplied so the NOT NULL adds succeed on a table
+-- that already has rows.
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS announcement_id UUID;
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS revision_number INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS mandatory BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS schedule_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS targeting JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE UNIQUE INDEX IF NOT EXISTS idx_announcement_revisions_announcement_revision ON announcement_revisions(announcement_id, revision_number);
 CREATE TABLE IF NOT EXISTS announcement_delivery_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
