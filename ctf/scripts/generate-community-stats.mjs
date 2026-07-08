@@ -169,10 +169,18 @@ async function collectStats() {
   return out;
 }
 
+// The public, signed-out landing page for each plugin. A reader with no account can open these,
+// see what the app does, and sign in — so they are safe to paste into a public Quora post. The path
+// is always /apps/<slug> (see ctf/packages/web/lib/plugins/repository.ts getPluginRoute).
+const APP_BASE_URL = 'https://app.chargingthefuture.com';
+function appUrlFor(slug) {
+  return `${APP_BASE_URL}/apps/${slug}`;
+}
+
 function toStatsMarkdown(stats) {
   const lines = [];
   for (const plugin of stats) {
-    lines.push(`### ${plugin.displayName}`);
+    lines.push(`### ${plugin.displayName} — ${appUrlFor(plugin.slug)}`);
     if (plugin.note) {
       lines.push(`- _${plugin.note}_`);
     }
@@ -188,7 +196,9 @@ function toStatsForPrompt(stats) {
   const lines = [];
   for (const plugin of stats) {
     if (plugin.facts.length === 0) continue;
-    lines.push(`${plugin.displayName}:`);
+    // Give the model the exact direct link for this app so it can paste it verbatim after the app's
+    // name — never a guessed or shortened URL.
+    lines.push(`${plugin.displayName} (direct link: ${appUrlFor(plugin.slug)}):`);
     for (const fact of plugin.facts) {
       lines.push(`  - ${fact.label}: ${fact.value}`);
     }
@@ -223,11 +233,11 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
   body: JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 2048,
-    system: `You write short weekly community notes for Charging the Future, an open-source platform built for survivors of Specterati harassment. Follow the brand voice guide carefully.\n\nBRAND VOICE:\n${brandVoice}\n\nWHAT THIS POST IS:\nA plain, honest weekly snapshot of how much is happening on the platform, using only whole-community totals. The goal is to show real activity and real need so someone reading sees a reason to join: open requests are waiting for help, people have listed skills, a skill they have is needed. Never describe any single person, post, or profile — only the totals you are given.\n\nWRITING RULES (these override any instinct toward marketing copy):\n- Write at about a 6th-grade reading level. Short sentences. Everyday words. If a 12-year-old would stumble on a word, pick a simpler one.\n- Sound like one person talking to a friend, not a company announcing. First person ("this week", "you can") over corporate "we are proud".\n- Use ONLY the numbers given below. Never invent, round up, or guess a number. If a number is 0, say it plainly.\n- Never sell the importance of the numbers. State what they are and what someone can do, then stop. Banned: "matters deeply", "build trust", "deserve", "we're committed", "game-changer", "powerful", "seamless", "thriving", "vibrant", and any sentence about what the numbers "say about us".\n- No negative framing. Don't shame low numbers or hype high ones. A small number is fine to read small.\n- No rhetorical questions. No applause lines. No closing flourish.\n- Don't perform kindness or guess at anyone's feelings. Warmth comes from being useful and plain.\n- The project's code lives at exactly this URL: ${repoUrl} — use it verbatim when mentioning where to find the project.\n\nToday: ${today}`,
+    system: `You write short weekly community notes for Charging the Future, an open-source platform built for survivors of Specterati harassment. Follow the brand voice guide carefully.\n\nBRAND VOICE:\n${brandVoice}\n\nWHAT THIS POST IS:\nA plain, honest weekly snapshot of how much is happening on the platform, using only whole-community totals. The goal is to show real activity and real need so someone reading sees a reason to join: open requests are waiting for help, people have listed skills, a skill they have is needed. Never describe any single person, post, or profile — only the totals you are given.\n\nWRITING RULES (these override any instinct toward marketing copy):\n- Write at about a 6th-grade reading level. Short sentences. Everyday words. If a 12-year-old would stumble on a word, pick a simpler one.\n- Sound like one person talking to a friend, not a company announcing. First person ("this week", "you can") over corporate "we are proud".\n- Use ONLY the numbers given below. Never invent, round up, or guess a number. If a number is 0, say it plainly.\n- A count of posts, requests, or items is a count of THINGS, not people. The same person can create several posts, so these totals are cumulative activity, not a headcount. Never say or imply how many people are behind them (do not turn "2 open posts" into "2 people"). Only call a number people or members when the fact is explicitly labeled "people" or "members".\n- Each app is given with its exact direct link ("direct link: https://app.chargingthefuture.com/apps/..."). The FIRST time you mention an app by name, put its full link right after the name, in parentheses, copied EXACTLY as given. Never invent, shorten, or guess a link, and never link an app you have no link for.\n- Never sell the importance of the numbers. State what they are and what someone can do, then stop. Banned: "matters deeply", "build trust", "deserve", "we're committed", "game-changer", "powerful", "seamless", "thriving", "vibrant", and any sentence about what the numbers "say about us".\n- No negative framing. Don't shame low numbers or hype high ones. A small number is fine to read small.\n- No rhetorical questions. No applause lines. No closing flourish.\n- Don't perform kindness or guess at anyone's feelings. Warmth comes from being useful and plain.\n- The project's code lives at exactly this URL: ${repoUrl} — use it verbatim when mentioning where to find the project.\n\nToday: ${today}`,
     messages: [
       {
         role: 'user',
-        content: `This week's whole-community totals:\n\n${statsForPrompt}\n\nWrite a community snapshot. Return ONLY a JSON object with these exact keys:\n- title: A short, plain in-list title (max 80 chars), e.g. "Community activity — ${today}".\n- quoraDraft: A 2-4 short-paragraph Quora post, written like a personal note. Lead with the SocketRelay open posts and the Directory numbers, since those show need most clearly. Plain words, ~6th-grade reading level. Make it concrete: a number, what it means, and one simple thing a reader can do (join, list a skill, answer an open post). One sentence on where the project lives, giving the GitHub URL exactly as ${repoUrl}. Do not invent numbers, do not sell importance, no rhetorical questions.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
+        content: `This week's whole-community totals:\n\n${statsForPrompt}\n\nWrite a community snapshot. Return ONLY a JSON object with these exact keys:\n- title: A short, plain in-list title (max 80 chars), e.g. "Community activity — ${today}".\n- quoraDraft: A 2-4 short-paragraph Quora post, written like a personal note. Lead with the SocketRelay open posts and the Directory numbers, since those show need most clearly. When you first name each app, paste its exact direct link (given above as "direct link: ...") right after the name in parentheses, so a reader can tap straight through to it. Remember an open-post count is a count of posts, not people. Plain words, ~6th-grade reading level. Make it concrete: a number, what it means, and one simple thing a reader can do (join, list a skill, answer an open post). One sentence on where the project lives, giving the GitHub URL exactly as ${repoUrl}. Do not invent numbers or links, do not sell importance, no rhetorical questions.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
       },
     ],
   }),
