@@ -11,7 +11,7 @@
 | **Surfaces** | web (`/apps/trust-transport`, `/admin/trust-transport`) · android (`TrustTransport.tsx`, `AdminTrustTransport.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:trust-transport` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md` |
-| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed) |
+| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed; 2026-07-08: mutual completion confirmation — TT-8 reworded (no unilateral complete) and TT-8b added) |
 
 ---
 
@@ -182,9 +182,29 @@ Result: web ☐ android ☐
 
 **Steps:**
 1. Open the **Help out** tab → "Trips you're helping with"; find your active trip.
-2. Tap the forward action (Start trip → Mark picked up → Mark delivered → Mark complete) to advance one step.
+2. Tap the forward action (Start trip → Mark picked up → Mark delivered) to advance one step.
 
-**Expected:** The trip status changes one step forward and the new state shows on the card. Transitions are forward-only and append-only — there is no control to revert to the previous state. An out-of-order transition (via the API) is refused. When you mark the trip **complete** and the requester chose ServiceCredits settlement, the credits move from the requester to you (verify in your ServiceCredits wallet) and a `trust-transport.trip.settlement` audit event is written; a completed Free/Barter trip moves no credits.
+**Expected:** The trip status changes one step forward and the new state shows on the card. Transitions are forward-only and append-only — there is no control to revert to the previous state. An out-of-order transition (via the API) is refused. The forward steps stop at **Mark delivered** — there is no unilateral "Mark complete" tap; from delivered, completion is mutual (see TT-8b). Confirm no single button on this card moves the trip straight to `completed`.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-8b — Mutual completion confirmation (both parties confirm before settlement)
+
+**Role:** requester and provider (two members) · **Surfaces:** web, android
+
+**Precondition:** A trip is in the `delivered` state (from TT-8). You can act as the provider on the Help-out tab and as the requester on the Tracking tab.
+
+**Steps:**
+1. As the **provider**, on the Help-out trip card, tap "Confirm trip completed".
+2. Observe the card. Then, as the **requester**, open the Tracking card for the same trip.
+3. As the **requester**, tap "Confirm trip completed".
+
+**Expected:**
+- Step 1: The provider's card shows "You confirmed completion. Waiting for the other party to confirm." The trip is **not** yet `completed` and **no** settlement has happened — if settlement is ServiceCredits, no credits have moved yet; if fiat/crypto, no earnings-ledger credit yet.
+- Step 2: The requester's Tracking card shows a "Confirm trip completed" control (and a note that the other party already confirmed).
+- Step 3: On the requester's confirmation the trip becomes `completed` and settlement fires: ServiceCredits move requester → provider (verify the wallet) with a `trust-transport.trip.settlement` audit event; a fiat/crypto priced trip credits the provider's earnings ledger; a Free/Barter trip moves nothing. A member cannot reach `completed` with only one side's confirmation. (Attempting to `POST .../status` with `nextStatus: completed` as a member is refused with `TRUST_TRANSPORT_COMPLETION_REQUIRES_CONFIRMATION`.)
 
 Result: web ☐ android ☐
 
@@ -230,11 +250,11 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as a member. A cancellable trip/order exists (seeded).
 
 **Steps:**
-1. Open a cancellable order.
-2. Initiate cancellation.
-3. Confirm the explicit confirmation prompt.
+1. Open the Tracking tab and find a non-terminal request/order you made (open, accepted, or in progress).
+2. Tap/click "Cancel request".
+3. Confirm the explicit confirmation prompt (a `window.confirm` dialog on web, a native `Alert` on android).
 
-**Expected:** The order transitions to a cancelled terminal state. The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
+**Expected:** The order transitions to a cancelled terminal state and disappears from the cancellable list (the "Cancel request" control no longer shows). The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
 
 Result: web ☐ android ☐
 
@@ -491,7 +511,8 @@ These cases must produce the same observable outcome on both surfaces. Run both 
 | TT-11 | Explicit confirmation prompt before cancel |
 | TT-17 | Right panel shows "Good to know" reminders; no fabricated safety claims |
 | TT-18 | Discovery list shows only mode + settlement + age; offer sends and confirms |
-| TT-8 | Forward status control advances the trip one step; ServiceCredits settlement moves credits on completion |
+| TT-8 | Forward status control advances the trip one step; no unilateral "Mark complete" past delivered |
+| TT-8b | Completion needs both parties to confirm; settlement fires only on the second confirmation |
 | TT-9 | Proof capture saves a redacted reference; empty value rejected |
 | TT-13 | Balance card per currency; payout request created with the chosen currency; over-balance refused |
 | TT-14 | Zero/negative/over-balance payout attempts all rejected with inline error |

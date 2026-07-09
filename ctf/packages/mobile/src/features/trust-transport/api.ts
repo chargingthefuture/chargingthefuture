@@ -51,6 +51,15 @@ export async function createRequest(
   return data.item;
 }
 
+// Cancel your own request (any non-terminal status). Confirmed by the caller before invoking.
+export async function cancelOrder(requestId: string): Promise<void> {
+  await authedFetchJson<{ ok: boolean }>(`${BASE}/orders/${requestId}/cancel`, {
+    method: 'POST',
+    headers: MUTATION_HEADERS,
+    body: JSON.stringify({}),
+  });
+}
+
 export async function listOffersForRequest(requestId: string): Promise<TrustTransportOffer[]> {
   const data = await authedFetchJson<{ ok: boolean; items: TrustTransportOffer[] }>(
     `${BASE}/requests/${requestId}/offers`,
@@ -110,6 +119,21 @@ export async function updateTripStatus(tripId: string, nextStatus: TrustTranspor
     },
   );
   return data.trip;
+}
+
+// Confirm your side of trip completion (only valid once the trip is 'delivered'). Neither party can
+// complete a trip alone — this only actually completes it (and fires settlement) once both the
+// requester and the provider have confirmed.
+export async function confirmTripCompletion(tripId: string): Promise<{ trip: TrustTransportTrip; bothConfirmed: boolean }> {
+  const data = await authedFetchJson<{ ok: boolean; trip: TrustTransportTrip; bothConfirmed: boolean }>(
+    `${BASE}/trips/${tripId}/complete`,
+    {
+      method: 'POST',
+      headers: MUTATION_HEADERS,
+      body: JSON.stringify({}),
+    },
+  );
+  return { trip: data.trip, bothConfirmed: data.bothConfirmed };
 }
 
 // Capture pickup/delivery proof as a redacted reference (no raw images).

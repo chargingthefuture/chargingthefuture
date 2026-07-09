@@ -1362,6 +1362,8 @@ CREATE TABLE IF NOT EXISTS trust_transport_trips (
   stream_channel_id TEXT,
   cancelled_reason TEXT,
   completed_at TIMESTAMPTZ,
+  requester_completion_confirmed_at TIMESTAMPTZ,
+  provider_completion_confirmed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -4229,6 +4231,8 @@ ALTER TABLE IF EXISTS trust_transport_risk_signals ADD COLUMN IF NOT EXISTS crea
 
 -- trust_transport_trips (1 — defensive)
 ALTER TABLE IF EXISTS trust_transport_trips ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS trust_transport_trips ADD COLUMN IF NOT EXISTS requester_completion_confirmed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS trust_transport_trips ADD COLUMN IF NOT EXISTS provider_completion_confirmed_at TIMESTAMPTZ;
 
 -- trust_transport_user_extension (4 missing)
 ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS account_restricted BOOLEAN NOT NULL DEFAULT FALSE;
