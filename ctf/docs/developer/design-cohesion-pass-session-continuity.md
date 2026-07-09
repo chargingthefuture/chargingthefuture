@@ -98,12 +98,32 @@ Admin pages/components are in scope for the SAME token treatment (they share the
 
 ## 7. Open questions for owner (DO NOT GUESS)
 
-- **Q1 (status colors):** Should bright status/data-viz colors (`#EF4444` danger, `#22C55E` success,
-  `#F59E0B`, chart palettes) get comic-theme variants (spec has danger/success), or stay raw as the
-  shipped `workforce-shell.tsx` does? Current pass keeps them RAW.
-- **Q2 (cross-platform reconciliation):** Which side wins the F4 deltas — web `#B91C1C` danger vs
-  mobile `#EF4444`; the textSecondary/textSubtle naming; card radius 14 vs 12? Changing either
-  touches prod pixels, so it is gated on your call.
+- **Q1 (status colors): ANSWERED by the token spec itself (2026-07-08).** `app/globals.css` keeps
+  `--ctf-danger: #b91c1c` and `--ctf-success: #22c55e` IDENTICAL in both `:root` and
+  `[data-theme='comic']` — the sanctioned behavior is that status colors do not change under comic.
+  Keeping bright status/data-viz swatches RAW is therefore spec-consistent, not a gap. Closed.
+- **Q2 (cross-platform reconciliation): STILL OPEN.** Which side wins the F4 deltas — web `#B91C1C`
+  danger vs mobile `#EF4444`; the textSecondary/textSubtle naming; card radius 14 vs 12? Changing
+  either touches prod pixels, so it stays gated on the owner's call. (Mobile tokenization can proceed
+  with mobile's own current values without this — see §10.)
+- **Q3 (admin token group): RESOLVED (2026-07-08).** `getPluginShellTokens` now carries
+  `SURFACE` (`#161B27` → comic `#141414`) and `BORDER_SOLID` (`#1E2A3A` → comic `#D4C49A1A`,
+  the click-log precedent). All admin shells were converted with it.
+- **Q4 (undefined var, NEW):** `community-shell.module.css` uses `var(--ctf-surface-raised, #1e293b)`
+  but `--ctf-surface-raised` is not defined in `globals.css` — it always resolves to the `#1e293b`
+  fallback in BOTH themes. Either define the var (default `#1e293b`, comic value TBD) or switch the
+  call site to `--ctf-surface`. Left as-is pending the call.
+- **Q5 (#38BDF8 in community chat, NEW):** community-shell chat has ~15 raw `#38BDF8` (equal to the
+  `--ctf-gold` default). Several sit on `@comic`-assistant classes whose comic overrides deliberately
+  remap to inkDim ("no blue in comic"), but six sites (`chatActionBtn`, `chatReplyBtn:hover`,
+  `chatQuotedAuthor`/quoted block, `chatReactionPillActive`, `unreadDividerLabel`,
+  `composerReplyLabel`) have NO comic override, so cyan currently leaks into comic. Owner call:
+  map them to `--ctf-gold` (warm gold in comic) or add inkDim comic overrides.
+- **Q6 (accent-pinned contrast inks, NEW):** several dark "ink on accent" colors are pinned to the
+  DEFAULT accent (e.g. workforce `#3a1d05` on orange, lighthouse `#06210F`, gdp `#04243a`,
+  what-works `#0A0E06`, gentle-pulse `#0A0F0E`). Under comic the accent changes but the ink stays
+  tuned to the old accent. Kept raw (pixel-safe; contrast remains readable on the darker comic
+  accents). A follow-up could add an ACCENT_INK token slot if wanted.
 
 ## 8. Progress log
 
@@ -402,3 +422,63 @@ Recommended next-session order once Q3 is answered:
 - Tooling committed: `scripts/tokenize-theme.py`.
 - Deferred, awaiting owner: all `*-admin-shell` + `*-public-shell`; all custom-token plugins (above);
   data-viz colors (Q1); cross-platform reconciliation (Q2); admin/surface token group (Q3).
+
+### Session (2026-07-08/09) — WEB PASS COMPLETE (owner directive: "100% pixel perfect, cohesive, no gaps")
+Owner resumed the pass and directed full cohesion. Everything below is committed and pushed on this
+branch; every commit passed the pre-commit typecheck gate and the pre-push lint+typecheck+build gate.
+
+**Corrections to earlier assumptions:**
+- **Public shells ARE in scope.** The comic no-flash script runs in the ROOT layout
+  (`app/layout.tsx`) unconditionally — a signed-out visitor with `sh-theme=comic` in localStorage
+  gets comic CSS variables on public pages. The earlier "signed-out = comic N/A" deferral was wrong;
+  all `*-public-shell` files were converted.
+- **The hex audit had a blind spot:** files that import static color CONSTANTS from a `*-shared.ts`
+  (no inline hex) are theme-blind but invisible to a hex grep. A constant-import sweep found and
+  converted 7 such files (click-log-incident-list, lu-sidebar, lu-cohort-card, wp-comparison-chart,
+  wp-empty-main, ww-suggest-guidance, ww-problem-section).
+- **CSS modules were outside the original audit.** Themed via `var(--ctf-X, #exactdefault)`
+  substitution (byte-identical under default by definition): `comic-review-dashboard.module.css`
+  (41 subs), `admin-landing.module.css` (15), `bug-report-modal.module.css` (2),
+  `community-shell.module.css` (3 stragglers). `loading.module.css` untouched (spec §11).
+
+**Work landed (chronological commits):**
+1. Q3 infra: `SURFACE`/`BORDER_SOLID` slots added to `getPluginShellTokens`; transformer map updated.
+2. Batch 1 — workforce, gdp, service-credits (sca-*), skills-hunt (sha-*), socket-relay,
+   trust-transport: all admin shells/panels, public shells, remaining member surfaces, world-map chrome.
+3. Batch 2 — custom-token tier: chyme, click-log, contributions (was already token-wired via t props),
+   recurring-activity, gentle-pulse, mood, skills-taxonomy, unlock, weekly-performance.
+4. Batch 3 — foundation (getter lives in `foundation-ui.ts`), lighthouse, peer-programming, level-up,
+   what-works, directory.
+5. Batch 4 — new workforce-style getters created for dirs that had none: `beacon-shared.ts`,
+   `bug-reports-shared.ts`, `comic-shared.ts`, `safety-shared.ts`, `feed-announcements-shared.ts`,
+   `trust-shared.ts`; community-shell stragglers; cross-plugin shared components + server-component
+   app pages via `var(--ctf-*)` (server components MUST use vars — `useTheme` throws outside the
+   provider; `ui/button.tsx`, `ui/dialog.tsx`, `mobile-screen-header`, `mobile-top-actions`,
+   `share-link` were already var-based and needed nothing).
+6. Constant-importer sweep (7 files) + CSS modules (above).
+
+**Documented residuals (intentional, all verified raw-by-reason):**
+- Status/data-viz palettes everywhere (Q1 answered: spec keeps them identical under comic).
+- ADMIN badge indigo triplet (`#6366F1` + rgba tints) on every admin shell.
+- Contrast inks on accent fills (`#fff`, `#000`, and the accent-pinned inks in Q6).
+- White-alpha values with no token (0.02/0.03/0.05/0.07/0.12/0.15/0.16), role-mismatched
+  exact-value cases left raw case-by-case (documented per agent report in PR history).
+- `trust-transport` `STATIC_RIDE_TYPES`/`deriveRideTypes` keep `color: COLOR` (#38BDF8) — built in
+  `trust-transport-shell.tsx`, flows to tt-sidebar/tt-book-tab as data; needs accent threading.
+- skills-hunt `STATUS_OPTIONS` flagged/archived chips stay static `#FBBF24` under comic (part of
+  mixed status palettes).
+- chyme `#041a0b` CARD_BG + `#16A34A` ACCENT_CYAN constants static (no sanctioned comic value).
+- `#38BDF8` in community chat (Q5) and `--ctf-surface-raised` (Q4) await owner calls.
+- `app-loading.tsx` + `loading.module.css` (spec §11) and `stream-chat-panel.tsx` (contrast helper)
+  untouched by design.
+
+## 10. Remaining work (resumable)
+
+1. **Android/mobile pass (~116 files)** — `ctf/packages/mobile`: same recipe against
+   `src/theme/theme-tokens.ts` `getThemeTokens(theme)`. NOT blocked by Q2: tokenize with mobile's
+   own current values (no cross-platform value changes); Q2 reconciliation is a separate,
+   owner-gated value change.
+2. Owner calls: Q2 (cross-platform values), Q4 (`--ctf-surface-raised`), Q5 (community-chat cyan
+   under comic), Q6 (accent-pinned inks) — all small, none block anything above.
+3. Optional hardening: a CI grep gate that fails on new raw chrome hex in `components/**` (the
+   exact-match table in this doc is the spec for it).
