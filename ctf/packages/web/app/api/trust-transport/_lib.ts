@@ -102,6 +102,13 @@ export function trustTransportErrorResponse(error: unknown, fallbackMessage: str
     return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidTransition, message: 'Invalid status transition.' }, { status: 409 });
   }
 
+  if (code === 'completion_requires_confirmation') {
+    return NextResponse.json(
+      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.completionRequiresConfirmation, message: 'Both the requester and the provider must confirm before a trip can be marked complete.' },
+      { status: 409 },
+    );
+  }
+
   if (code === 'policy_denied') {
     return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.policyDenied, message: 'Operation denied by policy.' }, { status: 403 });
   }

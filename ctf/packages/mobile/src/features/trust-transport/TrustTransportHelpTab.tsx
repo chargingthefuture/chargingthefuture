@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { listAvailableRequests, createOffer, listProviderTrips, updateTripStatus, captureProof } from './api';
+import { listAvailableRequests, createOffer, listProviderTrips, updateTripStatus, captureProof, confirmTripCompletion } from './api';
 import { ttSettlementLabel, type TrustTransportAvailableRequest, type TrustTransportProviderTrip } from './types';
 import { TrustTransportChatButton } from './TrustTransportChatButton';
 
@@ -13,12 +13,13 @@ function modeLabel(mode: string): string {
   return mode.charAt(0).toUpperCase() + mode.slice(1);
 }
 
-// The forward step a provider can take from each trip status (the happy path). Terminal states have none.
-const NEXT_STEP: Record<string, { next: 'en_route' | 'picked_up' | 'delivered' | 'completed'; label: string }> = {
+// The forward step a provider can take from each trip status (the happy path). No 'delivered' entry —
+// from there, completion requires mutual confirmation (see CompletionConfirm below), not a single
+// unilateral tap, because completion is what triggers settlement.
+const NEXT_STEP: Record<string, { next: 'en_route' | 'picked_up' | 'delivered'; label: string }> = {
   assigned: { next: 'en_route', label: 'Start trip' },
   en_route: { next: 'picked_up', label: 'Mark picked up' },
   picked_up: { next: 'delivered', label: 'Mark delivered' },
-  delivered: { next: 'completed', label: 'Mark complete' },
 };
 
 function tripStatusLabel(s: string): string {
@@ -99,12 +100,58 @@ function ProofForm({ tripId, onDone }: { tripId: string; onDone: () => void }) {
   );
 }
 
-function ProviderTripCard({ trip, busyId, onAdvance }: { trip: TrustTransportProviderTrip; busyId: string | null; onAdvance: (_tripId: string, _next: 'en_route' | 'picked_up' | 'delivered' | 'completed') => void }) {
+// Once a trip is 'delivered', completing it requires both parties to confirm on-platform (owner
+// decision, 2026-07-08) — completion is what triggers settlement (a ServiceCredits debit, or an
+// earnings-ledger credit for an off-platform fiat/crypto exchange the platform never verified), so
+// neither side can complete it alone.
+function CompletionConfirm({ tripId, myConfirmedAtIso, otherConfirmedAtIso, onConfirmed }: { tripId: string; myConfirmedAtIso: string | null; otherConfirmedAtIso: string | null; onConfirmed: () => void }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function confirm() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await confirmTripCompletion(tripId);
+      onConfirmed();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not confirm completion.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (myConfirmedAtIso) {
+    return (
+      <View style={styles.completionWaiting}>
+        <Text style={styles.completionWaitingText}>You confirmed completion. Waiting for the other party to confirm.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.completionConfirm}>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      <TouchableOpacity
+        style={[styles.advanceBtn, submitting && styles.sendBtnDisabled]}
+        onPress={() => { void confirm(); }}
+        disabled={submitting}
+        accessibilityRole="button"
+      >
+        {submitting ? <ActivityIndicator size="small" color={COLOR} /> : <Text style={styles.advanceBtnText}>✓ Confirm trip completed</Text>}
+      </TouchableOpacity>
+      {otherConfirmedAtIso ? <Text style={styles.completionHint}>The other party has already confirmed — this finishes it.</Text> : null}
+    </View>
+  );
+}
+
+function ProviderTripCard({ trip, busyId, onAdvance, onConfirmed }: { trip: TrustTransportProviderTrip; busyId: string | null; onAdvance: (_tripId: string, _next: 'en_route' | 'picked_up' | 'delivered') => void; onConfirmed: () => void }) {
   const [proofOpen, setProofOpen] = useState(false);
   const [proofDone, setProofDone] = useState(false);
   const step = NEXT_STEP[trip.status];
   const route = `${trip.pickupCity ?? '—'} → ${trip.dropoffCity ?? '—'}`;
   const terminal = ['completed', 'cancelled', 'disputed', 'emergency_frozen'].includes(trip.status);
+  const awaitingCompletion = trip.status === 'delivered';
 
   return (
     <View style={styles.tripCard}>
@@ -124,6 +171,8 @@ function ProviderTripCard({ trip, busyId, onAdvance }: { trip: TrustTransportPro
         >
           {busyId === trip.tripId ? <ActivityIndicator size="small" color={COLOR} /> : <Text style={styles.advanceBtnText}>✓ {step.label}</Text>}
         </TouchableOpacity>
+      ) : awaitingCompletion ? (
+        <CompletionConfirm tripId={trip.tripId} myConfirmedAtIso={trip.providerCompletionConfirmedAtIso} otherConfirmedAtIso={trip.requesterCompletionConfirmedAtIso} onConfirmed={onConfirmed} />
       ) : (
         <Text style={styles.noStepText}>No further action — this trip is {tripStatusLabel(trip.status).toLowerCase()}.</Text>
       )}
@@ -166,7 +215,7 @@ function ProviderTripsSection() {
 
   useEffect(() => { void load(); }, []);
 
-  async function advance(tripId: string, nextStatus: 'en_route' | 'picked_up' | 'delivered' | 'completed') {
+  async function advance(tripId: string, nextStatus: 'en_route' | 'picked_up' | 'delivered') {
     setBusyId(tripId);
     setError(null);
     try {
@@ -186,7 +235,7 @@ function ProviderTripsSection() {
       <Text style={styles.tripsSectionTitle}>Trips you&apos;re helping with</Text>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
       {trips.map((t) => (
-        <ProviderTripCard key={t.tripId} trip={t} busyId={busyId} onAdvance={(id, next) => { void advance(id, next); }} />
+        <ProviderTripCard key={t.tripId} trip={t} busyId={busyId} onAdvance={(id, next) => { void advance(id, next); }} onConfirmed={() => { void load(); }} />
       ))}
     </View>
   );
@@ -441,6 +490,17 @@ const styles = StyleSheet.create({
   },
   advanceBtnText: { fontSize: 13, fontWeight: '600', color: COLOR },
   noStepText: { fontSize: 12, color: MUTED, marginTop: 10 },
+  completionConfirm: { marginTop: 12 },
+  completionWaiting: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 9,
+    backgroundColor: 'rgba(245,158,11,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.25)',
+  },
+  completionWaitingText: { fontSize: 12, fontWeight: '600', color: '#F59E0B' },
+  completionHint: { marginTop: 6, fontSize: 11, color: MUTED },
   addProofBtn: {
     marginTop: 8,
     padding: 8,
