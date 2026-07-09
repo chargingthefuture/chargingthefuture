@@ -23,4 +23,5 @@ export const TRUST_TRANSPORT_ERROR_CODE = {
   insufficientBalance: 'TRUST_TRANSPORT_INSUFFICIENT_BALANCE',
   accountRestricted: 'TRUST_TRANSPORT_ACCOUNT_RESTRICTED',
   mutualBlock: 'TRUST_TRANSPORT_MUTUAL_BLOCK',
+  completionRequiresConfirmation: 'TRUST_TRANSPORT_COMPLETION_REQUIRES_CONFIRMATION',
 } as const;
