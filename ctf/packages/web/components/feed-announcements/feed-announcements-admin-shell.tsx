@@ -81,8 +81,8 @@ export function FeedAnnouncementsAdminShell({
   const publishedCount = announcements.filter((a) => a.status === 'published').length;
   const draftCount = announcements.filter((a) => a.status === 'draft').length;
 
-  async function act(fn: () => Promise<{ ok: boolean; message?: string }>, okMessage: string) {
-    if (busy) return;
+  async function act(fn: () => Promise<{ ok: boolean; message?: string }>, okMessage: string): Promise<{ ok: boolean; message?: string }> {
+    if (busy) return { ok: false, message: 'Busy.' };
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -94,6 +94,7 @@ export function FeedAnnouncementsAdminShell({
       setError(res.message ?? 'Action failed.');
     }
     setBusy(false);
+    return res;
   }
 
   async function createDraft() {
@@ -101,11 +102,15 @@ export function FeedAnnouncementsAdminShell({
       setError('Title and body are required.');
       return;
     }
-    await act(
+    const res = await act(
       () => adminMutate('/api/feed/admin/announcements', 'POST', { title: draft.title.trim(), body: draft.body.trim(), priority: draft.priority, mandatory: draft.mandatory, scheduleAtIso: null, expiresAtIso: null }),
       'Draft created.',
     );
-    setDraft({ title: '', body: '', priority: 0, mandatory: false });
+    // Only clear the form on success — a failed submit must keep the typed title and message so the
+    // author does not lose their work and can just retry.
+    if (res.ok) {
+      setDraft({ title: '', body: '', priority: 0, mandatory: false });
+    }
   }
 
   return (
