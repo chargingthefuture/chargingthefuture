@@ -24,7 +24,6 @@ import type {
   TrustTransportMode,
   TrustTransportOffer,
   TrustTransportOfferInput,
-  TrustTransportPayoutRequest,
   TrustTransportProviderTrip,
   TrustTransportRequest,
   TrustTransportRequestInput,
@@ -134,18 +133,6 @@ type TripRow = {
   provider_completion_confirmed_at: Date | null;
   created_at: Date;
   updated_at: Date;
-};
-
-type PayoutRow = {
-  id: string;
-  provider_user_id: string;
-  amount: string;
-  currency: string;
-  status: TrustTransportPayoutRequest['status'];
-  requested_at: Date;
-  decided_at: Date | null;
-  decided_by_user_id: string | null;
-  decision_reason: string | null;
 };
 
 type AuditInput = {
@@ -268,20 +255,6 @@ function mapTripRow(row: TripRow): TrustTransportTrip {
     providerCompletionConfirmedAtIso: row.provider_completion_confirmed_at ? toIso(row.provider_completion_confirmed_at) : null,
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
-  };
-}
-
-function mapPayoutRow(row: PayoutRow): TrustTransportPayoutRequest {
-  return {
-    id: row.id,
-    providerUserId: row.provider_user_id,
-    amount: Number.parseFloat(row.amount),
-    currency: row.currency,
-    status: row.status,
-    requestedAtIso: toIso(row.requested_at),
-    decidedAtIso: row.decided_at ? toIso(row.decided_at) : null,
-    decidedByUserId: row.decided_by_user_id,
-    decisionReason: row.decision_reason,
   };
 }
 
@@ -1172,104 +1145,27 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
   await syncTrustTransportRequestPresence(request.requesterUserId, orderId, 'cancelled');
 }
 
-// The caller's available earnings balance per currency (only currencies with a nonzero balance). Powers
-// the Earnings surface and the currency-aware payout flow (issue #1233).
-export async function getEarningsBalancesByCurrency(userId: string): Promise<{ currency: string; balance: number }[]> {
-  const result = await queryDb<{ currency: string; balance: string }>(
-    `SELECT currency, COALESCE(SUM(CASE
-       WHEN entry_type IN ('credit', 'release') THEN amount
-       WHEN entry_type IN ('debit', 'hold') THEN -amount
-       ELSE 0
-     END), 0)::text AS balance
+// The caller's recorded earnings per currency: the total value of the trips they completed, grouped by
+// settlement currency (only currencies with a nonzero total). This is a read-only RECORD, not a
+// withdrawable wallet balance — for anything other than ServiceCredits the platform has no payment
+// processing, so the exchange is arranged peer-to-peer off-platform between the two people; the platform
+// only records that a completed trip was worth this much. The same ledger feeds the GDP recognition
+// layer, so these totals count toward the community's economic activity. Sums positive earning entries
+// (`credit` + `release`) only, matching the GDP source (lib/gdp/recognition.ts); there is no longer any
+// `hold`/`debit` side because the payout flow was removed (owner decision, 2026-07-08 — no platform payout
+// for money the platform never processed).
+export async function getRecordedEarningsByCurrency(userId: string): Promise<{ currency: string; amount: number }[]> {
+  const result = await queryDb<{ currency: string; total: string }>(
+    `SELECT currency, COALESCE(SUM(amount), 0)::text AS total
      FROM trust_transport_earnings_ledger
-     WHERE provider_user_id = $1
+     WHERE provider_user_id = $1 AND entry_type IN ('credit', 'release')
      GROUP BY currency
-     HAVING COALESCE(SUM(CASE
-       WHEN entry_type IN ('credit', 'release') THEN amount
-       WHEN entry_type IN ('debit', 'hold') THEN -amount
-       ELSE 0
-     END), 0) <> 0
+     HAVING COALESCE(SUM(amount), 0) <> 0
      ORDER BY currency`,
     [userId],
   );
 
-  return result.rows.map((row) => ({ currency: row.currency, balance: Number.parseFloat(row.balance) }));
-}
-
-async function getProviderAvailableBalance(providerUserId: string, currency: string): Promise<number> {
-  const result = await queryDb<{ balance: string }>(
-    `SELECT COALESCE(SUM(CASE
-       WHEN entry_type IN ('credit', 'release') THEN amount
-       WHEN entry_type IN ('debit', 'hold') THEN -amount
-       ELSE 0
-     END), 0)::text AS balance
-     FROM trust_transport_earnings_ledger
-     WHERE provider_user_id = $1 AND currency = $2`,
-    [providerUserId, currency],
-  );
-
-  return Number.parseFloat(result.rows[0]?.balance ?? '0');
-}
-
-export async function requestPayout(providerUserId: string, amount: number, currency: string, idempotencyKey: string): Promise<TrustTransportPayoutRequest> {
-  if (!Number.isFinite(amount) || amount <= 0) {
-    throw new Error('invalid_payload');
-  }
-
-  const normalizedCurrency = typeof currency === 'string' ? currency.trim() : '';
-  if (normalizedCurrency.length === 0) {
-    throw new Error('invalid_payload');
-  }
-
-  // Balance is checked against the requested currency's ledger only, and the payout + hold are stamped
-  // with that currency (issue #1233 — no more USD hard-code).
-  const available = await getProviderAvailableBalance(providerUserId, normalizedCurrency);
-  if (available < amount) {
-    throw new Error('insufficient_balance');
-  }
-
-  const result = await withDbTransaction(async (client) => {
-    const existing = await client.query<PayoutRow>(
-      `SELECT id, provider_user_id, amount, currency, status, requested_at, decided_at, decided_by_user_id, decision_reason
-       FROM trust_transport_payout_requests
-       WHERE provider_user_id = $1 AND idempotency_key = $2
-       LIMIT 1`,
-      [providerUserId, idempotencyKey],
-    );
-
-    if ((existing.rowCount ?? 0) > 0) {
-      return existing.rows[0];
-    }
-
-    const created = await client.query<PayoutRow>(
-      `INSERT INTO trust_transport_payout_requests (provider_user_id, amount, currency, price_currency, status, idempotency_key)
-       VALUES ($1, $2, $3, $3, 'requested', $4)
-       RETURNING id, provider_user_id, amount, currency, status, requested_at, decided_at, decided_by_user_id, decision_reason`,
-      [providerUserId, amount, normalizedCurrency, idempotencyKey],
-    );
-
-    await client.query(
-      `INSERT INTO trust_transport_earnings_ledger (provider_user_id, entry_type, amount, currency, price_currency, status, metadata)
-       VALUES ($1, 'hold', $2, $3, $3, 'held', jsonb_build_object('reason', 'payout_request', 'idempotencyKey', $4))`,
-      [providerUserId, amount, normalizedCurrency, idempotencyKey],
-    );
-
-    return created.rows[0];
-  });
-
-  return mapPayoutRow(result);
-}
-
-export async function listMyPayouts(providerUserId: string): Promise<TrustTransportPayoutRequest[]> {
-  const result = await queryDb<PayoutRow>(
-    `SELECT id, provider_user_id, amount, currency, status, requested_at, decided_at, decided_by_user_id, decision_reason
-     FROM trust_transport_payout_requests
-     WHERE provider_user_id = $1
-     ORDER BY requested_at DESC`,
-    [providerUserId],
-  );
-
-  return result.rows.map(mapPayoutRow);
+  return result.rows.map((row) => ({ currency: row.currency, amount: Number.parseFloat(row.total) }));
 }
 
 export async function getMarketConfig(): Promise<TrustTransportMarketConfig> {

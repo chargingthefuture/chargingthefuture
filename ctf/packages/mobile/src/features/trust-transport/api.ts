@@ -10,8 +10,7 @@ import type {
   TrustTransportMode,
   TrustTransportAvailableRequest,
   TrustTransportProviderTrip,
-  TrustTransportPayoutRequest,
-  TrustTransportEarningsBalance,
+  TrustTransportRecordedEarning,
   TrustTransportTripStatus,
 } from './types';
 
@@ -145,26 +144,10 @@ export async function captureProof(tripId: string, artifactType: 'photo' | 'code
   });
 }
 
-// Your available earnings balance per currency (only currencies with a nonzero balance).
-export async function getEarningsBalances(): Promise<TrustTransportEarningsBalance[]> {
-  const data = await authedFetchJson<{ ok: boolean; balances: TrustTransportEarningsBalance[] }>(`${BASE}/earnings`);
-  return data.balances ?? [];
-}
-
-export async function listPayouts(): Promise<TrustTransportPayoutRequest[]> {
-  const data = await authedFetchJson<{ ok: boolean; items: TrustTransportPayoutRequest[] }>(`${BASE}/payouts`);
-  return data.items ?? [];
-}
-
-// Request a payout against a specific currency's balance.
-export async function requestPayout(amount: number, currency: string): Promise<TrustTransportPayoutRequest> {
-  const data = await authedFetchJson<{ ok: boolean; payout: TrustTransportPayoutRequest }>(
-    `${BASE}/payouts/requests`,
-    {
-      method: 'POST',
-      headers: MUTATION_HEADERS,
-      body: JSON.stringify({ amount, currency }),
-    },
-  );
-  return data.payout;
+// A read-only record of what you've earned from completed trips, per settlement currency. Not a
+// withdrawable balance and not a payout: non-ServiceCredits payment is arranged peer-to-peer
+// off-platform. These figures also count toward the community's economic activity (GDP).
+export async function getRecordedEarnings(): Promise<TrustTransportRecordedEarning[]> {
+  const data = await authedFetchJson<{ ok: boolean; earnings: TrustTransportRecordedEarning[] }>(`${BASE}/earnings`);
+  return data.earnings ?? [];
 }

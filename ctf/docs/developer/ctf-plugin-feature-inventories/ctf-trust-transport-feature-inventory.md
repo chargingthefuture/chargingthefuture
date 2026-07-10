@@ -84,10 +84,10 @@ The plugin must provide equivalent core behavior across web and Android.
 2. In-context communication channel scoped to each order/trip between exactly the two parties (rider and driver). The chat opens with the trip and closes when the trip reaches a terminal state (completed, cancelled, disputed): no new messages may be sent, both parties keep read-only access for a limited window, and messages are retained server-side for moderation/abuse evidence per the deletion contract. No 1:1 messaging exists outside an active trip (platform rule 100, "Messaging Scope and Lifecycle").
 3. Clear non-technical status and failure messaging.
 
-### 1.6 Earnings, Payouts, and Completion History
+### 1.6 Earnings and Completion History
 
-1. Provider earnings ledger per completed task.
-2. Payout request and payout status visibility.
+1. ServiceCredits earned on a completed trip are paid straight to the member's ServiceCredits wallet (a real on-platform transfer requester → provider).
+2. For any other settlement (fiat/crypto/barter), the platform has **no payment processing** — the payment is arranged peer-to-peer, off-platform, directly between the two people. There is no platform payout. The Earnings tab shows a **read-only record** of what completed trips were worth, per currency; the same figures are recognized by the GDP layer (`lib/gdp/recognition.ts`) as community economic activity. (Owner decision, 2026-07-08: the fiat/crypto "withdrawable balance + payout request" flow was removed — it implied a platform-issued payout that cannot exist.)
 3. Reputation is transparent completion history only — the record of whether each trip was successfully completed or not, and a count of completed trips. There are no ratings, reviews, star scores, written feedback, or reliability badges of any kind. (Owner directive: rating of people is not allowed.)
 
 ---
@@ -137,10 +137,12 @@ Command groups in scope:
 7. `trust-transport.delivery.proof.capture`
 8. `trust-transport.order.cancel`
 9. `trust-transport.chat.message.send`
-10. `trust-transport.payout.request`
-11. `trust-transport.admin.dispute.resolve`
-12. `trust-transport.admin.account.restrict`
-13. `trust-transport.admin.market.config.update`
+10. `trust-transport.admin.dispute.resolve`
+11. `trust-transport.admin.account.restrict`
+12. `trust-transport.admin.market.config.update`
+
+(Removed 2026-07-08: `trust-transport.payout.request` — there is no platform payout for non-ServiceCredits
+settlement; see the Earnings section and the Change Log.)
 
 ## HTTP Projection Routes
 
@@ -160,9 +162,7 @@ User routes:
 - `POST /api/trust-transport/trips/:tripId/chat` — Mint Stream chat credentials for the trip thread: chat channel (`channelId`/`streamChannelId`) and participant token. Text chat only — no video.
 - `POST /api/trust-transport/trips/:tripId/emergency-stop` — Safety emergency-stop control.
 - `POST /api/trust-transport/orders/:orderId/cancel` — Cancel an order.
-- `GET /api/trust-transport/earnings` — The caller's own available earnings balance **per currency** (only currencies with a nonzero balance), each of which a payout can be requested against.
-- `GET /api/trust-transport/payouts` — Payout history.
-- `POST /api/trust-transport/payouts/requests` — Request a payout.
+- `GET /api/trust-transport/earnings` — The caller's **recorded** earnings from completed trips, per currency (read-only). Not a withdrawable balance: for anything other than ServiceCredits the payment is arranged peer-to-peer off-platform, so there is nothing to withdraw. The same figures feed the GDP recognition layer. (The `POST /payouts/requests` and `GET /payouts` routes were removed 2026-07-08.)
 - `POST /api/trust-transport/service-credits` — Cross-user ServiceCredits transfer for trip economics (rejects self-transfer; emits a `trust-transport.service-credits.transfer` audit event).
 
 Admin routes:
@@ -200,8 +200,8 @@ Tables owned by this plugin:
 4. `trust_transport_status_events` — Append-only event log for status transitions.
 5. `trust_transport_proof_artifacts` — Pickup/delivery proof captures (photo, code, signature references).
 6. `trust_transport_disputes` — Dispute records and adjudication state.
-7. `trust_transport_earnings_ledger` — Earnings entries per completed task (`amount` is `NUMERIC`; `trip_id` links a settlement credit to its trip; balances are computed per `currency`).
-8. `trust_transport_payout_requests` — Provider payout requests and status.
+7. `trust_transport_earnings_ledger` — Earnings entries per completed task (`amount` is `NUMERIC`; `trip_id` links a settlement credit to its trip). A completed non-SC trip writes one `credit` row here; this is the read-only earnings record and the GDP recognition source. No `hold`/`debit` rows are written any more (the payout flow that created them was removed).
+8. `trust_transport_payout_requests` — **Deprecated / write-frozen (2026-07-08).** No code writes to it now that the payout flow is removed. Retained (not dropped) for historical/financial integrity and kept in the deletion registry.
 9. `trust_transport_risk_signals` — Fraud/risk signals captured for monitoring.
 10. `trust_transport_market_config` — Region/service-zone/fee/commission/capacity configuration.
 11. `trust_transport_admin_audit_trail` — Admin mutation audit log.
@@ -291,6 +291,24 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
    history only (completed vs. not), never a score, by owner directive.
 
 ## Change Log
+
+- 2026-07-08: Removed the fiat/crypto payout flow; Earnings became a read-only record (owner decision).
+  The platform has no payment processing, so a non-ServiceCredits payment is arranged peer-to-peer
+  off-platform between the two people — there is nothing for the platform to pay out. Previously a
+  completed non-SC trip credited a fiat/crypto "earnings ledger" that the member saw as a **withdrawable
+  balance** with a "Request a payout" button (an admin was supposed to review it, though no admin payout
+  surface ever existed) — implying a platform-issued payout that cannot happen. Removed: the
+  `POST /api/trust-transport/payouts/requests` and `GET /api/trust-transport/payouts` routes, the
+  `requestPayout`/`listMyPayouts`/`getProviderAvailableBalance` repository functions, the
+  `trust-transport.payout.request` command (command/policy/audit contracts), and the payout +
+  withdrawable-balance UI on web and Android. The Earnings tab now shows a read-only per-currency **record**
+  of completed-trip earnings with copy making clear the payment is settled off-platform. **GDP is
+  preserved:** completion still writes a `credit` row to `trust_transport_earnings_ledger`, which
+  `lib/gdp/recognition.ts` reads unchanged, so completed-trip value still counts toward community economic
+  activity per the multi-currency spec. `getEarningsBalancesByCurrency` → `getRecordedEarningsByCurrency`
+  (sums `credit`/`release` only; no more hold-netting). The `trust_transport_payout_requests` table is
+  retained (write-frozen) for historical/financial integrity, not dropped. No change to settlement itself
+  or to the ServiceCredits path (SC still pays straight to the wallet on completion).
 
 - 2026-07-08: Mutual completion confirmation (owner decision). Previously either party's single "Mark
   complete" tap (in practice the provider's) moved the trip straight to `completed`, which immediately

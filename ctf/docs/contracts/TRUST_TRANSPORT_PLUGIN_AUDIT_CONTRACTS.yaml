@@ -132,32 +132,8 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: trust-transport
-    command: trust-transport.payout.request
-    commandVersion: 1.0.0
-    purpose: provider_payouts
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-      evidence:
-        roleCheck: pass_or_fail
-        ledgerOwnershipCheck: pass_or_fail
-        availableBalanceCheck: pass_or_fail
-    dataClassesAccessed:
-      - payout_request_metadata
-      - earnings_ledger_metadata
-    targetContext:
-      workspaceId: workspace_identifier
-      providerId: provider_identifier
-      payoutRequestId: payout_request_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
+  # trust-transport.payout.request audit event was removed (owner decision, 2026-07-08): no platform
+  # payout exists for non-ServiceCredits settlement (peer-to-peer, off-platform). See the command contract.
 
   - eventId: uuid
     timestamp: rfc3339

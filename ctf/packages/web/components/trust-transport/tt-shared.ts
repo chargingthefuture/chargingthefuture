@@ -84,16 +84,6 @@ export interface ChatCreds {
 
 export type Tab = "book" | "tracking" | "chat" | "help" | "earnings";
 
-// A payout request row shown on the Earnings tab.
-export interface TtPayout {
-  id: string;
-  amount?: number;
-  currency?: string;
-  status?: string;
-  requestedAtIso?: string;
-  decisionReason?: string | null;
-}
-
 // An offer shown to the requester on their own request's Tracking card, so they can accept one.
 export interface TtOffer {
   id: string;

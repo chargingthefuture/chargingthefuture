@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trust-transport/_lib';
-import { getEarningsBalancesByCurrency } from 'lib/trust-transport/repository';
+import { getRecordedEarningsByCurrency } from 'lib/trust-transport/repository';
 import { reportError } from 'lib/observability/report';
 
-// The caller's own available earnings balance, per currency (only currencies with a nonzero balance),
-// which a payout can be requested against. Scoped to the caller's user id.
+// The caller's recorded earnings from completed trips, per currency (only currencies with a nonzero
+// total). Scoped to the caller's user id. This is a read-only record — for anything other than
+// ServiceCredits the payment is arranged peer-to-peer off-platform, so there is no withdrawable balance
+// and no payout to request. The same figures feed the GDP recognition layer.
 export async function GET() {
   const gate = await requireTrustTransportReadAccess();
   if (!gate.allowed) {
@@ -12,10 +14,10 @@ export async function GET() {
   }
 
   try {
-    const balances = await getEarningsBalancesByCurrency(gate.auth.userId);
-    return NextResponse.json({ ok: true, balances }, { status: 200 });
+    const earnings = await getRecordedEarningsByCurrency(gate.auth.userId);
+    return NextResponse.json({ ok: true, earnings }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'earnings' });
-    return trustTransportErrorResponse(error, 'Earnings balance unavailable.');
+    return trustTransportErrorResponse(error, 'Earnings record unavailable.');
   }
 }

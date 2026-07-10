@@ -128,15 +128,9 @@ export type TrustTransportProviderTrip = {
   providerCompletionConfirmedAtIso: string | null;
 };
 
-export type TrustTransportPayoutRequest = {
-  id: string;
+// A read-only record of earnings from completed trips, per settlement currency. Not a withdrawable
+// balance — non-ServiceCredits payment is settled peer-to-peer off-platform. Feeds the GDP layer.
+export type TrustTransportRecordedEarning = {
+  currency: string;
   amount: number;
-  currency: string;
-  status: string;
-  requestedAtIso: string;
-};
-
-export type TrustTransportEarningsBalance = {
-  currency: string;
-  balance: number;
 };

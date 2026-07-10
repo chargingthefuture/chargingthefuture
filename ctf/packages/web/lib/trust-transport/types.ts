@@ -13,6 +13,14 @@ export type TrustTransportRequestStatus =
 
 export type TrustTransportOfferStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn';
 
+// Recorded (read-only) earnings from completed trips, per settlement currency. NOT a withdrawable
+// balance — non-ServiceCredits payment is settled peer-to-peer off-platform; this only records what a
+// completed trip was worth. The same figures feed the GDP recognition layer.
+export type TrustTransportRecordedEarning = {
+  currency: string;
+  amount: number;
+};
+
 export type TrustTransportTripStatus =
   | 'assigned'
   | 'en_route'
@@ -22,8 +30,6 @@ export type TrustTransportTripStatus =
   | 'cancelled'
   | 'disputed'
   | 'emergency_frozen';
-
-export type TrustTransportPayoutStatus = 'requested' | 'approved' | 'rejected' | 'paid';
 
 export type TrustTransportRequestInput = {
   mode: TrustTransportMode;
@@ -136,18 +142,6 @@ export type TrustTransportTrip = {
 export type TrustTransportProofInput = {
   artifactType: 'photo' | 'code' | 'note';
   artifactRedacted: string;
-};
-
-export type TrustTransportPayoutRequest = {
-  id: string;
-  providerUserId: string;
-  amount: number;
-  currency: string;
-  status: TrustTransportPayoutStatus;
-  requestedAtIso: string;
-  decidedAtIso: string | null;
-  decidedByUserId: string | null;
-  decisionReason: string | null;
 };
 
 export type TrustTransportMarketConfig = {

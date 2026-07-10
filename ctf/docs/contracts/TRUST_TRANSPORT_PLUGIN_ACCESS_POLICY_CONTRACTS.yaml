@@ -129,27 +129,5 @@ policies:
       - actor_not_participant
       - region_not_permitted
 
-  - pluginId: trust-transport
-    command: trust-transport.payout.request
-    version: 1.0.0
-    requiredRoles:
-      - member
-    attributePolicies:
-      tenancy: same_workspace
-      actorMustOwnLedger: true
-      availableBalanceCheck: required
-    consentRequirements:
-      scopes:
-        - trust_transport_payouts
-      fallbackLawfulBasis: contract_performance
-    regionRestrictions:
-      allowedTransferMechanisms:
-        - local_processing
-        - scc
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: true
-    denyConditions:
-      - actor_not_authenticated
-      - insufficient_available_balance
-      - payout_channel_not_verified
+  # trust-transport.payout.request policy was removed (owner decision, 2026-07-08): no platform payout
+  # exists for non-ServiceCredits settlement (peer-to-peer, off-platform). See the command contract note.
