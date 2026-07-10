@@ -89,6 +89,10 @@ contracts:
       scheduleAt:
         type: string
         required: false
+      linkedPluginSlug:
+        type: string
+        required: false
+        description: Optional plugin slug to link. Validated against the visible plugin registry; an unknown or admin-only slug is stored as null. When set, the published feed item carries an "Open <Plugin>" link to /apps/<slug>.
     outputSchema:
       announcementId:
         type: string
@@ -121,6 +125,10 @@ contracts:
       targeting:
         type: object
         required: false
+      linkedPluginSlug:
+        type: string
+        required: false
+        description: Optional plugin slug to link (absent keeps the existing value; empty string clears it). Validated against the visible plugin registry.
     outputSchema:
       announcementId:
         type: string
