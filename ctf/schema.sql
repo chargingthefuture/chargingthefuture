@@ -1931,7 +1931,10 @@ CREATE TABLE IF NOT EXISTS announcements (
   created_by_user_id TEXT NOT NULL,
   updated_by_user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Optional plugin this announcement points at. When set, the published feed item gets an
+  -- "Open <Plugin>" link to /apps/<slug> so a reader can jump straight to the referenced app.
+  linked_plugin_slug TEXT
 );
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS id UUID;
 -- Repair legacy tables where `id` was added (above) before it had a default. Without a default, an
@@ -1955,6 +1958,7 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS created_by_user_id 
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS linked_plugin_slug TEXT;
 CREATE INDEX IF NOT EXISTS idx_announcements_status ON announcements(status);
 
 -- === FEED TIMELINE PROJECTION ===

@@ -156,6 +156,9 @@ export type Announcement = {
   publishedAtIso: string | null;
   expiresAtIso: string | null;
   targeting: AnnouncementTargeting;
+  // Optional plugin this announcement points at (slug, e.g. "socket-relay"). When set, the published
+  // feed item carries an "Open <Plugin>" link to /apps/<slug> so a reader can jump straight to it.
+  linkedPluginSlug: string | null;
   createdByUserId: string;
   updatedByUserId: string;
   createdAtIso: string;
@@ -170,6 +173,9 @@ export type AnnouncementDraftInput = {
   scheduleAtIso?: string | null;
   expiresAtIso?: string | null;
   targeting?: AnnouncementTargeting;
+  // Slug of the plugin to link, or null/empty for none. Validated against the visible plugin
+  // registry server-side; an unknown or admin-only slug is stored as null.
+  linkedPluginSlug?: string | null;
 };
 
 export type MembershipEventType = 'join' | 'leave';
