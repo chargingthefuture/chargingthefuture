@@ -25,7 +25,7 @@ export type PostDraft = {
   requiresAmount: boolean;
 };
 
-type FieldA11y = { id: string; "aria-describedby"?: string; "aria-invalid"?: true };
+type FieldA11y = { id: string; "aria-describedby"?: string; "aria-invalid"?: boolean };
 
 function TagEditor({
   tags,

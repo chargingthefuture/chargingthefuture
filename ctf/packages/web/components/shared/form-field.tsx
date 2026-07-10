@@ -26,7 +26,10 @@ import { useId, type CSSProperties, type ReactNode } from "react";
 type FieldChildProps = {
   id: string;
   "aria-describedby"?: string;
-  "aria-invalid"?: true;
+  // Always present (true/false) rather than true/undefined: when an error clears, the control goes to
+  // an explicit aria-invalid="false" instead of the attribute vanishing, which some assistive tech
+  // reads more reliably. The HTML/React spec allows the full boolean here.
+  "aria-invalid"?: boolean;
 };
 
 type FormFieldProps = {
@@ -61,7 +64,7 @@ export function FormField({ label, optional, hint, error, children, className, s
           {hint}
         </div>
       ) : null}
-      {children({ id, "aria-describedby": describedBy, "aria-invalid": error ? true : undefined })}
+      {children({ id, "aria-describedby": describedBy, "aria-invalid": error ? true : false })}
       {error ? (
         <div id={errorId} role="alert" style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>
           {error}
