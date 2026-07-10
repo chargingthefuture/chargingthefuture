@@ -3,13 +3,16 @@
 import { useState } from "react";
 import { Car, Navigation, MessageCircle, Check, X, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { COLOR, ttSettlementLabel, type TripRequest, type TtOffer } from "./tt-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getTrustTransportTokens, ttSettlementLabel, type TripRequest, type TtOffer } from "./tt-shared";
 
 const TERMINAL_STATUSES = new Set(["completed", "cancelled"]);
 
 // Offers on the requester's own open request, with Accept. Accepting opens a trip and (per discovery
 // model B) is the point at which the chosen provider gains the pickup/drop-off via the trip.
 function RequestOffers({ requestId, onAccepted }: { requestId: string; onAccepted: () => void }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [offers, setOffers] = useState<TtOffer[]>([]);
@@ -52,7 +55,7 @@ function RequestOffers({ requestId, onAccepted }: { requestId: string; onAccepte
 
   if (!open) {
     return (
-      <button type="button" onClick={() => void load()} style={{ width: "100%", padding: "10px 12px", borderRadius: 9, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)", color: "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer", marginBottom: 12 }}>
+      <button type="button" onClick={() => void load()} style={{ width: "100%", padding: "10px 12px", borderRadius: 9, background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, color: t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer", marginBottom: 12 }}>
         View offers
       </button>
     );
@@ -63,25 +66,25 @@ function RequestOffers({ requestId, onAccepted }: { requestId: string; onAccepte
   return (
     <div style={{ marginBottom: 12, display: "flex", flexDirection: "column", gap: 8 }}>
       {loading ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#6B7280", fontSize: 13 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.MUTED, fontSize: 13 }}>
           <Loader2 size={14} className="animate-spin" /> Loading offers…
         </div>
       ) : error ? (
         <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>
       ) : pending.length === 0 ? (
-        <div style={{ color: "#6B7280", fontSize: 13 }}>No offers yet. You&apos;ll see them here as people offer to help.</div>
+        <div style={{ color: t.MUTED, fontSize: 13 }}>No offers yet. You&apos;ll see them here as people offer to help.</div>
       ) : (
         pending.map((o) => (
-          <div key={o.id} style={{ padding: "10px 12px", borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ fontSize: 13, color: "#E8EAF0", fontWeight: 600 }}>
+          <div key={o.id} style={{ padding: "10px 12px", borderRadius: 10, background: "rgba(255,255,255,0.03)", border: `1px solid ${t.BORDER_STRONG}` }}>
+            <div style={{ fontSize: 13, color: t.TEXT, fontWeight: 600 }}>
               A community member{o.proposedAmount != null ? ` · proposes ${o.proposedAmount}` : ""}
             </div>
-            {o.note && <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4, lineHeight: 1.5 }}>{o.note}</div>}
+            {o.note && <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 4, lineHeight: 1.5 }}>{o.note}</div>}
             <button
               type="button"
               onClick={() => void accept(o.id)}
               disabled={acceptingId !== null}
-              style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: `${COLOR}1F`, border: `1px solid ${COLOR}40`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: acceptingId !== null ? "default" : "pointer", opacity: acceptingId !== null && acceptingId !== o.id ? 0.5 : 1, display: "flex", alignItems: "center", gap: 6 }}
+              style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: `${t.ACCENT}1F`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: acceptingId !== null ? "default" : "pointer", opacity: acceptingId !== null && acceptingId !== o.id ? 0.5 : 1, display: "flex", alignItems: "center", gap: 6 }}
             >
               {acceptingId === o.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Accept offer
             </button>
@@ -97,6 +100,8 @@ function RequestOffers({ requestId, onAccepted }: { requestId: string; onAccepte
 // requester, or an earnings-ledger credit for an off-platform fiat/crypto exchange the platform never
 // verified), so neither side can complete it alone.
 function CompletionConfirm({ tripId, myConfirmedAtIso, otherConfirmedAtIso, onConfirmed }: { tripId: string; myConfirmedAtIso: string | null; otherConfirmedAtIso: string | null; onConfirmed: () => void }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -125,11 +130,11 @@ function CompletionConfirm({ tripId, myConfirmedAtIso, otherConfirmedAtIso, onCo
   return (
     <div style={{ marginBottom: 10 }}>
       {error && <div style={{ fontSize: 12, color: "#EF4444", marginBottom: 8 }}>{error}</div>}
-      <button type="button" onClick={() => void confirm()} disabled={submitting} style={{ width: "100%", padding: "12px", borderRadius: 10, background: `${COLOR}1F`, border: `1px solid ${COLOR}40`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+      <button type="button" onClick={() => void confirm()} disabled={submitting} style={{ width: "100%", padding: "12px", borderRadius: 10, background: `${t.ACCENT}1F`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
         {submitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Confirm trip completed
       </button>
       {otherConfirmedAtIso && (
-        <div style={{ marginTop: 6, fontSize: 11, color: "#6B7280" }}>The other party has already confirmed — this finishes it.</div>
+        <div style={{ marginTop: 6, fontSize: 11, color: t.MUTED }}>The other party has already confirmed — this finishes it.</div>
       )}
     </div>
   );
@@ -144,14 +149,16 @@ function statusBadgeStyle(status: string) {
 }
 
 function TrackingEmpty({ onBook }: { onBook: () => void }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
   return (
     <div style={{ padding: "48px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-      <div style={{ width: 48, height: 48, borderRadius: "50%", border: "2px dashed rgba(249,115,22,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Navigation size={20} style={{ color: "rgba(249,115,22,0.4)" }} />
+      <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${t.ACCENT_TINT_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Navigation size={20} style={{ color: t.ACCENT_TAB_BORDER }} />
       </div>
-      <div style={{ fontSize: 15, fontWeight: 600, color: "#9CA3AF" }}>No active trips</div>
-      <div style={{ fontSize: 13, color: "#4B5563" }}>Book a ride to follow its status here.</div>
-      <button type="button" onClick={onBook} style={{ padding: "10px 20px", borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+      <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>No active trips</div>
+      <div style={{ fontSize: 13, color: t.FAINT }}>Book a ride to follow its status here.</div>
+      <button type="button" onClick={onBook} style={{ padding: "10px 20px", borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
         Book a Ride
       </button>
     </div>
@@ -159,6 +166,8 @@ function TrackingEmpty({ onBook }: { onBook: () => void }) {
 }
 
 function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionConfirmed }: { request: TripRequest; onChat: (r: TripRequest) => void; onAccepted: () => void; onCancelled: () => void; onCompletionConfirmed: () => void }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const pickup = request.pickupCity ?? request.fromLocation ?? null;
@@ -196,16 +205,16 @@ function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionCo
   }
 
   return (
-    <div style={{ padding: "24px", borderRadius: 16, background: `${COLOR}08`, border: `1px solid ${COLOR}30`, marginBottom: 16 }}>
+    <div style={{ padding: "24px", borderRadius: 16, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}30`, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: `${COLOR}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Car size={24} style={{ color: COLOR }} />
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: `${t.ACCENT}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Car size={24} style={{ color: t.ACCENT }} />
         </div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: "#F9FAFB" }}>{route}</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>{route}</div>
         <Badge style={{ background: "rgba(34,197,94,0.10)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)", fontSize: 12, marginLeft: "auto" }}>{ttSettlementLabel(request.priceCurrency, request.priceAmount)}</Badge>
         <Badge style={{ ...statusBadgeStyle(status), fontSize: 12 }}>{status}</Badge>
       </div>
-      <div style={{ padding: "48px 20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "center", color: "#9CA3AF", fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+      <div style={{ padding: "48px 20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}`, textAlign: "center", color: t.SUBTLE, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
         {awaitingDriver
           ? "Waiting for a driver to accept your request."
           : "Your driver is on the way. Status updates as they mark progress — message them on the Direct Line for specifics."}
@@ -219,7 +228,7 @@ function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionCo
           onConfirmed={onCompletionConfirmed}
         />
       )}
-      <button type="button" onClick={() => onChat(request)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: cancellable ? 10 : 0 }}>
+      <button type="button" onClick={() => onChat(request)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: cancellable ? 10 : 0 }}>
         <MessageCircle size={14} /> {awaitingDriver ? "Direct Line (opens when matched)" : "Direct Line"}
       </button>
       {cancellable && (
@@ -254,9 +263,11 @@ export function TrustTransportTrackingTab({
   onCancelled: () => void;
   onCompletionConfirmed: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
   return (
     <div style={{ flex: 1, padding: "24px", overflowY: "auto", minHeight: 0 }}>
-      <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 20 }}>Tracking</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 20 }}>Tracking</div>
       {requests.length === 0
         ? <TrackingEmpty onBook={onBook} />
         : requests.map((r) => <TrackingCard key={r.id} request={r} onChat={onChat} onAccepted={onAccepted} onCancelled={onCancelled} onCompletionConfirmed={onCompletionConfirmed} />)}

@@ -2241,6 +2241,30 @@
   color: var(--ctf-border-dim);
 }
 
+/* Chat affordances that ship sky-blue (#38BDF8) in the default theme — action/reply buttons,
+   quoted-author line, active reaction pill, unread divider, composer reply label. The comic theme
+   has no blue (§6): map their cyan text/tints to the cream ink used everywhere else in comic so
+   these controls read as themed chrome instead of leaking blue. Default theme is untouched. */
+:global([data-theme='comic']) .chatActionBtn,
+:global([data-theme='comic']) .chatRow:hover .chatReplyBtn,
+:global([data-theme='comic']) .chatReplyBtn:focus-visible,
+:global([data-theme='comic']) .chatQuotedAuthor,
+:global([data-theme='comic']) .chatReactionPillActive,
+:global([data-theme='comic']) .unreadDividerLabel,
+:global([data-theme='comic']) .composerReplyLabel {
+  color: var(--ctf-border);
+}
+
+:global([data-theme='comic']) .chatActionBtn,
+:global([data-theme='comic']) .chatReactionPillActive {
+  background: #d4c49a14;
+  border-color: #d4c49a45;
+}
+
+:global([data-theme='comic']) .chatActionBtn:hover {
+  background: #d4c49a1f;
+}
+
 /* "X is typing…" line above the composer. Subtle, single quiet line in the dark palette, with three
    animated dots to its left. Only rendered when the live Stream connection reports someone typing. */
 .typingIndicator {

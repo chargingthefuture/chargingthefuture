@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { listAvailableRequests, createOffer, listProviderTrips, updateTripStatus, captureProof, confirmTripCompletion } from './api';
 import { ttSettlementLabel, type TrustTransportAvailableRequest, type TrustTransportProviderTrip } from './types';
 import { TrustTransportChatButton } from './TrustTransportChatButton';
 
-const COLOR = '#38BDF8';
-const TEXT = '#F9FAFB';
-const MUTED = '#6B7280';
+// Left raw by design: SUBTLE (#9CA3AF) has no exact-value mobile token equivalent.
 const SUBTLE = '#9CA3AF';
 
 function modeLabel(mode: string): string {
@@ -37,6 +36,9 @@ const PROOF_TYPES: { key: 'photo' | 'code' | 'note'; label: string; placeholder:
 
 // Capture pickup/delivery proof as a redacted reference (no raw images) for dispute evidence.
 function ProofForm({ tripId, onDone }: { tripId: string; onDone: () => void }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [type, setType] = useState<'photo' | 'code' | 'note'>('photo');
   const [value, setValue] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -79,7 +81,7 @@ function ProofForm({ tripId, onDone }: { tripId: string; onDone: () => void }) {
         value={value}
         onChangeText={setValue}
         placeholder={active.placeholder}
-        placeholderTextColor={MUTED}
+        placeholderTextColor={tokens.textSecondary}
         maxLength={500}
         style={styles.proofInput}
         accessibilityLabel="Proof value"
@@ -94,7 +96,7 @@ function ProofForm({ tripId, onDone }: { tripId: string; onDone: () => void }) {
         disabled={submitting}
         accessibilityRole="button"
       >
-        {submitting ? <ActivityIndicator size="small" color={COLOR} /> : <Text style={styles.sendBtnText}>Save proof</Text>}
+        {submitting ? <ActivityIndicator size="small" color={accent} /> : <Text style={styles.sendBtnText}>Save proof</Text>}
       </TouchableOpacity>
     </View>
   );
@@ -105,6 +107,9 @@ function ProofForm({ tripId, onDone }: { tripId: string; onDone: () => void }) {
 // earnings-ledger credit for an off-platform fiat/crypto exchange the platform never verified), so
 // neither side can complete it alone.
 function CompletionConfirm({ tripId, myConfirmedAtIso, otherConfirmedAtIso, onConfirmed }: { tripId: string; myConfirmedAtIso: string | null; otherConfirmedAtIso: string | null; onConfirmed: () => void }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,7 +143,7 @@ function CompletionConfirm({ tripId, myConfirmedAtIso, otherConfirmedAtIso, onCo
         disabled={submitting}
         accessibilityRole="button"
       >
-        {submitting ? <ActivityIndicator size="small" color={COLOR} /> : <Text style={styles.advanceBtnText}>✓ Confirm trip completed</Text>}
+        {submitting ? <ActivityIndicator size="small" color={accent} /> : <Text style={styles.advanceBtnText}>✓ Confirm trip completed</Text>}
       </TouchableOpacity>
       {otherConfirmedAtIso ? <Text style={styles.completionHint}>The other party has already confirmed — this finishes it.</Text> : null}
     </View>
@@ -146,6 +151,9 @@ function CompletionConfirm({ tripId, myConfirmedAtIso, otherConfirmedAtIso, onCo
 }
 
 function ProviderTripCard({ trip, busyId, onAdvance, onConfirmed }: { trip: TrustTransportProviderTrip; busyId: string | null; onAdvance: (_tripId: string, _next: 'en_route' | 'picked_up' | 'delivered') => void; onConfirmed: () => void }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [proofOpen, setProofOpen] = useState(false);
   const [proofDone, setProofDone] = useState(false);
   const step = NEXT_STEP[trip.status];
@@ -169,7 +177,7 @@ function ProviderTripCard({ trip, busyId, onAdvance, onConfirmed }: { trip: Trus
           disabled={busyId !== null}
           accessibilityRole="button"
         >
-          {busyId === trip.tripId ? <ActivityIndicator size="small" color={COLOR} /> : <Text style={styles.advanceBtnText}>✓ {step.label}</Text>}
+          {busyId === trip.tripId ? <ActivityIndicator size="small" color={accent} /> : <Text style={styles.advanceBtnText}>✓ {step.label}</Text>}
         </TouchableOpacity>
       ) : awaitingCompletion ? (
         <CompletionConfirm tripId={trip.tripId} myConfirmedAtIso={trip.providerCompletionConfirmedAtIso} otherConfirmedAtIso={trip.requesterCompletionConfirmedAtIso} onConfirmed={onConfirmed} />
@@ -195,6 +203,9 @@ function ProviderTripCard({ trip, busyId, onAdvance, onConfirmed }: { trip: Trus
 // Trips the member is fulfilling, with controls to advance the lifecycle one step at a time. Renders
 // nothing until loaded and nothing when the member has no trips, so it stays out of the way otherwise.
 function ProviderTripsSection() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [loading, setLoading] = useState(true);
   const [trips, setTrips] = useState<TrustTransportProviderTrip[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -256,6 +267,9 @@ function postedAgo(iso: string): string {
 // The offer form for one available request. Note + proposed amount are both optional; sending resets
 // this card to a confirmation state so a member can't double-submit by tapping again.
 function OfferForm({ requestId, onSent }: { requestId: string; onSent: () => void }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [note, setNote] = useState('');
   const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -282,7 +296,7 @@ function OfferForm({ requestId, onSent }: { requestId: string; onSent: () => voi
         value={note}
         onChangeText={setNote}
         placeholder="Add a short note (optional) — e.g. when you can help"
-        placeholderTextColor={MUTED}
+        placeholderTextColor={tokens.textSecondary}
         style={styles.noteInput}
         multiline
         accessibilityLabel="Offer note"
@@ -291,7 +305,7 @@ function OfferForm({ requestId, onSent }: { requestId: string; onSent: () => voi
         value={amount}
         onChangeText={(t) => setAmount(t.replace(/[^0-9.]/g, ''))}
         placeholder="Propose an amount (optional)"
-        placeholderTextColor={MUTED}
+        placeholderTextColor={tokens.textSecondary}
         keyboardType="decimal-pad"
         style={styles.amountInput}
         accessibilityLabel="Proposed amount"
@@ -303,13 +317,16 @@ function OfferForm({ requestId, onSent }: { requestId: string; onSent: () => voi
         disabled={submitting}
         accessibilityRole="button"
       >
-        {submitting ? <ActivityIndicator size="small" color={COLOR} /> : <Text style={styles.sendBtnText}>Send offer</Text>}
+        {submitting ? <ActivityIndicator size="small" color={accent} /> : <Text style={styles.sendBtnText}>Send offer</Text>}
       </TouchableOpacity>
     </View>
   );
 }
 
 function HelpCard({ request }: { request: TrustTransportAvailableRequest }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -339,6 +356,9 @@ function HelpCard({ request }: { request: TrustTransportAvailableRequest }) {
 // Discovery model B: browse open requests from the community — mode + settlement + age only, never a
 // location, until the requester accepts an offer (the trip then carries the full request).
 export function TrustTransportHelpTab() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<TrustTransportAvailableRequest[]>([]);
@@ -371,7 +391,7 @@ export function TrustTransportHelpTab() {
       <ProviderTripsSection />
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={COLOR} />
+          <ActivityIndicator size="large" color={accent} />
         </View>
       ) : error ? (
         <Text style={styles.errorText}>{error}</Text>
@@ -386,162 +406,164 @@ export function TrustTransportHelpTab() {
   );
 }
 
-const styles = StyleSheet.create({
-  section: { padding: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: TEXT, marginBottom: 6 },
-  sectionDesc: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginBottom: 16 },
-  centered: { alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyText: { fontSize: 13, color: MUTED, textAlign: 'center' },
-  card: {
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: `${COLOR}08`,
-    borderWidth: 1,
-    borderColor: `${COLOR}25`,
-    marginBottom: 12,
-  },
-  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardMode: { fontSize: 14, fontWeight: '700', color: TEXT },
-  settleBadge: {
-    backgroundColor: 'rgba(34,197,94,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.25)',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-  },
-  settleBadgeText: { fontSize: 11, color: '#22C55E', fontWeight: '600' },
-  cardAge: { marginLeft: 'auto', fontSize: 11, color: MUTED },
-  cardNote: { fontSize: 11, color: SUBTLE, marginTop: 8, lineHeight: 16 },
-  sentText: { fontSize: 13, color: COLOR, fontWeight: '600', marginTop: 10 },
-  offerBtn: {
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 9,
-    backgroundColor: `${COLOR}15`,
-    borderWidth: 1,
-    borderColor: `${COLOR}30`,
-    alignItems: 'center',
-  },
-  offerBtnText: { fontSize: 13, fontWeight: '600', color: COLOR },
-  offerForm: { marginTop: 10, gap: 8 },
-  noteInput: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    borderRadius: 8,
-    fontSize: 13,
-    color: '#E8EAF0',
-    padding: 10,
-    minHeight: 44,
-    textAlignVertical: 'top',
-  },
-  amountInput: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    borderRadius: 8,
-    fontSize: 13,
-    color: '#E8EAF0',
-    padding: 10,
-  },
-  errorText: { fontSize: 12, color: '#EF4444' },
-  sendBtn: {
-    padding: 10,
-    borderRadius: 9,
-    backgroundColor: `${COLOR}1F`,
-    borderWidth: 1,
-    borderColor: `${COLOR}40`,
-    alignItems: 'center',
-  },
-  sendBtnDisabled: { opacity: 0.6 },
-  sendBtnText: { fontSize: 13, fontWeight: '600', color: COLOR },
-  tripsSection: { marginBottom: 20 },
-  tripsSectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: SUBTLE, marginBottom: 10 },
-  tripCard: {
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: `${COLOR}08`,
-    borderWidth: 1,
-    borderColor: `${COLOR}25`,
-    marginBottom: 12,
-  },
-  tripCardRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  tripRoute: { fontSize: 14, fontWeight: '700', color: TEXT, flexShrink: 1 },
-  tripStatusBadge: {
-    marginLeft: 'auto',
-    backgroundColor: `${COLOR}1A`,
-    borderWidth: 1,
-    borderColor: `${COLOR}33`,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-  },
-  tripStatusBadgeText: { fontSize: 12, color: COLOR, fontWeight: '600' },
-  tripMeta: { fontSize: 12, color: SUBTLE, marginTop: 6 },
-  advanceBtn: {
-    marginTop: 12,
-    padding: 10,
-    borderRadius: 9,
-    backgroundColor: `${COLOR}1F`,
-    borderWidth: 1,
-    borderColor: `${COLOR}40`,
-    alignItems: 'center',
-  },
-  advanceBtnText: { fontSize: 13, fontWeight: '600', color: COLOR },
-  noStepText: { fontSize: 12, color: MUTED, marginTop: 10 },
-  completionConfirm: { marginTop: 12 },
-  completionWaiting: {
-    marginTop: 12,
-    padding: 10,
-    borderRadius: 9,
-    backgroundColor: 'rgba(245,158,11,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.25)',
-  },
-  completionWaitingText: { fontSize: 12, fontWeight: '600', color: '#F59E0B' },
-  completionHint: { marginTop: 6, fontSize: 11, color: MUTED },
-  addProofBtn: {
-    marginTop: 8,
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-  },
-  addProofBtnText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
-  proofDoneText: { marginTop: 10, fontSize: 12, color: COLOR, fontWeight: '600' },
-  proofForm: { marginTop: 10, gap: 8 },
-  proofTypeRow: { flexDirection: 'row', gap: 6 },
-  proofTypeBtn: {
-    flex: 1,
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    alignItems: 'center',
-  },
-  proofTypeBtnActive: { backgroundColor: `${COLOR}20`, borderColor: `${COLOR}40` },
-  proofTypeBtnText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
-  proofTypeBtnTextActive: { color: COLOR },
-  proofInput: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    borderRadius: 8,
-    fontSize: 13,
-    color: '#E8EAF0',
-    padding: 10,
-  },
-  proofHint: { fontSize: 11, color: MUTED },
-  saveProofBtn: {
-    padding: 9,
-    borderRadius: 8,
-    backgroundColor: `${COLOR}1F`,
-    borderWidth: 1,
-    borderColor: `${COLOR}40`,
-    alignItems: 'center',
-  },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    section: { padding: 16 },
+    sectionTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 6 },
+    sectionDesc: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginBottom: 16 },
+    centered: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+    emptyText: { fontSize: 13, color: t.textSecondary, textAlign: 'center' },
+    card: {
+      padding: 14,
+      borderRadius: 14,
+      backgroundColor: `${accent}08`,
+      borderWidth: 1,
+      borderColor: `${accent}25`,
+      marginBottom: 12,
+    },
+    cardRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    cardMode: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
+    settleBadge: {
+      backgroundColor: 'rgba(34,197,94,0.10)',
+      borderWidth: 1,
+      borderColor: 'rgba(34,197,94,0.25)',
+      borderRadius: 20,
+      paddingHorizontal: 10,
+      paddingVertical: 2,
+    },
+    settleBadgeText: { fontSize: 11, color: t.success, fontWeight: '600' },
+    cardAge: { marginLeft: 'auto', fontSize: 11, color: t.textSecondary },
+    cardNote: { fontSize: 11, color: SUBTLE, marginTop: 8, lineHeight: 16 },
+    sentText: { fontSize: 13, color: accent, fontWeight: '600', marginTop: 10 },
+    offerBtn: {
+      marginTop: 10,
+      padding: 10,
+      borderRadius: 9,
+      backgroundColor: `${accent}15`,
+      borderWidth: 1,
+      borderColor: `${accent}30`,
+      alignItems: 'center',
+    },
+    offerBtnText: { fontSize: 13, fontWeight: '600', color: accent },
+    offerForm: { marginTop: 10, gap: 8 },
+    noteInput: {
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.10)',
+      borderRadius: 8,
+      fontSize: 13,
+      color: '#E8EAF0',
+      padding: 10,
+      minHeight: 44,
+      textAlignVertical: 'top',
+    },
+    amountInput: {
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.10)',
+      borderRadius: 8,
+      fontSize: 13,
+      color: '#E8EAF0',
+      padding: 10,
+    },
+    errorText: { fontSize: 12, color: t.danger },
+    sendBtn: {
+      padding: 10,
+      borderRadius: 9,
+      backgroundColor: `${accent}1F`,
+      borderWidth: 1,
+      borderColor: `${accent}40`,
+      alignItems: 'center',
+    },
+    sendBtnDisabled: { opacity: 0.6 },
+    sendBtnText: { fontSize: 13, fontWeight: '600', color: accent },
+    tripsSection: { marginBottom: 20 },
+    tripsSectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: SUBTLE, marginBottom: 10 },
+    tripCard: {
+      padding: 14,
+      borderRadius: 14,
+      backgroundColor: `${accent}08`,
+      borderWidth: 1,
+      borderColor: `${accent}25`,
+      marginBottom: 12,
+    },
+    tripCardRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    tripRoute: { fontSize: 14, fontWeight: '700', color: t.textPrimary, flexShrink: 1 },
+    tripStatusBadge: {
+      marginLeft: 'auto',
+      backgroundColor: `${accent}1A`,
+      borderWidth: 1,
+      borderColor: `${accent}33`,
+      borderRadius: 20,
+      paddingHorizontal: 10,
+      paddingVertical: 2,
+    },
+    tripStatusBadgeText: { fontSize: 12, color: accent, fontWeight: '600' },
+    tripMeta: { fontSize: 12, color: SUBTLE, marginTop: 6 },
+    advanceBtn: {
+      marginTop: 12,
+      padding: 10,
+      borderRadius: 9,
+      backgroundColor: `${accent}1F`,
+      borderWidth: 1,
+      borderColor: `${accent}40`,
+      alignItems: 'center',
+    },
+    advanceBtnText: { fontSize: 13, fontWeight: '600', color: accent },
+    noStepText: { fontSize: 12, color: t.textSecondary, marginTop: 10 },
+    completionConfirm: { marginTop: 12 },
+    completionWaiting: {
+      marginTop: 12,
+      padding: 10,
+      borderRadius: 9,
+      backgroundColor: 'rgba(245,158,11,0.08)',
+      borderWidth: 1,
+      borderColor: 'rgba(245,158,11,0.25)',
+    },
+    completionWaitingText: { fontSize: 12, fontWeight: '600', color: '#F59E0B' },
+    completionHint: { marginTop: 6, fontSize: 11, color: t.textSecondary },
+    addProofBtn: {
+      marginTop: 8,
+      padding: 8,
+      borderRadius: 8,
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.12)',
+      alignItems: 'center',
+    },
+    addProofBtnText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
+    proofDoneText: { marginTop: 10, fontSize: 12, color: accent, fontWeight: '600' },
+    proofForm: { marginTop: 10, gap: 8 },
+    proofTypeRow: { flexDirection: 'row', gap: 6 },
+    proofTypeBtn: {
+      flex: 1,
+      padding: 8,
+      borderRadius: 8,
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.10)',
+      alignItems: 'center',
+    },
+    proofTypeBtnActive: { backgroundColor: `${accent}20`, borderColor: `${accent}40` },
+    proofTypeBtnText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
+    proofTypeBtnTextActive: { color: accent },
+    proofInput: {
+      backgroundColor: 'rgba(255,255,255,0.03)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.10)',
+      borderRadius: 8,
+      fontSize: 13,
+      color: '#E8EAF0',
+      padding: 10,
+    },
+    proofHint: { fontSize: 11, color: t.textSecondary },
+    saveProofBtn: {
+      padding: 9,
+      borderRadius: 8,
+      backgroundColor: `${accent}1F`,
+      borderWidth: 1,
+      borderColor: `${accent}40`,
+      alignItems: 'center',
+    },
+  });
+}

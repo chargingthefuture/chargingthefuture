@@ -24,6 +24,7 @@
   /* Shared surface palette (community shell, account & data, plugin chrome). */
   --ctf-bg: #0f1117;
   --ctf-surface: #161b27;
+  --ctf-surface-raised: #1e293b;
   --ctf-panel: #0d0f14;
   --ctf-icon-rail: #090b0f;
   --ctf-border: #1e2a3a;
@@ -63,6 +64,7 @@
   --ctf-root-text: #ede3cb;
   --ctf-bg: #0d0d0d;
   --ctf-surface: #141414;
+  --ctf-surface-raised: #1c1c1c;
   --ctf-panel: #141414;
   --ctf-icon-rail: #080808;
   --ctf-border: #d4c49a;

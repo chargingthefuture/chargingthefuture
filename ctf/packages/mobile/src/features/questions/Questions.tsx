@@ -3,8 +3,10 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import { fetchQuestionsStreamCredentials } from './fetchQuestionsStreamCredentials';
 import { StreamChat } from 'stream-chat';
 import { OverlayProvider, Chat, Channel, MessageList, MessageInput } from 'stream-chat-react-native';
+import { useTheme } from '../../theme';
 
 export const Questions = () => {
+  const { tokens } = useTheme();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,8 +30,8 @@ export const Questions = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color="#F97316" /></View>;
-  if (error) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{error}</Text></View>;
+  if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={tokens.textSecondary} /></View>;
+  if (error) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: tokens.danger }}>{error}</Text></View>;
   if (!credentials || !chatClient) return null;
 
   return (
