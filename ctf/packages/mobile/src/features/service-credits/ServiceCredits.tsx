@@ -13,7 +13,7 @@ import { WalletTab } from './sc-wallet-tab';
 import { EarnTab } from './sc-earn-tab';
 import { SendTab } from './sc-send-tab';
 import { EconomyTab } from './sc-economy-tab';
-import { makeStyles, RAW } from './sc-styles';
+import { makeStyles } from './sc-styles';
 
 // Design canonical: design/artifacts/mockup-sandbox/src/components/mockups/
 //   survivor-hub/MobileServiceCredits.tsx (primary state)
@@ -78,7 +78,7 @@ function UnauthenticatedScreen() {
       <Text style={{ fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 12 }}>
         ServiceCredits
       </Text>
-      <Text style={{ fontSize: 14, color: RAW.textSubtle, lineHeight: 22 }}>
+      <Text style={{ fontSize: 14, color: t.textSecondary, lineHeight: 22 }}>
         Sign in to view your ServiceCredits balance, earn credits through learning and
         community activities, and spend them on real services across housing, transport,
         trades, and more.

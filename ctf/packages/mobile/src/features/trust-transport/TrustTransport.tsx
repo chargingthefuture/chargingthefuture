@@ -27,7 +27,8 @@ import { ttSettlementLabel, type TrustTransportMode, type TrustTransportRequest 
 import { CurrencySelect } from '../currency';
 import type { Currency } from '../currency';
 
-// Left raw by design: SUBTLE (#9CA3AF) has no exact-value mobile token equivalent.
+// The grey used by statusColor() for closed/unknown trip states — a status-map swatch, kept raw
+// (status colors do not theme, matching web) alongside its green/accent/red siblings.
 const SUBTLE = '#9CA3AF';
 
 type Tab = 'ride' | 'package' | 'track' | 'help' | 'earnings';

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
-import { LEDGER, RAW } from './sc-styles';
+import { LEDGER } from './sc-styles';
 import { describeLedgerEntry, fetchTransactions, type LedgerEntry, type Wallet } from './api';
 
 // Stats panel (earned total, spent total, this-month delta, network rank)
@@ -14,11 +14,15 @@ type Props = {
 
 // +/- sign and colour for a row, matching the web wallet: green credits, red debits, neutral grey
 // for escrow moves that net within the member's own wallet. These are money/ledger direction
-// swatches — left raw (LEDGER / RAW), not the danger/success chrome role.
-function amountStyle(direction: 'in' | 'out' | 'neutral'): { sign: string; color: string } {
+// swatches — left raw (LEDGER), not the danger/success chrome role. The neutral in-wallet move uses
+// the textSecondary token.
+function amountStyle(
+  direction: 'in' | 'out' | 'neutral',
+  tokens: ThemeTokens,
+): { sign: string; color: string } {
   if (direction === 'in') return { sign: '+', color: LEDGER.green };
   if (direction === 'out') return { sign: '−', color: LEDGER.red };
-  return { sign: '', color: RAW.textSubtle };
+  return { sign: '', color: tokens.textSecondary };
 }
 
 function TransactionRow({ entry }: { entry: LedgerEntry }) {
@@ -26,7 +30,7 @@ function TransactionRow({ entry }: { entry: LedgerEntry }) {
   const accent = getAppAccent('service-credits', theme);
   const s = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const { label, direction } = describeLedgerEntry(entry.entryType, entry.referenceType);
-  const { sign, color } = amountStyle(direction);
+  const { sign, color } = amountStyle(direction, tokens);
   const when = new Date(entry.createdAt).toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',

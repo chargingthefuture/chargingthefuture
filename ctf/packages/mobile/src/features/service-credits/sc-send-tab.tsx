@@ -9,7 +9,6 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
-import { RAW } from './sc-styles';
 import { sendTransfer } from './api';
 
 type Props = {
@@ -180,7 +179,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     railBtnText: {
       fontSize: 12,
       fontWeight: '600',
-      color: RAW.textSubtle,
+      color: t.textSecondary,
       textAlign: 'center',
     },
     railBtnTextActive: { color: accent },
@@ -197,7 +196,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: 'rgba(255,255,255,0.08)',
       borderRadius: t.radius,
       fontSize: 14,
-      color: RAW.textMuted,
+      color: t.textShell,
     },
     sendBtn: {
       paddingVertical: 14,
