@@ -92,7 +92,8 @@ function WhyThisWorks() {
 }
 
 function fieldBorder(active: boolean, t: ReturnType<typeof getSkillsHuntTokens>): string {
-  return `1px solid `;
+  // A filled/valid field gets the accent-tinted border; an empty one keeps the faint neutral border.
+  return `1px solid ${active ? `${t.ACCENT}50` : "rgba(255,255,255,0.1)"}`;
 }
 
 function NominationFields({ form }: { form: ScoutFormModel }) {

@@ -14,7 +14,7 @@ const SUBTLE = '#9CA3AF';
 export function TrustTransportEarningsTab() {
   const { tokens, theme } = useTheme();
   const accent = getAppAccent('trust-transport', theme);
-  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [earnings, setEarnings] = useState<TrustTransportRecordedEarning[]>([]);
@@ -78,7 +78,7 @@ export function TrustTransportEarningsTab() {
   );
 }
 
-function makeStyles(t: ThemeTokens, accent: string) {
+function makeStyles(t: ThemeTokens) {
   return StyleSheet.create({
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, minHeight: 300 },
     section: { padding: 16 },
