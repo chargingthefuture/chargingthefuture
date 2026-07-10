@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Megaphone, Send, Archive } from 'lucide-react';
+import { Megaphone, Send, Archive, Link2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import type { Announcement, FeedConfig } from 'lib/feed/types';
+
+type PluginOption = { slug: string; name: string };
 
 // Admin design tokens (shared admin look). Feed/announcements accent is the official purple.
 const COLOR = '#7C3AED';
@@ -76,13 +78,35 @@ export function FeedAnnouncementsAdminShell({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [draft, setDraft] = useState({ title: '', body: '', priority: 0, mandatory: false });
+  const [draft, setDraft] = useState({ title: '', body: '', priority: 0, mandatory: false, linkedPluginSlug: '' });
+  // Plugin registry options for the "Link a plugin" picker. Best-effort: a failed load just leaves the
+  // picker empty and never blocks authoring. The server re-validates the chosen slug on submit.
+  const [pluginOptions, setPluginOptions] = useState<PluginOption[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch('/api/plugins', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload: { plugins?: Array<{ slug: string; name: string }> } | null) => {
+        if (!cancelled && payload && Array.isArray(payload.plugins)) {
+          setPluginOptions(payload.plugins.map((p) => ({ slug: p.slug, name: p.name })));
+        }
+      })
+      .catch(() => {
+        /* picker is best-effort */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const linkedPluginName = pluginOptions.find((p) => p.slug === draft.linkedPluginSlug)?.name ?? null;
 
   const publishedCount = announcements.filter((a) => a.status === 'published').length;
   const draftCount = announcements.filter((a) => a.status === 'draft').length;
 
-  async function act(fn: () => Promise<{ ok: boolean; message?: string }>, okMessage: string) {
-    if (busy) return;
+  async function act(fn: () => Promise<{ ok: boolean; message?: string }>, okMessage: string): Promise<{ ok: boolean; message?: string }> {
+    if (busy) return { ok: false, message: 'Busy.' };
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -94,6 +118,7 @@ export function FeedAnnouncementsAdminShell({
       setError(res.message ?? 'Action failed.');
     }
     setBusy(false);
+    return res;
   }
 
   async function createDraft() {
@@ -101,11 +126,15 @@ export function FeedAnnouncementsAdminShell({
       setError('Title and body are required.');
       return;
     }
-    await act(
-      () => adminMutate('/api/feed/admin/announcements', 'POST', { title: draft.title.trim(), body: draft.body.trim(), priority: draft.priority, mandatory: draft.mandatory, scheduleAtIso: null, expiresAtIso: null }),
+    const res = await act(
+      () => adminMutate('/api/feed/admin/announcements', 'POST', { title: draft.title.trim(), body: draft.body.trim(), priority: draft.priority, mandatory: draft.mandatory, scheduleAtIso: null, expiresAtIso: null, linkedPluginSlug: draft.linkedPluginSlug || null }),
       'Draft created.',
     );
-    setDraft({ title: '', body: '', priority: 0, mandatory: false });
+    // Only clear the form on success — a failed submit must keep the typed title and message so the
+    // author does not lose their work and can just retry.
+    if (res.ok) {
+      setDraft({ title: '', body: '', priority: 0, mandatory: false, linkedPluginSlug: '' });
+    }
   }
 
   return (
@@ -166,6 +195,26 @@ export function FeedAnnouncementsAdminShell({
               <input type="number" min={0} value={draft.priority} onChange={(e) => setDraft((d) => ({ ...d, priority: Math.max(0, Math.floor(Number(e.target.value) || 0)) }))} style={{ ...fieldStyle, width: 80 }} />
             </label>
           </div>
+          {/* Optional: link a plugin. When set, the published announcement gets an "Open <Plugin>"
+              link so a reader can jump straight to that app. */}
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: SUBTLE }}>
+              <Link2 size={14} /> Link a plugin (optional)
+            </span>
+            <select
+              value={draft.linkedPluginSlug}
+              onChange={(e) => setDraft((d) => ({ ...d, linkedPluginSlug: e.target.value }))}
+              style={{ ...fieldStyle }}
+            >
+              <option value="">No linked plugin</option>
+              {pluginOptions.map((p) => (
+                <option key={p.slug} value={p.slug}>{p.name}</option>
+              ))}
+            </select>
+            {linkedPluginName ? (
+              <span style={{ fontSize: 12, color: SUBTLE }}>Readers will see an “Open {linkedPluginName}” link.</span>
+            ) : null}
+          </label>
           <button type="button" disabled={busy} onClick={() => void createDraft()} style={{ padding: '10px 16px', borderRadius: 10, background: busy ? `${COLOR}66` : COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 800, cursor: busy ? 'not-allowed' : 'pointer' }}>
             {busy ? 'Working…' : 'Create draft'}
           </button>
@@ -181,7 +230,15 @@ export function FeedAnnouncementsAdminShell({
                 <Pill label={a.status} color={STATUS_COLOR[a.status] ?? SUBTLE} />
                 {a.mandatory ? <Pill label="mandatory" color={COLOR} /> : null}
               </div>
-              <div style={{ fontSize: 12, color: SUBTLE, marginBottom: a.status === 'archived' ? 0 : 8 }}>{a.body}</div>
+              <div style={{ fontSize: 12, color: SUBTLE, marginBottom: a.linkedPluginSlug ? 6 : (a.status === 'archived' ? 0 : 8) }}>{a.body}</div>
+              {a.linkedPluginSlug ? (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: COLOR, marginBottom: a.status === 'archived' ? 0 : 8 }}>
+                  <Link2 size={12} /> Links to{' '}
+                  <a href={`/apps/${a.linkedPluginSlug}`} style={{ color: COLOR, textDecoration: 'underline' }}>
+                    {pluginOptions.find((p) => p.slug === a.linkedPluginSlug)?.name ?? a.linkedPluginSlug}
+                  </a>
+                </div>
+              ) : null}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {a.status === 'draft' ? (
                   <button type="button" disabled={busy} onClick={() => void act(() => adminMutate(`/api/feed/admin/announcements/${a.id}/publish`, 'POST', {}), 'Published.')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
