@@ -288,8 +288,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
   content: { padding: 16, gap: 16 },
   center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
   title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
-  subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
-  noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+  subtitle: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
+  noticeText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' },
   errorBanner: {
     fontSize: 13,
     color: '#FCA5A5',
@@ -310,7 +310,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  emptyText: { fontSize: 13, color: SUBTLE },
+  emptyText: { fontSize: 13, color: t.textSecondary },
   card: {
     backgroundColor: PANEL,
     borderWidth: 1,
@@ -320,7 +320,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     gap: 8,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
-  cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+  cardMeta: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
   rewardCard: {
     backgroundColor: `${accent}10`,
     borderWidth: 1,
@@ -337,8 +337,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     letterSpacing: 0.6,
   },
   rewardLine: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
-  rewardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
-  rewardNote: { fontSize: 11, color: SUBTLE, lineHeight: 16 },
+  rewardMeta: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
+  rewardNote: { fontSize: 11, color: t.textSecondary, lineHeight: 16 },
   paidPill: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
@@ -364,7 +364,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   pillStatus: { fontSize: 10, fontWeight: '700', textTransform: 'capitalize', marginTop: 2 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   submissionName: { fontSize: 14, fontWeight: '700', color: t.textPrimary, flex: 1, paddingRight: 8 },
-  submissionStatus: { fontSize: 11, fontWeight: '700', color: SUBTLE, textTransform: 'capitalize' },
+  submissionStatus: { fontSize: 11, fontWeight: '700', color: t.textSecondary, textTransform: 'capitalize' },
   submissionBio: { fontSize: 13, color: '#D1D5DB', lineHeight: 19 },
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
   actionBtn: {

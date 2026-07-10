@@ -25,11 +25,10 @@ import {
   type TrustTransportMarketConfig,
 } from './admin-api';
 
-// Left raw by design: PANEL/BORDER/SUBTLE have no exact-value mobile token equivalent
-// (panel #0D0F14, border alpha 0.08, subtle #9CA3AF are not in the theme palette).
+// Left raw by design: PANEL/BORDER have no exact-value mobile token equivalent
+// (panel #0D0F14, border alpha 0.08 are not in the theme palette).
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
-const SUBTLE = '#9CA3AF';
 
 function severityColor(severity: TrustTransportIncident['severity']): string {
   switch (severity) {
@@ -359,7 +358,7 @@ export const AdminTrustTransport = () => {
           value={maxConcurrentTrips}
           onChangeText={setMaxConcurrentTrips}
           placeholder="3"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
           keyboardType="number-pad"
         />
 
@@ -398,7 +397,7 @@ export const AdminTrustTransport = () => {
           value={accountUserId}
           onChangeText={setAccountUserId}
           placeholder="member-user-id"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
           autoCapitalize="none"
         />
 
@@ -408,7 +407,7 @@ export const AdminTrustTransport = () => {
           value={restrictReason}
           onChangeText={setRestrictReason}
           placeholder="Why this account is being restricted"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
         />
 
         <View style={styles.accountBtnRow}>
@@ -457,8 +456,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
   content: { padding: 16, gap: 16 },
   center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
   title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
-  subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
-  noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+  subtitle: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
+  noticeText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' },
   errorBanner: {
     fontSize: 13,
     color: '#FCA5A5',
@@ -490,7 +489,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     padding: 12,
     gap: 4,
   },
-  statLabel: { fontSize: 11, color: SUBTLE },
+  statLabel: { fontSize: 11, color: t.textSecondary },
   statValue: { fontSize: 22, fontWeight: '800', color: t.textPrimary },
   card: {
     backgroundColor: PANEL,
@@ -501,8 +500,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     gap: 10,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
-  cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
-  emptyText: { fontSize: 13, color: SUBTLE, fontStyle: 'italic' },
+  cardMeta: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
+  emptyText: { fontSize: 13, color: t.textSecondary, fontStyle: 'italic' },
   label: { fontSize: 12, fontWeight: '600', color: '#D1D5DB', marginTop: 4 },
   input: {
     borderWidth: 1,
@@ -527,7 +526,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   incidentHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   incidentHeaderText: { flex: 1, gap: 2 },
   incidentReason: { fontSize: 14, fontWeight: '600', color: t.textPrimary },
-  incidentMeta: { fontSize: 12, color: SUBTLE },
+  incidentMeta: { fontSize: 12, color: t.textSecondary },
   badgeColumn: { alignItems: 'flex-end', gap: 4 },
   badge: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
   resolveBtn: {
@@ -570,7 +569,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     gap: 2,
   },
   auditCommand: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
-  auditMeta: { fontSize: 11, color: SUBTLE },
+  auditMeta: { fontSize: 11, color: t.textSecondary },
   primaryBtn: {
     marginTop: 6,
     alignItems: 'center',

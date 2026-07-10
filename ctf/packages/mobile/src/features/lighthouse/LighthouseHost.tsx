@@ -22,7 +22,6 @@ function inlineRent(property: LighthouseProperty, currencies: CurrencyMap): stri
 // ctf/packages/web/components/lighthouse/lighthouse-host.tsx.
 
 const SURFACE = 'rgba(255,255,255,0.02)';
-const MUTED = '#9CA3AF';
 
 export const LighthouseHost: React.FC = () => {
   const { user } = useAuth();
@@ -152,6 +151,7 @@ export const LighthouseHost: React.FC = () => {
 };
 
 function makeStyles(t: ThemeTokens, accent: string) {
+  const MUTED = t.textSecondary;
   return StyleSheet.create({
     container: {
       flex: 1,

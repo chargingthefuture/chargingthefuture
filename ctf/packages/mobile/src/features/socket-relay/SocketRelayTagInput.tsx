@@ -118,7 +118,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#E8EAF0',
+    color: t.textShell,
   },
   suggestLabel: { fontSize: 11, color: t.textSecondary },
   suggestChip: {
@@ -129,6 +129,6 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
-  suggestChipText: { fontSize: 12, color: '#9CA3AF' },
+  suggestChipText: { fontSize: 12, color: t.textSecondary },
   });
 }

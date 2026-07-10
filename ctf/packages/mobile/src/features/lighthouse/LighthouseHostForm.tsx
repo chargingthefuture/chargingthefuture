@@ -4,7 +4,6 @@ import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
 import type { PropertyCreateInput } from './types';
 
 const SURFACE = 'rgba(255,255,255,0.02)';
-const MUTED = '#9CA3AF';
 
 // Currency code for ServiceCredits — mirrors SERVICE_CREDITS_CODE in
 // ctf/packages/web/lib/currency/types.ts.
@@ -235,6 +234,7 @@ export const LighthouseHostForm: React.FC<Props> = ({ submitting, error, onSubmi
 };
 
 function makeStyles(t: ThemeTokens, accent: string) {
+  const MUTED = t.textSecondary;
   return StyleSheet.create({
     card: {
       backgroundColor: SURFACE,

@@ -2,8 +2,6 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
-const TEXT_DIM = '#9CA3AF';
 
 /**
  * Foundation public/unauthenticated state — mirrors MobileFoundationPublic.tsx mockup.
@@ -76,7 +74,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     statusSignal: {
       fontSize: 12,
-      color: TEXT_DIM,
+      color: t.textSecondary,
     },
     header: {
       paddingHorizontal: 20,
@@ -102,7 +100,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     heroBody: {
       fontSize: 14,
-      color: TEXT_DIM,
+      color: t.textSecondary,
       lineHeight: 21,
     },
     joinBtn: {

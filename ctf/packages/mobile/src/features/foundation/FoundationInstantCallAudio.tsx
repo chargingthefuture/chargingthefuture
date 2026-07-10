@@ -28,8 +28,6 @@ import {
 } from '@stream-io/video-react-native-sdk';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
-const TEXT_DIM = '#9CA3AF';
 
 // Same call type as the web audio room and the other Stream calls in this app:
 // the plain "default" type. Audio-only is enforced by disabling the camera, not by
@@ -232,7 +230,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     controlIcon: { fontSize: 18 },
     controlText: { fontSize: 14, fontWeight: '600' },
     controlTextOn: { color: accent },
-    controlTextOff: { color: TEXT_DIM },
+    controlTextOff: { color: t.textSecondary },
     endBtn: { backgroundColor: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.3)' },
     endText: { color: '#F87171', fontSize: 14, fontWeight: '700' },
   });

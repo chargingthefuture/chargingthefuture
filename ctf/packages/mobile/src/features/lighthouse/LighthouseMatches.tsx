@@ -96,12 +96,12 @@ function makeCardStyles(t: ThemeTokens, accent: string) {
     },
     meta: {
       fontSize: 12,
-      color: '#9CA3AF',
+      color: t.textSecondary,
       marginLeft: 3,
     },
     message: {
       fontSize: 13,
-      color: '#9CA3AF',
+      color: t.textSecondary,
       marginTop: 4,
       lineHeight: 18,
     },
@@ -121,7 +121,7 @@ function makeCardStyles(t: ThemeTokens, accent: string) {
     },
     responseText: {
       fontSize: 12,
-      color: '#9CA3AF',
+      color: t.textSecondary,
       lineHeight: 17,
     },
   });
