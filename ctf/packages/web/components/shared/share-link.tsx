@@ -31,6 +31,12 @@ async function writeToClipboard(text: string): Promise<boolean> {
     // fall through to the legacy path (older mobile browsers / insecure contexts)
   }
   try {
+    // Legacy best-effort fallback for old / insecure-context browsers that lack the async Clipboard
+    // API. Note (iOS Safari): programmatic el.select() + execCommand('copy') can report success while
+    // copying nothing without a direct user gesture on the element, and execCommand is deprecated. The
+    // popover always shows the selectable URL field, so a member can copy by hand; the caller also
+    // surfaces a "Copy failed" state when this returns false so a silent no-op is not mistaken for a
+    // successful copy.
     const el = document.createElement("textarea");
     el.value = text;
     el.setAttribute("readonly", "");
@@ -71,6 +77,9 @@ export function ShareLink({
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  // True briefly when a copy attempt returned false (old browser / iOS gesture limit), so the member
+  // is told to copy the shown URL by hand instead of assuming it worked.
+  const [copyFailed, setCopyFailed] = useState(false);
   // The popup opens above the trigger by default, but flips below when the trigger sits near the top
   // of the viewport — otherwise the popup is clipped behind the header (the "modal doesn't fit" bug).
   const [placement, setPlacement] = useState<"top" | "bottom">("top");
@@ -124,7 +133,11 @@ export function ShareLink({
   async function onCopy() {
     const ok = await writeToClipboard(absolute);
     setCopied(ok);
-    window.setTimeout(() => setCopied(false), 2000);
+    setCopyFailed(!ok);
+    window.setTimeout(() => {
+      setCopied(false);
+      setCopyFailed(false);
+    }, 2000);
   }
 
   function onOpenNewTab() {
@@ -212,7 +225,7 @@ export function ShareLink({
           />
           <button type="button" onClick={() => void onCopy()} style={itemStyle}>
             {copied ? <Check size={15} /> : <Copy size={15} />}
-            <span aria-live="polite">{copied ? "Copied!" : "Copy link"}</span>
+            <span aria-live="polite">{copied ? "Copied!" : copyFailed ? "Copy failed — copy the link above" : "Copy link"}</span>
           </button>
           <button type="button" onClick={onOpenNewTab} style={itemStyle}>
             <ExternalLink size={15} />
