@@ -11,7 +11,7 @@
 | **Surfaces** | web (`/apps/trust-transport`, `/admin/trust-transport`) · android (`TrustTransport.tsx`, `AdminTrustTransport.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:trust-transport` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md` |
-| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed; 2026-07-08: mutual completion confirmation — TT-8 reworded (no unilateral complete) and TT-8b added) |
+| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed; 2026-07-08: mutual completion confirmation — TT-8 reworded (no unilateral complete) and TT-8b added; 2026-07-08: fiat payout flow removed — TT-13 reworded to a read-only earnings record and TT-14 (payout validation) dropped) |
 
 ---
 
@@ -260,35 +260,17 @@ Result: web ☐ android ☐
 
 ---
 
-### TT-13 — Earnings ledger and payout request
+### TT-13 — Earnings tab is a read-only record, not a withdrawable balance / payout
 
 **Role:** member fulfilling a trip · **Surfaces:** web, android
 
-**Precondition:** Signed in as a member who has fulfilled trips and has earnings entries. Any member with earnings can request a payout — there is no provider role.
+**Precondition:** Signed in as a member who has fulfilled at least one non-ServiceCredits (e.g. USD) trip, so an earnings record exists. (The seed provider `seed-trust-transport-provider-01` has a 24.50 USD credit.)
 
 **Steps:**
-1. Open the **Earnings** tab. Confirm a balance card shows for each currency you have a nonzero balance in.
-2. View the payout history list with per-row amount + currency + status.
-3. Pick a currency, enter a positive amount within that currency's balance, and submit.
+1. Open the **Earnings** tab.
+2. Read the intro copy and the per-currency cards.
 
-**Expected:** The payout request is created and appears in the history with its currency and a status (e.g. Requested). The payout is stamped with the currency you chose (not a hard-coded USD). Requesting more than that currency's balance is refused.
-
-Result: web ☐ android ☐
-
----
-
-### TT-14 — Payout request rejected for zero or negative amount
-
-**Role:** member fulfilling a trip · **Surfaces:** web, android
-
-**Precondition:** Signed in as a member with an earnings balance.
-
-**Steps:**
-1. Open the **Earnings** tab and pick a currency.
-2. Enter `0` as the amount and submit.
-3. Repeat with a negative amount, and with an amount above that currency's balance.
-
-**Expected:** Every attempt is rejected with a clear inline error. No payout request is created in any case.
+**Expected:** A per-currency card shows the total you&apos;ve earned across completed trips (e.g. `24.50 USD`). The tab makes clear this is a **record**, not a withdrawable balance: the copy says ServiceCredits are paid to your wallet, and other payment is arranged directly between you and the other person off-platform (the platform doesn&apos;t hold or pay out that money), and that these amounts count toward community economic activity. There is **no** "Available balance" withdrawable framing, **no** currency selector + amount + "Request a payout" form, and **no** "Payout history" section. (The `POST /api/trust-transport/payouts/requests` and `GET /api/trust-transport/payouts` routes no longer exist — a call to either returns 404.)
 
 Result: web ☐ android ☐
 
@@ -514,8 +496,7 @@ These cases must produce the same observable outcome on both surfaces. Run both 
 | TT-8 | Forward status control advances the trip one step; no unilateral "Mark complete" past delivered |
 | TT-8b | Completion needs both parties to confirm; settlement fires only on the second confirmation |
 | TT-9 | Proof capture saves a redacted reference; empty value rejected |
-| TT-13 | Balance card per currency; payout request created with the chosen currency; over-balance refused |
-| TT-14 | Zero/negative/over-balance payout attempts all rejected with inline error |
+| TT-13 | Earnings tab is a read-only per-currency record; no withdrawable balance, no payout form/history |
 | TT-A1 | Incident resolved after native/web confirmation prompt |
 | TT-A2 | Market config update persists after reload |
 | TT-A4 | Restrict and restore require confirmation; platform-wide signal written |

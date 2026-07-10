@@ -2,52 +2,33 @@
 
 import { useEffect, useState } from "react";
 import { Wallet, Loader2 } from "lucide-react";
-import { COLOR, type TtPayout } from "./tt-shared";
+import { COLOR } from "./tt-shared";
 
-interface CurrencyBalance {
+interface RecordedEarning {
   currency: string;
-  balance: number;
+  amount: number;
 }
 
-function payoutStatusLabel(s: string | undefined): string {
-  if (!s) return "—";
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function payoutStatusColor(s: string | undefined): string {
-  if (s === "paid" || s === "approved") return "#22C55E";
-  if (s === "rejected") return "#EF4444";
-  return "#F59E0B"; // requested / pending
-}
-
+// A read-only record of what a member has earned by completing trips, per settlement currency. There is
+// no withdrawable balance and no payout: for anything other than ServiceCredits the payment is arranged
+// directly between the two people off-platform (the platform has no payment processing), so this tab only
+// records what completed trips were worth. Those figures also count toward the community's economic
+// activity (GDP).
 export function TrustTransportEarningsTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [balances, setBalances] = useState<CurrencyBalance[]>([]);
-  const [payouts, setPayouts] = useState<TtPayout[]>([]);
-  const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null);
-  const [amount, setAmount] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [requested, setRequested] = useState(false);
+  const [earnings, setEarnings] = useState<RecordedEarning[]>([]);
 
   async function load() {
     setLoading(true);
     setError(null);
     try {
-      const [balRes, payRes] = await Promise.all([
-        fetch("/api/trust-transport/earnings"),
-        fetch("/api/trust-transport/payouts"),
-      ]);
-      if (!balRes.ok || !payRes.ok) throw new Error("Could not load your earnings.");
-      const balData = (await balRes.json()) as { balances?: CurrencyBalance[] };
-      const payData = (await payRes.json()) as { items?: TtPayout[] };
-      const nextBalances = Array.isArray(balData.balances) ? balData.balances : [];
-      setBalances(nextBalances);
-      setPayouts(Array.isArray(payData.items) ? payData.items : []);
-      setSelectedCurrency((prev) => prev && nextBalances.some((b) => b.currency === prev) ? prev : (nextBalances[0]?.currency ?? null));
+      const res = await fetch("/api/trust-transport/earnings");
+      if (!res.ok) throw new Error("Could not load your earnings record.");
+      const data = (await res.json()) as { earnings?: RecordedEarning[] };
+      setEarnings(Array.isArray(data.earnings) ? data.earnings : []);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Could not load your earnings.");
+      setError(e instanceof Error ? e.message : "Could not load your earnings record.");
     } finally {
       setLoading(false);
     }
@@ -55,43 +36,15 @@ export function TrustTransportEarningsTab() {
 
   useEffect(() => { void load(); }, []);
 
-  const selectedBalance = balances.find((b) => b.currency === selectedCurrency)?.balance ?? 0;
-
-  async function requestPayout() {
-    if (!selectedCurrency) return;
-    const parsed = Number(amount);
-    if (!(Number.isFinite(parsed) && parsed > 0)) {
-      setFormError("Enter an amount greater than zero.");
-      return;
-    }
-    if (parsed > selectedBalance) {
-      setFormError(`That's more than your available ${selectedCurrency} balance.`);
-      return;
-    }
-    setSubmitting(true);
-    setFormError(null);
-    try {
-      const res = await fetch("/api/trust-transport/payouts/requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ amount: parsed, currency: selectedCurrency }),
-      });
-      if (!res.ok) throw new Error("Could not submit your payout request.");
-      setRequested(true);
-      setAmount("");
-      await load();
-    } catch (e: unknown) {
-      setFormError(e instanceof Error ? e.message : "Could not submit your payout request.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   return (
     <div style={{ flex: 1, padding: "24px", overflowY: "auto", minHeight: 0 }}>
       <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 6 }}>Earnings</div>
-      <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 20, lineHeight: 1.5, maxWidth: 520 }}>
-        ServiceCredits you earn are paid straight to your ServiceCredits wallet when a trip completes. This tab tracks other-currency earnings and your payout requests, which an admin reviews.
+      <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 20, lineHeight: 1.5, maxWidth: 560 }}>
+        A record of what you&apos;ve earned by completing trips. ServiceCredits are paid straight to your
+        ServiceCredits wallet when a trip completes. Any other payment (cash, transfer, crypto) is arranged
+        directly between you and the other person — the platform doesn&apos;t hold or pay out that money —
+        so this is a record, not a withdrawable balance. These amounts count toward the community&apos;s
+        economic activity.
       </div>
 
       {loading ? (
@@ -102,59 +55,24 @@ export function TrustTransportEarningsTab() {
         <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>
       ) : (
         <>
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9CA3AF", marginBottom: 12 }}>Available balance</div>
-          {balances.length === 0 ? (
-            <div style={{ padding: "18px 20px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", marginBottom: 20, color: "#6B7280", fontSize: 13 }}>
-              No withdrawable earnings yet. Fiat/crypto earnings from completed trips show up here.
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9CA3AF", marginBottom: 12 }}>Recorded earnings</div>
+          {earnings.length === 0 ? (
+            <div style={{ padding: "18px 20px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", color: "#6B7280", fontSize: 13 }}>
+              No recorded earnings yet. Non-ServiceCredits earnings from completed trips show up here as a record.
             </div>
           ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
-              {balances.map((b) => (
-                <button
-                  key={b.currency}
-                  type="button"
-                  onClick={() => setSelectedCurrency(b.currency)}
-                  style={{ minWidth: 140, textAlign: "left", padding: "16px 18px", borderRadius: 16, background: selectedCurrency === b.currency ? `${COLOR}14` : "rgba(255,255,255,0.02)", border: `1px solid ${selectedCurrency === b.currency ? COLOR + "40" : "rgba(255,255,255,0.08)"}`, cursor: "pointer" }}
-                >
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              {earnings.map((e) => (
+                <div key={e.currency} style={{ minWidth: 140, padding: "16px 18px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <Wallet size={16} style={{ color: COLOR }} />
-                    <div style={{ fontSize: 12, color: "#9CA3AF" }}>{b.currency}</div>
+                    <div style={{ fontSize: 12, color: "#9CA3AF" }}>{e.currency}</div>
                   </div>
-                  <div style={{ marginTop: 6, fontSize: 24, fontWeight: 800, color: "#F9FAFB" }}>{b.balance}</div>
-                </button>
+                  <div style={{ marginTop: 6, fontSize: 24, fontWeight: 800, color: "#F9FAFB" }}>{e.amount}</div>
+                  <div style={{ marginTop: 4, fontSize: 11, color: "#6B7280" }}>earned across completed trips</div>
+                </div>
               ))}
             </div>
-          )}
-
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9CA3AF", marginBottom: 12 }}>Request a payout</div>
-          {requested && <div style={{ fontSize: 13, color: COLOR, fontWeight: 600, marginBottom: 10 }}>Payout requested. You&apos;ll see it below with its status.</div>}
-          {balances.length === 0 ? (
-            <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 8 }}>You can request a payout once you have a withdrawable balance.</div>
-          ) : (
-            <>
-              <div style={{ display: "flex", gap: 8, marginBottom: 8, maxWidth: 460, alignItems: "center" }}>
-                <select value={selectedCurrency ?? ""} onChange={(e) => setSelectedCurrency(e.target.value)} style={{ padding: "10px 12px", borderRadius: 9, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.10)", color: "#E8EAF0", fontSize: 14 }}>
-                  {balances.map((b) => <option key={b.currency} value={b.currency}>{b.currency}</option>)}
-                </select>
-                <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder={`Amount (max ${selectedBalance})`} style={{ flex: 1, padding: "10px 12px", borderRadius: 9, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.10)", color: "#E8EAF0", fontSize: 14 }} />
-                <button type="button" onClick={() => void requestPayout()} disabled={submitting} style={{ padding: "10px 18px", borderRadius: 9, background: `${COLOR}1F`, border: `1px solid ${COLOR}40`, color: COLOR, fontSize: 14, fontWeight: 600, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }}>
-                  {submitting && <Loader2 size={14} className="animate-spin" />} Request
-                </button>
-              </div>
-              {formError && <div style={{ fontSize: 12, color: "#EF4444", marginBottom: 8 }}>{formError}</div>}
-            </>
-          )}
-
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9CA3AF", margin: "24px 0 12px" }}>Payout history</div>
-          {payouts.length === 0 ? (
-            <div style={{ padding: "24px", textAlign: "center", color: "#6B7280", fontSize: 13, border: "1px dashed rgba(255,255,255,0.10)", borderRadius: 14 }}>No payout requests yet.</div>
-          ) : (
-            payouts.map((p) => (
-              <div key={p.id} style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#F9FAFB" }}>{p.amount}{p.currency ? ` ${p.currency}` : ""}</div>
-                <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: payoutStatusColor(p.status) }}>{payoutStatusLabel(p.status)}</span>
-              </div>
-            ))
           )}
         </>
       )}

@@ -156,28 +156,8 @@ contracts:
     retentionClass: transactional_long_lived
     idempotency: true
 
-  - pluginId: trust-transport
-    command: trust-transport.payout.request
-    version: 1.0.0
-    description: Submit payout request from earnings ledger balance.
-    inputSchema:
-      providerId:
-        type: string
-        required: true
-      amount:
-        type: number
-        required: true
-      currency:
-        type: string
-        required: true
-    outputSchema:
-      payoutRequestId:
-        type: string
-      status:
-        type: string
-    dataAccess:
-      - trust_transport_earnings_ledger
-      - trust_transport_payout_requests
-    purpose: provider_payouts
-    retentionClass: financial_long_lived
-    idempotency: true
+  # trust-transport.payout.request was removed (owner decision, 2026-07-08): for non-ServiceCredits
+  # settlement the platform has no payment processing, so the exchange is peer-to-peer off-platform and
+  # there is nothing for the platform to pay out. Completed-trip value is still recorded in
+  # trust_transport_earnings_ledger and counted toward GDP, but there is no payout command. The
+  # trust_transport_payout_requests table is retained (write-frozen) for historical/financial integrity.
