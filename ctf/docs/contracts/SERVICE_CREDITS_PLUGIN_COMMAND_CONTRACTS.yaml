@@ -479,6 +479,9 @@ contracts:
         type: number
       outstandingMutualCreditDebt:
         type: number
+      transferVolume30d:
+        type: number
+        description: Public. Total credits transferred in the last 30 days (shown as "Sent in last 30 days").
       velocity:
         type: number
       issuanceEnforced:
