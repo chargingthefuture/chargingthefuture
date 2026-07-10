@@ -89,9 +89,11 @@ export type ThemeTokens = {
   borderDim: string;
   /** Very faint row-divider tint. */
   borderFaint: string;
-  /** Primary body text. */
+  /** Primary body text (brightest). Mirrors web `--ctf-text`. */
   textPrimary: string;
-  /** Secondary text, descriptions, timestamps. */
+  /** Body/shell text — one step below primary. Mirrors web `--ctf-text-shell`. */
+  textShell: string;
+  /** Secondary text, descriptions, timestamps. Mirrors web `--ctf-text-secondary`. */
   textSecondary: string;
   /** Deeply muted text — disabled / fine print. */
   textMuted: string;
@@ -99,7 +101,8 @@ export type ThemeTokens = {
   danger: string;
   /** Success / live indicator. */
   success: string;
-  /** Warm gold accent — hero stats, progress, economy callouts. */
+  /** Highlight accent — hero stats, progress, economy callouts. Mirrors web `--ctf-gold`
+   *  (sky `#38BDF8` in default, warm gold `#C8A84B` in comic). */
   gold: string;
   /** Border radius applied to cards / buttons (0 in comic theme). */
   radius: number;
@@ -109,20 +112,27 @@ export type ThemeTokens = {
   isComic: boolean;
 };
 
+// Default palette. Values mirror the web token layer (app/globals.css `:root`) field-for-field so the
+// two platforms render the same default theme (owner decision 2026-07-10: web is the reference).
+// Web equivalents: bg=--ctf-bg, surface=--ctf-surface, surfaceAlt=--ctf-icon-rail, border=--ctf-border,
+// borderDim=--ctf-border-dim, textPrimary=--ctf-text, textSecondary=--ctf-text-secondary,
+// textMuted=--ctf-text-muted, danger=--ctf-danger, success=--ctf-success, gold=--ctf-gold,
+// radius=--ctf-card-radius, radiusChip=--ctf-chip-radius.
 const DEFAULT_TOKENS: ThemeTokens = {
   bg: '#0F1117',
   surface: '#161B27',
   surfaceAlt: '#090B0F',
   border: '#1E2A3A',
-  borderDim: '#283548',
+  borderDim: '#1E2A3A',
   borderFaint: 'rgba(255,255,255,0.06)',
   textPrimary: '#F9FAFB',
-  textSecondary: '#6B7280',
+  textShell: '#E8EAF0',
+  textSecondary: '#9CA3AF',
   textMuted: '#4B5563',
-  danger: '#EF4444',
+  danger: '#B91C1C',
   success: '#22C55E',
-  gold: '#C8A84B',
-  radius: 12,
+  gold: '#38BDF8',
+  radius: 14,
   radiusChip: 6,
   isComic: false,
 };
@@ -135,6 +145,7 @@ const COMIC_TOKENS: ThemeTokens = {
   borderDim: '#7A6A50',
   borderFaint: 'rgba(212,196,154,0.1)',
   textPrimary: '#EDE3CB',
+  textShell: '#EDE3CB',
   textSecondary: '#7A6A50',
   textMuted: '#4A3A2A',
   danger: '#B91C1C',
