@@ -851,7 +851,26 @@ CREATE TABLE IF NOT EXISTS announcement_revisions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Backfill every column on legacy databases (per the mandatory CREATE + ALTER-IF-NOT-EXISTS rule).
+-- A database whose announcement_revisions predates these columns keeps the old table on
+-- CREATE TABLE IF NOT EXISTS, so without these ALTERs the app's revision insert (which lists
+-- targeting/status/priority/mandatory/schedule_at/expires_at) fails and the whole "create draft"
+-- transaction rolls back with a 503. Defaults are supplied so the NOT NULL adds succeed on a table
+-- that already has rows.
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS announcement_id UUID;
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS revision_number INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS mandatory BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS schedule_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS targeting JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE UNIQUE INDEX IF NOT EXISTS idx_announcement_revisions_announcement_revision ON announcement_revisions(announcement_id, revision_number);
 CREATE TABLE IF NOT EXISTS announcement_delivery_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1343,6 +1362,8 @@ CREATE TABLE IF NOT EXISTS trust_transport_trips (
   stream_channel_id TEXT,
   cancelled_reason TEXT,
   completed_at TIMESTAMPTZ,
+  requester_completion_confirmed_at TIMESTAMPTZ,
+  provider_completion_confirmed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -1912,7 +1933,10 @@ CREATE TABLE IF NOT EXISTS announcements (
   created_by_user_id TEXT NOT NULL,
   updated_by_user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Optional plugin this announcement points at. When set, the published feed item gets an
+  -- "Open <Plugin>" link to /apps/<slug> so a reader can jump straight to the referenced app.
+  linked_plugin_slug TEXT
 );
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS id UUID;
 -- Repair legacy tables where `id` was added (above) before it had a default. Without a default, an
@@ -1936,6 +1960,7 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS created_by_user_id 
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS linked_plugin_slug TEXT;
 CREATE INDEX IF NOT EXISTS idx_announcements_status ON announcements(status);
 
 -- === FEED TIMELINE PROJECTION ===
@@ -4210,6 +4235,8 @@ ALTER TABLE IF EXISTS trust_transport_risk_signals ADD COLUMN IF NOT EXISTS crea
 
 -- trust_transport_trips (1 — defensive)
 ALTER TABLE IF EXISTS trust_transport_trips ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS trust_transport_trips ADD COLUMN IF NOT EXISTS requester_completion_confirmed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS trust_transport_trips ADD COLUMN IF NOT EXISTS provider_completion_confirmed_at TIMESTAMPTZ;
 
 -- trust_transport_user_extension (4 missing)
 ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS account_restricted BOOLEAN NOT NULL DEFAULT FALSE;

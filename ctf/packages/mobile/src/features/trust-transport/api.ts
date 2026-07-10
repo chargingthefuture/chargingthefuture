@@ -10,8 +10,7 @@ import type {
   TrustTransportMode,
   TrustTransportAvailableRequest,
   TrustTransportProviderTrip,
-  TrustTransportPayoutRequest,
-  TrustTransportEarningsBalance,
+  TrustTransportRecordedEarning,
   TrustTransportTripStatus,
 } from './types';
 
@@ -49,6 +48,15 @@ export async function createRequest(
     body: JSON.stringify({ ...input, idempotencyKey }),
   });
   return data.item;
+}
+
+// Cancel your own request (any non-terminal status). Confirmed by the caller before invoking.
+export async function cancelOrder(requestId: string): Promise<void> {
+  await authedFetchJson<{ ok: boolean }>(`${BASE}/orders/${requestId}/cancel`, {
+    method: 'POST',
+    headers: MUTATION_HEADERS,
+    body: JSON.stringify({}),
+  });
 }
 
 export async function listOffersForRequest(requestId: string): Promise<TrustTransportOffer[]> {
@@ -112,6 +120,21 @@ export async function updateTripStatus(tripId: string, nextStatus: TrustTranspor
   return data.trip;
 }
 
+// Confirm your side of trip completion (only valid once the trip is 'delivered'). Neither party can
+// complete a trip alone — this only actually completes it (and fires settlement) once both the
+// requester and the provider have confirmed.
+export async function confirmTripCompletion(tripId: string): Promise<{ trip: TrustTransportTrip; bothConfirmed: boolean }> {
+  const data = await authedFetchJson<{ ok: boolean; trip: TrustTransportTrip; bothConfirmed: boolean }>(
+    `${BASE}/trips/${tripId}/complete`,
+    {
+      method: 'POST',
+      headers: MUTATION_HEADERS,
+      body: JSON.stringify({}),
+    },
+  );
+  return { trip: data.trip, bothConfirmed: data.bothConfirmed };
+}
+
 // Capture pickup/delivery proof as a redacted reference (no raw images).
 export async function captureProof(tripId: string, artifactType: 'photo' | 'code' | 'note', artifactRedacted: string): Promise<void> {
   await authedFetchJson<{ ok: boolean }>(`${BASE}/trips/${tripId}/proof`, {
@@ -121,26 +144,10 @@ export async function captureProof(tripId: string, artifactType: 'photo' | 'code
   });
 }
 
-// Your available earnings balance per currency (only currencies with a nonzero balance).
-export async function getEarningsBalances(): Promise<TrustTransportEarningsBalance[]> {
-  const data = await authedFetchJson<{ ok: boolean; balances: TrustTransportEarningsBalance[] }>(`${BASE}/earnings`);
-  return data.balances ?? [];
-}
-
-export async function listPayouts(): Promise<TrustTransportPayoutRequest[]> {
-  const data = await authedFetchJson<{ ok: boolean; items: TrustTransportPayoutRequest[] }>(`${BASE}/payouts`);
-  return data.items ?? [];
-}
-
-// Request a payout against a specific currency's balance.
-export async function requestPayout(amount: number, currency: string): Promise<TrustTransportPayoutRequest> {
-  const data = await authedFetchJson<{ ok: boolean; payout: TrustTransportPayoutRequest }>(
-    `${BASE}/payouts/requests`,
-    {
-      method: 'POST',
-      headers: MUTATION_HEADERS,
-      body: JSON.stringify({ amount, currency }),
-    },
-  );
-  return data.payout;
+// A read-only record of what you've earned from completed trips, per settlement currency. Not a
+// withdrawable balance and not a payout: non-ServiceCredits payment is arranged peer-to-peer
+// off-platform. These figures also count toward the community's economic activity (GDP).
+export async function getRecordedEarnings(): Promise<TrustTransportRecordedEarning[]> {
+  const data = await authedFetchJson<{ ok: boolean; earnings: TrustTransportRecordedEarning[] }>(`${BASE}/earnings`);
+  return data.earnings ?? [];
 }

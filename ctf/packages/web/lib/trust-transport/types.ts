@@ -13,6 +13,14 @@ export type TrustTransportRequestStatus =
 
 export type TrustTransportOfferStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn';
 
+// Recorded (read-only) earnings from completed trips, per settlement currency. NOT a withdrawable
+// balance — non-ServiceCredits payment is settled peer-to-peer off-platform; this only records what a
+// completed trip was worth. The same figures feed the GDP recognition layer.
+export type TrustTransportRecordedEarning = {
+  currency: string;
+  amount: number;
+};
+
 export type TrustTransportTripStatus =
   | 'assigned'
   | 'en_route'
@@ -22,8 +30,6 @@ export type TrustTransportTripStatus =
   | 'cancelled'
   | 'disputed'
   | 'emergency_frozen';
-
-export type TrustTransportPayoutStatus = 'requested' | 'approved' | 'rejected' | 'paid';
 
 export type TrustTransportRequestInput = {
   mode: TrustTransportMode;
@@ -57,6 +63,14 @@ export type TrustTransportRequest = {
   // The trip id once an offer has been accepted for this request, otherwise null. Chat is keyed by
   // trip id, so the UI needs this to open the right channel (a request id is not a trip id).
   tripId?: string | null;
+  // The underlying trip's own lifecycle status (assigned/en_route/.../delivered/completed), present
+  // only when a trip exists. Needed because the request's own `status` already reads "completed" once
+  // the trip reaches "delivered" (see mapRequestStatusFromTrip) — before mutual completion confirmation
+  // and settlement have actually happened. The UI uses this to know whether a completion confirmation is
+  // still pending.
+  tripStatus?: TrustTransportTripStatus | null;
+  requesterCompletionConfirmedAtIso?: string | null;
+  providerCompletionConfirmedAtIso?: string | null;
 };
 
 export type TrustTransportOffer = {
@@ -82,6 +96,10 @@ export type TrustTransportProviderTrip = {
   priceCurrency: string | null;
   priceAmount: number | null;
   createdAtIso: string;
+  // Mutual completion confirmation (owner decision): once the trip is "delivered", either party
+  // confirming does not alone complete it — both must confirm before it settles.
+  requesterCompletionConfirmedAtIso: string | null;
+  providerCompletionConfirmedAtIso: string | null;
 };
 
 // What a member browsing open requests to help with is allowed to see (discovery model B). Deliberately
@@ -113,6 +131,10 @@ export type TrustTransportTrip = {
   streamChannelId: string | null;
   cancelledReason: string | null;
   completedAtIso: string | null;
+  // Mutual completion confirmation (owner decision, 2026-07-08): once a trip is "delivered", neither
+  // party alone can complete it — completion (and settlement) fires only once both have confirmed.
+  requesterCompletionConfirmedAtIso: string | null;
+  providerCompletionConfirmedAtIso: string | null;
   createdAtIso: string;
   updatedAtIso: string;
 };
@@ -120,18 +142,6 @@ export type TrustTransportTrip = {
 export type TrustTransportProofInput = {
   artifactType: 'photo' | 'code' | 'note';
   artifactRedacted: string;
-};
-
-export type TrustTransportPayoutRequest = {
-  id: string;
-  providerUserId: string;
-  amount: number;
-  currency: string;
-  status: TrustTransportPayoutStatus;
-  requestedAtIso: string;
-  decidedAtIso: string | null;
-  decidedByUserId: string | null;
-  decisionReason: string | null;
 };
 
 export type TrustTransportMarketConfig = {

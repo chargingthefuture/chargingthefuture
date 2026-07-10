@@ -1,50 +1,30 @@
-// Mirrors ctf/packages/web/components/trust-transport/tt-earnings-tab.tsx: per-currency balance
-// cards, a payout request form scoped to the selected currency, and payout history.
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
-import { getEarningsBalances, listPayouts, requestPayout } from './api';
-import type { TrustTransportEarningsBalance, TrustTransportPayoutRequest } from './types';
+// A read-only record of what a member has earned by completing trips, per settlement currency. There is
+// no withdrawable balance and no payout: for anything other than ServiceCredits the payment is arranged
+// directly between the two people off-platform (the platform has no payment processing). These figures
+// also count toward the community's economic activity (GDP). Mirrors the web Earnings tab.
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { getRecordedEarnings } from './api';
+import type { TrustTransportRecordedEarning } from './types';
 
-// Left raw by design: SUBTLE (#9CA3AF) has no exact-value mobile token equivalent.
+const COLOR = '#38BDF8';
+const TEXT = '#F9FAFB';
+const MUTED = '#6B7280';
 const SUBTLE = '#9CA3AF';
 
-function payoutStatusLabel(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-// Payout status palette — deliberately raw (green/red/amber set), per the design-cohesion
-// pass policy that status palettes are not tokenized. This is money/payout UI.
-function payoutStatusColor(s: string): string {
-  if (s === 'paid' || s === 'approved') return '#22C55E';
-  if (s === 'rejected') return '#EF4444';
-  return '#F59E0B'; // requested / pending
-}
-
 export function TrustTransportEarningsTab() {
-  const { tokens, theme } = useTheme();
-  const accent = getAppAccent('trust-transport', theme);
-  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [balances, setBalances] = useState<TrustTransportEarningsBalance[]>([]);
-  const [payouts, setPayouts] = useState<TrustTransportPayoutRequest[]>([]);
-  const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null);
-  const [amount, setAmount] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [requested, setRequested] = useState(false);
+  const [earnings, setEarnings] = useState<TrustTransportRecordedEarning[]>([]);
 
   async function load() {
     setLoading(true);
     setError(null);
     try {
-      const [nextBalances, nextPayouts] = await Promise.all([getEarningsBalances(), listPayouts()]);
-      setBalances(nextBalances);
-      setPayouts(nextPayouts);
-      setSelectedCurrency((prev) => (prev && nextBalances.some((b) => b.currency === prev) ? prev : (nextBalances[0]?.currency ?? null)));
+      const items = await getRecordedEarnings();
+      setEarnings(items);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not load your earnings.');
+      setError(e instanceof Error ? e.message : 'Could not load your earnings record.');
     } finally {
       setLoading(false);
     }
@@ -52,37 +32,10 @@ export function TrustTransportEarningsTab() {
 
   useEffect(() => { void load(); }, []);
 
-  const selectedBalance = balances.find((b) => b.currency === selectedCurrency)?.balance ?? 0;
-
-  async function submitPayout() {
-    if (!selectedCurrency) return;
-    const parsed = Number(amount);
-    if (!(Number.isFinite(parsed) && parsed > 0)) {
-      setFormError('Enter an amount greater than zero.');
-      return;
-    }
-    if (parsed > selectedBalance) {
-      setFormError(`That's more than your available ${selectedCurrency} balance.`);
-      return;
-    }
-    setSubmitting(true);
-    setFormError(null);
-    try {
-      await requestPayout(parsed, selectedCurrency);
-      setRequested(true);
-      setAmount('');
-      await load();
-    } catch (e: unknown) {
-      setFormError(e instanceof Error ? e.message : 'Could not submit your payout request.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={accent} />
+        <ActivityIndicator size="large" color={COLOR} />
       </View>
     );
   }
@@ -91,85 +44,31 @@ export function TrustTransportEarningsTab() {
     <ScrollView contentContainerStyle={styles.section}>
       <Text style={styles.sectionTitle}>Earnings</Text>
       <Text style={styles.sectionDesc}>
-        ServiceCredits you earn are paid straight to your ServiceCredits wallet when a trip completes.
-        This tab tracks other-currency earnings and your payout requests, which an admin reviews.
+        A record of what you&apos;ve earned by completing trips. ServiceCredits are paid straight to your
+        ServiceCredits wallet when a trip completes. Any other payment (cash, transfer, crypto) is arranged
+        directly between you and the other person — the platform doesn&apos;t hold or pay out that money —
+        so this is a record, not a withdrawable balance. These amounts count toward the community&apos;s
+        economic activity.
       </Text>
       {error ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : (
         <>
-          <Text style={styles.subheading}>Available balance</Text>
-          {balances.length === 0 ? (
+          <Text style={styles.subheading}>Recorded earnings</Text>
+          {earnings.length === 0 ? (
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>No withdrawable earnings yet. Fiat/crypto earnings from completed trips show up here.</Text>
+              <Text style={styles.emptyText}>No recorded earnings yet. Non-ServiceCredits earnings from completed trips show up here as a record.</Text>
             </View>
           ) : (
-            <View style={styles.balanceRow}>
-              {balances.map((b) => (
-                <TouchableOpacity
-                  key={b.currency}
-                  style={[styles.balanceCard, selectedCurrency === b.currency && styles.balanceCardActive]}
-                  onPress={() => setSelectedCurrency(b.currency)}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.balanceCurrency}>{b.currency}</Text>
-                  <Text style={styles.balanceAmount}>{b.balance}</Text>
-                </TouchableOpacity>
+            <View style={styles.row}>
+              {earnings.map((e) => (
+                <View key={e.currency} style={styles.card}>
+                  <Text style={styles.cardCurrency}>{e.currency}</Text>
+                  <Text style={styles.cardAmount}>{e.amount}</Text>
+                  <Text style={styles.cardHint}>earned across completed trips</Text>
+                </View>
               ))}
             </View>
-          )}
-
-          <Text style={styles.subheading}>Request a payout</Text>
-          {requested ? <Text style={styles.requestedText}>Payout requested. You&apos;ll see it below with its status.</Text> : null}
-          {balances.length === 0 ? (
-            <Text style={styles.emptyText}>You can request a payout once you have a withdrawable balance.</Text>
-          ) : (
-            <>
-              <View style={styles.currencyPickRow}>
-                {balances.map((b) => (
-                  <TouchableOpacity
-                    key={b.currency}
-                    style={[styles.currencyChip, selectedCurrency === b.currency && styles.currencyChipActive]}
-                    onPress={() => setSelectedCurrency(b.currency)}
-                    accessibilityRole="button"
-                  >
-                    <Text style={[styles.currencyChipText, selectedCurrency === b.currency && styles.currencyChipTextActive]}>{b.currency}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <TextInput
-                value={amount}
-                onChangeText={(t) => setAmount(t.replace(/[^0-9.]/g, ''))}
-                placeholder={`Amount (max ${selectedBalance})`}
-                placeholderTextColor={tokens.textSecondary}
-                keyboardType="decimal-pad"
-                style={styles.amountInput}
-                accessibilityLabel="Payout amount"
-              />
-              {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
-              <TouchableOpacity
-                style={[styles.requestBtn, submitting && styles.requestBtnDisabled]}
-                onPress={() => { void submitPayout(); }}
-                disabled={submitting}
-                accessibilityRole="button"
-              >
-                {submitting ? <ActivityIndicator size="small" color={accent} /> : <Text style={styles.requestBtnText}>Request payout</Text>}
-              </TouchableOpacity>
-            </>
-          )}
-
-          <Text style={styles.subheading}>Payout history</Text>
-          {payouts.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>No payout requests yet.</Text>
-            </View>
-          ) : (
-            payouts.map((p) => (
-              <View key={p.id} style={styles.payoutRow}>
-                <Text style={styles.payoutAmount}>{p.amount}{p.currency ? ` ${p.currency}` : ''}</Text>
-                <Text style={[styles.payoutStatus, { color: payoutStatusColor(p.status) }]}>{payoutStatusLabel(p.status)}</Text>
-              </View>
-            ))
           )}
         </>
       )}
@@ -177,25 +76,23 @@ export function TrustTransportEarningsTab() {
   );
 }
 
-function makeStyles(t: ThemeTokens, accent: string) {
-  return StyleSheet.create({
+const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, minHeight: 300 },
   section: { padding: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 6 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: TEXT, marginBottom: 6 },
   sectionDesc: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginBottom: 20 },
-  subheading: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: SUBTLE, marginBottom: 10, marginTop: 8 },
-  errorText: { fontSize: 12, color: t.danger, marginBottom: 8 },
+  subheading: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: SUBTLE, marginBottom: 10 },
+  errorText: { fontSize: 12, color: '#EF4444', marginBottom: 8 },
   emptyBox: {
     padding: 18,
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
-    marginBottom: 20,
   },
-  emptyText: { fontSize: 13, color: t.textSecondary },
-  balanceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-  balanceCard: {
+  emptyText: { fontSize: 13, color: MUTED },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  card: {
     minWidth: 120,
     padding: 14,
     borderRadius: 14,
@@ -203,54 +100,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
-  balanceCardActive: { backgroundColor: `${accent}14`, borderColor: `${accent}40` },
-  balanceCurrency: { fontSize: 12, color: SUBTLE },
-  balanceAmount: { marginTop: 6, fontSize: 22, fontWeight: '800', color: t.textPrimary },
-  requestedText: { fontSize: 13, color: accent, fontWeight: '600', marginBottom: 10 },
-  currencyPickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
-  currencyChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-  },
-  currencyChipActive: { backgroundColor: `${accent}20`, borderColor: `${accent}40` },
-  currencyChipText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
-  currencyChipTextActive: { color: accent },
-  amountInput: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    borderRadius: 9,
-    fontSize: 14,
-    color: '#E8EAF0',
-    padding: 12,
-    marginBottom: 8,
-  },
-  requestBtn: {
-    padding: 12,
-    borderRadius: 9,
-    backgroundColor: `${accent}1F`,
-    borderWidth: 1,
-    borderColor: `${accent}40`,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  requestBtnDisabled: { opacity: 0.6 },
-  requestBtnText: { fontSize: 14, fontWeight: '600', color: accent },
-  payoutRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    marginBottom: 8,
-  },
-  payoutAmount: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
-  payoutStatus: { marginLeft: 'auto', fontSize: 12, fontWeight: '600' },
-  });
-}
+  cardCurrency: { fontSize: 12, color: SUBTLE },
+  cardAmount: { marginTop: 6, fontSize: 22, fontWeight: '800', color: TEXT },
+  cardHint: { marginTop: 4, fontSize: 11, color: MUTED },
+});

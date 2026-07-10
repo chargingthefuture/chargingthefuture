@@ -19,6 +19,7 @@ import {
 import { feedAuthorHandle } from './author-handle';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
 import { emitFeedMembershipEventToStream } from './stream';
+import { getPluginBySlug, getPluginRoute, isAdminOnlyPlugin } from 'lib/plugins/repository';
 
 // Re-exported so existing server callers can keep importing it from the feed
 // repository; the implementation lives in the client-safe ./author-handle module.
@@ -85,6 +86,7 @@ type AnnouncementRow = {
   published_at: Date | null;
   expires_at: Date | null;
   targeting: AnnouncementTargeting;
+  linked_plugin_slug: string | null;
   created_by_user_id: string;
   updated_by_user_id: string;
   created_at: Date;
@@ -293,6 +295,7 @@ function mapAnnouncement(row: AnnouncementRow): Announcement {
     publishedAtIso: row.published_at ? toIso(row.published_at) : null,
     expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
     targeting: normalizeTargeting(row.targeting),
+    linkedPluginSlug: row.linked_plugin_slug ?? null,
     createdByUserId: row.created_by_user_id,
     updatedByUserId: row.updated_by_user_id,
     createdAtIso: toIso(row.created_at),
@@ -418,6 +421,12 @@ async function syncFeedItemForAnnouncement(
     return;
   }
 
+  // Compose the reader-facing body: the author's text plus an "Open <Plugin>: <url>" line when a
+  // valid plugin is linked, so a reader can go straight to the referenced app from wherever the
+  // announcement shows (mobile feed, Commons). Recomposed from the clean announcement body each
+  // publish, so re-publishing never stacks duplicate link lines.
+  const feedBody = await composeAnnouncementFeedBody(announcement.body, announcement.linkedPluginSlug);
+
   const feedItemResult = await client.query<{ id: string }>(
     `
       INSERT INTO feed_items
@@ -441,7 +450,7 @@ async function syncFeedItemForAnnouncement(
     [
       announcement.id,
       announcement.title,
-      announcement.body,
+      feedBody,
       announcement.priority,
       announcement.mandatory,
       announcement.publishedAtIso,
@@ -1060,6 +1069,7 @@ export async function listAnnouncements(includeArchived: boolean): Promise<Annou
         published_at,
         expires_at,
         targeting,
+        linked_plugin_slug,
         created_by_user_id,
         updated_by_user_id,
         created_at,
@@ -1074,6 +1084,34 @@ export async function listAnnouncements(includeArchived: boolean): Promise<Annou
   return result.rows.map(mapAnnouncement);
 }
 
+// Validate a requested linked-plugin slug against the visible plugin registry. Returns the resolved
+// { slug, name } only when the plugin exists, is visible to members, and is not admin-only (so a
+// reader can actually open /apps/<slug>); otherwise null. Empty/whitespace/absent → null (no link).
+async function resolveLinkedPlugin(slug: string | null | undefined): Promise<{ slug: string; name: string } | null> {
+  const trimmed = typeof slug === 'string' ? slug.trim() : '';
+  if (trimmed.length === 0) {
+    return null;
+  }
+  const plugin = await getPluginBySlug(trimmed);
+  if (!plugin || !plugin.isVisible || isAdminOnlyPlugin(plugin.slug)) {
+    return null;
+  }
+  return { slug: plugin.slug, name: plugin.name };
+}
+
+// Compose the feed item body for a published announcement: the author's body, plus — when a valid
+// plugin is linked — a trailing call-to-action line with the full app URL so a reader on any surface
+// (mobile feed, Commons) can go straight to the referenced app. Recomposed from the clean body every
+// publish, so re-publishing never stacks duplicate link lines.
+async function composeAnnouncementFeedBody(body: string, linkedPluginSlug: string | null): Promise<string> {
+  const resolved = await resolveLinkedPlugin(linkedPluginSlug);
+  if (!resolved) {
+    return body;
+  }
+  const url = `https://app.chargingthefuture.com${getPluginRoute(resolved.slug)}`;
+  return `${body}\n\nOpen ${resolved.name}: ${url}`;
+}
+
 export async function createAnnouncementDraft(actorId: string, input: AnnouncementDraftInput): Promise<Announcement> {
   return withDbTransaction(async (client) => {
     const title = normalizeText(input.title);
@@ -1083,18 +1121,20 @@ export async function createAnnouncementDraft(actorId: string, input: Announceme
     const scheduleAtIso = normalizeNullableText(input.scheduleAtIso);
     const expiresAtIso = normalizeNullableText(input.expiresAtIso);
     const targeting = normalizeTargeting(input.targeting);
+    const linkedPlugin = await resolveLinkedPlugin(input.linkedPluginSlug);
+    const linkedPluginSlug = linkedPlugin ? linkedPlugin.slug : null;
 
     const insert = await client.query<AnnouncementRow>(
       `
         INSERT INTO announcements
-          (title, body, status, priority, mandatory, schedule_at, expires_at, targeting, created_by_user_id, updated_by_user_id)
+          (title, body, status, priority, mandatory, schedule_at, expires_at, targeting, linked_plugin_slug, created_by_user_id, updated_by_user_id)
         VALUES
-          ($1, $2, 'draft', $3, $4, $5::timestamptz, $6::timestamptz, $7::jsonb, $8, $8)
+          ($1, $2, 'draft', $3, $4, $5::timestamptz, $6::timestamptz, $7::jsonb, $9, $8, $8)
         RETURNING
           id, title, body, status, priority, mandatory, schedule_at, published_at, expires_at, targeting,
-          created_by_user_id, updated_by_user_id, created_at, updated_at
+          linked_plugin_slug, created_by_user_id, updated_by_user_id, created_at, updated_at
       `,
-      [title, body, priority, mandatory, scheduleAtIso, expiresAtIso, JSON.stringify(targeting), actorId],
+      [title, body, priority, mandatory, scheduleAtIso, expiresAtIso, JSON.stringify(targeting), actorId, linkedPluginSlug],
     );
 
     const announcement = mapAnnouncement(insert.rows[0]);
@@ -1137,6 +1177,7 @@ export async function updateAnnouncementDraft(actorId: string, announcementId: s
           published_at,
           expires_at,
           targeting,
+          linked_plugin_slug,
           created_by_user_id,
           updated_by_user_id,
           created_at,
@@ -1163,6 +1204,12 @@ export async function updateAnnouncementDraft(actorId: string, announcementId: s
     const scheduleAtIso = normalizeNullableText(input.scheduleAtIso);
     const expiresAtIso = normalizeNullableText(input.expiresAtIso);
     const targeting = normalizeTargeting(input.targeting);
+    // Only change the linked plugin when the caller supplies the field; an absent field keeps the
+    // existing link. An explicit empty string clears it.
+    const linkedPluginSlug =
+      input.linkedPluginSlug === undefined
+        ? existing.rows[0].linked_plugin_slug ?? null
+        : (await resolveLinkedPlugin(input.linkedPluginSlug))?.slug ?? null;
 
     const update = await client.query<AnnouncementRow>(
       `
@@ -1175,14 +1222,15 @@ export async function updateAnnouncementDraft(actorId: string, announcementId: s
           schedule_at = $6::timestamptz,
           expires_at = $7::timestamptz,
           targeting = $8::jsonb,
+          linked_plugin_slug = $10,
           updated_by_user_id = $9,
           updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING
           id, title, body, status, priority, mandatory, schedule_at, published_at, expires_at, targeting,
-          created_by_user_id, updated_by_user_id, created_at, updated_at
+          linked_plugin_slug, created_by_user_id, updated_by_user_id, created_at, updated_at
       `,
-      [announcementId, title, body, priority, mandatory, scheduleAtIso, expiresAtIso, JSON.stringify(targeting), actorId],
+      [announcementId, title, body, priority, mandatory, scheduleAtIso, expiresAtIso, JSON.stringify(targeting), actorId, linkedPluginSlug],
     );
 
     const revision = await nextAnnouncementRevision(client, announcementId);
@@ -1225,7 +1273,7 @@ export async function publishAnnouncement(actorId: string, announcementId: strin
         WHERE id = $1::uuid
         RETURNING
           id, title, body, status, priority, mandatory, schedule_at, published_at, expires_at, targeting,
-          created_by_user_id, updated_by_user_id, created_at, updated_at
+          linked_plugin_slug, created_by_user_id, updated_by_user_id, created_at, updated_at
       `,
       [announcementId, actorId],
     );
@@ -1260,7 +1308,7 @@ export async function archiveAnnouncement(actorId: string, announcementId: strin
         WHERE id = $1::uuid
         RETURNING
           id, title, body, status, priority, mandatory, schedule_at, published_at, expires_at, targeting,
-          created_by_user_id, updated_by_user_id, created_at, updated_at
+          linked_plugin_slug, created_by_user_id, updated_by_user_id, created_at, updated_at
       `,
       [announcementId, actorId],
     );

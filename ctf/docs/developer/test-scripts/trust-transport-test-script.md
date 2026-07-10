@@ -11,7 +11,7 @@
 | **Surfaces** | web (`/apps/trust-transport`, `/admin/trust-transport`) · android (`TrustTransport.tsx`, `AdminTrustTransport.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:trust-transport` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md` |
-| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed) |
+| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed; 2026-07-08: mutual completion confirmation — TT-8 reworded (no unilateral complete) and TT-8b added; 2026-07-08: fiat payout flow removed — TT-13 reworded to a read-only earnings record and TT-14 (payout validation) dropped) |
 
 ---
 
@@ -182,9 +182,29 @@ Result: web ☐ android ☐
 
 **Steps:**
 1. Open the **Help out** tab → "Trips you're helping with"; find your active trip.
-2. Tap the forward action (Start trip → Mark picked up → Mark delivered → Mark complete) to advance one step.
+2. Tap the forward action (Start trip → Mark picked up → Mark delivered) to advance one step.
 
-**Expected:** The trip status changes one step forward and the new state shows on the card. Transitions are forward-only and append-only — there is no control to revert to the previous state. An out-of-order transition (via the API) is refused. When you mark the trip **complete** and the requester chose ServiceCredits settlement, the credits move from the requester to you (verify in your ServiceCredits wallet) and a `trust-transport.trip.settlement` audit event is written; a completed Free/Barter trip moves no credits.
+**Expected:** The trip status changes one step forward and the new state shows on the card. Transitions are forward-only and append-only — there is no control to revert to the previous state. An out-of-order transition (via the API) is refused. The forward steps stop at **Mark delivered** — there is no unilateral "Mark complete" tap; from delivered, completion is mutual (see TT-8b). Confirm no single button on this card moves the trip straight to `completed`.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-8b — Mutual completion confirmation (both parties confirm before settlement)
+
+**Role:** requester and provider (two members) · **Surfaces:** web, android
+
+**Precondition:** A trip is in the `delivered` state (from TT-8). You can act as the provider on the Help-out tab and as the requester on the Tracking tab.
+
+**Steps:**
+1. As the **provider**, on the Help-out trip card, tap "Confirm trip completed".
+2. Observe the card. Then, as the **requester**, open the Tracking card for the same trip.
+3. As the **requester**, tap "Confirm trip completed".
+
+**Expected:**
+- Step 1: The provider's card shows "You confirmed completion. Waiting for the other party to confirm." The trip is **not** yet `completed` and **no** settlement has happened — if settlement is ServiceCredits, no credits have moved yet; if fiat/crypto, no earnings-ledger credit yet.
+- Step 2: The requester's Tracking card shows a "Confirm trip completed" control (and a note that the other party already confirmed).
+- Step 3: On the requester's confirmation the trip becomes `completed` and settlement fires: ServiceCredits move requester → provider (verify the wallet) with a `trust-transport.trip.settlement` audit event; a fiat/crypto priced trip credits the provider's earnings ledger; a Free/Barter trip moves nothing. A member cannot reach `completed` with only one side's confirmation. (Attempting to `POST .../status` with `nextStatus: completed` as a member is refused with `TRUST_TRANSPORT_COMPLETION_REQUIRES_CONFIRMATION`.)
 
 Result: web ☐ android ☐
 
@@ -230,45 +250,27 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as a member. A cancellable trip/order exists (seeded).
 
 **Steps:**
-1. Open a cancellable order.
-2. Initiate cancellation.
-3. Confirm the explicit confirmation prompt.
+1. Open the Tracking tab and find a non-terminal request/order you made (open, accepted, or in progress).
+2. Tap/click "Cancel request".
+3. Confirm the explicit confirmation prompt (a `window.confirm` dialog on web, a native `Alert` on android).
 
-**Expected:** The order transitions to a cancelled terminal state. The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
-
-Result: web ☐ android ☐
-
----
-
-### TT-13 — Earnings ledger and payout request
-
-**Role:** member fulfilling a trip · **Surfaces:** web, android
-
-**Precondition:** Signed in as a member who has fulfilled trips and has earnings entries. Any member with earnings can request a payout — there is no provider role.
-
-**Steps:**
-1. Open the **Earnings** tab. Confirm a balance card shows for each currency you have a nonzero balance in.
-2. View the payout history list with per-row amount + currency + status.
-3. Pick a currency, enter a positive amount within that currency's balance, and submit.
-
-**Expected:** The payout request is created and appears in the history with its currency and a status (e.g. Requested). The payout is stamped with the currency you chose (not a hard-coded USD). Requesting more than that currency's balance is refused.
+**Expected:** The order transitions to a cancelled terminal state and disappears from the cancellable list (the "Cancel request" control no longer shows). The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
 
 Result: web ☐ android ☐
 
 ---
 
-### TT-14 — Payout request rejected for zero or negative amount
+### TT-13 — Earnings tab is a read-only record, not a withdrawable balance / payout
 
 **Role:** member fulfilling a trip · **Surfaces:** web, android
 
-**Precondition:** Signed in as a member with an earnings balance.
+**Precondition:** Signed in as a member who has fulfilled at least one non-ServiceCredits (e.g. USD) trip, so an earnings record exists. (The seed provider `seed-trust-transport-provider-01` has a 24.50 USD credit.)
 
 **Steps:**
-1. Open the **Earnings** tab and pick a currency.
-2. Enter `0` as the amount and submit.
-3. Repeat with a negative amount, and with an amount above that currency's balance.
+1. Open the **Earnings** tab.
+2. Read the intro copy and the per-currency cards.
 
-**Expected:** Every attempt is rejected with a clear inline error. No payout request is created in any case.
+**Expected:** A per-currency card shows the total you&apos;ve earned across completed trips (e.g. `24.50 USD`). The tab makes clear this is a **record**, not a withdrawable balance: the copy says ServiceCredits are paid to your wallet, and other payment is arranged directly between you and the other person off-platform (the platform doesn&apos;t hold or pay out that money), and that these amounts count toward community economic activity. There is **no** "Available balance" withdrawable framing, **no** currency selector + amount + "Request a payout" form, and **no** "Payout history" section. (The `POST /api/trust-transport/payouts/requests` and `GET /api/trust-transport/payouts` routes no longer exist — a call to either returns 404.)
 
 Result: web ☐ android ☐
 
@@ -491,10 +493,10 @@ These cases must produce the same observable outcome on both surfaces. Run both 
 | TT-11 | Explicit confirmation prompt before cancel |
 | TT-17 | Right panel shows "Good to know" reminders; no fabricated safety claims |
 | TT-18 | Discovery list shows only mode + settlement + age; offer sends and confirms |
-| TT-8 | Forward status control advances the trip one step; ServiceCredits settlement moves credits on completion |
+| TT-8 | Forward status control advances the trip one step; no unilateral "Mark complete" past delivered |
+| TT-8b | Completion needs both parties to confirm; settlement fires only on the second confirmation |
 | TT-9 | Proof capture saves a redacted reference; empty value rejected |
-| TT-13 | Balance card per currency; payout request created with the chosen currency; over-balance refused |
-| TT-14 | Zero/negative/over-balance payout attempts all rejected with inline error |
+| TT-13 | Earnings tab is a read-only per-currency record; no withdrawable balance, no payout form/history |
 | TT-A1 | Incident resolved after native/web confirmation prompt |
 | TT-A2 | Market config update persists after reload |
 | TT-A4 | Restrict and restore require confirmation; platform-wide signal written |

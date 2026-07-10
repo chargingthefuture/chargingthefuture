@@ -51,6 +51,11 @@ export type TrustTransportRequest = {
   // The trip id once an offer has been accepted. Chat is keyed by trip id, not the request id; null
   // until a trip exists.
   tripId: string | null;
+  // The underlying trip's own status. Needed because `status` above already reads 'completed' once the
+  // trip reaches 'delivered' — before mutual completion confirmation and settlement actually happen.
+  tripStatus: TrustTransportTripStatus | null;
+  requesterCompletionConfirmedAtIso: string | null;
+  providerCompletionConfirmedAtIso: string | null;
   createdAtIso: string;
   updatedAtIso: string;
 };
@@ -86,6 +91,10 @@ export type TrustTransportTrip = {
   streamChannelId: string | null;
   cancelledReason: string | null;
   completedAtIso: string | null;
+  // Mutual completion confirmation (owner decision, 2026-07-08): once a trip is 'delivered', neither
+  // party alone can complete it — completion (and settlement) fires only once both have confirmed.
+  requesterCompletionConfirmedAtIso: string | null;
+  providerCompletionConfirmedAtIso: string | null;
   createdAtIso: string;
   updatedAtIso: string;
 };
@@ -115,17 +124,13 @@ export type TrustTransportProviderTrip = {
   priceCurrency: string | null;
   priceAmount: number | null;
   createdAtIso: string;
+  requesterCompletionConfirmedAtIso: string | null;
+  providerCompletionConfirmedAtIso: string | null;
 };
 
-export type TrustTransportPayoutRequest = {
-  id: string;
+// A read-only record of earnings from completed trips, per settlement currency. Not a withdrawable
+// balance — non-ServiceCredits payment is settled peer-to-peer off-platform. Feeds the GDP layer.
+export type TrustTransportRecordedEarning = {
+  currency: string;
   amount: number;
-  currency: string;
-  status: string;
-  requestedAtIso: string;
-};
-
-export type TrustTransportEarningsBalance = {
-  currency: string;
-  balance: number;
 };

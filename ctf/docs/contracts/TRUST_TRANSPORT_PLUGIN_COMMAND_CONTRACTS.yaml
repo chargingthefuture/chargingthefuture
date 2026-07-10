@@ -83,7 +83,12 @@ contracts:
   - pluginId: trust-transport
     command: trust-transport.trip.status.update
     version: 1.0.0
-    description: Apply canonical status transition for active trip or delivery lifecycle.
+    description: >-
+      Apply a canonical forward status transition for an active trip (assigned -> en_route ->
+      picked_up -> delivered) or a terminal state (cancelled/disputed/emergency_frozen). A non-admin
+      may NOT set 'completed' here — completion requires both parties to confirm via
+      trust-transport.trip.completion.confirm. Admins keep a direct override to 'completed' (which
+      settles), e.g. when resolving a dispute.
     inputSchema:
       tripId:
         type: string
@@ -105,8 +110,9 @@ contracts:
       - trust_transport_trips
       - trust_transport_status_events
       - trust_transport_proof_artifacts
-      # On completion: ServiceCredits settlement moves credits requester -> provider; fiat/crypto
-      # settlement credits the provider's earnings ledger in that currency.
+      # On an admin-override completion: ServiceCredits settlement moves credits requester -> provider;
+      # fiat/crypto settlement credits the provider's earnings ledger in that currency. (For the normal
+      # member path, settlement fires on trust-transport.trip.completion.confirm instead.)
       - service_credits_wallets
       - service_credits_transfers
       - service_credits_ledger_entries
@@ -116,27 +122,42 @@ contracts:
     idempotency: true
 
   - pluginId: trust-transport
-    command: trust-transport.payout.request
+    command: trust-transport.trip.completion.confirm
     version: 1.0.0
-    description: Submit payout request from earnings ledger balance.
+    description: >-
+      Record one participant's confirmation that a delivered trip is complete. Only valid from the
+      'delivered' state and only for the trip's requester or provider. The trip actually transitions to
+      'completed' — and settlement fires (ServiceCredits move requester -> provider, or the provider's
+      earnings ledger is credited for a fiat/crypto exchange settled off-platform) — only once BOTH the
+      requester and the provider have confirmed. This exists because completion moves value: neither
+      party may complete a trip unilaterally.
     inputSchema:
-      providerId:
-        type: string
-        required: true
-      amount:
-        type: number
-        required: true
-      currency:
+      tripId:
         type: string
         required: true
     outputSchema:
-      payoutRequestId:
+      tripId:
         type: string
       status:
         type: string
+      bothConfirmed:
+        type: boolean
+      updatedAt:
+        type: string
     dataAccess:
+      - trust_transport_trips
+      - trust_transport_status_events
+      # Only when this confirmation is the second one (bothConfirmed) and settlement fires:
+      - service_credits_wallets
+      - service_credits_transfers
+      - service_credits_ledger_entries
       - trust_transport_earnings_ledger
-      - trust_transport_payout_requests
-    purpose: provider_payouts
-    retentionClass: financial_long_lived
+    purpose: lifecycle_transition
+    retentionClass: transactional_long_lived
     idempotency: true
+
+  # trust-transport.payout.request was removed (owner decision, 2026-07-08): for non-ServiceCredits
+  # settlement the platform has no payment processing, so the exchange is peer-to-peer off-platform and
+  # there is nothing for the platform to pay out. Completed-trip value is still recorded in
+  # trust_transport_earnings_ledger and counted toward GDP, but there is no payout command. The
+  # trust_transport_payout_requests table is retained (write-frozen) for historical/financial integrity.
