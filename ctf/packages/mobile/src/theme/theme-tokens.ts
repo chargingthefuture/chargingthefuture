@@ -60,6 +60,8 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   'account-data': { standard: '#D946EF', comic: '#B91C1C' },
   // Beacon uses the same amber accent as the web viewer (BEACON_COLOR = #F59E0B).
   beacon: { standard: '#F59E0B', comic: '#7A4A05' },
+  // Recurring Activity: a calm teal. Matches the web accent table verbatim.
+  'recurring-activity': { standard: '#2DD4BF', comic: '#0F5C54' },
 };
 
 const FALLBACK_ACCENT: AccentPair = { standard: '#6B7280', comic: '#7A6A50' };

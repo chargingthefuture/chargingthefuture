@@ -1,6 +1,7 @@
 # Design Cohesion Pass — Findings & Session Continuity
 
-> Status: **in progress**. Branch `design/brand-cohesion-theme-token-pass`.
+> Status: **web + mobile token conversion COMPLETE** (2026-07-10); only owner value-decisions
+> (Q2/Q4/Q5/Q6) and optional CI hardening remain. Branch `design/brand-cohesion-theme-token-pass`.
 > Resumable spec for the cross-cutting brand/theme cohesion pass across **web (desktop +
 > mobile-responsive)** and **Android (React Native)**. A future session resumes from §8 + §9.
 >
@@ -472,13 +473,54 @@ branch; every commit passed the pre-commit typecheck gate and the pre-push lint+
 - `app-loading.tsx` + `loading.module.css` (spec §11) and `stream-chat-panel.tsx` (contrast helper)
   untouched by design.
 
-## 10. Remaining work (resumable)
+## 10. Mobile pass — COMPLETE (2026-07-10)
 
-1. **Android/mobile pass (~116 files)** — `ctf/packages/mobile`: same recipe against
-   `src/theme/theme-tokens.ts` `getThemeTokens(theme)`. NOT blocked by Q2: tokenize with mobile's
-   own current values (no cross-platform value changes); Q2 reconciliation is a separate,
-   owner-gated value change.
-2. Owner calls: Q2 (cross-platform values), Q4 (`--ctf-surface-raised`), Q5 (community-chat cyan
-   under comic), Q6 (accent-pinned inks) — all small, none block anything above.
-3. Optional hardening: a CI grep gate that fails on new raw chrome hex in `components/**` (the
-   exact-match table in this doc is the spec for it).
+The Android/React-Native pass is done and pushed. Every non-loading feature screen and shared
+component in `ctf/packages/mobile/src` now reads `makeStyles(tokens, accent)` from `useTheme()`
+(idiom exemplar: `features/blocks/BlockedMembers.tsx`), so both themes resolve. Default theme is
+byte-identical by construction — `getThemeTokens('default')` returns the shipped palette and
+`getAppAccent(slug,'default')` returns the shipped accent. `pnpm --filter @ctf/mobile run typecheck`
+green.
+
+- Covered: announcements, chyme, click-log, comic, community, contributions, currency, directory,
+  feed, foundation, gdp, gentle-pulse, level-up, lighthouse, mood, peer-programming,
+  recurring-activity, service-credits (incl. the `sc-styles.ts` shared sheet → `makeStyles` factory),
+  skills-hunt, skills-taxonomy, socket-relay, trust, trust-transport, unlock, weekly-performance,
+  workforce, and shared components (FormField, ShareLink, StreamChatSearch, etc.).
+- Added `recurring-activity` to the mobile `PLUGIN_ACCENTS` table (`standard #2DD4BF`,
+  `comic #0F5C54`) to match the web table verbatim — it was the one plugin missing from mobile.
+
+**Mobile residuals (intentional, verified raw-by-reason):**
+- **`#9CA3AF` and `#E8EAF0` have NO mobile token** (mobile `textSecondary` is `#6B7280` — the exact
+  Q2/F4 web↔mobile naming collision). They recur across most screens and stay raw until Q2 is
+  decided. This is the single biggest mobile residual and the strongest reason to resolve Q2.
+- Status/data-viz palettes, wellbeing mood-scale colors (`mood/Mood.tsx` MOODS), ledger-direction
+  greens/reds, ADMIN badge indigo — raw per §F3.
+- `#0D0F14` admin-panel surface + `rgba(255,255,255,0.08)` admin border have no mobile token slot
+  (mobile has no admin-surface token yet — the mobile analogue of the web Q3 group). Candidate for a
+  future mobile `surfaceAdmin`/`borderStrong` slot.
+- Accent/status **rgba tints** (`rgba(132,204,22,…)`, `rgba(34,197,94,…)`, etc.) left raw — not
+  byte-identical to any `${accent}NN` hex-suffix form. Only pre-existing string-concat composites
+  (`COLOR + '20'`) converted cleanly.
+- Loading screens (`*Loading.tsx`, `LoadingScreen.tsx`) untouched (spec §11).
+- **Two likely copy-paste bugs found, left raw (out of scope for a token pass):**
+  `trust-transport/TrustTransportStreamTab.tsx` and `questions/Questions.tsx` each color an
+  ActivityIndicator `#F97316` (workforce-orange, not their own accent) and use `color: 'red'` for
+  errors. Worth a follow-up fix.
+- Hub-level screens `community/Community.tsx` (`#22C55E`) and `announcements/Announcements.tsx`
+  (`#84CC16`) keep their accent raw — no slug in `PLUGIN_ACCENTS` (same as web contributions).
+
+## 11. Remaining work (resumable)
+
+The token pass itself is functionally complete on both platforms. What's left is owner decisions and
+optional hardening — none blocks the pass:
+
+1. Owner calls: **Q2** (cross-platform value reconciliation — resolving it defines a mobile
+   `textSecondary`/`textSubtle` split and clears the biggest mobile residual), **Q4**
+   (`--ctf-surface-raised` undefined var), **Q5** (community-chat cyan under comic), **Q6**
+   (accent-pinned contrast inks). A mobile admin-surface token (`#0D0F14`/`0.08` group) is the
+   mobile sibling of the resolved web Q3 — bundle it with Q2.
+2. Two copy-paste spinner bugs (mobile stream/questions `#F97316` + `color: 'red'`) — small fix.
+3. Optional CI hardening: a grep gate failing on new raw chrome hex in `web/components/**` and
+   `mobile/src/features/**` (the exact-match tables in this doc are the spec). This is what would
+   keep the pass from regressing.

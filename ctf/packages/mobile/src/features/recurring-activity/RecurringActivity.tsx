@@ -30,11 +30,9 @@ import { useAuth } from '../../auth/auth-context';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
 import { useTheme, getAppAccent, type ThemeName, type ThemeTokens } from '../../theme';
 
-// recurring-activity has no entry in the shared PLUGIN_ACCENTS table, so getAppAccent('recurring-activity','default')
-// would return the neutral fallback grey — not this plugin's shipped teal. To keep the default theme byte-identical
-// we pin the shipped accent for 'default' and only route the comic theme through getAppAccent.
+// recurring-activity's accent (shipped teal #2DD4BF for default; comic ink from the shared table).
 function recurringAccent(theme: ThemeName): string {
-  return theme === 'comic' ? getAppAccent('recurring-activity', 'comic') : '#2DD4BF';
+  return getAppAccent('recurring-activity', theme);
 }
 
 const SECTORS: { key: RecurringActivitySector; label: string }[] = [
