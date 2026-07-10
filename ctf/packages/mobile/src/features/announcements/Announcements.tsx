@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -7,15 +7,14 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useTheme, type ThemeTokens } from '../../theme';
 import { fetchAnnouncements, markAnnouncementRead } from './api';
 import type { AnnouncementItem } from './api';
 
+// Announcements hub accent — the shipped lime the header, unread dots, and empty state use. It is
+// the hub's own accent (no registered plugin slug), so it stays a raw constant while the chrome
+// (background, borders, text) reads the theme tokens.
 const COLOR = '#84CC16';
-const BG = '#0F1117';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-const DIMMER = '#4B5563';
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
@@ -38,39 +37,41 @@ function AnnouncementCard({
   item: AnnouncementItem;
   onRead: (_id: string) => void;
 }) {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   const urgent = isUrgent(item);
   const accent = '#A78BFA';
 
   return (
     <Pressable
-      style={[styles.card, { borderColor: urgent ? '#EF444440' : BORDER }]}
+      style={[s.card, { borderColor: urgent ? '#EF444440' : tokens.border }]}
       onPress={() => onRead(item.id)}
     >
       {urgent && (
-        <View style={styles.urgentBadge}>
-          <Text style={styles.urgentText}>URGENT</Text>
+        <View style={s.urgentBadge}>
+          <Text style={s.urgentText}>URGENT</Text>
         </View>
       )}
-      <View style={styles.cardHeader}>
-        <View style={[styles.avatar, { backgroundColor: `${accent}25` }]}>
-          <Text style={[styles.avatarText, { color: accent }]}>AH</Text>
+      <View style={s.cardHeader}>
+        <View style={[s.avatar, { backgroundColor: `${accent}25` }]}>
+          <Text style={[s.avatarText, { color: accent }]}>AH</Text>
         </View>
-        <View style={styles.cardMeta}>
-          <Text style={styles.cardAuthor}>Announcements Hub</Text>
-          <Text style={styles.cardTime}>{formatTime(item.publishedAtIso)}</Text>
+        <View style={s.cardMeta}>
+          <Text style={s.cardAuthor}>Announcements Hub</Text>
+          <Text style={s.cardTime}>{formatTime(item.publishedAtIso)}</Text>
         </View>
-        {!item.isRead && <View style={styles.unreadDot} />}
+        {!item.isRead && <View style={s.unreadDot} />}
       </View>
-      <Text style={styles.cardTitle} numberOfLines={2}>
+      <Text style={s.cardTitle} numberOfLines={2}>
         {item.title}
       </Text>
-      <Text style={styles.cardBody} numberOfLines={4}>
+      <Text style={s.cardBody} numberOfLines={4}>
         {item.body}
       </Text>
       {item.mandatory && (
-        <View style={styles.mandatoryRow}>
-          <View style={styles.mandatoryPill}>
-            <Text style={styles.mandatoryText}>Required reading</Text>
+        <View style={s.mandatoryRow}>
+          <View style={s.mandatoryPill}>
+            <Text style={s.mandatoryText}>Required reading</Text>
           </View>
         </View>
       )}
@@ -79,13 +80,15 @@ function AnnouncementCard({
 }
 
 function EmptyState() {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   return (
-    <View style={styles.emptyWrap}>
-      <View style={styles.emptyIcon}>
+    <View style={s.emptyWrap}>
+      <View style={s.emptyIcon}>
         <Text style={{ fontSize: 28, color: `${COLOR}50` }}>📣</Text>
       </View>
-      <Text style={styles.emptyTitle}>No announcements yet</Text>
-      <Text style={styles.emptyBody}>
+      <Text style={s.emptyTitle}>No announcements yet</Text>
+      <Text style={s.emptyBody}>
         Platform announcements from the Hub team will appear here as they are published.
       </Text>
     </View>
@@ -93,6 +96,8 @@ function EmptyState() {
 }
 
 export const Announcements = () => {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   const [items, setItems] = useState<AnnouncementItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,27 +134,27 @@ export const Announcements = () => {
   );
 
   return (
-    <View style={styles.screen}>
+    <View style={s.screen}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerIcon}>
+      <View style={s.header}>
+        <View style={s.headerIcon}>
           <Text style={{ fontSize: 16, color: COLOR }}>📣</Text>
         </View>
         <View>
-          <Text style={styles.headerTitle}>Announcements</Text>
-          <Text style={styles.headerSub}>Hub team updates · Live</Text>
+          <Text style={s.headerTitle}>Announcements</Text>
+          <Text style={s.headerSub}>Hub team updates · Live</Text>
         </View>
       </View>
 
       {loading ? (
-        <View style={styles.center}>
+        <View style={s.center}>
           <ActivityIndicator size="large" color={COLOR} />
         </View>
       ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryBtn} onPress={load}>
-            <Text style={styles.retryText}>Retry</Text>
+        <View style={s.center}>
+          <Text style={s.errorText}>{error}</Text>
+          <Pressable style={s.retryBtn} onPress={load}>
+            <Text style={s.retryText}>Retry</Text>
           </Pressable>
         </View>
       ) : items.length === 0 ? (
@@ -161,7 +166,7 @@ export const Announcements = () => {
           renderItem={({ item }) => (
             <AnnouncementCard item={item} onRead={handleRead} />
           )}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -169,10 +174,11 @@ export const Announcements = () => {
   );
 };
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: t.bg,
   },
   header: {
     flexDirection: 'row',
@@ -180,9 +186,9 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#090B0F',
+    backgroundColor: t.surfaceAlt,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
   },
   headerIcon: {
     width: 36,
@@ -195,7 +201,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: TEXT,
+    color: t.textPrimary,
   },
   headerSub: {
     fontSize: 11,
@@ -251,11 +257,11 @@ const styles = StyleSheet.create({
   cardAuthor: {
     fontSize: 13,
     fontWeight: '700',
-    color: TEXT,
+    color: t.textPrimary,
   },
   cardTime: {
     fontSize: 11,
-    color: DIMMER,
+    color: t.textMuted,
     marginTop: 1,
   },
   unreadDot: {
@@ -267,13 +273,13 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: TEXT,
+    color: t.textPrimary,
     lineHeight: 20,
     marginBottom: 6,
   },
   cardBody: {
     fontSize: 13,
-    color: SUBTLE,
+    color: t.textSecondary,
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -321,19 +327,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: TEXT,
+    color: t.textPrimary,
     marginBottom: 10,
     textAlign: 'center',
   },
   emptyBody: {
     fontSize: 14,
-    color: SUBTLE,
+    color: t.textSecondary,
     lineHeight: 22,
     textAlign: 'center',
   },
   errorText: {
     fontSize: 14,
-    color: '#EF4444',
+    color: t.danger,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -350,4 +356,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLOR,
   },
-});
+  });
+}

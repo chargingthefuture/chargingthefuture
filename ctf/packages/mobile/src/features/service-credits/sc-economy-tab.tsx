@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { COLOR, colors } from './sc-styles';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
+import { RAW } from './sc-styles';
 import { fetchCirculation, type CirculationMetrics } from './api';
 
 // Member-facing view of the public ServiceCredits circulation metrics.
@@ -30,6 +31,9 @@ function buildTiles(m: CirculationMetrics): Tile[] {
 }
 
 export function EconomyTab() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('service-credits', theme);
+  const s = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [metrics, setMetrics] = useState<CirculationMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +58,7 @@ export function EconomyTab() {
   if (loading) {
     return (
       <View style={s.center}>
-        <ActivityIndicator color={COLOR} size="large" />
+        <ActivityIndicator color={accent} size="large" />
       </View>
     );
   }
@@ -98,55 +102,57 @@ export function EconomyTab() {
   );
 }
 
-const s = StyleSheet.create({
-  center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: 16 },
-  errorText: { fontSize: 14, color: colors.textDim, textAlign: 'center' },
-  retryBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: COLOR,
-    borderRadius: 10,
-  },
-  retryText: { color: '#0F1117', fontWeight: '700', fontSize: 14 },
-  heading: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  subheading: {
-    fontSize: 12,
-    color: colors.textDim,
-    marginBottom: 14,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  tile: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  tileValue: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  tileLabel: {
-    fontSize: 11,
-    color: colors.textSubtle,
-  },
-  caption: {
-    fontSize: 11,
-    color: colors.textDim,
-    lineHeight: 16,
-    marginTop: 14,
-  },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: 16 },
+    errorText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' },
+    retryBtn: {
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      backgroundColor: accent,
+      borderRadius: 10,
+    },
+    retryText: { color: '#0F1117', fontWeight: '700', fontSize: 14 },
+    heading: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: t.textPrimary,
+      marginBottom: 4,
+    },
+    subheading: {
+      fontSize: 12,
+      color: t.textSecondary,
+      marginBottom: 14,
+    },
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    tile: {
+      flexBasis: '47%',
+      flexGrow: 1,
+      padding: 14,
+      borderRadius: 14,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      borderColor: t.borderFaint,
+    },
+    tileValue: {
+      fontSize: 22,
+      fontWeight: '900',
+      color: t.textPrimary,
+      marginBottom: 4,
+    },
+    tileLabel: {
+      fontSize: 11,
+      color: RAW.textSubtle,
+    },
+    caption: {
+      fontSize: 11,
+      color: t.textSecondary,
+      lineHeight: 16,
+      marginTop: 14,
+    },
+  });
+}

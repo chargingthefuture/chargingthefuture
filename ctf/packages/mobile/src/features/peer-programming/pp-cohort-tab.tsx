@@ -1,13 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import type {
   PeerProgrammingCohort,
   PeerProgrammingCohortMember,
   PeerProgrammingCohortSummary,
   PeerProgrammingTopic,
 } from './api';
-
-const COLOR = '#6EE7B7';
 
 function memberName(member: PeerProgrammingCohortMember): string {
   return member.username ?? `Member ${member.userId.slice(0, 6)}`;
@@ -31,7 +30,11 @@ export const PeerProgrammingCohortTab = ({
   currentCohortId,
   myCohortId,
   onListenIn,
-}: Props) => (
+}: Props) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('peer-programming', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return (
   <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
     <View style={styles.infoBox}>
       <Text style={styles.infoTitle}>Deterministic Placement</Text>
@@ -99,24 +102,26 @@ export const PeerProgrammingCohortTab = ({
       </View>
     )}
   </ScrollView>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 16 },
   infoBox: {
-    backgroundColor: `${COLOR}08`,
-    borderColor: `${COLOR}18`,
+    backgroundColor: `${accent}08`,
+    borderColor: `${accent}18`,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: t.radius,
     padding: 12,
     marginBottom: 14,
   },
-  infoTitle: { fontSize: 13, fontWeight: '700', color: COLOR, marginBottom: 4 },
-  infoDesc: { fontSize: 12, color: '#6B7280' },
+  infoTitle: { fontSize: 13, fontWeight: '700', color: accent, marginBottom: 4 },
+  infoDesc: { fontSize: 12, color: t.textSecondary },
   card: {
     backgroundColor: 'rgba(255,255,255,0.02)',
-    borderColor: `${COLOR}30`,
+    borderColor: `${accent}30`,
     borderWidth: 1,
     borderRadius: 14,
     padding: 14,
@@ -128,8 +133,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   cardLeft: { flex: 1, marginRight: 8 },
-  cohortLabel: { fontSize: 16, fontWeight: '700', color: '#F9FAFB', marginBottom: 4 },
-  weekText: { fontSize: 12, color: '#6B7280' },
+  cohortLabel: { fontSize: 16, fontWeight: '700', color: t.textPrimary, marginBottom: 4 },
+  weekText: { fontSize: 12, color: t.textSecondary },
   statusBadge: {
     flexShrink: 0,
     paddingHorizontal: 8,
@@ -138,27 +143,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusActive: { backgroundColor: '#22C55E20', borderColor: '#22C55E40' },
-  statusOpen: { backgroundColor: `${COLOR}20`, borderColor: `${COLOR}40` },
+  statusOpen: { backgroundColor: `${accent}20`, borderColor: `${accent}40` },
   statusText: { fontSize: 10, fontWeight: '700' },
   statusActiveText: { color: '#22C55E' },
-  statusOpenText: { color: COLOR },
+  statusOpenText: { color: accent },
   topicBox: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: t.borderFaint,
     paddingTop: 12,
   },
-  topicLabel: { fontSize: 11, color: '#6B7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
-  topicTitle: { fontSize: 14, fontWeight: '700', color: '#F9FAFB', marginBottom: 6 },
+  topicLabel: { fontSize: 11, color: t.textSecondary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
+  topicTitle: { fontSize: 14, fontWeight: '700', color: t.textPrimary, marginBottom: 6 },
   topicGuidance: { fontSize: 12, color: '#9CA3AF', lineHeight: 18 },
   rosterBox: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: t.borderFaint,
     paddingTop: 12,
     marginTop: 12,
   },
   rosterLabel: {
     fontSize: 11,
-    color: '#6B7280',
+    color: t.textSecondary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -168,7 +173,7 @@ const styles = StyleSheet.create({
   runningSection: { marginTop: 16 },
   runningTitle: {
     fontSize: 11,
-    color: '#6B7280',
+    color: t.textSecondary,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -181,23 +186,24 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: t.radius,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.07)',
     marginBottom: 8,
   },
   runningLeft: { flex: 1 },
-  runningLabel: { fontSize: 14, fontWeight: '700', color: '#F9FAFB', marginBottom: 2 },
-  runningMeta: { fontSize: 11, color: '#6B7280' },
-  runningHere: { fontSize: 12, fontWeight: '700', color: COLOR },
+  runningLabel: { fontSize: 14, fontWeight: '700', color: t.textPrimary, marginBottom: 2 },
+  runningMeta: { fontSize: 11, color: t.textSecondary },
+  runningHere: { fontSize: 12, fontWeight: '700', color: accent },
   listenBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: `${COLOR}15`,
+    backgroundColor: `${accent}15`,
     borderWidth: 1,
-    borderColor: `${COLOR}40`,
+    borderColor: `${accent}40`,
   },
-  listenBtnText: { fontSize: 12, fontWeight: '700', color: COLOR },
-});
+  listenBtnText: { fontSize: 12, fontWeight: '700', color: accent },
+  });
+}

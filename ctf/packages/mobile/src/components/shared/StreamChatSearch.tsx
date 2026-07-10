@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { useTheme, type ThemeTokens } from '../../theme';
 
 // One in-channel search result row: enough to show who said what and when.
 interface SearchHit {
@@ -54,6 +55,8 @@ export const StreamChatSearch: React.FC<StreamChatSearchProps> = ({
   accentColor,
   onSelectMessage,
 }) => {
+  const { tokens } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -206,57 +209,59 @@ function formatTimestamp(iso: string): string {
   });
 }
 
-const styles = StyleSheet.create({
-  collapsedRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  toggle: { paddingVertical: 4, paddingHorizontal: 8 },
-  toggleText: { fontSize: 14, fontWeight: '600' },
-  container: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
-  },
-  form: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  input: {
-    flex: 1,
-    height: 40,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    color: '#fff',
-    fontSize: 14,
-  },
-  submit: {
-    height: 40,
-    minWidth: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  submitText: { fontSize: 14, fontWeight: '600' },
-  close: { height: 40, width: 40, alignItems: 'center', justifyContent: 'center' },
-  closeText: { fontSize: 22, color: 'rgba(255,255,255,0.6)', lineHeight: 24 },
-  results: { maxHeight: 240, marginTop: 8 },
-  message: { paddingVertical: 12, color: 'rgba(255,255,255,0.6)', fontSize: 14 },
-  hit: {
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  hitHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  hitAuthor: { flex: 1, fontSize: 13, fontWeight: '700' },
-  hitTime: { fontSize: 11, color: 'rgba(255,255,255,0.45)' },
-  hitText: { marginTop: 2, fontSize: 13, color: '#D1D5DB', lineHeight: 18 },
-});
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
+    collapsedRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    toggle: { paddingVertical: 4, paddingHorizontal: 8 },
+    toggleText: { fontSize: 14, fontWeight: '600' },
+    container: {
+      paddingHorizontal: 12,
+      paddingTop: 8,
+      paddingBottom: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255,255,255,0.08)',
+    },
+    form: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    input: {
+      flex: 1,
+      height: 40,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      backgroundColor: t.borderFaint,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.12)',
+      color: '#fff',
+      fontSize: 14,
+    },
+    submit: {
+      height: 40,
+      minWidth: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    submitText: { fontSize: 14, fontWeight: '600' },
+    close: { height: 40, width: 40, alignItems: 'center', justifyContent: 'center' },
+    closeText: { fontSize: 22, color: 'rgba(255,255,255,0.6)', lineHeight: 24 },
+    results: { maxHeight: 240, marginTop: 8 },
+    message: { paddingVertical: 12, color: 'rgba(255,255,255,0.6)', fontSize: 14 },
+    hit: {
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      borderRadius: 8,
+      marginBottom: 4,
+      backgroundColor: 'rgba(255,255,255,0.04)',
+    },
+    hitHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+    hitAuthor: { flex: 1, fontSize: 13, fontWeight: '700' },
+    hitTime: { fontSize: 11, color: 'rgba(255,255,255,0.45)' },
+    hitText: { marginTop: 2, fontSize: 13, color: '#D1D5DB', lineHeight: 18 },
+  });
+}

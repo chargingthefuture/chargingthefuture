@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { COLOR, colors } from './sc-styles';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
+import { LEDGER, RAW } from './sc-styles';
 
 // Static educational content about how to earn and where to spend ServiceCredits.
 // Credit amounts shown here are platform documentation, not user-specific data.
@@ -21,6 +22,9 @@ const SPEND_APPS = [
 ] as const;
 
 export function EarnTab() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('service-credits', theme);
+  const s = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View>
       <Text style={s.heading}>Earn Credits</Text>
@@ -41,7 +45,7 @@ export function EarnTab() {
       </View>
 
       <View style={[s.card, s.spendCard]}>
-        <Text style={[s.cardLabel, { color: COLOR }]}>Where to Spend</Text>
+        <Text style={[s.cardLabel, { color: accent }]}>Where to Spend</Text>
         {SPEND_APPS.map((app) => (
           <React.Fragment key={app}>
             <View style={s.spendRow}>
@@ -55,56 +59,58 @@ export function EarnTab() {
   );
 }
 
-const s = StyleSheet.create({
-  heading: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  subheading: {
-    fontSize: 12,
-    color: colors.textDim,
-    marginBottom: 14,
-  },
-  card: {
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    marginBottom: 12,
-  },
-  cardLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.green,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.04)',
-  },
-  rowText: { fontSize: 13, color: colors.text, flex: 1 },
-  rowCredits: { fontSize: 13, fontWeight: '700', marginLeft: 8 },
-  spendCard: { borderColor: `${COLOR}20` },
-  spendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    gap: 8,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.green,
-  },
-  spendText: { fontSize: 13, color: colors.textSubtle },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    heading: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: t.textPrimary,
+      marginBottom: 4,
+    },
+    subheading: {
+      fontSize: 12,
+      color: t.textSecondary,
+      marginBottom: 14,
+    },
+    card: {
+      padding: 14,
+      borderRadius: 14,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      borderColor: t.borderFaint,
+      marginBottom: 12,
+    },
+    cardLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: LEDGER.green,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: 10,
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255,255,255,0.04)',
+    },
+    rowText: { fontSize: 13, color: t.textPrimary, flex: 1 },
+    rowCredits: { fontSize: 13, fontWeight: '700', marginLeft: 8 },
+    spendCard: { borderColor: `${accent}20` },
+    spendRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 6,
+      gap: 8,
+    },
+    dot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: LEDGER.green,
+    },
+    spendText: { fontSize: 13, color: RAW.textSubtle },
+  });
+}

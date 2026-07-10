@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { usePluginAuth } from './usePluginAuth';
 import {
   fetchAdminTopic,
@@ -27,11 +28,10 @@ function memberName(member: CohortMember): string {
 }
 import type { PeerProgrammingTopic } from './api';
 
-const COLOR = '#6EE7B7';
-const BG = '#0F1117';
+// PANEL (#0D0F14) has no exact mobile token; BORDER is a white-alpha ≠ 0.06; SUBTLE (#9CA3AF) has
+// no mobile token — all three stay raw.
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
-const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 
 // Monday (UTC) of the current week — matches the server getWeekStartDate so the
@@ -46,6 +46,9 @@ function currentWeekStartDate(now = new Date()): string {
 
 export const AdminPeerProgramming = () => {
   const { auth, loading: authLoading } = usePluginAuth('clerk');
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('peer-programming', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
 
   const [topic, setTopic] = useState<PeerProgrammingTopic | null>(null);
   const [loading, setLoading] = useState(true);
@@ -151,7 +154,7 @@ export const AdminPeerProgramming = () => {
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLOR} />
+        <ActivityIndicator size="large" color={accent} />
       </View>
     );
   }
@@ -314,11 +317,12 @@ export const AdminPeerProgramming = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: t.bg },
   content: { padding: 16, gap: 16 },
-  center: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  title: { fontSize: 20, fontWeight: '800', color: TEXT },
+  center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
   subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
   noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
   errorBanner: {
@@ -349,7 +353,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
   cohortRow: {
     paddingVertical: 8,
     borderTopWidth: 1,
@@ -364,17 +368,17 @@ const styles = StyleSheet.create({
   },
   cohortMembers: { fontSize: 12, color: '#D1D5DB', lineHeight: 18 },
   cohortLeft: { flex: 1 },
-  cohortLabel: { fontSize: 14, fontWeight: '700', color: TEXT },
+  cohortLabel: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
   cohortMeta: { fontSize: 12, color: SUBTLE, marginTop: 1 },
   cohortOpenBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
-    backgroundColor: `${COLOR}20`,
+    backgroundColor: `${accent}20`,
     borderWidth: 1,
-    borderColor: `${COLOR}40`,
+    borderColor: `${accent}40`,
   },
-  cohortOpenText: { fontSize: 10, fontWeight: '700', color: COLOR },
+  cohortOpenText: { fontSize: 10, fontWeight: '700', color: accent },
   cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
   label: { fontSize: 12, fontWeight: '600', color: '#D1D5DB', marginTop: 4 },
   input: {
@@ -382,7 +386,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.03)',
-    color: TEXT,
+    color: t.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
@@ -396,8 +400,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 11,
-    backgroundColor: COLOR,
+    backgroundColor: accent,
   },
   btnBusy: { opacity: 0.7 },
   primaryBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-});
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   type DimensionValue,
 } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { useAuth } from '../../auth/auth-context';
 import { fetchGdpCurrentReport, pickMetric, pickMetricIsEstimate, GdpReport, GdpSourceContribution } from './api';
 
@@ -22,15 +23,19 @@ const COMMUNITY_VALUE_INDEX_LABEL = 'Community Value Index';
 const COMMUNITY_VALUE_INDEX_DISCLAIMER =
   "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through community-set weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
 
-// ─── Design tokens (from MobileGDP.tsx design-sync) ──────────────────────────
-const COLOR = '#06B6D4';
-const BG = '#0F1117';
-const BG_DARK = '#090B0F';
-const TEXT_PRIMARY = '#F9FAFB';
+// ─── Raw palette left un-tokenized ───────────────────────────────────────────
+// #E8EAF0 (body ink) and #9CA3AF (muted) have no mobile theme token, so they stay
+// raw. Chrome + the gdp accent are read from the active theme inside makeStyles.
 const TEXT_BODY = '#E8EAF0';
 const TEXT_MUTED = '#9CA3AF';
-const TEXT_DIM = '#6B7280';
-const BORDER = 'rgba(255,255,255,0.06)';
+
+// Resolve the memoized StyleSheet + the gdp accent for the active theme.
+function useGdpTheme() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('gdp', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return { styles, accent };
+}
 
 // ─── Nav tabs (from mockup) ───────────────────────────────────────────────────
 const NAV = [
@@ -44,12 +49,13 @@ type NavKey = (typeof NAV)[number]['key'];
 
 // ─── Loading state (from MobileGDPLoading.tsx) ───────────────────────────────
 function GdpLoadingState() {
+  const { styles, accent } = useGdpTheme();
   return (
     <View style={styles.root}>
       <View style={styles.loadingCenter}>
         <Text style={styles.loadingTagline}>EXIT THEIR ECONOMY</Text>
         <Text style={styles.loadingTagline}>EXIT THE PSYOP</Text>
-        <ActivityIndicator color={COLOR} size="large" style={styles.loadingSpinner} />
+        <ActivityIndicator color={accent} size="large" style={styles.loadingSpinner} />
       </View>
     </View>
   );
@@ -57,6 +63,7 @@ function GdpLoadingState() {
 
 // ─── Public (unauthenticated) state (from MobileGDPPublic.tsx) ───────────────
 function GdpPublicState({ onSignIn }: { onSignIn: () => void }) {
+  const { styles } = useGdpTheme();
   return (
     <View style={styles.root}>
       <View style={styles.statusBar}>
@@ -99,6 +106,7 @@ function GdpPublicState({ onSignIn }: { onSignIn: () => void }) {
 
 // ─── Empty state (no published report) (from MobileGDPEmpty.tsx) ─────────────
 function GdpEmptyState({ onAddSkills }: { onAddSkills?: () => void }) {
+  const { styles } = useGdpTheme();
   return (
     <View style={styles.root}>
       <View style={styles.statusBar}>
@@ -137,6 +145,7 @@ function GdpEmptyState({ onAddSkills }: { onAddSkills?: () => void }) {
 
 // ─── Main authenticated view ──────────────────────────────────────────────────
 function GdpMainView({ report }: { report: GdpReport }) {
+  const { styles } = useGdpTheme();
   const [activeNav, setActiveNav] = useState<NavKey>('overview');
 
   // Real metric bindings — keys observed in web repository.ts getGdpShellStats()
@@ -256,6 +265,7 @@ function GdpOverviewTab({
   fmtCount: (_n: number | null) => string;
   publication: GdpReport['publication'];
 }) {
+  const { styles } = useGdpTheme();
   return (
     <>
       {/* Hero card */}
@@ -312,6 +322,7 @@ function GdpSectorsTab({
   sources: GdpSourceContribution[];
   fmtIndex: (_n: number | null) => string;
 }) {
+  const { styles } = useGdpTheme();
   const contributing = sources
     .filter((s) => Number.isFinite(s.valueIndex) && s.valueIndex > 0)
     .sort((a, b) => b.valueIndex - a.valueIndex);
@@ -361,6 +372,7 @@ function GdpTrendTab({
   valueIndex: number | null;
   fmtIndex: (_n: number | null) => string;
 }) {
+  const { styles } = useGdpTheme();
   /*
    * Weekly series data (M/T/W/T/F/S/S bar chart) is not returned by
    * /api/gdp/report/current — omitted per real-data-only rule.
@@ -409,6 +421,7 @@ function GdpHomeTab({
   fmtIndex: (_n: number | null) => string;
   fmtCount: (_n: number | null) => string;
 }) {
+  const { styles } = useGdpTheme();
   const hasData = valueIndex !== null || weeklyActiveUsers !== null;
   return (
     <View>
@@ -444,6 +457,7 @@ function GdpHomeTab({
 
 // ─── Root screen ──────────────────────────────────────────────────────────────
 export const Gdp = () => {
+  const { styles } = useGdpTheme();
   const { isAuthenticated, isLoading: authLoading, signIn } = useAuth();
   const [dataLoading, setDataLoading] = useState(false);
   const [report, setReport] = useState<GdpReport | null>(null);
@@ -502,7 +516,15 @@ export const Gdp = () => {
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  // Alias the theme values to the names the StyleSheet already uses (exemplar idiom).
+  const COLOR = accent;
+  const BG = t.bg;
+  const BG_DARK = t.surfaceAlt;
+  const TEXT_PRIMARY = t.textPrimary;
+  const TEXT_DIM = t.textSecondary;
+  const BORDER = t.borderFaint;
+  return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: BG,
@@ -584,13 +606,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 20,
-    backgroundColor: '#22C55E20',
+    backgroundColor: `${t.success}20`,
     borderWidth: 1,
-    borderColor: '#22C55E35',
+    borderColor: `${t.success}35`,
   },
   liveChipText: {
     fontSize: 11,
-    color: '#22C55E',
+    color: t.success,
     fontWeight: '600',
   },
   // Content
@@ -646,7 +668,7 @@ const styles = StyleSheet.create({
   },
   estimateFootnote: {
     fontSize: 10.5,
-    color: '#4B5563',
+    color: t.textMuted,
     marginTop: 10,
     lineHeight: 15,
     fontStyle: 'italic',
@@ -666,7 +688,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     paddingHorizontal: 8,
-    borderRadius: 12,
+    borderRadius: t.radius,
     borderWidth: 1,
     alignItems: 'center',
   },
@@ -847,20 +869,21 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: BORDER,
+    // World-map backdrop — data-viz surface, no theme token; left raw.
     backgroundColor: '#0D0F14',
     overflow: 'hidden',
     marginBottom: 12,
   },
   mapRegion: {
     position: 'absolute',
-    borderRadius: 6,
+    borderRadius: t.radiusChip,
     backgroundColor: `${COLOR}1F`,
     borderWidth: 1,
     borderColor: `${COLOR}55`,
   },
   mapCaption: {
     fontSize: 12,
-    color: '#4B5563',
+    color: t.textMuted,
     lineHeight: 18,
   },
   // Bottom nav
@@ -966,7 +989,7 @@ const styles = StyleSheet.create({
   },
   publicCta: {
     padding: 14,
-    borderRadius: 12,
+    borderRadius: t.radius,
     backgroundColor: COLOR,
     alignItems: 'center',
     marginBottom: 24,
@@ -1060,7 +1083,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${COLOR}30`,
     borderStyle: 'dashed',
-    backgroundColor: '#161B27',
+    backgroundColor: t.surface,
     padding: 18,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1085,7 +1108,7 @@ const styles = StyleSheet.create({
   emptyCtaBtn: {
     width: '100%',
     padding: 13,
-    borderRadius: 12,
+    borderRadius: t.radius,
     backgroundColor: COLOR,
     alignItems: 'center',
   },
@@ -1103,7 +1126,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: '#EF4444',
+    color: t.danger,
     textAlign: 'center',
   },
-});
+  });
+}

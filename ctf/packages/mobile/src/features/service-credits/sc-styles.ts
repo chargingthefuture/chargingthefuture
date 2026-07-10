@@ -1,88 +1,92 @@
 import { StyleSheet } from 'react-native';
+import type { ThemeTokens } from '../../theme';
 
-export const COLOR = '#A855F7';
+// Shared chrome for the ServiceCredits screen (header + bottom nav), themed through the flat token
+// palette. Call from a component with `makeStyles(tokens, accent)` where `accent` comes from
+// getAppAccent('service-credits', theme). The money/ledger direction swatches (+credit green,
+// −debit red) and the neutral contrast greys are left raw per the token-pass status-palette rule;
+// the tabs reference LEDGER / RAW for those.
 
-export const colors = {
-  bg: '#0F1117',
-  surface: '#161B27',
-  card: '#090B0F',
-  border: 'rgba(255,255,255,0.06)',
-  text: '#F9FAFB',
-  textMuted: '#E8EAF0',
-  textSubtle: '#9CA3AF',
-  textDim: '#6B7280',
+// Money/ledger direction palette — semantic status swatches, left raw (not the danger/success chrome role).
+export const LEDGER = {
   green: '#22C55E',
   red: '#EF4444',
-  purple: '#A855F7',
-  accent: COLOR,
-};
+} as const;
 
-export const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+// Contrast inks / no-mobile-token greys used by the money screens — left raw.
+export const RAW = {
+  textMuted: '#E8EAF0', // high-contrast input ink
+  textSubtle: '#9CA3AF', // neutral direction / no mobile token
+} as const;
 
-  // Header
-  header: {
-    padding: 14,
-    paddingHorizontal: 20,
-    backgroundColor: colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  headerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: `${COLOR}30`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
-  headerSubtitle: { fontSize: 11, color: COLOR },
-  balancePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: `${COLOR}08`,
-    borderWidth: 1,
-    borderColor: `${COLOR}20`,
-    alignItems: 'center',
-  },
-  balancePillValue: { fontSize: 14, fontWeight: '800', color: COLOR },
-  balancePillLabel: { fontSize: 9, color: colors.textDim },
+export function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: t.bg },
 
-  // Bottom nav
-  bottomNav: {
-    height: 72,
-    backgroundColor: colors.card,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingHorizontal: 8,
-  },
-  navBtn: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  navBtnIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navBtnIconActive: { backgroundColor: `${COLOR}20` },
-  navBtnLabel: { fontSize: 10, fontWeight: '400', color: colors.textDim },
-  navBtnLabelActive: { fontWeight: '600', color: COLOR },
+    // Header
+    header: {
+      padding: 14,
+      paddingHorizontal: 20,
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: t.borderFaint,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    headerIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: `${accent}30`,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary },
+    headerSubtitle: { fontSize: 11, color: accent },
+    balancePill: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 10,
+      backgroundColor: `${accent}08`,
+      borderWidth: 1,
+      borderColor: `${accent}20`,
+      alignItems: 'center',
+    },
+    balancePillValue: { fontSize: 14, fontWeight: '800', color: accent },
+    balancePillLabel: { fontSize: 9, color: t.textSecondary },
 
-  // Content area
-  content: { flex: 1, padding: 16 },
-});
+    // Bottom nav
+    bottomNav: {
+      height: 72,
+      backgroundColor: t.surfaceAlt,
+      borderTopWidth: 1,
+      borderTopColor: t.borderFaint,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+      paddingHorizontal: 8,
+    },
+    navBtn: {
+      flex: 1,
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+    },
+    navBtnIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    navBtnIconActive: { backgroundColor: `${accent}20` },
+    navBtnLabel: { fontSize: 10, fontWeight: '400', color: t.textSecondary },
+    navBtnLabelActive: { fontWeight: '600', color: accent },
+
+    // Content area
+    content: { flex: 1, padding: 16 },
+  });
+}

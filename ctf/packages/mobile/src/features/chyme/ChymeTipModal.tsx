@@ -6,16 +6,25 @@
  * immediately. The caller renders it only for other members (never the local member, never a
  * listen-only guest, who has no wallet).
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { postChymeTip } from './api';
 
-const PRIMARY = '#22C55E';
+// Shared theme wiring for the Chyme tip button/modal — the accent is the Chyme plugin
+// accent for the active theme, and the StyleSheet is memoized on the tokens/accent.
+function useTipStyles() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('chyme', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return { styles, tokens };
+}
 
 export const ChymeTipButton: React.FC<{ recipientUserId: string; recipientName: string }> = ({
   recipientUserId,
   recipientName,
 }) => {
+  const { styles } = useTipStyles();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -43,6 +52,7 @@ const ChymeTipModal: React.FC<{
   recipientName: string;
   onClose: () => void;
 }> = ({ visible, recipientUserId, recipientName, onClose }) => {
+  const { styles, tokens } = useTipStyles();
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -88,7 +98,7 @@ const ChymeTipModal: React.FC<{
             onChangeText={setAmount}
             keyboardType="number-pad"
             placeholder="e.g. 10"
-            placeholderTextColor="#4B5563"
+            placeholderTextColor={tokens.textMuted}
             style={styles.input}
             accessibilityLabel="Tip amount in ServiceCredits"
           />
@@ -98,7 +108,7 @@ const ChymeTipModal: React.FC<{
             value={message}
             onChangeText={setMessage}
             placeholder="Say something"
-            placeholderTextColor="#4B5563"
+            placeholderTextColor={tokens.textMuted}
             style={styles.input}
             accessibilityLabel="Optional message with the tip"
           />
@@ -120,7 +130,9 @@ const ChymeTipModal: React.FC<{
   );
 };
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  const PRIMARY = accent;
+  return StyleSheet.create({
   tipBtn: {
     marginTop: 4,
     paddingHorizontal: 10,
@@ -173,6 +185,7 @@ const styles = StyleSheet.create({
   sendBtnDisabled: { backgroundColor: `${PRIMARY}66` },
   sendBtnText: { fontSize: 14, fontWeight: '800', color: '#021006' },
   cancelBtn: { width: '100%', paddingVertical: 10, alignItems: 'center', marginTop: 4 },
-  cancelBtnText: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
-  note: { fontSize: 10, color: '#4B5563', marginTop: 8, lineHeight: 15 },
-});
+  cancelBtnText: { fontSize: 13, color: t.textSecondary, fontWeight: '600' },
+  note: { fontSize: 10, color: t.textMuted, marginTop: 8, lineHeight: 15 },
+  });
+}

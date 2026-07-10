@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,13 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
+import { useTheme, getAppAccent } from '../../theme';
 import { fetchWallet, type Wallet } from './api';
 import { WalletTab } from './sc-wallet-tab';
 import { EarnTab } from './sc-earn-tab';
 import { SendTab } from './sc-send-tab';
 import { EconomyTab } from './sc-economy-tab';
-import { styles, colors, COLOR } from './sc-styles';
+import { makeStyles, RAW } from './sc-styles';
 
 // Design canonical: design/artifacts/mockup-sandbox/src/components/mockups/
 //   survivor-hub/MobileServiceCredits.tsx (primary state)
@@ -38,9 +39,13 @@ const NAV: { label: string; key: NavKey }[] = [
 ];
 
 function LoadingScreen() {
+  // Loading screen — the comic theme has no effect here (token-pass §F5), so the background and the
+  // faint label stay raw; only the spinner adopts the plugin accent.
+  const { theme } = useTheme();
+  const accent = getAppAccent('service-credits', theme);
   return (
     <View style={{ flex: 1, backgroundColor: '#0F1117', alignItems: 'center', justifyContent: 'center' }}>
-      <ActivityIndicator color={COLOR} size="large" />
+      <ActivityIndicator color={accent} size="large" />
       <Text style={{ marginTop: 16, fontSize: 10, letterSpacing: 4, color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase' }}>
         EXIT THEIR ECONOMY
       </Text>
@@ -49,14 +54,16 @@ function LoadingScreen() {
 }
 
 function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const { tokens: t, theme } = useTheme();
+  const accent = getAppAccent('service-credits', theme);
   return (
-    <View style={{ flex: 1, backgroundColor: '#0F1117', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-      <Text style={{ fontSize: 14, color: colors.textDim, textAlign: 'center', marginBottom: 16 }}>
+    <View style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <Text style={{ fontSize: 14, color: t.textSecondary, textAlign: 'center', marginBottom: 16 }}>
         {message}
       </Text>
       <TouchableOpacity
         onPress={onRetry}
-        style={{ paddingVertical: 12, paddingHorizontal: 24, backgroundColor: COLOR, borderRadius: 10 }}
+        style={{ paddingVertical: 12, paddingHorizontal: 24, backgroundColor: accent, borderRadius: 10 }}
       >
         <Text style={{ color: '#0F1117', fontWeight: '700', fontSize: 14 }}>Retry</Text>
       </TouchableOpacity>
@@ -65,12 +72,13 @@ function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => voi
 }
 
 function UnauthenticatedScreen() {
+  const { tokens: t } = useTheme();
   return (
-    <View style={{ flex: 1, backgroundColor: '#0F1117', padding: 24 }}>
-      <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text, marginBottom: 12 }}>
+    <View style={{ flex: 1, backgroundColor: t.bg, padding: 24 }}>
+      <Text style={{ fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 12 }}>
         ServiceCredits
       </Text>
-      <Text style={{ fontSize: 14, color: colors.textSubtle, lineHeight: 22 }}>
+      <Text style={{ fontSize: 14, color: RAW.textSubtle, lineHeight: 22 }}>
         Sign in to view your ServiceCredits balance, earn credits through learning and
         community activities, and spend them on real services across housing, transport,
         trades, and more.
@@ -80,6 +88,10 @@ function UnauthenticatedScreen() {
 }
 
 export function ServiceCredits() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('service-credits', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+
   const [activeNav, setActiveNav] = useState<NavKey>('wallet');
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -159,7 +171,7 @@ export function ServiceCredits() {
               accessibilityState={{ selected: active }}
             >
               <View style={[styles.navBtnIcon, active && styles.navBtnIconActive]}>
-                <Text style={{ fontSize: 16, color: active ? COLOR : colors.textDim }}>
+                <Text style={{ fontSize: 16, color: active ? accent : tokens.textSecondary }}>
                   {key === 'wallet' ? '💰' : key === 'earn' ? '⚡' : key === 'send' ? '↑' : '📊'}
                 </Text>
               </View>
