@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +16,8 @@ import { TrustTransportHelpTab } from './TrustTransportHelpTab';
 import { TrustTransportChatButton } from './TrustTransportChatButton';
 import { TrustTransportEarningsTab } from './TrustTransportEarningsTab';
 import {
+  cancelOrder,
+  confirmTripCompletion,
   createRequest,
   listRequests,
   type ListRequestsResponse,
@@ -245,6 +248,91 @@ function statusColor(status: string): string {
   return SUBTLE;
 }
 
+const TERMINAL_REQUEST_STATUSES = new Set(['completed', 'cancelled']);
+
+function CancelRequestButton({ requestId, onCancelled }: { requestId: string; onCancelled: () => void }) {
+  const [cancelling, setCancelling] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function doCancel() {
+    setCancelling(true);
+    setError(null);
+    try {
+      await cancelOrder(requestId);
+      onCancelled();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not cancel this request.');
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  function confirmCancel() {
+    Alert.alert('Cancel this request?', "This can't be undone.", [
+      { text: 'Keep request', style: 'cancel' },
+      { text: 'Cancel request', style: 'destructive', onPress: () => { void doCancel(); } },
+    ]);
+  }
+
+  return (
+    <>
+      {error ? <Text style={styles.cancelErrorText}>{error}</Text> : null}
+      <TouchableOpacity
+        style={[styles.cancelBtn, cancelling && styles.cancelBtnDisabled]}
+        onPress={confirmCancel}
+        disabled={cancelling}
+        accessibilityRole="button"
+      >
+        {cancelling ? <ActivityIndicator size="small" color="#EF4444" /> : <Text style={styles.cancelBtnText}>Cancel request</Text>}
+      </TouchableOpacity>
+    </>
+  );
+}
+
+// Requester side of mutual completion confirmation (owner decision, 2026-07-08): once the trip is
+// 'delivered', the ride isn't complete (and no ServiceCredits move / no off-platform exchange is recorded
+// as settled) until both the requester and the provider confirm on-platform.
+function RequesterCompletionConfirm({ tripId, myConfirmedAtIso, otherConfirmedAtIso, onConfirmed }: { tripId: string; myConfirmedAtIso: string | null; otherConfirmedAtIso: string | null; onConfirmed: () => void }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function confirm() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await confirmTripCompletion(tripId);
+      onConfirmed();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not confirm completion.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (myConfirmedAtIso) {
+    return (
+      <View style={styles.completionWaiting}>
+        <Text style={styles.completionWaitingText}>You confirmed completion. Waiting for the other party to confirm.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.completionConfirm}>
+      {error ? <Text style={styles.cancelErrorText}>{error}</Text> : null}
+      <TouchableOpacity
+        style={[styles.confirmCompletionBtn, submitting && styles.cancelBtnDisabled]}
+        onPress={() => { void confirm(); }}
+        disabled={submitting}
+        accessibilityRole="button"
+      >
+        {submitting ? <ActivityIndicator size="small" color={COLOR} /> : <Text style={styles.confirmCompletionBtnText}>✓ Confirm trip completed</Text>}
+      </TouchableOpacity>
+      {otherConfirmedAtIso ? <Text style={styles.completionHint}>The other party has already confirmed — this finishes it.</Text> : null}
+    </View>
+  );
+}
+
 function TrackTab({
   requests,
   loading,
@@ -298,7 +386,18 @@ function TrackTab({
             {req.status === 'open' ? (
               <TrustTransportOffersSection requestId={req.id} onAccepted={onRefresh} />
             ) : null}
+            {req.tripId && req.tripStatus === 'delivered' ? (
+              <RequesterCompletionConfirm
+                tripId={req.tripId}
+                myConfirmedAtIso={req.requesterCompletionConfirmedAtIso}
+                otherConfirmedAtIso={req.providerCompletionConfirmedAtIso}
+                onConfirmed={onRefresh}
+              />
+            ) : null}
             {req.tripId ? <TrustTransportChatButton tripId={req.tripId} /> : null}
+            {!TERMINAL_REQUEST_STATUSES.has(req.status) ? (
+              <CancelRequestButton requestId={req.id} onCancelled={onRefresh} />
+            ) : null}
           </View>
         </React.Fragment>
       ))}
@@ -581,6 +680,38 @@ const styles = StyleSheet.create({
   requestLocation: { fontSize: 13, color: SUBTLE, marginBottom: 2 },
   requestSettle: { fontSize: 12, fontWeight: '700', color: '#22C55E', marginTop: 2, marginBottom: 2 },
   settleLabel: { fontSize: 13, color: MUTED, marginTop: 10, marginBottom: 6 },
+  cancelBtn: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 9,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.3)',
+    alignItems: 'center',
+  },
+  cancelBtnDisabled: { opacity: 0.6 },
+  cancelBtnText: { fontSize: 13, fontWeight: '600', color: '#EF4444' },
+  cancelErrorText: { fontSize: 12, color: '#EF4444', marginTop: 8 },
+  completionConfirm: { marginTop: 8 },
+  confirmCompletionBtn: {
+    padding: 10,
+    borderRadius: 9,
+    backgroundColor: `${COLOR}1F`,
+    borderWidth: 1,
+    borderColor: `${COLOR}40`,
+    alignItems: 'center',
+  },
+  confirmCompletionBtnText: { fontSize: 13, fontWeight: '600', color: COLOR },
+  completionWaiting: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 9,
+    backgroundColor: 'rgba(245,158,11,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.25)',
+  },
+  completionWaitingText: { fontSize: 12, fontWeight: '600', color: '#F59E0B' },
+  completionHint: { marginTop: 6, fontSize: 11, color: MUTED },
   publicContent: { padding: 20 },
   publicHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   publicTitle: { fontSize: 20, fontWeight: '800', color: TEXT },

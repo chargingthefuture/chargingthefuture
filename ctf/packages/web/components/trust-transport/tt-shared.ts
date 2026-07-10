@@ -57,6 +57,11 @@ export interface TripRequest {
   // The trip id once an offer has been accepted. Chat is keyed by trip id, so opening chat needs this
   // (a request id is not a trip id). Null/absent until a trip exists.
   tripId?: string | null;
+  // The underlying trip's own status. Needed because `status` above already reads "completed" once the
+  // trip reaches "delivered" — before mutual completion confirmation (and settlement) actually happens.
+  tripStatus?: string | null;
+  requesterCompletionConfirmedAtIso?: string | null;
+  providerCompletionConfirmedAtIso?: string | null;
 }
 
 // Plain label for how a ride is settled (issue #420). Honors the ServiceCredits rule (never the bare
@@ -112,6 +117,10 @@ export interface ProviderTrip {
   priceCurrency?: string | null;
   priceAmount?: number | null;
   createdAtIso?: string;
+  // Mutual completion confirmation (owner decision, 2026-07-08): once "delivered", neither party alone
+  // can complete the trip — both must confirm.
+  requesterCompletionConfirmedAtIso?: string | null;
+  providerCompletionConfirmedAtIso?: string | null;
 }
 
 // A request shown on the "Help out" tab (discovery model B): mode + settlement + age only. The pickup

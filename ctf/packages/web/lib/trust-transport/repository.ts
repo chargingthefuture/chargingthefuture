@@ -103,6 +103,9 @@ type RequestRow = {
   updated_at: Date;
   // Present only when the row is selected with a join to trust_transport_trips (e.g. listRequests).
   trip_id?: string | null;
+  trip_status?: TrustTransportTripStatus | null;
+  requester_completion_confirmed_at?: Date | null;
+  provider_completion_confirmed_at?: Date | null;
 };
 
 type OfferRow = {
@@ -127,6 +130,8 @@ type TripRow = {
   stream_channel_id: string | null;
   cancelled_reason: string | null;
   completed_at: Date | null;
+  requester_completion_confirmed_at: Date | null;
+  provider_completion_confirmed_at: Date | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -228,6 +233,9 @@ function mapRequestRow(row: RequestRow): TrustTransportRequest {
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
     tripId: row.trip_id ?? null,
+    tripStatus: row.trip_status ?? null,
+    requesterCompletionConfirmedAtIso: row.requester_completion_confirmed_at ? toIso(row.requester_completion_confirmed_at) : null,
+    providerCompletionConfirmedAtIso: row.provider_completion_confirmed_at ? toIso(row.provider_completion_confirmed_at) : null,
   };
 }
 
@@ -256,6 +264,8 @@ function mapTripRow(row: TripRow): TrustTransportTrip {
     streamChannelId: row.stream_channel_id,
     cancelledReason: row.cancelled_reason,
     completedAtIso: row.completed_at ? toIso(row.completed_at) : null,
+    requesterCompletionConfirmedAtIso: row.requester_completion_confirmed_at ? toIso(row.requester_completion_confirmed_at) : null,
+    providerCompletionConfirmedAtIso: row.provider_completion_confirmed_at ? toIso(row.provider_completion_confirmed_at) : null,
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
   };
@@ -440,10 +450,11 @@ export async function listRequests(options?: { page?: number; pageSize?: number;
   const result = await queryDb<RequestRow>(
     // LATERAL with LIMIT 1 so a request with more than one trip row (data anomaly) cannot duplicate the
     // request in the page and diverge from the COUNT above — at most one trip id per request.
-    `SELECT r.id, r.requester_user_id, r.mode, r.title, r.details, r.pickup_city, r.dropoff_city, r.pickup_geo_redacted, r.dropoff_geo_redacted, r.status, r.price_amount, r.price_currency, r.created_at, r.updated_at, t.id AS trip_id
+    `SELECT r.id, r.requester_user_id, r.mode, r.title, r.details, r.pickup_city, r.dropoff_city, r.pickup_geo_redacted, r.dropoff_geo_redacted, r.status, r.price_amount, r.price_currency, r.created_at, r.updated_at,
+            t.id AS trip_id, t.status AS trip_status, t.requester_completion_confirmed_at, t.provider_completion_confirmed_at
      FROM trust_transport_requests r
      LEFT JOIN LATERAL (
-       SELECT id FROM trust_transport_trips
+       SELECT id, status, requester_completion_confirmed_at, provider_completion_confirmed_at FROM trust_transport_trips
        WHERE request_id = r.id
        ORDER BY created_at
        LIMIT 1
@@ -633,7 +644,7 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
     const offer = offerResult.rows[0];
 
     const existingTrip = await client.query<TripRow>(
-      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, created_at, updated_at
+      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
        FROM trust_transport_trips
        WHERE request_id = $1::uuid
        LIMIT 1`,
@@ -666,7 +677,7 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
     const tripResult = await client.query<TripRow>(
       `INSERT INTO trust_transport_trips (request_id, offer_id, requester_user_id, provider_user_id, mode, status)
        VALUES ($1::uuid, $2::uuid, $3, $4, $5, 'assigned')
-       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, created_at, updated_at`,
+       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
       [requestId, offerId, request.requesterUserId, offer.provider_user_id, request.mode],
     );
 
@@ -722,10 +733,13 @@ export async function listProviderTrips(providerUserId: string): Promise<TrustTr
     dropoff_city: string | null;
     price_amount: string | number | null;
     price_currency: string | null;
+    requester_completion_confirmed_at: Date | null;
+    provider_completion_confirmed_at: Date | null;
     trip_created_at: Date;
   }>(
     `SELECT t.id AS trip_id, t.request_id, t.status, t.mode,
-            r.pickup_city, r.dropoff_city, r.price_amount, r.price_currency, t.created_at AS trip_created_at
+            r.pickup_city, r.dropoff_city, r.price_amount, r.price_currency,
+            t.requester_completion_confirmed_at, t.provider_completion_confirmed_at, t.created_at AS trip_created_at
      FROM trust_transport_trips t
      JOIN trust_transport_requests r ON r.id = t.request_id
      WHERE t.provider_user_id = $1
@@ -742,13 +756,15 @@ export async function listProviderTrips(providerUserId: string): Promise<TrustTr
     dropoffCity: row.dropoff_city,
     priceCurrency: row.price_currency,
     priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
+    requesterCompletionConfirmedAtIso: row.requester_completion_confirmed_at ? toIso(row.requester_completion_confirmed_at) : null,
+    providerCompletionConfirmedAtIso: row.provider_completion_confirmed_at ? toIso(row.provider_completion_confirmed_at) : null,
     createdAtIso: toIso(row.trip_created_at),
   }));
 }
 
 export async function getTripById(tripId: string): Promise<TrustTransportTrip | null> {
   const result = await queryDb<TripRow>(
-    `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, created_at, updated_at
+    `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
      FROM trust_transport_trips
      WHERE id = $1::uuid
      LIMIT 1`,
@@ -798,7 +814,7 @@ export async function updateTripStatus(
 ): Promise<{ trip: TrustTransportTrip; request: TrustTransportRequest }> {
   const result = await withDbTransaction(async (client) => {
     const tripResult = await client.query<TripRow>(
-      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, created_at, updated_at
+      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
        FROM trust_transport_trips
        WHERE id = $1::uuid
        LIMIT 1
@@ -814,6 +830,15 @@ export async function updateTripStatus(
     const isParticipant = trip.requester_user_id === actorUserId || trip.provider_user_id === actorUserId;
     if (!isParticipant && !isAdmin) {
       throw new Error('policy_denied');
+    }
+
+    // Neither party can unilaterally complete a trip (owner decision, 2026-07-08): completion is what
+    // triggers settlement (a ServiceCredits debit from the requester, or an earnings-ledger credit for an
+    // off-platform fiat/crypto exchange the platform never verified), so it must go through
+    // confirmTripCompletion() below, which requires both the requester and the provider to confirm.
+    // Admins keep a direct override (e.g. resolving a dispute in the requester's or provider's favor).
+    if (nextStatus === 'completed' && !isAdmin) {
+      throw new Error('completion_requires_confirmation');
     }
 
     assertTripTransition(trip.status, nextStatus);
@@ -833,7 +858,7 @@ export async function updateTripStatus(
            completed_at = CASE WHEN $2 = 'completed' THEN NOW() ELSE completed_at END,
            updated_at = NOW()
        WHERE id = $1::uuid
-       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, created_at, updated_at`,
+       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
       [tripId, nextStatus, normalizeNullableText(note)],
     );
 
@@ -877,6 +902,114 @@ export async function updateTripStatus(
   // Settlement (owner decision): when a trip completes, ServiceCredits move requester -> provider, and
   // fiat/crypto settlement credits the provider's earnings ledger. Runs after the completion is committed.
   await settleTripOnCompletion(result.trip, result.request, nextStatus);
+
+  return result;
+}
+
+// Record one participant's completion confirmation. Only confirmable from "delivered". Idempotent per
+// participant (re-confirming does not move the timestamp). Once both the requester and the provider have
+// confirmed, the trip actually transitions to "completed" and settlement fires — this is the only path to
+// "completed" for a non-admin (see the gate in updateTripStatus above). Returns `bothConfirmed` so the
+// caller can distinguish "recorded your confirmation, still waiting on the other party" from "trip is now
+// fully completed."
+export async function confirmTripCompletion(
+  tripId: string,
+  actorUserId: string,
+): Promise<{ trip: TrustTransportTrip; request: TrustTransportRequest; bothConfirmed: boolean }> {
+  const result = await withDbTransaction(async (client) => {
+    const tripResult = await client.query<TripRow>(
+      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
+       FROM trust_transport_trips
+       WHERE id = $1::uuid
+       LIMIT 1
+       FOR UPDATE`,
+      [tripId],
+    );
+
+    if ((tripResult.rowCount ?? 0) === 0) {
+      throw new Error('trip_not_found');
+    }
+
+    const trip = tripResult.rows[0];
+    const isRequester = trip.requester_user_id === actorUserId;
+    const isProvider = trip.provider_user_id === actorUserId;
+    if (!isRequester && !isProvider) {
+      throw new Error('policy_denied');
+    }
+
+    if (trip.status !== 'delivered') {
+      throw new Error('invalid_transition');
+    }
+
+    const column = isRequester ? 'requester_completion_confirmed_at' : 'provider_completion_confirmed_at';
+    const confirmedResult = await client.query<TripRow>(
+      `UPDATE trust_transport_trips
+       SET ${column} = COALESCE(${column}, NOW()), updated_at = NOW()
+       WHERE id = $1::uuid
+       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
+      [tripId],
+    );
+
+    await client.query(
+      `INSERT INTO trust_transport_status_events (request_id, trip_id, actor_user_id, event_name, from_status, to_status, metadata)
+       VALUES ($1::uuid, $2::uuid, $3, 'trip_completion_confirmed', 'delivered', 'delivered', jsonb_build_object('role', $4))`,
+      [trip.request_id, trip.id, actorUserId, isRequester ? 'requester' : 'provider'],
+    );
+
+    let confirmedTrip = confirmedResult.rows[0];
+    const bothConfirmed = confirmedTrip.requester_completion_confirmed_at !== null && confirmedTrip.provider_completion_confirmed_at !== null;
+
+    let requestRow: RequestRow;
+    if (bothConfirmed) {
+      const completedTripResult = await client.query<TripRow>(
+        `UPDATE trust_transport_trips
+         SET status = 'completed', completed_at = NOW(), updated_at = NOW()
+         WHERE id = $1::uuid
+         RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
+        [tripId],
+      );
+      confirmedTrip = completedTripResult.rows[0];
+
+      const completedRequestResult = await client.query<RequestRow>(
+        `UPDATE trust_transport_requests
+         SET status = 'completed', updated_at = NOW()
+         WHERE id = $1::uuid
+         RETURNING id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, price_amount, price_currency, created_at, updated_at`,
+        [trip.request_id],
+      );
+      requestRow = completedRequestResult.rows[0];
+
+      await client.query(
+        `INSERT INTO trust_transport_status_events (request_id, trip_id, actor_user_id, event_name, from_status, to_status, metadata)
+         VALUES ($1::uuid, $2::uuid, $3, 'trip_status_updated', 'delivered', 'completed', jsonb_build_object('reason', 'mutual_completion_confirmed'))`,
+        [trip.request_id, trip.id, actorUserId],
+      );
+    } else {
+      const requestResult = await client.query<RequestRow>(
+        `SELECT id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, price_amount, price_currency, created_at, updated_at
+         FROM trust_transport_requests
+         WHERE id = $1::uuid
+         LIMIT 1`,
+        [trip.request_id],
+      );
+      requestRow = requestResult.rows[0];
+    }
+
+    return {
+      trip: mapTripRow(confirmedTrip),
+      request: mapRequestRow(requestRow),
+      bothConfirmed,
+    };
+  });
+
+  if (result.bothConfirmed) {
+    await syncTrustTransportRequestPresence(
+      result.request.requesterUserId,
+      result.request.id,
+      result.request.status,
+    );
+    await settleTripOnCompletion(result.trip, result.request, 'completed');
+  }
 
   return result;
 }

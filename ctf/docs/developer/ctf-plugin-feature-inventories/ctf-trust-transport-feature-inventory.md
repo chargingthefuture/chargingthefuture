@@ -133,13 +133,14 @@ Command groups in scope:
 3. `trust-transport.offer.create`
 4. `trust-transport.offer.accept`
 5. `trust-transport.trip.status.update`
-6. `trust-transport.delivery.proof.capture`
-7. `trust-transport.order.cancel`
-8. `trust-transport.chat.message.send`
-9. `trust-transport.payout.request`
-10. `trust-transport.admin.dispute.resolve`
-11. `trust-transport.admin.account.restrict`
-12. `trust-transport.admin.market.config.update`
+6. `trust-transport.trip.completion.confirm`
+7. `trust-transport.delivery.proof.capture`
+8. `trust-transport.order.cancel`
+9. `trust-transport.chat.message.send`
+10. `trust-transport.payout.request`
+11. `trust-transport.admin.dispute.resolve`
+12. `trust-transport.admin.account.restrict`
+13. `trust-transport.admin.market.config.update`
 
 ## HTTP Projection Routes
 
@@ -153,7 +154,8 @@ User routes:
 - `POST /api/trust-transport/requests/:requestId/offers` — Make an offer on an open request (one pending offer per provider per request; re-offering updates it).
 - `POST /api/trust-transport/offers/:offerId/accept` — Accept an offer, opening a trip.
 - `GET /api/trust-transport/trips` — Trips the caller is fulfilling (provider side), with the now-revealed pickup/drop-off, so they can advance the lifecycle.
-- `POST /api/trust-transport/trips/:tripId/status` — Update trip status.
+- `POST /api/trust-transport/trips/:tripId/status` — Advance trip status one forward step (assigned → en_route → picked_up → delivered), or set a terminal state. A non-admin cannot set `completed` here — completion requires mutual confirmation (below). Admins keep a direct override to `completed`.
+- `POST /api/trust-transport/trips/:tripId/complete` — Record the caller's completion confirmation for a `delivered` trip. Only the requester or provider may call it. The trip transitions to `completed` (and settlement fires) only once **both** parties have confirmed — neither can complete a trip alone, because completion moves value (a ServiceCredits transfer, or a recorded off-platform fiat/crypto settlement).
 - `POST /api/trust-transport/trips/:tripId/proof` — Capture pickup/delivery proof.
 - `POST /api/trust-transport/trips/:tripId/chat` — Mint Stream chat credentials for the trip thread: chat channel (`channelId`/`streamChannelId`) and participant token. Text chat only — no video.
 - `POST /api/trust-transport/trips/:tripId/emergency-stop` — Safety emergency-stop control.
@@ -194,7 +196,7 @@ Tables owned by this plugin:
 
 1. `trust_transport_requests` — Request rows across ride/package/food modes.
 2. `trust_transport_offers` — Offers placed by providers on a request.
-3. `trust_transport_trips` — Accepted-offer trips with lifecycle state.
+3. `trust_transport_trips` — Accepted-offer trips with lifecycle state. Includes `requester_completion_confirmed_at` and `provider_completion_confirmed_at` (both nullable timestamps): a trip only transitions to `completed` (and settles) once both are set — mutual completion confirmation.
 4. `trust_transport_status_events` — Append-only event log for status transitions.
 5. `trust_transport_proof_artifacts` — Pickup/delivery proof captures (photo, code, signature references).
 6. `trust_transport_disputes` — Dispute records and adjudication state.
@@ -289,6 +291,35 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
    history only (completed vs. not), never a score, by owner directive.
 
 ## Change Log
+
+- 2026-07-08: Mutual completion confirmation (owner decision). Previously either party's single "Mark
+  complete" tap (in practice the provider's) moved the trip straight to `completed`, which immediately
+  settled it — debiting the requester's ServiceCredits wallet, or crediting the provider's earnings
+  ledger for a fiat/crypto amount the platform never processed. That let one side unilaterally trigger a
+  value movement. Now: a trip can only be advanced to `delivered` by the normal status route; from
+  `delivered`, completion requires **both** the requester and the provider to confirm via the new
+  `POST /api/trust-transport/trips/:tripId/complete` route (command `trust-transport.trip.completion.confirm`).
+  The trip becomes `completed` and settles only on the second confirmation. `updateTripStatus` now rejects
+  a non-admin `completed` transition with `completion_requires_confirmation` (admins keep a direct override,
+  e.g. for dispute resolution). Schema: `trust_transport_trips` gains `requester_completion_confirmed_at`
+  and `provider_completion_confirmed_at`. UI: the provider's Help-tab trip card and the requester's
+  Tracking card both show a "Confirm trip completed" control on a delivered trip, then a "waiting for the
+  other party" state after their own confirmation — web and Android. Contracts updated (command,
+  access-policy, audit). This does not change the settlement mechanics themselves; it changes who must
+  agree before settlement runs. (Open follow-up flagged to the owner: for non-SC settlement the platform
+  has no payment processing — the exchange is peer-to-peer off-platform — so the fiat/crypto "earnings
+  ledger + payout request" flow may be reworked so it no longer implies a platform-issued payout.)
+
+- 2026-07-02: Cancel-request UI on both platforms. The `POST /api/trust-transport/orders/:orderId/cancel`
+  route and `cancelOrder()` repository function already existed and were fully authorized (requester or
+  admin only; forward-transition-checked so a completed/cancelled request can't be re-cancelled) but had
+  no caller anywhere in the app — a member had no way to cancel a request they made. Added a "Cancel
+  request" control to the Tracking tab (web `tt-tracking-tab.tsx`) and the Track tab (android
+  `TrustTransport.tsx`, new `cancelOrder()` added to the mobile API client) for any of the member's own
+  non-terminal requests (open, accepted, in progress), each behind an explicit confirmation prompt
+  (`window.confirm` on web, a native `Alert` on android) per the "explicit confirmation for irreversible
+  actions" security control. No schema/route/contract change — the endpoint already existed and was
+  reviewed.
 
 - 2026-07-02: Android earnings + payouts screen (parity with web slice 6, issue #1250). New
   `TrustTransportEarningsTab.tsx` — an "Earnings" tab in the bottom nav with per-currency balance cards

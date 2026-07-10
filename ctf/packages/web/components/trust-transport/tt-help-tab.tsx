@@ -10,12 +10,13 @@ function modeLabel(mode: string | undefined): string {
   return mode.charAt(0).toUpperCase() + mode.slice(1);
 }
 
-// The forward step a provider can take from each trip status (the happy path). Terminal states have none.
+// The forward step a provider can take from each trip status (the happy path). "delivered" has no
+// entry here — from there, completion requires mutual confirmation (see CompletionConfirm below), not a
+// single unilateral tap, because completion is what triggers settlement.
 const NEXT_STEP: Record<string, { next: string; label: string }> = {
   assigned: { next: "en_route", label: "Start trip" },
   en_route: { next: "picked_up", label: "Mark picked up" },
   picked_up: { next: "delivered", label: "Mark delivered" },
-  delivered: { next: "completed", label: "Mark complete" },
 };
 
 function tripStatusLabel(s: string | undefined): string {
@@ -134,12 +135,56 @@ function TripChat({ tripId }: { tripId: string }) {
   );
 }
 
-function ProviderTripCard({ trip, busyId, onAdvance }: { trip: ProviderTrip; busyId: string | null; onAdvance: (tripId: string, next: string) => void }) {
+// Once a trip is "delivered", completing it requires both parties to confirm on-platform (owner
+// decision, 2026-07-08) — completion is what triggers settlement (a ServiceCredits debit, or an
+// earnings-ledger credit for an off-platform fiat/crypto exchange the platform never verified), so
+// neither side can complete it alone.
+function CompletionConfirm({ tripId, myConfirmedAtIso, otherConfirmedAtIso, onConfirmed }: { tripId: string; myConfirmedAtIso: string | null; otherConfirmedAtIso: string | null; onConfirmed: () => void }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function confirm() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/trust-transport/trips/${tripId}/complete`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
+      if (!res.ok) throw new Error("Could not confirm completion.");
+      onConfirmed();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Could not confirm completion.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (myConfirmedAtIso) {
+    return (
+      <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 9, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", color: "#F59E0B", fontSize: 12, fontWeight: 600 }}>
+        You confirmed completion. Waiting for the other party to confirm.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      {error && <div style={{ fontSize: 12, color: "#EF4444", marginBottom: 8 }}>{error}</div>}
+      <button type="button" onClick={() => void confirm()} disabled={submitting} style={{ width: "100%", padding: "10px 12px", borderRadius: 9, background: `${COLOR}1F`, border: `1px solid ${COLOR}40`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        {submitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Confirm trip completed
+      </button>
+      {otherConfirmedAtIso && (
+        <div style={{ marginTop: 6, fontSize: 11, color: "#6B7280" }}>The other party has already confirmed — this finishes it.</div>
+      )}
+    </div>
+  );
+}
+
+function ProviderTripCard({ trip, busyId, onAdvance, onConfirmed }: { trip: ProviderTrip; busyId: string | null; onAdvance: (tripId: string, next: string) => void; onConfirmed: () => void }) {
   const [proofOpen, setProofOpen] = useState(false);
   const [proofDone, setProofDone] = useState(false);
   const step = NEXT_STEP[trip.status ?? ""];
   const route = `${trip.pickupCity ?? "—"} → ${trip.dropoffCity ?? "—"}`;
   const terminal = ["completed", "cancelled", "disputed", "emergency_frozen"].includes(trip.status ?? "");
+  const awaitingCompletion = trip.status === "delivered";
 
   return (
     <div style={{ padding: "14px 16px", borderRadius: 14, background: `${COLOR}08`, border: `1px solid ${COLOR}25`, marginBottom: 12 }}>
@@ -152,6 +197,8 @@ function ProviderTripCard({ trip, busyId, onAdvance }: { trip: ProviderTrip; bus
         <button type="button" onClick={() => onAdvance(trip.tripId, step.next)} disabled={busyId !== null} style={{ marginTop: 12, width: "100%", padding: "10px 12px", borderRadius: 9, background: `${COLOR}1F`, border: `1px solid ${COLOR}40`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: busyId !== null ? "default" : "pointer", opacity: busyId !== null && busyId !== trip.tripId ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
           {busyId === trip.tripId ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} {step.label}
         </button>
+      ) : awaitingCompletion ? (
+        <CompletionConfirm tripId={trip.tripId} myConfirmedAtIso={trip.providerCompletionConfirmedAtIso ?? null} otherConfirmedAtIso={trip.requesterCompletionConfirmedAtIso ?? null} onConfirmed={onConfirmed} />
       ) : (
         <div style={{ marginTop: 10, fontSize: 12, color: "#6B7280" }}>No further action — this trip is {tripStatusLabel(trip.status).toLowerCase()}.</div>
       )}
@@ -221,7 +268,7 @@ function ProviderTripsSection() {
       <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9CA3AF", marginBottom: 12 }}>Trips you&apos;re helping with</div>
       {error && <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 10 }}>{error}</div>}
       {trips.map((t) => (
-        <ProviderTripCard key={t.tripId} trip={t} busyId={busyId} onAdvance={(id, next) => void advance(id, next)} />
+        <ProviderTripCard key={t.tripId} trip={t} busyId={busyId} onAdvance={(id, next) => void advance(id, next)} onConfirmed={() => void load()} />
       ))}
     </div>
   );
