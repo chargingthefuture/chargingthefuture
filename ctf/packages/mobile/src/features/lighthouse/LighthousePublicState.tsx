@@ -151,7 +151,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     description: {
       fontSize: 14,
-      color: '#9CA3AF',
+      color: t.textSecondary,
       lineHeight: 21,
       marginBottom: 16,
     },

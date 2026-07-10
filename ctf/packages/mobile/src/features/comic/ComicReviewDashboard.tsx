@@ -686,7 +686,7 @@ function makeStyles(t: ThemeTokens) {
   chipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: t.textSecondary,
     maxWidth: 120,
   },
   chipTextActive: {
@@ -779,7 +779,7 @@ function makeStyles(t: ThemeTokens) {
   },
   draftText: {
     fontSize: 14,
-    color: '#E8EAF0',
+    color: t.textShell,
     lineHeight: 22,
   },
   sectionLabelCyan: {
@@ -902,7 +902,7 @@ function makeStyles(t: ThemeTokens) {
     borderWidth: 1,
     borderColor: 'rgba(14,165,233,0.4)',
     fontSize: 14,
-    color: '#E8EAF0',
+    color: t.textShell,
     lineHeight: 22,
     textAlignVertical: 'top',
   },
@@ -1062,7 +1062,7 @@ function makeStyles(t: ThemeTokens) {
   },
   emptyBody: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: t.textSecondary,
     lineHeight: 21,
     textAlign: 'center',
   },

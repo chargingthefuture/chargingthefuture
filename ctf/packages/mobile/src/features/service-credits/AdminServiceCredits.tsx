@@ -632,7 +632,7 @@ function makeStyles(t: ThemeTokens) {
     },
     card: { backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, borderRadius: 14, padding: 16, gap: 10 },
     cardTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
-    cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+    cardMeta: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
     policyText: {
       fontFamily: 'monospace',
       fontSize: 12,
@@ -688,6 +688,6 @@ function makeStyles(t: ThemeTokens) {
       borderColor: t.border,
     },
     metricValue: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 2 },
-    metricLabel: { fontSize: 11, color: SUBTLE },
+    metricLabel: { fontSize: 11, color: t.textSecondary },
   });
 }
