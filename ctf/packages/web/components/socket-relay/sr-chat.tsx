@@ -28,8 +28,6 @@ function ResolveBar({
   resolving: boolean;
   onResolve: (fulfillmentId: string, outcome: SrResolveOutcome) => void;
 }) {
-  const { theme } = useTheme();
-  const t = getSocketRelayTokens(theme);
   if (selected.status !== "active") {
     return (
       <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: SUBTLE }}>
