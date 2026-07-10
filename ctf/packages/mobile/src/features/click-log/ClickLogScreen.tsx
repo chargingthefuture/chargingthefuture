@@ -2,7 +2,7 @@
 // All counts derived from real /api/click-log data; no fabricated values.
 // "Today" and "This week" badge counts are computed client-side from incidents[].created_at.
 // The bottom-nav "Export" tab has no backing API — button is rendered but no-ops (see comment).
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,16 +16,20 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { fetchIncidents, logIncident, deleteIncident } from './api';
 
-// ── Design tokens (from MobileClickLog.tsx) ──────────────────────────────────
-const BRAND = '#EC4899';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-const STATUS_BG = '#090B0F';
+// ── Theme wiring ─────────────────────────────────────────────────────────────
+// The ClickLog accent is the plugin accent for the active theme (default: the pink
+// brand #EC4899); chrome colours come from the shared theme tokens. The StyleSheet is
+// memoized on the tokens/accent. `subtle` is the secondary-text token, used inline for
+// icon tints.
+function useClickLogTheme() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('click-log', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return { styles, accent, subtle: tokens.textSecondary };
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type IncidentMetadata = {
@@ -77,17 +81,19 @@ function formatIncidentTime(dateStr: string): string {
 
 // ── Loading state ─────────────────────────────────────────────────────────────
 function ClickLogLoading() {
+  const { styles, accent } = useClickLogTheme();
   return (
     <View style={[styles.root, styles.centered]}>
       <Text style={styles.loadingTagline}>EXIT THEIR ECONOMY</Text>
       <Text style={styles.loadingTagline}>EXIT THE PSYOP</Text>
-      <ActivityIndicator color={BRAND} style={styles.loadingSpinner} />
+      <ActivityIndicator color={accent} style={styles.loadingSpinner} />
     </View>
   );
 }
 
 // ── Public (unauthenticated) state ────────────────────────────────────────────
 function ClickLogPublic() {
+  const { styles, accent, subtle } = useClickLogTheme();
   const features = [
     { label: 'One tap' },
     { label: 'Private' },
@@ -99,7 +105,7 @@ function ClickLogPublic() {
       <View style={[styles.headerPublic]}>
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
-            <Ionicons name="warning-outline" size={18} color={BRAND} />
+            <Ionicons name="warning-outline" size={18} color={accent} />
             <Text style={styles.headerTitle}>ClickLog</Text>
           </View>
           <View style={styles.authRow}>
@@ -118,11 +124,11 @@ function ClickLogPublic() {
         {/* Locked button overlay */}
         <View style={styles.lockedButtonWrap}>
           <View style={[styles.bigButton, styles.bigButtonLocked]}>
-            <Ionicons name="warning-outline" size={34} color={BRAND} />
-            <Text style={[styles.bigButtonLabel, { color: BRAND }]}>Log Incident</Text>
+            <Ionicons name="warning-outline" size={34} color={accent} />
+            <Text style={[styles.bigButtonLabel, { color: accent }]}>Log Incident</Text>
           </View>
           <View style={styles.lockOverlay}>
-            <Ionicons name="lock-closed-outline" size={18} color={BRAND} />
+            <Ionicons name="lock-closed-outline" size={18} color={accent} />
           </View>
         </View>
 
@@ -159,7 +165,7 @@ function ClickLogPublic() {
         {(['warning-outline', 'time-outline', 'document-text-outline'] as const).map((icon, i) => (
           <React.Fragment key={icon}>
             <View style={[styles.navItem, styles.navItemLocked]}>
-              <Ionicons name={icon} size={20} color={SUBTLE} />
+              <Ionicons name={icon} size={20} color={subtle} />
               <Text style={styles.navLabelLocked}>{['Log', 'History', 'Export'][i]}</Text>
             </View>
           </React.Fragment>
@@ -171,6 +177,7 @@ function ClickLogPublic() {
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 function ClickLogEmpty({ onLog }: { onLog: () => void }) {
+  const { styles, accent, subtle } = useClickLogTheme();
   const features = [
     { label: 'One tap' },
     { label: 'Private' },
@@ -182,7 +189,7 @@ function ClickLogEmpty({ onLog }: { onLog: () => void }) {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.iconBadge}>
-            <Ionicons name="warning-outline" size={16} color={BRAND} />
+            <Ionicons name="warning-outline" size={16} color={accent} />
           </View>
           <View>
             <Text style={styles.headerTitle}>ClickLog</Text>
@@ -226,7 +233,7 @@ function ClickLogEmpty({ onLog }: { onLog: () => void }) {
         ].map(({ icon, label, active }) => (
           <React.Fragment key={label}>
             <View style={styles.navItem}>
-              <Ionicons name={icon} size={20} color={active ? BRAND : SUBTLE} />
+              <Ionicons name={icon} size={20} color={active ? accent : subtle} />
               <Text style={[styles.navLabel, active && styles.navLabelActive]}>{label}</Text>
             </View>
           </React.Fragment>
@@ -248,6 +255,7 @@ function ClickLogMain({
   onLog: (_notes: string, _includeLocation: boolean) => Promise<void>;
   onDelete: (_id: string) => void;
 }) {
+  const { styles, accent, subtle } = useClickLogTheme();
   const [tab, setTab] = useState<TabKey>('log');
   const [logged, setLogged] = useState(false);
   const [notes, setNotes] = useState('');
@@ -290,14 +298,14 @@ function ClickLogMain({
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
             <View style={styles.iconBadge}>
-              <Ionicons name="warning-outline" size={16} color={BRAND} />
+              <Ionicons name="warning-outline" size={16} color={accent} />
             </View>
             <View>
               <Text style={styles.headerTitle}>ClickLog</Text>
               <Text style={styles.headerSubtitle}>{totalCount} incidents total</Text>
             </View>
           </View>
-          <Ionicons name="notifications-outline" size={18} color={SUBTLE} />
+          <Ionicons name="notifications-outline" size={18} color={subtle} />
         </View>
 
         {/* Tab bar */}
@@ -362,7 +370,7 @@ function ClickLogMain({
               <TextInput
                 style={styles.noteInput}
                 placeholder="Describe what happened…"
-                placeholderTextColor={SUBTLE}
+                placeholderTextColor={subtle}
                 value={notes}
                 onChangeText={setNotes}
                 multiline
@@ -376,7 +384,7 @@ function ClickLogMain({
                   onPress={() => setIncludeLocation((v) => !v)}
                   accessibilityLabel="Toggle location"
                 >
-                  <Ionicons name="location-outline" size={11} color={includeLocation ? BRAND : SUBTLE} />
+                  <Ionicons name="location-outline" size={11} color={includeLocation ? accent : subtle} />
                   <Text style={[styles.locationBtnText, includeLocation && styles.locationBtnTextActive]}>
                     Location
                   </Text>
@@ -403,7 +411,7 @@ function ClickLogMain({
                 <React.Fragment key={incident.id}>
                   <View style={styles.incidentRow}>
                     <View style={styles.incidentIconWrap}>
-                      <Ionicons name="warning-outline" size={13} color={BRAND} />
+                      <Ionicons name="warning-outline" size={13} color={accent} />
                     </View>
                     <View style={styles.incidentBody}>
                       <Text style={styles.incidentTime}>{formatIncidentTime(incident.created_at)}</Text>
@@ -412,7 +420,7 @@ function ClickLogMain({
                       )}
                       {!!(incident.metadata?.latitude && incident.metadata?.longitude) && (
                         <View style={styles.incidentLocation}>
-                          <Ionicons name="location-outline" size={9} color={SUBTLE} />
+                          <Ionicons name="location-outline" size={9} color={subtle} />
                           <Text style={styles.incidentLocationText}>Location</Text>
                         </View>
                       )}
@@ -423,7 +431,7 @@ function ClickLogMain({
                       accessibilityLabel="Delete incident"
                       accessibilityRole="button"
                     >
-                      <Ionicons name="trash-outline" size={13} color={SUBTLE} />
+                      <Ionicons name="trash-outline" size={13} color={subtle} />
                     </TouchableOpacity>
                   </View>
                 </React.Fragment>
@@ -448,7 +456,7 @@ function ClickLogMain({
             disabled={tabKey === null}
             accessibilityLabel={label}
           >
-            <Ionicons name={icon} size={20} color={tab === tabKey ? BRAND : SUBTLE} />
+            <Ionicons name={icon} size={20} color={tab === tabKey ? accent : subtle} />
             <Text style={[styles.navLabel, tab === tabKey && styles.navLabelActive]}>{label}</Text>
           </TouchableOpacity>
         ))}
@@ -550,7 +558,15 @@ export function ClickLogScreen() {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  const BRAND = accent;
+  const BG = t.bg;
+  const SURFACE = t.surface;
+  const BORDER = t.border;
+  const TEXT = t.textPrimary;
+  const SUBTLE = t.textSecondary;
+  const STATUS_BG = t.surfaceAlt;
+  return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: BG,
@@ -629,7 +645,7 @@ const styles = StyleSheet.create({
   signInBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: t.radiusChip,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
     borderColor: BORDER,
@@ -642,7 +658,7 @@ const styles = StyleSheet.create({
   joinBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: t.radiusChip,
     backgroundColor: BRAND,
   },
   joinBtnText: {
@@ -704,7 +720,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: t.radius,
     backgroundColor: SURFACE,
     borderWidth: 1,
     borderColor: `${BRAND}15`,
@@ -738,9 +754,9 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   bigButtonLogged: {
-    backgroundColor: '#22C55E',
-    borderColor: '#22C55E',
-    shadowColor: '#22C55E',
+    backgroundColor: t.success,
+    borderColor: t.success,
+    shadowColor: t.success,
   },
   bigButtonLocked: {
     backgroundColor: 'rgba(233,30,140,0.1)',
@@ -841,7 +857,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     padding: 13,
-    borderRadius: 12,
+    borderRadius: t.radius,
     backgroundColor: SURFACE,
     borderWidth: 1,
     borderColor: BORDER,
@@ -981,7 +997,7 @@ const styles = StyleSheet.create({
   ctaBtn: {
     width: '100%',
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: t.radius,
     backgroundColor: BRAND,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1004,7 +1020,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 8,
-    borderRadius: 12,
+    borderRadius: t.radius,
     backgroundColor: SURFACE,
     borderWidth: 1,
     borderColor: BORDER,
@@ -1051,4 +1067,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: SUBTLE,
   },
-});
+  });
+}

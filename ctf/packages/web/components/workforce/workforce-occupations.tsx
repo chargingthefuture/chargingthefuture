@@ -5,6 +5,8 @@ import { ArrowLeft, Eye, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { WORKFORCE_SKILL_LEVELS } from '../../lib/workforce/skill-level';
 import type { WorkforceOccupation } from '../../lib/workforce/types';
+import { useTheme } from '@/hooks/useTheme';
+import { getWorkforceTokens } from './workforce-shared';
 
 const PAGE_SIZE = 20;
 const FETCH_PAGE_SIZE = 100; // API max; we page through to load the full list for client-side filtering.
@@ -41,6 +43,8 @@ async function fetchAllOccupations(signal: AbortSignal): Promise<WorkforceOccupa
 }
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   return (
     <div
       style={{
@@ -50,13 +54,15 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
         border: '1px solid rgba(255,255,255,0.06)',
       }}
     >
-      <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: accent ?? '#F9FAFB' }}>{value}</div>
+      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: accent ?? t.TITLE }}>{value}</div>
     </div>
   );
 }
 
 function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   const [occ, setOcc] = useState<WorkforceOccupation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +98,7 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
           gap: 6,
           background: 'transparent',
           border: 'none',
-          color: '#9CA3AF',
+          color: t.SUBTLE,
           fontSize: 13,
           cursor: 'pointer',
           alignSelf: 'flex-start',
@@ -102,18 +108,18 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
       </button>
 
       {loading ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#6B7280', fontSize: 13 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: t.MUTED, fontSize: 13 }}>
           <Loader2 size={14} className="animate-spin" /> Loading occupation…
         </div>
       ) : error ? (
         <div style={{ fontSize: 13, color: '#EF4444' }}>{error}</div>
       ) : !occ ? (
-        <div style={{ fontSize: 13, color: '#6B7280' }}>Occupation not found.</div>
+        <div style={{ fontSize: 13, color: t.MUTED }}>Occupation not found.</div>
       ) : (
         <>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#F9FAFB' }}>{occ.name}</div>
-            <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: t.TITLE }}>{occ.name}</div>
+            <div style={{ fontSize: 13, color: t.MUTED, marginTop: 2 }}>
               {occ.sector} · {occ.skillLevel}
             </div>
           </div>
@@ -125,13 +131,13 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
             <Stat
               label="Roles to fill"
               value={occ.gap > 0 ? occ.gap.toLocaleString() : '—'}
-              accent={occ.gap > 0 ? '#F97316' : '#22C55E'}
+              accent={occ.gap > 0 ? t.ACCENT : '#22C55E'}
             />
           </div>
           <div
             style={{
               fontSize: 12,
-              color: '#6B7280',
+              color: t.MUTED,
               lineHeight: 1.7,
               padding: '12px 14px',
               borderRadius: 12,
@@ -154,6 +160,8 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
 }
 
 export function WorkforceOccupations() {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   const [all, setAll] = useState<WorkforceOccupation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -200,11 +208,11 @@ export function WorkforceOccupations() {
 
   const selectStyle: React.CSSProperties = {
     padding: '7px 10px',
-    background: 'rgba(255,255,255,0.04)',
+    background: t.INPUT_BG,
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: 8,
     fontSize: 13,
-    color: '#E8EAF0',
+    color: t.TEXT,
     outline: 'none',
   };
 
@@ -215,7 +223,7 @@ export function WorkforceOccupations() {
           <OccupationDetail id={selectedId} onBack={() => setSelectedId(null)} />
         ) : (
           <>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#F9FAFB', marginBottom: 16 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE, marginBottom: 16 }}>
               Occupations
             </div>
 
@@ -237,13 +245,13 @@ export function WorkforceOccupations() {
             </div>
 
             {loading ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#6B7280', fontSize: 13 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: t.MUTED, fontSize: 13 }}>
                 <Loader2 size={14} className="animate-spin" /> Loading occupations…
               </div>
             ) : error ? (
               <div style={{ fontSize: 13, color: '#EF4444' }}>{error}</div>
             ) : filtered.length === 0 ? (
-              <div style={{ fontSize: 13, color: '#6B7280' }}>No occupations match these filters.</div>
+              <div style={{ fontSize: 13, color: t.MUTED }}>No occupations match these filters.</div>
             ) : (
               <>
                 <div style={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
@@ -266,18 +274,18 @@ export function WorkforceOccupations() {
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, color: '#E8EAF0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontSize: 14, color: t.TEXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {o.name}
                         </div>
-                        <div style={{ fontSize: 12, color: '#6B7280' }}>{o.sector}</div>
+                        <div style={{ fontSize: 12, color: t.MUTED }}>{o.sector}</div>
                       </div>
                       <span
                         style={{
                           fontSize: 11,
                           fontWeight: 600,
-                          color: SKILL_BADGE[o.skillLevel] ?? '#9CA3AF',
-                          background: `${SKILL_BADGE[o.skillLevel] ?? '#9CA3AF'}1A`,
-                          border: `1px solid ${SKILL_BADGE[o.skillLevel] ?? '#9CA3AF'}40`,
+                          color: SKILL_BADGE[o.skillLevel] ?? t.SUBTLE,
+                          background: `${SKILL_BADGE[o.skillLevel] ?? t.SUBTLE}1A`,
+                          border: `1px solid ${SKILL_BADGE[o.skillLevel] ?? t.SUBTLE}40`,
                           borderRadius: 6,
                           padding: '1px 7px',
                           flexShrink: 0,
@@ -285,19 +293,19 @@ export function WorkforceOccupations() {
                       >
                         {o.skillLevel}
                       </span>
-                      <span style={{ width: 110, textAlign: 'right', fontSize: 12, color: '#6B7280', flexShrink: 0 }}>
+                      <span style={{ width: 110, textAlign: 'right', fontSize: 12, color: t.MUTED, flexShrink: 0 }}>
                         {o.recruited.toLocaleString()} / {o.target.toLocaleString()}
                       </span>
-                      <span style={{ width: 96, textAlign: 'right', fontSize: 13, fontWeight: 700, color: o.gap > 0 ? '#F97316' : '#22C55E', flexShrink: 0 }}>
+                      <span style={{ width: 96, textAlign: 'right', fontSize: 13, fontWeight: 700, color: o.gap > 0 ? t.ACCENT : '#22C55E', flexShrink: 0 }}>
                         {o.gap > 0 ? `${o.gap.toLocaleString()} to fill` : 'filled'}
                       </span>
-                      <Eye size={16} style={{ color: '#6B7280', flexShrink: 0 }} />
+                      <Eye size={16} style={{ color: t.MUTED, flexShrink: 0 }} />
                     </button>
                   ))}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
-                  <div style={{ fontSize: 12, color: '#6B7280' }}>
+                  <div style={{ fontSize: 12, color: t.MUTED }}>
                     {filtered.length.toLocaleString()} occupations
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -309,7 +317,7 @@ export function WorkforceOccupations() {
                     >
                       Previous
                     </button>
-                    <span style={{ fontSize: 12, color: '#9CA3AF' }}>
+                    <span style={{ fontSize: 12, color: t.SUBTLE }}>
                       Page {current + 1} of {pageCount}
                     </span>
                     <button

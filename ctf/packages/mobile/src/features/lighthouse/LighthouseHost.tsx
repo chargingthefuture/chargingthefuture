@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../auth/auth-context';
+import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
 import { fetchMyProperties, createProperty } from './api';
 import type { LighthouseProperty, PropertyCreateInput } from './types';
 import { fetchCurrencies } from '../currency/api';
@@ -20,15 +21,15 @@ function inlineRent(property: LighthouseProperty, currencies: CurrencyMap): stri
 // from data we already have (username + Quora link). Mirrors the web surface at
 // ctf/packages/web/components/lighthouse/lighthouse-host.tsx.
 
-const COLOR = '#60A5FA';
-const BG = '#0F1117';
 const SURFACE = 'rgba(255,255,255,0.02)';
-const BORDER = `${COLOR}20`;
 const MUTED = '#9CA3AF';
 
 export const LighthouseHost: React.FC = () => {
   const { user } = useAuth();
   const username = user?.username ?? null;
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('lighthouse', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
 
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<LighthouseProperty[]>([]);
@@ -90,7 +91,7 @@ export const LighthouseHost: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLOR} />
+        <ActivityIndicator size="large" color={accent} />
       </View>
     );
   }
@@ -105,7 +106,7 @@ export const LighthouseHost: React.FC = () => {
           {quoraUrl ? (
             <View style={styles.quoraBadge}>
               <Text style={styles.quoraText}>Quora profile</Text>
-              <Ionicons name="open-outline" size={12} color={COLOR} />
+              <Ionicons name="open-outline" size={12} color={accent} />
             </View>
           ) : null}
         </View>
@@ -124,7 +125,7 @@ export const LighthouseHost: React.FC = () => {
           }}
           activeOpacity={0.8}
         >
-          <Ionicons name={showForm ? 'close' : 'add'} size={16} color={COLOR} />
+          <Ionicons name={showForm ? 'close' : 'add'} size={16} color={accent} />
           <Text style={styles.toggleBtnText}>{showForm ? 'Close' : 'List your place'}</Text>
         </TouchableOpacity>
       </View>
@@ -150,113 +151,115 @@ export const LighthouseHost: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: BG,
-  },
-  identityCard: {
-    backgroundColor: SURFACE,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
-  },
-  identityLabel: {
-    fontSize: 13,
-    color: MUTED,
-    marginBottom: 6,
-  },
-  identityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  identityName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#F9FAFB',
-  },
-  quoraBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  quoraText: {
-    fontSize: 12,
-    color: COLOR,
-  },
-  identityHint: {
-    fontSize: 12,
-    color: MUTED,
-    marginTop: 6,
-    lineHeight: 18,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    gap: 12,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#F9FAFB',
-    flexShrink: 1,
-  },
-  toggleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: `${COLOR}1A`,
-    borderWidth: 1,
-    borderColor: `${COLOR}40`,
-  },
-  toggleBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLOR,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: MUTED,
-    textAlign: 'center',
-    paddingVertical: 24,
-  },
-  listingList: {
-    gap: 10,
-  },
-  listingCard: {
-    backgroundColor: SURFACE,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    padding: 14,
-  },
-  listingTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#F9FAFB',
-  },
-  listingMeta: {
-    fontSize: 13,
-    color: MUTED,
-    marginTop: 2,
-  },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.bg,
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 40,
+    },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: t.bg,
+    },
+    identityCard: {
+      backgroundColor: SURFACE,
+      borderWidth: 1,
+      borderColor: `${accent}20`,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 16,
+    },
+    identityLabel: {
+      fontSize: 13,
+      color: MUTED,
+      marginBottom: 6,
+    },
+    identityRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    identityName: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: t.textPrimary,
+    },
+    quoraBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    quoraText: {
+      fontSize: 12,
+      color: accent,
+    },
+    identityHint: {
+      fontSize: 12,
+      color: MUTED,
+      marginTop: 6,
+      lineHeight: 18,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+      gap: 12,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: t.textPrimary,
+      flexShrink: 1,
+    },
+    toggleBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      backgroundColor: `${accent}1A`,
+      borderWidth: 1,
+      borderColor: `${accent}40`,
+    },
+    toggleBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: accent,
+    },
+    emptyText: {
+      fontSize: 14,
+      color: MUTED,
+      textAlign: 'center',
+      paddingVertical: 24,
+    },
+    listingList: {
+      gap: 10,
+    },
+    listingCard: {
+      backgroundColor: SURFACE,
+      borderWidth: 1,
+      borderColor: `${accent}20`,
+      borderRadius: t.radius,
+      padding: 14,
+    },
+    listingTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: t.textPrimary,
+    },
+    listingMeta: {
+      fontSize: 13,
+      color: MUTED,
+      marginTop: 2,
+    },
+  });
+}

@@ -3,8 +3,8 @@
 import { Search } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { WorkforceDashboard, WorkforceGroupedReportItem } from '../../lib/workforce/types';
-
-const COLOR = '#F97316';
+import { useTheme } from '@/hooks/useTheme';
+import { getWorkforceTokens } from './workforce-shared';
 
 type SidebarView = 'overview' | 'sector' | 'skill-level' | 'occupations';
 
@@ -28,13 +28,15 @@ export function WorkforceSidebar({
   dashboard,
   sectorItems,
 }: WorkforceSidebarProps) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   const gapCount = sectorItems.filter((g) => g.gap > 0).length;
 
   return (
     <aside
       style={{
         width: 240,
-        background: '#0D0F14',
+        background: t.HEADER,
         borderRight: '1px solid rgba(255,255,255,0.06)',
         display: 'flex',
         flexDirection: 'column',
@@ -47,7 +49,7 @@ export function WorkforceSidebar({
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: '0.08em',
-            color: '#6B7280',
+            color: t.MUTED,
             textTransform: 'uppercase',
             marginBottom: 12,
           }}
@@ -62,7 +64,7 @@ export function WorkforceSidebar({
               left: 10,
               top: '50%',
               transform: 'translateY(-50%)',
-              color: '#4B5563',
+              color: t.FAINT,
               pointerEvents: 'none',
             }}
           />
@@ -72,11 +74,11 @@ export function WorkforceSidebar({
             style={{
               width: '100%',
               padding: '7px 10px 7px 30px',
-              background: 'rgba(255,255,255,0.04)',
+              background: t.INPUT_BG,
               border: '1px solid rgba(255,255,255,0.06)',
               borderRadius: 8,
               fontSize: 13,
-              color: '#9CA3AF',
+              color: t.SUBTLE,
               outline: 'none',
               boxSizing: 'border-box',
               cursor: 'default',
@@ -99,8 +101,8 @@ export function WorkforceSidebar({
                 padding: '8px 10px',
                 borderRadius: 8,
                 cursor: 'pointer',
-                background: activeView === key ? `${COLOR}18` : 'transparent',
-                borderLeft: activeView === key ? `2px solid ${COLOR}` : '2px solid transparent',
+                background: activeView === key ? `${t.ACCENT}18` : 'transparent',
+                borderLeft: activeView === key ? `2px solid ${t.ACCENT}` : '2px solid transparent',
                 marginLeft: 2,
                 marginBottom: 2,
                 border: 'none',
@@ -111,7 +113,7 @@ export function WorkforceSidebar({
               <span
                 style={{
                   fontSize: 13,
-                  color: activeView === key ? '#E8EAF0' : '#9CA3AF',
+                  color: activeView === key ? t.TEXT : t.SUBTLE,
                   flex: 1,
                 }}
               >
@@ -143,7 +145,7 @@ export function WorkforceSidebar({
                   fontSize: 11,
                   fontWeight: 700,
                   letterSpacing: '0.08em',
-                  color: '#4B5563',
+                  color: t.FAINT,
                   textTransform: 'uppercase',
                   padding: '0 10px',
                 }}
@@ -155,8 +157,8 @@ export function WorkforceSidebar({
                 { l: 'Recruited', v: dashboard.recruitedTotal.toLocaleString() },
                 { l: 'Skill Gaps', v: gapCount > 0 ? `${gapCount} sectors` : 'None' },
               ].map(({ l, v }) => (
-                <div key={l} style={{ padding: '7px 10px', fontSize: 12, color: '#6B7280' }}>
-                  {l}: <span style={{ color: COLOR, fontWeight: 600 }}>{v}</span>
+                <div key={l} style={{ padding: '7px 10px', fontSize: 12, color: t.MUTED }}>
+                  {l}: <span style={{ color: t.ACCENT, fontWeight: 600 }}>{v}</span>
                 </div>
               ))}
             </>

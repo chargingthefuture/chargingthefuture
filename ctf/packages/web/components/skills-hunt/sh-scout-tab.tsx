@@ -1,8 +1,10 @@
 "use client";
 
 import { Search, CheckCircle, ExternalLink, Send } from "lucide-react";
-import { COLOR, BIO_MAX, type Tab } from "./sh-shared";
+import { BIO_MAX, type Tab } from "./sh-shared";
 import { SkillsPicker } from "./sh-skills-picker";
+import { useTheme } from '@/hooks/useTheme';
+import { getSkillsHuntTokens } from './sh-shared';
 
 export interface ScoutFormModel {
   fullName: string;
@@ -36,46 +38,52 @@ const WHY_ITEMS = [
 ];
 
 function NoActiveRound() {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 24px", gap: 20, textAlign: "center" }}>
-      <div style={{ width: 72, height: 72, borderRadius: 20, background: `${COLOR}10`, border: `1px dashed ${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Search size={32} style={{ color: COLOR, opacity: 0.5 }} />
+      <div style={{ width: 72, height: 72, borderRadius: 20, background: `${t.ACCENT}10`, border: `1px dashed ${t.ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Search size={32} style={{ color: t.ACCENT, opacity: 0.5 }} />
       </div>
       <div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 8 }}>No active round right now</div>
-        <div style={{ fontSize: 14, color: "#6B7280", maxWidth: 400, lineHeight: 1.7 }}>Check back soon — rounds open when there are survivors ready to be nominated. Your nominations help build the Directory so the economy can grow.</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 8 }}>No active round right now</div>
+        <div style={{ fontSize: 14, color: t.MUTED, maxWidth: 400, lineHeight: 1.7 }}>Check back soon — rounds open when there are survivors ready to be nominated. Your nominations help build the Directory so the economy can grow.</div>
       </div>
     </div>
   );
 }
 
 function SubmittedState({ onReset, onViewLeaderboard }: { onReset: () => void; onViewLeaderboard: () => void }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 24px", gap: 16, textAlign: "center" }}>
       <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#22C55E20", border: "1px solid #22C55E40", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <CheckCircle size={36} style={{ color: "#22C55E" }} />
       </div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB" }}>Nomination submitted!</div>
-      <div style={{ fontSize: 14, color: "#6B7280", maxWidth: 400, lineHeight: 1.7 }}>
+      <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE }}>Nomination submitted!</div>
+      <div style={{ fontSize: 14, color: t.MUTED, maxWidth: 400, lineHeight: 1.7 }}>
         Thank you for growing the network. This submission is under review — you&apos;ll earn points once accepted.
       </div>
       <div style={{ display: "flex", gap: 12 }}>
-        <button type="button" onClick={onReset} style={{ padding: "12px 24px", borderRadius: 12, background: COLOR, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Nominate Another</button>
-        <button type="button" onClick={onViewLeaderboard} style={{ padding: "12px 24px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>View Leaderboard</button>
+        <button type="button" onClick={onReset} style={{ padding: "12px 24px", borderRadius: 12, background: t.ACCENT, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Nominate Another</button>
+        <button type="button" onClick={onViewLeaderboard} style={{ padding: "12px 24px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: t.SUBTLE, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>View Leaderboard</button>
       </div>
     </div>
   );
 }
 
 function WhyThisWorks() {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
   return (
     <div style={{ width: 260, flexShrink: 0, maxWidth: "100%" }}>
-      <div style={{ padding: "18px", borderRadius: 14, background: `${COLOR}08`, border: `1px solid ${COLOR}20` }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 12 }}>Why this works</div>
+      <div style={{ padding: "18px", borderRadius: 14, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT, marginBottom: 12 }}>Why this works</div>
         {WHY_ITEMS.map((item, i) => (
           <div key={i} style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "flex-start" }}>
             <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
-            <span style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>{item.text}</span>
+            <span style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.5 }}>{item.text}</span>
           </div>
         ))}
       </div>
@@ -83,54 +91,59 @@ function WhyThisWorks() {
   );
 }
 
-function fieldBorder(active: boolean): string {
-  return `1px solid ${active ? COLOR + "50" : "rgba(255,255,255,0.1)"}`;
+function fieldBorder(active: boolean, t: ReturnType<typeof getSkillsHuntTokens>): string {
+  // A filled/valid field gets the accent-tinted border; an empty one keeps the faint neutral border.
+  return `1px solid ${active ? `${t.ACCENT}50` : "rgba(255,255,255,0.1)"}`;
 }
 
 function NominationFields({ form }: { form: ScoutFormModel }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
   return (
     <>
       <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", display: "block", marginBottom: 6 }}>
-          Full Name <span style={{ color: COLOR }}>*</span>
-          <span style={{ fontSize: 11, color: "#4B5563", fontWeight: 400, marginLeft: 6 }}>2–100 chars, letters and spaces only</span>
+        <label style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
+          Full Name <span style={{ color: t.ACCENT }}>*</span>
+          <span style={{ fontSize: 11, color: t.FAINT, fontWeight: 400, marginLeft: 6 }}>2–100 chars, letters and spaces only</span>
         </label>
         <input value={form.fullName} onChange={(e) => form.onFullName(e.target.value.replace(/[^a-zA-Z\s]/g, "").slice(0, 100))} aria-label="Full name" placeholder="e.g. Amara Williams"
-          style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: fieldBorder(form.fullName.length >= 2), borderRadius: 10, fontSize: 14, color: "#E8EAF0", outline: "none", boxSizing: "border-box" }} />
-        <div style={{ fontSize: 11, color: "#4B5563", textAlign: "right", marginTop: 3 }}>{form.fullName.length}/100</div>
+          style={{ width: "100%", padding: "10px 14px", background: t.INPUT_BG, border: fieldBorder(form.fullName.length >= 2, t), borderRadius: 10, fontSize: 14, color: t.TEXT, outline: "none", boxSizing: "border-box" }} />
+        <div style={{ fontSize: 11, color: t.FAINT, textAlign: "right", marginTop: 3 }}>{form.fullName.length}/100</div>
       </div>
 
       <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", display: "block", marginBottom: 6 }}>
-          Bio <span style={{ fontSize: 11, color: "#4B5563", fontWeight: 400 }}>(optional)</span>
+        <label style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
+          Bio <span style={{ fontSize: 11, color: t.FAINT, fontWeight: 400 }}>(optional)</span>
         </label>
         <textarea value={form.bio} onChange={(e) => form.onBio(e.target.value.slice(0, BIO_MAX))} rows={2} aria-label="Bio" placeholder="e.g. Lives in Houston, works in construction, connected through mutual contact…"
-          style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: fieldBorder(Boolean(form.bio)), borderRadius: 10, fontSize: 14, color: "#E8EAF0", outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
-        <div style={{ fontSize: 11, color: form.bio.length > 240 ? "#F59E0B" : "#4B5563", textAlign: "right", marginTop: 3 }}>{form.bio.length}/{BIO_MAX}</div>
+          style={{ width: "100%", padding: "10px 14px", background: t.INPUT_BG, border: fieldBorder(Boolean(form.bio), t), borderRadius: 10, fontSize: 14, color: t.TEXT, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
+        <div style={{ fontSize: 11, color: form.bio.length > 240 ? "#F59E0B" : t.FAINT, textAlign: "right", marginTop: 3 }}>{form.bio.length}/{BIO_MAX}</div>
       </div>
 
       <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", display: "block", marginBottom: 6 }}>
-          Quora Profile URL <span style={{ fontSize: 11, color: "#4B5563", fontWeight: 400 }}>(social proof — highly recommended)</span>
+        <label style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
+          Quora Profile URL <span style={{ fontSize: 11, color: t.FAINT, fontWeight: 400 }}>(social proof — highly recommended)</span>
         </label>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: fieldBorder(Boolean(form.quora)), borderRadius: 10 }}>
-          <ExternalLink size={14} style={{ color: "#6B7280", flexShrink: 0 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: t.INPUT_BG, border: fieldBorder(Boolean(form.quora), t), borderRadius: 10 }}>
+          <ExternalLink size={14} style={{ color: t.MUTED, flexShrink: 0 }} />
           <input value={form.quora} onChange={(e) => form.onQuora(e.target.value)} aria-label="Quora profile URL" placeholder="https://quora.com/profile/..."
-            style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: "#E8EAF0" }} />
+            style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: t.TEXT }} />
         </div>
-        <div style={{ fontSize: 11, color: "#4B5563", marginTop: 4 }}>Quora activity helps verify this is a real person — reduces risk of trafficker infiltration.</div>
+        <div style={{ fontSize: 11, color: t.FAINT, marginTop: 4 }}>Quora activity helps verify this is a real person — reduces risk of trafficker infiltration.</div>
       </div>
     </>
   );
 }
 
 function NominationForm({ form }: { form: ScoutFormModel }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
   const canSubmit = form.fullName.trim().length >= 2 && form.allSkillCount > 0 && !form.submitting;
   return (
     <div style={{ flex: "1 1 320px", maxWidth: 580 }}>
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Nominate a Survivor</div>
-        <div style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.6 }}>Think of someone you believe may be a survivor — you don&apos;t need to be 100% certain. Their Quora profile helps verify their identity, and their skills join our economy.</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>Nominate a Survivor</div>
+        <div style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6 }}>Think of someone you believe may be a survivor — you don&apos;t need to be 100% certain. Their Quora profile helps verify their identity, and their skills join our economy.</div>
       </div>
 
       {form.submitError && (
@@ -156,7 +169,7 @@ function NominationForm({ form }: { form: ScoutFormModel }) {
         />
 
         <button type="button" onClick={form.onSubmit} disabled={!canSubmit}
-          style={{ padding: "14px", borderRadius: 12, background: canSubmit ? COLOR : "rgba(255,255,255,0.05)", border: "none", color: canSubmit ? "#fff" : "#4B5563", fontSize: 15, fontWeight: 700, cursor: canSubmit ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          style={{ padding: "14px", borderRadius: 12, background: canSubmit ? t.ACCENT : "rgba(255,255,255,0.05)", border: "none", color: canSubmit ? "#fff" : t.FAINT, fontSize: 15, fontWeight: 700, cursor: canSubmit ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
           <Send size={16} /> {form.submitting ? "Submitting…" : "Submit Nomination · earn points on acceptance"}
         </button>
       </div>

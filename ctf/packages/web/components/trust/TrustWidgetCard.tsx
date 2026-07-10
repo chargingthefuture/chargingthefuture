@@ -13,9 +13,12 @@
 //   note and a static visibility row rather than non-functional controls.
 import React from "react";
 import { ShieldCheck, Eye, CheckCircle2 } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
 import type { TrustUserExtension, TrustEvidenceItem } from "../../lib/trust/types";
+import { getTrustTokens } from "./trust-shared";
 
-const BRAND = "#0EA5E9";
+// Accent-with-alpha card tints and the 5% hairline have no exact shell-token equivalent
+// (the token helper carries solid values only), so they stay as the shipped literals.
 const CARD_BG = "rgba(14,165,233,0.06)";
 const CARD_BORDER = "rgba(14,165,233,0.18)";
 const HAIRLINE = "rgba(255,255,255,0.05)";
@@ -30,32 +33,38 @@ function titleCase(value: string): string {
 // not verify members, so showing a "Verified"/"Unverified" badge would promise something it cannot
 // support. Trust is signal-only.
 function WidgetHeader() {
+  const { theme } = useTheme();
+  const t = getTrustTokens(theme);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "12px 14px 10px" }}>
-      <ShieldCheck size={14} style={{ color: BRAND }} />
+      <ShieldCheck size={14} style={{ color: t.ACCENT }} />
       <span style={{ fontSize: 12, fontWeight: 700, color: "#38BDF8", letterSpacing: "0.06em", textTransform: "uppercase" }}>Trust</span>
     </div>
   );
 }
 
 function VisibilityRow({ visibility, bordered }: { visibility: string; bordered: boolean }) {
+  const { theme } = useTheme();
+  const t = getTrustTokens(theme);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, padding: bordered ? "9px 0 0" : 0, marginTop: bordered ? 0 : 4, borderTop: bordered ? `1px solid ${HAIRLINE}` : "none" }}>
-      <Eye size={11} style={{ color: "#4B5563" }} />
-      <span style={{ fontSize: 11, color: "#4B5563" }}>Visible to: {titleCase(visibility)}</span>
+      <Eye size={11} style={{ color: t.FAINT }} />
+      <span style={{ fontSize: 11, color: t.FAINT }}>Visible to: {titleCase(visibility)}</span>
     </div>
   );
 }
 
 function EmptyBody({ visibility }: { visibility: string }) {
+  const { theme } = useTheme();
+  const t = getTrustTokens(theme);
   return (
     <div style={{ padding: "4px 14px 14px" }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 0 14px", borderTop: `1px solid ${HAIRLINE}` }}>
         <div style={{ width: 48, height: 48, borderRadius: "50%", border: "2px dashed rgba(14,165,233,0.3)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
           <ShieldCheck size={22} style={{ color: "rgba(14,165,233,0.4)" }} />
         </div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 4 }}>No trust signals yet</div>
-        <div style={{ fontSize: 11, color: "#4B5563", textAlign: "center", lineHeight: 1.5 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: t.SUBTLE, marginBottom: 4 }}>No trust signals yet</div>
+        <div style={{ fontSize: 11, color: t.FAINT, textAlign: "center", lineHeight: 1.5 }}>
           Trust signals appear as you participate in the community
         </div>
       </div>
@@ -64,7 +73,7 @@ function EmptyBody({ visibility }: { visibility: string }) {
         {STEPS.map((label) => (
           <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: `1px solid ${HAIRLINE}` }}>
             <div style={{ width: 16, height: 16, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.12)", flexShrink: 0 }} />
-            <span style={{ fontSize: 11, color: "#6B7280" }}>{label}</span>
+            <span style={{ fontSize: 11, color: t.MUTED }}>{label}</span>
           </div>
         ))}
       </div>
@@ -75,15 +84,17 @@ function EmptyBody({ visibility }: { visibility: string }) {
 }
 
 function EvidenceItem({ item }: { item: TrustEvidenceItem }) {
+  const { theme } = useTheme();
+  const t = getTrustTokens(theme);
   return (
     <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "8px 10px", border: `1px solid ${HAIRLINE}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
         <CheckCircle2 size={12} style={{ color: "#38BDF8", flexShrink: 0 }} />
         <span style={{ fontSize: 11, fontWeight: 600, color: "#E2E8F0" }}>{titleCase(item.type)}</span>
-        <span style={{ fontSize: 10, color: "#4B5563", marginLeft: "auto" }}>{new Date(item.createdAt).toLocaleDateString()}</span>
+        <span style={{ fontSize: 10, color: t.FAINT, marginLeft: "auto" }}>{new Date(item.createdAt).toLocaleDateString()}</span>
       </div>
       <div style={{ fontSize: 11, color: "#CBD5E1", lineHeight: 1.5 }}>{item.summary}</div>
-      {item.details && <div style={{ fontSize: 10, color: "#6B7280", marginTop: 3, lineHeight: 1.5 }}>{item.details}</div>}
+      {item.details && <div style={{ fontSize: 10, color: t.MUTED, marginTop: 3, lineHeight: 1.5 }}>{item.details}</div>}
     </div>
   );
 }

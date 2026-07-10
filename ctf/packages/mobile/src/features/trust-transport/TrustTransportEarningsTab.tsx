@@ -2,17 +2,19 @@
 // no withdrawable balance and no payout: for anything other than ServiceCredits the payment is arranged
 // directly between the two people off-platform (the platform has no payment processing). These figures
 // also count toward the community's economic activity (GDP). Mirrors the web Earnings tab.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { getRecordedEarnings } from './api';
 import type { TrustTransportRecordedEarning } from './types';
 
-const COLOR = '#38BDF8';
-const TEXT = '#F9FAFB';
-const MUTED = '#6B7280';
+// Left raw by design: SUBTLE (#9CA3AF) has no exact-value mobile token equivalent.
 const SUBTLE = '#9CA3AF';
 
 export function TrustTransportEarningsTab() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [earnings, setEarnings] = useState<TrustTransportRecordedEarning[]>([]);
@@ -35,7 +37,7 @@ export function TrustTransportEarningsTab() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLOR} />
+        <ActivityIndicator size="large" color={accent} />
       </View>
     );
   }
@@ -76,31 +78,33 @@ export function TrustTransportEarningsTab() {
   );
 }
 
-const styles = StyleSheet.create({
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, minHeight: 300 },
-  section: { padding: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: TEXT, marginBottom: 6 },
-  sectionDesc: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginBottom: 20 },
-  subheading: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: SUBTLE, marginBottom: 10 },
-  errorText: { fontSize: 12, color: '#EF4444', marginBottom: 8 },
-  emptyBox: {
-    padding: 18,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  emptyText: { fontSize: 13, color: MUTED },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  card: {
-    minWidth: 120,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  cardCurrency: { fontSize: 12, color: SUBTLE },
-  cardAmount: { marginTop: 6, fontSize: 22, fontWeight: '800', color: TEXT },
-  cardHint: { marginTop: 4, fontSize: 11, color: MUTED },
-});
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, minHeight: 300 },
+    section: { padding: 16 },
+    sectionTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 6 },
+    sectionDesc: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginBottom: 20 },
+    subheading: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: SUBTLE, marginBottom: 10 },
+    errorText: { fontSize: 12, color: t.danger, marginBottom: 8 },
+    emptyBox: {
+      padding: 18,
+      borderRadius: 14,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      borderColor: t.borderFaint,
+    },
+    emptyText: { fontSize: 13, color: t.textSecondary },
+    row: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    card: {
+      minWidth: 120,
+      padding: 14,
+      borderRadius: 14,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+    },
+    cardCurrency: { fontSize: 12, color: SUBTLE },
+    cardAmount: { marginTop: 6, fontSize: 22, fontWeight: '800', color: t.textPrimary },
+    cardHint: { marginTop: 4, fontSize: 11, color: t.textSecondary },
+  });
+}

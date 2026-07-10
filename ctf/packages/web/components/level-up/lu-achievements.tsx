@@ -2,7 +2,8 @@
 
 import { Award, BookOpen, CheckCircle, Coins, Lock, Star, Trophy, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { BORDER, GREEN, MUTED, SUBTLE, SURFACE, TEXT, TRACK_COLORS, type Achievement } from "./lu-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getLevelUpTokens, TRACK_COLORS, type Achievement } from "./lu-shared";
 
 // Achievements screen — layout aligned to design/.../survivor-hub/LevelUpAchievements.tsx.
 // Real data only: every value comes from GET /api/level-up/achievements.
@@ -39,11 +40,13 @@ function formatDate(iso: string | null): string {
 }
 
 function StatCard({ label, value, color, Icon }: { label: string; value: string; color: string; Icon: LucideIcon }) {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
   return (
-    <div style={{ flex: 1, minWidth: 150, background: SURFACE, borderRadius: 10, padding: "14px 16px", border: `1px solid ${BORDER}` }}>
+    <div style={{ flex: 1, minWidth: 150, background: t.SURFACE, borderRadius: 10, padding: "14px 16px", border: `1px solid ${t.BORDER_SOLID}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
         <Icon size={14} color={color} />
-        <span style={{ fontSize: 12, color: SUBTLE }}>{label}</span>
+        <span style={{ fontSize: 12, color: t.TEXT_SUBTLE }}>{label}</span>
       </div>
       <div style={{ fontSize: 20, fontWeight: 700, color }}>{value}</div>
     </div>
@@ -51,40 +54,44 @@ function StatCard({ label, value, color, Icon }: { label: string; value: string;
 }
 
 function EmptyAchievements() {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: "48px 0", textAlign: "center" }}>
-      <div style={{ width: 56, height: 56, borderRadius: 14, background: `${GREEN}10`, border: `1px solid ${GREEN}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Trophy size={24} style={{ color: GREEN, opacity: 0.5 }} />
+      <div style={{ width: 56, height: 56, borderRadius: 14, background: `${t.ACCENT}10`, border: `1px solid ${t.ACCENT}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Trophy size={24} style={{ color: t.ACCENT, opacity: 0.5 }} />
       </div>
       <div>
-        <div style={{ fontSize: 15, fontWeight: 600, color: TEXT, marginBottom: 6 }}>No badges yet</div>
-        <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, maxWidth: 360 }}>Earn badges by completing cohort milestones. Badges are awarded — they are never bought or spent.</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT_BODY, marginBottom: 6 }}>No badges yet</div>
+        <div style={{ fontSize: 13, color: t.TEXT_SUBTLE, lineHeight: 1.6, maxWidth: 360 }}>Earn badges by completing cohort milestones. Badges are awarded — they are never bought or spent.</div>
       </div>
     </div>
   );
 }
 
 function BadgeTile({ achievement }: { achievement: Achievement }) {
-  const tc = TRACK_COLORS[achievement.track] ?? GREEN;
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
+  const tc = TRACK_COLORS[achievement.track] ?? t.ACCENT;
   const Icon = iconFor(achievement.icon);
   return (
-    <div style={{ background: SURFACE, borderRadius: 12, padding: "16px 14px", border: `1px solid ${achievement.earned ? `${GREEN}30` : BORDER}`, textAlign: "center" }}>
-      <div style={{ width: 44, height: 44, borderRadius: 12, margin: "0 auto 10px", background: achievement.earned ? `${GREEN}18` : BORDER, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {achievement.earned ? <Icon size={20} color={GREEN} /> : <Lock size={18} color={MUTED} />}
+    <div style={{ background: t.SURFACE, borderRadius: 12, padding: "16px 14px", border: `1px solid ${achievement.earned ? `${t.ACCENT}30` : t.BORDER_SOLID}`, textAlign: "center" }}>
+      <div style={{ width: 44, height: 44, borderRadius: 12, margin: "0 auto 10px", background: achievement.earned ? `${t.ACCENT}18` : t.BORDER_SOLID, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {achievement.earned ? <Icon size={20} color={t.ACCENT} /> : <Lock size={18} color={t.FAINT} />}
       </div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: achievement.earned ? TEXT : SUBTLE, marginBottom: 4, lineHeight: 1.3 }}>{achievement.name}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: achievement.earned ? t.TEXT_BODY : t.TEXT_SUBTLE, marginBottom: 4, lineHeight: 1.3 }}>{achievement.name}</div>
       {achievement.track && (
         <div style={{ display: "inline-block", fontSize: 10, color: tc, background: `${tc}15`, padding: "2px 7px", borderRadius: 20, marginBottom: 8 }}>{achievement.track}</div>
       )}
       {achievement.description && (
-        <div style={{ fontSize: 11, color: SUBTLE, lineHeight: 1.5, marginBottom: 8 }}>{achievement.description}</div>
+        <div style={{ fontSize: 11, color: t.TEXT_SUBTLE, lineHeight: 1.5, marginBottom: 8 }}>{achievement.description}</div>
       )}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         {achievement.creditReward > 0 ? (
-          <span style={{ fontSize: 11, color: achievement.earned ? GREEN : SUBTLE, fontWeight: 600 }}>+{achievement.creditReward} SC</span>
+          <span style={{ fontSize: 11, color: achievement.earned ? t.ACCENT : t.TEXT_SUBTLE, fontWeight: 600 }}>+{achievement.creditReward} SC</span>
         ) : <span />}
         {achievement.earned && achievement.earnedAtIso && (
-          <span style={{ fontSize: 10, color: MUTED }}>{formatDate(achievement.earnedAtIso)}</span>
+          <span style={{ fontSize: 10, color: t.FAINT }}>{formatDate(achievement.earnedAtIso)}</span>
         )}
       </div>
     </div>
@@ -92,16 +99,20 @@ function BadgeTile({ achievement }: { achievement: Achievement }) {
 }
 
 function SectionHeader({ Icon, color, title, count, dim }: { Icon: LucideIcon; color: string; title: string; count: number; dim?: boolean }) {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
       <Icon size={15} color={color} />
-      <span style={{ fontSize: 15, fontWeight: 600, color: dim ? SUBTLE : TEXT }}>{title}</span>
-      <span style={{ fontSize: 12, color: dim ? MUTED : SUBTLE }}>— {count} {count === 1 ? "badge" : "badges"}</span>
+      <span style={{ fontSize: 15, fontWeight: 600, color: dim ? t.TEXT_SUBTLE : t.TEXT_BODY }}>{title}</span>
+      <span style={{ fontSize: 12, color: dim ? t.FAINT : t.TEXT_SUBTLE }}>— {count} {count === 1 ? "badge" : "badges"}</span>
     </div>
   );
 }
 
 export function LevelUpAchievements({ achievements }: { achievements: Achievement[] }) {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
   if (achievements.length === 0) return <EmptyAchievements />;
 
   const earned = achievements.filter((a) => a.earned);
@@ -111,19 +122,19 @@ export function LevelUpAchievements({ achievements }: { achievements: Achievemen
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
-        <span style={{ background: `${GREEN}18`, color: GREEN, fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 20, border: `1px solid ${GREEN}30` }}>{earned.length} earned</span>
-        <span style={{ fontSize: 13, color: SUBTLE }}>of {achievements.length} total badges</span>
+        <span style={{ background: `${t.ACCENT}18`, color: t.ACCENT, fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 20, border: `1px solid ${t.ACCENT}30` }}>{earned.length} earned</span>
+        <span style={{ fontSize: 13, color: t.TEXT_SUBTLE }}>of {achievements.length} total badges</span>
       </div>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 28, flexWrap: "wrap" }}>
         <StatCard label="Badges earned" value={String(earned.length)} color="#F59E0B" Icon={Trophy} />
-        <StatCard label="Still locked" value={String(locked.length)} color={SUBTLE} Icon={Lock} />
-        <StatCard label="SC from achievements" value={`${scFromBadges} SC`} color={GREEN} Icon={Coins} />
+        <StatCard label="Still locked" value={String(locked.length)} color={t.TEXT_SUBTLE} Icon={Lock} />
+        <StatCard label="SC from achievements" value={`${scFromBadges} SC`} color={t.ACCENT} Icon={Coins} />
       </div>
 
       {earned.length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <SectionHeader Icon={CheckCircle} color={GREEN} title="Earned" count={earned.length} />
+          <SectionHeader Icon={CheckCircle} color={t.ACCENT} title="Earned" count={earned.length} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
             {earned.map((a) => <BadgeTile key={a.id} achievement={a} />)}
           </div>
@@ -132,7 +143,7 @@ export function LevelUpAchievements({ achievements }: { achievements: Achievemen
 
       {locked.length > 0 && (
         <div>
-          <SectionHeader Icon={Lock} color={MUTED} title="Locked" count={locked.length} dim />
+          <SectionHeader Icon={Lock} color={t.FAINT} title="Locked" count={locked.length} dim />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12, opacity: 0.7 }}>
             {locked.map((a) => <BadgeTile key={a.id} achievement={a} />)}
           </div>

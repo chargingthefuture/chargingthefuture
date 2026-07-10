@@ -5,14 +5,9 @@
 // server selects active users (login in the last 7 days); the optional manual
 // override lets an admin pass an explicit user-id list for a dry run.
 import { useState } from 'react';
+import { useTheme } from '@/hooks/useTheme';
 import type { AssignmentRunResult } from './pp-admin-shared';
-
-// Admin design tokens (shared admin look from the design system). PeerProgramming accent is mint.
-const COLOR = '#6EE7B7';
-const BG = '#0F1117';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+import { getPeerProgrammingTokens } from './pp-shared';
 
 export function PeerProgrammingAdminAssignments({
   busy,
@@ -23,6 +18,8 @@ export function PeerProgrammingAdminAssignments({
   lastResult: AssignmentRunResult | null;
   onRun: (input: { allowManualOverride: boolean; activeUserIds: string[] }) => Promise<void>;
 }) {
+  const { theme } = useTheme();
+  const t = getPeerProgrammingTokens(theme);
   const [useOverride, setUseOverride] = useState(false);
   const [idsText, setIdsText] = useState('');
 
@@ -38,25 +35,25 @@ export function PeerProgrammingAdminAssignments({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <p style={{ fontSize: 12, color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
+      <p style={{ fontSize: 12, color: t.MUTED, margin: 0, lineHeight: 1.5 }}>
         Forms cohorts of up to 5 from this week&rsquo;s active members and records an in-app
         notification for each assignment. Running again for the same week is safe — assignments and
         notifications are idempotent.
       </p>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: TEXT, cursor: 'pointer' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: t.TITLE, cursor: 'pointer' }}>
         <input
           type="checkbox"
           checked={useOverride}
           onChange={(event) => setUseOverride(event.target.checked)}
-          style={{ width: 16, height: 16, accentColor: COLOR }}
+          style={{ width: 16, height: 16, accentColor: t.ACCENT }}
         />
         <span>Use a manual user-id list instead of the last-7-days active set</span>
       </label>
 
       {useOverride ? (
         <label style={{ display: 'block' }}>
-          <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 6 }}>
+          <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 6 }}>
             User IDs
           </span>
           <textarea
@@ -65,9 +62,9 @@ export function PeerProgrammingAdminAssignments({
             style={{
               width: '100%',
               minHeight: 96,
-              background: BG,
-              border: `1px solid ${BORDER}`,
-              color: TEXT,
+              background: t.BG,
+              border: `1px solid ${t.BORDER_SOLID}`,
+              color: t.TITLE,
               borderRadius: 8,
               padding: '8px 10px',
               fontSize: 13,
@@ -87,8 +84,8 @@ export function PeerProgrammingAdminAssignments({
           alignSelf: 'flex-start',
           padding: '8px 16px',
           borderRadius: 8,
-          background: COLOR,
-          border: `1px solid ${COLOR}`,
+          background: t.ACCENT,
+          border: `1px solid ${t.ACCENT}`,
           color: '#0F1117',
           fontSize: 13,
           fontWeight: 700,

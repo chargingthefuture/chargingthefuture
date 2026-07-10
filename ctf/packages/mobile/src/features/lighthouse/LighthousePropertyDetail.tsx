@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,9 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
 import type { LighthouseProperty } from './types';
 import { acceptedCurrencyLabels, formatRentParts, type CurrencyMap } from './currency';
-
-const COLOR = '#60A5FA';
-const BG = '#0F1117';
-const DARK = '#090B0F';
 
 interface Props {
   property: LighthouseProperty;
@@ -34,17 +31,28 @@ function formatAvailability(iso: string | null): string {
   return `Available ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 }
 
-const AmenityTag: React.FC<{ label: string }> = ({ label }) => (
-  <View style={styles.tag}>
-    <Text style={styles.tagText}>{label}</Text>
-  </View>
-);
+const AmenityTag: React.FC<{ label: string }> = ({ label }) => {
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('lighthouse', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return (
+    <View style={styles.tag}>
+      <Text style={styles.tagText}>{label}</Text>
+    </View>
+  );
+};
 
-const HouseRuleRow: React.FC<{ rule: string }> = ({ rule }) => (
-  <Text style={styles.ruleText}>• {rule}</Text>
-);
+const HouseRuleRow: React.FC<{ rule: string }> = ({ rule }) => {
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('lighthouse', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return <Text style={styles.ruleText}>• {rule}</Text>;
+};
 
 export const LighthousePropertyDetail: React.FC<Props> = ({ property, currencies, onBack }) => {
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('lighthouse', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const location = [property.city, property.state, property.country]
     .filter(Boolean)
     .join(', ');
@@ -62,7 +70,7 @@ export const LighthousePropertyDetail: React.FC<Props> = ({ property, currencies
           activeOpacity={0.7}
           onPress={onBack}
         >
-          <Ionicons name="arrow-back" size={16} color={COLOR} />
+          <Ionicons name="arrow-back" size={16} color={accent} />
           <Text style={styles.backBtnText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.topBarTitle}>Listing</Text>
@@ -70,7 +78,7 @@ export const LighthousePropertyDetail: React.FC<Props> = ({ property, currencies
       </View>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.hero}>
-          <Ionicons name="home-outline" size={48} color={`${COLOR}60`} />
+          <Ionicons name="home-outline" size={48} color={`${accent}60`} />
         </View>
         <View style={styles.content}>
           <Text style={styles.title}>{property.title}</Text>
@@ -82,7 +90,7 @@ export const LighthousePropertyDetail: React.FC<Props> = ({ property, currencies
           ) : null}
           {property.propertyType && property.propertyType.trim().length > 0 ? (
             <View style={styles.typeChip}>
-              <Ionicons name="home-outline" size={11} color={COLOR} />
+              <Ionicons name="home-outline" size={11} color={accent} />
               <Text style={styles.typeChipText}>{property.propertyType}</Text>
             </View>
           ) : null}
@@ -141,7 +149,7 @@ export const LighthousePropertyDetail: React.FC<Props> = ({ property, currencies
             </View>
           ) : null}
           <View style={styles.privacyNote}>
-            <Ionicons name="lock-closed-outline" size={12} color={COLOR} />
+            <Ionicons name="lock-closed-outline" size={12} color={accent} />
             <Text style={styles.privacyNoteTitle}>Privacy Protected</Text>
           </View>
           <Text style={styles.privacyBody}>
@@ -153,217 +161,219 @@ export const LighthousePropertyDetail: React.FC<Props> = ({ property, currencies
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: DARK,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  backBtnText: {
-    fontSize: 14,
-    color: COLOR,
-    fontWeight: '600',
-    marginLeft: 2,
-  },
-  topBarTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#F9FAFB',
-  },
-  topBarSpacer: {
-    width: 48,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  hero: {
-    paddingVertical: 32,
-    backgroundColor: `${COLOR}08`,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-  },
-  content: {
-    padding: 20,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#F9FAFB',
-    marginBottom: 8,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginBottom: 8,
-  },
-  locationText: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginLeft: 2,
-  },
-  typeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    backgroundColor: `${COLOR}12`,
-    borderWidth: 1,
-    borderColor: `${COLOR}30`,
-    borderRadius: 8,
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-    marginBottom: 12,
-  },
-  typeChipText: {
-    fontSize: 12,
-    color: COLOR,
-    fontWeight: '600',
-    marginLeft: 2,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 14,
-  },
-  metaText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-  },
-  metaDivider: {
-    fontSize: 13,
-    color: '#4B5563',
-  },
-  description: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    lineHeight: 21,
-    marginBottom: 16,
-  },
-  priceBox: {
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: `${COLOR}08`,
-    borderWidth: 1,
-    borderColor: `${COLOR}20`,
-    marginBottom: 16,
-  },
-  price: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: COLOR,
-  },
-  priceUnit: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLOR,
-  },
-  priceSuffix: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '400',
-  },
-  acceptsRow: {
-    marginTop: 12,
-  },
-  acceptsLabel: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 6,
-  },
-  acceptsChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  acceptsChip: {
-    borderRadius: 8,
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  acceptsChipCredits: {
-    backgroundColor: '#F59E0B15',
-    borderColor: '#F59E0B30',
-  },
-  acceptsChipText: {
-    fontSize: 12,
-    color: '#D1D5DB',
-  },
-  acceptsChipTextCredits: {
-    color: '#F59E0B',
-  },
-  section: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#F9FAFB',
-    marginBottom: 8,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  tag: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  tagText: {
-    fontSize: 11,
-    color: '#9CA3AF',
-  },
-  ruleText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  privacyNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
-    marginTop: 8,
-  },
-  privacyNoteTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLOR,
-    marginLeft: 2,
-  },
-  privacyBody: {
-    fontSize: 12,
-    color: '#6B7280',
-    lineHeight: 19,
-  },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.bg,
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: t.borderFaint,
+    },
+    backBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    backBtnText: {
+      fontSize: 14,
+      color: accent,
+      fontWeight: '600',
+      marginLeft: 2,
+    },
+    topBarTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: t.textPrimary,
+    },
+    topBarSpacer: {
+      width: 48,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 40,
+    },
+    hero: {
+      paddingVertical: 32,
+      backgroundColor: `${accent}08`,
+      alignItems: 'center',
+      borderBottomWidth: 1,
+      borderBottomColor: t.borderFaint,
+    },
+    content: {
+      padding: 20,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: t.textPrimary,
+      marginBottom: 8,
+    },
+    locationRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      marginBottom: 8,
+    },
+    locationText: {
+      fontSize: 12,
+      color: '#9CA3AF',
+      marginLeft: 2,
+    },
+    typeChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      alignSelf: 'flex-start',
+      backgroundColor: `${accent}12`,
+      borderWidth: 1,
+      borderColor: `${accent}30`,
+      borderRadius: 8,
+      paddingVertical: 3,
+      paddingHorizontal: 10,
+      marginBottom: 12,
+    },
+    typeChipText: {
+      fontSize: 12,
+      color: accent,
+      fontWeight: '600',
+      marginLeft: 2,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 14,
+    },
+    metaText: {
+      fontSize: 13,
+      color: '#9CA3AF',
+    },
+    metaDivider: {
+      fontSize: 13,
+      color: t.textMuted,
+    },
+    description: {
+      fontSize: 14,
+      color: '#9CA3AF',
+      lineHeight: 21,
+      marginBottom: 16,
+    },
+    priceBox: {
+      padding: 16,
+      borderRadius: 14,
+      backgroundColor: `${accent}08`,
+      borderWidth: 1,
+      borderColor: `${accent}20`,
+      marginBottom: 16,
+    },
+    price: {
+      fontSize: 32,
+      fontWeight: '900',
+      color: accent,
+    },
+    priceUnit: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: accent,
+    },
+    priceSuffix: {
+      fontSize: 13,
+      color: t.textSecondary,
+      fontWeight: '400',
+    },
+    acceptsRow: {
+      marginTop: 12,
+    },
+    acceptsLabel: {
+      fontSize: 11,
+      color: '#9CA3AF',
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+      marginBottom: 6,
+    },
+    acceptsChips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
+    acceptsChip: {
+      borderRadius: 8,
+      paddingVertical: 3,
+      paddingHorizontal: 10,
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+    },
+    acceptsChipCredits: {
+      backgroundColor: '#F59E0B15',
+      borderColor: '#F59E0B30',
+    },
+    acceptsChipText: {
+      fontSize: 12,
+      color: '#D1D5DB',
+    },
+    acceptsChipTextCredits: {
+      color: '#F59E0B',
+    },
+    section: {
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: t.textPrimary,
+      marginBottom: 8,
+    },
+    tagRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
+    tag: {
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+    },
+    tagText: {
+      fontSize: 11,
+      color: '#9CA3AF',
+    },
+    ruleText: {
+      fontSize: 13,
+      color: '#9CA3AF',
+      lineHeight: 20,
+      marginBottom: 4,
+    },
+    privacyNote: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 6,
+      marginTop: 8,
+    },
+    privacyNoteTitle: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: accent,
+      marginLeft: 2,
+    },
+    privacyBody: {
+      fontSize: 12,
+      color: t.textSecondary,
+      lineHeight: 19,
+    },
+  });
+}

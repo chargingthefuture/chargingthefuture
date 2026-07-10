@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import type { SkillsHuntFeatureRewardCard } from "lib/skills-hunt/types";
-import { COLOR } from "./sha-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
 
-const field: React.CSSProperties = {
-  width: "100%", padding: "9px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.12)", color: "#E8EAF0", fontSize: 13, outline: "none", boxSizing: "border-box",
-};
-const label: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 600, color: "#9CA3AF", marginBottom: 5 };
+const fieldStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({
+  width: "100%", padding: "9px 12px", borderRadius: 8, background: t.INPUT_BG,
+  border: "1px solid rgba(255,255,255,0.12)", color: t.TEXT, fontSize: 13, outline: "none", boxSizing: "border-box",
+});
+const labelStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({ display: "block", fontSize: 12, fontWeight: 600, color: t.SUBTLE, marginBottom: 5 });
 
 // Load the current card. A 404 means "not configured yet" → null (start empty);
 // any other non-OK response throws so the caller can surface the message.
@@ -24,6 +25,10 @@ async function fetchRewardCard(): Promise<SkillsHuntFeatureRewardCard | null> {
 }
 
 export function SkillsHuntAdminRewardCard() {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
+  const field = fieldStyle(t);
+  const label = labelStyle(t);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [ctaLabel, setCtaLabel] = useState("");
@@ -80,12 +85,12 @@ export function SkillsHuntAdminRewardCard() {
   }
 
   if (loading) {
-    return <div style={{ color: "#6B7280", fontSize: 13 }}>Loading reward card…</div>;
+    return <div style={{ color: t.MUTED, fontSize: 13 }}>Loading reward card…</div>;
   }
 
   return (
     <div style={{ maxWidth: 520 }}>
-      <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 14 }}>
+      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 14 }}>
         This is the SkillsHunt reward card pinned on the Directory page. Edits here change what every member sees there.
       </div>
       <div style={{ display: "grid", gap: 12 }}>
@@ -107,14 +112,14 @@ export function SkillsHuntAdminRewardCard() {
             <input id="shrc-cta-url" style={field} value={ctaUrl} onChange={(e) => { setCtaUrl(e.target.value); setSaved(false); }} />
           </div>
         </div>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#E8EAF0", cursor: "pointer" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: t.TEXT, cursor: "pointer" }}>
           <input type="checkbox" checked={isActive} onChange={(e) => { setIsActive(e.target.checked); setSaved(false); }} />
           Show this card on the Directory page
         </label>
         {error && <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button type="button" onClick={() => void save()} disabled={saving}
-            style={{ padding: "9px 18px", borderRadius: 8, background: COLOR, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            style={{ padding: "9px 18px", borderRadius: 8, background: t.ACCENT, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>
             {saving ? "Saving…" : "Save card"}
           </button>
           {saved && <span style={{ fontSize: 13, color: "#22C55E", fontWeight: 600 }}>Saved</span>}

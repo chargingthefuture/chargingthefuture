@@ -2,7 +2,7 @@
 // Mockup: design/.../survivor-hub/MobileGentlePulse.tsx + Empty/Loading/Public variants.
 // Omitted (no backing API field): emoji, duration, category, play-count, streak, filter chips.
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { useAuth } from '../../auth/auth-context';
 import {
   fetchSessions,
@@ -21,10 +22,20 @@ import {
   type GentlePulseSession,
 } from './api';
 
-const COLOR = '#34D399';
+// BG (#061711) and SURFACE (#060A09) are gentle-pulse's own deep-green chrome — no
+// mobile theme token matches them, so they stay raw. BG doubles as the contrast ink on
+// the accent play button. The gentle-pulse accent is read from the active theme.
 const BG = '#061711';
 const SURFACE = '#060A09';
 const WIDTH = Dimensions.get('window').width;
+
+// Resolve the memoized StyleSheet + the gentle-pulse accent for the active theme.
+function useGentlePulseTheme() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('gentle-pulse', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return { styles, accent, tokens };
+}
 
 type NavKey = 'sessions' | 'playing';
 
@@ -36,6 +47,7 @@ const NAV: Array<{ icon: keyof typeof Ionicons.glyphMap; label: string; key: Nav
 // ── Loading skeleton ──────────────────────────────────────────────────────────
 
 function LoadingView() {
+  const { styles } = useGentlePulseTheme();
   return (
     <View style={styles.center}>
       <Text style={styles.loadingTag}>EXIT THEIR ECONOMY</Text>
@@ -47,6 +59,7 @@ function LoadingView() {
 // ── Empty state ───────────────────────────────────────────────────────────────
 
 function EmptyView() {
+  const { styles } = useGentlePulseTheme();
   return (
     <View style={styles.emptyWrap}>
       <View style={styles.emptyCard}>
@@ -60,10 +73,11 @@ function EmptyView() {
 // ── Public / unauthenticated state ────────────────────────────────────────────
 
 function PublicView({ onSignIn }: { onSignIn: () => void }) {
+  const { styles, accent } = useGentlePulseTheme();
   return (
     <View style={styles.publicWrap}>
       <View style={styles.publicHeader}>
-        <Ionicons name="heart" size={20} color={COLOR} />
+        <Ionicons name="heart" size={20} color={accent} />
         <Text style={styles.publicTitle}>GentlePulse</Text>
       </View>
       <Text style={styles.publicBadge}>Trauma-informed wellness</Text>
@@ -75,7 +89,7 @@ function PublicView({ onSignIn }: { onSignIn: () => void }) {
       </TouchableOpacity>
       <View style={styles.publicLockWrap}>
         <View style={styles.publicLockIcon}>
-          <Ionicons name="lock-closed" size={20} color={COLOR} />
+          <Ionicons name="lock-closed" size={20} color={accent} />
         </View>
         <Text style={styles.publicLockLabel}>Sign in for all sessions</Text>
         <TouchableOpacity style={styles.publicSignInBtn} onPress={onSignIn}>
@@ -95,12 +109,13 @@ function SessionCard({
   session: GentlePulseSession;
   onPress: () => void;
 }) {
+  const { styles, accent } = useGentlePulseTheme();
   return (
     <TouchableOpacity style={styles.sessionCard} onPress={onPress} accessibilityRole="button">
       <Text style={styles.sessionTitle} numberOfLines={2}>{session.title}</Text>
       <Text style={styles.sessionDesc} numberOfLines={3}>{session.description}</Text>
       <View style={styles.sessionPlay}>
-        <Ionicons name="play" size={12} color={COLOR} />
+        <Ionicons name="play" size={12} color={accent} />
       </View>
     </TouchableOpacity>
   );
@@ -117,12 +132,13 @@ function PlayerView({
   onBack: () => void;
   onStop: () => void;
 }) {
+  const { styles, accent } = useGentlePulseTheme();
   const [isPaused, setIsPaused] = useState(false);
 
   if (!session) {
     return (
       <View style={styles.playerEmpty}>
-        <Ionicons name="heart" size={48} color={COLOR} style={{ opacity: 0.3, marginBottom: 12 }} />
+        <Ionicons name="heart" size={48} color={accent} style={{ opacity: 0.3, marginBottom: 12 }} />
         <Text style={styles.playerEmptyText}>Select a session to begin</Text>
         <TouchableOpacity onPress={onBack} style={styles.playerEmptyBtn}>
           <Text style={styles.playerEmptyBtnText}>Browse Sessions</Text>
@@ -133,7 +149,7 @@ function PlayerView({
 
   return (
     <View style={styles.playerBox}>
-      <Ionicons name="heart-circle" size={80} color={`${COLOR}60`} style={{ marginBottom: 16 }} />
+      <Ionicons name="heart-circle" size={80} color={`${accent}60`} style={{ marginBottom: 16 }} />
       <Text style={styles.playerTitle}>{session.title}</Text>
       <Text style={styles.playerDesc} numberOfLines={4}>{session.description}</Text>
       <View style={styles.playerControls}>
@@ -155,6 +171,7 @@ function PlayerView({
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export function GentlePulse() {
+  const { styles, accent, tokens } = useGentlePulseTheme();
   const { isAuthenticated, isLoading: authLoading, signIn } = useAuth();
   const [activeNav, setActiveNav] = useState<NavKey>('sessions');
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -216,7 +233,7 @@ export function GentlePulse() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.headerIcon}>
-            <Ionicons name="heart" size={18} color={COLOR} />
+            <Ionicons name="heart" size={18} color={accent} />
           </View>
           <View>
             <Text style={styles.headerTitle}>GentlePulse</Text>
@@ -228,11 +245,11 @@ export function GentlePulse() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLOR} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
       >
         {loading && (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color={COLOR} />
+            <ActivityIndicator size="large" color={accent} />
           </View>
         )}
         {error && !loading && (
@@ -262,7 +279,7 @@ export function GentlePulse() {
         {NAV.map(({ icon, label, key }) => (
           <TouchableOpacity key={key} onPress={() => setActiveNav(key)} style={styles.bottomNavBtn}>
             <View style={[styles.bottomNavIcon, activeNav === key && styles.bottomNavIconActive]}>
-              <Ionicons name={icon} size={20} color={activeNav === key ? COLOR : '#4B5563'} />
+              <Ionicons name={icon} size={20} color={activeNav === key ? accent : tokens.textMuted} />
             </View>
             <Text style={[styles.bottomNavLabel, activeNav === key && styles.bottomNavLabelActive]}>
               {label}
@@ -274,7 +291,10 @@ export function GentlePulse() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  // Alias the accent to the name the StyleSheet already uses (exemplar idiom).
+  const COLOR = accent;
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: BG },
   fullBg: { flex: 1, backgroundColor: BG },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
@@ -284,18 +304,18 @@ const styles = StyleSheet.create({
   emptyWrap: { paddingTop: 32, paddingHorizontal: 16 },
   emptyCard: { borderRadius: 14, borderWidth: 1, borderColor: `${COLOR}30`, borderStyle: 'dashed', backgroundColor: `${COLOR}06`, padding: 18, alignItems: 'center' },
   emptyZero: { fontSize: 36, fontWeight: '900', color: COLOR, marginBottom: 4 },
-  emptyLabel: { fontSize: 12, color: '#6B7280' },
+  emptyLabel: { fontSize: 12, color: t.textSecondary },
   // Public
   publicWrap: { flex: 1, padding: 20 },
   publicHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  publicTitle: { fontSize: 20, fontWeight: '800', color: '#F9FAFB' },
+  publicTitle: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
   publicBadge: { paddingVertical: 3, paddingHorizontal: 12, borderRadius: 20, backgroundColor: `${COLOR}20`, borderWidth: 1, borderColor: `${COLOR}40`, fontSize: 11, color: COLOR, fontWeight: '600', alignSelf: 'flex-start', marginBottom: 10 },
   publicDesc: { fontSize: 14, color: '#9CA3AF', lineHeight: 21, marginBottom: 16 },
-  publicCta: { paddingVertical: 14, borderRadius: 12, backgroundColor: COLOR, alignItems: 'center', marginBottom: 24 },
+  publicCta: { paddingVertical: 14, borderRadius: t.radius, backgroundColor: COLOR, alignItems: 'center', marginBottom: 24 },
   publicCtaText: { color: '#000', fontWeight: '700', fontSize: 15 },
   publicLockWrap: { alignItems: 'center', gap: 10 },
   publicLockIcon: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: `${COLOR}50`, backgroundColor: `${COLOR}10`, alignItems: 'center', justifyContent: 'center' },
-  publicLockLabel: { fontSize: 15, fontWeight: '700', color: '#F9FAFB' },
+  publicLockLabel: { fontSize: 15, fontWeight: '700', color: t.textPrimary },
   publicSignInBtn: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: 9, backgroundColor: COLOR },
   publicSignInText: { color: '#000', fontWeight: '700', fontSize: 13 },
   // Status / header
@@ -305,7 +325,7 @@ const styles = StyleSheet.create({
   header: { paddingVertical: 14, paddingHorizontal: 20, backgroundColor: SURFACE, borderBottomWidth: 1, borderBottomColor: `${COLOR}10`, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: `${COLOR}30`, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: '#F9FAFB' },
+  headerTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary },
   headerSubtitle: { fontSize: 11, color: COLOR },
   // Scroll / content
   scroll: { flex: 1 },
@@ -313,24 +333,24 @@ const styles = StyleSheet.create({
   // Session grid
   sessionGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   sessionCard: { width: (WIDTH - 16 * 2 - 10) / 2, paddingVertical: 16, paddingHorizontal: 12, borderRadius: 14, backgroundColor: 'rgba(20,184,166,0.03)', borderWidth: 1, borderColor: `${COLOR}18`, marginBottom: 10 },
-  sessionTitle: { fontSize: 13, fontWeight: '700', color: '#F9FAFB', marginBottom: 6, lineHeight: 17 },
-  sessionDesc: { fontSize: 11, color: '#6B7280', lineHeight: 15, marginBottom: 8, flex: 1 },
+  sessionTitle: { fontSize: 13, fontWeight: '700', color: t.textPrimary, marginBottom: 6, lineHeight: 17 },
+  sessionDesc: { fontSize: 11, color: t.textSecondary, lineHeight: 15, marginBottom: 8, flex: 1 },
   sessionPlay: { width: 28, height: 28, borderRadius: 8, backgroundColor: `${COLOR}20`, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end' },
   // Player
   playerBox: { alignItems: 'center', paddingVertical: 24 },
-  playerTitle: { fontSize: 20, fontWeight: '800', color: '#F9FAFB', marginBottom: 8, textAlign: 'center' },
-  playerDesc: { fontSize: 13, color: '#6B7280', lineHeight: 19, marginBottom: 32, textAlign: 'center', paddingHorizontal: 8 },
+  playerTitle: { fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 8, textAlign: 'center' },
+  playerDesc: { fontSize: 13, color: t.textSecondary, lineHeight: 19, marginBottom: 32, textAlign: 'center', paddingHorizontal: 8 },
   playerControls: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginBottom: 24 },
   playerCtrlBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
-  playerCtrlText: { fontSize: 18, color: '#6B7280' },
+  playerCtrlText: { fontSize: 18, color: t.textSecondary },
   playerPlayBtn: { width: 68, height: 68, borderRadius: 34, backgroundColor: COLOR, alignItems: 'center', justifyContent: 'center' },
   playerAffirm: { fontSize: 13, color: `${COLOR}80`, fontStyle: 'italic', textAlign: 'center' },
   playerEmpty: { alignItems: 'center', paddingVertical: 40 },
-  playerEmptyText: { fontSize: 14, color: '#4B5563', marginBottom: 16 },
+  playerEmptyText: { fontSize: 14, color: t.textMuted, marginBottom: 16 },
   playerEmptyBtn: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: 10, backgroundColor: `${COLOR}15`, borderWidth: 1, borderColor: `${COLOR}30` },
   playerEmptyBtnText: { color: COLOR, fontSize: 14, fontWeight: '600' },
   // Error
-  errorText: { color: '#EF4444', marginBottom: 12 },
+  errorText: { color: t.danger, marginBottom: 12 },
   // Bottom nav
   bottomNav: { height: 72, backgroundColor: SURFACE, borderTopWidth: 1, borderTopColor: `${COLOR}08`, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingHorizontal: 8 },
   bottomNavBtn: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 8 },
@@ -338,4 +358,5 @@ const styles = StyleSheet.create({
   bottomNavIconActive: { backgroundColor: `${COLOR}20` },
   bottomNavLabel: { fontSize: 10, color: '#374151', fontWeight: '400' },
   bottomNavLabelActive: { color: COLOR, fontWeight: '600' },
-});
+  });
+}

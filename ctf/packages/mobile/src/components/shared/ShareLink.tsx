@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Text, Modal, TouchableOpacity, Pressable, StyleSheet, Linking, Share } from 'react-native';
+import { useTheme, type ThemeTokens } from '../../theme';
 
 // THE shared way to share any URL across the mobile app — the React Native counterpart of the web
 // `ShareLink` (the v2 "useLink" pattern). A trigger opens a popup that (1) shows the full link, (2)
@@ -21,6 +22,8 @@ type ShareLinkProps = {
 };
 
 export function ShareLink({ url, label = 'Share', title = 'Share this link', color = '#FB923C' }: ShareLinkProps) {
+  const { tokens } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const [open, setOpen] = useState(false);
 
   async function openLink() {
@@ -76,12 +79,14 @@ export function ShareLink({ url, label = 'Share', title = 'Share this link', col
   );
 }
 
-const styles = StyleSheet.create({
-  trigger: { fontSize: 12, fontWeight: '600' },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#161B27', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, gap: 12 },
-  title: { fontSize: 13, fontWeight: '700', color: '#9CA3AF' },
-  url: { fontSize: 13, color: '#E8EAF0', padding: 10, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 8 },
-  item: { paddingVertical: 12 },
-  itemText: { fontSize: 15, fontWeight: '600', color: '#E8EAF0' },
-});
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
+    trigger: { fontSize: 12, fontWeight: '600' },
+    backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    sheet: { backgroundColor: t.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, gap: 12 },
+    title: { fontSize: 13, fontWeight: '700', color: '#9CA3AF' },
+    url: { fontSize: 13, color: '#E8EAF0', padding: 10, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 8 },
+    item: { paddingVertical: 12 },
+    itemText: { fontSize: 15, fontWeight: '600', color: '#E8EAF0' },
+  });
+}

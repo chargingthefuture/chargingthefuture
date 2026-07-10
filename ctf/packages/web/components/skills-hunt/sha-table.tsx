@@ -2,7 +2,8 @@
 
 import type { SkillsHuntSubmission } from "lib/skills-hunt/types";
 import { feedAuthorHandle } from "lib/feed/author-handle";
-import { COLOR } from "./sha-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getSkillsHuntAdminTokens } from "./sha-shared";
 
 interface RowProps {
   submission: SkillsHuntSubmission;
@@ -15,21 +16,25 @@ interface RowProps {
 }
 
 function SkillsCell({ submission }: { submission: SkillsHuntSubmission }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
       {submission.skills.map((sk) => (
-        <span key={sk} style={{ padding: "1px 7px", borderRadius: 10, background: `${COLOR}20`, color: COLOR, fontSize: 11 }}>{sk}</span>
+        <span key={sk} style={{ padding: "1px 7px", borderRadius: 10, background: `${t.ACCENT}20`, color: t.ACCENT, fontSize: 11 }}>{sk}</span>
       ))}
       {submission.proposedSkills.map((sk) => (
-        <span key={sk} style={{ padding: "1px 7px", borderRadius: 10, background: "rgba(251,191,36,0.15)", color: "#FBBF24", fontSize: 11 }}>{sk} ✎</span>
+        <span key={sk} style={{ padding: "1px 7px", borderRadius: 10, background: "rgba(251,191,36,0.15)", color: t.ACCENT, fontSize: 11 }}>{sk} ✎</span>
       ))}
     </div>
   );
 }
 
 function RowActions({ submission, acting, onAccept, onReject, onFlag }: Omit<RowProps, "selected" | "onToggle">) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
   if (submission.status !== "pending") {
-    return <span style={{ fontSize: 11, color: "#6B7280" }}>{submission.reviewAction ?? submission.status}</span>;
+    return <span style={{ fontSize: 11, color: t.MUTED }}>{submission.reviewAction ?? submission.status}</span>;
   }
   const btn = (bg: string, border: string, color: string): React.CSSProperties => ({
     padding: "4px 10px", borderRadius: 6, background: bg, border, color, fontSize: 11, fontWeight: 700, cursor: "pointer", opacity: acting ? 0.5 : 1,
@@ -38,33 +43,35 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag }: Omit<Row
     <div style={{ display: "flex", gap: 6 }}>
       <button type="button" disabled={acting} onClick={() => onAccept(submission.id)} style={btn("#22C55E", "none", "#fff")}>Accept</button>
       <button type="button" disabled={acting} onClick={() => onReject(submission.id)} style={btn("#EF4444", "none", "#fff")}>Reject</button>
-      <button type="button" disabled={acting} onClick={() => onFlag(submission.id)} style={btn(`${COLOR}30`, `1px solid ${COLOR}60`, COLOR)}>Flag</button>
+      <button type="button" disabled={acting} onClick={() => onFlag(submission.id)} style={btn(`${t.ACCENT}30`, `1px solid ${t.ACCENT}60`, t.ACCENT)}>Flag</button>
     </div>
   );
 }
 
 function SubmissionRow(props: RowProps) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
   const { submission: s, selected, onToggle } = props;
-  const urlColor = s.urlValidationResult === "dead" ? "#EF4444" : s.urlValidationResult === "valid" ? "#22C55E" : "#6B7280";
+  const urlColor = s.urlValidationResult === "dead" ? "#EF4444" : s.urlValidationResult === "valid" ? "#22C55E" : t.MUTED;
   return (
-    <tr style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+    <tr style={{ borderTop: `1px solid ${t.BORDER}` }}>
       <td style={{ padding: "10px 6px" }}>
         <input type="checkbox" checked={selected} onChange={() => onToggle(s.id)} disabled={s.status !== "pending"} aria-label={`Select ${s.fullName}`} />
       </td>
       <td style={{ padding: "10px 6px" }}>
-        <div style={{ fontWeight: 600, color: "#F9FAFB" }}>{feedAuthorHandle(s.submitterUsername, s.submitterUserId)}</div>
-        <div style={{ fontSize: 11, color: "#4B5563" }}>{new Date(s.createdAtIso).toLocaleString()}</div>
+        <div style={{ fontWeight: 600, color: t.TITLE }}>{feedAuthorHandle(s.submitterUsername, s.submitterUserId)}</div>
+        <div style={{ fontSize: 11, color: t.FAINT }}>{new Date(s.createdAtIso).toLocaleString()}</div>
       </td>
       <td style={{ padding: "10px 6px" }}>{s.fullName}</td>
       <td style={{ padding: "10px 6px", maxWidth: 280 }}><SkillsCell submission={s} /></td>
       <td style={{ padding: "10px 6px" }}>
         {s.quoraProfileUrl
           ? <a href={s.quoraProfileUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#3B82F6", fontSize: 11 }}>open ↗</a>
-          : <span style={{ color: "#4B5563" }}>—</span>}
+          : <span style={{ color: t.FAINT }}>—</span>}
       </td>
       <td style={{ padding: "10px 6px", fontSize: 11, color: urlColor }}>{s.urlValidationResult ?? "—"}</td>
-      <td style={{ padding: "10px 6px", color: COLOR, fontWeight: 700 }}>{s.pointsAwarded}</td>
-      <td style={{ padding: "10px 6px", fontSize: 12, color: s.creditGranted ? "#22C55E" : "#4B5563", fontWeight: s.creditGranted ? 700 : 400 }} title={s.creditGranted ? "ServiceCredits paid to this scout" : "No ServiceCredits paid"}>
+      <td style={{ padding: "10px 6px", color: t.ACCENT, fontWeight: 700 }}>{s.pointsAwarded}</td>
+      <td style={{ padding: "10px 6px", fontSize: 12, color: s.creditGranted ? "#22C55E" : t.FAINT, fontWeight: s.creditGranted ? 700 : 400 }} title={s.creditGranted ? "ServiceCredits paid to this scout" : "No ServiceCredits paid"}>
         {s.creditGranted ? `+${s.creditAmount}` : "—"}
       </td>
       <td style={{ padding: "10px 6px" }}><RowActions {...props} /></td>
@@ -93,11 +100,13 @@ export function SkillsHuntAdminTable({
   onReject: (id: string) => void;
   onFlag: (id: string) => void;
 }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
   const headCell: React.CSSProperties = { padding: "8px 6px" };
   return (
     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
       <thead>
-        <tr style={{ textAlign: "left", color: "#6B7280", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+        <tr style={{ textAlign: "left", color: t.MUTED, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em" }}>
           <th style={{ ...headCell, width: 32 }}>
             <input type="checkbox" checked={allPendingSelected} onChange={onToggleAll} aria-label="Select all pending" />
           </th>

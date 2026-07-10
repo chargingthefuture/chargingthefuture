@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { BellRing } from "lucide-react";
-import { COLOR } from "./foundation-ui";
+import { useTheme } from "@/hooks/useTheme";
+import { getFoundationTokens } from "./foundation-ui";
 
 // "Enable call alerts on this device" (issue #808 task 5). A provider who allows instant 1:1 calls can
 // turn on Web Push so their device wakes when a member rings them, even with the app closed. The in-app
@@ -45,6 +46,8 @@ function pushSupported(): boolean {
 }
 
 export function CallAlerts() {
+  const { theme } = useTheme();
+  const t = getFoundationTokens(theme);
   const [status, setStatus] = useState<Status>("checking");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -155,7 +158,7 @@ export function CallAlerts() {
   }, []);
 
   const note = (text: string) => (
-    <div style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.5 }}>{text}</div>
+    <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5 }}>{text}</div>
   );
 
   return (
@@ -167,12 +170,12 @@ export function CallAlerts() {
         padding: "14px 16px",
         borderRadius: 12,
         background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.08)",
+        border: `1px solid ${t.BORDER_STRONG}`,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <BellRing size={16} color={COLOR} />
-        <span style={{ fontSize: 14, fontWeight: 700, color: "#F9FAFB" }}>Call alerts on this device</span>
+        <BellRing size={16} color={t.ACCENT} />
+        <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>Call alerts on this device</span>
       </div>
 
       {error ? (
@@ -218,7 +221,7 @@ export function CallAlerts() {
               padding: "9px 16px",
               borderRadius: 10,
               cursor: busy ? "default" : "pointer",
-              background: COLOR,
+              background: t.ACCENT,
               color: "#1a1205",
               fontSize: 13,
               fontWeight: 700,
@@ -233,7 +236,7 @@ export function CallAlerts() {
 
       {status === "enabled" ? (
         <>
-          <div style={{ fontSize: 13, color: COLOR, fontWeight: 600 }}>On for this device</div>
+          <div style={{ fontSize: 13, color: t.ACCENT, fontWeight: 600 }}>On for this device</div>
           {note("This device will be woken when a member rings you.")}
           <button
             type="button"
@@ -244,8 +247,8 @@ export function CallAlerts() {
               padding: "9px 16px",
               borderRadius: 10,
               cursor: busy ? "default" : "pointer",
-              background: "rgba(255,255,255,0.06)",
-              color: "#F9FAFB",
+              background: t.BORDER,
+              color: t.TITLE,
               fontSize: 13,
               fontWeight: 600,
               border: "1px solid rgba(255,255,255,0.12)",

@@ -1,13 +1,21 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
 // Design: MobileWorkforcePublic — unauthenticated visitor view
 // Live snapshot bars in the mockup have hardcoded pct values (37/25/20/18) with no real API
 // → omitted per real-data-only rule; structural layout preserved.
 // "Join the Hub" and "Sign in" buttons are navigation concerns owned by the auth shell → rendered inert.
-const COLOR = '#F97316';
+
+function useWorkforceStyles() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('workforce', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return { styles };
+}
 
 function PublicStatBar({ label, color }: { label: string; color: string }) {
+  const { styles } = useWorkforceStyles();
   return (
     <View style={styles.barRow}>
       <Text style={styles.barLabel}>{label}</Text>
@@ -20,6 +28,7 @@ function PublicStatBar({ label, color }: { label: string; color: string }) {
 }
 
 export function WorkforcePublic() {
+  const { styles } = useWorkforceStyles();
   return (
     <View style={styles.container}>
       <View style={styles.statusBar}>
@@ -41,11 +50,13 @@ export function WorkforcePublic() {
           Real-time skills distribution, employment gaps, and personalized pathways across the survivor community.
         </Text>
 
-        {/* Live snapshot — structural only; pct values omitted (no unauthed API) */}
+        {/* Live snapshot — structural only; pct values omitted (no unauthed API).
+            Bar colors are a data-series palette (green/orange/amber/grey) — stays raw per the
+            cohesion-pass policy for chart/series swatches. */}
         <View style={styles.snapshot}>
           <Text style={styles.snapshotLabel}>Live snapshot</Text>
           <PublicStatBar label="Employed" color="#22C55E" />
-          <PublicStatBar label="In Training" color={COLOR} />
+          <PublicStatBar label="In Training" color="#F97316" />
           <PublicStatBar label="Seeking" color="#F59E0B" />
           <PublicStatBar label="Exploring" color="#6B7280" />
         </View>
@@ -74,159 +85,161 @@ export function WorkforcePublic() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F1117',
-  },
-  statusBar: {
-    height: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-  },
-  statusTime: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#F9FAFB',
-  },
-  statusDots: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 16,
-    gap: 12,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#F9FAFB',
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 3,
-    borderRadius: 20,
-    backgroundColor: COLOR + '20',
-    borderWidth: 1,
-    borderColor: COLOR + '40',
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLOR,
-  },
-  description: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    lineHeight: 21,
-  },
-  snapshot: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
-    padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    gap: 8,
-  },
-  snapshotLabel: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginBottom: 2,
-  },
-  barRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  barLabel: {
-    width: 65,
-    fontSize: 11,
-    color: '#9CA3AF',
-  },
-  barTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    overflow: 'hidden',
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  ctaButton: {
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: COLOR,
-    alignItems: 'center',
-  },
-  ctaText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  lockedRegion: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    minHeight: 200,
-    position: 'relative',
-  },
-  blurPlaceholder: {
-    height: 160,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    opacity: 0.3,
-  },
-  lockOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 20,
-    right: 20,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  lockCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: COLOR + '50',
-    backgroundColor: COLOR + '10',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lockIcon: {
-    fontSize: 18,
-  },
-  lockMessage: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#F9FAFB',
-    textAlign: 'center',
-  },
-  signInButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 9,
-    backgroundColor: COLOR,
-    alignItems: 'center',
-  },
-  signInText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#fff',
-  },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.bg,
+    },
+    statusBar: {
+      height: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+    },
+    statusTime: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: t.textPrimary,
+    },
+    statusDots: {
+      fontSize: 12,
+      color: t.textSecondary,
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 24,
+      paddingBottom: 16,
+      gap: 12,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: t.textPrimary,
+    },
+    badge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 12,
+      paddingVertical: 3,
+      borderRadius: 20,
+      backgroundColor: accent + '20',
+      borderWidth: 1,
+      borderColor: accent + '40',
+    },
+    badgeText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: accent,
+    },
+    description: {
+      fontSize: 14,
+      color: '#9CA3AF',
+      lineHeight: 21,
+    },
+    snapshot: {
+      borderRadius: t.radius,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.07)',
+      padding: 14,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      gap: 8,
+    },
+    snapshotLabel: {
+      fontSize: 11,
+      color: t.textSecondary,
+      marginBottom: 2,
+    },
+    barRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    barLabel: {
+      width: 65,
+      fontSize: 11,
+      color: '#9CA3AF',
+    },
+    barTrack: {
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      overflow: 'hidden',
+    },
+    barFill: {
+      height: '100%',
+      borderRadius: 3,
+    },
+    ctaButton: {
+      padding: 14,
+      borderRadius: t.radius,
+      backgroundColor: accent,
+      alignItems: 'center',
+    },
+    ctaText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: '#fff',
+    },
+    lockedRegion: {
+      flex: 1,
+      paddingHorizontal: 20,
+      paddingBottom: 20,
+      minHeight: 200,
+      position: 'relative',
+    },
+    blurPlaceholder: {
+      height: 160,
+      borderRadius: t.radius,
+      borderWidth: 1,
+      borderColor: t.borderFaint,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      opacity: 0.3,
+    },
+    lockOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 20,
+      right: 20,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+    },
+    lockCircle: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      borderWidth: 2,
+      borderColor: accent + '50',
+      backgroundColor: accent + '10',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    lockIcon: {
+      fontSize: 18,
+    },
+    lockMessage: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: t.textPrimary,
+      textAlign: 'center',
+    },
+    signInButton: {
+      paddingHorizontal: 24,
+      paddingVertical: 10,
+      borderRadius: 9,
+      backgroundColor: accent,
+      alignItems: 'center',
+    },
+    signInText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#fff',
+    },
+  });
+}

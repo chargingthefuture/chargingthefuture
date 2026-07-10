@@ -7,13 +7,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Feedback } from './sca-fields';
 import { type AdminCirculationMetrics, type AdminCirculationResponse } from './sca-shared';
-
-// Admin design tokens (shared dark admin look). ServiceCredits accent is purple #A855F7.
-const SURFACE = '#161B27';
-const BG = '#0F1117';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+import { useTheme } from '@/hooks/useTheme';
+import { getServiceCreditsTokens } from './sc-shared';
 
 function fmt(n: number): string {
   return n.toLocaleString();
@@ -45,21 +40,23 @@ function buildTiles(m: AdminCirculationMetrics): Tile[] {
 }
 
 function Tiles({ metrics }: { metrics: AdminCirculationMetrics }) {
+  const { theme } = useTheme();
+  const t = getServiceCreditsTokens(theme);
   return (
     <>
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
         {buildTiles(metrics).map(({ label, value }) => (
           <div
             key={label}
-            style={{ borderRadius: 10, border: `1px solid ${BORDER}`, background: BG, padding: '10px 12px' }}
+            style={{ borderRadius: 10, border: `1px solid ${t.BORDER_SOLID}`, background: t.BG, padding: '10px 12px' }}
           >
-            <div style={{ fontSize: 18, fontWeight: 800, color: TEXT }}>{value}</div>
-            <div style={{ fontSize: 11, color: SUBTLE, marginTop: 2 }}>{label}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: t.TITLE }}>{value}</div>
+            <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>{label}</div>
           </div>
         ))}
       </div>
       {!metrics.treasuryUserIdConfigured ? (
-        <p style={{ fontSize: 11, color: SUBTLE, margin: 0 }}>
+        <p style={{ fontSize: 11, color: t.MUTED, margin: 0 }}>
           Set policy.treasuryUserId to track the treasury balance.
         </p>
       ) : null}
@@ -68,6 +65,8 @@ function Tiles({ metrics }: { metrics: AdminCirculationMetrics }) {
 }
 
 export function ServiceCreditsCirculationPanel() {
+  const { theme } = useTheme();
+  const t = getServiceCreditsTokens(theme);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<AdminCirculationMetrics | null>(null);
@@ -103,15 +102,15 @@ export function ServiceCreditsCirculationPanel() {
         flexDirection: 'column',
         gap: 16,
         borderRadius: 12,
-        border: `1px solid ${BORDER}`,
-        background: SURFACE,
+        border: `1px solid ${t.BORDER_SOLID}`,
+        background: t.SURFACE,
         padding: 18,
         marginBottom: 16,
       }}
     >
       <header>
-        <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, margin: '0 0 4px' }}>Circulation</h2>
-        <p style={{ fontSize: 13, color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, margin: '0 0 4px' }}>Circulation</h2>
+        <p style={{ fontSize: 13, color: t.MUTED, margin: 0, lineHeight: 1.5 }}>
           Live totals for the ServiceCredits economy and the operator levers behind issuance. These
           are bare credit quantities, not money.
         </p>
@@ -120,7 +119,7 @@ export function ServiceCreditsCirculationPanel() {
       <Feedback error={error} notice={null} />
 
       {loading ? (
-        <p style={{ fontSize: 13, color: SUBTLE, margin: 0 }}>Loading…</p>
+        <p style={{ fontSize: 13, color: t.MUTED, margin: 0 }}>Loading…</p>
       ) : metrics ? (
         <Tiles metrics={metrics} />
       ) : null}

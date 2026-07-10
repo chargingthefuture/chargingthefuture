@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../auth/auth-context';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import {
   fetchCurrentWeek,
   fetchWeekMetrics,
@@ -17,21 +18,19 @@ import {
 } from './api';
 
 // ── Brand tokens (from MobileWeeklyPerformance.tsx mockup) ──────────────────
-const BRAND = '#6366F1';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-const STATUS_BG = '#090B0F';
+// The ADMIN badge indigo — the shared raw admin-badge color used on every admin surface. It equals
+// the weekly-performance accent by coincidence; the badge deliberately stays raw (not themed).
+const ADMIN_INDIGO = '#6366F1';
 
 // Display config for well-known metric keys. Any other key is rendered generically with a
 // humanized label (the web shell does the same), so live engagement numbers show without a
 // hardcoded entry per key.
+// Metric-series palette — dashboard data colors, deliberately raw (not theme tokens).
+// '#6366F1' here is the engagements series color, which happens to equal the plugin accent.
 const METRIC_CONFIG: Record<string, { label: string; color: string }> = {
   member_count: { label: 'Members', color: '#A78BFA' },
   signups: { label: 'Sign-ups', color: '#22C55E' },
-  engagements: { label: 'Engagements', color: BRAND },
+  engagements: { label: 'Engagements', color: '#6366F1' },
   gdp_delta: { label: 'GDP Delta', color: '#06B6D4' },
 };
 
@@ -50,6 +49,15 @@ function metricConfig(key: string): { label: string; color: string } {
   return METRIC_CONFIG[key] ?? { label: humanizeMetricKey(key), color: METRIC_FALLBACK_COLOR };
 }
 
+// ── Theme wiring ─────────────────────────────────────────────────────────────
+
+function useWpStyles() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('weekly-performance', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return { tokens, accent, styles };
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type Tab = 'metrics' | 'history';
@@ -57,6 +65,7 @@ type Tab = 'metrics' | 'history';
 // ── Loading state ────────────────────────────────────────────────────────────
 
 function WpLoading() {
+  const { styles } = useWpStyles();
   return (
     <View style={styles.loadingRoot}>
       <Text style={styles.loadingLine}>EXIT THEIR ECONOMY</Text>
@@ -67,16 +76,18 @@ function WpLoading() {
 
 // ── Public (unauthenticated) state ───────────────────────────────────────────
 
+// Metric-series palette (same raw dashboard colors as METRIC_CONFIG).
 const BLURRED_LABELS = [
   { label: 'Members', color: '#A78BFA' },
   { label: 'Sign-ups', color: '#22C55E' },
-  { label: 'Engagements', color: BRAND },
+  { label: 'Engagements', color: '#6366F1' },
   { label: 'GDP Delta', color: '#06B6D4' },
 ];
 
 // ── Access-restricted state (authenticated, but lacks admin/operations role) ──
 
 function WpAccessRestricted() {
+  const { styles } = useWpStyles();
   return (
     <View style={styles.root}>
       <View style={styles.header}>
@@ -96,6 +107,7 @@ function WpAccessRestricted() {
 }
 
 function WpPublic() {
+  const { styles } = useWpStyles();
   return (
     <View style={styles.root}>
       {/* Header */}
@@ -147,6 +159,7 @@ function WpPublic() {
 // ── Empty state (authenticated, no metrics yet) ──────────────────────────────
 
 function WpEmpty({ weekLabel }: { weekLabel: string }) {
+  const { tokens, styles } = useWpStyles();
   return (
     <View style={styles.root}>
       <View style={styles.header}>
@@ -167,7 +180,7 @@ function WpEmpty({ weekLabel }: { weekLabel: string }) {
             <React.Fragment key={label}>
               <View style={[styles.metricCard, { borderColor: `${color}15` }]}>
                 <Text style={[styles.metricCardLabel, styles.metricCardLabelUpper]}>{label}</Text>
-                <Text style={[styles.metricCardValue, { color: SUBTLE }]}>—</Text>
+                <Text style={[styles.metricCardValue, { color: tokens.textSecondary }]}>—</Text>
               </View>
             </React.Fragment>
           ))}
@@ -181,6 +194,7 @@ function WpEmpty({ weekLabel }: { weekLabel: string }) {
 // ── Metric cards (populated) ─────────────────────────────────────────────────
 
 function WpMetricCards({ metrics }: { metrics: WeekMetric[] }) {
+  const { styles } = useWpStyles();
   if (metrics.length === 0) {
     return (
       <Text style={styles.noDataText}>
@@ -230,6 +244,7 @@ function WpHistory({
   onSelectWeek: (_w: WeekRow) => void;
   isAdmin: boolean;
 }) {
+  const { styles } = useWpStyles();
   return (
     <ScrollView contentContainerStyle={styles.historyList}>
       {weeks.map((w) => {
@@ -275,6 +290,7 @@ function WpBottomNav({
   activeTab: Tab;
   onTabPress: (_tab: Tab) => void;
 }) {
+  const { styles } = useWpStyles();
   const TABS: { key: Tab; label: string }[] = [
     { key: 'metrics', label: 'Metrics' },
     { key: 'history', label: 'History' },
@@ -305,6 +321,7 @@ function WpBottomNav({
 // ── Main screen ──────────────────────────────────────────────────────────────
 
 export const WeeklyPerformance: React.FC = () => {
+  const { accent, styles } = useWpStyles();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const isAdmin = !!user?.isAdmin;
   // The access-policy contract restricts every weekly-performance command to the
@@ -419,7 +436,7 @@ export const WeeklyPerformance: React.FC = () => {
       <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent}>
         {tab === 'metrics' && (
           metricsLoading
-            ? <ActivityIndicator size="large" color={BRAND} style={styles.spinner} />
+            ? <ActivityIndicator size="large" color={accent} style={styles.spinner} />
             : <WpMetricCards metrics={metrics} />
         )}
         {tab === 'history' && (
@@ -440,237 +457,240 @@ export const WeeklyPerformance: React.FC = () => {
 
 // ── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: BG },
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: t.bg },
 
-  // Loading
-  loadingRoot: {
-    flex: 1,
-    backgroundColor: BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  loadingLine: {
-    fontSize: 10,
-    letterSpacing: 2.5,
-    color: 'rgba(255,255,255,0.22)',
-    textTransform: 'uppercase',
-    fontWeight: '500',
-    lineHeight: 20,
-    textAlign: 'center',
-  },
+    // Loading
+    loadingRoot: {
+      flex: 1,
+      backgroundColor: t.bg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 32,
+    },
+    loadingLine: {
+      fontSize: 10,
+      letterSpacing: 2.5,
+      color: 'rgba(255,255,255,0.22)',
+      textTransform: 'uppercase',
+      fontWeight: '500',
+      lineHeight: 20,
+      textAlign: 'center',
+    },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    backgroundColor: STATUS_BG,
-  },
-  headerIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
-    backgroundColor: `${BRAND}20`,
-    borderWidth: 1,
-    borderColor: `${BRAND}35`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  headerIconText: { fontSize: 16 },
-  headerTextWrap: { flex: 1 },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
-  headerSub: { fontSize: 11, color: SUBTLE, marginTop: 1 },
-  adminBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: `${BRAND}20`,
-    borderWidth: 1,
-    borderColor: `${BRAND}40`,
-  },
-  adminBadgeText: { fontSize: 9, fontWeight: '700', color: BRAND },
+    // Header
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 12,
+      paddingBottom: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+      backgroundColor: t.surfaceAlt,
+    },
+    headerIconWrap: {
+      width: 34,
+      height: 34,
+      borderRadius: 9,
+      backgroundColor: `${accent}20`,
+      borderWidth: 1,
+      borderColor: `${accent}35`,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 8,
+    },
+    headerIconText: { fontSize: 16 },
+    headerTextWrap: { flex: 1 },
+    headerTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
+    headerSub: { fontSize: 11, color: t.textSecondary, marginTop: 1 },
+    // ADMIN badge — the shared raw indigo triplet used on every admin surface; stays raw.
+    adminBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: t.radiusChip,
+      backgroundColor: `${ADMIN_INDIGO}20`,
+      borderWidth: 1,
+      borderColor: `${ADMIN_INDIGO}40`,
+    },
+    adminBadgeText: { fontSize: 9, fontWeight: '700', color: ADMIN_INDIGO },
 
-  // Tab bar
-  tabBar: {
-    flexDirection: 'row',
-    gap: 4,
-    padding: 8,
-    backgroundColor: STATUS_BG,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-  },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: BORDER,
-    alignItems: 'center',
-  },
-  tabBtnActive: { backgroundColor: `${BRAND}20`, borderColor: `${BRAND}40` },
-  tabBtnText: { fontSize: 12, fontWeight: '400', color: SUBTLE },
-  tabBtnTextActive: { fontWeight: '700', color: BRAND },
+    // Tab bar
+    tabBar: {
+      flexDirection: 'row',
+      gap: 4,
+      padding: 8,
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+    },
+    tabBtn: {
+      flex: 1,
+      paddingVertical: 7,
+      borderRadius: 8,
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: 'center',
+    },
+    tabBtnActive: { backgroundColor: `${accent}20`, borderColor: `${accent}40` },
+    tabBtnText: { fontSize: 12, fontWeight: '400', color: t.textSecondary },
+    tabBtnTextActive: { fontWeight: '700', color: accent },
 
-  // Scroll
-  scrollArea: { flex: 1 },
-  scrollContent: { padding: 14, paddingBottom: 88 },
+    // Scroll
+    scrollArea: { flex: 1 },
+    scrollContent: { padding: 14, paddingBottom: 88 },
 
-  // Metrics grid
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  metricCard: {
-    width: '47%',
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: SURFACE,
-    borderWidth: 1,
-  },
-  metricCardLabel: { fontSize: 10, color: SUBTLE, marginBottom: 6 },
-  metricCardLabelUpper: { textTransform: 'uppercase', letterSpacing: 1 },
-  metricCardValue: { fontSize: 22, fontWeight: '800' },
-  metricCardUnit: { fontSize: 10, color: SUBTLE, marginTop: 2 },
-  noDataText: { fontSize: 14, color: SUBTLE, textAlign: 'center', marginTop: 32 },
+    // Metrics grid
+    metricsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    metricCard: {
+      width: '47%',
+      padding: 14,
+      borderRadius: t.radius,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+    },
+    metricCardLabel: { fontSize: 10, color: t.textSecondary, marginBottom: 6 },
+    metricCardLabelUpper: { textTransform: 'uppercase', letterSpacing: 1 },
+    metricCardValue: { fontSize: 22, fontWeight: '800' },
+    metricCardUnit: { fontSize: 10, color: t.textSecondary, marginTop: 2 },
+    noDataText: { fontSize: 14, color: t.textSecondary, textAlign: 'center', marginTop: 32 },
 
-  // History
-  historyList: { gap: 8 },
-  historyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: SURFACE,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  historyItemSelected: { borderColor: BRAND },
-  historyItemContent: { flex: 1 },
-  historyItemLabel: { fontSize: 13, fontWeight: '600', color: TEXT },
-  historyItemStatus: { fontSize: 11, color: SUBTLE, marginTop: 2 },
-  historyBadge: {
-    fontSize: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    fontWeight: '600',
-    overflow: 'hidden',
-  },
-  historyBadgeLive: {
-    backgroundColor: `${BRAND}15`,
-    color: BRAND,
-  },
-  historyBadgeView: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    color: SUBTLE,
-  },
-  exportHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: BORDER,
-    marginTop: 4,
-  },
-  exportHintText: { fontSize: 11, color: SUBTLE },
+    // History
+    historyList: { gap: 8 },
+    historyItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 14,
+      borderRadius: t.radius,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    historyItemSelected: { borderColor: accent },
+    historyItemContent: { flex: 1 },
+    historyItemLabel: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
+    historyItemStatus: { fontSize: 11, color: t.textSecondary, marginTop: 2 },
+    historyBadge: {
+      fontSize: 10,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 10,
+      fontWeight: '600',
+      overflow: 'hidden',
+    },
+    historyBadgeLive: {
+      backgroundColor: `${accent}15`,
+      color: accent,
+    },
+    historyBadgeView: {
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      color: t.textSecondary,
+    },
+    exportHint: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      padding: 12,
+      borderRadius: 10,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      borderColor: t.border,
+      marginTop: 4,
+    },
+    exportHintText: { fontSize: 11, color: t.textSecondary },
 
-  // Bottom nav
-  bottomNav: {
-    height: 72,
-    backgroundColor: STATUS_BG,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  navLabel: { fontSize: 10, fontWeight: '400', color: SUBTLE },
-  navLabelActive: { fontWeight: '600', color: BRAND },
-  navItemDimmed: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    opacity: 0.4,
-  },
-  navLabelDimmed: { fontSize: 10, color: SUBTLE },
+    // Bottom nav
+    bottomNav: {
+      height: 72,
+      backgroundColor: t.surfaceAlt,
+      borderTopWidth: 1,
+      borderTopColor: t.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    navItem: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+    },
+    navLabel: { fontSize: 10, fontWeight: '400', color: t.textSecondary },
+    navLabelActive: { fontWeight: '600', color: accent },
+    navItemDimmed: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      opacity: 0.4,
+    },
+    navLabelDimmed: { fontSize: 10, color: t.textSecondary },
 
-  // Public
-  publicHeader: {
-    padding: 12,
-    backgroundColor: `${BRAND}10`,
-    borderBottomWidth: 1,
-    borderBottomColor: `${BRAND}25`,
-    alignItems: 'center',
-  },
-  publicHero: { padding: 20 },
-  publicHeroTitle: { fontSize: 20, fontWeight: '800', color: TEXT, marginBottom: 8 },
-  publicHeroSub: { fontSize: 13, color: SUBTLE, lineHeight: 21 },
-  blurredContainer: { flex: 1, padding: 16, position: 'relative' },
-  blurredCards: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  lockOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  lockCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: `${BRAND}50`,
-    backgroundColor: `${BRAND}10`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lockIcon: { fontSize: 18 },
-  lockText: { fontSize: 14, fontWeight: '700', color: TEXT, textAlign: 'center' },
+    // Public
+    publicHeader: {
+      padding: 12,
+      backgroundColor: `${accent}10`,
+      borderBottomWidth: 1,
+      borderBottomColor: `${accent}25`,
+      alignItems: 'center',
+    },
+    publicHero: { padding: 20 },
+    publicHeroTitle: { fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 8 },
+    publicHeroSub: { fontSize: 13, color: t.textSecondary, lineHeight: 21 },
+    blurredContainer: { flex: 1, padding: 16, position: 'relative' },
+    blurredCards: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    lockOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+    },
+    lockCircle: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      borderWidth: 2,
+      borderColor: `${accent}50`,
+      backgroundColor: `${accent}10`,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    lockIcon: { fontSize: 18 },
+    lockText: { fontSize: 14, fontWeight: '700', color: t.textPrimary, textAlign: 'center' },
 
-  // Empty
-  emptyBody: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 20,
-  },
-  emptyIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: `${BRAND}10`,
-    borderWidth: 1,
-    borderColor: `${BRAND}25`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyIconText: { fontSize: 30 },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: TEXT },
-  emptySub: { fontSize: 13, color: SUBTLE, lineHeight: 21, textAlign: 'center', maxWidth: 300 },
+    // Empty
+    emptyBody: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+      gap: 20,
+    },
+    emptyIcon: {
+      width: 72,
+      height: 72,
+      borderRadius: 20,
+      backgroundColor: `${accent}10`,
+      borderWidth: 1,
+      borderColor: `${accent}25`,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyIconText: { fontSize: 30 },
+    emptyTitle: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
+    emptySub: { fontSize: 13, color: t.textSecondary, lineHeight: 21, textAlign: 'center', maxWidth: 300 },
 
-  // Misc
-  spinner: { marginTop: 32 },
-  errorText: { color: '#EF4444', fontSize: 13, textAlign: 'center', padding: 12 },
-});
+    // Misc
+    spinner: { marginTop: 32 },
+    errorText: { color: t.danger, fontSize: 13, textAlign: 'center', padding: 12 },
+  });
+}

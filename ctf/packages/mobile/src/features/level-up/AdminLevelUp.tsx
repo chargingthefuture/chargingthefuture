@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -8,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import {
   adjustMemberCredits,
@@ -18,16 +19,15 @@ import {
 import type { Cohort } from './api';
 
 // Brand tokens (from design/.../survivor-hub/MobileLevelUpAdmin.tsx).
-const COLOR = '#10B981';
-const BG = '#0F1117';
 const PANEL = '#0D0F14';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 const WARN = '#F59E0B';
 
 export const AdminLevelUp = () => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('level-up', theme);
+  const s = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+
   const { auth, loading: authLoading } = usePluginAuth('clerk');
 
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
@@ -144,87 +144,87 @@ export const AdminLevelUp = () => {
 
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLOR} />
+      <View style={s.center}>
+        <ActivityIndicator size="large" color={accent} />
       </View>
     );
   }
 
   if (!auth?.isAuthenticated || forbidden) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.noticeText}>The LevelUp admin tools are available to admins only.</Text>
+      <View style={s.center}>
+        <Text style={s.noticeText}>The LevelUp admin tools are available to admins only.</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerTextWrap}>
-          <Text style={styles.title}>LevelUp Admin</Text>
-          <Text style={styles.subtitle}>Cohort overview and ServiceCredits grants.</Text>
+    <ScrollView style={s.screen} contentContainerStyle={s.content}>
+      <View style={s.headerRow}>
+        <View style={s.headerTextWrap}>
+          <Text style={s.title}>LevelUp Admin</Text>
+          <Text style={s.subtitle}>Cohort overview and ServiceCredits grants.</Text>
         </View>
-        <View style={styles.adminBadge}>
-          <Text style={styles.adminBadgeText}>ADMIN</Text>
+        <View style={s.adminBadge}>
+          <Text style={s.adminBadgeText}>ADMIN</Text>
         </View>
       </View>
 
-      {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
-      {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
+      {error ? <Text style={s.errorBanner}>{error}</Text> : null}
+      {notice ? <Text style={s.noticeBanner}>{notice}</Text> : null}
 
       {/* Auto cohorts from Workforce gaps (issue #904) */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Auto cohorts from Workforce gaps</Text>
-        <Text style={styles.cardMeta}>
+      <View style={s.card}>
+        <Text style={s.cardTitle}>Auto cohorts from Workforce gaps</Text>
+        <Text style={s.cardMeta}>
           The daily run reads the Workforce talent gaps and opens cohorts for the largest of them. Run
           it now to apply the current gaps right away. It is safe to run more than once — a cohort is
           never created twice for the same occupation, and cohorts past their term are closed.
         </Text>
         <Pressable
-          style={[styles.primaryBtn, autoRunning ? styles.btnBusy : null]}
+          style={[s.primaryBtn, autoRunning ? s.btnBusy : null]}
           onPress={onRunAutoCohorts}
           disabled={autoRunning}
         >
           {autoRunning ? (
             <ActivityIndicator size="small" color="#000" />
           ) : (
-            <Text style={styles.primaryBtnText}>Run now</Text>
+            <Text style={s.primaryBtnText}>Run now</Text>
           )}
         </Pressable>
       </View>
 
       {/* Cohort overview */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Cohorts</Text>
+      <View style={s.card}>
+        <Text style={s.cardTitle}>Cohorts</Text>
         {cohorts.length === 0 ? (
-          <Text style={styles.cardMeta}>No cohorts yet. Trainers create cohorts from the plugin shell.</Text>
+          <Text style={s.cardMeta}>No cohorts yet. Trainers create cohorts from the plugin shell.</Text>
         ) : (
           cohorts.map((cohort) => (
             <React.Fragment key={cohort.id}>
-              <View style={styles.cohortRow}>
-                <View style={styles.cohortHeaderRow}>
-                  <Text style={styles.cohortTitle}>{cohort.title}</Text>
-                  <Text style={styles.cohortStatus}>{cohort.status}</Text>
+              <View style={s.cohortRow}>
+                <View style={s.cohortHeaderRow}>
+                  <Text style={s.cohortTitle}>{cohort.title}</Text>
+                  <Text style={s.cohortStatus}>{cohort.status}</Text>
                 </View>
                 {cohort.autoCreated || cohort.needsTrainer ? (
-                  <View style={styles.badgeRow}>
+                  <View style={s.badgeRow}>
                     {cohort.autoCreated ? (
-                      <View style={styles.autoBadge}>
-                        <Text style={styles.autoBadgeText}>auto</Text>
+                      <View style={s.autoBadge}>
+                        <Text style={s.autoBadgeText}>auto</Text>
                       </View>
                     ) : null}
                     {cohort.needsTrainer ? (
-                      <View style={styles.needsTrainerBadge}>
-                        <Text style={styles.needsTrainerBadgeText}>needs trainer</Text>
+                      <View style={s.needsTrainerBadge}>
+                        <Text style={s.needsTrainerBadgeText}>needs trainer</Text>
                       </View>
                     ) : null}
                   </View>
                 ) : null}
-                <Text style={styles.cohortMeta}>
+                <Text style={s.cohortMeta}>
                   {cohort.track} · {cohort.seatsAvailable} of {cohort.seats} seats open
                 </Text>
-                <Text style={styles.cohortMeta}>
+                <Text style={s.cohortMeta}>
                   Required deposit: {cohort.requiredCredits} credits · Trainer split:{' '}
                   {cohort.trainerSplitPercent}% · Completion bonus: {cohort.completionBonusCredits} credits
                 </Text>
@@ -235,17 +235,17 @@ export const AdminLevelUp = () => {
       </View>
 
       {/* ServiceCredits grant (grant-only — never removes credits) */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Grant member ServiceCredits</Text>
-        <Text style={styles.cardMeta}>
+      <View style={s.card}>
+        <Text style={s.cardTitle}>Grant member ServiceCredits</Text>
+        <Text style={s.cardMeta}>
           LevelUp only ever grants ServiceCredits to a member — it never removes them. Enter an amount
           greater than zero. Every grant is recorded against a governance ticket and written to the
           audit log.
         </Text>
 
-        <Text style={styles.label}>Member user ID</Text>
+        <Text style={s.label}>Member user ID</Text>
         <TextInput
-          style={styles.input}
+          style={s.input}
           value={targetUserId}
           onChangeText={setTargetUserId}
           placeholder="user_…"
@@ -254,9 +254,9 @@ export const AdminLevelUp = () => {
           editable={!confirming && !submitting}
         />
 
-        <Text style={styles.label}>Amount to grant (greater than zero)</Text>
+        <Text style={s.label}>Amount to grant (greater than zero)</Text>
         <TextInput
-          style={styles.input}
+          style={s.input}
           value={amountText}
           onChangeText={setAmountText}
           placeholder="e.g. 25"
@@ -265,9 +265,9 @@ export const AdminLevelUp = () => {
           editable={!confirming && !submitting}
         />
 
-        <Text style={styles.label}>Reason</Text>
+        <Text style={s.label}>Reason</Text>
         <TextInput
-          style={[styles.input, styles.multiline]}
+          style={[s.input, s.multiline]}
           value={reason}
           onChangeText={setReason}
           placeholder="Why this adjustment is being made"
@@ -276,9 +276,9 @@ export const AdminLevelUp = () => {
           editable={!confirming && !submitting}
         />
 
-        <Text style={styles.label}>Governance ticket ID</Text>
+        <Text style={s.label}>Governance ticket ID</Text>
         <TextInput
-          style={styles.input}
+          style={s.input}
           value={governanceTicketId}
           onChangeText={setGovernanceTicketId}
           placeholder="e.g. GOV-1234"
@@ -288,41 +288,41 @@ export const AdminLevelUp = () => {
         />
 
         {confirming ? (
-          <View style={styles.confirmBox}>
-            <Text style={styles.confirmText}>
+          <View style={s.confirmBox}>
+            <Text style={s.confirmText}>
               Confirm: this will add {magnitude} ServiceCredits to member {targetUserId.trim()}.
             </Text>
-            <Text style={styles.confirmMeta}>
+            <Text style={s.confirmMeta}>
               Reason: {reason.trim()} · Governance ticket: {governanceTicketId.trim()}
             </Text>
             <Pressable
-              style={[styles.confirmBtn, submitting ? styles.btnBusy : null]}
+              style={[s.confirmBtn, submitting ? s.btnBusy : null]}
               onPress={submitAdjustment}
               disabled={submitting}
             >
               {submitting ? (
                 <ActivityIndicator size="small" color="#000" />
               ) : (
-                <Text style={styles.confirmBtnText}>
+                <Text style={s.confirmBtnText}>
                   Yes, grant {magnitude} credits
                 </Text>
               )}
             </Pressable>
             <Pressable
-              style={styles.cancelBtn}
+              style={s.cancelBtn}
               onPress={() => setConfirming(false)}
               disabled={submitting}
             >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Text style={s.cancelBtnText}>Cancel</Text>
             </Pressable>
           </View>
         ) : (
           <Pressable
-            style={[styles.primaryBtn, !formReady ? styles.btnBusy : null]}
+            style={[s.primaryBtn, !formReady ? s.btnBusy : null]}
             onPress={beginConfirm}
             disabled={submitting || !formReady}
           >
-            <Text style={styles.primaryBtnText}>Review grant</Text>
+            <Text style={s.primaryBtnText}>Review grant</Text>
           </Pressable>
         )}
       </View>
@@ -330,133 +330,135 @@ export const AdminLevelUp = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
-  content: { padding: 16, gap: 16 },
-  center: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  headerTextWrap: { flex: 1 },
-  title: { fontSize: 20, fontWeight: '800', color: TEXT },
-  subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginTop: 2 },
-  adminBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: 'rgba(99,102,241,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.3)',
-  },
-  adminBadgeText: { fontSize: 11, fontWeight: '700', color: '#6366F1' },
-  noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
-  errorBanner: {
-    fontSize: 13,
-    color: '#FCA5A5',
-    backgroundColor: 'rgba(239,68,68,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.3)',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  noticeBanner: {
-    fontSize: 13,
-    color: '#86EFAC',
-    backgroundColor: 'rgba(16,185,129,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.3)',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  card: {
-    backgroundColor: PANEL,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 14,
-    padding: 16,
-    gap: 10,
-  },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
-  cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
-  cohortRow: {
-    backgroundColor: SURFACE,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    padding: 12,
-    gap: 4,
-  },
-  cohortHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cohortTitle: { fontSize: 14, fontWeight: '700', color: TEXT, flex: 1 },
-  cohortStatus: { fontSize: 11, color: SUBTLE, textTransform: 'capitalize' },
-  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
-  autoBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: 'rgba(99,102,241,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.3)',
-  },
-  autoBadgeText: { fontSize: 11, fontWeight: '700', color: '#6366F1' },
-  needsTrainerBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: 'rgba(245,158,11,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.4)',
-  },
-  needsTrainerBadgeText: { fontSize: 11, fontWeight: '700', color: '#FBBF24' },
-  cohortMeta: { fontSize: 11, color: SUBTLE, lineHeight: 16 },
-  label: { fontSize: 12, fontWeight: '600', color: '#D1D5DB', marginTop: 4 },
-  input: {
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    color: TEXT,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-  },
-  multiline: { minHeight: 70, textAlignVertical: 'top' },
-  primaryBtn: {
-    marginTop: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 11,
-    backgroundColor: COLOR,
-  },
-  primaryBtnText: { fontSize: 14, fontWeight: '700', color: '#000' },
-  confirmBox: {
-    marginTop: 6,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: `${WARN}66`,
-    backgroundColor: `${WARN}1A`,
-    borderRadius: 12,
-    padding: 12,
-  },
-  confirmText: { fontSize: 13, fontWeight: '700', color: WARN },
-  confirmMeta: { fontSize: 11, color: SUBTLE, lineHeight: 16 },
-  confirmBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 11,
-    backgroundColor: WARN,
-  },
-  confirmBtnText: { fontSize: 14, fontWeight: '700', color: '#000' },
-  cancelBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  cancelBtnText: { fontSize: 13, fontWeight: '600', color: SUBTLE },
-  btnBusy: { opacity: 0.7 },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: t.bg },
+    content: { padding: 16, gap: 16 },
+    center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    headerTextWrap: { flex: 1 },
+    title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
+    subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginTop: 2 },
+    adminBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: t.radiusChip,
+      backgroundColor: 'rgba(99,102,241,0.15)',
+      borderWidth: 1,
+      borderColor: 'rgba(99,102,241,0.3)',
+    },
+    adminBadgeText: { fontSize: 11, fontWeight: '700', color: '#6366F1' },
+    noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+    errorBanner: {
+      fontSize: 13,
+      color: '#FCA5A5',
+      backgroundColor: 'rgba(239,68,68,0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(239,68,68,0.3)',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    noticeBanner: {
+      fontSize: 13,
+      color: '#86EFAC',
+      backgroundColor: 'rgba(16,185,129,0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(16,185,129,0.3)',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    card: {
+      backgroundColor: PANEL,
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 14,
+      padding: 16,
+      gap: 10,
+    },
+    cardTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
+    cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+    cohortRow: {
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: t.radius,
+      padding: 12,
+      gap: 4,
+    },
+    cohortHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    cohortTitle: { fontSize: 14, fontWeight: '700', color: t.textPrimary, flex: 1 },
+    cohortStatus: { fontSize: 11, color: SUBTLE, textTransform: 'capitalize' },
+    badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+    autoBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: t.radiusChip,
+      backgroundColor: 'rgba(99,102,241,0.15)',
+      borderWidth: 1,
+      borderColor: 'rgba(99,102,241,0.3)',
+    },
+    autoBadgeText: { fontSize: 11, fontWeight: '700', color: '#6366F1' },
+    needsTrainerBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: t.radiusChip,
+      backgroundColor: 'rgba(245,158,11,0.12)',
+      borderWidth: 1,
+      borderColor: 'rgba(245,158,11,0.4)',
+    },
+    needsTrainerBadgeText: { fontSize: 11, fontWeight: '700', color: '#FBBF24' },
+    cohortMeta: { fontSize: 11, color: SUBTLE, lineHeight: 16 },
+    label: { fontSize: 12, fontWeight: '600', color: '#D1D5DB', marginTop: 4 },
+    input: {
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 10,
+      backgroundColor: 'rgba(255,255,255,0.03)',
+      color: t.textPrimary,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+    },
+    multiline: { minHeight: 70, textAlignVertical: 'top' },
+    primaryBtn: {
+      marginTop: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      borderRadius: 11,
+      backgroundColor: accent,
+    },
+    primaryBtnText: { fontSize: 14, fontWeight: '700', color: '#000' },
+    confirmBox: {
+      marginTop: 6,
+      gap: 8,
+      borderWidth: 1,
+      borderColor: `${WARN}66`,
+      backgroundColor: `${WARN}1A`,
+      borderRadius: t.radius,
+      padding: 12,
+    },
+    confirmText: { fontSize: 13, fontWeight: '700', color: WARN },
+    confirmMeta: { fontSize: 11, color: SUBTLE, lineHeight: 16 },
+    confirmBtn: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      borderRadius: 11,
+      backgroundColor: WARN,
+    },
+    confirmBtnText: { fontSize: 14, fontWeight: '700', color: '#000' },
+    cancelBtn: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 10,
+      borderRadius: 11,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    cancelBtnText: { fontSize: 13, fontWeight: '600', color: SUBTLE },
+    btnBusy: { opacity: 0.7 },
+  });
+}

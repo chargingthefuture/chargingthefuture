@@ -10,15 +10,14 @@
  * charge and call lifecycle run server-side and are driven by the controller. The
  * button only renders when canOfferConnectNow is true.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { Provider } from './api';
 import { useInstantCall, type ConnectNowProvider } from './FoundationInstantCallController';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-const COLOR = '#F59E0B';
-const TEXT = '#F9FAFB';
+// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
 const TEXT_DIM = '#9CA3AF';
-const SUBTLE = '#6B7280';
 
 // Whole ServiceCredits per block of N minutes, e.g. "5 ServiceCredits / 10 min".
 // ServiceCredits is one joined word per the brand lexicon. Mirrors instantCallRateLabel
@@ -63,6 +62,9 @@ export function canOfferConnectNow(provider: Provider, viewerUserId: string | nu
 // accepts calls — most importantly on their own profile. Caller gates on acceptsInstantCalls.
 // Mirrors InstantCallAvailabilityBadge on web.
 export const InstantCallAvailabilityBadge: React.FC<{ provider: Provider }> = ({ provider }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('foundation', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const rate = provider.instantCallRateCredits ?? 0;
   const interval = provider.instantCallIntervalMinutes ?? 0;
   const rateLabel = instantCallRateLabel(rate, interval);
@@ -82,6 +84,9 @@ const BLOCK_CAP_OPTIONS = [1, 2, 3, 4, 6, 8, 12, 24];
 const DEFAULT_BLOCK_CAP = 6;
 
 export const ConnectNowButton: React.FC<{ provider: Provider }> = ({ provider }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('foundation', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [open, setOpen] = useState(false);
 
   // canOfferConnectNow guarantees a numeric rate >= 1 before this renders, but narrow
@@ -123,6 +128,9 @@ const ConnectNowDialog: React.FC<{
   rateLabel: string;
   onClose: () => void;
 }> = ({ provider, rate, interval, rateLabel, onClose }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('foundation', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const providerName = provider.displayName;
   const [consented, setConsented] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -253,104 +261,106 @@ const ConnectNowDialog: React.FC<{
   );
 };
 
-const styles = StyleSheet.create({
-  connectBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    backgroundColor: COLOR,
-  },
-  connectIcon: { fontSize: 15 },
-  connectText: { color: '#1a1205', fontSize: 14, fontWeight: '700' },
-  connectRate: { color: '#1a1205', fontSize: 13, fontWeight: '600', opacity: 0.85 },
-  availabilityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: `${COLOR}12`,
-    borderWidth: 1,
-    borderColor: `${COLOR}30`,
-  },
-  availabilityIcon: { fontSize: 14 },
-  availabilityText: { color: COLOR, fontSize: 13.5, fontWeight: '600' },
-  availabilityRate: { color: COLOR, fontSize: 13, fontWeight: '600', opacity: 0.85 },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(8,9,13,0.72)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 440,
-    maxHeight: '88%',
-    backgroundColor: '#11131A',
-    borderWidth: 1,
-    borderColor: `${COLOR}30`,
-    borderRadius: 16,
-  },
-  cardScroll: { padding: 22 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
-  cardTitle: { fontSize: 18, fontWeight: '800', color: TEXT },
-  closeIcon: { fontSize: 24, color: TEXT_DIM, paddingHorizontal: 4 },
-  intro: { fontSize: 13.5, color: TEXT_DIM, lineHeight: 21, marginBottom: 14 },
-  introStrong: { color: TEXT, fontWeight: '700' },
-  rateBox: {
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: `${COLOR}10`,
-    borderWidth: 1,
-    borderColor: `${COLOR}28`,
-    marginBottom: 14,
-  },
-  rateBoxLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.9, color: SUBTLE, textTransform: 'uppercase', marginBottom: 6 },
-  rateBoxValue: { fontSize: 17, fontWeight: '800', color: COLOR },
-  rateBoxNote: { fontSize: 12.5, color: TEXT_DIM, marginTop: 4, lineHeight: 18 },
-  fieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.9, color: SUBTLE, textTransform: 'uppercase', marginBottom: 8 },
-  capRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  capChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  capChipOn: { backgroundColor: `${COLOR}20`, borderColor: `${COLOR}55` },
-  capChipText: { fontSize: 13, fontWeight: '600', color: TEXT_DIM },
-  capChipTextOn: { color: COLOR },
-  helpText: { fontSize: 12.5, color: TEXT_DIM, lineHeight: 18, marginBottom: 14 },
-  helpStrong: { color: TEXT, fontWeight: '700' },
-  disclaimer: { fontSize: 12.5, color: TEXT_DIM, lineHeight: 20, marginBottom: 14 },
-  errorText: { fontSize: 13, color: '#F87171', lineHeight: 18, marginBottom: 12 },
-  consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 16 },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  checkboxOn: { backgroundColor: COLOR, borderColor: COLOR },
-  checkboxMark: { color: '#1a1205', fontSize: 13, fontWeight: '800' },
-  consentText: { flex: 1, fontSize: 13, color: '#D1D5DB', lineHeight: 19 },
-  startBtn: { width: '100%', paddingVertical: 13, borderRadius: 10, alignItems: 'center' },
-  startBtnOn: { backgroundColor: COLOR },
-  startBtnOff: { backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
-  startText: { fontSize: 14, fontWeight: '700' },
-  startTextOn: { color: '#1a1205' },
-  startTextOff: { color: SUBTLE },
-  footerNote: { marginTop: 10, fontSize: 12, color: TEXT_DIM, lineHeight: 18, textAlign: 'center' },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    connectBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 18,
+      borderRadius: t.radius,
+      backgroundColor: accent,
+    },
+    connectIcon: { fontSize: 15 },
+    connectText: { color: '#1a1205', fontSize: 14, fontWeight: '700' },
+    connectRate: { color: '#1a1205', fontSize: 13, fontWeight: '600', opacity: 0.85 },
+    availabilityBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 9,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      backgroundColor: `${accent}12`,
+      borderWidth: 1,
+      borderColor: `${accent}30`,
+    },
+    availabilityIcon: { fontSize: 14 },
+    availabilityText: { color: accent, fontSize: 13.5, fontWeight: '600' },
+    availabilityRate: { color: accent, fontSize: 13, fontWeight: '600', opacity: 0.85 },
+    backdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(8,9,13,0.72)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16,
+    },
+    card: {
+      width: '100%',
+      maxWidth: 440,
+      maxHeight: '88%',
+      backgroundColor: '#11131A',
+      borderWidth: 1,
+      borderColor: `${accent}30`,
+      borderRadius: 16,
+    },
+    cardScroll: { padding: 22 },
+    cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+    cardTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary },
+    closeIcon: { fontSize: 24, color: TEXT_DIM, paddingHorizontal: 4 },
+    intro: { fontSize: 13.5, color: TEXT_DIM, lineHeight: 21, marginBottom: 14 },
+    introStrong: { color: t.textPrimary, fontWeight: '700' },
+    rateBox: {
+      padding: 14,
+      borderRadius: t.radius,
+      backgroundColor: `${accent}10`,
+      borderWidth: 1,
+      borderColor: `${accent}28`,
+      marginBottom: 14,
+    },
+    rateBoxLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.9, color: t.textSecondary, textTransform: 'uppercase', marginBottom: 6 },
+    rateBoxValue: { fontSize: 17, fontWeight: '800', color: accent },
+    rateBoxNote: { fontSize: 12.5, color: TEXT_DIM, marginTop: 4, lineHeight: 18 },
+    fieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.9, color: t.textSecondary, textTransform: 'uppercase', marginBottom: 8 },
+    capRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+    capChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 10,
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.12)',
+    },
+    capChipOn: { backgroundColor: `${accent}20`, borderColor: `${accent}55` },
+    capChipText: { fontSize: 13, fontWeight: '600', color: TEXT_DIM },
+    capChipTextOn: { color: accent },
+    helpText: { fontSize: 12.5, color: TEXT_DIM, lineHeight: 18, marginBottom: 14 },
+    helpStrong: { color: t.textPrimary, fontWeight: '700' },
+    disclaimer: { fontSize: 12.5, color: TEXT_DIM, lineHeight: 20, marginBottom: 14 },
+    errorText: { fontSize: 13, color: '#F87171', lineHeight: 18, marginBottom: 12 },
+    consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 16 },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 5,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.3)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 1,
+    },
+    checkboxOn: { backgroundColor: accent, borderColor: accent },
+    checkboxMark: { color: '#1a1205', fontSize: 13, fontWeight: '800' },
+    consentText: { flex: 1, fontSize: 13, color: '#D1D5DB', lineHeight: 19 },
+    startBtn: { width: '100%', paddingVertical: 13, borderRadius: 10, alignItems: 'center' },
+    startBtnOn: { backgroundColor: accent },
+    startBtnOff: { backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+    startText: { fontSize: 14, fontWeight: '700' },
+    startTextOn: { color: '#1a1205' },
+    startTextOff: { color: t.textSecondary },
+    footerNote: { marginTop: 10, fontSize: 12, color: TEXT_DIM, lineHeight: 18, textAlign: 'center' },
+  });
+}

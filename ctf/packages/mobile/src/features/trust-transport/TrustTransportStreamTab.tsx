@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import { fetchTrustTransportStreamCredentials } from './fetchTrustTransportStreamCredentials';
 import { StreamChat } from 'stream-chat';
 import { OverlayProvider, Chat, Channel, MessageList, MessageInput } from 'stream-chat-react-native';
+import { useTheme, getAppAccent } from '../../theme';
 
 interface TrustTransportStreamTabProps {
   tripId: string;
@@ -11,6 +12,8 @@ interface TrustTransportStreamTabProps {
 // Text chat for a trip thread. TrustTransport is chat only — there is deliberately no video room (the
 // transport plugin does not do video, and the web has no video either).
 export const TrustTransportStreamTab: React.FC<TrustTransportStreamTabProps> = ({ tripId }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // `stream-chat` and `stream-chat-react-native` bundle divergent StreamChat type definitions:
@@ -45,8 +48,8 @@ export const TrustTransportStreamTab: React.FC<TrustTransportStreamTabProps> = (
     };
   }, [tripId]);
 
-  if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color="#F97316" /></View>;
-  if (error) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{error}</Text></View>;
+  if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={accent} /></View>;
+  if (error) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: tokens.danger }}>{error}</Text></View>;
   if (!chatClient || !channelId) return null;
 
   return (

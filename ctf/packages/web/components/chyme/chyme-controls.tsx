@@ -3,18 +3,19 @@
 import type { CSSProperties } from 'react';
 import { Hand, Mic, MicOff, Phone, Volume2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import { BORDER, PRIMARY } from './chyme-shared';
+import { useTheme } from '@/hooks/useTheme';
+import { getChymeTokens, type ChymeTokens } from './chyme-shared';
 
-function toggleButtonStyle(active: boolean, activeBg: string, activeBorder: string, activeColor: string): CSSProperties {
+function toggleButtonStyle(t: ChymeTokens, active: boolean, activeBg: string, activeBorder: string, activeColor: string): CSSProperties {
   return {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
     padding: '10px 18px',
     borderRadius: 12,
-    background: active ? activeBg : 'rgba(255,255,255,0.04)',
-    border: `1px solid ${active ? activeBorder : 'rgba(255,255,255,0.08)'}`,
-    color: active ? activeColor : '#9CA3AF',
+    background: active ? activeBg : t.INPUT_BG,
+    border: `1px solid ${active ? activeBorder : t.BORDER_STRONG}`,
+    color: active ? activeColor : t.SUBTLE,
     fontSize: 14,
     fontWeight: 600,
     cursor: 'pointer',
@@ -36,14 +37,16 @@ export function ChymeControls({
   joinReady: boolean;
   onLeave: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
   const muteStyle = muted
-    ? toggleButtonStyle(true, 'rgba(239,68,68,0.15)', 'rgba(239,68,68,0.4)', '#F87171')
-    : toggleButtonStyle(true, `${PRIMARY}18`, `${PRIMARY}40`, PRIMARY);
-  const handStyle = toggleButtonStyle(handRaised, 'rgba(234,179,8,0.15)', 'rgba(234,179,8,0.4)', '#FDE047');
+    ? toggleButtonStyle(t, true, 'rgba(239,68,68,0.15)', 'rgba(239,68,68,0.4)', '#F87171')
+    : toggleButtonStyle(t, true, `${t.ACCENT}18`, `${t.ACCENT}40`, t.ACCENT);
+  const handStyle = toggleButtonStyle(t, handRaised, 'rgba(234,179,8,0.15)', 'rgba(234,179,8,0.4)', '#FDE047');
   const isMobile = useIsMobile();
 
   return (
-    <div style={{ padding: '16px 24px', borderTop: `1px solid ${BORDER}`, background: '#030d05', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, flexWrap: isMobile ? 'wrap' : undefined }}>
+    <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, flexWrap: isMobile ? 'wrap' : undefined }}>
       <button onClick={onToggleMute} style={muteStyle}>
         {muted ? <MicOff size={16} /> : <Mic size={16} />}
         {muted ? 'Unmute' : 'Mute'}
@@ -53,7 +56,7 @@ export function ChymeControls({
         {handRaised ? 'Lower Hand' : 'Raise Hand'}
       </button>
       <div style={{ flex: 1 }} />
-      <div style={{ fontSize: 12, color: '#4B5563', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ fontSize: 12, color: t.FAINT, display: 'flex', alignItems: 'center', gap: 6 }}>
         <Volume2 size={14} /> Audio
       </div>
       {joinReady && (

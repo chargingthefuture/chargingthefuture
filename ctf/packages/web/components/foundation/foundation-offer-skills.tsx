@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Check, ShieldCheck } from "lucide-react";
-import { COLOR } from "./foundation-ui";
+import { useTheme } from "@/hooks/useTheme";
+import { getFoundationTokens } from "./foundation-ui";
 import { InstantCallSettings } from "./foundation-instant-call-settings";
 
 type OfferableSkill = { id: string; name: string; offered: boolean };
@@ -13,6 +14,8 @@ type OfferableSkill = { id: string; name: string; offered: boolean };
 // puts them in Foundation's provider search — Directory says "I have this skill", Foundation says
 // "and I'll answer if you reach out about it".
 export function OfferSkillsPanel() {
+  const { theme } = useTheme();
+  const t = getFoundationTokens(theme);
   const [skills, setSkills] = useState<OfferableSkill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,12 +76,12 @@ export function OfferSkillsPanel() {
       <div style={{ padding: "24px" }}>
         <InstantCallSettings />
 
-        <div style={{ marginBottom: 20, padding: "20px 24px", borderRadius: 16, background: `linear-gradient(135deg,${COLOR}15 0%,rgba(239,68,68,0.05) 100%)`, border: `1px solid ${COLOR}20` }}>
+        <div style={{ marginBottom: 20, padding: "20px 24px", borderRadius: 16, background: `linear-gradient(135deg,${t.ACCENT}15 0%,rgba(239,68,68,0.05) 100%)`, border: `1px solid ${t.ACCENT}20` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <ShieldCheck size={18} color={COLOR} />
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB" }}>Offer your skills</div>
+            <ShieldCheck size={18} color={t.ACCENT} />
+            <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE }}>Offer your skills</div>
           </div>
-          <div style={{ fontSize: 14, color: "#9CA3AF" }}>
+          <div style={{ fontSize: 14, color: t.SUBTLE }}>
             Turn on the skills you&apos;re willing to be contacted about. Only these put you in Foundation&apos;s provider search — survivors only reach out to people who said yes.
           </div>
         </div>
@@ -88,15 +91,15 @@ export function OfferSkillsPanel() {
         ) : null}
 
         {loading ? (
-          <div style={{ padding: "48px", textAlign: "center", color: "#6B7280", fontSize: 14 }}>Loading your skills…</div>
+          <div style={{ padding: "48px", textAlign: "center", color: t.MUTED, fontSize: 14 }}>Loading your skills…</div>
         ) : skills.length === 0 ? (
           <div style={{ padding: "40px 24px", textAlign: "center", display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "#9CA3AF" }}>No skills on your Directory profile yet</div>
-            <div style={{ fontSize: 13, color: "#4B5563" }}>Add skills to your Directory profile first — then you can offer them here.</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>No skills on your Directory profile yet</div>
+            <div style={{ fontSize: 13, color: t.FAINT }}>Add skills to your Directory profile first — then you can offer them here.</div>
           </div>
         ) : (
           <>
-            <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 12 }}>{offeredCount} of {skills.length} offered</div>
+            <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 12 }}>{offeredCount} of {skills.length} offered</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {skills.map((s) => (
                 <button
@@ -104,13 +107,13 @@ export function OfferSkillsPanel() {
                   type="button"
                   disabled={savingId === s.id}
                   onClick={() => void toggle(s)}
-                  style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "12px 16px", borderRadius: 12, cursor: savingId === s.id ? "default" : "pointer", background: s.offered ? `${COLOR}12` : "rgba(255,255,255,0.02)", border: `1px solid ${s.offered ? COLOR + "40" : "rgba(255,255,255,0.08)"}`, opacity: savingId === s.id ? 0.6 : 1 }}
+                  style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "12px 16px", borderRadius: 12, cursor: savingId === s.id ? "default" : "pointer", background: s.offered ? `${t.ACCENT}12` : "rgba(255,255,255,0.02)", border: `1px solid ${s.offered ? t.ACCENT + "40" : t.BORDER_STRONG}`, opacity: savingId === s.id ? 0.6 : 1 }}
                 >
-                  <span style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: s.offered ? COLOR : "transparent", border: `1px solid ${s.offered ? COLOR : "rgba(255,255,255,0.2)"}` }}>
+                  <span style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: s.offered ? t.ACCENT : "transparent", border: `1px solid ${s.offered ? t.ACCENT : "rgba(255,255,255,0.2)"}` }}>
                     {s.offered ? <Check size={14} color="#1a1205" /> : null}
                   </span>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: "#F9FAFB" }}>{s.name}</span>
-                  <span style={{ marginLeft: "auto", fontSize: 12, color: s.offered ? COLOR : "#6B7280" }}>{s.offered ? "Offering" : "Off"}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: t.TITLE }}>{s.name}</span>
+                  <span style={{ marginLeft: "auto", fontSize: 12, color: s.offered ? t.ACCENT : t.MUTED }}>{s.offered ? "Offering" : "Off"}</span>
                 </button>
               ))}
             </div>

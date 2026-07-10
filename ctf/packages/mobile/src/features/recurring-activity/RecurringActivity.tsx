@@ -28,13 +28,12 @@ import type { Currency } from '../currency/types';
 import { fetchDirectoryList, type DirectoryListItem } from '../directory/api';
 import { useAuth } from '../../auth/auth-context';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
+import { useTheme, getAppAccent, type ThemeName, type ThemeTokens } from '../../theme';
 
-const COLOR = '#2DD4BF';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT_COLOR = '#F9FAFB';
-const SUBTLE = '#6B7280';
+// recurring-activity's accent (shipped teal #2DD4BF for default; comic ink from the shared table).
+function recurringAccent(theme: ThemeName): string {
+  return getAppAccent('recurring-activity', theme);
+}
 
 const SECTORS: { key: RecurringActivitySector; label: string }[] = [
   { key: 'housing', label: 'Housing' },
@@ -65,20 +64,21 @@ function cadenceLabel(cadence: RecurringActivityCadence): string {
 }
 
 // Calm, non-alarming status wording. No red, no "due/overdue", no nagging.
-function statusMeta(activity: Activity): { label: string; color: string } {
+// The pending "invitation" blue (#38BDF8) is a status swatch with no mobile token — left raw.
+function statusMeta(activity: Activity, accent: string, subtle: string): { label: string; color: string } {
   switch (activity.status) {
     case 'active':
-      return { label: 'Ongoing', color: COLOR };
+      return { label: 'Ongoing', color: accent };
     case 'pending':
       return activity.role === 'counterparty'
         ? { label: 'Invitation to confirm', color: '#38BDF8' }
         : { label: 'Waiting for the other member', color: '#38BDF8' };
     case 'ended':
-      return { label: 'Ended', color: SUBTLE };
+      return { label: 'Ended', color: subtle };
     case 'declined':
-      return { label: 'Not confirmed', color: SUBTLE };
+      return { label: 'Not confirmed', color: subtle };
     default:
-      return { label: activity.status, color: SUBTLE };
+      return { label: activity.status, color: subtle };
   }
 }
 
@@ -97,6 +97,9 @@ function CounterpartyPicker({
   selected: { userId: string; name: string } | null;
   onSelect: (_choice: { userId: string; name: string } | null) => void;
 }) {
+  const { tokens, theme } = useTheme();
+  const accent = recurringAccent(theme);
+  const st = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<DirectoryListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -151,7 +154,7 @@ function CounterpartyPicker({
         value={query}
         onChangeText={setQuery}
         placeholder="Search members by name"
-        placeholderTextColor={SUBTLE}
+        placeholderTextColor={tokens.textSecondary}
         autoCapitalize="none"
         style={st.input}
       />
@@ -193,6 +196,9 @@ function CreateForm({
   }) => void;
   onCancel: () => void;
 }) {
+  const { tokens, theme } = useTheme();
+  const accent = recurringAccent(theme);
+  const st = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [counterparty, setCounterparty] = useState<{ userId: string; name: string } | null>(null);
   const [sector, setSector] = useState<RecurringActivitySector>('general');
   const [currencyCode, setCurrencyCode] = useState('');
@@ -266,7 +272,7 @@ function CreateForm({
             value={scValue}
             onChangeText={setScValue}
             placeholder="e.g. 20"
-            placeholderTextColor={SUBTLE}
+            placeholderTextColor={tokens.textSecondary}
             keyboardType="numeric"
             style={st.input}
           />
@@ -320,7 +326,10 @@ function ActivityCard({
   onEnd: () => void;
   onVisibility: (_v: RecurringActivityVisibility) => void;
 }) {
-  const meta = statusMeta(activity);
+  const { tokens, theme } = useTheme();
+  const accent = recurringAccent(theme);
+  const st = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  const meta = statusMeta(activity, accent, tokens.textSecondary);
   const withName = activity.counterpartyName ?? 'a member';
   const isOwner = activity.role === 'owner';
   const canConfirm = activity.status === 'pending' && activity.role === 'counterparty';
@@ -381,6 +390,9 @@ function ActivityCard({
 
 export const RecurringActivity: React.FC = () => {
   const { user } = useAuth();
+  const { tokens, theme } = useTheme();
+  const accent = recurringAccent(theme);
+  const st = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -463,7 +475,7 @@ export const RecurringActivity: React.FC = () => {
         <Text style={st.headerSub}>Ongoing ties you choose to acknowledge</Text>
       </View>
 
-      <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 14 }}>
+      <ScrollView style={{ flex: 1, backgroundColor: tokens.bg }} contentContainerStyle={{ padding: 14 }}>
         {error && activities.length > 0 ? <Text style={st.errorText}>{error}</Text> : null}
 
         {!showForm ? (
@@ -528,50 +540,52 @@ export const RecurringActivity: React.FC = () => {
         ) : null}
 
         {loading && activities.length > 0 ? (
-          <ActivityIndicator color={COLOR} style={{ marginTop: 16 }} />
+          <ActivityIndicator color={accent} style={{ marginTop: 16 }} />
         ) : null}
       </ScrollView>
     </View>
   );
 };
 
-const st = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: BG },
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+  fill: { flex: 1, backgroundColor: t.bg },
   center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
-  header: { padding: 16, paddingBottom: 10, backgroundColor: SURFACE, borderBottomWidth: 1, borderBottomColor: BORDER },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: TEXT_COLOR },
-  headerSub: { fontSize: 12, color: SUBTLE, marginTop: 2 },
-  bodyText: { fontSize: 13, color: SUBTLE, lineHeight: 20 },
-  sectionLabel: { fontSize: 12, fontWeight: '700', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6, marginBottom: 8 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: TEXT_COLOR },
-  card: { backgroundColor: SURFACE, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: BORDER, marginBottom: 10 },
+  header: { padding: 16, paddingBottom: 10, backgroundColor: t.surface, borderBottomWidth: 1, borderBottomColor: t.border },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: t.textPrimary },
+  headerSub: { fontSize: 12, color: t.textSecondary, marginTop: 2 },
+  bodyText: { fontSize: 13, color: t.textSecondary, lineHeight: 20 },
+  sectionLabel: { fontSize: 12, fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6, marginBottom: 8 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
+  card: { backgroundColor: t.surface, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: t.border, marginBottom: 10 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: TEXT_COLOR },
-  cardWith: { fontSize: 13, color: TEXT_COLOR, marginTop: 6 },
-  cardMeta: { fontSize: 12, color: SUBTLE, marginTop: 3 },
+  cardTitle: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
+  cardWith: { fontSize: 13, color: t.textPrimary, marginTop: 6 },
+  cardMeta: { fontSize: 12, color: t.textSecondary, marginTop: 3 },
   statusPill: { paddingHorizontal: 9, paddingVertical: 2, borderRadius: 20 },
   statusPillText: { fontSize: 11, fontWeight: '600' },
-  formCard: { backgroundColor: SURFACE, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: BORDER, marginBottom: 16 },
-  formIntro: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginBottom: 12 },
-  fieldLabel: { fontSize: 12, color: SUBTLE, marginBottom: 6, marginTop: 12 },
+  formCard: { backgroundColor: t.surface, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: t.border, marginBottom: 16 },
+  formIntro: { fontSize: 13, color: t.textSecondary, lineHeight: 19, marginBottom: 12 },
+  fieldLabel: { fontSize: 12, color: t.textSecondary, marginBottom: 6, marginTop: 12 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: BORDER, backgroundColor: BG },
-  chipSelected: { borderColor: COLOR, backgroundColor: `${COLOR}22` },
-  chipText: { fontSize: 13, fontWeight: '600', color: SUBTLE },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: t.border, backgroundColor: t.bg },
+  chipSelected: { borderColor: accent, backgroundColor: `${accent}22` },
+  chipText: { fontSize: 13, fontWeight: '600', color: t.textSecondary },
   chipTextSelected: { color: '#FFFFFF' },
-  input: { padding: 10, backgroundColor: BG, borderWidth: 1, borderColor: BORDER, borderRadius: 8, fontSize: 14, color: TEXT_COLOR, marginBottom: 4 },
-  hint: { fontSize: 11, color: SUBTLE, marginTop: 8, lineHeight: 16 },
+  input: { padding: 10, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, borderRadius: 8, fontSize: 14, color: t.textPrimary, marginBottom: 4 },
+  hint: { fontSize: 11, color: t.textSecondary, marginTop: 8, lineHeight: 16 },
   errorText: { fontSize: 12, color: '#F87171', marginTop: 10, marginBottom: 4 },
   formActions: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  primaryBtn: { backgroundColor: COLOR, padding: 12, borderRadius: 9, alignItems: 'center' },
+  primaryBtn: { backgroundColor: accent, padding: 12, borderRadius: 9, alignItems: 'center' },
   primaryBtnText: { fontSize: 13, fontWeight: '700', color: '#062B27' },
-  secondaryBtn: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 9, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
-  secondaryBtnText: { fontSize: 13, color: SUBTLE },
-  selectedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: BG, borderWidth: 1, borderColor: BORDER, borderRadius: 8, padding: 10 },
-  selectedName: { fontSize: 14, fontWeight: '600', color: TEXT_COLOR },
+  secondaryBtn: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 9, borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center' },
+  secondaryBtnText: { fontSize: 13, color: t.textSecondary },
+  selectedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, borderRadius: 8, padding: 10 },
+  selectedName: { fontSize: 14, fontWeight: '600', color: t.textPrimary },
   changeBtn: { paddingHorizontal: 10, paddingVertical: 4 },
-  changeBtnText: { fontSize: 12, color: COLOR, fontWeight: '600' },
-  resultRow: { backgroundColor: BG, borderWidth: 1, borderColor: BORDER, borderRadius: 8, padding: 10, marginTop: 6 },
-  resultName: { fontSize: 13, fontWeight: '600', color: TEXT_COLOR },
-  resultSub: { fontSize: 11, color: SUBTLE, marginTop: 2 },
-});
+  changeBtnText: { fontSize: 12, color: accent, fontWeight: '600' },
+  resultRow: { backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, borderRadius: 8, padding: 10, marginTop: 6 },
+  resultName: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
+  resultSub: { fontSize: 11, color: t.textSecondary, marginTop: 2 },
+  });
+}

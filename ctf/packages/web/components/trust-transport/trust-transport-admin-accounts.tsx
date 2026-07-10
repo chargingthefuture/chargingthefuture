@@ -2,25 +2,22 @@
 
 import { useState } from 'react';
 import { ShieldOff, ShieldCheck } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
+import { getTrustTransportTokens, type TrustTransportTokens } from './tt-shared';
 
-// Admin design tokens (shared admin look). TrustTransport accent is sky blue.
-const COLOR = '#38BDF8';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-
-const fieldStyle = {
+// Admin design tokens (shared admin look) come from the shared theme getter; the default theme
+// returns the exact shipped hex values. TrustTransport accent is sky blue.
+const fieldStyle = (t: TrustTransportTokens) => ({
   width: '100%',
   padding: '9px 12px',
-  background: 'rgba(255,255,255,0.04)',
-  border: `1px solid ${BORDER}`,
+  background: t.INPUT_BG,
+  border: `1px solid ${t.BORDER_SOLID}`,
   borderRadius: 8,
   fontSize: 14,
-  color: TEXT,
+  color: t.TITLE,
   outline: 'none',
   boxSizing: 'border-box',
-} as const;
+} as const);
 
 async function adminMutate(url: string, body?: unknown): Promise<{ ok: boolean; message?: string }> {
   try {
@@ -38,6 +35,8 @@ async function adminMutate(url: string, body?: unknown): Promise<{ ok: boolean; 
 }
 
 export function TrustTransportAdminAccounts() {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
   const [userId, setUserId] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState<null | 'restrict' | 'restore'>(null);
@@ -66,22 +65,22 @@ export function TrustTransportAdminAccounts() {
   }
 
   return (
-    <div style={{ padding: '16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+    <div style={{ padding: '16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
       <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Account actions</div>
-      <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 14 }}>
+      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 14 }}>
         Restrict pauses a member from TrustTransport (e.g. after an incident); restore lifts it. Enter the member&rsquo;s user ID (copy it from the incident you&rsquo;re reviewing).
       </div>
       <label style={{ display: 'block', marginBottom: 10 }}>
-        <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>User ID</span>
-        <input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="user_…" style={fieldStyle} />
+        <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>User ID</span>
+        <input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="user_…" style={fieldStyle(t)} />
       </label>
       <label style={{ display: 'block', marginBottom: 14 }}>
-        <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>Reason (for restrict)</span>
-        <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is this account being restricted?" style={fieldStyle} />
+        <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Reason (for restrict)</span>
+        <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is this account being restricted?" style={fieldStyle(t)} />
       </label>
 
       {error ? <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: '#EF4444' }}>{error}</div> : null}
-      {message ? <div role="status" style={{ marginBottom: 12, fontSize: 13, color: COLOR }}>{message}</div> : null}
+      {message ? <div role="status" style={{ marginBottom: 12, fontSize: 13, color: t.ACCENT }}>{message}</div> : null}
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button type="button" disabled={busy !== null} onClick={() => void act('restrict')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer' }}>

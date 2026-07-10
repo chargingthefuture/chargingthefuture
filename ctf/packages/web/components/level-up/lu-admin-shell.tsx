@@ -19,49 +19,48 @@ import {
   type AdminKpis,
   type AutoCohortRunResult,
 } from './lu-admin-shared';
+import { getLevelUpTokens, type LevelUpTokens } from './lu-shared';
+import { useTheme } from '@/hooks/useTheme';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
-
-// Admin design tokens (shared admin look from the design system). LevelUp accent is green.
-const COLOR = '#10B981';
-const BG = '#0F1117';
-const PANEL = '#0D0F14';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
 
 type AdjustOutcome = { ok: boolean; adjustment?: unknown };
 
 function StatBlock({ label, value }: { label: string; value: string }) {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
   return (
-    <div style={{ flex: 1, minWidth: 140, padding: '12px 14px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
-      <div style={{ fontSize: 22, fontWeight: 800, color: TEXT }}>{value}</div>
-      <div style={{ fontSize: 11, color: SUBTLE, marginTop: 3 }}>{label}</div>
+    <div style={{ flex: 1, minWidth: 140, padding: '12px 14px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE }}>{value}</div>
+      <div style={{ fontSize: 11, color: t.MUTED, marginTop: 3 }}>{label}</div>
     </div>
   );
 }
 
 function Pill({ children }: { children: React.ReactNode }) {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
   return (
-    <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: SURFACE, color: SUBTLE, border: `1px solid ${BORDER}`, textTransform: 'capitalize' }}>
+    <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: t.SURFACE, color: t.MUTED, border: `1px solid ${t.BORDER_SOLID}`, textTransform: 'capitalize' }}>
       {children}
     </span>
   );
 }
 
-const inputStyle: React.CSSProperties = {
+const inputStyle = (t: LevelUpTokens): React.CSSProperties => ({
   width: '100%',
   borderRadius: 8,
-  background: BG,
-  border: `1px solid ${BORDER}`,
-  color: TEXT,
+  background: t.BG,
+  border: `1px solid ${t.BORDER_SOLID}`,
+  color: t.TITLE,
   padding: '9px 12px',
   fontSize: 13,
   outline: 'none',
-};
+});
 
 export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
   const isMobile = useIsMobile();
   const [cohorts, setCohorts] = useState<AdminCohort[] | null>(null);
   const [cohortsError, setCohortsError] = useState<string | null>(null);
@@ -183,21 +182,21 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
         // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
         // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
         ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
-        background: BG,
-        color: TEXT,
+        background: t.BG,
+        color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="LevelUp Admin" accent={COLOR} icon={<TrendingUp size={18} color={COLOR} />} />
+      <MobileScreenHeader title="LevelUp Admin" accent={t.ACCENT} icon={<TrendingUp size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <TrendingUp size={18} color={COLOR} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingUp size={18} color={t.ACCENT} />
           </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800 }}>LevelUp Admin</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>Program metrics, cohorts &amp; grants</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Program metrics, cohorts &amp; grants</div>
           </div>
           <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, color: '#6366F1', fontWeight: 700 }}>ADMIN</span>
         </div>
@@ -210,9 +209,9 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
         </div>
 
         {/* Auto cohorts (issue #904) */}
-        <div style={{ marginBottom: 24, padding: '16px 18px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Auto cohorts from Workforce gaps</h2>
-          <p style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6, marginBottom: 14 }}>
+        <div style={{ marginBottom: 24, padding: '16px 18px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 6 }}>Auto cohorts from Workforce gaps</h2>
+          <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginBottom: 14 }}>
             The daily run reads the Workforce talent gaps and opens cohorts for the largest of them. Run
             it now to apply the current gaps right away. It is safe to run more than once — a cohort is
             never created twice for the same occupation, and cohorts past their term are closed.
@@ -231,7 +230,7 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
             type="button"
             onClick={runAutoCohorts}
             disabled={autoRunning}
-            style={{ padding: '9px 18px', borderRadius: 8, background: COLOR, border: `1px solid ${COLOR}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: autoRunning ? 'not-allowed' : 'pointer', opacity: autoRunning ? 0.6 : 1 }}
+            style={{ padding: '9px 18px', borderRadius: 8, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: autoRunning ? 'not-allowed' : 'pointer', opacity: autoRunning ? 0.6 : 1 }}
           >
             {autoRunning ? 'Running…' : 'Run now'}
           </button>
@@ -239,23 +238,23 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
 
         {/* Cohorts */}
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 12 }}>Cohorts</h2>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>Cohorts</h2>
           {cohortsError ? (
             <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
               {cohortsError}
             </div>
           ) : null}
           {cohorts === null ? (
-            <div style={{ fontSize: 13, color: SUBTLE }}>Loading cohorts…</div>
+            <div style={{ fontSize: 13, color: t.MUTED }}>Loading cohorts…</div>
           ) : cohorts.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
               No cohorts yet. Trainers create cohorts from the plugin shell.
             </div>
           ) : (
             cohorts.map((cohort) => (
-              <div key={cohort.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+              <div key={cohort.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{cohort.title}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>{cohort.title}</span>
                   <Pill>{cohort.track}</Pill>
                   <Pill>{cohort.status}</Pill>
                   {cohort.autoCreated ? <Pill>auto</Pill> : null}
@@ -265,7 +264,7 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
                     </span>
                   ) : null}
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 24px', fontSize: 12, color: SUBTLE }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 24px', fontSize: 12, color: t.MUTED }}>
                   <span>Seats: {cohort.seatsAvailable} of {cohort.seats} open</span>
                   <span>Required deposit: {cohort.requiredCredits} credits</span>
                   <span>Trainer split: {cohort.trainerSplitPercent}%</span>
@@ -277,9 +276,9 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
         </div>
 
         {/* ServiceCredits grant (grant-only — never removes credits) */}
-        <div style={{ padding: '16px 18px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Grant member ServiceCredits</h2>
-          <p style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6, marginBottom: 14 }}>
+        <div style={{ padding: '16px 18px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 6 }}>Grant member ServiceCredits</h2>
+          <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginBottom: 14 }}>
             LevelUp only ever grants ServiceCredits to a member — it never removes them. Enter an
             amount greater than zero. Every grant is recorded against a governance ticket and is
             written to the audit log.
@@ -298,9 +297,9 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
             <label style={{ display: 'block', fontSize: 12 }}>
-              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>Member user ID</span>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Member user ID</span>
               <input
-                style={inputStyle}
+                style={inputStyle(t)}
                 value={targetUserId}
                 onChange={(event) => setTargetUserId(event.target.value)}
                 disabled={confirming || submitting}
@@ -308,9 +307,9 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
               />
             </label>
             <label style={{ display: 'block', fontSize: 12 }}>
-              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>Amount to grant (greater than zero)</span>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Amount to grant (greater than zero)</span>
               <input
-                style={inputStyle}
+                style={inputStyle(t)}
                 value={amountText}
                 onChange={(event) => setAmountText(event.target.value)}
                 disabled={confirming || submitting}
@@ -320,9 +319,9 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
               />
             </label>
             <label style={{ display: 'block', fontSize: 12, gridColumn: '1 / -1' }}>
-              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>Reason</span>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Reason</span>
               <input
-                style={inputStyle}
+                style={inputStyle(t)}
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
                 disabled={confirming || submitting}
@@ -330,9 +329,9 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
               />
             </label>
             <label style={{ display: 'block', fontSize: 12, gridColumn: '1 / -1' }}>
-              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>Governance ticket ID</span>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Governance ticket ID</span>
               <input
-                style={inputStyle}
+                style={inputStyle(t)}
                 value={governanceTicketId}
                 onChange={(event) => setGovernanceTicketId(event.target.value)}
                 disabled={confirming || submitting}
@@ -362,7 +361,7 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
                   type="button"
                   onClick={cancelConfirm}
                   disabled={submitting}
-                  style={{ padding: '8px 16px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.6 : 1 }}
+                  style={{ padding: '8px 16px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.6 : 1 }}
                 >
                   Cancel
                 </button>
@@ -373,7 +372,7 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
               type="button"
               onClick={beginConfirm}
               disabled={submitting || !formReady}
-              style={{ marginTop: 14, padding: '9px 18px', borderRadius: 8, background: COLOR, border: `1px solid ${COLOR}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: submitting || !formReady ? 'not-allowed' : 'pointer', opacity: submitting || !formReady ? 0.6 : 1 }}
+              style={{ marginTop: 14, padding: '9px 18px', borderRadius: 8, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: submitting || !formReady ? 'not-allowed' : 'pointer', opacity: submitting || !formReady ? 0.6 : 1 }}
             >
               Review grant
             </button>
@@ -381,7 +380,7 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
         </div>
 
         <p style={{ fontSize: 13, marginTop: 16 }}>
-          <Link href="/apps/level-up" style={{ color: COLOR, textDecoration: 'none', fontWeight: 600 }}>
+          <Link href="/apps/level-up" style={{ color: t.ACCENT, textDecoration: 'none', fontWeight: 600 }}>
             Open plugin shell
           </Link>
         </p>

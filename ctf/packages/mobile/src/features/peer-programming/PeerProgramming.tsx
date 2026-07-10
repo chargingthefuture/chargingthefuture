@@ -1,14 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { fetchRoom, type RoomData } from './api';
 import { usePluginAuth } from './usePluginAuth';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { PeerProgrammingLoading } from './pp-loading';
 import { PeerProgrammingPublic } from './pp-public';
 import { PeerProgrammingEmpty } from './pp-empty';
 import { PeerProgrammingCohortTab } from './pp-cohort-tab';
 import { PeerProgrammingSessionTab } from './pp-session-tab';
-
-const COLOR = '#6EE7B7';
 
 type NavKey = 'home' | 'cohorts' | 'session' | 'global';
 
@@ -28,6 +27,9 @@ export const PeerProgramming = () => {
   const [viewingCohortId, setViewingCohortId] = useState<string | null>(null);
 
   const { auth, loading: authLoading } = usePluginAuth('clerk');
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('peer-programming', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
 
   const load = useCallback(() => {
     if (!auth?.isAuthenticated || !auth.userId) return;
@@ -162,40 +164,41 @@ export const PeerProgramming = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0F1117' },
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+  root: { flex: 1, backgroundColor: t.bg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#090B0F',
+    backgroundColor: t.surfaceAlt,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
   },
   headerIcon: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: `${COLOR}30`,
+    backgroundColor: `${accent}30`,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerIconText: { fontSize: 10, fontWeight: '700', color: COLOR },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: '#F9FAFB' },
+  headerIconText: { fontSize: 10, fontWeight: '700', color: accent },
+  headerTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary },
   navBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#090B0F',
+    backgroundColor: t.surfaceAlt,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
   },
   navItem: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8 },
-  navItemActive: { backgroundColor: `${COLOR}20` },
-  navLabel: { fontSize: 13, color: '#4B5563', fontWeight: '600' },
-  navLabelActive: { color: COLOR },
+  navItemActive: { backgroundColor: `${accent}20` },
+  navLabel: { fontSize: 13, color: t.textMuted, fontWeight: '600' },
+  navLabelActive: { color: accent },
   tabContent: { flex: 1 },
   listenBanner: {
     flexDirection: 'row',
@@ -204,30 +207,30 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: `${COLOR}15`,
+    backgroundColor: `${accent}15`,
     borderBottomWidth: 1,
-    borderBottomColor: `${COLOR}30`,
+    borderBottomColor: `${accent}30`,
   },
-  listenBannerText: { flex: 1, fontSize: 12, fontWeight: '600', color: COLOR },
+  listenBannerText: { flex: 1, fontSize: 12, fontWeight: '600', color: accent },
   listenLeaveBtn: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: `${COLOR}50`,
+    borderColor: `${accent}50`,
   },
-  listenLeaveText: { fontSize: 12, fontWeight: '700', color: COLOR },
-  errorState: { flex: 1, backgroundColor: '#0F1117', alignItems: 'center', justifyContent: 'center', padding: 32 },
-  errorText: { color: '#EF4444', fontSize: 14, textAlign: 'center' },
+  listenLeaveText: { fontSize: 12, fontWeight: '700', color: accent },
+  errorState: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  errorText: { color: t.danger, fontSize: 14, textAlign: 'center' },
   globalState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   globalEmoji: { fontSize: 48, marginBottom: 12 },
-  globalTitle: { fontSize: 18, fontWeight: '800', color: '#F9FAFB', marginBottom: 6 },
-  globalSubtitle: { fontSize: 13, color: '#6B7280', textAlign: 'center' },
+  globalTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 6 },
+  globalSubtitle: { fontSize: 13, color: t.textSecondary, textAlign: 'center' },
   bottomNav: {
     height: 72,
-    backgroundColor: '#090B0F',
+    backgroundColor: t.surfaceAlt,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: t.borderFaint,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -241,7 +244,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 10,
   },
-  bottomNavItemActive: { backgroundColor: `${COLOR}20` },
-  bottomNavLabel: { fontSize: 10, color: '#4B5563', fontWeight: '400' },
-  bottomNavLabelActive: { color: COLOR, fontWeight: '600' },
-});
+  bottomNavItemActive: { backgroundColor: `${accent}20` },
+  bottomNavLabel: { fontSize: 10, color: t.textMuted, fontWeight: '400' },
+  bottomNavLabelActive: { color: accent, fontWeight: '600' },
+  });
+}

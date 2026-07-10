@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import {
   fetchAdminAuditEvents,
@@ -24,11 +25,10 @@ import {
   type TrustTransportMarketConfig,
 } from './admin-api';
 
-const COLOR = '#38BDF8';
-const BG = '#0F1117';
+// Left raw by design: PANEL/BORDER/SUBTLE have no exact-value mobile token equivalent
+// (panel #0D0F14, border alpha 0.08, subtle #9CA3AF are not in the theme palette).
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
-const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 
 function severityColor(severity: TrustTransportIncident['severity']): string {
@@ -57,6 +57,9 @@ function statusColor(status: TrustTransportIncident['status']): string {
 
 export const AdminTrustTransport = () => {
   const { auth, loading: authLoading } = usePluginAuth('clerk');
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
 
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
@@ -258,7 +261,7 @@ export const AdminTrustTransport = () => {
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLOR} />
+        <ActivityIndicator size="large" color={accent} />
       </View>
     );
   }
@@ -334,7 +337,7 @@ export const AdminTrustTransport = () => {
                   disabled={resolvingId === incident.id}
                 >
                   {resolvingId === incident.id ? (
-                    <ActivityIndicator size="small" color="#22C55E" />
+                    <ActivityIndicator size="small" color={tokens.success} />
                   ) : (
                     <Text style={styles.resolveBtnText}>Resolve</Text>
                   )}
@@ -448,11 +451,12 @@ export const AdminTrustTransport = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: t.bg },
   content: { padding: 16, gap: 16 },
-  center: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  title: { fontSize: 20, fontWeight: '800', color: TEXT },
+  center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
   subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
   noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
   errorBanner: {
@@ -482,12 +486,12 @@ const styles = StyleSheet.create({
     backgroundColor: PANEL,
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 12,
+    borderRadius: t.radius,
     padding: 12,
     gap: 4,
   },
   statLabel: { fontSize: 11, color: SUBTLE },
-  statValue: { fontSize: 22, fontWeight: '800', color: TEXT },
+  statValue: { fontSize: 22, fontWeight: '800', color: t.textPrimary },
   card: {
     backgroundColor: PANEL,
     borderWidth: 1,
@@ -496,7 +500,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
   cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
   emptyText: { fontSize: 13, color: SUBTLE, fontStyle: 'italic' },
   label: { fontSize: 12, fontWeight: '600', color: '#D1D5DB', marginTop: 4 },
@@ -505,7 +509,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.03)',
-    color: TEXT,
+    color: t.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
@@ -515,14 +519,14 @@ const styles = StyleSheet.create({
   incidentRow: {
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 12,
+    borderRadius: t.radius,
     padding: 12,
     gap: 10,
     backgroundColor: 'rgba(255,255,255,0.02)',
   },
   incidentHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   incidentHeaderText: { flex: 1, gap: 2 },
-  incidentReason: { fontSize: 14, fontWeight: '600', color: TEXT },
+  incidentReason: { fontSize: 14, fontWeight: '600', color: t.textPrimary },
   incidentMeta: { fontSize: 12, color: SUBTLE },
   badgeColumn: { alignItems: 'flex-end', gap: 4 },
   badge: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
@@ -535,7 +539,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(34,197,94,0.3)',
   },
-  resolveBtnText: { fontSize: 13, fontWeight: '700', color: '#22C55E' },
+  resolveBtnText: { fontSize: 13, fontWeight: '700', color: t.success },
   accountBtnRow: { flexDirection: 'row', gap: 10, marginTop: 6 },
   restrictBtn: {
     flex: 1,
@@ -547,7 +551,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(239,68,68,0.3)',
   },
-  restrictBtnText: { fontSize: 14, fontWeight: '700', color: '#EF4444' },
+  restrictBtnText: { fontSize: 14, fontWeight: '700', color: t.danger },
   restoreBtn: {
     flex: 1,
     alignItems: 'center',
@@ -558,14 +562,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(34,197,94,0.3)',
   },
-  restoreBtnText: { fontSize: 14, fontWeight: '700', color: '#22C55E' },
+  restoreBtnText: { fontSize: 14, fontWeight: '700', color: t.success },
   auditRow: {
     borderTopWidth: 1,
     borderTopColor: BORDER,
     paddingTop: 8,
     gap: 2,
   },
-  auditCommand: { fontSize: 13, fontWeight: '600', color: TEXT },
+  auditCommand: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
   auditMeta: { fontSize: 11, color: SUBTLE },
   primaryBtn: {
     marginTop: 6,
@@ -573,8 +577,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 11,
-    backgroundColor: COLOR,
+    backgroundColor: accent,
   },
   btnBusy: { opacity: 0.7 },
   primaryBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-});
+  });
+}

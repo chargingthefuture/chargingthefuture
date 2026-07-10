@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import {
   joinSession,
@@ -7,9 +7,8 @@ import {
   type PeerProgrammingSessionCredentials,
   type PeerProgrammingTopic,
 } from './api';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { PeerProgrammingSessionCall } from './PeerProgrammingSessionCall';
-
-const COLOR = '#6EE7B7';
 
 type Props = {
   cohort: PeerProgrammingCohort;
@@ -36,7 +35,11 @@ type VideoState =
   | { kind: 'stream-disabled' }
   | { kind: 'error'; message: string };
 
-const MessageRow = ({ item }: { item: PeerProgrammingMessage }) => (
+const MessageRow = ({ item }: { item: PeerProgrammingMessage }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('peer-programming', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return (
   <View style={styles.messageRow}>
     <View style={styles.avatar}>
       <Text style={styles.avatarText}>{item.authorUserId.slice(0, 2).toUpperCase()}</Text>
@@ -48,9 +51,13 @@ const MessageRow = ({ item }: { item: PeerProgrammingMessage }) => (
       </Text>
     </View>
   </View>
-);
+  );
+};
 
 const VideoPanel = ({ readOnly }: { readOnly?: boolean }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('peer-programming', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [video, setVideo] = useState<VideoState>({ kind: 'idle' });
 
   const handleJoin = async () => {
@@ -126,7 +133,11 @@ const VideoPanel = ({ readOnly }: { readOnly?: boolean }) => {
   );
 };
 
-export const PeerProgrammingSessionTab = ({ cohort, topic, messages, readOnly }: Props) => (
+export const PeerProgrammingSessionTab = ({ cohort, topic, messages, readOnly }: Props) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('peer-programming', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return (
   <View style={styles.root}>
     <View style={styles.sessionHeader}>
       <Text style={styles.sessionTitle}>{cohort.cohortLabel}</Text>
@@ -151,48 +162,50 @@ export const PeerProgrammingSessionTab = ({ cohort, topic, messages, readOnly }:
       style={styles.list}
     />
   </View>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
   root: { flex: 1 },
   sessionHeader: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
   },
-  sessionTitle: { fontSize: 15, fontWeight: '700', color: '#F9FAFB', marginBottom: 2 },
+  sessionTitle: { fontSize: 15, fontWeight: '700', color: t.textPrimary, marginBottom: 2 },
   sessionSubtitle: { fontSize: 12, color: '#9CA3AF' },
   listenNotice: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: `${COLOR}12`,
+    backgroundColor: `${accent}12`,
     borderBottomWidth: 1,
-    borderBottomColor: `${COLOR}25`,
+    borderBottomColor: `${accent}25`,
   },
-  listenNoticeText: { fontSize: 12, fontWeight: '600', color: COLOR },
+  listenNoticeText: { fontSize: 12, fontWeight: '600', color: accent },
   list: { flex: 1 },
   messageList: { padding: 16 },
   videoCard: {
     borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
-    borderColor: `${COLOR}30`,
+    borderColor: `${accent}30`,
     paddingVertical: 28,
     paddingHorizontal: 16,
     alignItems: 'center',
     marginBottom: 20,
   },
   videoIcon: { fontSize: 40, marginBottom: 10 },
-  videoTitle: { fontSize: 16, fontWeight: '700', color: '#F9FAFB', marginBottom: 6 },
-  videoHint: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 20 },
+  videoTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary, marginBottom: 6 },
+  videoHint: { fontSize: 13, color: t.textSecondary, textAlign: 'center', lineHeight: 20 },
   videoError: { fontSize: 13, color: '#F87171', textAlign: 'center', lineHeight: 20, marginTop: 4 },
   joinBtn: {
     marginTop: 16,
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: COLOR,
+    backgroundColor: accent,
   },
   joinBtnDisabled: { opacity: 0.6 },
   joinBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -202,22 +215,23 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: `${COLOR}25`,
+    backgroundColor: `${accent}25`,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  avatarText: { fontSize: 11, fontWeight: '700', color: COLOR },
+  avatarText: { fontSize: 11, fontWeight: '700', color: accent },
   messageBubble: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 12,
+    borderRadius: t.radius,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.07)',
     padding: 10,
   },
   messageBody: { fontSize: 13, color: '#E8EAF0', lineHeight: 18, marginBottom: 4 },
-  messageTime: { fontSize: 10, color: '#6B7280' },
+  messageTime: { fontSize: 10, color: t.textSecondary },
   emptyState: { alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyText: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 22 },
-});
+  emptyText: { fontSize: 14, color: t.textSecondary, textAlign: 'center', lineHeight: 22 },
+  });
+}

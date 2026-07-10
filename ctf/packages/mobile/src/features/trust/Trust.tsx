@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,18 +7,14 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { fetchTrustSelf, TrustUserExtension, TrustEvidenceItem } from './api';
-
-// Brand palette from design mockup (MobileTrust.tsx)
-const BRAND = '#0EA5E9';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
 // ── Loading state ─────────────────────────────────────────────────────────────
 
 function TrustLoadingView() {
+  const { tokens, theme } = useTheme();
+  const brand = getAppAccent('trust', theme);
+  const styles = useMemo(() => makeStyles(tokens, brand), [tokens, brand]);
   return (
     <View style={styles.loadingRoot}>
       <Text style={styles.loadingTagline}>EXIT THEIR ECONOMY</Text>
@@ -39,13 +35,16 @@ const PUBLIC_SIGNALS = [
 ];
 
 function TrustPublicView() {
+  const { tokens, theme } = useTheme();
+  const brand = getAppAccent('trust', theme);
+  const styles = useMemo(() => makeStyles(tokens, brand), [tokens, brand]);
   return (
     <ScrollView style={styles.publicRoot} contentContainerStyle={styles.publicContent}>
       <Text style={styles.publicTitle}>Trust</Text>
       <Text style={styles.publicTagline}>Privacy-respecting identity</Text>
       <Text style={styles.publicHeadline}>
         {'Prove you\'re real.\n'}
-        <Text style={{ color: BRAND }}>Without exposing who you are.</Text>
+        <Text style={{ color: brand }}>Without exposing who you are.</Text>
       </Text>
       <Text style={styles.publicDesc}>
         Trust aggregates voluntary signals to establish credibility. Providers and peers can trust
@@ -75,6 +74,9 @@ function TrustPublicView() {
 // Authenticated user with no evidence yet.
 
 function TrustEmptyView({ visibility }: { visibility: string }) {
+  const { tokens, theme } = useTheme();
+  const brand = getAppAccent('trust', theme);
+  const styles = useMemo(() => makeStyles(tokens, brand), [tokens, brand]);
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.scrollContent}>
       {/* Header */}
@@ -115,7 +117,7 @@ function TrustEmptyView({ visibility }: { visibility: string }) {
           ] as { label: string; value: string }[]).map(({ label, value }) => (
             <React.Fragment key={label}>
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: SUBTLE }]}>{value}</Text>
+                <Text style={[styles.statValue, { color: tokens.textSecondary }]}>{value}</Text>
                 <Text style={styles.statLabel}>{label}</Text>
               </View>
             </React.Fragment>
@@ -123,7 +125,7 @@ function TrustEmptyView({ visibility }: { visibility: string }) {
         </View>
         <View style={styles.progressRow}>
           <Text style={styles.progressLabel}>Signal progress</Text>
-          <Text style={[styles.progressPct, { color: SUBTLE }]}>0%</Text>
+          <Text style={[styles.progressPct, { color: tokens.textSecondary }]}>0%</Text>
         </View>
         <View style={styles.progressBg}>
           <View style={[styles.progressFill, { width: '0%' }]} />
@@ -141,6 +143,9 @@ function TrustEmptyView({ visibility }: { visibility: string }) {
 // ── Main (populated) state ────────────────────────────────────────────────────
 
 function TrustMainView({ trust }: { trust: TrustUserExtension }) {
+  const { tokens, theme } = useTheme();
+  const brand = getAppAccent('trust', theme);
+  const styles = useMemo(() => makeStyles(tokens, brand), [tokens, brand]);
   const visibility = trust.trustVisibility;
 
   return (
@@ -197,6 +202,9 @@ function TrustMainView({ trust }: { trust: TrustUserExtension }) {
 // ── Root screen ───────────────────────────────────────────────────────────────
 
 export const Trust: React.FC = () => {
+  const { tokens, theme } = useTheme();
+  const brand = getAppAccent('trust', theme);
+  const styles = useMemo(() => makeStyles(tokens, brand), [tokens, brand]);
   const [loading, setLoading] = useState(true);
   const [trust, setTrust] = useState<TrustUserExtension | null>(null);
   const [unauthenticated, setUnauthenticated] = useState(false);
@@ -268,11 +276,12 @@ function capitalise(s: string): string {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, brand: string) {
+  return StyleSheet.create({
   // Loading
   loadingRoot: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: t.bg,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
@@ -287,40 +296,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   // Public
-  publicRoot: { flex: 1, backgroundColor: BG },
+  publicRoot: { flex: 1, backgroundColor: t.bg },
   publicContent: { padding: 20, paddingBottom: 40 },
-  publicTitle: { fontSize: 20, fontWeight: '800', color: TEXT, marginBottom: 8 },
+  publicTitle: { fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 8 },
   publicTagline: {
     paddingVertical: 3,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: BRAND + '20',
+    backgroundColor: brand + '20',
     borderWidth: 1,
-    borderColor: BRAND + '40',
+    borderColor: brand + '40',
     fontSize: 11,
-    color: BRAND,
+    color: brand,
     fontWeight: '600',
     alignSelf: 'flex-start',
     marginBottom: 12,
     overflow: 'hidden',
   },
-  publicHeadline: { fontSize: 22, fontWeight: '800', color: TEXT, lineHeight: 28, marginBottom: 12 },
+  publicHeadline: { fontSize: 22, fontWeight: '800', color: t.textPrimary, lineHeight: 28, marginBottom: 12 },
   publicDesc: { fontSize: 14, color: '#9CA3AF', lineHeight: 21, marginBottom: 16 },
   publicSignalRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   publicSignalDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: BRAND,
+    backgroundColor: brand,
   },
   publicSignalText: { fontSize: 13, color: '#D1D5DB' },
   previewCard: {
     marginTop: 20,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: BRAND + '30',
+    borderColor: brand + '30',
     padding: 20,
-    backgroundColor: BRAND + '06',
+    backgroundColor: brand + '06',
     alignItems: 'center',
     gap: 8,
   },
@@ -329,18 +338,18 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     borderWidth: 3,
-    borderColor: BRAND,
-    backgroundColor: BRAND + '15',
+    borderColor: brand,
+    backgroundColor: brand + '15',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
   },
   previewIconText: { fontSize: 26 },
-  previewScoreLabel: { fontSize: 11, color: SUBTLE },
-  previewScoreDash: { fontSize: 28, fontWeight: '900', color: BRAND, marginTop: 2 },
-  previewSignIn: { fontSize: 11, color: SUBTLE, marginTop: 2 },
+  previewScoreLabel: { fontSize: 11, color: t.textSecondary },
+  previewScoreDash: { fontSize: 28, fontWeight: '900', color: brand, marginTop: 2 },
+  previewSignIn: { fontSize: 11, color: t.textSecondary, marginTop: 2 },
   // Shared screen root
-  root: { flex: 1, backgroundColor: BG },
+  root: { flex: 1, backgroundColor: t.bg },
   scrollContent: { paddingBottom: 32 },
   // Header
   header: {
@@ -350,22 +359,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: t.border,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconWrap: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: BRAND + '15',
+    backgroundColor: brand + '15',
     borderWidth: 1,
-    borderColor: BRAND + '30',
+    borderColor: brand + '30',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconText: { fontSize: 18 },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: TEXT },
-  headerSubtitle: { fontSize: 11, color: SUBTLE },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: t.textPrimary },
+  headerSubtitle: { fontSize: 11, color: t.textSecondary },
   // Empty state
   emptyIllustration: { alignItems: 'center', textAlign: 'center', marginVertical: 24, paddingHorizontal: 16 },
   emptyCircleOuter: {
@@ -373,7 +382,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 2,
-    borderColor: BRAND + '30',
+    borderColor: brand + '30',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
@@ -383,70 +392,70 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: BRAND + '08',
+    backgroundColor: brand + '08',
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyIconLarge: { fontSize: 28, opacity: 0.3 },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: TEXT, marginBottom: 8 },
-  emptyDesc: { fontSize: 13, color: SUBTLE, lineHeight: 20, textAlign: 'center', maxWidth: 300 },
+  emptyTitle: { fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 8 },
+  emptyDesc: { fontSize: 13, color: t.textSecondary, lineHeight: 20, textAlign: 'center', maxWidth: 300 },
   // Score card
   scoreCard: {
     margin: 16,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: BRAND + '20',
+    borderColor: brand + '20',
     padding: 16,
-    backgroundColor: SURFACE,
+    backgroundColor: t.surface,
   },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: SUBTLE,
+    color: t.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 12,
   },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
   statItem: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 12, fontWeight: '700', color: TEXT },
-  statLabel: { fontSize: 9, color: '#4B5563', marginTop: 2 },
+  statValue: { fontSize: 12, fontWeight: '700', color: t.textPrimary },
+  statLabel: { fontSize: 9, color: t.textMuted, marginTop: 2 },
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  progressLabel: { fontSize: 11, color: SUBTLE },
+  progressLabel: { fontSize: 11, color: t.textSecondary },
   progressPct: { fontSize: 11, fontWeight: '700' },
   progressBg: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: BRAND + '15',
+    backgroundColor: brand + '15',
     overflow: 'hidden',
   },
-  progressFill: { height: '100%', borderRadius: 3, backgroundColor: BRAND },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: brand },
   // Visibility card (empty state)
   visCard: {
     marginHorizontal: 16,
     marginTop: 0,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: t.radius,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
     padding: 12,
-    backgroundColor: SURFACE,
+    backgroundColor: t.surface,
   },
-  visLabel: { fontSize: 12, color: SUBTLE },
+  visLabel: { fontSize: 12, color: t.textSecondary },
   // Visibility card (populated state)
   visCardFull: {
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: t.radius,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
     padding: 12,
-    backgroundColor: SURFACE,
+    backgroundColor: t.surface,
   },
   visFullLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: SUBTLE,
+    color: t.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 10,
@@ -454,22 +463,22 @@ const styles = StyleSheet.create({
   visRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: BG,
+    backgroundColor: t.bg,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
     borderRadius: 8,
     padding: 10,
   },
-  visRowText: { fontSize: 13, fontWeight: '500', color: TEXT },
+  visRowText: { fontSize: 13, fontWeight: '500', color: t.textPrimary },
   // Evidence card
   evidenceCard: {
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: t.radius,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
     padding: 12,
-    backgroundColor: SURFACE,
+    backgroundColor: t.surface,
   },
   evidenceRow: {
     flexDirection: 'row',
@@ -477,40 +486,41 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 9,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: t.border,
   },
   evidenceRowLast: { borderBottomWidth: 0 },
   evidenceIconWrap: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: BRAND + '12',
+    backgroundColor: brand + '12',
     borderWidth: 1,
-    borderColor: BRAND + '20',
+    borderColor: brand + '20',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  evidenceIconText: { fontSize: 14, color: BRAND },
+  evidenceIconText: { fontSize: 14, color: brand },
   evidenceBody: { flex: 1 },
-  evidenceLabel: { fontSize: 13, fontWeight: '500', color: TEXT },
-  evidenceTime: { fontSize: 11, color: SUBTLE },
+  evidenceLabel: { fontSize: 13, fontWeight: '500', color: t.textPrimary },
+  evidenceTime: { fontSize: 11, color: t.textSecondary },
   // Error
   errorRoot: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: t.bg,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
   },
-  errorText: { color: '#EF4444', fontSize: 14, marginBottom: 16, textAlign: 'center' },
+  errorText: { color: t.danger, fontSize: 14, marginBottom: 16, textAlign: 'center' },
   retryBtn: {
-    backgroundColor: BRAND + '20',
+    backgroundColor: brand + '20',
     borderWidth: 1,
-    borderColor: BRAND + '40',
+    borderColor: brand + '40',
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 24,
   },
-  retryText: { color: BRAND, fontSize: 14, fontWeight: '700' },
-});
+  retryText: { color: brand, fontSize: 14, fontWeight: '700' },
+  });
+}

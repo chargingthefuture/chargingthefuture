@@ -5,7 +5,7 @@
 // per-day averages — never per-user rows — and withholds data until a minimum
 // number of check-ins exist, so a clean empty state shows below that threshold.
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -16,12 +16,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { fetchMoodCommunity, fetchMoodEligibility, submitMood, type CommunityPulse } from './api';
 
-const COLOR = '#4ADE80';
-const BG = '#0F1117';
-const SURFACE = '#090B0F';
-
+// The MOODS scale colors (and the faceForAverage fallback) encode a wellbeing value —
+// they are DATA, not chrome, so they stay raw. Chrome + the mood accent are read from
+// the active theme inside makeStyles.
 const MOODS = [
   { emoji: '😢', label: 'Low', value: 1, color: '#EF4444' },
   { emoji: '😔', label: 'Down', value: 2, color: '#F97316' },
@@ -47,6 +47,14 @@ function useClientId(): string {
   return ref.current;
 }
 
+// Resolve the memoized StyleSheet + the mood accent for the active theme.
+function useMoodTheme() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('mood', theme);
+  const s = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return { s, accent, tokens };
+}
+
 function MoodPicker({
   selected,
   onSelect,
@@ -54,6 +62,7 @@ function MoodPicker({
   selected: number | null;
   onSelect: (_v: number) => void;
 }) {
+  const { s } = useMoodTheme();
   return (
     <View style={s.moodRow}>
       {MOODS.map((m) => (
@@ -79,6 +88,7 @@ function CheckinView({
   clientId: string;
   onSubmitted: () => void;
 }) {
+  const { s, tokens } = useMoodTheme();
   const [selected, setSelected] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -113,7 +123,7 @@ function CheckinView({
           <TextInput
             style={s.noteInput}
             placeholder="(Optional) Anything to share? Pseudonymous and private…"
-            placeholderTextColor="#4B5563"
+            placeholderTextColor={tokens.textMuted}
             multiline
             numberOfLines={3}
             value={note}
@@ -140,6 +150,7 @@ function CheckinView({
 }
 
 function SubmittedView({ onReset }: { onReset: () => void }) {
+  const { s } = useMoodTheme();
   return (
     <View style={s.submittedWrap}>
       <Text style={s.submittedHeart}>💚</Text>
@@ -168,6 +179,7 @@ function faceForAverage(avg: number | null): { emoji: string; color: string } {
 // Trends tab: real aggregate community pulse from GET /api/mood/community.
 // Shows an empty state until the backend reports enough check-ins.
 function TrendsView() {
+  const { s, accent } = useMoodTheme();
   const [pulse, setPulse] = useState<CommunityPulse | null>(null);
   const [loading, setLoading] = useState(true);
   const [errored, setErrored] = useState(false);
@@ -183,7 +195,7 @@ function TrendsView() {
     return () => { active = false; };
   }, []);
 
-  if (loading) return <ActivityIndicator color={COLOR} style={s.loader} />;
+  if (loading) return <ActivityIndicator color={accent} style={s.loader} />;
 
   if (errored) {
     return (
@@ -222,8 +234,8 @@ function TrendsView() {
           </Text>
           <Text style={s.trendsCardLabel}>Avg mood ({pulse.windowDays}-day)</Text>
         </View>
-        <View style={[s.trendsCard, { backgroundColor: `${COLOR}08`, borderColor: `${COLOR}20` }]}>
-          <Text style={[s.trendsCardValue, { color: COLOR }]}>{pulse.totalCount.toLocaleString()}</Text>
+        <View style={[s.trendsCard, { backgroundColor: `${accent}08`, borderColor: `${accent}20` }]}>
+          <Text style={[s.trendsCardValue, { color: accent }]}>{pulse.totalCount.toLocaleString()}</Text>
           <Text style={s.trendsCardLabel}>Check-ins this week</Text>
         </View>
       </View>
@@ -241,7 +253,7 @@ function TrendsView() {
                       style={[
                         s.chartBar,
                         { height: heightPx },
-                        day.averageMood ? { backgroundColor: COLOR } : s.chartBarEmpty,
+                        day.averageMood ? { backgroundColor: accent } : s.chartBarEmpty,
                       ]}
                     />
                   </View>
@@ -258,6 +270,7 @@ function TrendsView() {
 }
 
 function HomeView({ onNavigate }: { onNavigate: (_key: NavKey) => void }) {
+  const { s } = useMoodTheme();
   return (
     <View style={s.emptyWrap}>
       <Text style={s.emptyEmoji}>😁</Text>
@@ -271,6 +284,7 @@ function HomeView({ onNavigate }: { onNavigate: (_key: NavKey) => void }) {
 }
 
 function PrivateView() {
+  const { s } = useMoodTheme();
   return (
     <View style={s.emptyWrap}>
       <Text style={s.emptyEmoji}>🔒</Text>
@@ -281,6 +295,7 @@ function PrivateView() {
 }
 
 export function Mood() {
+  const { s, accent } = useMoodTheme();
   const clientId = useClientId();
   const [activeNav, setActiveNav] = useState<NavKey>('checkin');
   const [submitted, setSubmitted] = useState(false);
@@ -313,7 +328,7 @@ export function Mood() {
   }, [clientId]);
 
   const renderCheckin = () => {
-    if (loadingEligibility) return <ActivityIndicator color={COLOR} style={s.loader} />;
+    if (loadingEligibility) return <ActivityIndicator color={accent} style={s.loader} />;
     if (eligible === false) {
       const when = cooldownUntil ? new Date(cooldownUntil).toLocaleDateString() : 'soon';
       return (
@@ -371,7 +386,12 @@ export function Mood() {
   );
 }
 
-const s = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  // Alias the theme values to the names the StyleSheet already uses (exemplar idiom).
+  const COLOR = accent;
+  const BG = t.bg;
+  const SURFACE = t.surfaceAlt;
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: BG },
   header: {
     flexDirection: 'row',
@@ -381,7 +401,7 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: SURFACE,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
   },
   headerIcon: {
     width: 36, height: 36, borderRadius: 10,
@@ -389,7 +409,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   headerIconText: { fontSize: 18, color: COLOR },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: '#F9FAFB' },
+  headerTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary },
   headerSub: { fontSize: 11, color: COLOR },
   anonBadge: {
     marginLeft: 'auto',
@@ -401,19 +421,19 @@ const s = StyleSheet.create({
   scrollArea: { flex: 1 },
   scrollContent: { padding: 16 },
   loader: { marginTop: 32 },
-  checkinTitle: { fontSize: 20, fontWeight: '800', color: '#F9FAFB', textAlign: 'center', marginBottom: 6 },
-  checkinSub: { fontSize: 13, color: '#6B7280', textAlign: 'center', marginBottom: 24 },
+  checkinTitle: { fontSize: 20, fontWeight: '800', color: t.textPrimary, textAlign: 'center', marginBottom: 6 },
+  checkinSub: { fontSize: 13, color: t.textSecondary, textAlign: 'center', marginBottom: 24 },
   moodRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', marginBottom: 24 },
   moodBtn: {
     flex: 1, alignItems: 'center', gap: 4,
     paddingVertical: 12, paddingHorizontal: 4, borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 2, borderColor: t.borderFaint,
   },
   moodEmoji: { fontSize: 26 },
-  moodLabel: { fontSize: 10, fontWeight: '600', color: '#4B5563' },
+  moodLabel: { fontSize: 10, fontWeight: '600', color: t.textMuted },
   noteInput: {
-    width: '100%', padding: 12, borderRadius: 12,
+    width: '100%', padding: 12, borderRadius: t.radius,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
     fontSize: 14, color: '#E8EAF0',
@@ -425,12 +445,12 @@ const s = StyleSheet.create({
   },
   submitBtnDisabled: { opacity: 0.6 },
   submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  anonNote: { fontSize: 11, color: '#4B5563', textAlign: 'center' },
-  errorText: { color: '#EF4444', fontSize: 13, textAlign: 'center', marginTop: 12 },
+  anonNote: { fontSize: 11, color: t.textMuted, textAlign: 'center' },
+  errorText: { color: t.danger, fontSize: 13, textAlign: 'center', marginTop: 12 },
   submittedWrap: { alignItems: 'center', paddingVertical: 24 },
   submittedHeart: { fontSize: 72, marginBottom: 16 },
-  submittedTitle: { fontSize: 22, fontWeight: '800', color: '#F9FAFB', marginBottom: 6 },
-  submittedSub: { fontSize: 14, color: '#6B7280', marginBottom: 24, textAlign: 'center' },
+  submittedTitle: { fontSize: 22, fontWeight: '800', color: t.textPrimary, marginBottom: 6 },
+  submittedSub: { fontSize: 14, color: t.textSecondary, marginBottom: 24, textAlign: 'center' },
   checkAgainBtn: {
     marginTop: 8, paddingVertical: 10, paddingHorizontal: 24, borderRadius: 10,
     backgroundColor: `${COLOR}15`,
@@ -439,19 +459,19 @@ const s = StyleSheet.create({
   checkAgainText: { color: COLOR, fontSize: 14, fontWeight: '600' },
   emptyWrap: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 16 },
   emptyEmoji: { fontSize: 56, marginBottom: 16 },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#F9FAFB', marginBottom: 6, textAlign: 'center' },
-  emptySub: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 20 },
-  trendsTitle: { fontSize: 18, fontWeight: '800', color: '#F9FAFB', marginBottom: 4 },
-  trendsSub: { fontSize: 12, color: '#6B7280', marginBottom: 16 },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 6, textAlign: 'center' },
+  emptySub: { fontSize: 13, color: t.textSecondary, textAlign: 'center', lineHeight: 20 },
+  trendsTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 4 },
+  trendsSub: { fontSize: 12, color: t.textSecondary, marginBottom: 16 },
   trendsCardsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  trendsCard: { flex: 1, padding: 14, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
+  trendsCard: { flex: 1, padding: 14, borderRadius: t.radius, borderWidth: 1, alignItems: 'center' },
   trendsCardEmoji: { fontSize: 26, marginBottom: 2 },
   trendsCardValue: { fontSize: 20, fontWeight: '800', marginBottom: 2 },
-  trendsCardLabel: { fontSize: 11, color: '#6B7280', textAlign: 'center' },
+  trendsCardLabel: { fontSize: 11, color: t.textSecondary, textAlign: 'center' },
   chartCard: {
     padding: 16, borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: t.borderFaint,
   },
   chartTitle: { fontSize: 13, fontWeight: '700', color: '#9CA3AF', marginBottom: 12 },
   chartRow: { flexDirection: 'row', gap: 6, alignItems: 'flex-end', height: 96 },
@@ -462,13 +482,13 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderStyle: 'dashed',
   },
-  chartDayLabel: { fontSize: 10, color: '#4B5563', marginTop: 4 },
+  chartDayLabel: { fontSize: 10, color: t.textMuted, marginTop: 4 },
   chartDayValue: { fontSize: 10, color: COLOR, fontWeight: '700' },
   navBar: {
     height: 72, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-around', paddingHorizontal: 8,
     backgroundColor: SURFACE,
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopWidth: 1, borderTopColor: t.borderFaint,
   },
   navItem: { flex: 1, alignItems: 'center', paddingVertical: 8 },
   navIconWrap: {
@@ -476,6 +496,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   navIconActive: { backgroundColor: `${COLOR}20` },
-  navLabel: { fontSize: 10, color: '#4B5563', fontWeight: '400' },
+  navLabel: { fontSize: 10, color: t.textMuted, fontWeight: '400' },
   navLabelActive: { color: COLOR, fontWeight: '600' },
-});
+  });
+}

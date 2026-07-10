@@ -1,7 +1,9 @@
 "use client";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { COLOR, type Tab } from "./sc-shared";
+import { type Tab } from "./sc-shared";
+import { useTheme } from '@/hooks/useTheme';
+import { getServiceCreditsTokens } from './sc-shared';
 
 // Real secondary navigation: each row switches the main view (the same tabs the icon rail drives),
 // so every item is clickable. The earlier list was decorative-only labels with no click affordance,
@@ -14,10 +16,12 @@ const NAV: { key: Tab; label: string }[] = [
 ];
 
 export function ServiceCreditsSidebar({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
+  const { theme } = useTheme();
+  const t = getServiceCreditsTokens(theme);
   return (
-    <aside style={{ width: 240, background: "#0D0F14", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+    <aside style={{ width: 240, background: t.HEADER, borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", flexShrink: 0 }}>
       <div style={{ padding: "20px 16px 12px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#6B7280", textTransform: "uppercase", marginBottom: 12 }}>ServiceCredits</div>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.MUTED, textTransform: "uppercase", marginBottom: 12 }}>ServiceCredits</div>
       </div>
       <ScrollArea style={{ flex: 1 }}>
         <div style={{ padding: "0 8px 16px" }}>
@@ -32,9 +36,9 @@ export function ServiceCreditsSidebar({ tab, onTab }: { tab: Tab; onTab: (tab: T
                 style={{
                   display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 10px",
                   borderRadius: 8, marginLeft: 2, marginBottom: 2, cursor: "pointer", textAlign: "left",
-                  background: active ? `${COLOR}1A` : "transparent",
-                  border: `1px solid ${active ? COLOR + "33" : "transparent"}`,
-                  color: active ? COLOR : "#9CA3AF",
+                  background: active ? `${t.ACCENT}1A` : "transparent",
+                  border: `1px solid ${active ? t.ACCENT + "33" : "transparent"}`,
+                  color: active ? t.ACCENT : t.SUBTLE,
                   fontSize: 13, fontWeight: active ? 600 : 500,
                 }}
               >

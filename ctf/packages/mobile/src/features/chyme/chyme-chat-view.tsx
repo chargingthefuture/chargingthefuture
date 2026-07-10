@@ -6,7 +6,7 @@
  * Omissions from mockup (no backing API field):
  *   - Per-message reaction/heart counts (no backend field).
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -15,9 +15,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { chymeHandle } from './api';
-
-const PRIMARY = '#22C55E';
 
 export type ChatMessage = {
   id: string;
@@ -57,7 +56,11 @@ export const ChymeChatView: React.FC<Props> = ({
   onChangeInput,
   onSend,
   onBack,
-}) => (
+}) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('chyme', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return (
   <View style={styles.container}>
     <View style={styles.statusBar}>
       <Text style={styles.clock}>9:41</Text>
@@ -100,7 +103,7 @@ export const ChymeChatView: React.FC<Props> = ({
           value={input}
           onChangeText={onChangeInput}
           placeholder="Say something…"
-          placeholderTextColor="#4B5563"
+          placeholderTextColor={tokens.textMuted}
           onSubmitEditing={onSend}
           returnKeyType="send"
           editable={!sending}
@@ -117,9 +120,12 @@ export const ChymeChatView: React.FC<Props> = ({
       </View>
     </View>
   </View>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  const PRIMARY = accent;
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: '#04160A' },
   statusBar: {
     height: 44,
@@ -163,7 +169,7 @@ const styles = StyleSheet.create({
   messageTime: { fontSize: 11, color: '#374151' },
   messageText: { fontSize: 14, color: '#9CA3AF', lineHeight: 21 },
   empty: { flex: 1, alignItems: 'center', paddingVertical: 24 },
-  emptyText: { fontSize: 14, color: '#4B5563', textAlign: 'center' },
+  emptyText: { fontSize: 14, color: t.textMuted, textAlign: 'center' },
   inputRow: {
     padding: 12,
     paddingHorizontal: 16,
@@ -191,4 +197,5 @@ const styles = StyleSheet.create({
   },
   sendBtnActive: { backgroundColor: PRIMARY },
   sendBtnIcon: { color: '#fff', fontSize: 20, fontWeight: '700' },
-});
+  });
+}

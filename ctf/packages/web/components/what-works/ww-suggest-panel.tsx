@@ -7,7 +7,8 @@ import { useState, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ListChecks, Plus, ExternalLink, Send, CheckCircle, Tag, ChevronDown, ChevronLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import { BG, BRAND, BORDER, SUBTLE, TEXT, type SuggestDraft, type WhatWorksProblemOption } from './ww-shared';
+import { useTheme } from '@/hooks/useTheme';
+import { getWhatWorksTokens, type SuggestDraft, type WhatWorksProblemOption, type WhatWorksTokens } from './ww-shared';
 import { WhatWorksSuggestGuidance } from './ww-suggest-guidance';
 
 type Props = {
@@ -17,15 +18,17 @@ type Props = {
   onBack?: () => void;
 };
 
-const inputStyle: CSSProperties = {
-  flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: '#F9FAFB', fontFamily: 'inherit',
-};
+const makeInputStyle = (t: WhatWorksTokens): CSSProperties => ({
+  flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: t.TITLE, fontFamily: 'inherit',
+});
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
+  const { theme } = useTheme();
+  const t = getWhatWorksTokens(theme);
   return (
     <div>
-      <label style={{ fontSize: 13, fontWeight: 600, color: '#9CA3AF', display: 'block', marginBottom: 8 }}>
-        {label} {required ? <span style={{ color: BRAND }}>*</span> : null}
+      <label style={{ fontSize: 13, fontWeight: 600, color: t.SUBTLE, display: 'block', marginBottom: 8 }}>
+        {label} {required ? <span style={{ color: t.ACCENT }}>*</span> : null}
       </label>
       {children}
     </div>
@@ -33,6 +36,9 @@ function Field({ label, required, children }: { label: string; required?: boolea
 }
 
 export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: Props) {
+  const { theme } = useTheme();
+  const t = getWhatWorksTokens(theme);
+  const inputStyle = makeInputStyle(t);
   const [problemId, setProblemId] = useState('');
   const [name, setName] = useState('');
   const [link, setLink] = useState('');
@@ -63,19 +69,19 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
 
   if (added) {
     return (
-      <div style={{ width: '100%', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: "'Inter',system-ui", color: TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <div style={{ width: '100%', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Inter',system-ui", color: t.TITLE, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         <div style={{ maxWidth: 460, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, padding: '0 32px' }}>
-          <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${BRAND}15`, border: `1px solid ${BRAND}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CheckCircle size={34} color={BRAND} />
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CheckCircle size={34} color={t.ACCENT} />
           </div>
           <div style={{ fontSize: 24, fontWeight: 800 }}>Suggestion submitted 🎉</div>
-          <div style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.7 }}>A reviewer will check it before it joins the shared list. Each tool you add helps the next survivor find what works faster.</div>
+          <div style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.7 }}>A reviewer will check it before it joins the shared list. Each tool you add helps the next survivor find what works faster.</div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => setAdded(false)} style={{ padding: '12px 24px', borderRadius: 10, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <button onClick={() => setAdded(false)} style={{ padding: '12px 24px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#0A0E06', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
               <Plus size={15} /> Add another
             </button>
             {onBack ? (
-              <button onClick={onBack} style={{ padding: '12px 24px', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={onBack} style={{ padding: '12px 24px', borderRadius: 10, background: t.BORDER, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                 Back to list
               </button>
             ) : null}
@@ -86,18 +92,18 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: "'Inter',system-ui", color: TEXT, overflow: 'hidden' }}>
-      <div style={{ height: 56, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, background: '#0D0F14', flexShrink: 0 }}>
-        <Link href="/apps" aria-label="Back to apps" style={{ width: 36, height: 36, borderRadius: 9, background: `${BRAND}14`, border: `1px solid ${BRAND}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: BRAND, textDecoration: 'none', flexShrink: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Inter',system-ui", color: t.TITLE, overflow: 'hidden' }}>
+      <div style={{ height: 56, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, background: t.HEADER, flexShrink: 0 }}>
+        <Link href="/apps" aria-label="Back to apps" style={{ width: 36, height: 36, borderRadius: 9, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.ACCENT, textDecoration: 'none', flexShrink: 0 }}>
           <ChevronLeft size={18} />
         </Link>
-        <ListChecks size={18} color={BRAND} />
+        <ListChecks size={18} color={t.ACCENT} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 600 }}>What Works</div>
-          <div style={{ fontSize: 12, color: SUBTLE }}>Add a survivor-verified tool to the shared list</div>
+          <div style={{ fontSize: 12, color: t.MUTED }}>Add a survivor-verified tool to the shared list</div>
         </div>
         {onBack ? (
-          <button onClick={onBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 9, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, color: '#9CA3AF', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={onBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 9, background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}`, color: t.SUBTLE, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
             <ChevronLeft size={14} /> Back to list
           </button>
         ) : null}
@@ -106,13 +112,13 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'flex-start', justifyContent: isMobile ? 'flex-start' : 'center', padding: isMobile ? '24px 16px' : '44px 64px', gap: isMobile ? 24 : 44 }}>
         <div style={{ flex: 1, maxWidth: 540 }}>
           <div style={{ marginBottom: 26 }}>
-            <div style={{ width: 56, height: 56, borderRadius: 16, background: `${BRAND}12`, border: `1px solid ${BRAND}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-              <ListChecks size={26} color={BRAND} />
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: `${t.ACCENT}12`, border: `1px solid ${t.ACCENT}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <ListChecks size={26} color={t.ACCENT} />
             </div>
             <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 10 }}>
               {isFirst ? 'The list is empty — add what worked first.' : 'Suggest a tool that worked.'}
             </div>
-            <div style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.7 }}>
+            <div style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.7 }}>
               Pick the problem your product solves, then add a specific item that worked for you — with a direct purchase link and a short note on why. Example: <span style={{ color: '#C4CAD3' }}>“Noise &amp; Verbal Harassment”</span> → a pair of noise-cancelling headphones.
             </div>
           </div>
@@ -126,36 +132,36 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
             style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
           >
             <Field label="Problem it solves" required>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${problemId ? BRAND + '50' : BORDER}`, borderRadius: 12 }}>
-                <Tag size={14} color={SUBTLE} style={{ flexShrink: 0 }} />
-                <select value={problemId} onChange={(event) => setProblemId(event.target.value)} style={{ ...inputStyle, cursor: 'pointer', appearance: 'none', color: problemId ? '#F9FAFB' : SUBTLE }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: t.INPUT_BG, border: `1px solid ${problemId ? t.ACCENT + '50' : t.BORDER_SOLID}`, borderRadius: 12 }}>
+                <Tag size={14} color={t.MUTED} style={{ flexShrink: 0 }} />
+                <select value={problemId} onChange={(event) => setProblemId(event.target.value)} style={{ ...inputStyle, cursor: 'pointer', appearance: 'none', color: problemId ? t.TITLE : t.MUTED }}>
                   <option value="" disabled>Choose an existing problem…</option>
                   {problems.map((problem) => (
-                    <option key={problem.id} value={problem.id} style={{ background: '#11141B', color: '#F9FAFB' }}>{problem.title}</option>
+                    <option key={problem.id} value={problem.id} style={{ background: '#11141B', color: t.TITLE }}>{problem.title}</option>
                   ))}
                 </select>
-                <ChevronDown size={15} color={SUBTLE} style={{ flexShrink: 0 }} />
+                <ChevronDown size={15} color={t.MUTED} style={{ flexShrink: 0 }} />
               </div>
-              <div style={{ fontSize: 11, color: SUBTLE, marginTop: 6, lineHeight: 1.5 }}>Pick an existing problem. New problems are added by admins to avoid duplicates.</div>
+              <div style={{ fontSize: 11, color: t.MUTED, marginTop: 6, lineHeight: 1.5 }}>Pick an existing problem. New problems are added by admins to avoid duplicates.</div>
             </Field>
 
             <Field label="Product name" required>
-              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Sony WH-1000XM5 Headphones" style={{ ...inputStyle, padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${name ? BRAND + '50' : BORDER}`, borderRadius: 12, boxSizing: 'border-box', width: '100%' }} />
+              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Sony WH-1000XM5 Headphones" style={{ ...inputStyle, padding: '11px 14px', background: t.INPUT_BG, border: `1px solid ${name ? t.ACCENT + '50' : t.BORDER_SOLID}`, borderRadius: 12, boxSizing: 'border-box', width: '100%' }} />
             </Field>
 
             <Field label="Direct purchase link" required>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${link ? BRAND + '50' : BORDER}`, borderRadius: 12 }}>
-                <ExternalLink size={14} color={SUBTLE} style={{ flexShrink: 0 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: t.INPUT_BG, border: `1px solid ${link ? t.ACCENT + '50' : t.BORDER_SOLID}`, borderRadius: 12 }}>
+                <ExternalLink size={14} color={t.MUTED} style={{ flexShrink: 0 }} />
                 <input value={link} onChange={(event) => setLink(event.target.value)} placeholder="https://…" style={inputStyle} />
               </div>
             </Field>
 
             <Field label="Why it works (optional)">
-              <textarea value={why} onChange={(event) => setWhy(event.target.value)} rows={3} placeholder="A short note from your experience — what it actually solved." style={{ ...inputStyle, padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, borderRadius: 12, boxSizing: 'border-box', width: '100%', resize: 'none', lineHeight: 1.5 }} />
+              <textarea value={why} onChange={(event) => setWhy(event.target.value)} rows={3} placeholder="A short note from your experience — what it actually solved." style={{ ...inputStyle, padding: '11px 14px', background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 12, boxSizing: 'border-box', width: '100%', resize: 'none', lineHeight: 1.5 }} />
             </Field>
 
             <button type="submit" disabled={!ready || submitting}
-              style={{ padding: '14px', borderRadius: 12, background: ready && !submitting ? BRAND : 'rgba(255,255,255,0.06)', border: 'none', color: ready && !submitting ? '#0A0E06' : SUBTLE, fontSize: 15, fontWeight: 700, cursor: ready && !submitting ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              style={{ padding: '14px', borderRadius: 12, background: ready && !submitting ? t.ACCENT : t.BORDER, border: 'none', color: ready && !submitting ? '#0A0E06' : t.MUTED, fontSize: 15, fontWeight: 700, cursor: ready && !submitting ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <Send size={16} /> {submitting ? 'Submitting…' : 'Submit for review'}
             </button>
           </form>

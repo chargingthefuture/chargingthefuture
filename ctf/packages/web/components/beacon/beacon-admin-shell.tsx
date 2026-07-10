@@ -16,17 +16,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Radio, Copy, Check } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { BeaconHostStage, type BeaconHostCredentials } from './beacon-host-stage';
-import { BEACON_COLOR } from 'lib/beacon/constants';
-
-const BG = '#0F1117';
-const PANEL = '#0D0F14';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#9CA3AF';
+import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
 
 type BeaconEvent = {
   id: string;
@@ -77,6 +71,8 @@ async function adminMutate<T = unknown>(url: string, method: 'POST', body?: unkn
 
 export function BeaconAdminShell() {
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getBeaconTokens(theme);
   const [events, setEvents] = useState<BeaconEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -235,51 +231,51 @@ export function BeaconAdminShell() {
   return (
     <main
       style={{
-        background: BG,
+        background: t.BG,
         // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
         // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
         // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
         ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
-        color: TEXT,
+        color: t.TITLE,
       }}
     >
-      <MobileScreenHeader title="Beacon Admin" accent={BEACON_COLOR} icon={<Radio size={18} color={BEACON_COLOR} />} />
+      <MobileScreenHeader title="Beacon Admin" accent={t.ACCENT} icon={<Radio size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 980, margin: '0 auto', padding: '32px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Radio size={22} style={{ color: BEACON_COLOR }} />
+          <Radio size={22} style={{ color: t.ACCENT }} />
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Beacon admin</h1>
         </div>
-        <p style={{ color: SUBTLE, fontSize: 14, marginTop: 4 }}>
+        <p style={{ color: t.SUBTLE, fontSize: 14, marginTop: 4 }}>
           Go live with a one-way broadcast. Watching is public; chatting needs a signed-in member.
-          {' '}<Link href="/apps/beacon" style={{ color: BEACON_COLOR }}>Open the public viewer</Link>.
+          {' '}<Link href="/apps/beacon" style={{ color: t.ACCENT }}>Open the public viewer</Link>.
         </p>
 
-        {error ? <div style={{ ...bannerStyle, color: '#F87171', borderColor: 'rgba(239,68,68,0.35)' }}>{error}</div> : null}
-        {notice ? <div style={{ ...bannerStyle, color: BEACON_COLOR, borderColor: `${BEACON_COLOR}55` }}>{notice}</div> : null}
+        {error ? <div style={{ ...bannerStyle(t), color: '#F87171', borderColor: 'rgba(239,68,68,0.35)' }}>{error}</div> : null}
+        {notice ? <div style={{ ...bannerStyle(t), color: t.ACCENT, borderColor: `${t.ACCENT}55` }}>{notice}</div> : null}
 
-        <section style={cardStyle}>
+        <section style={cardStyle(t)}>
           <h2 style={cardTitleStyle}>Create an event</h2>
-          <label style={labelStyle}>Title</label>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="State of the TI Skills Economy" style={inputStyle} />
-          <label style={labelStyle}>Description</label>
-          <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
-          <button type="button" onClick={() => void createEvent()} disabled={creating} style={primaryButtonStyle}>
+          <label style={labelStyle(t)}>Title</label>
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="State of the TI Skills Economy" style={inputStyle(t)} />
+          <label style={labelStyle(t)}>Description</label>
+          <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} style={{ ...inputStyle(t), resize: 'vertical' }} />
+          <button type="button" onClick={() => void createEvent()} disabled={creating} style={primaryButtonStyle(t)}>
             {creating ? 'Creating…' : 'Create draft'}
           </button>
         </section>
 
         {activeEvent && activeEvent.status !== 'ended' ? (
-          <section ref={broadcastSectionRef} style={cardStyle}>
+          <section ref={broadcastSectionRef} style={cardStyle(t)}>
             <h2 style={cardTitleStyle}>Broadcast: {activeEvent.title}</h2>
             {activeEvent.status === 'draft' ? (
-              <button type="button" onClick={() => void goLive(activeEvent.id)} style={primaryButtonStyle}>Go live</button>
+              <button type="button" onClick={() => void goLive(activeEvent.id)} style={primaryButtonStyle(t)}>Go live</button>
             ) : (
-              <button type="button" onClick={() => void endEvent(activeEvent.id)} style={{ ...primaryButtonStyle, background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.35)', color: '#F87171' }}>End broadcast</button>
+              <button type="button" onClick={() => void endEvent(activeEvent.id)} style={{ ...primaryButtonStyle(t), background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.35)', color: '#F87171' }}>End broadcast</button>
             )}
 
             {ingest ? (
               <div style={{ marginTop: 18 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: SUBTLE, marginBottom: 8 }}>Phone demo — push to this RTMP target from a broadcaster app</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Phone demo — push to this RTMP target from a broadcaster app</div>
                 <CopyRow label="RTMP URL" value={ingest.rtmpIngestUrl} copied={copied === 'RTMP URL'} onCopy={() => copy('RTMP URL', ingest.rtmpIngestUrl)} />
                 <CopyRow label="Stream key" value={ingest.streamKey} copied={copied === 'Stream key'} onCopy={() => copy('Stream key', ingest.streamKey)} masked />
               </div>
@@ -287,30 +283,30 @@ export function BeaconAdminShell() {
 
             {host ? (
               <div style={{ marginTop: 18 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: SUBTLE, marginBottom: 8 }}>Computer demo — share a screen or window from this browser</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Computer demo — share a screen or window from this browser</div>
                 <BeaconHostStage credentials={host} eventId={activeEvent.id} />
               </div>
             ) : null}
 
             {activeEvent.status === 'live' ? (
               <div style={{ marginTop: 18 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: SUBTLE, marginBottom: 8 }}>Moderate the chat</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Moderate the chat</div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <input value={moderateTarget} onChange={(event) => setModerateTarget(event.target.value)} placeholder="member user id" style={{ ...inputStyle, marginBottom: 0, maxWidth: 240 }} />
-                  <button type="button" onClick={() => moderateTarget && void moderate(activeEvent.id, 'mute', { targetUserId: moderateTarget })} style={chipButtonStyle}>Mute</button>
-                  <button type="button" onClick={() => moderateTarget && void moderate(activeEvent.id, 'ban', { targetUserId: moderateTarget })} style={chipButtonStyle}>Ban</button>
-                  <button type="button" onClick={() => void moderate(activeEvent.id, 'slow_mode', { cooldownSeconds: 10 })} style={chipButtonStyle}>Slow-mode 10s</button>
-                  <button type="button" onClick={() => void moderate(activeEvent.id, 'slow_mode', { cooldownSeconds: 0 })} style={chipButtonStyle}>Slow-mode off</button>
+                  <input value={moderateTarget} onChange={(event) => setModerateTarget(event.target.value)} placeholder="member user id" style={{ ...inputStyle(t), marginBottom: 0, maxWidth: 240 }} />
+                  <button type="button" onClick={() => moderateTarget && void moderate(activeEvent.id, 'mute', { targetUserId: moderateTarget })} style={chipButtonStyle(t)}>Mute</button>
+                  <button type="button" onClick={() => moderateTarget && void moderate(activeEvent.id, 'ban', { targetUserId: moderateTarget })} style={chipButtonStyle(t)}>Ban</button>
+                  <button type="button" onClick={() => void moderate(activeEvent.id, 'slow_mode', { cooldownSeconds: 10 })} style={chipButtonStyle(t)}>Slow-mode 10s</button>
+                  <button type="button" onClick={() => void moderate(activeEvent.id, 'slow_mode', { cooldownSeconds: 0 })} style={chipButtonStyle(t)}>Slow-mode off</button>
                 </div>
                 {chat ? (
-                  <div style={{ marginTop: 14, height: 360, borderRadius: 12, border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
+                  <div style={{ marginTop: 14, height: 360, borderRadius: 12, border: `1px solid ${t.BORDER_SOLID}`, overflow: 'hidden' }}>
                     <StreamChatPanel
                       streamApiKey={chat.streamApiKey}
                       streamToken={chat.streamToken}
                       streamUserId={chat.streamUserId}
                       streamChannelId={chat.streamChannelId}
                       channelType={chat.streamChannelType}
-                      accentColor={BEACON_COLOR}
+                      accentColor={t.ACCENT}
                     />
                   </div>
                 ) : null}
@@ -319,29 +315,29 @@ export function BeaconAdminShell() {
           </section>
         ) : null}
 
-        <section style={cardStyle}>
+        <section style={cardStyle(t)}>
           <h2 style={cardTitleStyle}>Event history</h2>
           {loading ? (
-            <div style={{ color: SUBTLE, fontSize: 14 }}>Loading…</div>
+            <div style={{ color: t.SUBTLE, fontSize: 14 }}>Loading…</div>
           ) : events.length === 0 ? (
-            <div style={{ color: SUBTLE, fontSize: 14 }}>No events yet. Create one above.</div>
+            <div style={{ color: t.SUBTLE, fontSize: 14 }}>No events yet. Create one above.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {events.map((event) => (
-                <div key={event.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
+                <div key={event.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.title}</div>
-                    <div style={{ fontSize: 12, color: SUBTLE }}>
+                    <div style={{ fontSize: 12, color: t.SUBTLE }}>
                       {event.status}
                       {event.recordingUrl ? ' · recording ready' : ''}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {event.recordingUrl ? (
-                      <a href={event.recordingUrl} target="_blank" rel="noreferrer" style={chipButtonStyle}>Replay</a>
+                      <a href={event.recordingUrl} target="_blank" rel="noreferrer" style={chipButtonStyle(t)}>Replay</a>
                     ) : null}
                     {event.status !== 'ended' ? (
-                      <button type="button" onClick={() => setActiveEventId(event.id)} style={chipButtonStyle}>Open</button>
+                      <button type="button" onClick={() => setActiveEventId(event.id)} style={chipButtonStyle(t)}>Open</button>
                     ) : null}
                   </div>
                 </div>
@@ -355,22 +351,24 @@ export function BeaconAdminShell() {
 }
 
 function CopyRow({ label, value, copied, onCopy, masked }: { label: string; value: string; copied: boolean; onCopy: () => void; masked?: boolean }) {
+  const { theme } = useTheme();
+  const t = getBeaconTokens(theme);
   const shown = value.length === 0 ? '(not provided by Stream)' : masked ? '••••••••••••' : value;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-      <span style={{ fontSize: 12, color: SUBTLE, width: 88, flexShrink: 0 }}>{label}</span>
-      <code style={{ flex: 1, fontSize: 12, color: TEXT, background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shown}</code>
-      <button type="button" onClick={onCopy} disabled={value.length === 0} style={{ ...chipButtonStyle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 12, color: t.SUBTLE, width: 88, flexShrink: 0 }}>{label}</span>
+      <code style={{ flex: 1, fontSize: 12, color: t.TITLE, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 8, padding: '8px 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shown}</code>
+      <button type="button" onClick={onCopy} disabled={value.length === 0} style={{ ...chipButtonStyle(t), display: 'inline-flex', alignItems: 'center', gap: 6 }}>
         {copied ? <Check size={14} /> : <Copy size={14} />}{copied ? 'Copied' : 'Copy'}
       </button>
     </div>
   );
 }
 
-const cardStyle: React.CSSProperties = { marginTop: 18, borderRadius: 14, background: PANEL, border: `1px solid ${BORDER}`, padding: 18 };
+const cardStyle = (t: BeaconTokens): React.CSSProperties => ({ marginTop: 18, borderRadius: 14, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, padding: 18 });
 const cardTitleStyle: React.CSSProperties = { fontSize: 16, fontWeight: 700, margin: '0 0 12px' };
-const labelStyle: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: SUBTLE, margin: '8px 0 4px' };
-const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 12px', color: TEXT, fontSize: 14, marginBottom: 8 };
-const primaryButtonStyle: React.CSSProperties = { marginTop: 8, padding: '10px 18px', borderRadius: 10, background: `${BEACON_COLOR}20`, border: `1px solid ${BEACON_COLOR}55`, color: BEACON_COLOR, fontSize: 14, fontWeight: 700, cursor: 'pointer' };
-const chipButtonStyle: React.CSSProperties = { padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' };
-const bannerStyle: React.CSSProperties = { marginTop: 14, padding: '10px 14px', borderRadius: 10, background: SURFACE, border: '1px solid', fontSize: 14 };
+const labelStyle = (t: BeaconTokens): React.CSSProperties => ({ display: 'block', fontSize: 12, fontWeight: 600, color: t.SUBTLE, margin: '8px 0 4px' });
+const inputStyle = (t: BeaconTokens): React.CSSProperties => ({ width: '100%', boxSizing: 'border-box', background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, padding: '10px 12px', color: t.TITLE, fontSize: 14, marginBottom: 8 });
+const primaryButtonStyle = (t: BeaconTokens): React.CSSProperties => ({ marginTop: 8, padding: '10px 18px', borderRadius: 10, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}55`, color: t.ACCENT, fontSize: 14, fontWeight: 700, cursor: 'pointer' });
+const chipButtonStyle = (t: BeaconTokens): React.CSSProperties => ({ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' });
+const bannerStyle = (t: BeaconTokens): React.CSSProperties => ({ marginTop: 14, padding: '10px 14px', borderRadius: 10, background: t.SURFACE, border: '1px solid', fontSize: 14 });

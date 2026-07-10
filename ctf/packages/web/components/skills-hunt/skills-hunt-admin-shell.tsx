@@ -5,7 +5,8 @@ import { Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { MobileScreenHeader } from "@/components/shared/mobile-screen-header";
 import type { SkillsHuntRound } from "lib/skills-hunt/types";
-import { COLOR } from "./sha-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getSkillsHuntAdminTokens } from "./sha-shared";
 import { SkillsHuntModeration } from "./sha-moderation";
 import { SkillsHuntRoundManager } from "./sha-round-manager";
 import { SkillsHuntAdminMissions } from "./sha-missions";
@@ -26,28 +27,30 @@ type Props = { rounds: SkillsHuntRound[] };
 
 export function SkillsHuntAdminShell({ rounds }: Props) {
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
   const [tab, setTab] = useState<Tab>("moderation");
   // Shared between Moderation (round filter) and Missions (which round to manage).
   const [activeRoundId, setActiveRoundId] = useState<string | null>(rounds[0]?.id ?? null);
 
   return (
-    <div style={{ ...(isMobile ? { minHeight: "100vh" } : { height: "100dvh", overflowY: "auto" }), background: "#0F1117", color: "#E8EAF0", fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
-      <MobileScreenHeader title="SkillsHunt Admin" accent={COLOR} icon={<Search size={18} color={COLOR} />} />
+    <div style={{ ...(isMobile ? { minHeight: "100vh" } : { height: "100dvh", overflowY: "auto" }), background: t.BG, color: t.TEXT, fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
+      <MobileScreenHeader title="SkillsHunt Admin" accent={t.ACCENT} icon={<Search size={18} color={t.ACCENT} />} />
       <header style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", margin: 0 }}>SkillsHunt — Admin</h1>
-          <div style={{ fontSize: 13, color: "#6B7280" }}>Run rounds, pay scouts in ServiceCredits, review nominations, publish missions, handle reports.</div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, margin: 0 }}>SkillsHunt — Admin</h1>
+          <div style={{ fontSize: 13, color: t.MUTED }}>Run rounds, pay scouts in ServiceCredits, review nominations, publish missions, handle reports.</div>
         </div>
-        <a href="/apps/skills-hunt" style={{ fontSize: 13, color: COLOR, textDecoration: "none" }}>← Open player shell</a>
+        <a href="/apps/skills-hunt" style={{ fontSize: 13, color: t.ACCENT, textDecoration: "none" }}>← Open player shell</a>
       </header>
 
       <div role="tablist" aria-label="SkillsHunt admin sections" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
-        {TABS.map((t) => {
-          const active = tab === t.key;
+        {TABS.map((entry) => {
+          const active = tab === entry.key;
           return (
-            <button key={t.key} type="button" role="tab" aria-selected={active} onClick={() => setTab(t.key)}
-              style={{ padding: "7px 16px", borderRadius: 20, background: active ? `${COLOR}25` : "rgba(255,255,255,0.04)", border: `1px solid ${active ? COLOR + "60" : "rgba(255,255,255,0.08)"}`, color: active ? COLOR : "#9CA3AF", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-              {t.label}
+            <button key={entry.key} type="button" role="tab" aria-selected={active} onClick={() => setTab(entry.key)}
+              style={{ padding: "7px 16px", borderRadius: 20, background: active ? `${t.ACCENT}25` : t.INPUT_BG, border: `1px solid ${active ? t.ACCENT + "60" : t.BORDER_STRONG}`, color: active ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              {entry.label}
             </button>
           );
         })}

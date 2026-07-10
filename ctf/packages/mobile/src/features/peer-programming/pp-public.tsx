@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-const COLOR = '#6EE7B7';
-
-export const PeerProgrammingPublic = () => (
+export const PeerProgrammingPublic = () => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('peer-programming', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return (
   <View style={styles.root}>
     <Text style={styles.title}>PeerProgramming</Text>
     <View style={styles.badge}>
@@ -16,19 +19,21 @@ export const PeerProgrammingPublic = () => (
       <Text style={styles.hintText}>Sign in to get matched with your cohort.</Text>
     </View>
   </View>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0F1117',
+    backgroundColor: t.bg,
     padding: 24,
     justifyContent: 'center',
   },
   title: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#F9FAFB',
+    color: t.textPrimary,
     marginBottom: 10,
   },
   badge: {
@@ -36,14 +41,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 3,
     borderRadius: 20,
-    backgroundColor: `${COLOR}20`,
+    backgroundColor: `${accent}20`,
     borderWidth: 1,
-    borderColor: `${COLOR}40`,
+    borderColor: `${accent}40`,
     marginBottom: 12,
   },
   badgeText: {
     fontSize: 11,
-    color: COLOR,
+    color: accent,
     fontWeight: '600',
   },
   description: {
@@ -54,15 +59,16 @@ const styles = StyleSheet.create({
   },
   hint: {
     padding: 16,
-    borderRadius: 12,
-    backgroundColor: `${COLOR}08`,
+    borderRadius: t.radius,
+    backgroundColor: `${accent}08`,
     borderWidth: 1,
-    borderColor: `${COLOR}20`,
+    borderColor: `${accent}20`,
   },
   hintText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#F9FAFB',
+    color: t.textPrimary,
     textAlign: 'center',
   },
-});
+  });
+}

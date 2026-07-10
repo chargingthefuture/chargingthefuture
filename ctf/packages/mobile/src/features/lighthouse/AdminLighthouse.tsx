@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
+import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
 import type { LighthouseMatch } from './types';
 import {
   fetchAdminMatches,
@@ -9,11 +10,8 @@ import {
   type LighthouseAdminStats,
 } from './admin-api';
 
-const COLOR = '#60A5FA';
-const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
-const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 
 function statusColor(status: LighthouseMatch['status']): string {
@@ -24,6 +22,9 @@ function statusColor(status: LighthouseMatch['status']): string {
 
 export const AdminLighthouse = () => {
   const { auth, loading: authLoading } = usePluginAuth('clerk');
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('lighthouse', theme);
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const [stats, setStats] = useState<LighthouseAdminStats | null>(null);
   const [matches, setMatches] = useState<LighthouseMatch[]>([]);
@@ -99,7 +100,7 @@ export const AdminLighthouse = () => {
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLOR} />
+        <ActivityIndicator size="large" color={accent} />
       </View>
     );
   }
@@ -114,7 +115,7 @@ export const AdminLighthouse = () => {
 
   const summary: Array<{ label: string; value: number; color: string }> = stats
     ? [
-        { label: 'Seekers', value: stats.seekers, color: COLOR },
+        { label: 'Seekers', value: stats.seekers, color: accent },
         { label: 'Hosts', value: stats.hosts, color: '#A78BFA' },
         { label: 'Properties', value: stats.properties, color: '#3B82F6' },
         { label: 'Active matches', value: stats.activeMatches, color: '#F59E0B' },
@@ -188,73 +189,75 @@ export const AdminLighthouse = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
-  content: { padding: 16, gap: 16 },
-  center: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  title: { fontSize: 20, fontWeight: '800', color: TEXT },
-  subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
-  noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
-  errorBanner: {
-    fontSize: 13,
-    color: '#FCA5A5',
-    backgroundColor: 'rgba(239,68,68,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.3)',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  noticeBanner: {
-    fontSize: 13,
-    color: '#86EFAC',
-    backgroundColor: 'rgba(34,197,94,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.3)',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  emptyText: { fontSize: 13, color: SUBTLE },
-  sectionHeading: { fontSize: 16, fontWeight: '700', color: TEXT },
-  statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  statCard: {
-    flexGrow: 1,
-    flexBasis: '46%',
-    backgroundColor: PANEL,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    padding: 14,
-  },
-  statLabel: { fontSize: 11, color: SUBTLE, marginBottom: 4 },
-  statValue: { fontSize: 20, fontWeight: '800' },
-  card: {
-    backgroundColor: PANEL,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 14,
-    padding: 16,
-    gap: 8,
-  },
-  cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  matchTitle: { fontSize: 14, fontWeight: '700', color: TEXT },
-  matchStatus: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
-  matchMessage: { fontSize: 13, color: '#D1D5DB', lineHeight: 19 },
-  actionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  actionBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 9,
-    borderWidth: 1,
-  },
-  acceptBtn: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: 'rgba(34,197,94,0.3)' },
-  rejectBtn: { backgroundColor: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' },
-  btnBusy: { opacity: 0.6 },
-  actionText: { fontSize: 13, fontWeight: '600' },
-  acceptText: { color: '#22C55E' },
-  rejectText: { color: '#EF4444' },
-});
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: t.bg },
+    content: { padding: 16, gap: 16 },
+    center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
+    title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
+    subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
+    noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+    errorBanner: {
+      fontSize: 13,
+      color: '#FCA5A5',
+      backgroundColor: 'rgba(239,68,68,0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(239,68,68,0.3)',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    noticeBanner: {
+      fontSize: 13,
+      color: '#86EFAC',
+      backgroundColor: 'rgba(34,197,94,0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(34,197,94,0.3)',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    emptyText: { fontSize: 13, color: SUBTLE },
+    sectionHeading: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
+    statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    statCard: {
+      flexGrow: 1,
+      flexBasis: '46%',
+      backgroundColor: PANEL,
+      borderWidth: 1,
+      borderColor: BORDER,
+      borderRadius: t.radius,
+      padding: 14,
+    },
+    statLabel: { fontSize: 11, color: SUBTLE, marginBottom: 4 },
+    statValue: { fontSize: 20, fontWeight: '800' },
+    card: {
+      backgroundColor: PANEL,
+      borderWidth: 1,
+      borderColor: BORDER,
+      borderRadius: 14,
+      padding: 16,
+      gap: 8,
+    },
+    cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+    rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    matchTitle: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
+    matchStatus: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
+    matchMessage: { fontSize: 13, color: '#D1D5DB', lineHeight: 19 },
+    actionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+    actionBtn: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      borderRadius: 9,
+      borderWidth: 1,
+    },
+    acceptBtn: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: 'rgba(34,197,94,0.3)' },
+    rejectBtn: { backgroundColor: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' },
+    btnBusy: { opacity: 0.6 },
+    actionText: { fontSize: 13, fontWeight: '600' },
+    acceptText: { color: t.success },
+    rejectText: { color: t.danger },
+  });
+}

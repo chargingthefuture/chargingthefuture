@@ -4,7 +4,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, ChevronRight, Search } from "lucide-react";
-import { COLOR, SKILLS_HUNT_COLOR, initials, type Member, type SkillsHuntRewardCard } from "./shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getDirectoryTokens, SKILLS_HUNT_COLOR, initials, type Member, type SkillsHuntRewardCard } from "./shared";
 import { DirectoryEmptyState } from "./directory-empty-state";
 
 export function DirectoryBrowse({
@@ -26,6 +27,8 @@ export function DirectoryBrowse({
   onSelect: (member: Member) => void;
   onClearFilters: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getDirectoryTokens(theme);
   if (!loadingMembers && members.length === 0) {
     return <DirectoryEmptyState categories={categories} filtered={filtered} onClearFilters={onClearFilters} />;
   }
@@ -42,7 +45,7 @@ export function DirectoryBrowse({
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: SKILLS_HUNT_COLOR, marginBottom: 2 }}>{rewardCard.title}</div>
-                  <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>{rewardCard.description}</div>
+                  <div style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.5 }}>{rewardCard.description}</div>
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 14px", borderRadius: 10, background: SKILLS_HUNT_COLOR, color: "#fff", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
@@ -51,37 +54,37 @@ export function DirectoryBrowse({
             </div>
           </a>
         )}
-        <div style={{ marginBottom: 20, padding: "20px 24px", borderRadius: 16, background: `linear-gradient(135deg,${COLOR}20 0%,rgba(14,165,233,0.1) 100%)`, border: `1px solid ${COLOR}25` }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Find Your Support Network</div>
-          <div style={{ fontSize: 14, color: "#9CA3AF" }}>Verified trauma-informed providers · Trusted · Privacy-first</div>
+        <div style={{ marginBottom: 20, padding: "20px 24px", borderRadius: 16, background: `linear-gradient(135deg,${t.ACCENT}20 0%,rgba(14,165,233,0.1) 100%)`, border: `1px solid ${t.ACCENT}25` }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>Find Your Support Network</div>
+          <div style={{ fontSize: 14, color: t.SUBTLE }}>Verified trauma-informed providers · Trusted · Privacy-first</div>
         </div>
 
         {loadingMembers ? (
-          <div style={{ padding: "48px", textAlign: "center", color: "#6B7280", fontSize: 14 }}>Loading providers…</div>
+          <div style={{ padding: "48px", textAlign: "center", color: t.MUTED, fontSize: 14 }}>Loading providers…</div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 14 }}>
             {members.map((p) => (
-              <div key={p.id} onClick={() => onSelect(p)} style={{ padding: "20px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${COLOR}20`, cursor: "pointer" }}>
+              <div key={p.id} onClick={() => onSelect(p)} style={{ padding: "20px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}20`, cursor: "pointer" }}>
                 <div style={{ display: "flex", gap: 14, marginBottom: 14, alignItems: "flex-start" }}>
                   <Avatar style={{ width: 48, height: 48, flexShrink: 0 }}>
-                    <AvatarFallback style={{ background: `${COLOR}25`, color: COLOR, fontSize: 18, fontWeight: 800 }}>{initials(p.name)}</AvatarFallback>
+                    <AvatarFallback style={{ background: `${t.ACCENT}25`, color: t.ACCENT, fontSize: 18, fontWeight: 800 }}>{initials(p.name)}</AvatarFallback>
                   </Avatar>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
                     </div>
-                    <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 4 }}>{p.jobTitle}</div>
-                    <Badge style={{ background: `${COLOR}10`, color: COLOR, border: `1px solid ${COLOR}25`, fontSize: 11 }}>{p.sector}</Badge>
+                    <div style={{ fontSize: 12, color: t.SUBTLE, marginBottom: 4 }}>{p.jobTitle}</div>
+                    <Badge style={{ background: `${t.ACCENT}10`, color: t.ACCENT, border: `1px solid ${t.ACCENT}25`, fontSize: 11 }}>{p.sector}</Badge>
                   </div>
                 </div>
                 {p.skills.length > 0 && (
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
                     {p.skills.slice(0, 3).map((s) => (
-                      <Badge key={s} style={{ background: `${COLOR}10`, color: COLOR, border: `1px solid ${COLOR}25`, fontSize: 11 }}>{s}</Badge>
+                      <Badge key={s} style={{ background: `${t.ACCENT}10`, color: t.ACCENT, border: `1px solid ${t.ACCENT}25`, fontSize: 11 }}>{s}</Badge>
                     ))}
                   </div>
                 )}
-                <button style={{ width: "100%", padding: "8px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                <button style={{ width: "100%", padding: "8px", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
                   View Profile <ChevronRight size={12} />
                 </button>
               </div>

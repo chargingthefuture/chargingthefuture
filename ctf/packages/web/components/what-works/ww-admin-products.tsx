@@ -13,23 +13,18 @@ import {
   MAX_PURCHASE_URL_LENGTH,
 } from 'lib/what-works/constants';
 import type { AdminProduct } from './ww-admin-shared';
+import { useTheme } from '@/hooks/useTheme';
+import { getWhatWorksTokens, type WhatWorksTokens } from './ww-shared';
 
-const COLOR = '#84CC16';
-const PANEL = '#0D0F14';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-
-const editInputStyle: React.CSSProperties = {
+const makeEditInputStyle = (t: WhatWorksTokens): React.CSSProperties => ({
   borderRadius: 8,
-  background: PANEL,
-  border: `1px solid ${BORDER}`,
-  color: TEXT,
+  background: t.HEADER,
+  border: `1px solid ${t.BORDER_SOLID}`,
+  color: t.TITLE,
   padding: '9px 12px',
   fontSize: 13,
   fontFamily: 'inherit',
-};
+});
 
 export type ProductEditDraft = { emoji: string; name: string; kind: string; note: string; purchaseUrl: string };
 
@@ -57,6 +52,9 @@ const STATUS_STYLE: Record<WhatWorksProductStatus, { bg: string; color: string; 
 };
 
 export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChangeFilter, onReview, onEdit, onDelete }: Props) {
+  const { theme } = useTheme();
+  const t = getWhatWorksTokens(theme);
+  const editInputStyle = makeEditInputStyle(t);
   // Which row's inline reject form is open, and the reason text being typed. Replaces the old
   // blocking window.prompt with a themable, testable inline textarea.
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -109,7 +107,7 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
   return (
     <section style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 800, color: TEXT, margin: 0 }}>Suggestions</h2>
+        <h2 style={{ fontSize: 15, fontWeight: 800, color: t.TITLE, margin: 0 }}>Suggestions</h2>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {FILTERS.map((filter) => {
             const active = statusFilter === filter.value;
@@ -119,7 +117,7 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
                 type="button"
                 onClick={() => onChangeFilter(filter.value)}
                 aria-pressed={active}
-                style={{ padding: '6px 14px', borderRadius: 8, background: active ? COLOR : SURFACE, border: `1px solid ${active ? COLOR : BORDER}`, color: active ? '#0F1117' : SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '6px 14px', borderRadius: 8, background: active ? t.ACCENT : t.SURFACE, border: `1px solid ${active ? t.ACCENT : t.BORDER_SOLID}`, color: active ? t.BG : t.MUTED, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
               >
                 {filter.label}
               </button>
@@ -129,7 +127,7 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
       </div>
 
       {products.length === 0 ? (
-        <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+        <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
           No suggestions in this view.
         </div>
       ) : (
@@ -137,24 +135,24 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
           const busy = busyId === product.id;
           const status = STATUS_STYLE[product.status];
           return (
-            <div key={product.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+            <div key={product.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span aria-hidden>{product.emoji || '🧰'}</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{product.name}</span>
-                    {product.kind ? <span style={{ fontSize: 12, color: SUBTLE }}>{product.kind}</span> : null}
+                    <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>{product.name}</span>
+                    {product.kind ? <span style={{ fontSize: 12, color: t.MUTED }}>{product.kind}</span> : null}
                   </div>
-                  <div style={{ fontSize: 12, color: SUBTLE, marginTop: 4 }}>Problem: {product.problemTitle}</div>
-                  {product.note ? <div style={{ fontSize: 13, color: SUBTLE, fontStyle: 'italic', marginTop: 4 }}>“{product.note}”</div> : null}
-                  <a href={product.purchaseUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 4, fontSize: 12, color: COLOR, textDecoration: 'underline', textUnderlineOffset: 4, wordBreak: 'break-all' }}>
+                  <div style={{ fontSize: 12, color: t.MUTED, marginTop: 4 }}>Problem: {product.problemTitle}</div>
+                  {product.note ? <div style={{ fontSize: 13, color: t.MUTED, fontStyle: 'italic', marginTop: 4 }}>“{product.note}”</div> : null}
+                  <a href={product.purchaseUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 4, fontSize: 12, color: t.ACCENT, textDecoration: 'underline', textUnderlineOffset: 4, wordBreak: 'break-all' }}>
                     {product.purchaseUrl}
                   </a>
                 </div>
                 <span style={{ flexShrink: 0, padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: status.bg, color: status.color, border: `1px solid ${status.border}` }}>{product.status}</span>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 12 }}>
-                <span style={{ fontSize: 12, color: SUBTLE, marginRight: 'auto' }}>{product.verifiedCount} verified</span>
+                <span style={{ fontSize: 12, color: t.MUTED, marginRight: 'auto' }}>{product.verifiedCount} verified</span>
                 {product.status !== 'approved' ? (
                   <button type="button" disabled={busy} onClick={() => onReview(product.id, 'approve')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
                     <CheckCircle size={13} /> Approve
@@ -165,16 +163,16 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
                     <XCircle size={13} /> {product.status === 'approved' ? 'Unpublish' : 'Reject'}
                   </button>
                 ) : null}
-                <button type="button" disabled={busy} onClick={() => (editingId === product.id ? setEditingId(null) : openEdit(product))} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                <button type="button" disabled={busy} onClick={() => (editingId === product.id ? setEditingId(null) : openEdit(product))} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
                   <Pencil size={13} /> Edit
                 </button>
                 {confirmingDeleteId === product.id ? (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 12, color: SUBTLE }}>Delete permanently?</span>
+                    <span style={{ fontSize: 12, color: t.MUTED }}>Delete permanently?</span>
                     <button type="button" disabled={busy} onClick={() => { setConfirmingDeleteId(null); onDelete(product.id); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
                       <Trash2 size={13} /> Confirm
                     </button>
-                    <button type="button" onClick={() => setConfirmingDeleteId(null)} style={{ padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    <button type="button" onClick={() => setConfirmingDeleteId(null)} style={{ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                       Cancel
                     </button>
                   </span>
@@ -186,7 +184,7 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
               </div>
               {rejectingId === product.id ? (
                 <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)' }}>
-                  <label htmlFor={`reject-reason-${product.id}`} style={{ display: 'block', fontSize: 12, color: SUBTLE, marginBottom: 6 }}>
+                  <label htmlFor={`reject-reason-${product.id}`} style={{ display: 'block', fontSize: 12, color: t.MUTED, marginBottom: 6 }}>
                     Reason (optional, shown only to admins)
                   </label>
                   <textarea
@@ -196,11 +194,11 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
                     maxLength={MAX_PRODUCT_NOTE_LENGTH}
                     rows={3}
                     placeholder="Why is this being rejected?"
-                    style={{ width: '100%', resize: 'vertical', padding: '8px 10px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontFamily: 'inherit' }}
+                    style={{ width: '100%', resize: 'vertical', padding: '8px 10px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, fontFamily: 'inherit' }}
                   />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                    <span style={{ fontSize: 11, color: SUBTLE, marginRight: 'auto' }}>{reason.length}/{MAX_PRODUCT_NOTE_LENGTH}</span>
-                    <button type="button" onClick={closeReject} style={{ padding: '6px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    <span style={{ fontSize: 11, color: t.MUTED, marginRight: 'auto' }}>{reason.length}/{MAX_PRODUCT_NOTE_LENGTH}</span>
+                    <button type="button" onClick={closeReject} style={{ padding: '6px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                       Cancel
                     </button>
                     <button type="button" disabled={busy} onClick={() => confirmReject(product.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
@@ -213,8 +211,8 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
                 (() => {
                   const canSave = Boolean(draft.name.trim()) && Boolean(draft.purchaseUrl.trim()) && !busy;
                   return (
-                    <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: `${COLOR}08`, border: `1px solid ${COLOR}35` }}>
-                      <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 10 }}>Correct this tool&apos;s details. Its status and verified count are unchanged.</div>
+                    <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}35` }}>
+                      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 10 }}>Correct this tool&apos;s details. Its status and verified count are unchanged.</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                         <input value={draft.emoji} onChange={(event) => setDraft((prev) => ({ ...prev, emoji: event.target.value.slice(0, MAX_EMOJI_LENGTH) }))} maxLength={MAX_EMOJI_LENGTH} placeholder="Emoji" aria-label="Edit emoji" style={{ ...editInputStyle, width: 80, flexShrink: 0 }} />
                         <input value={draft.name} onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value.slice(0, MAX_PRODUCT_NAME_LENGTH) }))} maxLength={MAX_PRODUCT_NAME_LENGTH} placeholder="Product name" aria-label="Edit product name" style={{ ...editInputStyle, flex: 1, minWidth: 180 }} />
@@ -223,11 +221,11 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
                       <input value={draft.purchaseUrl} onChange={(event) => setDraft((prev) => ({ ...prev, purchaseUrl: event.target.value.slice(0, MAX_PURCHASE_URL_LENGTH) }))} maxLength={MAX_PURCHASE_URL_LENGTH} placeholder="https://…" aria-label="Edit purchase link" inputMode="url" style={{ ...editInputStyle, width: '100%', marginTop: 8, boxSizing: 'border-box' }} />
                       <textarea value={draft.note} onChange={(event) => setDraft((prev) => ({ ...prev, note: event.target.value.slice(0, MAX_PRODUCT_NOTE_LENGTH) }))} maxLength={MAX_PRODUCT_NOTE_LENGTH} rows={2} placeholder="Why it works (optional)" aria-label="Edit note" style={{ ...editInputStyle, width: '100%', marginTop: 8, resize: 'vertical', boxSizing: 'border-box' }} />
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-                        <span style={{ fontSize: 11, color: SUBTLE, marginRight: 'auto' }}>{draft.note.length}/{MAX_PRODUCT_NOTE_LENGTH}</span>
-                        <button type="button" onClick={() => setEditingId(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        <span style={{ fontSize: 11, color: t.MUTED, marginRight: 'auto' }}>{draft.note.length}/{MAX_PRODUCT_NOTE_LENGTH}</span>
+                        <button type="button" onClick={() => setEditingId(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                           <X size={13} /> Cancel
                         </button>
-                        <button type="button" disabled={!canSave} onClick={() => saveEdit(product.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: canSave ? 'pointer' : 'not-allowed', opacity: canSave ? 1 : 0.6 }}>
+                        <button type="button" disabled={!canSave} onClick={() => saveEdit(product.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}35`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: canSave ? 'pointer' : 'not-allowed', opacity: canSave ? 1 : 0.6 }}>
                           <Check size={13} /> {busy ? 'Saving…' : 'Save'}
                         </button>
                       </div>

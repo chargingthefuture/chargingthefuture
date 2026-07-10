@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,21 +6,21 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
 // Public/unauthenticated state — uses MobileSocketRelayPublic.tsx mockup color
 // Note: this screen is shown when the user is not signed in.
 // The blurred preview items use no real data (no unauthenticated list endpoint)
 // so they are omitted per real-data-only policy; the lock overlay is retained.
 
-const COLOR = '#FB923C';
-const BG = '#0F1117';
-const SUBTLE = '#6B7280';
-
 type Props = {
   onSignIn: () => void;
 };
 
 export function SocketRelayPublic({ onSignIn }: Props) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('socket-relay', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Status bar row */}
@@ -61,8 +61,9 @@ export function SocketRelayPublic({ onSignIn }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: t.bg },
   content: { flexGrow: 1 },
   statusBar: {
     height: 44,
@@ -71,8 +72,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
-  time: { fontSize: 15, fontWeight: '700', color: '#F9FAFB' },
-  statusDots: { fontSize: 12, color: SUBTLE },
+  time: { fontSize: 15, fontWeight: '700', color: t.textPrimary },
+  statusDots: { fontSize: 12, color: t.textSecondary },
   hero: {
     paddingHorizontal: 20,
     paddingBottom: 16,
@@ -80,23 +81,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  titleIcon: { fontSize: 20, color: COLOR },
-  title: { fontSize: 20, fontWeight: '800', color: '#F9FAFB' },
+  titleIcon: { fontSize: 20, color: accent },
+  title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
   badge: {
     paddingHorizontal: 12,
     paddingVertical: 3,
     borderRadius: 20,
-    backgroundColor: `${COLOR}20`,
+    backgroundColor: `${accent}20`,
     borderWidth: 1,
-    borderColor: `${COLOR}40`,
+    borderColor: `${accent}40`,
     alignSelf: 'flex-start',
   },
-  badgeText: { fontSize: 11, fontWeight: '600', color: COLOR },
+  badgeText: { fontSize: 11, fontWeight: '600', color: accent },
   description: { fontSize: 14, color: '#9CA3AF', lineHeight: 21 },
   joinBtn: {
     paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: COLOR,
+    borderRadius: t.radius,
+    backgroundColor: accent,
     alignItems: 'center',
   },
   joinBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
@@ -112,8 +113,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: `${COLOR}50`,
-    backgroundColor: `${COLOR}10`,
+    borderColor: `${accent}50`,
+    backgroundColor: `${accent}10`,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -121,14 +122,15 @@ const styles = StyleSheet.create({
   lockHeading: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#F9FAFB',
+    color: t.textPrimary,
     textAlign: 'center',
   },
   signInBtn: {
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 9,
-    backgroundColor: COLOR,
+    backgroundColor: accent,
   },
   signInBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
-});
+  });
+}

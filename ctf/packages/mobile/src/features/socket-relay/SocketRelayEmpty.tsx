@@ -1,11 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-
-const COLOR = '#FB923C';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const SUBTLE = '#6B7280';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
 const STEPS = [
   { step: '1', label: 'Post a need or offer' },
@@ -19,6 +14,9 @@ type Props = {
 };
 
 export function SocketRelayEmpty({ onPostNeed, onOfferHelp }: Props) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('socket-relay', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -73,29 +71,30 @@ export function SocketRelayEmpty({ onPostNeed, onOfferHelp }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: t.bg },
   header: {
-    backgroundColor: '#090B0F',
+    backgroundColor: t.surfaceAlt,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  headerTime: { fontSize: 13, fontWeight: '600', color: '#F9FAFB' },
-  headerStatus: { fontSize: 11, color: SUBTLE },
+  headerTime: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
+  headerStatus: { fontSize: 11, color: t.textSecondary },
   titleBar: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: t.border,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  titleIcon: { fontSize: 16, color: COLOR },
-  titleText: { fontSize: 15, fontWeight: '700', color: '#F9FAFB' },
+  titleIcon: { fontSize: 16, color: accent },
+  titleText: { fontSize: 15, fontWeight: '700', color: t.textPrimary },
   body: {
     flex: 1,
     alignItems: 'center',
@@ -107,25 +106,25 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: `${COLOR}15`,
+    backgroundColor: `${accent}15`,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: `${COLOR}40`,
+    borderColor: `${accent}40`,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
   },
-  iconGlyph: { fontSize: 30, color: `${COLOR}50` },
+  iconGlyph: { fontSize: 30, color: `${accent}50` },
   heading: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#F9FAFB',
+    color: t.textPrimary,
     marginBottom: 10,
     textAlign: 'center',
   },
   subtext: {
     fontSize: 14,
-    color: SUBTLE,
+    color: t.textSecondary,
     lineHeight: 22,
     marginBottom: 8,
     textAlign: 'center',
@@ -141,19 +140,19 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: `${COLOR}20`,
+    backgroundColor: `${accent}20`,
     borderWidth: 1,
-    borderColor: `${COLOR}40`,
+    borderColor: `${accent}40`,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepNumber: { fontSize: 11, fontWeight: '700', color: COLOR },
-  stepLabel: { fontSize: 13, color: SUBTLE },
+  stepNumber: { fontSize: 11, fontWeight: '700', color: accent },
+  stepLabel: { fontSize: 13, color: t.textSecondary },
   primaryBtn: {
     width: '100%',
     paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: COLOR,
+    borderRadius: t.radius,
+    backgroundColor: accent,
     alignItems: 'center',
     marginTop: 12,
     marginBottom: 10,
@@ -162,19 +161,20 @@ const styles = StyleSheet.create({
   secondaryBtn: {
     width: '100%',
     paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: SURFACE,
+    borderRadius: t.radius,
+    backgroundColor: t.surface,
     borderWidth: 1,
-    borderColor: `${COLOR}40`,
+    borderColor: `${accent}40`,
     alignItems: 'center',
   },
-  secondaryBtnText: { fontSize: 15, fontWeight: '700', color: COLOR },
+  secondaryBtnText: { fontSize: 15, fontWeight: '700', color: accent },
   footer: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderTopWidth: 1,
-    borderTopColor: BORDER,
-    backgroundColor: SURFACE,
+    borderTopColor: t.border,
+    backgroundColor: t.surface,
   },
-  footerText: { fontSize: 12, color: SUBTLE },
-});
+  footerText: { fontSize: 12, color: t.textSecondary },
+  });
+}

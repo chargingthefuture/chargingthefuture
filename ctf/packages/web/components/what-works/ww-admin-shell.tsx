@@ -7,32 +7,29 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ThumbsUp } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import type { WhatWorksProductStatus } from 'lib/what-works/types';
 import { adminMutate, type AdminProblem, type AdminProduct } from './ww-admin-shared';
+import { getWhatWorksTokens } from './ww-shared';
 import { WhatWorksAdminProducts } from './ww-admin-products';
 import { WhatWorksAdminProblems } from './ww-admin-problems';
 
-// Admin design tokens (shared admin look from the design system). WhatWorks accent is lime.
-const COLOR = '#84CC16';
-const BG = '#0F1117';
-const PANEL = '#0D0F14';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-
 function StatBlock({ label, value, accent }: { label: string; value: number; accent?: string }) {
+  const { theme } = useTheme();
+  const t = getWhatWorksTokens(theme);
   return (
-    <div style={{ flex: 1, minWidth: 92, padding: '10px 12px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
-      <div style={{ fontSize: 18, fontWeight: 800, color: accent ?? TEXT }}>{value}</div>
-      <div style={{ fontSize: 11, color: SUBTLE, marginTop: 2 }}>{label}</div>
+    <div style={{ flex: 1, minWidth: 92, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: accent ?? t.TITLE }}>{value}</div>
+      <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>{label}</div>
     </div>
   );
 }
 
 export function WhatWorksAdminShell() {
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getWhatWorksTokens(theme);
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [problems, setProblems] = useState<AdminProblem[]>([]);
   const [statusFilter, setStatusFilter] = useState<WhatWorksProductStatus | 'all'>('pending');
@@ -206,27 +203,27 @@ export function WhatWorksAdminShell() {
         // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
         // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
         ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
-        background: BG,
-        color: TEXT,
+        background: t.BG,
+        color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="WhatWorks Admin" accent={COLOR} icon={<ThumbsUp size={18} color={COLOR} />} />
+      <MobileScreenHeader title="WhatWorks Admin" accent={t.ACCENT} icon={<ThumbsUp size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ThumbsUp size={18} color={COLOR} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ThumbsUp size={18} color={t.ACCENT} />
           </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800 }}>WhatWorks Admin</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>Entry moderation</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Entry moderation</div>
           </div>
           <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, color: '#6366F1', fontWeight: 700 }}>ADMIN</span>
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <Link href="/apps/what-works" style={{ fontSize: 13, color: COLOR, textDecoration: 'underline', textUnderlineOffset: 4 }}>
+          <Link href="/apps/what-works" style={{ fontSize: 13, color: t.ACCENT, textDecoration: 'underline', textUnderlineOffset: 4 }}>
             Open the WhatWorks list
           </Link>
         </div>
@@ -243,7 +240,7 @@ export function WhatWorksAdminShell() {
         ) : null}
 
         {loading ? (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>Loading…</div>
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>Loading…</div>
         ) : (
           <>
             <WhatWorksAdminProducts

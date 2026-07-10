@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
 import { LighthouseScreen } from './LighthouseScreen';
 import { LighthouseHost } from './LighthouseHost';
 import { LighthouseMatches } from './LighthouseMatches';
 import { LighthouseStreamTab } from './LighthouseStreamTab';
-
-const COLOR = '#60A5FA';
-const DARK = '#090B0F';
 
 type TabKey = 'browse' | 'host' | 'matches' | 'chat';
 
@@ -26,6 +24,9 @@ const NAV: NavItem[] = [
 ];
 
 export const LighthouseTabs: React.FC = () => {
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('lighthouse', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [tab, setTab] = useState<TabKey>('browse');
 
   return (
@@ -50,7 +51,7 @@ export const LighthouseTabs: React.FC = () => {
                 <Ionicons
                   name={(active ? activeIcon : icon) as 'search'}
                   size={20}
-                  color={active ? COLOR : '#6B7280'}
+                  color={active ? accent : tokens.textSecondary}
                 />
               </View>
               <Text style={[styles.navLabel, active && styles.navLabelActive]}>
@@ -64,48 +65,50 @@ export const LighthouseTabs: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F1117',
-  },
-  content: {
-    flex: 1,
-  },
-  navBar: {
-    height: 72,
-    backgroundColor: DARK,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingHorizontal: 8,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  navIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navIconBoxActive: {
-    backgroundColor: `${COLOR}20`,
-  },
-  navLabel: {
-    fontSize: 10,
-    color: '#4B5563',
-    fontWeight: '400',
-  },
-  navLabelActive: {
-    color: COLOR,
-    fontWeight: '600',
-  },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.bg,
+    },
+    content: {
+      flex: 1,
+    },
+    navBar: {
+      height: 72,
+      backgroundColor: t.surfaceAlt,
+      borderTopWidth: 1,
+      borderTopColor: t.borderFaint,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+      paddingHorizontal: 8,
+    },
+    navItem: {
+      flex: 1,
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+    },
+    navIconBox: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    navIconBoxActive: {
+      backgroundColor: `${accent}20`,
+    },
+    navLabel: {
+      fontSize: 10,
+      color: t.textMuted,
+      fontWeight: '400',
+    },
+    navLabelActive: {
+      color: accent,
+      fontWeight: '600',
+    },
+  });
+}

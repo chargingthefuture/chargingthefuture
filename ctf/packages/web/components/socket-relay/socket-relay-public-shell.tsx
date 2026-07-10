@@ -4,21 +4,15 @@ import {
   Share2, Search, Shield, ShieldCheck, Lock, LogIn, UserPlus, Heart, Plus,
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import { getAppAccent } from '@/lib/theme/theme-tokens';
+import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
+import { getSocketRelayTokens } from './sr-shared';
 
-// Palette from the SocketRelayPublic / MobileSocketRelayPublic mockups.
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-// The plugin accent is the single source of truth in the per-plugin registry, so the signed-out
-// public shell matches the signed-in in-app shell on every device and in every auth state. The mobile
-// mockup had used a divergent red (#F43F5E); that drift is corrected by reading the registry value
-// (#FB923C) for both layouts.
-const SR_ACCENT = getAppAccent('socket-relay', 'default');
+// Chrome palette comes from the shared theme tokens (getSocketRelayTokens); the plugin accent
+// (t.ACCENT) is the single source of truth, so the signed-out public shell matches the signed-in
+// in-app shell on every device and in every auth state. The mobile mockup had used a divergent
+// red (#F43F5E); that drift is corrected by using the shared accent (#FB923C) for both layouts.
 const ACCENT = '#7C3AED';
 const ACCENT_CYAN = '#0EA5E9';
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
@@ -26,9 +20,11 @@ const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 const CATEGORIES = ['All', 'Food', 'Transport', 'Legal', 'Employment', 'Childcare', 'Housing'];
 
 function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
-  const COLOR = SR_ACCENT;
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
+  const COLOR = t.ACCENT;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE }}>
       {/* Marketing banner */}
       <div style={{ background: `linear-gradient(90deg, ${ACCENT} 0%, ${ACCENT_CYAN} 100%)`, padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -56,20 +52,20 @@ function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string;
 
       <div style={{ display: 'flex', flex: 1 }}>
         {/* Left sidebar */}
-        <aside style={{ width: 300, borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 16px 10px', borderBottom: `1px solid ${BORDER}` }}>
+        <aside style={{ width: 300, borderRight: `1px solid ${t.BORDER_SOLID}`, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px 16px 10px', borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <Share2 size={16} color={COLOR} />
               <span style={{ fontSize: 15, fontWeight: 700 }}>SocketRelay</span>
               <span style={{ marginLeft: 'auto', fontSize: 11, background: `${COLOR}18`, color: COLOR, border: `1px solid ${COLOR}30`, borderRadius: 4, padding: '2px 7px' }}>Public Feed</span>
             </div>
             <div style={{ position: 'relative', marginBottom: 10 }}>
-              <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: SUBTLE }} />
-              <input placeholder="Search needs & offers…" style={{ width: '100%', padding: '8px 10px 8px 30px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: SUBTLE, outline: 'none', boxSizing: 'border-box' }} readOnly />
+              <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: t.MUTED }} />
+              <input placeholder="Search needs & offers…" style={{ width: '100%', padding: '8px 10px 8px 30px', background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 8, fontSize: 13, color: t.MUTED, outline: 'none', boxSizing: 'border-box' }} readOnly />
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {CATEGORIES.map((c) => (
-                <span key={c} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 12, border: `1px solid ${c === 'All' ? COLOR + '50' : BORDER}`, color: c === 'All' ? COLOR : SUBTLE, background: c === 'All' ? `${COLOR}10` : 'transparent', cursor: 'default' }}>{c}</span>
+                <span key={c} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 12, border: `1px solid ${c === 'All' ? COLOR + '50' : t.BORDER_SOLID}`, color: c === 'All' ? COLOR : t.MUTED, background: c === 'All' ? `${COLOR}10` : 'transparent', cursor: 'default' }}>{c}</span>
               ))}
             </div>
           </div>
@@ -81,18 +77,18 @@ function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string;
               'Anonymous posts are supported',
               'Survivors respond and connect directly',
             ].map((l) => (
-              <div key={l} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '7px 0', borderBottom: `1px solid ${BORDER}` }}>
+              <div key={l} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '7px 0', borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
                 <Heart size={13} color={COLOR} style={{ marginTop: 2, flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: SUBTLE }}>{l}</span>
+                <span style={{ fontSize: 12, color: t.MUTED }}>{l}</span>
               </div>
             ))}
           </div>
 
           {/* Auth gate to post */}
           <div style={{ margin: '12px', borderRadius: 12, border: `2px dashed ${COLOR}30`, background: `${COLOR}06`, padding: '16px', textAlign: 'center' }}>
-            <Lock size={16} color={SUBTLE} style={{ marginBottom: 6 }} />
-            <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 4 }}>Sign in to post or respond</div>
-            <div style={{ fontSize: 11, color: SUBTLE, marginBottom: 10 }}>Posting is always free. Anonymous posts supported.</div>
+            <Lock size={16} color={t.MUTED} style={{ marginBottom: 6 }} />
+            <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>Sign in to post or respond</div>
+            <div style={{ fontSize: 11, color: t.MUTED, marginBottom: 10 }}>Posting is always free. Anonymous posts supported.</div>
             <a href={verifyUrl ?? signInUrl} style={{ display: 'block', width: '100%', padding: '9px', borderRadius: 8, background: `linear-gradient(90deg,${ACCENT},${ACCENT_CYAN})`, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', boxSizing: 'border-box', textDecoration: 'none' }}>
               {verifyUrl ? 'Finish verifying' : 'Create Free Account →'}
             </a>
@@ -101,17 +97,17 @@ function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string;
 
         {/* Main feed */}
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 24px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ padding: '16px 24px', borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ fontSize: 15, fontWeight: 700 }}>Live Relay Feed</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>Public · Updates in real time</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Public · Updates in real time</div>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 20, background: SURFACE, border: `1px solid ${BORDER}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 20, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
                 <ShieldCheck size={12} color={ACCENT_CYAN} />
                 <span style={{ fontSize: 11, color: ACCENT_CYAN }}>Survivor Verified</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 20, background: SURFACE, border: `1px solid ${BORDER}` }}>
-                <Shield size={12} color={SUBTLE} />
-                <span style={{ fontSize: 11, color: SUBTLE }}>Anonymous posts protected</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 20, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+                <Shield size={12} color={t.MUTED} />
+                <span style={{ fontSize: 11, color: t.MUTED }}>Anonymous posts protected</span>
               </div>
             </div>
           </div>
@@ -122,10 +118,10 @@ function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string;
               {[0, 1, 2, 3, 4].map((i) => {
                 const need = i % 2 === 0;
                 return (
-                  <div key={i} style={{ borderRadius: 12, border: `1px solid ${need ? '#FB923C30' : '#22C55E30'}`, background: need ? '#FB923C06' : '#22C55E06', padding: '14px 16px' }}>
+                  <div key={i} style={{ borderRadius: 12, border: `1px solid ${need ? `${COLOR}30` : '#22C55E30'}`, background: need ? `${COLOR}06` : '#22C55E06', padding: '14px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: need ? '#FB923C20' : '#22C55E20', color: need ? '#FB923C' : '#22C55E' }}>{need ? 'NEED' : 'OFFER'}</span>
-                      <span style={{ height: 14, width: 60, borderRadius: 4, background: 'rgba(255,255,255,0.06)' }} />
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: need ? `${COLOR}20` : '#22C55E20', color: need ? COLOR : '#22C55E' }}>{need ? 'NEED' : 'OFFER'}</span>
+                      <span style={{ height: 14, width: 60, borderRadius: 4, background: t.BORDER }} />
                     </div>
                     <div style={{ height: 13, width: '70%', borderRadius: 6, background: 'rgba(255,255,255,0.10)', marginBottom: 10 }} />
                     <div style={{ height: 10, width: '45%', borderRadius: 5, background: 'rgba(255,255,255,0.05)' }} />
@@ -138,7 +134,7 @@ function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string;
                 <Lock size={22} color={COLOR} />
               </div>
               <div style={{ fontSize: 16, fontWeight: 700, textAlign: 'center' }}>Sign in to see the live relay feed</div>
-              <div style={{ fontSize: 13, color: SUBTLE, textAlign: 'center', maxWidth: 320 }}>
+              <div style={{ fontSize: 13, color: t.MUTED, textAlign: 'center', maxWidth: 320 }}>
                 Browse open needs and offers, then respond directly. Posting is always free and anonymous posts are supported.
               </div>
               <a href={verifyUrl ?? signInUrl} style={{ padding: '12px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
@@ -148,8 +144,8 @@ function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string;
           </div>
 
           {/* Bottom CTA */}
-          <div style={{ padding: '16px 24px', borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 10, alignItems: 'center' }}>
-            <div style={{ fontSize: 13, color: SUBTLE }}>Want to help or need something?</div>
+          <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.BORDER_SOLID}`, display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div style={{ fontSize: 13, color: t.MUTED }}>Want to help or need something?</div>
             {verifyUrl ? (
               <a href={verifyUrl} style={{ padding: '9px 22px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
                 Finish verifying
@@ -164,8 +160,8 @@ function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string;
                 </a>
               </>
             )}
-            <div style={{ marginLeft: 'auto', fontSize: 12, color: SUBTLE, display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Shield size={12} color={SUBTLE} /> Anonymous posts always available
+            <div style={{ marginLeft: 'auto', fontSize: 12, color: t.MUTED, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Shield size={12} color={t.MUTED} /> Anonymous posts always available
             </div>
           </div>
         </main>
@@ -175,9 +171,11 @@ function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string;
 }
 
 function MobileSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
-  const COLOR = SR_ACCENT;
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
+  const COLOR = t.ACCENT;
   return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
+    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: t.TITLE }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <PublicShellBackLink />
@@ -185,7 +183,7 @@ function MobileSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string; 
           <span style={{ fontSize: 20, fontWeight: 800 }}>Socket Relay</span>
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 11, color: COLOR, fontWeight: 600, width: 'fit-content' }}>Peer-to-peer needs board</span>
-        <p style={{ margin: 0, fontSize: 14, color: '#9CA3AF', lineHeight: 1.5 }}>Post what you need, offer what you have. Clothing, furniture, skills, time — the survivor community connects directly.</p>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Post what you need, offer what you have. Clothing, furniture, skills, time — the survivor community connects directly.</p>
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 

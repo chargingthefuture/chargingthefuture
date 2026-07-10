@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-const COLOR = '#6EE7B7';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const SUBTLE = '#6B7280';
-
-export const PeerProgrammingEmpty = () => (
+export const PeerProgrammingEmpty = () => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('peer-programming', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return (
   <View style={styles.root}>
     <View style={styles.card}>
       <Text style={styles.cardTitle}>Not in a cohort yet</Text>
@@ -16,31 +16,34 @@ export const PeerProgrammingEmpty = () => (
       </Text>
     </View>
   </View>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0F1117',
+    backgroundColor: t.bg,
     padding: 20,
   },
   card: {
-    borderRadius: 12,
+    borderRadius: t.radius,
     borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: SURFACE,
+    borderColor: t.border,
+    backgroundColor: t.surface,
     padding: 14,
     marginBottom: 20,
   },
   cardTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLOR,
+    color: accent,
     marginBottom: 6,
   },
   cardDesc: {
     fontSize: 12,
-    color: SUBTLE,
+    color: t.textSecondary,
     lineHeight: 20,
   },
-});
+  });
+}
