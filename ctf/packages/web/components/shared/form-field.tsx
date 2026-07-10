@@ -52,12 +52,12 @@ export function FormField({ label, optional, hint, error, children, className, s
 
   return (
     <div className={className} style={style}>
-      <label htmlFor={id} style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6, ...labelStyle }}>
+      <label htmlFor={id} style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--ctf-text-secondary, #9CA3AF)", marginBottom: 6, ...labelStyle }}>
         {label}
-        {optional ? <span style={{ color: "#6B7280", fontWeight: 400 }}> (optional)</span> : null}
+        {optional ? <span style={{ color: "var(--ctf-text-subtle, #6B7280)", fontWeight: 400 }}> (optional)</span> : null}
       </label>
       {hint ? (
-        <div id={hintId} style={{ fontSize: 12, color: "#6B7280", marginBottom: 6, lineHeight: 1.5 }}>
+        <div id={hintId} style={{ fontSize: 12, color: "var(--ctf-text-subtle, #6B7280)", marginBottom: 6, lineHeight: 1.5 }}>
           {hint}
         </div>
       ) : null}

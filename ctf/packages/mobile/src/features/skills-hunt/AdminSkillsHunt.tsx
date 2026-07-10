@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import type { Round, Submission } from './SkillsHuntApi';
 import {
@@ -16,15 +17,14 @@ function creditsLabel(amount: number): string {
   return `${amount} ServiceCredits`;
 }
 
-const COLOR = '#FBBF24';
-const BG = '#0F1117';
+// Left raw (no exact theme-token match): the shared admin panel/border/subtle greys.
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
-const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 
 const STATUS_FILTERS: SubmissionStatusFilter[] = ['pending', 'accepted', 'rejected', 'flagged'];
 
+// Round status palette — deliberately raw (status colors stay together, untokenized).
 function roundStatusColor(status: Round['status']): string {
   if (status === 'active') return '#22C55E';
   if (status === 'draft') return '#0EA5E9';
@@ -32,6 +32,9 @@ function roundStatusColor(status: Round['status']): string {
 }
 
 export const AdminSkillsHunt = () => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-hunt', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const { auth, loading: authLoading } = usePluginAuth('clerk');
 
   const [rounds, setRounds] = useState<Round[]>([]);
@@ -130,7 +133,7 @@ export const AdminSkillsHunt = () => {
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLOR} />
+        <ActivityIndicator size="large" color={accent} />
       </View>
     );
   }
@@ -279,11 +282,12 @@ export const AdminSkillsHunt = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: t.bg },
   content: { padding: 16, gap: 16 },
-  center: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  title: { fontSize: 20, fontWeight: '800', color: TEXT },
+  center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
   subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
   noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
   errorBanner: {
@@ -315,12 +319,12 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
   cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
   rewardCard: {
-    backgroundColor: `${COLOR}10`,
+    backgroundColor: `${accent}10`,
     borderWidth: 1,
-    borderColor: `${COLOR}35`,
+    borderColor: `${accent}35`,
     borderRadius: 14,
     padding: 16,
     gap: 6,
@@ -328,23 +332,23 @@ const styles = StyleSheet.create({
   rewardTitle: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLOR,
+    color: accent,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  rewardLine: { fontSize: 14, fontWeight: '700', color: TEXT },
+  rewardLine: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
   rewardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
   rewardNote: { fontSize: 11, color: SUBTLE, lineHeight: 16 },
   paidPill: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: t.radiusChip,
     backgroundColor: 'rgba(34,197,94,0.12)',
     borderWidth: 1,
     borderColor: 'rgba(34,197,94,0.3)',
   },
-  paidPillText: { fontSize: 11, fontWeight: '700', color: '#22C55E' },
+  paidPillText: { fontSize: 11, fontWeight: '700', color: t.success },
   pillWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: {
     borderWidth: 1,
@@ -354,12 +358,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: 'rgba(255,255,255,0.03)',
   },
-  pillActive: { backgroundColor: COLOR, borderColor: COLOR },
+  pillActive: { backgroundColor: accent, borderColor: accent },
   pillText: { fontSize: 12, fontWeight: '600', color: '#D1D5DB', textTransform: 'capitalize' },
   pillTextActive: { color: '#000' },
   pillStatus: { fontSize: 10, fontWeight: '700', textTransform: 'capitalize', marginTop: 2 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  submissionName: { fontSize: 14, fontWeight: '700', color: TEXT, flex: 1, paddingRight: 8 },
+  submissionName: { fontSize: 14, fontWeight: '700', color: t.textPrimary, flex: 1, paddingRight: 8 },
   submissionStatus: { fontSize: 11, fontWeight: '700', color: SUBTLE, textTransform: 'capitalize' },
   submissionBio: { fontSize: 13, color: '#D1D5DB', lineHeight: 19 },
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
@@ -371,6 +375,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     borderWidth: 1,
   },
+  // Accept / reject / flag palette — deliberately raw (green/red/amber status set stays together).
   acceptBtn: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: 'rgba(34,197,94,0.3)' },
   rejectBtn: { backgroundColor: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' },
   flagBtn: { backgroundColor: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.3)' },
@@ -379,4 +384,5 @@ const styles = StyleSheet.create({
   acceptText: { color: '#22C55E' },
   rejectText: { color: '#EF4444' },
   flagText: { color: '#F59E0B' },
-});
+  });
+}

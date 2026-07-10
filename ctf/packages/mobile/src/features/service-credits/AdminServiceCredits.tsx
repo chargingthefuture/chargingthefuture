@@ -7,8 +7,9 @@
 // dispute adjustment — each behind an explicit confirm step. No credits→fiat equivalence
 // is ever shown; amounts come only from operator input or a real endpoint response.
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import { AdminDemoBanner } from '../../components/shared/AdminDemoBanner';
 import {
@@ -27,12 +28,7 @@ import {
   type CreditLimit,
 } from './admin-api';
 
-const COLOR = '#A855F7';
-const DANGER = '#EF4444';
-const BG = '#0F1117';
-const PANEL = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
+// Neutral secondary ink — no mobile token, left raw per the token-pass.
 const SUBTLE = '#9CA3AF';
 
 type ActionKey =
@@ -59,9 +55,12 @@ function ConfirmButtonless({
   disabled?: boolean;
   onPress: () => void;
 }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('service-credits', theme);
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   return (
     <Pressable
-      style={[styles.primaryBtn, { backgroundColor: COLOR }, disabled || busy ? styles.btnDisabled : null]}
+      style={[styles.primaryBtn, { backgroundColor: accent }, disabled || busy ? styles.btnDisabled : null]}
       disabled={disabled || busy}
       onPress={onPress}
     >
@@ -71,6 +70,8 @@ function ConfirmButtonless({
 }
 
 function MetricTile({ label, value }: { label: string; value: string }) {
+  const { tokens } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   return (
     <View style={styles.metricTile}>
       <Text style={styles.metricValue}>{value}</Text>
@@ -92,6 +93,8 @@ function LabeledInput({
   placeholder?: string;
   numeric?: boolean;
 }) {
+  const { tokens } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   return (
     <View style={{ gap: 4 }}>
       <Text style={styles.label}>{label}</Text>
@@ -125,8 +128,10 @@ function ConfirmButton({
   danger?: boolean;
   onConfirm: () => void;
 }) {
+  const { tokens, theme } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const [armed, setArmed] = useState(false);
-  const accent = danger ? DANGER : COLOR;
+  const accent = danger ? tokens.danger : getAppAccent('service-credits', theme);
 
   if (!armed) {
     return (
@@ -163,6 +168,9 @@ function ConfirmButton({
 }
 
 export const AdminServiceCredits = () => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('service-credits', theme);
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const { auth, loading: authLoading } = usePluginAuth('clerk');
 
   const [loading, setLoading] = useState(true);
@@ -257,7 +265,7 @@ export const AdminServiceCredits = () => {
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLOR} />
+        <ActivityIndicator size="large" color={accent} />
       </View>
     );
   }
@@ -594,93 +602,95 @@ export const AdminServiceCredits = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
-  content: { padding: 16, gap: 16 },
-  center: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  // Pull the demo banner to the screen edges (the content padding is 16) so it reads as a full-width
-  // warning strip, mirroring the web fixed-position banner.
-  demoBanner: { marginTop: -16, marginHorizontal: -16, marginBottom: 4 },
-  title: { fontSize: 20, fontWeight: '800', color: TEXT },
-  subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
-  noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
-  errorBanner: {
-    fontSize: 13,
-    color: '#FCA5A5',
-    backgroundColor: 'rgba(239,68,68,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.3)',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  noticeBanner: {
-    fontSize: 13,
-    color: '#86EFAC',
-    backgroundColor: 'rgba(34,197,94,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.3)',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  card: { backgroundColor: PANEL, borderWidth: 1, borderColor: BORDER, borderRadius: 14, padding: 16, gap: 10 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
-  cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
-  policyText: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    color: '#D1D5DB',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 8,
-    padding: 10,
-  },
-  label: { fontSize: 12, fontWeight: '600', color: '#D1D5DB' },
-  input: {
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    color: TEXT,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-  },
-  primaryBtn: { marginTop: 6, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 11 },
-  primaryBtnText: { fontSize: 14, fontWeight: '700', color: '#000' },
-  secondaryBtn: {
-    marginTop: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  secondaryBtnText: { fontSize: 14, fontWeight: '600', color: TEXT },
-  btnDisabled: { opacity: 0.5 },
-  confirmBox: {
-    marginTop: 6,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.4)',
-    backgroundColor: 'rgba(245,158,11,0.1)',
-    borderRadius: 10,
-    padding: 12,
-  },
-  confirmText: { fontSize: 13, color: '#FCD34D', lineHeight: 19 },
-  confirmRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-  metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
-  metricTile: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  metricValue: { fontSize: 18, fontWeight: '800', color: TEXT, marginBottom: 2 },
-  metricLabel: { fontSize: 11, color: SUBTLE },
-});
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: t.bg },
+    content: { padding: 16, gap: 16 },
+    center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
+    // Pull the demo banner to the screen edges (the content padding is 16) so it reads as a full-width
+    // warning strip, mirroring the web fixed-position banner.
+    demoBanner: { marginTop: -16, marginHorizontal: -16, marginBottom: 4 },
+    title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
+    subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
+    noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+    errorBanner: {
+      fontSize: 13,
+      color: '#FCA5A5',
+      backgroundColor: 'rgba(239,68,68,0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(239,68,68,0.3)',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    noticeBanner: {
+      fontSize: 13,
+      color: '#86EFAC',
+      backgroundColor: 'rgba(34,197,94,0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(34,197,94,0.3)',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    card: { backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, borderRadius: 14, padding: 16, gap: 10 },
+    cardTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
+    cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+    policyText: {
+      fontFamily: 'monospace',
+      fontSize: 12,
+      color: '#D1D5DB',
+      backgroundColor: 'rgba(255,255,255,0.03)',
+      borderRadius: 8,
+      padding: 10,
+    },
+    label: { fontSize: 12, fontWeight: '600', color: '#D1D5DB' },
+    input: {
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 10,
+      backgroundColor: 'rgba(255,255,255,0.03)',
+      color: t.textPrimary,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+    },
+    primaryBtn: { marginTop: 6, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 11 },
+    primaryBtnText: { fontSize: 14, fontWeight: '700', color: '#000' },
+    secondaryBtn: {
+      marginTop: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 18,
+      borderRadius: 11,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    secondaryBtnText: { fontSize: 14, fontWeight: '600', color: t.textPrimary },
+    btnDisabled: { opacity: 0.5 },
+    confirmBox: {
+      marginTop: 6,
+      gap: 10,
+      borderWidth: 1,
+      borderColor: 'rgba(245,158,11,0.4)',
+      backgroundColor: 'rgba(245,158,11,0.1)',
+      borderRadius: 10,
+      padding: 12,
+    },
+    confirmText: { fontSize: 13, color: '#FCD34D', lineHeight: 19 },
+    confirmRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+    metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
+    metricTile: {
+      flexBasis: '47%',
+      flexGrow: 1,
+      padding: 12,
+      borderRadius: 10,
+      backgroundColor: 'rgba(255,255,255,0.03)',
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    metricValue: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 2 },
+    metricLabel: { fontSize: 11, color: SUBTLE },
+  });
+}

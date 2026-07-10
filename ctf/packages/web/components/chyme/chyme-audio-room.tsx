@@ -13,7 +13,8 @@ import {
   type StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
 import { Mic, Headphones } from 'lucide-react';
-import { BORDER, PRIMARY, chymeHandle, initials, type CurrentUser } from './chyme-shared';
+import { useTheme } from '@/hooks/useTheme';
+import { getChymeTokens, chymeHandle, initials, type CurrentUser } from './chyme-shared';
 import { ChymeControls } from './chyme-controls';
 import { ChymeTipButton } from './chyme-tip-dialog';
 import { reportError } from 'lib/observability/report';
@@ -74,6 +75,8 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error' | 'unsupported'>('connecting');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
 
   useEffect(() => {
     // If the browser has no WebRTC (Safari Lockdown Mode, some hardened/older browsers), the Stream
@@ -174,7 +177,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
             <div style={{ color: '#FBBF24', fontWeight: 700, marginBottom: 6 }}>
               Live audio isn’t available in this browser
             </div>
-            <div style={{ color: '#9CA3AF' }}>
+            <div style={{ color: t.SUBTLE }}>
               The audio room needs WebRTC, which this browser has turned off. On iPhone or iPad this
               usually means Safari <strong>Lockdown Mode</strong> is on. You can still read and send chat
               here. To listen or speak, turn off Lockdown Mode for this site (Safari address bar →{' '}
@@ -194,7 +197,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
         isMobile={isMobile}
         onLeave={onLeave}
         stage={
-          <div style={{ color: status === 'error' ? '#F87171' : '#4B5563', fontSize: 14 }}>
+          <div style={{ color: status === 'error' ? '#F87171' : t.FAINT, fontSize: 14 }}>
             {status === 'error'
               ? (errorMessage ?? 'Could not connect to the audio room.')
               : 'Connecting to the audio room…'}
@@ -236,6 +239,8 @@ function ChymeAudioFrame({
   isMobile: boolean;
   onLeave: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
   return (
     <>
       <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden' }}>
@@ -243,7 +248,7 @@ function ChymeAudioFrame({
         {showChat && chatPanel}
       </div>
       {controls ?? (
-        <div style={{ padding: '16px 24px', borderTop: `1px solid ${BORDER}`, background: '#030d05', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+        <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
           <button
             onClick={onLeave}
             style={{ padding: '10px 18px', borderRadius: 12, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
@@ -272,6 +277,8 @@ function ChymeAudioRoomLive({
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
   const call = useCall();
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
   // Hand-raise is tracked locally so the toggle is reliable for the person pressing it: their own
   // tile shows ✋ and the button reads "Lower Hand" until they lower it. The state is ALSO persisted
   // server-side (POST /api/chyme/hand) so it rides on the member's presence row and everyone else
@@ -310,11 +317,11 @@ function ChymeAudioRoomLive({
 
   const stage = (
     <>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#4B5563', textTransform: 'uppercase', marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: t.FAINT, textTransform: 'uppercase', marginBottom: 16 }}>
         On Stage · {uniqueParticipants.length} {uniqueParticipants.length === 1 ? 'Participant' : 'Participants'}
       </div>
       {uniqueParticipants.length === 0 ? (
-        <div style={{ color: '#4B5563', fontSize: 14 }}>No participants yet.</div>
+        <div style={{ color: t.FAINT, fontSize: 14 }}>No participants yet.</div>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
           {uniqueParticipants.map((participant) => (
@@ -353,6 +360,8 @@ function ChymeSpeakerTile({
   localHandRaised?: boolean;
   raisedHandUserIds: ReadonlySet<string>;
 }) {
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
   const isSelf = participant.isLocalParticipant;
   // Signed-out guests join as listen-only (their Stream id is minted as `chyme-guest-…`). They can
   // never publish, so a mic icon is misleading — show a headphones "listening" indicator instead.
@@ -376,16 +385,16 @@ function ChymeSpeakerTile({
             width: 72,
             height: 72,
             borderRadius: '50%',
-            background: `${PRIMARY}20`,
-            border: `3px solid ${speaking ? PRIMARY : isSelf ? `${PRIMARY}80` : 'transparent'}`,
+            background: `${t.ACCENT}20`,
+            border: `3px solid ${speaking ? t.ACCENT : isSelf ? `${t.ACCENT}80` : 'transparent'}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: speaking ? `0 0 20px ${PRIMARY}80` : isSelf ? `0 0 12px ${PRIMARY}40` : 'none',
+            boxShadow: speaking ? `0 0 20px ${t.ACCENT}80` : isSelf ? `0 0 12px ${t.ACCENT}40` : 'none',
             transition: 'box-shadow 0.15s, border-color 0.15s',
           }}
         >
-          <span style={{ fontSize: 20, fontWeight: 800, color: PRIMARY }}>{initials(name)}</span>
+          <span style={{ fontSize: 20, fontWeight: 800, color: t.ACCENT }}>{initials(name)}</span>
         </div>
         <div
           style={{
@@ -395,7 +404,7 @@ function ChymeSpeakerTile({
             width: 22,
             height: 22,
             borderRadius: '50%',
-            background: !isGuest && publishingAudio ? PRIMARY : 'rgba(120,120,120,0.9)',
+            background: !isGuest && publishingAudio ? t.ACCENT : 'rgba(120,120,120,0.9)',
             border: '2px solid #021006',
             display: 'flex',
             alignItems: 'center',
@@ -414,13 +423,13 @@ function ChymeSpeakerTile({
           </div>
         )}
       </div>
-      <div style={{ fontSize: 12, fontWeight: 600, color: '#E8EAF0', textAlign: 'center' }}>{name}</div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: t.TEXT, textAlign: 'center' }}>{name}</div>
       <span
         style={{
           fontSize: 10,
-          background: !isGuest && publishingAudio ? `${PRIMARY}20` : 'rgba(255,255,255,0.05)',
-          color: !isGuest && publishingAudio ? PRIMARY : '#6B7280',
-          border: `1px solid ${!isGuest && publishingAudio ? `${PRIMARY}35` : 'transparent'}`,
+          background: !isGuest && publishingAudio ? `${t.ACCENT}20` : 'rgba(255,255,255,0.05)',
+          color: !isGuest && publishingAudio ? t.ACCENT : t.MUTED,
+          border: `1px solid ${!isGuest && publishingAudio ? `${t.ACCENT}35` : 'transparent'}`,
           padding: '1px 8px',
           borderRadius: 20,
         }}

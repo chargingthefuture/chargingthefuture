@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTheme, type ThemeTokens } from '../../theme';
 import { ComicConsentSheet } from './ComicConsentSheet';
 import { mentionsComic, sendComicMessage } from './api';
 
@@ -17,9 +18,11 @@ import { mentionsComic, sendComicMessage } from './api';
 // composer: an @comic chip + the helper "Type @comic to ask the AI Assistant". Typing @comic … and
 // sending routes to the assistant; the asker sees only a safe holding state (every answer is human-
 // reviewed first). First use opens the consent bottom sheet before anything is sent.
+//
+// CYAN is the @comic AI-assistant accent. It is deliberately kept raw: the comic theme remaps this
+// slug to inkDim (getAppAccent('comic','comic')), a value change that is out of scope for this
+// byte-identical token pass, so the assistant cyan stays constant while chrome reads theme tokens.
 const CYAN = '#38BDF8';
-const DIM = '#4B5563';
-const SUBTLE = '#6B7280';
 
 type ComicComposerProps = {
   // Called after a successful @comic send so the host stream can show an optimistic pending card.
@@ -27,6 +30,8 @@ type ComicComposerProps = {
 };
 
 export function ComicComposer({ onAsked }: ComicComposerProps) {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,35 +109,35 @@ export function ComicComposer({ onAsked }: ComicComposerProps) {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.wrap}>
-        <View style={styles.helperRow}>
-          <View style={styles.chip}>
+      <View style={s.wrap}>
+        <View style={s.helperRow}>
+          <View style={s.chip}>
             <Ionicons name="at" size={11} color={CYAN} />
-            <Text style={styles.chipText}>comic</Text>
+            <Text style={s.chipText}>comic</Text>
           </View>
-          <Text style={styles.helperText}>
-            Type <Text style={styles.helperStrong}>@comic</Text> to ask the AI Assistant
+          <Text style={s.helperText}>
+            Type <Text style={s.helperStrong}>@comic</Text> to ask the AI Assistant
           </Text>
         </View>
 
-        {error && <Text style={styles.error}>{error}</Text>}
-        {info && <Text style={styles.info}>{info}</Text>}
+        {error && <Text style={s.error}>{error}</Text>}
+        {info && <Text style={s.info}>{info}</Text>}
 
-        <View style={styles.inputRow}>
+        <View style={s.inputRow}>
           <TextInput
-            style={styles.input}
+            style={s.input}
             value={input}
             onChangeText={(value) => {
               setInput(value);
               if (info) setInfo(null);
             }}
             placeholder="Share, or type @comic to ask…"
-            placeholderTextColor={DIM}
+            placeholderTextColor={tokens.textMuted}
             multiline
             editable={!sending}
           />
           <Pressable
-            style={[styles.sendBtn, isAsk && input.trim() ? styles.sendBtnActive : null]}
+            style={[s.sendBtn, isAsk && input.trim() ? s.sendBtnActive : null]}
             onPress={handleSend}
             disabled={!input.trim() || sending}
             accessibilityRole="button"
@@ -141,7 +146,7 @@ export function ComicComposer({ onAsked }: ComicComposerProps) {
             {sending ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Ionicons name="send" size={14} color={isAsk && input.trim() ? '#fff' : DIM} />
+              <Ionicons name="send" size={14} color={isAsk && input.trim() ? '#fff' : tokens.textMuted} />
             )}
           </Pressable>
         </View>
@@ -152,14 +157,15 @@ export function ComicComposer({ onAsked }: ComicComposerProps) {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
   wrap: {
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 12,
-    backgroundColor: '#090B0F',
+    backgroundColor: t.surfaceAlt,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: t.borderFaint,
   },
   helperRow: {
     flexDirection: 'row',
@@ -173,7 +179,7 @@ const styles = StyleSheet.create({
     gap: 3,
     paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: t.radiusChip,
     backgroundColor: 'rgba(14,165,233,0.12)',
     borderWidth: 1,
     borderColor: 'rgba(14,165,233,0.3)',
@@ -185,7 +191,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 11,
-    color: SUBTLE,
+    color: t.textSecondary,
     flex: 1,
   },
   helperStrong: {
@@ -225,11 +231,12 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: t.borderFaint,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sendBtnActive: {
     backgroundColor: CYAN,
   },
-});
+  });
+}

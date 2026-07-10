@@ -10,6 +10,8 @@ import { Radio, Lock } from 'lucide-react';
 import type Hls from 'hls.js';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
+import { useTheme } from '@/hooks/useTheme';
+import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
 import { BEACON_COLOR } from 'lib/beacon/constants';
 
 type BeaconEventLike = {
@@ -35,13 +37,9 @@ type ChatCredentials = {
   streamToken: string;
 };
 
-const PANEL = '#0D0F14';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#9CA3AF';
-
 export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMember: boolean }) {
+  const { theme } = useTheme();
+  const t = getBeaconTokens(theme);
   const [current, setCurrent] = useState<CurrentResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [chat, setChat] = useState<ChatCredentials | null>(null);
@@ -156,18 +154,18 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
   }, [isMember, liveEvent, chat, joinChat]);
 
   return (
-    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px', color: TEXT }}>
+    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px', color: t.TITLE }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         {!isMember && <PublicShellBackLink />}
-        <Radio size={22} style={{ color: BEACON_COLOR }} />
+        <Radio size={22} style={{ color: t.ACCENT }} />
         <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Beacon</h1>
       </div>
-      <p style={{ color: SUBTLE, fontSize: 14, marginTop: 0 }}>
+      <p style={{ color: t.SUBTLE, fontSize: 14, marginTop: 0 }}>
         Live broadcasts from the team. Watch with just a link; sign in to chat and react.
       </p>
 
       {loading ? (
-        <div style={panelStyle}>Loading…</div>
+        <div style={panelStyle(t)}>Loading…</div>
       ) : liveEvent ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
           <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr', alignItems: 'start' }} className="beacon-live-grid">
@@ -193,22 +191,22 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
               </div>
               <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 6px' }}>{liveEvent.title}</h2>
               {liveEvent.description ? (
-                <p style={{ color: SUBTLE, fontSize: 14, margin: '0 0 12px' }}>{liveEvent.description}</p>
+                <p style={{ color: t.SUBTLE, fontSize: 14, margin: '0 0 12px' }}>{liveEvent.description}</p>
               ) : null}
-              <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', border: `1px solid ${BORDER}`, aspectRatio: '16 / 9' }}>
+              <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', border: `1px solid ${t.BORDER_SOLID}`, aspectRatio: '16 / 9' }}>
                 {hlsUrl ? (
                   <video ref={videoRef} controls autoPlay playsInline muted style={{ width: '100%', height: '100%' }} />
                 ) : (
-                  <div style={{ ...centeredStyle, height: '100%' }}>The broadcast is starting…</div>
+                  <div style={{ ...centeredStyle(t), height: '100%' }}>The broadcast is starting…</div>
                 )}
               </div>
-              <p style={{ color: SUBTLE, fontSize: 12, marginTop: 10 }}>
+              <p style={{ color: t.SUBTLE, fontSize: 12, marginTop: 10 }}>
                 This broadcast and its chat are public. The event is recorded; the replay is posted to the Commons.
               </p>
             </section>
 
-            <aside style={{ ...panelStyle, padding: 0, minHeight: 420, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ padding: '12px 16px', borderBottom: `1px solid ${BORDER}`, fontWeight: 700, fontSize: 14 }}>Live chat</div>
+            <aside style={{ ...panelStyle(t), padding: 0, minHeight: 420, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ padding: '12px 16px', borderBottom: `1px solid ${t.BORDER_SOLID}`, fontWeight: 700, fontSize: 14 }}>Live chat</div>
               {isMember ? (
                 chat ? (
                   <div style={{ flex: 1, minHeight: 0 }}>
@@ -218,31 +216,31 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
                       streamUserId={chat.streamUserId}
                       streamChannelId={chat.streamChannelId}
                       channelType={chat.streamChannelType}
-                      accentColor={BEACON_COLOR}
+                      accentColor={t.ACCENT}
                     />
                   </div>
                 ) : (
-                  <div style={{ ...centeredStyle, flex: 1 }}>{chatError ?? 'Connecting to chat…'}</div>
+                  <div style={{ ...centeredStyle(t), flex: 1 }}>{chatError ?? 'Connecting to chat…'}</div>
                 )
               ) : (
-                <div style={{ ...centeredStyle, flex: 1, flexDirection: 'column', gap: 12, padding: 24, textAlign: 'center' }}>
-                  <Lock size={28} style={{ color: SUBTLE }} />
-                  <div style={{ fontSize: 14, color: SUBTLE }}>Sign in to chat and react. Anyone can watch — chatting is for members.</div>
-                  <a href={signInUrl} style={ctaStyle}>Sign in to chat</a>
+                <div style={{ ...centeredStyle(t), flex: 1, flexDirection: 'column', gap: 12, padding: 24, textAlign: 'center' }}>
+                  <Lock size={28} style={{ color: t.SUBTLE }} />
+                  <div style={{ fontSize: 14, color: t.SUBTLE }}>Sign in to chat and react. Anyone can watch — chatting is for members.</div>
+                  <a href={signInUrl} style={ctaStyle(t)}>Sign in to chat</a>
                 </div>
               )}
             </aside>
           </div>
         </div>
       ) : (
-        <div style={{ ...panelStyle, textAlign: 'center', padding: '48px 24px' }}>
-          <Radio size={40} style={{ color: SUBTLE, display: 'block', margin: '0 auto 12px' }} />
+        <div style={{ ...panelStyle(t), textAlign: 'center', padding: '48px 24px' }}>
+          <Radio size={40} style={{ color: t.SUBTLE, display: 'block', margin: '0 auto 12px' }} />
           <div style={{ fontSize: 16, fontWeight: 600 }}>No live event right now</div>
-          <p style={{ color: SUBTLE, fontSize: 14, marginTop: 6 }}>When the team goes live, it will appear here.</p>
+          <p style={{ color: t.SUBTLE, fontSize: 14, marginTop: 6 }}>When the team goes live, it will appear here.</p>
           {replay?.recordingUrl ? (
             <div style={{ marginTop: 20, textAlign: 'left' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: SUBTLE, marginBottom: 8 }}>Last replay</div>
-              <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', border: `1px solid ${BORDER}`, aspectRatio: '16 / 9' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Last replay</div>
+              <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', border: `1px solid ${t.BORDER_SOLID}`, aspectRatio: '16 / 9' }}>
                 <video controls playsInline src={replay.recordingUrl} style={{ width: '100%', height: '100%' }} />
               </div>
               <div style={{ fontSize: 14, fontWeight: 600, marginTop: 8 }}>{replay.title}</div>
@@ -260,32 +258,32 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
   );
 }
 
-const panelStyle: React.CSSProperties = {
+const panelStyle = (t: BeaconTokens): React.CSSProperties => ({
   marginTop: 20,
   borderRadius: 14,
-  background: PANEL,
-  border: `1px solid ${BORDER}`,
+  background: t.HEADER,
+  border: `1px solid ${t.BORDER_SOLID}`,
   padding: 20,
-  color: TEXT,
-};
+  color: t.TITLE,
+});
 
-const centeredStyle: React.CSSProperties = {
+const centeredStyle = (t: BeaconTokens): React.CSSProperties => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  color: SUBTLE,
+  color: t.SUBTLE,
   fontSize: 14,
-  background: SURFACE,
-};
+  background: t.SURFACE,
+});
 
-const ctaStyle: React.CSSProperties = {
+const ctaStyle = (t: BeaconTokens): React.CSSProperties => ({
   display: 'inline-block',
   padding: '9px 18px',
   borderRadius: 10,
-  background: `${BEACON_COLOR}20`,
-  border: `1px solid ${BEACON_COLOR}55`,
-  color: BEACON_COLOR,
+  background: `${t.ACCENT}20`,
+  border: `1px solid ${t.ACCENT}55`,
+  color: t.ACCENT,
   fontSize: 14,
   fontWeight: 700,
   textDecoration: 'none',
-};
+});

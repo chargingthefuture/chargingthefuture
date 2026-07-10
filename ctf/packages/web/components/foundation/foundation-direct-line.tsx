@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { StreamChatPanel } from "@/components/shared/stream-chat-panel";
-import { COLOR, FONT } from "./foundation-ui";
+import { useTheme } from "@/hooks/useTheme";
+import { FONT, getFoundationTokens } from "./foundation-ui";
 
 // Stream credentials a member needs to connect to one connection thread's Direct Line channel.
 export interface DirectLineCredentials {
@@ -23,19 +24,21 @@ function DirectLineFrame({
   onBack: () => void;
   children: React.ReactNode;
 }) {
+  const { theme } = useTheme();
+  const t = getFoundationTokens(theme);
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, background: "#0F1117", fontFamily: FONT, color: "#F9FAFB" }}>
-      <header style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderBottom: `1px solid ${COLOR}20`, flexShrink: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, background: t.BG, fontFamily: FONT, color: t.TITLE }}>
+      <header style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderBottom: `1px solid ${t.ACCENT}20`, flexShrink: 0 }}>
         <button
           onClick={onBack}
           aria-label="Back"
-          style={{ width: 36, height: 36, borderRadius: 10, background: `${COLOR}14`, border: `1px solid ${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", color: COLOR, cursor: "pointer", flexShrink: 0 }}
+          style={{ width: 36, height: 36, borderRadius: 10, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, cursor: "pointer", flexShrink: 0 }}
         >
           <ChevronLeft size={20} />
         </button>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: "#F9FAFB" }}>Direct Line</div>
-          {subtitle ? <div style={{ fontSize: 12, color: "#9CA3AF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{subtitle}</div> : null}
+          <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>Direct Line</div>
+          {subtitle ? <div style={{ fontSize: 12, color: t.SUBTLE, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{subtitle}</div> : null}
         </div>
       </header>
       <div style={{ flex: 1, minHeight: 0 }}>{children}</div>
@@ -52,6 +55,8 @@ export function DirectLineFromQuote({
   subtitle?: string | null;
   onBack: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getFoundationTokens(theme);
   return (
     <DirectLineFrame subtitle={subtitle} onBack={onBack}>
       <StreamChatPanel
@@ -59,7 +64,7 @@ export function DirectLineFromQuote({
         streamToken={credentials.streamToken}
         streamUserId={credentials.streamUserId}
         streamChannelId={credentials.streamChannelId}
-        accentColor={COLOR}
+        accentColor={t.ACCENT}
       />
     </DirectLineFrame>
   );
@@ -80,6 +85,8 @@ export function DirectLineFromThread({
   subtitle?: string | null;
   onBack: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getFoundationTokens(theme);
   const [state, setState] = useState<LoadState>({ status: "loading" });
 
   useEffect(() => {
@@ -127,7 +134,7 @@ export function DirectLineFromThread({
   return (
     <DirectLineFrame subtitle={subtitle} onBack={onBack}>
       {state.status === "loading" && (
-        <div style={{ padding: 24, color: "#9CA3AF", fontSize: 14 }}>Opening Direct Line…</div>
+        <div style={{ padding: 24, color: t.SUBTLE, fontSize: 14 }}>Opening Direct Line…</div>
       )}
       {state.status === "error" && (
         <div style={{ padding: 24, color: "#EF4444", fontSize: 14 }}>{state.message}</div>
@@ -138,7 +145,7 @@ export function DirectLineFromThread({
           streamToken={state.credentials.streamToken}
           streamUserId={state.credentials.streamUserId}
           streamChannelId={state.credentials.streamChannelId}
-          accentColor={COLOR}
+          accentColor={t.ACCENT}
         />
       )}
     </DirectLineFrame>

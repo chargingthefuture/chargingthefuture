@@ -6,7 +6,8 @@ import type {
   SkillsHuntSubmissionReportStatus,
 } from "lib/skills-hunt/types";
 import { feedAuthorHandle } from "lib/feed/author-handle";
-import { COLOR } from "./sha-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { COLOR, getSkillsHuntAdminTokens } from "./sha-shared";
 
 const STATUS_FILTERS: Array<{ key: SkillsHuntSubmissionReportStatus; label: string; color: string }> = [
   { key: "open",      label: "Open",      color: "#F59E0B" },
@@ -23,6 +24,8 @@ const RESOLUTIONS: Array<{ status: Resolution; label: string; color: string }> =
 ];
 
 function ReportCard({ report, onResolve }: { report: SkillsHuntSubmissionReport; onResolve: (id: string, status: Resolution) => void }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
   const reporter = feedAuthorHandle(report.reporterUsername, report.reporterUserId);
   const target = report.submissionId
     ? `submission ${report.submissionId}`
@@ -30,10 +33,10 @@ function ReportCard({ report, onResolve }: { report: SkillsHuntSubmissionReport;
       ? `directory ${report.directoryProfileId}`
       : "—";
   return (
-    <div style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}>
-      <div style={{ fontWeight: 700, color: "#F9FAFB" }}>{report.reason}</div>
-      {report.details && <div style={{ fontSize: 13, color: "#9CA3AF", marginTop: 4 }}>{report.details}</div>}
-      <div style={{ fontSize: 11, color: "#6B7280", marginTop: 6 }}>
+    <div style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER_STRONG}` }}>
+      <div style={{ fontWeight: 700, color: t.TITLE }}>{report.reason}</div>
+      {report.details && <div style={{ fontSize: 13, color: t.SUBTLE, marginTop: 4 }}>{report.details}</div>}
+      <div style={{ fontSize: 11, color: t.MUTED, marginTop: 6 }}>
         {reporter} · {target} · {report.status} · {new Date(report.createdAtIso).toLocaleString()}
       </div>
       {report.status === "open" && (
@@ -51,6 +54,8 @@ function ReportCard({ report, onResolve }: { report: SkillsHuntSubmissionReport;
 }
 
 export function SkillsHuntAdminReports() {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
   const [status, setStatus] = useState<SkillsHuntSubmissionReportStatus>("open");
   const [reports, setReports] = useState<SkillsHuntSubmissionReport[]>([]);
   const [loading, setLoading] = useState(false);
@@ -102,7 +107,7 @@ export function SkillsHuntAdminReports() {
           const active = status === s.key;
           return (
             <button key={s.key} type="button" onClick={() => setStatus(s.key)}
-              style={{ padding: "4px 12px", borderRadius: 20, background: active ? `${s.color}25` : "rgba(255,255,255,0.04)", border: `1px solid ${active ? s.color + "60" : "rgba(255,255,255,0.08)"}`, color: active ? s.color : "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              style={{ padding: "4px 12px", borderRadius: 20, background: active ? `${s.color}25` : t.INPUT_BG, border: `1px solid ${active ? s.color + "60" : t.BORDER_STRONG}`, color: active ? s.color : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
               {s.label}
             </button>
           );
@@ -110,9 +115,9 @@ export function SkillsHuntAdminReports() {
       </div>
       {error && <div style={{ marginBottom: 12, color: "#EF4444", fontSize: 13 }}>{error}</div>}
       {loading ? (
-        <div style={{ color: "#6B7280", fontSize: 13 }}>Loading reports…</div>
+        <div style={{ color: t.MUTED, fontSize: 13 }}>Loading reports…</div>
       ) : reports.length === 0 ? (
-        <div style={{ color: "#6B7280", fontSize: 13 }}>No reports in this status.</div>
+        <div style={{ color: t.MUTED, fontSize: 13 }}>No reports in this status.</div>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
           {reports.map((r) => <ReportCard key={r.id} report={r} onResolve={resolve} />)}

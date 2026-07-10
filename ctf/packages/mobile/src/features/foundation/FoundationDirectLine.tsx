@@ -17,18 +17,14 @@
  * Covers loading / error / connecting states; the empty state (a thread with no messages yet) is
  * rendered by StreamChatView's own empty message list.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
 import { StreamChatView } from '../../components/shared/StreamChatView';
 import { fetchThreadDirectLineCredentials, type DirectLineCredentials, type DirectLineError } from './api';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-// Foundation accent (matches the web Direct Line accent and the rest of the mobile Foundation screens).
-const COLOR = '#F59E0B';
-const BG = '#0F1117';
-const SURFACE_DARK = '#090B0F';
-const TEXT = '#F9FAFB';
+// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
 const TEXT_DIM = '#9CA3AF';
-const ERROR = '#EF4444';
 
 type LoadState =
   | { status: 'loading' }
@@ -48,6 +44,10 @@ interface FoundationDirectLineProps {
 }
 
 export function FoundationDirectLine({ threadId, subtitle, onBack }: FoundationDirectLineProps) {
+  const { tokens, theme } = useTheme();
+  // Foundation accent (matches the web Direct Line accent and the rest of the mobile Foundation screens).
+  const accent = getAppAccent('foundation', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [state, setState] = useState<LoadState>({ status: 'loading' });
 
   useEffect(() => {
@@ -100,7 +100,7 @@ export function FoundationDirectLine({ threadId, subtitle, onBack }: FoundationD
       <View style={styles.body}>
         {state.status === 'loading' ? (
           <View style={styles.centered}>
-            <ActivityIndicator color={COLOR} size="large" />
+            <ActivityIndicator color={accent} size="large" />
             <Text style={styles.centeredText}>Opening Direct Line…</Text>
           </View>
         ) : state.status === 'error' ? (
@@ -113,7 +113,7 @@ export function FoundationDirectLine({ threadId, subtitle, onBack }: FoundationD
             streamToken={state.credentials.streamToken}
             streamUserId={state.credentials.streamUserId}
             streamChannelId={state.credentials.streamChannelId}
-            accentColor={COLOR}
+            accentColor={accent}
           />
         )}
       </View>
@@ -121,90 +121,92 @@ export function FoundationDirectLine({ threadId, subtitle, onBack }: FoundationD
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  statusBar: {
-    height: 44,
-    backgroundColor: SURFACE_DARK,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-  },
-  statusTime: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: TEXT,
-  },
-  statusSignal: {
-    fontSize: 12,
-    color: TEXT_DIM,
-  },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: SURFACE_DARK,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-    gap: 12,
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  backIcon: {
-    color: COLOR,
-    fontSize: 16,
-  },
-  backLabel: {
-    color: COLOR,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  titleWrap: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  navTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: TEXT,
-    textAlign: 'center',
-  },
-  navSubtitle: {
-    fontSize: 12,
-    color: TEXT_DIM,
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  navRight: {
-    width: 56,
-  },
-  body: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  centeredText: {
-    fontSize: 14,
-    color: TEXT_DIM,
-    textAlign: 'center',
-  },
-  errorText: {
-    fontSize: 14,
-    color: ERROR,
-    textAlign: 'center',
-    lineHeight: 21,
-  },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.bg,
+    },
+    statusBar: {
+      height: 44,
+      backgroundColor: t.surfaceAlt,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+    },
+    statusTime: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: t.textPrimary,
+    },
+    statusSignal: {
+      fontSize: 12,
+      color: TEXT_DIM,
+    },
+    navBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: t.borderFaint,
+      gap: 12,
+    },
+    backBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    backIcon: {
+      color: accent,
+      fontSize: 16,
+    },
+    backLabel: {
+      color: accent,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    titleWrap: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    navTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: t.textPrimary,
+      textAlign: 'center',
+    },
+    navSubtitle: {
+      fontSize: 12,
+      color: TEXT_DIM,
+      textAlign: 'center',
+      marginTop: 2,
+    },
+    navRight: {
+      width: 56,
+    },
+    body: {
+      flex: 1,
+    },
+    centered: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+      gap: 12,
+    },
+    centeredText: {
+      fontSize: 14,
+      color: TEXT_DIM,
+      textAlign: 'center',
+    },
+    errorText: {
+      fontSize: 14,
+      color: t.danger,
+      textAlign: 'center',
+      lineHeight: 21,
+    },
+  });
+}

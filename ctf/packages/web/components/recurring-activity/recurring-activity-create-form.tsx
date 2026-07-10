@@ -102,21 +102,21 @@ export function RecurringActivityCreateForm({
       <label htmlFor="ra-sector" style={labelStyle}>What is it</label>
       <select id="ra-sector" value={sector} onChange={(e) => setSector(e.target.value as RecurringActivitySector)} style={selectStyle}>
         {SECTORS.map((s) => (
-          <option key={s} value={s} style={{ color: '#0F1117' }}>{SECTOR_LABEL[s]}</option>
+          <option key={s} value={s} style={{ color: t.BG }}>{SECTOR_LABEL[s]}</option>
         ))}
       </select>
 
       <label htmlFor="ra-currency" style={labelStyle}>Currency</label>
       <select id="ra-currency" value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)} style={selectStyle}>
         {currencies.map((c) => (
-          <option key={c.code} value={c.code} style={{ color: '#0F1117' }}>{c.label}</option>
+          <option key={c.code} value={c.code} style={{ color: t.BG }}>{c.label}</option>
         ))}
       </select>
 
       <label htmlFor="ra-cadence" style={labelStyle}>How often</label>
       <select id="ra-cadence" value={cadence} onChange={(e) => setCadence(e.target.value as RecurringActivityCadence)} style={selectStyle}>
         {CADENCES.map((c) => (
-          <option key={c} value={c} style={{ color: '#0F1117' }}>{CADENCE_LABEL[c]}</option>
+          <option key={c} value={c} style={{ color: t.BG }}>{CADENCE_LABEL[c]}</option>
         ))}
       </select>
 
@@ -148,7 +148,7 @@ export function RecurringActivityCreateForm({
           borderRadius: 10,
           background: canSubmit ? t.ACCENT : `${t.ACCENT}55`,
           border: 'none',
-          color: '#0F1117',
+          color: t.BG,
           fontSize: 14,
           fontWeight: 700,
           cursor: canSubmit ? 'pointer' : 'not-allowed',

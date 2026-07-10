@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { useTheme } from '@/hooks/useTheme';
+import { getComicTokens } from './comic-shared';
 import type { ComicReviewItem, ComicTrainingStats } from '../../lib/comic/types';
 import styles from './comic-review-dashboard.module.css';
 
@@ -21,13 +23,15 @@ type TrainingStatsResponse = { ok: true; stats: ComicTrainingStats };
 // Compact "Training examples collected: N" line for the queue header. Read-only and best-effort: the
 // caller only renders this when the stats fetch succeeded, so a failure simply hides the number.
 function TrainingStatsBadge({ stats }: { stats: ComicTrainingStats }) {
+  const { theme } = useTheme();
+  const t = getComicTokens(theme);
   const pending = stats.trainingExamplesByStatus.pending ?? 0;
   const exported = stats.trainingExamplesByStatus.exported ?? 0;
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#9CA3AF', flexWrap: 'wrap' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: t.SUBTLE, flexWrap: 'wrap' }}>
       <strong style={{ color: '#E5E7EB', fontWeight: 600 }}>Training examples collected:</strong>{' '}
       <span style={{ color: '#E5E7EB', fontWeight: 600 }}>{stats.trainingExamplesTotal}</span>
-      <span style={{ color: '#4B5563' }}>
+      <span style={{ color: t.FAINT }}>
         ({pending} awaiting export · {exported} exported · {stats.ratedAnswersTotal} rated answers)
       </span>
     </span>
@@ -92,6 +96,8 @@ const REVIEWER_GUIDANCE = [
 ];
 
 export function ComicReviewDashboard() {
+  const { theme } = useTheme();
+  const t = getComicTokens(theme);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [items, setItems] = useState<ComicReviewItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -319,15 +325,15 @@ export function ComicReviewDashboard() {
           rail already carries the back control, so desktopBack={false} makes this render nothing. */}
       <MobileScreenHeader
         title="AI Assistant"
-        accent="#0EA5E9"
-        icon={<ShieldCheck size={18} color="#0EA5E9" />}
+        accent={t.ACCENT}
+        icon={<ShieldCheck size={18} color={t.ACCENT} />}
         desktopBack={false}
       />
       <div className={`${styles.dashboard} ${selected ? styles.dashboardDetail : styles.dashboardList}`}>
         {/* Icon rail */}
         <aside className={styles.iconRail}>
         <div className={styles.iconRailLogo} aria-hidden="true">
-          <ShieldCheck size={20} color="#0EA5E9" />
+          <ShieldCheck size={20} color={t.ACCENT} />
         </div>
         <button type="button" className={`${styles.iconRailBtn} ${styles.iconRailBtnActive}`} aria-label="Review queue" aria-current="page">
           <Inbox size={20} />
@@ -401,13 +407,13 @@ export function ComicReviewDashboard() {
               <ArrowLeft size={14} /> Queue
             </button>
           ) : (
-            <Sparkles size={18} color="#0EA5E9" />
+            <Sparkles size={18} color={t.ACCENT} />
           )}
           <div className={styles.mainHeaderText}>
             <div className={styles.mainHeaderTitle}>
               {editing && selected ? (
                 <>
-                  <Pencil size={15} color="#0EA5E9" /> Edit &amp; approve answer
+                  <Pencil size={15} color={t.ACCENT} /> Edit &amp; approve answer
                 </>
               ) : (
                 'Review & Correction Dashboard'
@@ -441,7 +447,7 @@ export function ComicReviewDashboard() {
             // rather than implying the queue is clear.
             <div className={styles.allCaughtUp}>
               <div className={styles.allCaughtUpIcon} aria-hidden="true">
-                <Inbox size={42} color="#0EA5E9" />
+                <Inbox size={42} color={t.ACCENT} />
               </div>
               <div className={styles.allCaughtUpTitle}>
                 {error ? 'Queue unavailable' : 'Select an answer to review'}
@@ -540,11 +546,11 @@ export function ComicReviewDashboard() {
                   <div className={styles.provenanceList}>
                     {selected.hasDraft ? (
                       <div className={styles.provenanceRow}>
-                        <FileText size={13} color="#0EA5E9" /> Drafted by: {selected.engine}
+                        <FileText size={13} color={t.ACCENT} /> Drafted by: {selected.engine}
                       </div>
                     ) : null}
                     <div className={styles.provenanceRow}>
-                      <FileText size={13} color="#0EA5E9" /> Intent: {selected.intent ?? 'not classified'}
+                      <FileText size={13} color={t.ACCENT} /> Intent: {selected.intent ?? 'not classified'}
                     </div>
                     {selected.safetyCategory ? (
                       <div className={styles.provenanceRow}>
@@ -671,7 +677,7 @@ export function ComicReviewDashboard() {
       <aside className={styles.rightRail}>
         <div className={styles.guidanceCard}>
           <div className={styles.guidanceHead}>
-            <ShieldCheck size={15} color="#0EA5E9" />
+            <ShieldCheck size={15} color={t.ACCENT} />
             <span>Reviewer guidance</span>
           </div>
           {REVIEWER_GUIDANCE.map((g) => (

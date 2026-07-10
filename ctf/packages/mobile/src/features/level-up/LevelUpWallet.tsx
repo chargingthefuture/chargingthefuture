@@ -8,14 +8,11 @@
 // would contradict the grant-only model), so they are intentionally omitted
 // rather than fabricated.
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { fetchWalletView, type WalletView, type WalletHistoryEntry } from './api';
 
-const GREEN = '#10B981';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const MUTED = '#4B5563';
 const TEXT = '#E2E8F0';
 const SUBTLE = '#94A3B8';
 
@@ -40,22 +37,26 @@ function formatDate(iso: string): string {
   }
 }
 
-const HistoryRow: React.FC<{ entry: WalletHistoryEntry }> = ({ entry }) => {
+const HistoryRow: React.FC<{ entry: WalletHistoryEntry; s: ReturnType<typeof makeStyles>; accent: string }> = ({ entry, s, accent }) => {
   return (
-    <View style={styles.row}>
-      <View style={[styles.rowIcon, { backgroundColor: `${GREEN}12`, borderColor: `${GREEN}25` }]}>
-        <Text style={styles.rowIconText}>↓</Text>
+    <View style={s.row}>
+      <View style={[s.rowIcon, { backgroundColor: `${accent}12`, borderColor: `${accent}25` }]}>
+        <Text style={s.rowIconText}>↓</Text>
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.rowLabel} numberOfLines={1}>{entry.label}</Text>
-        <Text style={styles.rowKind}>{(KIND_LABELS[entry.kind] ?? 'Credit earned')} · {formatDate(entry.earnedAtIso)}</Text>
+        <Text style={s.rowLabel} numberOfLines={1}>{entry.label}</Text>
+        <Text style={s.rowKind}>{(KIND_LABELS[entry.kind] ?? 'Credit earned')} · {formatDate(entry.earnedAtIso)}</Text>
       </View>
-      <Text style={styles.rowAmount}>+{entry.amount} SC</Text>
+      <Text style={s.rowAmount}>+{entry.amount} SC</Text>
     </View>
   );
 }
 
 export function LevelUpWallet() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('level-up', theme);
+  const s = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+
   const [wallet, setWallet] = useState<WalletView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,21 +76,21 @@ export function LevelUpWallet() {
 
   useEffect(() => { void load(); }, [load]);
 
-  if (loading) return <ActivityIndicator color={GREEN} style={{ marginTop: 32 }} />;
+  if (loading) return <ActivityIndicator color={accent} style={{ marginTop: 32 }} />;
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => void load()}>
-          <Text style={styles.retryBtnText}>Retry</Text>
+      <View style={s.center}>
+        <Text style={s.errorText}>{error}</Text>
+        <TouchableOpacity style={s.retryBtn} onPress={() => void load()}>
+          <Text style={s.retryBtnText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
   }
   if (!wallet) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.emptyBody}>Wallet unavailable.</Text>
+      <View style={s.center}>
+        <Text style={s.emptyBody}>Wallet unavailable.</Text>
       </View>
     );
   }
@@ -101,82 +102,84 @@ export function LevelUpWallet() {
   });
 
   return (
-    <ScrollView contentContainerStyle={styles.list}>
+    <ScrollView contentContainerStyle={s.list}>
       {/* Available balance */}
-      <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Available Balance</Text>
-        <Text style={styles.balanceValue}>{wallet.availableBalance.toLocaleString()} <Text style={styles.balanceUnit}>SC</Text></Text>
-        <Text style={styles.escrowNote}>{wallet.levelUpEscrowedBalance.toLocaleString()} SC locked in escrow</Text>
+      <View style={s.balanceCard}>
+        <Text style={s.balanceLabel}>Available Balance</Text>
+        <Text style={s.balanceValue}>{wallet.availableBalance.toLocaleString()} <Text style={s.balanceUnit}>SC</Text></Text>
+        <Text style={s.escrowNote}>{wallet.levelUpEscrowedBalance.toLocaleString()} SC locked in escrow</Text>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statSmallLabel}>Earned through LevelUp</Text>
-          <Text style={[styles.statSmallValue, { color: '#3B82F6' }]}>{wallet.totalEarned.toLocaleString()} SC</Text>
+      <View style={s.statsRow}>
+        <View style={s.statCard}>
+          <Text style={s.statSmallLabel}>Earned through LevelUp</Text>
+          <Text style={[s.statSmallValue, { color: '#3B82F6' }]}>{wallet.totalEarned.toLocaleString()} SC</Text>
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statSmallLabel}>In escrow</Text>
-          <Text style={[styles.statSmallValue, { color: '#F59E0B' }]}>{wallet.levelUpEscrowedBalance.toLocaleString()} SC</Text>
+        <View style={s.statCard}>
+          <Text style={s.statSmallLabel}>In escrow</Text>
+          <Text style={[s.statSmallValue, { color: '#F59E0B' }]}>{wallet.levelUpEscrowedBalance.toLocaleString()} SC</Text>
         </View>
       </View>
 
-      <View style={styles.notice}>
-        <Text style={styles.noticeText}>LevelUp is earn-only. Credits below were granted for completed milestones and earned badges — never spent here.</Text>
+      <View style={s.notice}>
+        <Text style={s.noticeText}>LevelUp is earn-only. Credits below were granted for completed milestones and earned badges — never spent here.</Text>
       </View>
 
-      <View style={styles.tabRow}>
+      <View style={s.tabRow}>
         {FILTER_TABS.map((tab) => (
-          <TouchableOpacity key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => setActiveTab(tab)}>
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+          <TouchableOpacity key={tab} style={[s.tab, activeTab === tab && s.tabActive]} onPress={() => setActiveTab(tab)}>
+            <Text style={[s.tabText, activeTab === tab && s.tabTextActive]}>{tab}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
       {wallet.history.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.emptyTitle}>No credits earned yet</Text>
-          <Text style={styles.emptyBody}>Complete milestones and earn badges to grow your balance.</Text>
+        <View style={s.center}>
+          <Text style={s.emptyTitle}>No credits earned yet</Text>
+          <Text style={s.emptyBody}>Complete milestones and earn badges to grow your balance.</Text>
         </View>
       ) : visible.length === 0 ? (
-        <Text style={styles.noneInCategory}>Nothing in this category yet.</Text>
+        <Text style={s.noneInCategory}>Nothing in this category yet.</Text>
       ) : (
         visible.map((entry, index) => (
-          <HistoryRow key={`${entry.kind}-${entry.earnedAtIso}-${index}`} entry={entry} />
+          <HistoryRow key={`${entry.kind}-${entry.earnedAtIso}-${index}`} entry={entry} s={s} accent={accent} />
         ))
       )}
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  list: { padding: 16, paddingBottom: 80 },
-  center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
-  balanceCard: { backgroundColor: SURFACE, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: BORDER, marginBottom: 10 },
-  balanceLabel: { fontSize: 12, color: SUBTLE, marginBottom: 6 },
-  balanceValue: { fontSize: 32, fontWeight: '800', color: GREEN, marginBottom: 4 },
-  balanceUnit: { fontSize: 16 },
-  escrowNote: { fontSize: 12, color: '#F59E0B' },
-  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  statCard: { flex: 1, backgroundColor: SURFACE, borderRadius: 10, padding: 11, borderWidth: 1, borderColor: BORDER },
-  statSmallLabel: { fontSize: 11, color: SUBTLE, marginBottom: 4 },
-  statSmallValue: { fontSize: 15, fontWeight: '700' },
-  notice: { backgroundColor: `${GREEN}08`, borderRadius: 7, borderWidth: 1, borderColor: `${GREEN}20`, padding: 10, marginBottom: 12 },
-  noticeText: { fontSize: 11, color: SUBTLE, lineHeight: 16 },
-  tabRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
-  tab: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: BORDER },
-  tabActive: { backgroundColor: GREEN },
-  tabText: { fontSize: 12, fontWeight: '500', color: SUBTLE },
-  tabTextActive: { color: '#000', fontWeight: '700' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, backgroundColor: SURFACE, borderRadius: 9, borderWidth: 1, borderColor: BORDER, marginBottom: 6 },
-  rowIcon: { width: 34, height: 34, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  rowIconText: { color: GREEN, fontSize: 16, fontWeight: '700' },
-  rowLabel: { fontSize: 12, fontWeight: '500', color: TEXT, marginBottom: 3 },
-  rowKind: { fontSize: 10, color: MUTED },
-  rowAmount: { fontSize: 14, fontWeight: '700', color: GREEN },
-  noneInCategory: { fontSize: 13, color: SUBTLE, textAlign: 'center', paddingVertical: 24 },
-  errorText: { fontSize: 14, color: '#EF4444', textAlign: 'center', marginBottom: 16 },
-  retryBtn: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: 9, backgroundColor: GREEN },
-  retryBtnText: { color: '#000', fontWeight: '700', fontSize: 13 },
-  emptyTitle: { fontSize: 15, fontWeight: '600', color: TEXT, marginBottom: 6 },
-  emptyBody: { fontSize: 13, color: SUBTLE, textAlign: 'center', lineHeight: 20 },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    list: { padding: 16, paddingBottom: 80 },
+    center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+    balanceCard: { backgroundColor: t.surface, borderRadius: t.radius, padding: 16, borderWidth: 1, borderColor: t.border, marginBottom: 10 },
+    balanceLabel: { fontSize: 12, color: SUBTLE, marginBottom: 6 },
+    balanceValue: { fontSize: 32, fontWeight: '800', color: accent, marginBottom: 4 },
+    balanceUnit: { fontSize: 16 },
+    escrowNote: { fontSize: 12, color: '#F59E0B' },
+    statsRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+    statCard: { flex: 1, backgroundColor: t.surface, borderRadius: 10, padding: 11, borderWidth: 1, borderColor: t.border },
+    statSmallLabel: { fontSize: 11, color: SUBTLE, marginBottom: 4 },
+    statSmallValue: { fontSize: 15, fontWeight: '700' },
+    notice: { backgroundColor: `${accent}08`, borderRadius: 7, borderWidth: 1, borderColor: `${accent}20`, padding: 10, marginBottom: 12 },
+    noticeText: { fontSize: 11, color: SUBTLE, lineHeight: 16 },
+    tabRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
+    tab: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: t.border },
+    tabActive: { backgroundColor: accent },
+    tabText: { fontSize: 12, fontWeight: '500', color: SUBTLE },
+    tabTextActive: { color: '#000', fontWeight: '700' },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, backgroundColor: t.surface, borderRadius: 9, borderWidth: 1, borderColor: t.border, marginBottom: 6 },
+    rowIcon: { width: 34, height: 34, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+    rowIconText: { color: accent, fontSize: 16, fontWeight: '700' },
+    rowLabel: { fontSize: 12, fontWeight: '500', color: TEXT, marginBottom: 3 },
+    rowKind: { fontSize: 10, color: t.textMuted },
+    rowAmount: { fontSize: 14, fontWeight: '700', color: accent },
+    noneInCategory: { fontSize: 13, color: SUBTLE, textAlign: 'center', paddingVertical: 24 },
+    errorText: { fontSize: 14, color: t.danger, textAlign: 'center', marginBottom: 16 },
+    retryBtn: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: 9, backgroundColor: accent },
+    retryBtnText: { color: '#000', fontWeight: '700', fontSize: 13 },
+    emptyTitle: { fontSize: 15, fontWeight: '600', color: TEXT, marginBottom: 6 },
+    emptyBody: { fontSize: 13, color: SUBTLE, textAlign: 'center', lineHeight: 20 },
+  });
+}

@@ -4,19 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Bug, ExternalLink } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { getBugReportsTokens } from './bug-reports-shared';
 import type { BugReportStatus, BugReportRiskLevel } from 'lib/bug-reports/constants';
 import type { BugReportRiskFlag } from 'lib/bug-reports/sanitize';
 
-// Admin design tokens (shared admin look from the design system). Bug Reports is cross-cutting
-// platform tooling with no plugin accent, so it uses the neutral admin indigo (rule 131).
-const COLOR = '#6366F1';
-const BG = '#0F1117';
-const PANEL = '#0D0F14';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+// Admin chrome (shared admin look from the design system) comes from the theme tokens. Bug Reports
+// is cross-cutting platform tooling with no plugin accent, so it uses the neutral admin indigo
+// (rule 131) via getBugReportsTokens.
 
 type AdminBugReport = {
   id: string;
@@ -89,16 +85,20 @@ function StatusPill({ status }: { status: BugReportStatus }) {
 }
 
 function StatBlock({ label, value, accent }: { label: string; value: number; accent?: string }) {
+  const { theme } = useTheme();
+  const t = getBugReportsTokens(theme);
   return (
-    <div style={{ flex: 1, minWidth: 120, padding: '10px 12px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
-      <div style={{ fontSize: 18, fontWeight: 800, color: accent ?? TEXT }}>{value}</div>
-      <div style={{ fontSize: 11, color: SUBTLE, marginTop: 2 }}>{label}</div>
+    <div style={{ flex: 1, minWidth: 120, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: accent ?? t.TITLE }}>{value}</div>
+      <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>{label}</div>
     </div>
   );
 }
 
 export function BugReportsAdminShell() {
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getBugReportsTokens(theme);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [items, setItems] = useState<AdminBugReport[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -157,28 +157,28 @@ export function BugReportsAdminShell() {
         // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
         // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
         ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
-        background: BG,
-        color: TEXT,
+        background: t.BG,
+        color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="Bug Reports Admin" accent={COLOR} icon={<Bug size={18} color={COLOR} />} />
+      <MobileScreenHeader title="Bug Reports Admin" accent={t.ACCENT} icon={<Bug size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Bug size={18} color={COLOR} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Bug size={18} color={t.ACCENT} />
           </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800 }}>Bug Reports</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>In-app report triage</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>In-app report triage</div>
           </div>
           <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, color: '#6366F1', fontWeight: 700 }}>ADMIN</span>
         </div>
 
-        <p style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, marginBottom: 16 }}>
+        <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, marginBottom: 16 }}>
           Reports filed from inside the app. A report the safety check flagged is{' '}
-          <span style={{ color: TEXT, fontWeight: 600 }}>held for review</span> and never sent to the triage repo on its
+          <span style={{ color: t.TITLE, fontWeight: 600 }}>held for review</span> and never sent to the triage repo on its
           own — release it to send the redacted copy to triage, or reject it. Only redacted text is shown here; the raw
           text stays in the database.
         </p>
@@ -198,13 +198,13 @@ export function BugReportsAdminShell() {
         ) : null}
 
         {loadState === 'loading' ? (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
             Loading reports…
           </div>
         ) : null}
 
         {loadState === 'ready' && items.length === 0 ? (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
             No bug reports yet. When someone files one from inside the app, it shows up here.
           </div>
         ) : null}
@@ -217,20 +217,20 @@ export function BugReportsAdminShell() {
           const canReject = report.status === 'held_for_review' || report.status === 'new';
           const busy = busyId === report.id;
           return (
-            <div key={report.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+            <div key={report.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <StatusPill status={report.status} />
-                <span style={{ fontSize: 12, color: SUBTLE }}>{formatWhen(report.createdAt)}</span>
-                {report.pluginSlug ? <span style={{ fontSize: 12, color: SUBTLE }}>· {report.pluginSlug}</span> : null}
+                <span style={{ fontSize: 12, color: t.MUTED }}>{formatWhen(report.createdAt)}</span>
+                {report.pluginSlug ? <span style={{ fontSize: 12, color: t.MUTED }}>· {report.pluginSlug}</span> : null}
               </div>
 
-              <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: TEXT, margin: 0 }}>
+              <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: t.TITLE, margin: 0 }}>
                 {report.redactedMessage || '(no message)'}
               </p>
 
               {report.redactedContext ? (
-                <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: SUBTLE, marginTop: 8, marginBottom: 0 }}>
-                  <span style={{ color: TEXT, fontWeight: 600 }}>What they were trying to do: </span>
+                <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: t.MUTED, marginTop: 8, marginBottom: 0 }}>
+                  <span style={{ color: t.TITLE, fontWeight: 600 }}>What they were trying to do: </span>
                   {report.redactedContext}
                 </p>
               ) : null}
@@ -248,7 +248,7 @@ export function BugReportsAdminShell() {
                 </div>
               ) : null}
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: 10, fontSize: 12, color: SUBTLE }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: 10, fontSize: 12, color: t.MUTED }}>
                 {report.pageUrl ? <span>Page: {report.pageUrl}</span> : null}
                 {report.appVersion ? <span>App: {report.appVersion}</span> : null}
                 {report.issueUrl ? (
@@ -256,7 +256,7 @@ export function BugReportsAdminShell() {
                     href={report.issueUrl}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: COLOR, textDecoration: 'none' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: t.ACCENT, textDecoration: 'none' }}
                   >
                     <ExternalLink size={12} /> Triage issue #{report.issueNumber ?? '?'}
                   </Link>
@@ -280,7 +280,7 @@ export function BugReportsAdminShell() {
                       type="button"
                       onClick={() => void resolve(report.id, 'reject')}
                       disabled={busy}
-                      style={{ padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
+                      style={{ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
                     >
                       Reject
                     </button>
@@ -291,8 +291,8 @@ export function BugReportsAdminShell() {
           );
         })}
 
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${BORDER}`, fontSize: 13 }}>
-          <Link href="/admin" style={{ color: COLOR, textDecoration: 'none' }}>
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${t.BORDER_SOLID}`, fontSize: 13 }}>
+          <Link href="/admin" style={{ color: t.ACCENT, textDecoration: 'none' }}>
             ← Back to admin
           </Link>
         </div>

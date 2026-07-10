@@ -1,5 +1,6 @@
-import React, { type ReactNode } from 'react';
+import React, { useMemo, type ReactNode } from 'react';
 import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
+import { useTheme, type ThemeTokens } from '../../theme';
 
 // Shared accessible form field for the mobile app. Mirrors the web `FormField` contract.
 //
@@ -30,6 +31,8 @@ type FormFieldProps = {
 };
 
 export function FormField({ label, optional, hint, error, children, style }: FormFieldProps) {
+  const { tokens } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const accessibilityLabel = optional ? `${label}, optional` : label;
   return (
     <View style={style}>
@@ -48,9 +51,11 @@ export function FormField({ label, optional, hint, error, children, style }: For
   );
 }
 
-const styles = StyleSheet.create({
-  label: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 6 },
-  optional: { color: '#6B7280', fontWeight: '400' },
-  hint: { fontSize: 12, color: '#6B7280', marginBottom: 6, lineHeight: 18 },
-  error: { fontSize: 12, color: '#EF4444', marginTop: 6 },
-});
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
+    label: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 6 },
+    optional: { color: t.textSecondary, fontWeight: '400' },
+    hint: { fontSize: 12, color: t.textSecondary, marginBottom: 6, lineHeight: 18 },
+    error: { fontSize: 12, color: t.danger, marginTop: 6 },
+  });
+}

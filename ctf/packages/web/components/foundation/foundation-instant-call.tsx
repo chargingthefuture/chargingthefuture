@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { PhoneCall, PhoneIncoming, X } from "lucide-react";
-import { COLOR, type ProviderView } from "./foundation-ui";
+import { useTheme } from "@/hooks/useTheme";
+import { getFoundationTokens, type ProviderView } from "./foundation-ui";
 import { FoundationCallAudio, type FoundationCallCredentials } from "./foundation-call-audio";
 
 // Client orchestration for the Foundation instant 1:1 call ring/answer lifecycle (issue #808 task 3).
@@ -429,6 +430,8 @@ function CallOverlay({
   onEnd: () => void;
   onExtend: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getFoundationTokens(theme);
   const isCallee = side.kind === "callee";
   const isCaller = side.kind === "caller";
   const inCall = ringStatus === "answered" && credentials !== null;
@@ -473,7 +476,7 @@ function CallOverlay({
         style={{
           width: "100%", maxWidth: 440,
           background: "#11131A",
-          border: `1px solid ${COLOR}30`,
+          border: `1px solid ${t.ACCENT}30`,
           borderRadius: 16,
           padding: "26px 22px 22px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
@@ -484,16 +487,16 @@ function CallOverlay({
         <div
           style={{
             width: 64, height: 64, borderRadius: "50%",
-            background: `${COLOR}1A`, border: `1px solid ${COLOR}40`,
-            display: "flex", alignItems: "center", justifyContent: "center", color: COLOR,
+            background: `${t.ACCENT}1A`, border: `1px solid ${t.ACCENT}40`,
+            display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT,
           }}
         >
           {isCallee ? <PhoneIncoming size={26} /> : <PhoneCall size={26} />}
         </div>
 
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#F9FAFB" }}>{heading}</div>
-          {subline ? <div style={{ fontSize: 13.5, color: "#9CA3AF", marginTop: 4 }}>{subline}</div> : null}
+          <div style={{ fontSize: 18, fontWeight: 800, color: t.TITLE }}>{heading}</div>
+          {subline ? <div style={{ fontSize: 13.5, color: t.SUBTLE, marginTop: 4 }}>{subline}</div> : null}
         </div>
 
         {error ? (
@@ -536,7 +539,7 @@ function CallOverlay({
               onClick={onAnswer}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", borderRadius: 12,
-                background: COLOR, border: "none",
+                background: t.ACCENT, border: "none",
                 color: "#1a1205", fontSize: 14, fontWeight: 800, cursor: "pointer",
               }}
             >
@@ -586,6 +589,8 @@ function CallerBillingStrip({
   extending: boolean;
   onExtend: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getFoundationTokens(theme);
   const countdown = secondsLeft === null ? "—" : formatCountdown(secondsLeft);
   const capText = authorizedBlocks === null ? `${blocksCharged} paid` : `${blocksCharged} of ${authorizedBlocks} blocks`;
   const canExtend = !atCap && !extending;
@@ -595,26 +600,26 @@ function CallerBillingStrip({
       style={{
         width: "100%",
         borderRadius: 12,
-        background: "rgba(255,255,255,0.04)",
-        border: `1px solid ${nearBlockEnd && !atCap ? `${COLOR}55` : "rgba(255,255,255,0.10)"}`,
+        background: t.INPUT_BG,
+        border: `1px solid ${nearBlockEnd && !atCap ? `${t.ACCENT}55` : t.BORDER_HI}`,
         padding: "12px 14px",
         display: "flex", flexDirection: "column", gap: 10,
       }}
     >
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#6B7280", textTransform: "uppercase" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.MUTED, textTransform: "uppercase" }}>
             This block
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: nearBlockEnd && !atCap ? COLOR : "#F9FAFB", fontVariantNumeric: "tabular-nums" }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: nearBlockEnd && !atCap ? t.ACCENT : t.TITLE, fontVariantNumeric: "tabular-nums" }}>
             {countdown}
           </div>
         </div>
-        <div style={{ fontSize: 12.5, color: "#9CA3AF", textAlign: "right" }}>{capText}</div>
+        <div style={{ fontSize: 12.5, color: t.SUBTLE, textAlign: "right" }}>{capText}</div>
       </div>
 
       {atCap ? (
-        <div style={{ fontSize: 12.5, color: "#9CA3AF", lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12.5, color: t.SUBTLE, lineHeight: 1.5 }}>
           You&apos;ve used all the blocks you authorized. The call will end when this block&apos;s time runs
           out.
         </div>
@@ -628,8 +633,8 @@ function CallerBillingStrip({
             width: "100%",
             padding: "10px 16px",
             borderRadius: 10,
-            background: nearBlockEnd ? COLOR : "rgba(255,255,255,0.06)",
-            color: nearBlockEnd ? "#1a1205" : "#F9FAFB",
+            background: nearBlockEnd ? t.ACCENT : t.BORDER,
+            color: nearBlockEnd ? "#1a1205" : t.TITLE,
             border: nearBlockEnd ? "none" : "1px solid rgba(255,255,255,0.12)",
             fontSize: 13.5, fontWeight: 700,
             cursor: canExtend ? "pointer" : "not-allowed",

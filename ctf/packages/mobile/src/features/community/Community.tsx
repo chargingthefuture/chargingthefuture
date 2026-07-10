@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -7,15 +7,14 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useTheme, type ThemeTokens } from '../../theme';
 import { fetchCommunityPosts, markCommunityItemRead } from './api';
 import type { CommunityItem } from './api';
 
+// Community hub accent — the shipped green the header, avatars, pills, and unread dots use. It is
+// the hub's own accent (no registered plugin slug), so it stays a raw constant while the chrome
+// (background, borders, text) reads the theme tokens.
 const COLOR = '#22C55E';
-const BG = '#0F1117';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-const DIMMER = '#4B5563';
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
@@ -43,57 +42,59 @@ function CommunityCard({
   item: CommunityItem;
   onRead: (_id: string) => void;
 }) {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   const category = item.community?.category ?? 'general';
   const replyCount = item.community?.replyCount ?? 0;
   const replies = item.community?.replies ?? [];
 
   return (
     <Pressable
-      style={[styles.card, { borderColor: BORDER }]}
+      style={s.card}
       onPress={() => onRead(item.id)}
     >
-      <View style={styles.cardHeader}>
-        <View style={[styles.avatar, { backgroundColor: `${COLOR}25` }]}>
-          <Text style={[styles.avatarText, { color: COLOR }]}>C</Text>
+      <View style={s.cardHeader}>
+        <View style={[s.avatar, { backgroundColor: `${COLOR}25` }]}>
+          <Text style={[s.avatarText, { color: COLOR }]}>C</Text>
         </View>
-        <View style={styles.cardMeta}>
-          <Text style={styles.cardCategory}>{categoryLabel(category)}</Text>
-          <Text style={styles.cardTime}>{formatTime(item.publishedAtIso)}</Text>
+        <View style={s.cardMeta}>
+          <Text style={s.cardCategory}>{categoryLabel(category)}</Text>
+          <Text style={s.cardTime}>{formatTime(item.publishedAtIso)}</Text>
         </View>
-        {!item.isRead && <View style={styles.unreadDot} />}
+        {!item.isRead && <View style={s.unreadDot} />}
       </View>
 
-      <Text style={styles.cardTitle} numberOfLines={2}>
+      <Text style={s.cardTitle} numberOfLines={2}>
         {item.title}
       </Text>
-      <Text style={styles.cardBody} numberOfLines={3}>
+      <Text style={s.cardBody} numberOfLines={3}>
         {item.body}
       </Text>
 
       {replies.length > 0 && (
-        <View style={styles.repliesBox}>
-          <Text style={styles.repliesLabel}>
+        <View style={s.repliesBox}>
+          <Text style={s.repliesLabel}>
             {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
           </Text>
           {replies.slice(0, 2).map((reply) => (
             <React.Fragment key={reply.id}>
-              <Text style={styles.replyText} numberOfLines={2}>
+              <Text style={s.replyText} numberOfLines={2}>
                 {reply.body}
               </Text>
             </React.Fragment>
           ))}
           {replyCount > 2 && (
-            <Text style={styles.moreReplies}>+{replyCount - 2} more</Text>
+            <Text style={s.moreReplies}>+{replyCount - 2} more</Text>
           )}
         </View>
       )}
 
-      <View style={styles.cardFooter}>
-        <View style={[styles.typePill, { backgroundColor: `${COLOR}15`, borderColor: `${COLOR}30` }]}>
-          <Text style={[styles.typePillText, { color: COLOR }]}>{categoryLabel(category)}</Text>
+      <View style={s.cardFooter}>
+        <View style={[s.typePill, { backgroundColor: `${COLOR}15`, borderColor: `${COLOR}30` }]}>
+          <Text style={[s.typePillText, { color: COLOR }]}>{categoryLabel(category)}</Text>
         </View>
         {replyCount > 0 && (
-          <Text style={styles.replyCount}>{replyCount} replies</Text>
+          <Text style={s.replyCount}>{replyCount} replies</Text>
         )}
         {/* likes/hearts: no backing API field — omitted per real-data-only policy */}
       </View>
@@ -102,13 +103,15 @@ function CommunityCard({
 }
 
 function EmptyState() {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   return (
-    <View style={styles.emptyWrap}>
-      <View style={styles.emptyIcon}>
+    <View style={s.emptyWrap}>
+      <View style={s.emptyIcon}>
         <Text style={{ fontSize: 28, color: `${COLOR}50` }}>👥</Text>
       </View>
-      <Text style={styles.emptyTitle}>No community posts yet</Text>
-      <Text style={styles.emptyBody}>
+      <Text style={s.emptyTitle}>No community posts yet</Text>
+      <Text style={s.emptyBody}>
         Community posts, peer support, resource sharing, and events will appear here.
       </Text>
     </View>
@@ -116,6 +119,8 @@ function EmptyState() {
 }
 
 export const Community = () => {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   const [items, setItems] = useState<CommunityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -152,27 +157,27 @@ export const Community = () => {
   );
 
   return (
-    <View style={styles.screen}>
+    <View style={s.screen}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerIcon}>
+      <View style={s.header}>
+        <View style={s.headerIcon}>
           <Text style={{ fontSize: 16, color: COLOR }}>👥</Text>
         </View>
         <View>
-          <Text style={styles.headerTitle}>Community</Text>
-          <Text style={styles.headerSub}>Peer posts and support · Live</Text>
+          <Text style={s.headerTitle}>Community</Text>
+          <Text style={s.headerSub}>Peer posts and support · Live</Text>
         </View>
       </View>
 
       {loading ? (
-        <View style={styles.center}>
+        <View style={s.center}>
           <ActivityIndicator size="large" color={COLOR} />
         </View>
       ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryBtn} onPress={load}>
-            <Text style={styles.retryText}>Retry</Text>
+        <View style={s.center}>
+          <Text style={s.errorText}>{error}</Text>
+          <Pressable style={s.retryBtn} onPress={load}>
+            <Text style={s.retryText}>Retry</Text>
           </Pressable>
         </View>
       ) : items.length === 0 ? (
@@ -184,7 +189,7 @@ export const Community = () => {
           renderItem={({ item }) => (
             <CommunityCard item={item} onRead={handleRead} />
           )}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -192,10 +197,11 @@ export const Community = () => {
   );
 };
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: t.bg,
   },
   header: {
     flexDirection: 'row',
@@ -203,9 +209,9 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#090B0F',
+    backgroundColor: t.surfaceAlt,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
   },
   headerIcon: {
     width: 36,
@@ -218,7 +224,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: TEXT,
+    color: t.textPrimary,
   },
   headerSub: {
     fontSize: 11,
@@ -231,6 +237,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
+    borderColor: t.border,
     padding: 16,
     marginBottom: 12,
   },
@@ -262,7 +269,7 @@ const styles = StyleSheet.create({
   },
   cardTime: {
     fontSize: 11,
-    color: DIMMER,
+    color: t.textMuted,
     marginTop: 1,
   },
   unreadDot: {
@@ -274,13 +281,13 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: TEXT,
+    color: t.textPrimary,
     lineHeight: 20,
     marginBottom: 6,
   },
   cardBody: {
     fontSize: 13,
-    color: SUBTLE,
+    color: t.textSecondary,
     lineHeight: 20,
     marginBottom: 10,
   },
@@ -303,7 +310,7 @@ const styles = StyleSheet.create({
   },
   replyText: {
     fontSize: 12,
-    color: SUBTLE,
+    color: t.textSecondary,
     lineHeight: 18,
   },
   moreReplies: {
@@ -329,7 +336,7 @@ const styles = StyleSheet.create({
   },
   replyCount: {
     fontSize: 12,
-    color: DIMMER,
+    color: t.textMuted,
   },
   center: {
     flex: 1,
@@ -358,19 +365,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: TEXT,
+    color: t.textPrimary,
     marginBottom: 10,
     textAlign: 'center',
   },
   emptyBody: {
     fontSize: 14,
-    color: SUBTLE,
+    color: t.textSecondary,
     lineHeight: 22,
     textAlign: 'center',
   },
   errorText: {
     fontSize: 14,
-    color: '#EF4444',
+    color: t.danger,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -387,4 +394,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLOR,
   },
-});
+  });
+}

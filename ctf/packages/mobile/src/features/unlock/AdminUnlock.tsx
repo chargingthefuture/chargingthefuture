@@ -5,8 +5,9 @@
 //   POST /api/unlock/admin/submissions/:submissionId/review  (x-ctf-csrf: '1')
 // Admin access is enforced server-side; a 401/403 surfaces an "admins only" notice.
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import {
@@ -26,14 +27,15 @@ const QUEUE_TABS: { key: UnlockAdminQueueFilter; label: string }[] = [
   { key: 'all', label: 'All' },
 ];
 
-const COLOR = '#C084FC';
-const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
-const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 
 export const AdminUnlock = () => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('unlock', theme);
+  const s = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+
   const { auth, loading: authLoading } = usePluginAuth('clerk');
 
   const [items, setItems] = useState<UnlockAdminSubmission[]>([]);
@@ -141,113 +143,113 @@ export const AdminUnlock = () => {
 
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLOR} />
+      <View style={s.center}>
+        <ActivityIndicator size="large" color={accent} />
       </View>
     );
   }
 
   if (!auth?.isAuthenticated || forbidden) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.noticeText}>The Unlock admin tools are available to admins only.</Text>
+      <View style={s.center}>
+        <Text style={s.noticeText}>The Unlock admin tools are available to admins only.</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Unlock Admin</Text>
-      <Text style={styles.subtitle}>
+    <ScrollView style={s.screen} contentContainerStyle={s.content}>
+      <Text style={s.title}>Unlock Admin</Text>
+      <Text style={s.subtitle}>
         Verification queue. Approve or reject pending Quora profile submissions. Rewards are issued
         automatically and arrive within {UNLOCK_REWARD_SLA_HOURS} hours — if a reward is still pending it
         will be retried in the background.
       </Text>
 
       <Pressable
-        style={[styles.reconcileBtn, reconciling ? styles.btnBusy : null]}
+        style={[s.reconcileBtn, reconciling ? s.btnBusy : null]}
         onPress={confirmReconcile}
         disabled={reconciling}
       >
         {reconciling ? (
-          <ActivityIndicator size="small" color={COLOR} />
+          <ActivityIndicator size="small" color={accent} />
         ) : (
-          <Text style={styles.reconcileBtnText}>Retry pending rewards</Text>
+          <Text style={s.reconcileBtnText}>Retry pending rewards</Text>
         )}
       </Pressable>
 
-      {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
-      {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
+      {error ? <Text style={s.errorBanner}>{error}</Text> : null}
+      {notice ? <Text style={s.noticeBanner}>{notice}</Text> : null}
 
-      <View style={styles.tabRow}>
+      <View style={s.tabRow}>
         {QUEUE_TABS.map((tab) => {
           const active = filter === tab.key;
           return (
             <Pressable
               key={tab.key}
-              style={[styles.tab, active ? styles.tabActive : null]}
+              style={[s.tab, active ? s.tabActive : null]}
               onPress={() => setFilter(tab.key)}
               disabled={active}
             >
-              <Text style={[styles.tabText, active ? styles.tabTextActive : null]}>{tab.label}</Text>
+              <Text style={[s.tabText, active ? s.tabTextActive : null]}>{tab.label}</Text>
             </Pressable>
           );
         })}
       </View>
 
-      <Text style={styles.sectionHeading}>
+      <Text style={s.sectionHeading}>
         {filter === 'pending' ? 'Pending submissions' : filter === 'approved' ? 'Approved submissions' : 'All submissions'}
       </Text>
       {items.length === 0 ? (
-        <Text style={styles.emptyText}>No submissions in this view.</Text>
+        <Text style={s.emptyText}>No submissions in this view.</Text>
       ) : (
         items.map((submission) => (
           <React.Fragment key={submission.id}>
-            <View style={styles.card}>
-              <View style={styles.rowBetween}>
-                <Text style={styles.cardTitle}>Submission #{submission.id}</Text>
-                <Text style={[styles.cardStatus, { color: '#F59E0B' }]}>{submission.reviewStatus}</Text>
+            <View style={s.card}>
+              <View style={s.rowBetween}>
+                <Text style={s.cardTitle}>Submission #{submission.id}</Text>
+                <Text style={[s.cardStatus, { color: '#F59E0B' }]}>{submission.reviewStatus}</Text>
               </View>
               {submission.reviewStatus === 'approved' ? (
                 <View
                   style={[
-                    styles.rewardPill,
-                    submission.incentiveGrantedAt ? styles.rewardPillGranted : styles.rewardPillPending,
+                    s.rewardPill,
+                    submission.incentiveGrantedAt ? s.rewardPillGranted : s.rewardPillPending,
                   ]}
                 >
                   <Text
                     style={[
-                      styles.rewardPillText,
-                      submission.incentiveGrantedAt ? styles.rewardPillTextGranted : styles.rewardPillTextPending,
+                      s.rewardPillText,
+                      submission.incentiveGrantedAt ? s.rewardPillTextGranted : s.rewardPillTextPending,
                     ]}
                   >
                     {submission.incentiveGrantedAt ? 'Reward granted' : 'Reward pending'}
                   </Text>
                 </View>
               ) : null}
-              <Text style={styles.cardMeta}>User: {submission.userId}</Text>
-              <Text style={styles.cardUrl} numberOfLines={2}>
+              <Text style={s.cardMeta}>User: {submission.userId}</Text>
+              <Text style={s.cardUrl} numberOfLines={2}>
                 {submission.quoraProfileUrl}
               </Text>
-              <Text style={styles.cardMeta}>Tier: {submission.accessTier}</Text>
-              <Text style={styles.cardMeta}>
+              <Text style={s.cardMeta}>Tier: {submission.accessTier}</Text>
+              <Text style={s.cardMeta}>
                 Window expires: {submission.unlockWindowExpiresAt.slice(0, 10)}
               </Text>
               {submission.reviewStatus === 'pending' ? (
-                <View style={styles.actionRow}>
+                <View style={s.actionRow}>
                   <Pressable
-                    style={[styles.actionBtn, styles.acceptBtn, acting === submission.id ? styles.btnBusy : null]}
+                    style={[s.actionBtn, s.acceptBtn, acting === submission.id ? s.btnBusy : null]}
                     onPress={() => confirmReview(submission, 'approved')}
                     disabled={acting === submission.id}
                   >
-                    <Text style={[styles.actionText, styles.acceptText]}>Approve</Text>
+                    <Text style={[s.actionText, s.acceptText]}>Approve</Text>
                   </Pressable>
                   <Pressable
-                    style={[styles.actionBtn, styles.rejectBtn, acting === submission.id ? styles.btnBusy : null]}
+                    style={[s.actionBtn, s.rejectBtn, acting === submission.id ? s.btnBusy : null]}
                     onPress={() => confirmReview(submission, 'rejected')}
                     disabled={acting === submission.id}
                   >
-                    <Text style={[styles.actionText, styles.rejectText]}>Reject</Text>
+                    <Text style={[s.actionText, s.rejectText]}>Reject</Text>
                   </Pressable>
                 </View>
               ) : null}
@@ -259,91 +261,93 @@ export const AdminUnlock = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
-  content: { padding: 16, gap: 16 },
-  center: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  title: { fontSize: 20, fontWeight: '800', color: TEXT },
-  subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
-  noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
-  errorBanner: {
-    fontSize: 13,
-    color: '#FCA5A5',
-    backgroundColor: 'rgba(239,68,68,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.3)',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  noticeBanner: {
-    fontSize: 13,
-    color: '#86EFAC',
-    backgroundColor: 'rgba(34,197,94,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.3)',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  reconcileBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    backgroundColor: `${COLOR}1F`,
-    borderColor: `${COLOR}4D`,
-  },
-  reconcileBtnText: { fontSize: 13, fontWeight: '700', color: COLOR },
-  emptyText: { fontSize: 13, color: SUBTLE },
-  tabRow: { flexDirection: 'row', gap: 8 },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: PANEL,
-  },
-  tabActive: { backgroundColor: `${COLOR}1F`, borderColor: `${COLOR}4D` },
-  tabText: { fontSize: 13, fontWeight: '600', color: SUBTLE },
-  tabTextActive: { color: COLOR },
-  sectionHeading: { fontSize: 16, fontWeight: '700', color: TEXT },
-  card: {
-    backgroundColor: PANEL,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 14,
-    padding: 16,
-    gap: 6,
-  },
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: TEXT },
-  cardStatus: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
-  rewardPill: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, marginTop: 2 },
-  rewardPillGranted: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: 'rgba(34,197,94,0.3)' },
-  rewardPillPending: { backgroundColor: 'rgba(245,158,11,0.12)', borderColor: 'rgba(245,158,11,0.3)' },
-  rewardPillText: { fontSize: 11, fontWeight: '700' },
-  rewardPillTextGranted: { color: '#22C55E' },
-  rewardPillTextPending: { color: '#F59E0B' },
-  cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
-  cardUrl: { fontSize: 12, color: '#D1D5DB', lineHeight: 18 },
-  actionRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
-  actionBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 9,
-    borderWidth: 1,
-  },
-  acceptBtn: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: 'rgba(34,197,94,0.3)' },
-  rejectBtn: { backgroundColor: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' },
-  btnBusy: { opacity: 0.6 },
-  actionText: { fontSize: 13, fontWeight: '600' },
-  acceptText: { color: '#22C55E' },
-  rejectText: { color: '#EF4444' },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: t.bg },
+    content: { padding: 16, gap: 16 },
+    center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
+    title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
+    subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
+    noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+    errorBanner: {
+      fontSize: 13,
+      color: '#FCA5A5',
+      backgroundColor: 'rgba(239,68,68,0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(239,68,68,0.3)',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    noticeBanner: {
+      fontSize: 13,
+      color: '#86EFAC',
+      backgroundColor: 'rgba(34,197,94,0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(34,197,94,0.3)',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    reconcileBtn: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      backgroundColor: `${accent}1F`,
+      borderColor: `${accent}4D`,
+    },
+    reconcileBtnText: { fontSize: 13, fontWeight: '700', color: accent },
+    emptyText: { fontSize: 13, color: SUBTLE },
+    tabRow: { flexDirection: 'row', gap: 8 },
+    tab: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      borderRadius: 9,
+      borderWidth: 1,
+      borderColor: BORDER,
+      backgroundColor: PANEL,
+    },
+    tabActive: { backgroundColor: `${accent}1F`, borderColor: `${accent}4D` },
+    tabText: { fontSize: 13, fontWeight: '600', color: SUBTLE },
+    tabTextActive: { color: accent },
+    sectionHeading: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
+    card: {
+      backgroundColor: PANEL,
+      borderWidth: 1,
+      borderColor: BORDER,
+      borderRadius: 14,
+      padding: 16,
+      gap: 6,
+    },
+    rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    cardTitle: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
+    cardStatus: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
+    rewardPill: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: t.radiusChip, borderWidth: 1, marginTop: 2 },
+    rewardPillGranted: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: 'rgba(34,197,94,0.3)' },
+    rewardPillPending: { backgroundColor: 'rgba(245,158,11,0.12)', borderColor: 'rgba(245,158,11,0.3)' },
+    rewardPillText: { fontSize: 11, fontWeight: '700' },
+    rewardPillTextGranted: { color: '#22C55E' },
+    rewardPillTextPending: { color: '#F59E0B' },
+    cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+    cardUrl: { fontSize: 12, color: '#D1D5DB', lineHeight: 18 },
+    actionRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
+    actionBtn: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      borderRadius: 9,
+      borderWidth: 1,
+    },
+    acceptBtn: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: 'rgba(34,197,94,0.3)' },
+    rejectBtn: { backgroundColor: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' },
+    btnBusy: { opacity: 0.6 },
+    actionText: { fontSize: 13, fontWeight: '600' },
+    acceptText: { color: '#22C55E' },
+    rejectText: { color: '#EF4444' },
+  });
+}

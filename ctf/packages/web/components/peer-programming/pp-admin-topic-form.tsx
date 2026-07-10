@@ -4,16 +4,15 @@
 // Binds PUT /api/peer-programming/admin/topics (upsert). The endpoint requires
 // weekStartDate, title, and guidance; `publish` toggles draft vs published.
 import { useState } from 'react';
+import { useTheme } from '@/hooks/useTheme';
 import type { PeerProgrammingTopic } from './pp-admin-shared';
+import { getPeerProgrammingTokens, type PeerProgrammingTokens } from './pp-shared';
 
-// Admin design tokens (shared admin look from the design system). PeerProgramming accent is mint.
-const COLOR = '#6EE7B7';
-const BG = '#0F1117';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+// Admin design tokens (shared admin look from the design system) come from the theme-aware
+// PeerProgramming tokens: accent (mint), page background, title text, and the solid admin
+// border. The default theme keeps the shipped hex values.
 
-const inputStyle: React.CSSProperties = {
+const inputStyle = (t: PeerProgrammingTokens): React.CSSProperties => ({
   width: '100%',
   // box-sizing keeps padding inside the width; minWidth:0 lets the field shrink inside its grid track
   // (grid/flex items default to min-width:auto, which is content-based). Without it an iOS
@@ -25,22 +24,22 @@ const inputStyle: React.CSSProperties = {
   maxWidth: '100%',
   WebkitAppearance: 'none',
   appearance: 'none',
-  background: BG,
-  border: `1px solid ${BORDER}`,
-  color: TEXT,
+  background: t.BG,
+  border: `1px solid ${t.BORDER_SOLID}`,
+  color: t.TITLE,
   borderRadius: 8,
   padding: '8px 10px',
   fontSize: 13,
   fontFamily: 'inherit',
-};
+});
 
-const labelTextStyle: React.CSSProperties = {
+const labelTextStyle = (t: PeerProgrammingTokens): React.CSSProperties => ({
   display: 'block',
   fontSize: 13,
   fontWeight: 600,
-  color: TEXT,
+  color: t.TITLE,
   marginBottom: 6,
-};
+});
 
 type TopicDraft = {
   weekStartDate: string;
@@ -73,6 +72,8 @@ export function PeerProgrammingAdminTopicForm({
   isMobile: boolean;
   onSubmit: (draft: TopicDraft) => Promise<void>;
 }) {
+  const { theme } = useTheme();
+  const t = getPeerProgrammingTokens(theme);
   const [draft, setDraft] = useState<TopicDraft>(() => draftFromTopic(topic, defaultWeekStart));
 
   const canSubmit =
@@ -105,59 +106,59 @@ export function PeerProgrammingAdminTopicForm({
         }}
       >
         <label style={{ display: 'block', minWidth: 0 }}>
-          <span style={labelTextStyle}>Week start date</span>
+          <span style={labelTextStyle(t)}>Week start date</span>
           <input
             type="date"
             required
             value={draft.weekStartDate}
             onChange={(event) => setDraft((prev) => ({ ...prev, weekStartDate: event.target.value }))}
-            style={inputStyle}
+            style={inputStyle(t)}
           />
-          <span style={{ display: 'block', fontSize: 11, color: SUBTLE, marginTop: 6, lineHeight: 1.5 }}>
+          <span style={{ display: 'block', fontSize: 11, color: t.MUTED, marginTop: 6, lineHeight: 1.5 }}>
             Use the Monday of the target week. The room shows the topic for the current week only.
           </span>
         </label>
         <label style={{ display: 'block', minWidth: 0 }}>
-          <span style={labelTextStyle}>Title</span>
+          <span style={labelTextStyle(t)}>Title</span>
           <input
             type="text"
             required
             value={draft.title}
             onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
-            style={inputStyle}
+            style={inputStyle(t)}
             placeholder="This week's focus"
           />
         </label>
       </div>
 
       <label style={{ display: 'block' }}>
-        <span style={labelTextStyle}>Guidance</span>
+        <span style={labelTextStyle(t)}>Guidance</span>
         <textarea
           required
           value={draft.guidance}
           onChange={(event) => setDraft((prev) => ({ ...prev, guidance: event.target.value }))}
-          style={{ ...inputStyle, minHeight: 112, resize: 'vertical' }}
+          style={{ ...inputStyle(t), minHeight: 112, resize: 'vertical' }}
           placeholder="What should cohorts work on together this week?"
         />
       </label>
 
       <label style={{ display: 'block' }}>
-        <span style={labelTextStyle}>Revision note (optional)</span>
+        <span style={labelTextStyle(t)}>Revision note (optional)</span>
         <input
           type="text"
           value={draft.revisionNote}
           onChange={(event) => setDraft((prev) => ({ ...prev, revisionNote: event.target.value }))}
-          style={inputStyle}
+          style={inputStyle(t)}
           placeholder="Why this guidance changed"
         />
       </label>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: TEXT, cursor: 'pointer' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: t.TITLE, cursor: 'pointer' }}>
         <input
           type="checkbox"
           checked={draft.publish}
           onChange={(event) => setDraft((prev) => ({ ...prev, publish: event.target.checked }))}
-          style={{ width: 16, height: 16, accentColor: COLOR }}
+          style={{ width: 16, height: 16, accentColor: t.ACCENT }}
         />
         <span>Publish (visible to cohorts). Leave unchecked to save as a draft.</span>
       </label>
@@ -169,8 +170,8 @@ export function PeerProgrammingAdminTopicForm({
           alignSelf: 'flex-start',
           padding: '8px 16px',
           borderRadius: 8,
-          background: COLOR,
-          border: `1px solid ${COLOR}`,
+          background: t.ACCENT,
+          border: `1px solid ${t.ACCENT}`,
           color: '#0F1117',
           fontSize: 13,
           fontWeight: 700,

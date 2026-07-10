@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -23,13 +23,10 @@ import { FoundationProviderCard } from './FoundationProviderCard';
 import { FoundationProviderDetail } from './FoundationProviderDetail';
 import { FoundationDirectLine } from './FoundationDirectLine';
 import { FoundationCallAlerts } from './FoundationCallAlerts';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-const BG = '#0F1117';
-const SURFACE_DARK = '#090B0F';
-const TEXT = '#F9FAFB';
+// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
 const TEXT_DIM = '#9CA3AF';
-const SUBTLE = '#6B7280';
-const COLOR = '#F59E0B';
 
 type Tab = 'browse' | 'quotes' | 'offer';
 
@@ -50,6 +47,10 @@ const TAB_LABEL: Record<Tab, string> = {
  * design-mockup fixtures with no real API field.
  */
 export function Foundation() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('foundation', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -225,7 +226,7 @@ export function Foundation() {
           value={query}
           onChangeText={setQuery}
           placeholder="Search providers..."
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
           style={styles.searchInput}
         />
       </View>
@@ -283,7 +284,7 @@ export function Foundation() {
             Foundation. Only the skills you turn on appear on your provider card.
           </Text>
           {offerLoading ? (
-            <ActivityIndicator color={COLOR} style={styles.offerSpinner} />
+            <ActivityIndicator color={accent} style={styles.offerSpinner} />
           ) : offerError ? (
             <Text style={styles.offerError}>{offerError}</Text>
           ) : offerSkills.length === 0 ? (
@@ -411,26 +412,27 @@ export function Foundation() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: t.bg,
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: t.bg,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
   },
   errorText: {
-    color: COLOR,
+    color: accent,
     fontSize: 15,
     textAlign: 'center',
   },
   statusBar: {
     height: 44,
-    backgroundColor: SURFACE_DARK,
+    backgroundColor: t.surfaceAlt,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -439,7 +441,7 @@ const styles = StyleSheet.create({
   statusTime: {
     fontSize: 13,
     fontWeight: '700',
-    color: TEXT,
+    color: t.textPrimary,
   },
   statusSignal: {
     fontSize: 12,
@@ -448,9 +450,9 @@ const styles = StyleSheet.create({
   appHeader: {
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: SURFACE_DARK,
+    backgroundColor: t.surfaceAlt,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -464,42 +466,42 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: `${COLOR}30`,
+    backgroundColor: `${accent}30`,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoIcon: {
     fontSize: 18,
-    color: COLOR,
+    color: accent,
   },
   appTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: TEXT,
+    color: t.textPrimary,
   },
   appSubtitle: {
     fontSize: 11,
-    color: COLOR,
+    color: accent,
   },
   verifiedBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
-    backgroundColor: `${COLOR}20`,
+    backgroundColor: `${accent}20`,
     borderWidth: 1,
-    borderColor: `${COLOR}35`,
+    borderColor: `${accent}35`,
   },
   verifiedText: {
     fontSize: 11,
-    color: COLOR,
+    color: accent,
     fontWeight: '600',
   },
   searchWrap: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: SURFACE_DARK,
+    backgroundColor: t.surfaceAlt,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
   },
   searchInput: {
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -509,16 +511,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     fontSize: 14,
-    color: TEXT,
+    color: t.textPrimary,
   },
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 8,
     gap: 8,
-    backgroundColor: SURFACE_DARK,
+    backgroundColor: t.surfaceAlt,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
   },
   tabBtn: {
     paddingHorizontal: 14,
@@ -526,19 +528,19 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: t.borderFaint,
   },
   tabBtnActive: {
-    backgroundColor: `${COLOR}20`,
-    borderColor: `${COLOR}50`,
+    backgroundColor: `${accent}20`,
+    borderColor: `${accent}50`,
   },
   tabLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: SUBTLE,
+    color: t.textSecondary,
   },
   tabLabelActive: {
-    color: COLOR,
+    color: accent,
   },
   list: {
     padding: 16,
@@ -556,15 +558,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: `${COLOR}15`,
+    backgroundColor: `${accent}15`,
     borderWidth: 1,
-    borderColor: `${COLOR}35`,
+    borderColor: `${accent}35`,
   },
   filterLabel: {
     flex: 1,
     fontSize: 12,
     fontWeight: '600',
-    color: COLOR,
+    color: accent,
   },
   filterClear: {
     paddingHorizontal: 8,
@@ -573,7 +575,7 @@ const styles = StyleSheet.create({
   filterClearText: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLOR,
+    color: accent,
   },
   offerIntro: {
     fontSize: 13,
@@ -586,12 +588,12 @@ const styles = StyleSheet.create({
   },
   offerError: {
     fontSize: 13,
-    color: COLOR,
+    color: accent,
     marginTop: 8,
   },
   offerEmpty: {
     fontSize: 13,
-    color: SUBTLE,
+    color: t.textSecondary,
     lineHeight: 20,
     marginTop: 8,
   },
@@ -610,26 +612,26 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.12)',
   },
   offerChipOn: {
-    backgroundColor: `${COLOR}20`,
-    borderColor: `${COLOR}55`,
+    backgroundColor: `${accent}20`,
+    borderColor: `${accent}55`,
   },
   offerChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: SUBTLE,
+    color: t.textSecondary,
   },
   offerChipTextOn: {
-    color: COLOR,
+    color: accent,
   },
   offerSaved: {
     fontSize: 12,
-    color: '#22C55E',
+    color: t.success,
     marginBottom: 12,
   },
   offerSaveBtn: {
     paddingVertical: 13,
-    borderRadius: 12,
-    backgroundColor: COLOR,
+    borderRadius: t.radius,
+    backgroundColor: accent,
     alignItems: 'center',
   },
   offerSaveBtnBusy: {
@@ -654,7 +656,7 @@ const styles = StyleSheet.create({
   },
   emptyQuotesDesc: {
     fontSize: 13,
-    color: SUBTLE,
+    color: t.textSecondary,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -662,12 +664,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 10,
-    backgroundColor: `${COLOR}15`,
+    backgroundColor: `${accent}15`,
     borderWidth: 1,
-    borderColor: `${COLOR}30`,
+    borderColor: `${accent}30`,
   },
   browseBtnText: {
-    color: COLOR,
+    color: accent,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -678,7 +680,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
-    borderColor: `${COLOR}20`,
+    borderColor: `${accent}20`,
     marginBottom: 10,
   },
   quoteInfo: {
@@ -687,7 +689,7 @@ const styles = StyleSheet.create({
   quoteName: {
     fontSize: 14,
     fontWeight: '700',
-    color: TEXT,
+    color: t.textPrimary,
     marginBottom: 2,
   },
   quoteDate: {
@@ -697,7 +699,7 @@ const styles = StyleSheet.create({
   quoteOpenHint: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLOR,
+    color: accent,
     marginTop: 4,
   },
   statusBadge: {
@@ -707,28 +709,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusAccepted: {
-    backgroundColor: '#22C55E20',
-    borderColor: '#22C55E40',
+    backgroundColor: `${t.success}20`,
+    borderColor: `${t.success}40`,
   },
   statusPending: {
-    backgroundColor: `${COLOR}15`,
-    borderColor: `${COLOR}30`,
+    backgroundColor: `${accent}15`,
+    borderColor: `${accent}30`,
   },
   statusBadgeText: {
     fontSize: 11,
     fontWeight: '600',
   },
   statusAcceptedText: {
-    color: '#22C55E',
+    color: t.success,
   },
   statusPendingText: {
-    color: COLOR,
+    color: accent,
   },
   bottomNav: {
     height: 72,
-    backgroundColor: SURFACE_DARK,
+    backgroundColor: t.surfaceAlt,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: t.borderFaint,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -749,22 +751,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   navIconWrapActive: {
-    backgroundColor: `${COLOR}20`,
+    backgroundColor: `${accent}20`,
   },
   navIcon: {
     fontSize: 18,
-    color: SUBTLE,
+    color: t.textSecondary,
   },
   navIconActive: {
-    color: COLOR,
+    color: accent,
   },
   navLabel: {
     fontSize: 10,
-    color: '#4B5563',
+    color: t.textMuted,
     fontWeight: '400',
   },
   navLabelActive: {
-    color: COLOR,
+    color: accent,
     fontWeight: '600',
   },
-});
+  });
+}

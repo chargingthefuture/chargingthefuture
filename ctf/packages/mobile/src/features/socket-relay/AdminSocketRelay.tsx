@@ -26,15 +26,10 @@ import {
   type AdminFulfillment,
   type AdminRequest,
 } from './admin-api';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-// Design tokens (from MobileSocketRelayAdmin.tsx design-sync)
-const COLOR = '#FB923C';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
+// Deep card panel from the design sync — no matching theme token; kept raw.
 const PANEL = '#0D0F14';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
 
 const STATUS_COLORS: Record<string, { fg: string; bg: string; border: string }> = {
   open: { fg: '#F59E0B', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)' },
@@ -48,6 +43,9 @@ const STATUS_COLORS: Record<string, { fg: string; bg: string; border: string }> 
 };
 
 function StatusBadge({ status }: { status: string }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('socket-relay', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const palette = STATUS_COLORS[status] ?? STATUS_COLORS.closed;
   return (
     <View
@@ -59,6 +57,9 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function StatCard({ label, value }: { label: string; value: number }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('socket-relay', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View style={styles.statCard}>
       <Text style={styles.statLabel}>{label}</Text>
@@ -80,6 +81,9 @@ function RequestCard({
   deleting: boolean;
   onDelete: (_requestId: string, _requestTitle: string) => void;
 }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('socket-relay', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View style={styles.card}>
       <View style={styles.cardHeaderRow}>
@@ -113,6 +117,9 @@ function RequestCard({
 }
 
 function FulfillmentCard({ item }: { item: AdminFulfillment }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('socket-relay', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View style={styles.card}>
       <View style={styles.cardHeaderRow}>
@@ -130,6 +137,9 @@ function FulfillmentCard({ item }: { item: AdminFulfillment }) {
 }
 
 export const AdminSocketRelay = () => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('socket-relay', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const { auth, loading: authLoading } = usePluginAuth('clerk');
 
   const [loading, setLoading] = useState(true);
@@ -208,7 +218,7 @@ export const AdminSocketRelay = () => {
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLOR} />
+        <ActivityIndicator size="large" color={accent} />
       </View>
     );
   }
@@ -276,36 +286,37 @@ export const AdminSocketRelay = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: t.bg },
   content: { padding: 16, gap: 12 },
   center: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: t.bg,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
   },
-  noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+  noticeText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' },
 
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerIcon: {
     width: 34,
     height: 34,
     borderRadius: 9,
-    backgroundColor: `${COLOR}20`,
+    backgroundColor: `${accent}20`,
     borderWidth: 1,
-    borderColor: `${COLOR}35`,
+    borderColor: `${accent}35`,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerIconText: { color: COLOR, fontSize: 16, fontWeight: '700' },
-  title: { fontSize: 16, fontWeight: '700', color: TEXT },
-  subtitle: { fontSize: 11, color: SUBTLE },
+  headerIconText: { color: accent, fontSize: 16, fontWeight: '700' },
+  title: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
+  subtitle: { fontSize: 11, color: t.textSecondary },
   adminTag: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: t.radiusChip,
     backgroundColor: 'rgba(99,102,241,0.15)',
     borderWidth: 1,
     borderColor: 'rgba(99,102,241,0.3)',
@@ -327,43 +338,43 @@ const styles = StyleSheet.create({
   statCard: {
     flexGrow: 1,
     flexBasis: '47%',
-    backgroundColor: SURFACE,
+    backgroundColor: t.surface,
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
+    borderColor: t.border,
+    borderRadius: t.radius,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  statLabel: { fontSize: 11, color: SUBTLE },
-  statValue: { fontSize: 20, fontWeight: '700', color: TEXT, marginTop: 2 },
+  statLabel: { fontSize: 11, color: t.textSecondary },
+  statValue: { fontSize: 20, fontWeight: '700', color: t.textPrimary, marginTop: 2 },
 
   sectionLabel: {
     fontSize: 11,
-    color: SUBTLE,
+    color: t.textSecondary,
     fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginTop: 8,
   },
-  emptyText: { fontSize: 13, color: SUBTLE },
+  emptyText: { fontSize: 13, color: t.textSecondary },
 
   card: {
     backgroundColor: PANEL,
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
+    borderColor: t.border,
+    borderRadius: t.radius,
     padding: 14,
     gap: 8,
   },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  cardTitle: { fontSize: 14, fontWeight: '600', color: TEXT },
-  cardMeta: { fontSize: 12, color: SUBTLE, marginTop: 2 },
+  cardTitle: { fontSize: 14, fontWeight: '600', color: t.textPrimary },
+  cardMeta: { fontSize: 12, color: t.textSecondary, marginTop: 2 },
   cardBody: { fontSize: 13, color: '#D1D5DB', lineHeight: 18 },
 
   badge: {
     paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: t.radiusChip,
     borderWidth: 1,
   },
   badgeText: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
@@ -378,5 +389,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(239,68,68,0.25)',
   },
   btnBusy: { opacity: 0.7 },
-  deleteBtnText: { fontSize: 13, fontWeight: '600', color: '#EF4444' },
-});
+  deleteBtnText: { fontSize: 13, fontWeight: '600', color: t.danger },
+  });
+}

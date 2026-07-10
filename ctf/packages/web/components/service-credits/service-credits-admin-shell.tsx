@@ -16,17 +16,13 @@ import { ServiceCreditsWalletStatusPanel } from './sca-wallet-status-panel';
 import { ServiceCreditsLedgerStatus } from './sca-ledger-status';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
-
-// Admin design tokens (shared dark admin look). ServiceCredits accent is purple #A855F7.
-const COLOR = '#A855F7';
-const BG = '#0F1117';
-const PANEL = '#0D0F14';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+import { useTheme } from '@/hooks/useTheme';
+import { getServiceCreditsTokens } from './sc-shared';
 
 export function ServiceCreditsAdminShell() {
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getServiceCreditsTokens(theme);
   return (
     <main
       style={{
@@ -34,12 +30,12 @@ export function ServiceCreditsAdminShell() {
         // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
         // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
         ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
-        background: BG,
-        color: TEXT,
+        background: t.BG,
+        color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="ServiceCredits Admin" accent={COLOR} icon={<Coins size={18} color={COLOR} />} />
+      <MobileScreenHeader title="ServiceCredits Admin" accent={t.ACCENT} icon={<Coins size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div
@@ -49,8 +45,8 @@ export function ServiceCreditsAdminShell() {
             gap: 10,
             padding: '14px 16px',
             borderRadius: 12,
-            background: PANEL,
-            border: `1px solid ${BORDER}`,
+            background: t.HEADER,
+            border: `1px solid ${t.BORDER_SOLID}`,
             marginBottom: 16,
           }}
         >
@@ -59,19 +55,19 @@ export function ServiceCreditsAdminShell() {
               width: 36,
               height: 36,
               borderRadius: 9,
-              background: `${COLOR}20`,
-              border: `1px solid ${COLOR}35`,
+              background: `${t.ACCENT}20`,
+              border: `1px solid ${t.ACCENT}35`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <Coins size={18} color={COLOR} />
+            <Coins size={18} color={t.ACCENT} />
           </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800 }}>ServiceCredits Admin</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>Governance, treasury &amp; disputes</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Governance, treasury &amp; disputes</div>
           </div>
           <span
             style={{
@@ -89,12 +85,12 @@ export function ServiceCreditsAdminShell() {
           </span>
         </div>
 
-        <p style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, margin: '0 0 8px' }}>
+        <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, margin: '0 0 8px' }}>
           Governance, treasury, and dispute controls for the ServiceCredits ledger. Every action is
           written to the audit trail and asks you to confirm before it commits.
         </p>
         <p style={{ fontSize: 13, margin: '0 0 16px' }}>
-          <Link href="/apps/service-credits" style={{ color: COLOR, textDecoration: 'none', fontWeight: 600 }}>
+          <Link href="/apps/service-credits" style={{ color: t.ACCENT, textDecoration: 'none', fontWeight: 600 }}>
             Open the plugin shell
           </Link>
         </p>

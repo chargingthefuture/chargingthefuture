@@ -2,13 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { SkillsHuntRound, SkillsHuntSubmission, SkillsHuntSubmissionStatus } from "lib/skills-hunt/types";
-import { promptRejectReason, type ReviewAction } from "./sha-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { promptRejectReason, getSkillsHuntAdminTokens, type ReviewAction } from "./sha-shared";
 import { SkillsHuntAdminFilters, SkillsHuntAdminBulkBar } from "./sha-filters";
 import { SkillsHuntAdminTable } from "./sha-table";
 
 type RewardSummary = { totalCreditsPaid: number; rewardedSubmissionCount: number };
 
 function RewardBanner({ round, summary }: { round: SkillsHuntRound | null; summary: RewardSummary | null }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
   if (!round) return null;
   const per = round.rewardCreditsPerAccept;
   return (
@@ -16,10 +19,10 @@ function RewardBanner({ round, summary }: { round: SkillsHuntRound | null; summa
       {per > 0 ? (
         <span>Reward: <b>{per} ServiceCredits</b> per accepted nomination{round.rewardPerUserRoundCap !== null ? ` · cap ${round.rewardPerUserRoundCap} per scout` : ""}.</span>
       ) : (
-        <span style={{ color: "#9CA3AF" }}>No ServiceCredits reward on this round — set one in the Rounds tab. Accepting still awards points and badges.</span>
+        <span style={{ color: t.SUBTLE }}>No ServiceCredits reward on this round — set one in the Rounds tab. Accepting still awards points and badges.</span>
       )}
       {summary && summary.rewardedSubmissionCount > 0 && (
-        <span style={{ color: "#9CA3AF" }}>Paid so far: <b style={{ color: "#22C55E" }}>{summary.totalCreditsPaid}</b> to {summary.rewardedSubmissionCount} scout{summary.rewardedSubmissionCount === 1 ? "" : "s"}.</span>
+        <span style={{ color: t.SUBTLE }}>Paid so far: <b style={{ color: "#22C55E" }}>{summary.totalCreditsPaid}</b> to {summary.rewardedSubmissionCount} scout{summary.rewardedSubmissionCount === 1 ? "" : "s"}.</span>
       )}
     </div>
   );
@@ -30,6 +33,8 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
   activeRoundId: string | null;
   onRoundChange: (id: string) => void;
 }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
   const [statusFilter, setStatusFilter] = useState<SkillsHuntSubmissionStatus>("pending");
   const [submissions, setSubmissions] = useState<SkillsHuntSubmission[]>([]);
   const [round, setRound] = useState<SkillsHuntRound | null>(null);
@@ -130,7 +135,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
   const allPendingSelected = pendingCount > 0 && selected.size === pendingCount;
 
   if (rounds.length === 0) {
-    return <div style={{ color: "#6B7280", fontSize: 13 }}>No rounds yet. Create one in the Rounds tab before moderating.</div>;
+    return <div style={{ color: t.MUTED, fontSize: 13 }}>No rounds yet. Create one in the Rounds tab before moderating.</div>;
   }
 
   return (
@@ -141,9 +146,9 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
 
       {error && <div style={{ marginBottom: 12, color: "#EF4444", fontSize: 13 }}>{error}</div>}
       {loading ? (
-        <div style={{ color: "#6B7280", fontSize: 13 }}>Loading submissions…</div>
+        <div style={{ color: t.MUTED, fontSize: 13 }}>Loading submissions…</div>
       ) : submissions.length === 0 ? (
-        <div style={{ color: "#6B7280", fontSize: 13 }}>No submissions matching this filter.</div>
+        <div style={{ color: t.MUTED, fontSize: 13 }}>No submissions matching this filter.</div>
       ) : (
         <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <div style={{ minWidth: 760 }}>

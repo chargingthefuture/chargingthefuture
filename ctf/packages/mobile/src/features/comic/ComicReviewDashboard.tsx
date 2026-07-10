@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTheme, type ThemeTokens } from '../../theme';
 import {
   fetchComicReviewQueue,
   fetchComicTrainingStats,
@@ -28,13 +29,13 @@ import type {
 // Provenance shown is real only (engine / intent / safety category / the real nlu confidence) —
 // the mockup's fabricated "Sources" list and hardcoded confidence buckets are intentionally not
 // reproduced, matching the web dashboard (no fabricated source documents).
+// ACCENT / ACCENT_LIGHT are the @comic AI-assistant cyan (and its light tint). They are kept raw:
+// this cyan is the assistant accent that the comic theme remaps to inkDim, a value change out of
+// scope for this byte-identical token pass. PANEL is a bespoke deep-chrome shade with no matching
+// mobile token, so it also stays raw. Background, borders, and text read the theme tokens.
 const ACCENT = '#0EA5E9';
 const ACCENT_LIGHT = '#7DD3FC';
-const BG = '#0F1117';
 const PANEL = '#0D0F14';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
 
 function shortAsker(userId: string): string {
   if (!userId) return 'Survivor';
@@ -69,33 +70,35 @@ function confidenceBand(value: number | null): ConfidenceBand {
 }
 
 function ConfidenceCard({ item }: { item: ComicReviewItem }) {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   const band = confidenceBand(item.nluConfidence);
   return (
     <View>
-      <Text style={styles.sectionLabel}>Confidence</Text>
-      <View style={styles.confCard}>
-        <View style={styles.confTop}>
-          <Text style={[styles.confLabel, { color: band.color }]}>{band.label}</Text>
+      <Text style={s.sectionLabel}>Confidence</Text>
+      <View style={s.confCard}>
+        <View style={s.confTop}>
+          <Text style={[s.confLabel, { color: band.color }]}>{band.label}</Text>
           {band.pct !== null ? (
-            <Text style={[styles.confLabel, { color: band.color }]}>{band.pct}%</Text>
+            <Text style={[s.confLabel, { color: band.color }]}>{band.pct}%</Text>
           ) : null}
         </View>
         {band.pct !== null ? (
-          <View style={styles.confTrack}>
-            <View style={[styles.confFill, { width: `${band.pct}%`, backgroundColor: band.color }]} />
+          <View style={s.confTrack}>
+            <View style={[s.confFill, { width: `${band.pct}%`, backgroundColor: band.color }]} />
           </View>
         ) : (
-          <View style={styles.confHintRow}>
+          <View style={s.confHintRow}>
             <Ionicons name="warning-outline" size={12} color="#FCD34D" />
-            <Text style={styles.confHintText}>
+            <Text style={s.confHintText}>
               No calibrated confidence yet — every draft is held for human review.
             </Text>
           </View>
         )}
         {band.low ? (
-          <View style={styles.confHintRow}>
+          <View style={s.confHintRow}>
             <Ionicons name="warning-outline" size={12} color="#FCA5A5" />
-            <Text style={styles.confLowText}>Safety-sensitive — review wording carefully.</Text>
+            <Text style={s.confLowText}>Safety-sensitive — review wording carefully.</Text>
           </View>
         ) : null}
       </View>
@@ -104,18 +107,20 @@ function ConfidenceCard({ item }: { item: ComicReviewItem }) {
 }
 
 function DashboardHeader({ count, allClear }: { count: number; allClear: boolean }) {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   return (
-    <View style={styles.header}>
-      <View style={styles.headerIcon}>
+    <View style={s.header}>
+      <View style={s.headerIcon}>
         <Ionicons name="shield-checkmark" size={17} color={ACCENT} />
       </View>
-      <View style={styles.headerText}>
-        <Text style={styles.headerTitle}>Review Dashboard</Text>
-        <Text style={styles.headerSub}>AI Assistant answers awaiting review</Text>
+      <View style={s.headerText}>
+        <Text style={s.headerTitle}>Review Dashboard</Text>
+        <Text style={s.headerSub}>AI Assistant answers awaiting review</Text>
       </View>
-      <View style={[styles.countPill, allClear ? styles.countPillClear : null]}>
-        <Ionicons name="time-outline" size={11} color={allClear ? '#22C55E' : ACCENT} />
-        <Text style={[styles.countText, allClear ? styles.countTextClear : null]}>{count}</Text>
+      <View style={[s.countPill, allClear ? s.countPillClear : null]}>
+        <Ionicons name="time-outline" size={11} color={allClear ? tokens.success : ACCENT} />
+        <Text style={[s.countText, allClear ? s.countTextClear : null]}>{count}</Text>
       </View>
     </View>
   );
@@ -124,16 +129,18 @@ function DashboardHeader({ count, allClear }: { count: number; allClear: boolean
 // Compact "Training examples collected: N" line under the header. Read-only and best-effort: the
 // caller passes null when the stats fetch failed (or the viewer is not an admin), so the line hides.
 function TrainingStatsLine({ stats }: { stats: ComicTrainingStats | null }) {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   if (!stats) return null;
   const pending = stats.trainingExamplesByStatus.pending ?? 0;
   const exported = stats.trainingExamplesByStatus.exported ?? 0;
   return (
-    <View style={styles.trainingStatsLine}>
-      <Ionicons name="school-outline" size={12} color={SUBTLE} />
-      <Text style={styles.trainingStatsText} numberOfLines={2}>
-        <Text style={styles.trainingStatsStrong}>Training examples collected: </Text>
-        <Text style={styles.trainingStatsStrong}>{stats.trainingExamplesTotal}</Text>
-        <Text style={styles.trainingStatsDim}>
+    <View style={s.trainingStatsLine}>
+      <Ionicons name="school-outline" size={12} color={tokens.textSecondary} />
+      <Text style={s.trainingStatsText} numberOfLines={2}>
+        <Text style={s.trainingStatsStrong}>Training examples collected: </Text>
+        <Text style={s.trainingStatsStrong}>{stats.trainingExamplesTotal}</Text>
+        <Text style={s.trainingStatsDim}>
           {` (${pending} awaiting export · ${exported} exported · ${stats.ratedAnswersTotal} rated answers)`}
         </Text>
       </Text>
@@ -142,21 +149,23 @@ function TrainingStatsLine({ stats }: { stats: ComicTrainingStats | null }) {
 }
 
 function EmptyDashboard({ trainingStats }: { trainingStats: ComicTrainingStats | null }) {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   return (
-    <View style={styles.screen}>
+    <View style={s.screen}>
       <DashboardHeader count={0} allClear />
       <TrainingStatsLine stats={trainingStats} />
-      <View style={styles.emptyWrap}>
-        <View style={styles.emptyIcon}>
-          <Ionicons name="checkmark-circle" size={38} color="#22C55E" />
+      <View style={s.emptyWrap}>
+        <View style={s.emptyIcon}>
+          <Ionicons name="checkmark-circle" size={38} color={tokens.success} />
         </View>
-        <Text style={styles.emptyTitle}>All caught up</Text>
-        <Text style={styles.emptyBody}>
+        <Text style={s.emptyTitle}>All caught up</Text>
+        <Text style={s.emptyBody}>
           Every AI Assistant answer has been reviewed. Survivors only ever see answers a human has approved.
         </Text>
-        <View style={styles.emptyNote}>
-          <Ionicons name="mail-outline" size={13} color="#4B5563" />
-          <Text style={styles.emptyNoteText}>New drafts will appear here automatically.</Text>
+        <View style={s.emptyNote}>
+          <Ionicons name="mail-outline" size={13} color={tokens.textMuted} />
+          <Text style={s.emptyNoteText}>New drafts will appear here automatically.</Text>
         </View>
       </View>
     </View>
@@ -164,28 +173,30 @@ function EmptyDashboard({ trainingStats }: { trainingStats: ComicTrainingStats |
 }
 
 function ProvenanceRow({ item }: { item: ComicReviewItem }) {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   return (
-    <View style={styles.provenanceWrap}>
-      <Text style={styles.sectionLabel}>Provenance</Text>
-      <View style={styles.provenanceGrid}>
+    <View style={s.provenanceWrap}>
+      <Text style={s.sectionLabel}>Provenance</Text>
+      <View style={s.provenanceGrid}>
         {item.hasDraft ? (
-          <View style={styles.provenanceItem}>
-            <Text style={styles.provenanceKey}>Engine</Text>
-            <Text style={styles.provenanceValue}>{item.engine}</Text>
+          <View style={s.provenanceItem}>
+            <Text style={s.provenanceKey}>Engine</Text>
+            <Text style={s.provenanceValue}>{item.engine}</Text>
           </View>
         ) : null}
-        <View style={styles.provenanceItem}>
-          <Text style={styles.provenanceKey}>Intent</Text>
-          <Text style={styles.provenanceValue}>{item.intent ?? '—'}</Text>
+        <View style={s.provenanceItem}>
+          <Text style={s.provenanceKey}>Intent</Text>
+          <Text style={s.provenanceValue}>{item.intent ?? '—'}</Text>
         </View>
-        <View style={styles.provenanceItem}>
-          <Text style={styles.provenanceKey}>Confidence</Text>
-          <Text style={styles.provenanceValue}>{confidenceLabel(item.nluConfidence)}</Text>
+        <View style={s.provenanceItem}>
+          <Text style={s.provenanceKey}>Confidence</Text>
+          <Text style={s.provenanceValue}>{confidenceLabel(item.nluConfidence)}</Text>
         </View>
         {item.safetyCategory ? (
-          <View style={styles.provenanceItem}>
-            <Text style={styles.provenanceKey}>Safety</Text>
-            <Text style={[styles.provenanceValue, styles.provenanceSafety]}>{item.safetyCategory}</Text>
+          <View style={s.provenanceItem}>
+            <Text style={s.provenanceKey}>Safety</Text>
+            <Text style={[s.provenanceValue, s.provenanceSafety]}>{item.safetyCategory}</Text>
           </View>
         ) : null}
       </View>
@@ -194,6 +205,8 @@ function ProvenanceRow({ item }: { item: ComicReviewItem }) {
 }
 
 export const ComicReviewDashboard = () => {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
   const [items, setItems] = useState<ComicReviewItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
@@ -309,9 +322,9 @@ export const ComicReviewDashboard = () => {
 
   if (loading) {
     return (
-      <View style={styles.screen}>
+      <View style={s.screen}>
         <DashboardHeader count={0} allClear={false} />
-        <View style={styles.center}>
+        <View style={s.center}>
           <ActivityIndicator size="large" color={ACCENT} />
         </View>
       </View>
@@ -320,11 +333,11 @@ export const ComicReviewDashboard = () => {
 
   if (forbidden) {
     return (
-      <View style={styles.screen}>
+      <View style={s.screen}>
         <DashboardHeader count={0} allClear={false} />
-        <View style={styles.center}>
-          <Ionicons name="lock-closed-outline" size={32} color={SUBTLE} />
-          <Text style={styles.noticeText}>The review dashboard is available to owners only.</Text>
+        <View style={s.center}>
+          <Ionicons name="lock-closed-outline" size={32} color={tokens.textSecondary} />
+          <Text style={s.noticeText}>The review dashboard is available to owners only.</Text>
         </View>
       </View>
     );
@@ -332,12 +345,12 @@ export const ComicReviewDashboard = () => {
 
   if (error) {
     return (
-      <View style={styles.screen}>
+      <View style={s.screen}>
         <DashboardHeader count={0} allClear={false} />
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryBtn} onPress={load}>
-            <Text style={styles.retryText}>Retry</Text>
+        <View style={s.center}>
+          <Text style={s.errorText}>{error}</Text>
+          <Pressable style={s.retryBtn} onPress={load}>
+            <Text style={s.retryText}>Retry</Text>
           </Pressable>
         </View>
       </View>
@@ -349,29 +362,29 @@ export const ComicReviewDashboard = () => {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={s.screen}>
       <DashboardHeader count={items.length} allClear={false} />
       <TrainingStatsLine stats={trainingStats} />
 
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.chipsBar}
-        contentContainerStyle={styles.chipsContent}
+        style={s.chipsBar}
+        contentContainerStyle={s.chipsContent}
       >
         {items.map((entry) => {
           const active = entry.reviewId === selected.reviewId;
           return (
             <Pressable
               key={entry.reviewId}
-              style={[styles.chip, active ? styles.chipActive : null]}
+              style={[s.chip, active ? s.chipActive : null]}
               onPress={() => {
                 setSelectedId(entry.reviewId);
                 setEditing(false);
               }}
             >
-              <View style={[styles.chipDot, entry.safetyCategory ? styles.chipDotSafety : null]} />
-              <Text style={[styles.chipText, active ? styles.chipTextActive : null]} numberOfLines={1}>
+              <View style={[s.chipDot, entry.safetyCategory ? s.chipDotSafety : null]} />
+              <Text style={[s.chipText, active ? s.chipTextActive : null]} numberOfLines={1}>
                 {entry.askedByUsername ? `@${entry.askedByUsername}` : shortAsker(entry.askedByUserId)}
               </Text>
             </Pressable>
@@ -379,15 +392,15 @@ export const ComicReviewDashboard = () => {
         })}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={styles.detail} showsVerticalScrollIndicator={false}>
-        <View style={styles.detailMeta}>
-          <Text style={styles.detailAsker}>{selected.askedByUsername ? `@${selected.askedByUsername}` : shortAsker(selected.askedByUserId)}</Text>
-          <Text style={styles.detailTime}>{formatTime(selected.createdAtIso)}</Text>
+      <ScrollView contentContainerStyle={s.detail} showsVerticalScrollIndicator={false}>
+        <View style={s.detailMeta}>
+          <Text style={s.detailAsker}>{selected.askedByUsername ? `@${selected.askedByUsername}` : shortAsker(selected.askedByUserId)}</Text>
+          <Text style={s.detailTime}>{formatTime(selected.createdAtIso)}</Text>
         </View>
 
-        <Text style={styles.sectionLabel}>Question</Text>
-        <View style={styles.questionBox}>
-          <Text style={styles.questionText}>{selected.questionBody}</Text>
+        <Text style={s.sectionLabel}>Question</Text>
+        <View style={s.questionBox}>
+          <Text style={s.questionText}>{selected.questionBody}</Text>
         </View>
 
         {editing ? (
@@ -396,45 +409,45 @@ export const ComicReviewDashboard = () => {
                 (drafting unavailable, or safety-held), there is nothing to show above the editor. */}
             {selected.hasDraft ? (
               <>
-                <View style={styles.draftHeader}>
-                  <Text style={styles.sectionLabel}>Original AI draft</Text>
-                  <View style={styles.needsCorrectionBadge}>
-                    <Text style={styles.needsCorrectionText}>Needs correction</Text>
+                <View style={s.draftHeader}>
+                  <Text style={s.sectionLabel}>Original AI draft</Text>
+                  <View style={s.needsCorrectionBadge}>
+                    <Text style={s.needsCorrectionText}>Needs correction</Text>
                   </View>
                 </View>
-                <View style={styles.draftReadonlyBox}>
-                  <Text style={styles.draftReadonlyText}>{selected.draftBody}</Text>
+                <View style={s.draftReadonlyBox}>
+                  <Text style={s.draftReadonlyText}>{selected.draftBody}</Text>
                 </View>
               </>
             ) : null}
 
             {/* Editable answer with Reset + character count. */}
-            <View style={styles.draftHeader}>
-              <Text style={styles.sectionLabelCyan}>Your {selected.hasDraft ? 'corrected ' : ''}answer</Text>
+            <View style={s.draftHeader}>
+              <Text style={s.sectionLabelCyan}>Your {selected.hasDraft ? 'corrected ' : ''}answer</Text>
               <Pressable
-                style={styles.resetBtn}
+                style={s.resetBtn}
                 onPress={() => setDraft(selected.hasDraft ? selected.draftBody : '')}
                 disabled={busy}
               >
-                <Ionicons name="refresh" size={11} color={SUBTLE} />
-                <Text style={styles.resetText}>Reset</Text>
+                <Ionicons name="refresh" size={11} color={tokens.textSecondary} />
+                <Text style={s.resetText}>Reset</Text>
               </Pressable>
             </View>
             <TextInput
-              style={styles.editInput}
+              style={s.editInput}
               value={draft}
               onChangeText={setDraft}
               multiline
               placeholder={selected.hasDraft ? 'Correct the answer before approving…' : 'Write the answer before approving…'}
-              placeholderTextColor={SUBTLE}
+              placeholderTextColor={tokens.textSecondary}
               editable={!busy}
             />
-            <Text style={styles.charCount}>{draft.length} characters</Text>
+            <Text style={s.charCount}>{draft.length} characters</Text>
 
             {/* Safety reminder banner. */}
-            <View style={styles.safetyBanner}>
+            <View style={s.safetyBanner}>
               <Ionicons name="warning-outline" size={15} color="#FBBF24" />
-              <Text style={styles.safetyBannerText}>
+              <Text style={s.safetyBannerText}>
                 Make sure the corrected wording never pressures someone to reveal their location or
                 identity before they&apos;re ready.
               </Text>
@@ -442,15 +455,15 @@ export const ComicReviewDashboard = () => {
           </>
         ) : (
           <>
-            <View style={styles.draftHeader}>
-              <Text style={styles.sectionLabel}>{selected.hasDraft ? 'AI draft' : 'No AI draft'}</Text>
-              <View style={styles.notSentBadge}>
+            <View style={s.draftHeader}>
+              <Text style={s.sectionLabel}>{selected.hasDraft ? 'AI draft' : 'No AI draft'}</Text>
+              <View style={s.notSentBadge}>
                 <Ionicons name="sparkles" size={8} color={ACCENT_LIGHT} />
-                <Text style={styles.notSentText}>Not sent</Text>
+                <Text style={s.notSentText}>Not sent</Text>
               </View>
             </View>
-            <View style={styles.draftBox}>
-              <Text style={styles.draftText}>
+            <View style={s.draftBox}>
+              <Text style={s.draftText}>
                 {selected.hasDraft
                   ? selected.draftBody
                   : selected.safetyCategory
@@ -465,19 +478,19 @@ export const ComicReviewDashboard = () => {
         )}
 
         {plugins.length > 0 ? (
-          <View style={styles.pluginPickerWrap}>
-            <Text style={styles.sectionLabel}>Applicable plugins</Text>
-            <Text style={styles.pluginPickerHint}>Tag the plugins this answer points to (optional).</Text>
-            <View style={styles.pluginChipWrap}>
+          <View style={s.pluginPickerWrap}>
+            <Text style={s.sectionLabel}>Applicable plugins</Text>
+            <Text style={s.pluginPickerHint}>Tag the plugins this answer points to (optional).</Text>
+            <View style={s.pluginChipWrap}>
               {plugins.map((p) => {
                 const on = selectedSlugs.includes(p.slug);
                 return (
                   <Pressable
                     key={p.slug}
-                    style={[styles.pluginChip, on ? styles.pluginChipOn : null]}
+                    style={[s.pluginChip, on ? s.pluginChipOn : null]}
                     onPress={() => togglePluginSlug(p.slug)}
                   >
-                    <Text style={[styles.pluginChipText, on ? styles.pluginChipTextOn : null]}>{p.name}</Text>
+                    <Text style={[s.pluginChipText, on ? s.pluginChipTextOn : null]}>{p.name}</Text>
                   </Pressable>
                 );
               })}
@@ -486,13 +499,13 @@ export const ComicReviewDashboard = () => {
         ) : null}
       </ScrollView>
 
-      <View style={styles.actions}>
-        {actionError && <Text style={styles.actionError}>{actionError}</Text>}
+      <View style={s.actions}>
+        {actionError && <Text style={s.actionError}>{actionError}</Text>}
         {editing ? (
           // Edit mode: primary = approve the corrected answer (disabled while empty), then Reject.
           <>
             <Pressable
-              style={[styles.approveBtn, busy || draft.trim().length === 0 ? styles.btnBusy : null]}
+              style={[s.approveBtn, busy || draft.trim().length === 0 ? s.btnBusy : null]}
               onPress={() => resolve('correct')}
               disabled={busy || draft.trim().length === 0}
             >
@@ -501,18 +514,18 @@ export const ComicReviewDashboard = () => {
               ) : (
                 <>
                   <Ionicons name="checkmark" size={16} color="#fff" />
-                  <Text style={styles.approveText}>Approve corrected</Text>
+                  <Text style={s.approveText}>Approve corrected</Text>
                 </>
               )}
             </Pressable>
-            <View style={styles.secondaryRow}>
-              <Pressable style={styles.editBtn} onPress={() => setEditing(false)} disabled={busy}>
+            <View style={s.secondaryRow}>
+              <Pressable style={s.editBtn} onPress={() => setEditing(false)} disabled={busy}>
                 <Ionicons name="arrow-back" size={14} color={ACCENT_LIGHT} />
-                <Text style={styles.editText}>Cancel edit</Text>
+                <Text style={s.editText}>Cancel edit</Text>
               </Pressable>
-              <Pressable style={styles.rejectBtn} onPress={() => resolve('reject')} disabled={busy}>
+              <Pressable style={s.rejectBtn} onPress={() => resolve('reject')} disabled={busy}>
                 <Ionicons name="close" size={14} color="#F87171" />
-                <Text style={styles.rejectText}>Reject</Text>
+                <Text style={s.rejectText}>Reject</Text>
               </Pressable>
             </View>
           </>
@@ -522,7 +535,7 @@ export const ComicReviewDashboard = () => {
           <>
             {selected.hasDraft ? (
               <Pressable
-                style={[styles.approveBtn, busy ? styles.btnBusy : null]}
+                style={[s.approveBtn, busy ? s.btnBusy : null]}
                 onPress={() => resolve('approve')}
                 disabled={busy}
               >
@@ -531,19 +544,19 @@ export const ComicReviewDashboard = () => {
                 ) : (
                   <>
                     <Ionicons name="checkmark" size={16} color="#fff" />
-                    <Text style={styles.approveText}>Approve &amp; send</Text>
+                    <Text style={s.approveText}>Approve &amp; send</Text>
                   </>
                 )}
               </Pressable>
             ) : null}
-            <View style={styles.secondaryRow}>
-              <Pressable style={styles.editBtn} onPress={beginEdit} disabled={busy}>
+            <View style={s.secondaryRow}>
+              <Pressable style={s.editBtn} onPress={beginEdit} disabled={busy}>
                 <Ionicons name="pencil" size={14} color={ACCENT_LIGHT} />
-                <Text style={styles.editText}>Edit &amp; approve</Text>
+                <Text style={s.editText}>Edit &amp; approve</Text>
               </Pressable>
-              <Pressable style={styles.rejectBtn} onPress={() => resolve('reject')} disabled={busy}>
+              <Pressable style={s.rejectBtn} onPress={() => resolve('reject')} disabled={busy}>
                 <Ionicons name="close" size={14} color="#F87171" />
-                <Text style={styles.rejectText}>Reject</Text>
+                <Text style={s.rejectText}>Reject</Text>
               </Pressable>
             </View>
           </>
@@ -553,10 +566,11 @@ export const ComicReviewDashboard = () => {
   );
 };
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: t.bg,
   },
   header: {
     flexDirection: 'row',
@@ -565,7 +579,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: t.border,
   },
   headerIcon: {
     width: 32,
@@ -583,11 +597,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: TEXT,
+    color: t.textPrimary,
   },
   headerSub: {
     fontSize: 11,
-    color: SUBTLE,
+    color: t.textSecondary,
   },
   countPill: {
     flexDirection: 'row',
@@ -610,7 +624,7 @@ const styles = StyleSheet.create({
     color: ACCENT,
   },
   countTextClear: {
-    color: '#22C55E',
+    color: t.success,
   },
   trainingStatsLine: {
     flexDirection: 'row',
@@ -620,24 +634,24 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: PANEL,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: t.border,
   },
   trainingStatsText: {
     flexShrink: 1,
     fontSize: 11,
-    color: SUBTLE,
+    color: t.textSecondary,
   },
   trainingStatsStrong: {
     color: '#E5E7EB',
     fontWeight: '600',
   },
   trainingStatsDim: {
-    color: '#4B5563',
+    color: t.textMuted,
   },
   chipsBar: {
     flexGrow: 0,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: t.border,
   },
   chipsContent: {
     flexDirection: 'row',
@@ -654,7 +668,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
   },
   chipActive: {
     backgroundColor: 'rgba(14,165,233,0.18)',
@@ -676,7 +690,7 @@ const styles = StyleSheet.create({
     maxWidth: 120,
   },
   chipTextActive: {
-    color: TEXT,
+    color: t.textPrimary,
   },
   detail: {
     padding: 16,
@@ -688,24 +702,24 @@ const styles = StyleSheet.create({
   },
   detailAsker: {
     fontSize: 11,
-    color: SUBTLE,
+    color: t.textSecondary,
   },
   detailTime: {
     fontSize: 11,
-    color: SUBTLE,
+    color: t.textSecondary,
     marginLeft: 'auto',
   },
   sectionLabel: {
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.6,
-    color: SUBTLE,
+    color: t.textSecondary,
     textTransform: 'uppercase',
     marginBottom: 6,
     marginTop: 8,
   },
   pluginPickerWrap: { marginTop: 14 },
-  pluginPickerHint: { fontSize: 11, color: SUBTLE, marginBottom: 8 },
+  pluginPickerHint: { fontSize: 11, color: t.textSecondary, marginBottom: 8 },
   pluginChipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   pluginChip: {
     paddingHorizontal: 10,
@@ -719,7 +733,7 @@ const styles = StyleSheet.create({
     backgroundColor: `${ACCENT}1F`,
     borderColor: `${ACCENT}66`,
   },
-  pluginChipText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
+  pluginChipText: { fontSize: 12, fontWeight: '600', color: t.textSecondary },
   pluginChipTextOn: { color: ACCENT_LIGHT },
   questionBox: {
     paddingHorizontal: 14,
@@ -727,11 +741,11 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
   },
   questionText: {
     fontSize: 14,
-    color: TEXT,
+    color: t.textPrimary,
     lineHeight: 21,
   },
   draftHeader: {
@@ -812,11 +826,11 @@ const styles = StyleSheet.create({
   },
   resetText: {
     fontSize: 11,
-    color: SUBTLE,
+    color: t.textSecondary,
   },
   charCount: {
     fontSize: 10,
-    color: '#4B5563',
+    color: t.textMuted,
     textAlign: 'right',
     marginTop: 5,
   },
@@ -841,7 +855,7 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
   },
   confTop: {
     flexDirection: 'row',
@@ -855,7 +869,7 @@ const styles = StyleSheet.create({
   confTrack: {
     height: 7,
     borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: t.borderFaint,
     overflow: 'hidden',
   },
   confFill: {
@@ -908,11 +922,11 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
   },
   provenanceKey: {
     fontSize: 10,
-    color: SUBTLE,
+    color: t.textSecondary,
     marginBottom: 2,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
@@ -930,7 +944,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: BORDER,
+    borderTopColor: t.border,
     backgroundColor: PANEL,
     gap: 8,
   },
@@ -1002,12 +1016,12 @@ const styles = StyleSheet.create({
   },
   noticeText: {
     fontSize: 14,
-    color: SUBTLE,
+    color: t.textSecondary,
     textAlign: 'center',
   },
   errorText: {
     fontSize: 14,
-    color: '#EF4444',
+    color: t.danger,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -1044,7 +1058,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 19,
     fontWeight: '800',
-    color: TEXT,
+    color: t.textPrimary,
   },
   emptyBody: {
     fontSize: 13,
@@ -1060,6 +1074,7 @@ const styles = StyleSheet.create({
   },
   emptyNoteText: {
     fontSize: 12,
-    color: '#4B5563',
+    color: t.textMuted,
   },
-});
+  });
+}

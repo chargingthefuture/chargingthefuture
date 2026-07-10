@@ -15,15 +15,12 @@ import {
   type TreasuryConfigResponse,
   type TreasuryFeeResponse,
 } from './sca-shared';
-
-// Admin design tokens (shared dark admin look). ServiceCredits accent is purple #A855F7.
-const SURFACE = '#161B27';
-const BG = '#0F1117';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+import { useTheme } from '@/hooks/useTheme';
+import { getServiceCreditsTokens } from './sc-shared';
 
 export function ServiceCreditsTreasuryPanel() {
+  const { theme } = useTheme();
+  const t = getServiceCreditsTokens(theme);
   const [loading, setLoading] = useState(true);
   const [policyText, setPolicyText] = useState('');
   const [policyError, setPolicyError] = useState<string | null>(null);
@@ -126,15 +123,15 @@ export function ServiceCreditsTreasuryPanel() {
         flexDirection: 'column',
         gap: 16,
         borderRadius: 12,
-        border: `1px solid ${BORDER}`,
-        background: SURFACE,
+        border: `1px solid ${t.BORDER_SOLID}`,
+        background: t.SURFACE,
         padding: 18,
         marginBottom: 16,
       }}
     >
       <header>
-        <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, margin: '0 0 4px' }}>Treasury</h2>
-        <p style={{ fontSize: 13, color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, margin: '0 0 4px' }}>Treasury</h2>
+        <p style={{ fontSize: 13, color: t.MUTED, margin: 0, lineHeight: 1.5 }}>
           Review and edit the treasury policy, and move a fee from a member into the treasury wallet.
         </p>
       </header>
@@ -142,9 +139,9 @@ export function ServiceCreditsTreasuryPanel() {
       <Feedback error={error} notice={notice} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <h3 style={{ fontSize: 13, fontWeight: 700, color: TEXT, margin: 0 }}>Treasury policy</h3>
+        <h3 style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, margin: 0 }}>Treasury policy</h3>
         {loading ? (
-          <p style={{ fontSize: 13, color: SUBTLE, margin: 0 }}>Loading…</p>
+          <p style={{ fontSize: 13, color: t.MUTED, margin: 0 }}>Loading…</p>
         ) : (
           <>
             <textarea
@@ -153,9 +150,9 @@ export function ServiceCreditsTreasuryPanel() {
                 width: '100%',
                 boxSizing: 'border-box',
                 borderRadius: 8,
-                border: `1px solid ${BORDER}`,
-                background: BG,
-                color: TEXT,
+                border: `1px solid ${t.BORDER_SOLID}`,
+                background: t.BG,
+                color: t.TITLE,
                 padding: '9px 12px',
                 fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                 fontSize: 12,
@@ -180,8 +177,8 @@ export function ServiceCreditsTreasuryPanel() {
         )}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: `1px solid ${BORDER}`, paddingTop: 16 }}>
-        <h3 style={{ fontSize: 13, fontWeight: 700, color: TEXT, margin: 0 }}>Collect fee</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: `1px solid ${t.BORDER_SOLID}`, paddingTop: 16 }}>
+        <h3 style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, margin: 0 }}>Collect fee</h3>
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
           <Field label="Source member user ID" value={sourceUserId} onChange={setSourceUserId} placeholder="user_…" />
           <Field label="Treasury wallet user ID" value={treasuryUserId} onChange={setTreasuryUserId} placeholder="user_…" />

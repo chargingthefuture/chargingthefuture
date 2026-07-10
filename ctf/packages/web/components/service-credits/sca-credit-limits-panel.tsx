@@ -9,15 +9,12 @@
 import { useState } from 'react';
 import { Field, ConfirmAction, Feedback } from './sca-fields';
 import { scAdminMutate, type CreditLimitResponse, type CreditLimitLookup, type CreditLimitLookupResponse } from './sca-shared';
-
-// Admin design tokens (shared dark admin look). ServiceCredits accent is purple #A855F7.
-const SURFACE = '#161B27';
-const BG = '#0F1117';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+import { useTheme } from '@/hooks/useTheme';
+import { getServiceCreditsTokens } from './sc-shared';
 
 export function ServiceCreditsCreditLimitsPanel() {
+  const { theme } = useTheme();
+  const t = getServiceCreditsTokens(theme);
   const [targetUserId, setTargetUserId] = useState('');
   const [creditLimit, setCreditLimit] = useState('');
   const [busy, setBusy] = useState(false);
@@ -78,15 +75,15 @@ export function ServiceCreditsCreditLimitsPanel() {
         flexDirection: 'column',
         gap: 16,
         borderRadius: 12,
-        border: `1px solid ${BORDER}`,
-        background: SURFACE,
+        border: `1px solid ${t.BORDER_SOLID}`,
+        background: t.SURFACE,
         padding: 18,
         marginBottom: 16,
       }}
     >
       <header>
-        <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, margin: '0 0 4px' }}>Mutual-credit limits</h2>
-        <p style={{ fontSize: 13, color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, margin: '0 0 4px' }}>Mutual-credit limits</h2>
+        <p style={{ fontSize: 13, color: t.MUTED, margin: 0, lineHeight: 1.5 }}>
           New accounts start at 0. Raise a limit only for trusted members; set to 0 to revoke.
         </p>
       </header>
@@ -109,9 +106,9 @@ export function ServiceCreditsCreditLimitsPanel() {
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: 8,
-            border: `1px solid ${BORDER}`,
-            background: BG,
-            color: TEXT,
+            border: `1px solid ${t.BORDER_SOLID}`,
+            background: t.BG,
+            color: t.TITLE,
             padding: '9px 16px',
             fontSize: 13,
             fontWeight: 600,
@@ -128,28 +125,28 @@ export function ServiceCreditsCreditLimitsPanel() {
               gap: '4px 24px',
               gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
               borderRadius: 10,
-              border: `1px solid ${BORDER}`,
-              background: BG,
+              border: `1px solid ${t.BORDER_SOLID}`,
+              background: t.BG,
               padding: 12,
               fontSize: 13,
               margin: 0,
             }}
           >
             <div>
-              <dt style={{ color: SUBTLE }}>Mutual-credit limit</dt>
-              <dd style={{ fontWeight: 700, color: TEXT, margin: 0 }}>{lookup.creditLimit}</dd>
+              <dt style={{ color: t.MUTED }}>Mutual-credit limit</dt>
+              <dd style={{ fontWeight: 700, color: t.TITLE, margin: 0 }}>{lookup.creditLimit}</dd>
             </div>
             <div>
-              <dt style={{ color: SUBTLE }}>Source</dt>
-              <dd style={{ fontWeight: 700, color: TEXT, margin: 0 }}>{lookup.isDefault ? 'Policy default' : 'Per-account'}</dd>
+              <dt style={{ color: t.MUTED }}>Source</dt>
+              <dd style={{ fontWeight: 700, color: t.TITLE, margin: 0 }}>{lookup.isDefault ? 'Policy default' : 'Per-account'}</dd>
             </div>
             <div>
-              <dt style={{ color: SUBTLE }}>Frozen</dt>
-              <dd style={{ fontWeight: 700, color: TEXT, margin: 0 }}>{lookup.frozen ? 'Yes' : 'No'}</dd>
+              <dt style={{ color: t.MUTED }}>Frozen</dt>
+              <dd style={{ fontWeight: 700, color: t.TITLE, margin: 0 }}>{lookup.frozen ? 'Yes' : 'No'}</dd>
             </div>
           </dl>
         ) : null}
-        <p style={{ fontSize: 11, color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 11, color: t.MUTED, margin: 0, lineHeight: 1.5 }}>
           Every member gets the same flat limit by default. Override per account only when needed; set to 0 to revoke.
         </p>
       </div>

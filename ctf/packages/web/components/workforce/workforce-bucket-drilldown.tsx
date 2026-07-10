@@ -4,12 +4,16 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import type { WorkforceBucketDetail, WorkforceGroupedReportItem } from '../../lib/workforce/types';
 import { WorkforceMemberList } from './workforce-member-list';
+import { useTheme } from '@/hooks/useTheme';
+import { getWorkforceTokens } from './workforce-shared';
 
 type DrilldownKind = 'sector' | 'skill-level';
 
 // One expandable bucket row. Lazy-loads the matched-member detail the first time it is opened — the
 // V2 collapsible sector/skill-level drilldown.
 function BucketRow({ kind, item }: { kind: DrilldownKind; item: WorkforceGroupedReportItem }) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<WorkforceBucketDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,14 +59,14 @@ function BucketRow({ kind, item }: { kind: DrilldownKind; item: WorkforceGrouped
         }}
       >
         {open ? (
-          <ChevronDown size={16} style={{ color: '#6B7280', flexShrink: 0 }} />
+          <ChevronDown size={16} style={{ color: t.MUTED, flexShrink: 0 }} />
         ) : (
-          <ChevronRight size={16} style={{ color: '#6B7280', flexShrink: 0 }} />
+          <ChevronRight size={16} style={{ color: t.MUTED, flexShrink: 0 }} />
         )}
-        <span style={{ flex: 1, fontSize: 14, color: '#E8EAF0', textTransform: 'capitalize' }}>
+        <span style={{ flex: 1, fontSize: 14, color: t.TEXT, textTransform: 'capitalize' }}>
           {item.bucket}
         </span>
-        <span style={{ fontSize: 12, color: '#6B7280' }}>
+        <span style={{ fontSize: 12, color: t.MUTED }}>
           {item.recruited.toLocaleString()} recruited / {item.target.toLocaleString()} target
         </span>
         <span
@@ -71,7 +75,7 @@ function BucketRow({ kind, item }: { kind: DrilldownKind; item: WorkforceGrouped
             textAlign: 'right',
             fontSize: 13,
             fontWeight: 700,
-            color: item.gap > 0 ? '#F97316' : '#22C55E',
+            color: item.gap > 0 ? t.ACCENT : '#22C55E',
             flexShrink: 0,
           }}
         >
@@ -82,7 +86,7 @@ function BucketRow({ kind, item }: { kind: DrilldownKind; item: WorkforceGrouped
       {open ? (
         <div style={{ padding: '4px 6px 16px 34px' }}>
           {loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#6B7280', fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: t.MUTED, fontSize: 13 }}>
               <Loader2 size={14} className="animate-spin" /> Loading members…
             </div>
           ) : error ? (
@@ -105,6 +109,8 @@ export function WorkforceBucketDrilldown({
   title: string;
   items: WorkforceGroupedReportItem[];
 }) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   return (
     <div
       style={{
@@ -114,9 +120,9 @@ export function WorkforceBucketDrilldown({
         border: '1px solid rgba(255,255,255,0.06)',
       }}
     >
-      <div style={{ fontSize: 16, fontWeight: 700, color: '#F9FAFB', marginBottom: 12 }}>{title}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>{title}</div>
       {items.length === 0 ? (
-        <div style={{ fontSize: 13, color: '#6B7280' }}>No data yet.</div>
+        <div style={{ fontSize: 13, color: t.MUTED }}>No data yet.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {items.map((item) => (

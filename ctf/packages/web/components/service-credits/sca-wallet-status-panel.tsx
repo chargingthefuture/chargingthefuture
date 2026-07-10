@@ -7,14 +7,12 @@
 import { useState } from 'react';
 import { Field, ConfirmAction, Feedback } from './sca-fields';
 import { scAdminMutate, type WalletStatusResponse } from './sca-shared';
-
-// Admin design tokens (shared dark admin look). ServiceCredits accent is purple #A855F7.
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+import { useTheme } from '@/hooks/useTheme';
+import { getServiceCreditsTokens } from './sc-shared';
 
 export function ServiceCreditsWalletStatusPanel() {
+  const { theme } = useTheme();
+  const t = getServiceCreditsTokens(theme);
   const [targetUserId, setTargetUserId] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
@@ -52,15 +50,15 @@ export function ServiceCreditsWalletStatusPanel() {
         flexDirection: 'column',
         gap: 16,
         borderRadius: 12,
-        border: `1px solid ${BORDER}`,
-        background: SURFACE,
+        border: `1px solid ${t.BORDER_SOLID}`,
+        background: t.SURFACE,
         padding: 18,
         marginBottom: 16,
       }}
     >
       <header>
-        <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, margin: '0 0 4px' }}>Wallet freeze</h2>
-        <p style={{ fontSize: 13, color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, margin: '0 0 4px' }}>Wallet freeze</h2>
+        <p style={{ fontSize: 13, color: t.MUTED, margin: 0, lineHeight: 1.5 }}>
           Freezing blocks all spending; use for a risk-flagged account. Unfreeze to restore.
         </p>
       </header>

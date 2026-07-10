@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,7 @@ import type { Currency } from '../currency';
 import { useAuth } from '../../auth/auth-context';
 import { ShareLink } from '../../components/shared/ShareLink';
 import { getApiBaseUrl } from '../../auth/authedFetch';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
 // Absolute deep link to one request, the destination a shared ShareLink points at. Mirrors the web
 // feed's share target (/apps/socket-relay?request=<id>). Built from the same APP_URL the API calls
@@ -43,8 +44,6 @@ function requestShareUrl(requestId: string): string | null {
   }
 }
 
-// Design color — from MobileSocketRelay.tsx mockup
-const COLOR = '#FB923C';
 // Note: need/offer distinction, urgency, and credits are not in the
 // SocketRelayRequest model (title/details/tags/city/status only).
 // Those mockup UI elements are omitted per real-data-only policy.
@@ -52,6 +51,9 @@ const COLOR = '#FB923C';
 type NavKey = 'feed' | 'post' | 'lines';
 
 export function SocketRelay() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('socket-relay', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const { user } = useAuth();
   const currentUserId = user?.id;
   const [activeNav, setActiveNav] = useState<NavKey>('feed');
@@ -254,7 +256,7 @@ export function SocketRelay() {
           <TextInput
             style={styles.searchInput}
             placeholder="Search requests…"
-            placeholderTextColor="#4B5563"
+            placeholderTextColor={tokens.textMuted}
             value={search}
             onChangeText={setSearch}
           />
@@ -329,7 +331,7 @@ export function SocketRelay() {
                   const shareUrl = requestShareUrl(r.id);
                   return shareUrl ? (
                     <View style={styles.cardShareRow}>
-                      <ShareLink url={shareUrl} title="Share this request" color={COLOR} />
+                      <ShareLink url={shareUrl} title="Share this request" color={accent} />
                     </View>
                   ) : null;
                 })()}
@@ -343,7 +345,7 @@ export function SocketRelay() {
                         disabled={reposting === r.id}
                       >
                         {reposting === r.id ? (
-                          <ActivityIndicator size="small" color={COLOR} />
+                          <ActivityIndicator size="small" color={accent} />
                         ) : (
                           <Text style={styles.repostBtnText}>Re-post</Text>
                         )}
@@ -378,7 +380,7 @@ export function SocketRelay() {
                     }
                   >
                     {fulfilling === r.id ? (
-                      <ActivityIndicator size="small" color={COLOR} />
+                      <ActivityIndicator size="small" color={accent} />
                     ) : (
                       <Text
                         style={[
@@ -419,7 +421,7 @@ export function SocketRelay() {
       <TextInput
         style={styles.textArea}
         placeholder="Title — what do you need or offer? (80 chars)"
-        placeholderTextColor="#4B5563"
+        placeholderTextColor={tokens.textMuted}
         value={postTitle}
         onChangeText={setPostTitle}
         maxLength={80}
@@ -427,7 +429,7 @@ export function SocketRelay() {
       <TextInput
         style={styles.textArea}
         placeholder="Details (optional)"
-        placeholderTextColor="#4B5563"
+        placeholderTextColor={tokens.textMuted}
         value={postDetails}
         onChangeText={setPostDetails}
         multiline
@@ -441,7 +443,7 @@ export function SocketRelay() {
       <TextInput
         style={styles.textInput}
         placeholder="Location (neighbourhood only, optional)"
-        placeholderTextColor="#4B5563"
+        placeholderTextColor={tokens.textMuted}
         value={postCity}
         onChangeText={setPostCity}
       />
@@ -460,7 +462,7 @@ export function SocketRelay() {
         <TextInput
           style={styles.textInput}
           placeholder="Amount (e.g. 20)"
-          placeholderTextColor="#4B5563"
+          placeholderTextColor={tokens.textMuted}
           value={postPriceAmount}
           onChangeText={(t) => setPostPriceAmount(t.replace(/[^0-9.]/g, ''))}
           keyboardType="decimal-pad"
@@ -574,18 +576,19 @@ export function SocketRelay() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F1117',
+    backgroundColor: t.bg,
     paddingTop: Platform.OS === 'android' ? 32 : 0,
   },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#090B0F',
+    backgroundColor: t.surfaceAlt,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -595,18 +598,18 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: `${COLOR}30`,
+    backgroundColor: `${accent}30`,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerIconGlyph: { fontSize: 18, color: COLOR },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: '#F9FAFB' },
-  headerSubtitle: { fontSize: 11, color: COLOR },
+  headerIconGlyph: { fontSize: 18, color: accent },
+  headerTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary },
+  headerSubtitle: { fontSize: 11, color: accent },
   headerAddBtn: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: COLOR,
+    backgroundColor: accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -635,17 +638,17 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   tagChipActive: {
-    backgroundColor: `${COLOR}15`,
-    borderColor: `${COLOR}50`,
+    backgroundColor: `${accent}15`,
+    borderColor: `${accent}50`,
   },
-  tagChipText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
-  tagChipTextActive: { color: COLOR },
+  tagChipText: { fontSize: 12, fontWeight: '600', color: t.textSecondary },
+  tagChipTextActive: { color: accent },
   card: {
     padding: 14,
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
-    borderColor: `${COLOR}30`,
+    borderColor: `${accent}30`,
     marginBottom: 10,
   },
   cardBadgeRow: {
@@ -660,9 +663,9 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: t.borderFaint,
   },
-  categoryBadgeText: { fontSize: 10, color: '#6B7280' },
+  categoryBadgeText: { fontSize: 10, color: t.textSecondary },
   settleBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -694,28 +697,28 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#F9FAFB',
+    color: t.textPrimary,
     marginBottom: 4,
     lineHeight: 20,
   },
   cardDetails: { fontSize: 12, color: '#9CA3AF', marginBottom: 6, lineHeight: 18 },
-  cardPoster: { fontSize: 12, color: COLOR, fontWeight: '600', marginBottom: 4 },
-  cardMeta: { fontSize: 11, color: '#6B7280', marginBottom: 10 },
+  cardPoster: { fontSize: 12, color: accent, fontWeight: '600', marginBottom: 4 },
+  cardMeta: { fontSize: 11, color: t.textSecondary, marginBottom: 10 },
   cardShareRow: { flexDirection: 'row', marginBottom: 10 },
   helpBtn: {
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: `${COLOR}15`,
+    backgroundColor: `${accent}15`,
     borderWidth: 1,
-    borderColor: `${COLOR}30`,
+    borderColor: `${accent}30`,
     alignItems: 'center',
   },
   helpBtnDone: {
-    backgroundColor: '#22C55E20',
-    borderColor: '#22C55E40',
+    backgroundColor: `${t.success}20`,
+    borderColor: `${t.success}40`,
   },
-  helpBtnText: { fontSize: 12, fontWeight: '700', color: COLOR },
-  helpBtnTextDone: { color: '#22C55E' },
+  helpBtnText: { fontSize: 12, fontWeight: '700', color: accent },
+  helpBtnTextDone: { color: t.success },
   editBtn: {
     paddingVertical: 8,
     borderRadius: 8,
@@ -728,16 +731,16 @@ const styles = StyleSheet.create({
   repostBtn: {
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: `${COLOR}15`,
+    backgroundColor: `${accent}15`,
     borderWidth: 1,
-    borderColor: `${COLOR}30`,
+    borderColor: `${accent}30`,
     alignItems: 'center',
     marginBottom: 8,
   },
-  repostBtnText: { fontSize: 12, fontWeight: '700', color: COLOR },
+  repostBtnText: { fontSize: 12, fontWeight: '700', color: accent },
   cancelEditBtn: {
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: t.radius,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
@@ -755,22 +758,22 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 10,
-    backgroundColor: `${COLOR}20`,
+    backgroundColor: `${accent}20`,
     borderWidth: 1,
-    borderColor: `${COLOR}40`,
+    borderColor: `${accent}40`,
   },
-  retryBtnText: { color: COLOR, fontWeight: '700', fontSize: 13 },
+  retryBtnText: { color: accent, fontWeight: '700', fontSize: 13 },
   postHeading: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#F9FAFB',
+    color: t.textPrimary,
     marginBottom: 16,
   },
   textArea: {
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
+    borderRadius: t.radius,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
@@ -782,7 +785,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
+    borderRadius: t.radius,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
@@ -791,8 +794,8 @@ const styles = StyleSheet.create({
   },
   postBtn: {
     paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: COLOR,
+    borderRadius: t.radius,
+    backgroundColor: accent,
     alignItems: 'center',
     marginBottom: 12,
   },
@@ -803,15 +806,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: t.borderFaint,
   },
-  privacyTitle: { fontSize: 11, fontWeight: '700', color: COLOR, marginBottom: 4 },
-  privacyBody: { fontSize: 11, color: '#6B7280' },
+  privacyTitle: { fontSize: 11, fontWeight: '700', color: accent, marginBottom: 4 },
+  privacyBody: { fontSize: 11, color: t.textSecondary },
   bottomNav: {
     height: 72,
-    backgroundColor: '#090B0F',
+    backgroundColor: t.surfaceAlt,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: t.borderFaint,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -831,9 +834,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navIconBoxActive: { backgroundColor: `${COLOR}20` },
-  navIcon: { fontSize: 20, color: '#6B7280' },
-  navIconActive: { color: COLOR },
-  navLabel: { fontSize: 10, color: '#4B5563' },
-  navLabelActive: { color: COLOR, fontWeight: '600' },
-});
+  navIconBoxActive: { backgroundColor: `${accent}20` },
+  navIcon: { fontSize: 20, color: t.textSecondary },
+  navIconActive: { color: accent },
+  navLabel: { fontSize: 10, color: t.textMuted },
+  navLabelActive: { color: accent, fontWeight: '600' },
+  });
+}

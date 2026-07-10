@@ -20,14 +20,14 @@
  * States covered: checking, unsupported (Expo Go / no projectId), permission
  * denied, enabling, enabled-on-this-device, disabled, and error.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { authedFetch } from '../../auth/authedFetch';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-const COLOR = '#F59E0B';
-const TEXT = '#F9FAFB';
+// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
 const TEXT_DIM = '#9CA3AF';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' };
@@ -81,6 +81,10 @@ async function ensureCallChannel(): Promise<void> {
 }
 
 export const FoundationCallAlerts: React.FC = () => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('foundation', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+
   const [status, setStatus] = useState<Status>('checking');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -281,47 +285,49 @@ export const FoundationCallAlerts: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  card: {
-    gap: 10,
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    marginTop: 16,
-  },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  titleIcon: { fontSize: 14, color: COLOR },
-  title: { fontSize: 14, fontWeight: '700', color: TEXT },
-  note: { fontSize: 13, color: TEXT_DIM, lineHeight: 19 },
-  onLabel: { fontSize: 13, color: COLOR, fontWeight: '600' },
-  errorBox: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: 'rgba(239,68,68,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.3)',
-  },
-  errorText: { fontSize: 13, color: '#fecaca' },
-  primaryBtn: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 10,
-    backgroundColor: COLOR,
-  },
-  primaryText: { fontSize: 13, fontWeight: '700', color: '#1a1205' },
-  secondaryBtn: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  secondaryText: { fontSize: 13, fontWeight: '600', color: TEXT },
-  btnBusy: { opacity: 0.6 },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    card: {
+      gap: 10,
+      padding: 14,
+      borderRadius: t.radius,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+      marginTop: 16,
+    },
+    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    titleIcon: { fontSize: 14, color: accent },
+    title: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
+    note: { fontSize: 13, color: TEXT_DIM, lineHeight: 19 },
+    onLabel: { fontSize: 13, color: accent, fontWeight: '600' },
+    errorBox: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+      backgroundColor: 'rgba(239,68,68,0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(239,68,68,0.3)',
+    },
+    errorText: { fontSize: 13, color: '#fecaca' },
+    primaryBtn: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 16,
+      paddingVertical: 9,
+      borderRadius: 10,
+      backgroundColor: accent,
+    },
+    primaryText: { fontSize: 13, fontWeight: '700', color: '#1a1205' },
+    secondaryBtn: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 16,
+      paddingVertical: 9,
+      borderRadius: 10,
+      backgroundColor: 'rgba(255,255,255,0.06)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.12)',
+    },
+    secondaryText: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
+    btnBusy: { opacity: 0.6 },
+  });
+}

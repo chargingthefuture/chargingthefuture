@@ -1,15 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import type { Provider } from './api';
 import { createConnectionThread, requestQuote } from './api';
 import { ConnectNowButton, InstantCallAvailabilityBadge, canOfferConnectNow, acceptsInstantCalls, instantCallRateLabel, isOwnProfile } from './FoundationConnectNow';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-const BG = '#0F1117';
-const SURFACE_DARK = '#090B0F';
-const TEXT = '#F9FAFB';
+// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
 const TEXT_DIM = '#9CA3AF';
-const SUBTLE = '#6B7280';
-const COLOR = '#F59E0B';
 
 function initials(name: string): string {
   return name
@@ -41,6 +38,9 @@ interface FoundationProviderDetailProps {
  * the provider has the call enabled.
  */
 export function FoundationProviderDetail({ provider, viewerUserId = null, onBack, onOpenDirectLine }: FoundationProviderDetailProps) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('foundation', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -189,190 +189,192 @@ export function FoundationProviderDetail({ provider, viewerUserId = null, onBack
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  statusBar: {
-    height: 44,
-    backgroundColor: SURFACE_DARK,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-  },
-  statusTime: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: TEXT,
-  },
-  statusSignal: {
-    fontSize: 12,
-    color: TEXT_DIM,
-  },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: SURFACE_DARK,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-    gap: 12,
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  backIcon: {
-    color: COLOR,
-    fontSize: 16,
-  },
-  backLabel: {
-    color: COLOR,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  navTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '800',
-    color: TEXT,
-    textAlign: 'center',
-  },
-  navRight: {
-    width: 40,
-  },
-  scroll: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: `${COLOR}25`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  avatarText: {
-    color: COLOR,
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  displayName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: TEXT,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  headline: {
-    fontSize: 14,
-    color: TEXT_DIM,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  section: {
-    marginBottom: 16,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    color: SUBTLE,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-  },
-  bioText: {
-    fontSize: 14,
-    color: TEXT_DIM,
-    lineHeight: 22,
-  },
-  skillRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  skillChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: `${COLOR}12`,
-    borderWidth: 1,
-    borderColor: `${COLOR}30`,
-  },
-  skillChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLOR,
-  },
-  connectSection: {
-    gap: 8,
-    marginBottom: 16,
-  },
-  connectHint: {
-    fontSize: 12,
-    color: SUBTLE,
-    lineHeight: 18,
-    textAlign: 'center',
-  },
-  actions: {
-    gap: 10,
-    marginBottom: 16,
-  },
-  actionBtn: {
-    padding: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  primaryBtn: {
-    backgroundColor: COLOR,
-  },
-  primaryBtnDisabled: {
-    opacity: 0.5,
-  },
-  primaryBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  ownProfileHint: {
-    fontSize: 12,
-    color: SUBTLE,
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 17,
-  },
-  statusMsg: {
-    fontSize: 13,
-    color: TEXT_DIM,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  safetyBox: {
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: `${COLOR}08`,
-    borderWidth: 1,
-    borderColor: `${COLOR}18`,
-  },
-  safetyTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLOR,
-    marginBottom: 6,
-  },
-  safetyBody: {
-    fontSize: 12,
-    color: SUBTLE,
-    lineHeight: 19,
-  },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.bg,
+    },
+    statusBar: {
+      height: 44,
+      backgroundColor: t.surfaceAlt,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+    },
+    statusTime: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: t.textPrimary,
+    },
+    statusSignal: {
+      fontSize: 12,
+      color: TEXT_DIM,
+    },
+    navBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: t.borderFaint,
+      gap: 12,
+    },
+    backBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    backIcon: {
+      color: accent,
+      fontSize: 16,
+    },
+    backLabel: {
+      color: accent,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    navTitle: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '800',
+      color: t.textPrimary,
+      textAlign: 'center',
+    },
+    navRight: {
+      width: 40,
+    },
+    scroll: {
+      padding: 20,
+      paddingBottom: 40,
+    },
+    profileHeader: {
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    avatar: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: `${accent}25`,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 10,
+    },
+    avatarText: {
+      color: accent,
+      fontSize: 28,
+      fontWeight: '800',
+    },
+    displayName: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: t.textPrimary,
+      marginBottom: 4,
+      textAlign: 'center',
+    },
+    headline: {
+      fontSize: 14,
+      color: TEXT_DIM,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    section: {
+      marginBottom: 16,
+    },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      color: t.textSecondary,
+      textTransform: 'uppercase',
+      marginBottom: 6,
+    },
+    bioText: {
+      fontSize: 14,
+      color: TEXT_DIM,
+      lineHeight: 22,
+    },
+    skillRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    skillChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 8,
+      backgroundColor: `${accent}12`,
+      borderWidth: 1,
+      borderColor: `${accent}30`,
+    },
+    skillChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: accent,
+    },
+    connectSection: {
+      gap: 8,
+      marginBottom: 16,
+    },
+    connectHint: {
+      fontSize: 12,
+      color: t.textSecondary,
+      lineHeight: 18,
+      textAlign: 'center',
+    },
+    actions: {
+      gap: 10,
+      marginBottom: 16,
+    },
+    actionBtn: {
+      padding: 12,
+      borderRadius: t.radius,
+      alignItems: 'center',
+    },
+    primaryBtn: {
+      backgroundColor: accent,
+    },
+    primaryBtnDisabled: {
+      opacity: 0.5,
+    },
+    primaryBtnText: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    ownProfileHint: {
+      fontSize: 12,
+      color: t.textSecondary,
+      textAlign: 'center',
+      marginTop: 8,
+      lineHeight: 17,
+    },
+    statusMsg: {
+      fontSize: 13,
+      color: TEXT_DIM,
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    safetyBox: {
+      padding: 14,
+      borderRadius: t.radius,
+      backgroundColor: `${accent}08`,
+      borderWidth: 1,
+      borderColor: `${accent}18`,
+    },
+    safetyTitle: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: accent,
+      marginBottom: 6,
+    },
+    safetyBody: {
+      fontSize: 12,
+      color: t.textSecondary,
+      lineHeight: 19,
+    },
+  });
+}

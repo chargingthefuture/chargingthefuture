@@ -1,14 +1,16 @@
 'use client';
 
 import type { WorkforceDashboard } from '../../lib/workforce/types';
-
-const COLOR = '#F97316';
+import { useTheme } from '@/hooks/useTheme';
+import { getWorkforceTokens } from './workforce-shared';
 
 interface WorkforceHeroStatsProps {
   dashboard: WorkforceDashboard;
 }
 
 export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   const participationPct = Math.round(dashboard.participationRate * 100);
 
   const stats = [
@@ -22,7 +24,7 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
       label: 'Workforce Total',
       value: dashboard.workforceTotal.toLocaleString(),
       delta: `${participationPct}% participation`,
-      color: COLOR,
+      color: t.ACCENT,
     },
     {
       label: 'Total Headcount Target',
@@ -80,8 +82,8 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
             >
               {value}
             </div>
-            <div style={{ fontSize: 13, color: '#F9FAFB', fontWeight: 600, marginBottom: 4 }}>{label}</div>
-            <div style={{ fontSize: 12, color: '#6B7280' }}>{delta}</div>
+            <div style={{ fontSize: 13, color: t.TITLE, fontWeight: 600, marginBottom: 4 }}>{label}</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>{delta}</div>
           </div>
         ))}
       </div>
@@ -91,6 +93,8 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
 }
 
 function WorkforceRecruitmentProgress({ dashboard }: WorkforceHeroStatsProps) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   const pct = Math.min(100, Math.max(0, dashboard.percentRecruited));
   // Most of the bar is the gap to fill — the signal that tells LevelUp where to recruit and train.
   const barPct = pct < 0.5 && pct > 0 ? 0.5 : pct;
@@ -105,22 +109,22 @@ function WorkforceRecruitmentProgress({ dashboard }: WorkforceHeroStatsProps) {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: '#F9FAFB' }}>Recruitment Progress</div>
-        <div style={{ fontSize: 13, color: COLOR, fontWeight: 700 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>Recruitment Progress</div>
+        <div style={{ fontSize: 13, color: t.ACCENT, fontWeight: 700 }}>
           {dashboard.percentRecruited.toLocaleString(undefined, { maximumFractionDigits: 2 })}%
         </div>
       </div>
       <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden', marginBottom: 10 }}>
         <div style={{ height: '100%', width: `${barPct}%`, background: '#22C55E', borderRadius: 4 }} />
       </div>
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 12, color: '#9CA3AF' }}>
+      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 12, color: t.SUBTLE }}>
         <span>
           Remaining capacity:{' '}
-          <span style={{ color: '#E8EAF0', fontWeight: 600 }}>{dashboard.remainingCapacity.toLocaleString()}</span>
+          <span style={{ color: t.TEXT, fontWeight: 600 }}>{dashboard.remainingCapacity.toLocaleString()}</span>
         </span>
         <span>
           Min recruitable:{' '}
-          <span style={{ color: '#E8EAF0', fontWeight: 600 }}>{dashboard.minRecruitable.toLocaleString()}</span>
+          <span style={{ color: t.TEXT, fontWeight: 600 }}>{dashboard.minRecruitable.toLocaleString()}</span>
         </span>
       </div>
     </div>

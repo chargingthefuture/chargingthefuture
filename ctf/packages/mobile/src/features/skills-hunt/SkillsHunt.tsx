@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import {
   SkillsHuntApi,
   type Achievement,
@@ -18,8 +19,6 @@ import {
   type Submission,
 } from './SkillsHuntApi';
 import { SkillsHuntScoutTab } from './SkillsHuntScoutTab';
-
-const COLOR = '#FBBF24';
 
 type NavKey = 'scout' | 'leaderboard' | 'missions' | 'finds';
 
@@ -63,12 +62,32 @@ function statusLabel(status: Submission['status']): string {
 }
 
 // ─── Loading state (matches MobileSkillsHuntLoading mockup) ─────────────────
+// Deliberately raw: the theme has no effect on loading screens (token spec §11),
+// so this keeps the shipped hex instead of theme tokens.
+
+const loadingStyles = StyleSheet.create({
+  loadingRoot: {
+    flex: 1,
+    backgroundColor: '#0F1117',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingLine: {
+    fontSize: 10,
+    letterSpacing: 2,
+    color: 'rgba(255,255,255,0.22)',
+    textTransform: 'uppercase',
+    fontWeight: '500',
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+});
 
 export function SkillsHuntLoading() {
   return (
-    <View style={styles.loadingRoot}>
-      <Text style={styles.loadingLine}>EXIT THEIR ECONOMY</Text>
-      <Text style={styles.loadingLine}>EXIT THE PSYOP</Text>
+    <View style={loadingStyles.loadingRoot}>
+      <Text style={loadingStyles.loadingLine}>EXIT THEIR ECONOMY</Text>
+      <Text style={loadingStyles.loadingLine}>EXIT THE PSYOP</Text>
     </View>
   );
 }
@@ -76,6 +95,9 @@ export function SkillsHuntLoading() {
 // ─── Empty state (matches MobileSkillsHuntEmpty mockup) ──────────────────────
 
 function EmptyState({ onNominate }: { onNominate: () => void }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-hunt', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.emptyContainer}>
       <View style={styles.emptyIconCircle}>
@@ -115,7 +137,7 @@ function EmptyState({ onNominate }: { onNominate: () => void }) {
           <Text style={styles.missionHintTitle}>Mission: Nominate 1 survivor</Text>
           <Text style={styles.muted}>Earn 🔍 First Find badge + 50 pts</Text>
         </View>
-        <Text style={[styles.missionHintIcon, { color: COLOR }]}>0/1</Text>
+        <Text style={[styles.missionHintIcon, { color: accent }]}>0/1</Text>
       </View>
     </ScrollView>
   );
@@ -124,6 +146,9 @@ function EmptyState({ onNominate }: { onNominate: () => void }) {
 // ─── Leaderboard tab ─────────────────────────────────────────────────────────
 
 function LeaderboardTab({ round, currentUserId }: { round: Round | null; currentUserId: string | null }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-hunt', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [items, setItems] = useState<LeaderboardItem[]>([]);
   const [currentEntry, setCurrentEntry] = useState<LeaderboardItem | null>(null);
   const [loading, setLoading] = useState(false);
@@ -147,7 +172,7 @@ function LeaderboardTab({ round, currentUserId }: { round: Round | null; current
   useEffect(() => { void load(); }, [load]);
 
   if (!round) return <View style={styles.center}><Text style={styles.muted}>No active round.</Text></View>;
-  if (loading) return <View style={styles.center}><ActivityIndicator color={COLOR} /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={accent} /></View>;
   if (loadError) return <View style={styles.center}><Text style={styles.errorText}>{loadError}</Text></View>;
 
   const inItems = items.some(i => i.userId === currentUserId);
@@ -181,13 +206,13 @@ function LeaderboardTab({ round, currentUserId }: { round: Round | null; current
                 </Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.leaderName, { color: COLOR }]}>
+                <Text style={[styles.leaderName, { color: accent }]}>
                   {myEntry.usernameSnapshot ?? 'You'} (You)
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={styles.leaderPts}>{myEntry.score}</Text>
-                <Text style={[styles.tiny, { color: '#4B5563' }]}>pts</Text>
+                <Text style={[styles.tiny, { color: tokens.textMuted }]}>pts</Text>
                 {myEntry.pendingPoints > 0 && (
                   <Text style={[styles.tiny, { color: '#F59E0B' }]}>+{myEntry.pendingPoints}⏳</Text>
                 )}
@@ -208,13 +233,13 @@ function LeaderboardTab({ round, currentUserId }: { round: Round | null; current
               </Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.leaderName, isMe && { color: COLOR }]}>
+              <Text style={[styles.leaderName, isMe && { color: accent }]}>
                 {item.usernameSnapshot ?? 'Anonymous'}{isMe ? ' (You)' : ''}
               </Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={styles.leaderPts}>{item.score}</Text>
-              <Text style={[styles.tiny, { color: '#4B5563' }]}>pts</Text>
+              <Text style={[styles.tiny, { color: tokens.textMuted }]}>pts</Text>
               {item.pendingPoints > 0 && (
                 <Text style={[styles.tiny, { color: '#F59E0B' }]}>+{item.pendingPoints}⏳</Text>
               )}
@@ -229,6 +254,9 @@ function LeaderboardTab({ round, currentUserId }: { round: Round | null; current
 // ─── Missions tab ────────────────────────────────────────────────────────────
 
 function MissionsTab({ round, onScout }: { round: Round | null; onScout: () => void }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-hunt', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [items, setItems] = useState<MissionWithProgress[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -252,7 +280,7 @@ function MissionsTab({ round, onScout }: { round: Round | null; onScout: () => v
   }, [round]);
 
   if (!round) return <View style={styles.center}><Text style={styles.muted}>No active round.</Text></View>;
-  if (loading) return <View style={styles.center}><ActivityIndicator color={COLOR} /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={accent} /></View>;
   if (loadError) return <View style={styles.center}><Text style={styles.errorText}>{loadError}</Text></View>;
   if (items.length === 0) return <View style={styles.center}><Text style={styles.muted}>No missions for this round yet.</Text></View>;
 
@@ -270,7 +298,7 @@ function MissionsTab({ round, onScout }: { round: Round | null; onScout: () => v
       renderItem={({ item }) => {
         const progress = item.progress?.progressCount ?? 0;
         const pct = Math.min(100, (progress / Math.max(1, item.goalTarget)) * 100);
-        const color = item.colorHex ?? COLOR;
+        const color = item.colorHex ?? accent;
         return (
           <View style={[styles.missionCard, { borderColor: color + '35' }]}>
             <Text style={styles.missionTitle}>{item.title}</Text>
@@ -297,6 +325,9 @@ function MissionsTab({ round, onScout }: { round: Round | null; onScout: () => v
 // ─── My Finds tab ─────────────────────────────────────────────────────────────
 
 function MyFindsTab({ round, achievements }: { round: Round | null; achievements: Achievement[] }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-hunt', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [items, setItems] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -320,7 +351,7 @@ function MyFindsTab({ round, achievements }: { round: Round | null; achievements
   }, [round]);
 
   if (!round) return <View style={styles.center}><Text style={styles.muted}>No active round.</Text></View>;
-  if (loading) return <View style={styles.center}><ActivityIndicator color={COLOR} /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={accent} /></View>;
   if (loadError) return <View style={styles.center}><Text style={styles.errorText}>{loadError}</Text></View>;
 
   const earnedCodes = new Set(achievements.map(a => a.code));
@@ -346,7 +377,7 @@ function MyFindsTab({ round, achievements }: { round: Round | null; achievements
                     style={[
                       styles.badgeBox,
                       earned
-                        ? { backgroundColor: COLOR + '20', borderColor: COLOR + '40' }
+                        ? { backgroundColor: accent + '20', borderColor: accent + '40' }
                         : { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.06)' },
                       !earned && { opacity: 0.35 },
                     ]}
@@ -364,8 +395,10 @@ function MyFindsTab({ round, achievements }: { round: Round | null; achievements
       ListEmptyComponent={<Text style={styles.empty}>No nominations yet.</Text>}
       renderItem={({ item }) => {
         const isRare = item.status === 'flagged';
+        // Submission status palette (green accepted / amber-gold flagged / amber pending) —
+        // deliberately raw so the status set stays together, untokenized.
         return (
-          <View style={[styles.findCard, isRare && { borderColor: COLOR + '40' }]}>
+          <View style={[styles.findCard, isRare && { borderColor: '#FBBF2440' }]}>
             <View style={styles.findHeader}>
               <Text style={styles.findName}>{item.fullName}</Text>
               <View style={[
@@ -373,13 +406,13 @@ function MyFindsTab({ round, achievements }: { round: Round | null; achievements
                 item.status === 'accepted'
                   ? { backgroundColor: '#22C55E20', borderColor: '#22C55E40' }
                   : item.status === 'flagged'
-                  ? { backgroundColor: COLOR + '20', borderColor: COLOR + '40' }
+                  ? { backgroundColor: '#FBBF2420', borderColor: '#FBBF2440' }
                   : { backgroundColor: 'rgba(245,158,11,0.15)', borderColor: 'rgba(245,158,11,0.3)' },
               ]}>
                 <Text style={[
                   styles.statusText,
                   item.status === 'accepted' ? { color: '#22C55E' }
-                    : item.status === 'flagged' ? { color: COLOR }
+                    : item.status === 'flagged' ? { color: '#FBBF24' }
                     : { color: '#F59E0B' },
                 ]}>
                   {statusLabel(item.status)}
@@ -397,7 +430,7 @@ function MyFindsTab({ round, achievements }: { round: Round | null; achievements
                 ))}
               </View>
             )}
-            <Text style={[styles.tiny, { color: '#4B5563', marginTop: 6 }]}>
+            <Text style={[styles.tiny, { color: tokens.textMuted, marginTop: 6 }]}>
               {relativeDate(item.createdAtIso)}
             </Text>
           </View>
@@ -416,6 +449,9 @@ function NotificationInbox({
   notifications: Notification[];
   onMarkRead: (_id: string) => void;
 }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-hunt', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   if (notifications.length === 0) {
     return (
       <View style={styles.inboxEmpty}>
@@ -444,6 +480,9 @@ function NotificationInbox({
 // ─── Root component ──────────────────────────────────────────────────────────
 
 export function SkillsHunt({ userId }: { userId?: string } = {}) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-hunt', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [activeNav, setActiveNav] = useState<NavKey>('scout');
   const [round, setRound] = useState<Round | null>(null);
   const [loadingRound, setLoadingRound] = useState(true);
@@ -530,7 +569,7 @@ export function SkillsHunt({ userId }: { userId?: string } = {}) {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.headerIcon}>
-            <Text style={{ fontSize: 16, color: COLOR }}>🔍</Text>
+            <Text style={{ fontSize: 16, color: accent }}>🔍</Text>
           </View>
           <View>
             <Text style={styles.headerTitle}>SkillsHunt</Text>
@@ -589,10 +628,10 @@ export function SkillsHunt({ userId }: { userId?: string } = {}) {
               onPress={() => setActiveNav(key)}
               accessibilityLabel={label}
             >
-              <View style={[styles.navIconBox, active && { backgroundColor: COLOR + '20' }]}>
+              <View style={[styles.navIconBox, active && { backgroundColor: accent + '20' }]}>
                 <Text style={{ fontSize: 18, opacity: active ? 1 : 0.4 }}>{icon}</Text>
               </View>
-              <Text style={[styles.navLabel, active && { color: COLOR, fontWeight: '600' }]}>
+              <Text style={[styles.navLabel, active && { color: accent, fontWeight: '600' }]}>
                 {label}
               </Text>
             </TouchableOpacity>
@@ -605,35 +644,19 @@ export function SkillsHunt({ userId }: { userId?: string } = {}) {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0F1117' },
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+  root: { flex: 1, backgroundColor: t.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  muted: { color: '#6B7280', fontSize: 12 },
-  empty: { color: '#6B7280', textAlign: 'center', padding: 24 },
-  errorText: { color: '#EF4444', fontSize: 13 },
+  muted: { color: t.textSecondary, fontSize: 12 },
+  empty: { color: t.textSecondary, textAlign: 'center', padding: 24 },
+  errorText: { color: t.danger, fontSize: 13 },
   tiny: { fontSize: 10 },
-  sectionTitle: { color: '#F9FAFB', fontSize: 16, fontWeight: '700', marginBottom: 2 },
-
-  // Loading
-  loadingRoot: {
-    flex: 1,
-    backgroundColor: '#0F1117',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingLine: {
-    fontSize: 10,
-    letterSpacing: 2,
-    color: 'rgba(255,255,255,0.22)',
-    textTransform: 'uppercase',
-    fontWeight: '500',
-    lineHeight: 20,
-    textAlign: 'center',
-  },
+  sectionTitle: { color: t.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 2 },
 
   // Empty state
   emptyContainer: {
-    backgroundColor: '#0F1117',
+    backgroundColor: t.bg,
     padding: 24,
     alignItems: 'center',
     gap: 20,
@@ -642,59 +665,59 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: COLOR + '15',
+    backgroundColor: accent + '15',
     borderWidth: 1,
-    borderColor: COLOR + '40',
+    borderColor: accent + '40',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyIconGlyph: { fontSize: 28, opacity: 0.6 },
   emptyTextBlock: { alignItems: 'center' },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#F9FAFB', marginBottom: 10, textAlign: 'center' },
-  emptyBody: { fontSize: 14, color: '#6B7280', lineHeight: 22, textAlign: 'center' },
+  emptyTitle: { fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 10, textAlign: 'center' },
+  emptyBody: { fontSize: 14, color: t.textSecondary, lineHeight: 22, textAlign: 'center' },
   emptyHowBlock: { width: '100%', gap: 10 },
   emptyHowRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     padding: 12,
-    borderRadius: 12,
+    borderRadius: t.radius,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: t.borderFaint,
   },
   emptyHowEmoji: { fontSize: 22 },
   emptyHowText: { flex: 1, fontSize: 13, color: '#9CA3AF', lineHeight: 18 },
   primaryBtn: {
     width: '100%',
     padding: 14,
-    borderRadius: 12,
-    backgroundColor: COLOR,
+    borderRadius: t.radius,
+    backgroundColor: accent,
     alignItems: 'center',
   },
   primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   missionHint: {
     width: '100%',
     padding: 12,
-    borderRadius: 12,
-    backgroundColor: COLOR + '08',
+    borderRadius: t.radius,
+    backgroundColor: accent + '08',
     borderWidth: 1,
-    borderColor: COLOR + '20',
+    borderColor: accent + '20',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  missionHintIcon: { fontSize: 16, color: COLOR },
+  missionHintIcon: { fontSize: 16, color: accent },
   missionHintTitle: { fontSize: 12, fontWeight: '700', color: '#E8EAF0' },
 
   // Header
   header: {
-    backgroundColor: '#090B0F',
+    backgroundColor: t.surfaceAlt,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -704,24 +727,24 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: COLOR + '30',
+    backgroundColor: accent + '30',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: '#F9FAFB' },
-  headerSub: { fontSize: 11, color: '#6B7280' },
+  headerTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary },
+  headerSub: { fontSize: 11, color: t.textSecondary },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   ptsWidget: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 10,
-    backgroundColor: COLOR + '08',
+    backgroundColor: accent + '08',
     borderWidth: 1,
-    borderColor: COLOR + '20',
+    borderColor: accent + '20',
     alignItems: 'center',
   },
-  ptsScore: { fontSize: 14, fontWeight: '800', color: COLOR },
-  ptsLabel: { fontSize: 9, color: '#6B7280' },
+  ptsScore: { fontSize: 14, fontWeight: '800', color: accent },
+  ptsLabel: { fontSize: 9, color: t.textSecondary },
   bellBtn: { padding: 6 },
   bellGlyph: { fontSize: 18 },
 
@@ -730,13 +753,13 @@ const styles = StyleSheet.create({
     maxHeight: 240,
     backgroundColor: '#0D0F14',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
   },
   inboxEmpty: {
     padding: 16,
     backgroundColor: '#0D0F14',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: t.borderFaint,
     alignItems: 'center',
   },
   notifRow: {
@@ -745,18 +768,18 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.04)',
   },
   notifRowUnread: {
-    backgroundColor: COLOR + '08',
+    backgroundColor: accent + '08',
     borderLeftWidth: 2,
-    borderLeftColor: COLOR,
+    borderLeftColor: accent,
   },
-  notifTitle: { color: '#F9FAFB', fontSize: 13 },
+  notifTitle: { color: t.textPrimary, fontSize: 13 },
 
   // Bottom nav
   navBar: {
     height: 72,
-    backgroundColor: '#090B0F',
+    backgroundColor: t.surfaceAlt,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: t.borderFaint,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
@@ -774,7 +797,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navLabel: { fontSize: 10, color: '#4B5563', fontWeight: '400' },
+  navLabel: { fontSize: 10, color: t.textMuted, fontWeight: '400' },
 
   // Leaderboard
   leaderRow: {
@@ -782,25 +805,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 12,
-    borderRadius: 12,
+    borderRadius: t.radius,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: t.borderFaint,
     marginBottom: 8,
   },
-  leaderRowMe: { backgroundColor: COLOR + '12', borderColor: COLOR + '40' },
+  leaderRowMe: { backgroundColor: accent + '12', borderColor: accent + '40' },
   rankGlyph: { fontSize: 18, width: 28, textAlign: 'center' },
   leaderAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLOR + '25',
+    backgroundColor: accent + '25',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  leaderAvatarText: { color: COLOR, fontSize: 13, fontWeight: '800' },
-  leaderName: { color: '#F9FAFB', fontSize: 13, fontWeight: '700' },
-  leaderPts: { color: COLOR, fontWeight: '800', fontSize: 16 },
+  leaderAvatarText: { color: accent, fontSize: 13, fontWeight: '800' },
+  leaderName: { color: t.textPrimary, fontSize: 13, fontWeight: '700' },
+  leaderPts: { color: accent, fontWeight: '800', fontSize: 16 },
 
   // Missions
   missionCard: {
@@ -810,7 +833,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 10,
   },
-  missionTitle: { color: '#F9FAFB', fontWeight: '700', fontSize: 13, marginBottom: 8, lineHeight: 18 },
+  missionTitle: { color: t.textPrimary, fontWeight: '700', fontSize: 13, marginBottom: 8, lineHeight: 18 },
   missionMeta: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   missionPoints: { fontWeight: '700', fontSize: 11 },
   barTrack: { height: 5, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden', marginBottom: 10 },
@@ -831,14 +854,14 @@ const styles = StyleSheet.create({
   badgeEmoji: { fontSize: 17 },
   findCard: {
     padding: 12,
-    borderRadius: 12,
+    borderRadius: t.radius,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: t.borderFaint,
     marginBottom: 8,
   },
   findHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
-  findName: { color: '#F9FAFB', fontWeight: '700', fontSize: 13 },
+  findName: { color: t.textPrimary, fontWeight: '700', fontSize: 13 },
   statusPill: {
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -856,4 +879,5 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
   },
   skillChipText: { fontSize: 11, color: '#9CA3AF' },
-});
+  });
+}

@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
 import type { LighthouseProperty } from './types';
 import { acceptedCurrencyLabels, formatRentParts, type CurrencyMap } from './currency';
-
-const COLOR = '#60A5FA';
 
 interface Props {
   property: LighthouseProperty;
@@ -27,6 +26,9 @@ function formatBeds(bedrooms: number | null): string {
 }
 
 export const LighthousePropertyCard: React.FC<Props> = ({ property, currencies, onPress }) => {
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('lighthouse', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const beds = formatBeds(property.bedrooms);
   const baths = property.bathrooms !== null ? `${property.bathrooms}ba` : null;
   const availability = formatAvailability(property.availableFromIso);
@@ -41,7 +43,7 @@ export const LighthousePropertyCard: React.FC<Props> = ({ property, currencies, 
       onPress={() => onPress(property.id)}
     >
       <View style={styles.imagePlaceholder}>
-        <Ionicons name="home-outline" size={32} color={`${COLOR}60`} />
+        <Ionicons name="home-outline" size={32} color={`${accent}60`} />
       </View>
       <View style={styles.body}>
         <View style={styles.titleRow}>
@@ -51,7 +53,7 @@ export const LighthousePropertyCard: React.FC<Props> = ({ property, currencies, 
         </View>
         {location ? (
           <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={11} color="#6B7280" />
+            <Ionicons name="location-outline" size={11} color={tokens.textSecondary} />
             <Text style={styles.locationText}>{location}</Text>
           </View>
         ) : null}
@@ -86,97 +88,99 @@ export const LighthousePropertyCard: React.FC<Props> = ({ property, currencies, 
   );
 };
 
-const styles = StyleSheet.create({
-  card: {
-    marginBottom: 12,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: `${COLOR}20`,
-    overflow: 'hidden',
-  },
-  imagePlaceholder: {
-    height: 80,
-    backgroundColor: `${COLOR}08`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  body: {
-    padding: 14,
-  },
-  titleRow: {
-    marginBottom: 6,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#F9FAFB',
-    lineHeight: 20,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    gap: 3,
-  },
-  locationText: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginLeft: 2,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  footerLeft: {
-    flexShrink: 1,
-  },
-  price: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLOR,
-  },
-  priceUnit: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLOR,
-  },
-  priceSuffix: {
-    fontSize: 11,
-    color: '#6B7280',
-    fontWeight: '400',
-  },
-  creditsBadge: {
-    fontSize: 10,
-    color: '#F59E0B',
-    marginTop: 2,
-  },
-  priceUnknown: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 2,
-  },
-  metaText: {
-    fontSize: 11,
-    color: '#6B7280',
-  },
-  viewBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: `${COLOR}15`,
-    borderWidth: 1,
-    borderColor: `${COLOR}30`,
-  },
-  viewBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLOR,
-  },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    card: {
+      marginBottom: 12,
+      borderRadius: 16,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      borderColor: `${accent}20`,
+      overflow: 'hidden',
+    },
+    imagePlaceholder: {
+      height: 80,
+      backgroundColor: `${accent}08`,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    body: {
+      padding: 14,
+    },
+    titleRow: {
+      marginBottom: 6,
+    },
+    title: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: t.textPrimary,
+      lineHeight: 20,
+    },
+    locationRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 10,
+      gap: 3,
+    },
+    locationText: {
+      fontSize: 12,
+      color: t.textSecondary,
+      marginLeft: 2,
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-end',
+      gap: 8,
+    },
+    footerLeft: {
+      flexShrink: 1,
+    },
+    price: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: accent,
+    },
+    priceUnit: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: accent,
+    },
+    priceSuffix: {
+      fontSize: 11,
+      color: t.textSecondary,
+      fontWeight: '400',
+    },
+    creditsBadge: {
+      fontSize: 10,
+      color: '#F59E0B',
+      marginTop: 2,
+    },
+    priceUnknown: {
+      fontSize: 14,
+      color: t.textSecondary,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 2,
+    },
+    metaText: {
+      fontSize: 11,
+      color: t.textSecondary,
+    },
+    viewBtn: {
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      backgroundColor: `${accent}15`,
+      borderWidth: 1,
+      borderColor: `${accent}30`,
+    },
+    viewBtnText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: accent,
+    },
+  });
+}

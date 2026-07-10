@@ -12,7 +12,8 @@ import {
   type Call,
 } from '@stream-io/video-react-sdk';
 import { ScreenShare, ScreenShareOff } from 'lucide-react';
-import { BEACON_COLOR } from 'lib/beacon/constants';
+import { useTheme } from '@/hooks/useTheme';
+import { getBeaconTokens } from './beacon-shared';
 import { reportError } from 'lib/observability/report';
 
 export type BeaconHostCredentials = {
@@ -24,9 +25,9 @@ export type BeaconHostCredentials = {
   displayName: string;
 };
 
-const SUBTLE = '#9CA3AF';
-
 export function BeaconHostStage({ credentials, eventId }: { credentials: BeaconHostCredentials; eventId: string }) {
+  const { theme } = useTheme();
+  const t = getBeaconTokens(theme);
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
@@ -69,7 +70,7 @@ export function BeaconHostStage({ credentials, eventId }: { credentials: BeaconH
 
   if (status !== 'joined' || !client || !call) {
     return (
-      <div style={{ padding: '24px 0', color: status === 'error' ? '#F87171' : SUBTLE, fontSize: 14 }}>
+      <div style={{ padding: '24px 0', color: status === 'error' ? '#F87171' : t.SUBTLE, fontSize: 14 }}>
         {status === 'error' ? (errorMessage ?? 'Could not connect to the broadcast.') : 'Connecting to the broadcast…'}
       </div>
     );
@@ -85,6 +86,8 @@ export function BeaconHostStage({ credentials, eventId }: { credentials: BeaconH
 }
 
 function ScreenShareControls({ eventId }: { eventId: string }) {
+  const { theme } = useTheme();
+  const t = getBeaconTokens(theme);
   const { useScreenShareState, useHasOngoingScreenShare } = useCallStateHooks();
   const { screenShare, isMute } = useScreenShareState();
   const isSharing = useHasOngoingScreenShare();
@@ -122,9 +125,9 @@ function ScreenShareControls({ eventId }: { eventId: string }) {
           gap: 8,
           padding: '10px 16px',
           borderRadius: 10,
-          background: isMute ? `${BEACON_COLOR}20` : 'rgba(239,68,68,0.14)',
-          border: `1px solid ${isMute ? `${BEACON_COLOR}55` : 'rgba(239,68,68,0.35)'}`,
-          color: isMute ? BEACON_COLOR : '#F87171',
+          background: isMute ? `${t.ACCENT}20` : 'rgba(239,68,68,0.14)',
+          border: `1px solid ${isMute ? `${t.ACCENT}55` : 'rgba(239,68,68,0.35)'}`,
+          color: isMute ? t.ACCENT : '#F87171',
           fontSize: 14,
           fontWeight: 700,
           cursor: 'pointer',
@@ -133,7 +136,7 @@ function ScreenShareControls({ eventId }: { eventId: string }) {
         {isMute ? <ScreenShare size={18} /> : <ScreenShareOff size={18} />}
         {isMute ? 'Share screen' : 'Stop sharing'}
       </button>
-      <span style={{ fontSize: 13, color: SUBTLE }}>
+      <span style={{ fontSize: 13, color: t.SUBTLE }}>
         {isSharing ? 'Your screen is live to the broadcast.' : 'Pick a screen or window to demo from this computer.'}
       </span>
     </div>

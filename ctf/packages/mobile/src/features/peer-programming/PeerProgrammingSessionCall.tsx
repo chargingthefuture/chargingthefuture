@@ -26,9 +26,8 @@ import {
   type Call,
   type StreamVideoParticipant,
 } from '@stream-io/video-react-native-sdk';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import type { PeerProgrammingSessionCredentials } from './api';
-
-const COLOR = '#6EE7B7';
 
 // Same call type as the web call and the Chyme room: the plain "default" type where
 // members may publish audio and video. Matches pp-session-call.tsx exactly.
@@ -41,6 +40,9 @@ type Props = {
 };
 
 export const PeerProgrammingSessionCall: React.FC<Props> = ({ credentials, displayName, onLeave }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('peer-programming', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
@@ -119,7 +121,7 @@ export const PeerProgrammingSessionCall: React.FC<Props> = ({ credentials, displ
           </>
         ) : (
           <>
-            <ActivityIndicator size="large" color={COLOR} />
+            <ActivityIndicator size="large" color={accent} />
             <Text style={styles.connectingText}>Connecting to the live session…</Text>
           </>
         )}
@@ -137,6 +139,9 @@ export const PeerProgrammingSessionCall: React.FC<Props> = ({ credentials, displ
 };
 
 const PeerProgrammingSessionStage: React.FC<{ onLeave: () => void }> = ({ onLeave }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('peer-programming', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const { useParticipants, useCameraState, useMicrophoneState } = useCallStateHooks();
   const participants = useParticipants();
   const { camera, isMute: cameraOff } = useCameraState();
@@ -201,7 +206,8 @@ const PeerProgrammingSessionStage: React.FC<{ onLeave: () => void }> = ({ onLeav
   );
 };
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, paddingHorizontal: 24 },
   connectingText: { color: '#9CA3AF', fontSize: 14, marginTop: 16 },
   errorText: { color: '#F87171', fontSize: 14, textAlign: 'center', marginBottom: 18, lineHeight: 22 },
@@ -219,11 +225,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.2,
-    color: '#6B7280',
+    color: t.textSecondary,
     textTransform: 'uppercase',
     marginBottom: 14,
   },
-  emptyText: { color: '#6B7280', fontSize: 14 },
+  emptyText: { color: t.textSecondary, fontSize: 14 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   tile: {
     width: '47%',
@@ -231,7 +237,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: `${COLOR}25`,
+    borderColor: `${accent}25`,
     backgroundColor: '#000',
   },
   controls: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 22 },
@@ -243,8 +249,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
   },
-  controlBtnOn: { backgroundColor: `${COLOR}20`, borderColor: `${COLOR}40` },
+  controlBtnOn: { backgroundColor: `${accent}20`, borderColor: `${accent}40` },
   controlBtnOff: { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' },
   leaveControlBtn: { backgroundColor: 'rgba(239,68,68,0.14)', borderColor: 'rgba(239,68,68,0.35)' },
   controlIcon: { fontSize: 20 },
-});
+  });
+}

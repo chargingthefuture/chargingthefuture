@@ -7,8 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { AppLoading } from '@/components/shared/app-loading';
-import { getAppAccent, type ThemeName } from '@/lib/theme/theme-tokens';
-import { getPluginShellTokens, type PluginShellTokens } from '@/components/shared/plugin-shell-theme';
+import { getWorkforceTokens, type WorkforceTokens } from './workforce-shared';
 import type {
   WorkforceDashboard,
   WorkforceGroupedReportItem,
@@ -26,17 +25,6 @@ import { WorkforceOccupations } from './workforce-occupations';
 import { WorkforceProfilePanel } from './workforce-profile-panel';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { MobileTopActions } from '@/components/shared/mobile-top-actions';
-
-const COLOR = '#F97316';
-
-// Theme-aware chrome tokens for the Workforce shell. Default keeps the shipped values (accent
-// stays #F97316); comic uses the shared comic surface tokens plus the Workforce comic-ink accent.
-type WorkforceTokens = PluginShellTokens;
-
-function getWorkforceTokens(theme: ThemeName): WorkforceTokens {
-  const accent = theme === 'comic' ? getAppAccent('workforce', 'comic') : COLOR;
-  return getPluginShellTokens(accent, theme);
-}
 
 type Tab = 'dashboard';
 type SidebarView = 'overview' | 'sector' | 'skill-level' | 'occupations';

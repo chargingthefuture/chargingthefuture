@@ -4,8 +4,9 @@
 // has already been credited for a star), and the post-submit confirmation that shows the owner's
 // Signal URL inline (falling back to the editable instructions text when it is null).
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Linking } from 'react-native';
+import { useTheme, type ThemeTokens } from '../../theme';
 import {
   createSubmission,
   fetchFundraiser,
@@ -16,12 +17,10 @@ import {
 } from './ContributionsApi';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
 
+// Contributions accent — pink. Not in the plugin-accent table (getAppAccent would fall back to grey),
+// so it stays raw to keep the shipped pixels byte-identical.
 const COLOR = '#F472B6';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT_COLOR = '#F9FAFB';
-const SUBTLE = '#6B7280';
+// Signal deep-link blue — no mobile token, left raw.
 const SIGNAL_BLUE = '#38BDF8';
 
 const ALREADY_CREDITED_NOTE = "You've already received credits for starring the repository — thank you.";
@@ -50,7 +49,8 @@ function statusColor(status: string): string {
   if (status === 'pending') {
     return '#F59E0B';
   }
-  return SUBTLE;
+  // Status palette (confirmed/pending/not-matched) — left raw per token-pass §F3.
+  return '#6B7280';
 }
 
 function statusLabel(status: string): string {
@@ -74,6 +74,8 @@ function submissionLabel(sub: ContributionSubmission): string {
 }
 
 function GoalRow({ label, current, target, unit }: { label: string; current: number; target: number; unit: string; color: string }) {
+  const { tokens } = useTheme();
+  const st = useMemo(() => makeStyles(tokens), [tokens]);
   const p = pct(current, target);
   return (
     <View style={st.goalCard}>
@@ -94,6 +96,8 @@ function GoalRow({ label, current, target, unit }: { label: string; current: num
 }
 
 function GiftCardForm({ submitting, error, onSubmit, onCancel }: { submitting: boolean; error: string | null; onSubmit: (_method: GiftCardMethod, _amount: number, _signal: string) => void; onCancel: () => void }) {
+  const { tokens: t } = useTheme();
+  const st = useMemo(() => makeStyles(t), [t]);
   const [method, setMethod] = useState<GiftCardMethod>('amazon');
   const [value, setValue] = useState('');
   const [signal, setSignal] = useState('');
@@ -104,17 +108,17 @@ function GiftCardForm({ submitting, error, onSubmit, onCancel }: { submitting: b
       <Text style={st.fieldLabel}>Card type</Text>
       <View style={st.chipRow}>
         {CARD_TYPES.map((c) => (
-          <TouchableOpacity key={c.method} onPress={() => setMethod(c.method)} style={[st.chip, { backgroundColor: method === c.method ? COLOR : BORDER }]}>
-            <Text style={[st.chipText, { color: method === c.method ? '#fff' : SUBTLE }]}>{c.label}</Text>
+          <TouchableOpacity key={c.method} onPress={() => setMethod(c.method)} style={[st.chip, { backgroundColor: method === c.method ? COLOR : t.border }]}>
+            <Text style={[st.chipText, { color: method === c.method ? '#fff' : t.textSecondary }]}>{c.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
       <Text style={st.fieldLabel}>Value (USD, max $500)</Text>
-      <TextInput value={value} onChangeText={setValue} placeholder="e.g. 25" placeholderTextColor={SUBTLE} keyboardType="numeric" style={st.input} />
+      <TextInput value={value} onChangeText={setValue} placeholder="e.g. 25" placeholderTextColor={t.textSecondary} keyboardType="numeric" style={st.input} />
       <Text style={st.fieldLabel}>
-        Signal URL or phone <Text style={{ color: '#EF4444' }}>*</Text>
+        Signal URL or phone <Text style={{ color: t.danger }}>*</Text>
       </Text>
-      <TextInput value={signal} onChangeText={setSignal} placeholder="signal.me/+1… or +1 555-…" placeholderTextColor={SUBTLE} autoCapitalize="none" style={st.input} />
+      <TextInput value={signal} onChangeText={setSignal} placeholder="signal.me/+1… or +1 555-…" placeholderTextColor={t.textSecondary} autoCapitalize="none" style={st.input} />
       <Text style={st.hint}>So we can match your card to your account.</Text>
       {error ? <Text style={st.errorText}>{error}</Text> : null}
       <View style={st.formActions}>
@@ -130,6 +134,8 @@ function GiftCardForm({ submitting, error, onSubmit, onCancel }: { submitting: b
 }
 
 function UrlForm({ blurb, label, placeholder, helpText, submitting, error, onSubmit, onCancel }: { blurb: string; label: string; placeholder: string; helpText: string; submitting: boolean; error: string | null; onSubmit: (_url: string) => void; onCancel: () => void }) {
+  const { tokens: t } = useTheme();
+  const st = useMemo(() => makeStyles(t), [t]);
   const [url, setUrl] = useState('');
   const [missing, setMissing] = useState(false);
   // The link is required: without it the owner cannot find and confirm the contribution.
@@ -145,7 +151,7 @@ function UrlForm({ blurb, label, placeholder, helpText, submitting, error, onSub
     <View style={st.formCard}>
       <Text style={st.formBlurb}>{blurb}</Text>
       <Text style={st.fieldLabel}>
-        {label} <Text style={{ color: '#EF4444' }}>*</Text>
+        {label} <Text style={{ color: t.danger }}>*</Text>
       </Text>
       <TextInput
         value={url}
@@ -156,7 +162,7 @@ function UrlForm({ blurb, label, placeholder, helpText, submitting, error, onSub
           }
         }}
         placeholder={placeholder}
-        placeholderTextColor={SUBTLE}
+        placeholderTextColor={t.textSecondary}
         autoCapitalize="none"
         style={st.input}
       />
@@ -176,13 +182,15 @@ function UrlForm({ blurb, label, placeholder, helpText, submitting, error, onSub
 }
 
 function Confirmation({ data, onViewHistory }: { data: FundraiserResponse; onViewHistory: () => void }) {
+  const { tokens: t } = useTheme();
+  const st = useMemo(() => makeStyles(t), [t]);
   const ownerSignalUrl = data.ownerSignalUrl;
   const instructions =
     data.signalInstructions.trim().length > 0
       ? data.signalInstructions
       : "Send your gift card code directly to the platform owner on Signal. The contact details are in the owner's platform profile. Once the card is matched to your submission, your ServiceCredits will be added.";
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 18, paddingTop: 28 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: 18, paddingTop: 28 }}>
       <View style={{ alignItems: 'center', marginBottom: 28 }}>
         <View style={st.successIcon}>
           <Text style={{ fontSize: 28 }}>✅</Text>
@@ -227,6 +235,8 @@ function Confirmation({ data, onViewHistory }: { data: FundraiserResponse; onVie
 }
 
 export const Contributions: React.FC = () => {
+  const { tokens: t } = useTheme();
+  const st = useMemo(() => makeStyles(t), [t]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fundraiser, setFundraiser] = useState<FundraiserResponse | null>(null);
@@ -324,14 +334,14 @@ export const Contributions: React.FC = () => {
       <View style={st.tabBar}>
         {(['drive', 'contribute', 'history'] as Tab[]).map((k) => (
           <TouchableOpacity key={k} onPress={() => setTab(k)} style={[st.tab, tab === k && st.tabActive]}>
-            <Text style={[st.tabText, { color: tab === k ? COLOR : SUBTLE, fontWeight: tab === k ? '700' : '400' }]}>
+            <Text style={[st.tabText, { color: tab === k ? COLOR : t.textSecondary, fontWeight: tab === k ? '700' : '400' }]}>
               {k === 'drive' ? 'Drive' : k === 'contribute' ? 'Contribute' : 'My history'}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 14 }}>
+      <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: 14 }}>
         {tab === 'drive' && (
           <>
             <Text style={[st.bodyText, { marginBottom: 16 }]}>If everyone who's able gave a little, the platform's costs would be covered — and it stays free for everyone.</Text>
@@ -362,15 +372,15 @@ export const Contributions: React.FC = () => {
                   <TouchableOpacity
                     disabled={disabled}
                     onPress={() => setActivePath(active ? null : p.key)}
-                    style={[st.pathCard, { borderColor: active ? COLOR : BORDER, backgroundColor: active ? `${COLOR}10` : SURFACE, opacity: disabled ? 0.55 : 1 }]}
+                    style={[st.pathCard, { borderColor: active ? COLOR : t.border, backgroundColor: active ? `${COLOR}10` : t.surface, opacity: disabled ? 0.55 : 1 }]}
                   >
-                    <Text style={[st.pathLabel, { color: active ? COLOR : TEXT_COLOR }]}>{p.label}</Text>
+                    <Text style={[st.pathLabel, { color: active ? COLOR : t.textPrimary }]}>{p.label}</Text>
                     <Text style={st.pathSub}>
                       {disabled ? ALREADY_CREDITED_NOTE : `${p.sub} · `}
                       {!disabled && <Text style={{ color: COLOR, fontWeight: '600' }}>+{p.credits}</Text>}
                     </Text>
                     {!disabled && (
-                      <Text style={{ marginTop: 6, fontSize: 12, fontWeight: '600', color: active ? COLOR : SUBTLE }}>
+                      <Text style={{ marginTop: 6, fontSize: 12, fontWeight: '600', color: active ? COLOR : t.textSecondary }}>
                         {active ? 'Selected — form below ▴' : 'Choose this ▾'}
                       </Text>
                     )}
@@ -454,6 +464,8 @@ export const Contributions: React.FC = () => {
 };
 
 function Header() {
+  const { tokens } = useTheme();
+  const st = useMemo(() => makeStyles(tokens), [tokens]);
   return (
     <View style={st.header}>
       <Text style={st.headerTitle}>Contributions</Text>
@@ -462,61 +474,63 @@ function Header() {
   );
 }
 
-const st = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: BG },
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
+  fill: { flex: 1, backgroundColor: t.bg },
   center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
-  header: { padding: 16, paddingBottom: 10, backgroundColor: SURFACE, borderBottomWidth: 1, borderBottomColor: BORDER },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: TEXT_COLOR },
-  headerSub: { fontSize: 12, color: SUBTLE, marginTop: 2 },
-  tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: BORDER, backgroundColor: BG },
+  header: { padding: 16, paddingBottom: 10, backgroundColor: t.surface, borderBottomWidth: 1, borderBottomColor: t.border },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: t.textPrimary },
+  headerSub: { fontSize: 12, color: t.textSecondary, marginTop: 2 },
+  tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: t.border, backgroundColor: t.bg },
   tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabActive: { borderBottomColor: COLOR },
   tabText: { fontSize: 13 },
-  bodyText: { fontSize: 13, color: SUBTLE, lineHeight: 20 },
-  goalCard: { backgroundColor: SURFACE, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: BORDER, marginBottom: 10 },
+  bodyText: { fontSize: 13, color: t.textSecondary, lineHeight: 20 },
+  goalCard: { backgroundColor: t.surface, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: t.border, marginBottom: 10 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  goalLabel: { fontSize: 13, color: SUBTLE },
-  goalValue: { fontSize: 13, fontWeight: '700', color: TEXT_COLOR },
-  track: { height: 6, backgroundColor: BORDER, borderRadius: 99 },
+  goalLabel: { fontSize: 13, color: t.textSecondary },
+  goalValue: { fontSize: 13, fontWeight: '700', color: t.textPrimary },
+  track: { height: 6, backgroundColor: t.border, borderRadius: 99 },
   barFill: { height: '100%', backgroundColor: COLOR, borderRadius: 99 },
-  goalPct: { fontSize: 11, color: SUBTLE, marginTop: 5 },
+  goalPct: { fontSize: 11, color: t.textSecondary, marginTop: 5 },
   noteBox: { padding: 10, backgroundColor: `${COLOR}08`, borderRadius: 8, borderWidth: 1, borderColor: `${COLOR}20`, marginBottom: 16 },
-  noteText: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+  noteText: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
   pathCard: { borderRadius: 10, padding: 14, borderWidth: 1, marginBottom: 8 },
   pathLabel: { fontSize: 14, fontWeight: '600', marginBottom: 6 },
-  pathSub: { fontSize: 12, color: SUBTLE },
-  formCard: { backgroundColor: SURFACE, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: BORDER, marginBottom: 8 },
-  formBlurb: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginBottom: 12 },
-  fieldLabel: { fontSize: 12, color: SUBTLE, marginBottom: 6, marginTop: 4 },
+  pathSub: { fontSize: 12, color: t.textSecondary },
+  formCard: { backgroundColor: t.surface, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: t.border, marginBottom: 8 },
+  formBlurb: { fontSize: 13, color: t.textSecondary, lineHeight: 19, marginBottom: 12 },
+  fieldLabel: { fontSize: 12, color: t.textSecondary, marginBottom: 6, marginTop: 4 },
   chipRow: { flexDirection: 'row', gap: 7, marginBottom: 6 },
   chip: { flex: 1, paddingVertical: 6, borderRadius: 20, alignItems: 'center' },
   chipText: { fontSize: 11, fontWeight: '500' },
-  input: { padding: 10, backgroundColor: BG, borderWidth: 1, borderColor: BORDER, borderRadius: 8, fontSize: 14, color: TEXT_COLOR, marginBottom: 4 },
-  hint: { fontSize: 11, color: SUBTLE, marginBottom: 8 },
+  input: { padding: 10, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, borderRadius: 8, fontSize: 14, color: t.textPrimary, marginBottom: 4 },
+  hint: { fontSize: 11, color: t.textSecondary, marginBottom: 8 },
   errorText: { fontSize: 12, color: '#F87171', marginBottom: 8 },
   formActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
   primaryBtn: { backgroundColor: COLOR, padding: 12, borderRadius: 9, alignItems: 'center' },
   primaryBtnText: { fontSize: 13, fontWeight: '600', color: '#fff' },
-  secondaryBtn: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 9, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
-  secondaryBtnText: { fontSize: 13, color: SUBTLE },
-  historyCard: { backgroundColor: SURFACE, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: BORDER, marginBottom: 10 },
-  historyLabel: { fontSize: 13, fontWeight: '500', color: TEXT_COLOR, marginBottom: 6 },
+  secondaryBtn: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 9, borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center' },
+  secondaryBtnText: { fontSize: 13, color: t.textSecondary },
+  historyCard: { backgroundColor: t.surface, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: t.border, marginBottom: 10 },
+  historyLabel: { fontSize: 13, fontWeight: '500', color: t.textPrimary, marginBottom: 6 },
   historyMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statusPill: { paddingHorizontal: 8, paddingVertical: 1, borderRadius: 20 },
   statusPillText: { fontSize: 11, fontWeight: '600' },
   creditsText: { fontSize: 12, color: COLOR, fontWeight: '600', marginTop: 6 },
   privacyBox: { padding: 12, backgroundColor: `${COLOR}08`, borderRadius: 9, borderWidth: 1, borderColor: `${COLOR}20`, marginTop: 6 },
   successIcon: { width: 60, height: 60, borderRadius: 16, backgroundColor: `${COLOR}18`, borderWidth: 1, borderColor: `${COLOR}30`, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  successTitle: { fontSize: 18, fontWeight: '700', color: TEXT_COLOR, marginBottom: 4 },
-  signalCard: { backgroundColor: SURFACE, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: BORDER, marginBottom: 14 },
-  signalHeading: { fontSize: 13, fontWeight: '600', color: TEXT_COLOR, marginBottom: 10 },
+  successTitle: { fontSize: 18, fontWeight: '700', color: t.textPrimary, marginBottom: 4 },
+  signalCard: { backgroundColor: t.surface, borderRadius: t.radius, padding: 16, borderWidth: 1, borderColor: t.border, marginBottom: 14 },
+  signalHeading: { fontSize: 13, fontWeight: '600', color: t.textPrimary, marginBottom: 10 },
   signalLink: { color: SIGNAL_BLUE, fontWeight: '600' },
-  supportBox: { padding: 12, backgroundColor: BG, borderRadius: 8, borderWidth: 1, borderColor: BORDER, marginTop: 10 },
-  supportLabel: { fontSize: 11, color: SUBTLE, marginBottom: 4 },
+  supportBox: { padding: 12, backgroundColor: t.bg, borderRadius: 8, borderWidth: 1, borderColor: t.border, marginTop: 10 },
+  supportLabel: { fontSize: 11, color: t.textSecondary, marginBottom: 4 },
   supportLink: { fontSize: 12, color: SIGNAL_BLUE, lineHeight: 18 },
-  warnBox: { padding: 12, backgroundColor: '#EF44440F', borderRadius: 8, borderWidth: 1, borderColor: '#EF444440', marginTop: 10 },
-  warnLabel: { fontSize: 11, color: '#EF4444', fontWeight: '600' as const, marginBottom: 4 },
-  warnText: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+  warnBox: { padding: 12, backgroundColor: `${t.danger}0F`, borderRadius: 8, borderWidth: 1, borderColor: `${t.danger}40`, marginTop: 10 },
+  warnLabel: { fontSize: 11, color: t.danger, fontWeight: '600' as const, marginBottom: 4 },
+  warnText: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
   pendingCard: { padding: 14, backgroundColor: `${COLOR}08`, borderRadius: 10, borderWidth: 1, borderColor: `${COLOR}20`, marginBottom: 20 },
-  pendingTitle: { fontSize: 13, fontWeight: '600', color: TEXT_COLOR, marginBottom: 2 },
-});
+  pendingTitle: { fontSize: 13, fontWeight: '600', color: t.textPrimary, marginBottom: 2 },
+  });
+}

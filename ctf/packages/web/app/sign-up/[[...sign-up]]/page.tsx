@@ -6,7 +6,7 @@ export default function SignUpPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0F1117',
+        background: 'var(--ctf-bg, #0F1117)',
       }}
     >
       <p>Sign up is not available.</p>

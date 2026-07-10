@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import {
   fetchAllWorkforceOccupations,
   fetchWorkforceOccupation,
@@ -20,12 +21,12 @@ import type {
 // Workforce feature — the screen's tab bar lives in WorkforceDashboard; this renders only the chosen
 // tab's content. Occupations browse mirrors the web browse; Sectors / Skill Level are the V2 member
 // drilldowns. Read-only.
-const COLOR = '#F97316';
 const SKILL_LEVELS = ['Foundational', 'Intermediate', 'Advanced'];
 const PAGE_SIZE = 20;
 
 export type WorkforceBrowseTab = 'occupations' | 'sector' | 'skill-level';
 
+// Match-reason badge palette — a mixed categorical status set with no sanctioned tokens; stays raw.
 const REASON: Record<WorkforceMatchReason, { label: string; color: string }> = {
   jobTitle: { label: 'Job title', color: '#22C55E' },
   skill: { label: 'Skill', color: '#A855F7' },
@@ -39,7 +40,15 @@ function fmt(n: number): string {
   return String(n);
 }
 
+function useWorkforceStyles() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('workforce', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return { tokens, accent, styles };
+}
+
 function MemberCard({ m }: { m: WorkforceMatchedMember }) {
+  const { styles } = useWorkforceStyles();
   const r = REASON[m.matchReason];
   return (
     <View style={styles.memberCard}>
@@ -62,6 +71,7 @@ function MemberCard({ m }: { m: WorkforceMatchedMember }) {
 }
 
 function BucketRow({ kind, item }: { kind: 'sector' | 'skill-level'; item: WorkforceGroupedReportItem }) {
+  const { tokens, accent, styles } = useWorkforceStyles();
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<WorkforceBucketDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -92,14 +102,14 @@ function BucketRow({ kind, item }: { kind: 'sector' | 'skill-level'; item: Workf
         <Text style={styles.bucketChevron}>{open ? '▾' : '▸'}</Text>
         <Text style={styles.bucketName} numberOfLines={1}>{item.bucket}</Text>
         <Text style={styles.rowMeta}>{fmt(item.recruited)} / {fmt(item.target)}</Text>
-        <Text style={[styles.rowGap, { color: item.gap > 0 ? '#F97316' : '#22C55E' }]}>
+        <Text style={[styles.rowGap, { color: item.gap > 0 ? accent : tokens.success }]}>
           {item.gap > 0 ? `${fmt(item.gap)} to fill` : 'filled'}
         </Text>
       </TouchableOpacity>
       {open ? (
         <View style={styles.bucketBody}>
           {loading ? (
-            <ActivityIndicator color={COLOR} />
+            <ActivityIndicator color={accent} />
           ) : error ? (
             <Text style={styles.errorText}>{error}</Text>
           ) : (detail?.matchedMembers.length ?? 0) === 0 ? (
@@ -114,6 +124,7 @@ function BucketRow({ kind, item }: { kind: 'sector' | 'skill-level'; item: Workf
 }
 
 function BucketDrilldown({ kind, fetcher }: { kind: 'sector' | 'skill-level'; fetcher: () => Promise<WorkforceGroupedReportItem[]> }) {
+  const { accent, styles } = useWorkforceStyles();
   const [items, setItems] = useState<WorkforceGroupedReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -128,13 +139,14 @@ function BucketDrilldown({ kind, fetcher }: { kind: 'sector' | 'skill-level'; fe
     return () => { active = false; };
   }, [fetcher]);
 
-  if (loading) return <ActivityIndicator color={COLOR} style={{ marginTop: 24 }} />;
+  if (loading) return <ActivityIndicator color={accent} style={{ marginTop: 24 }} />;
   if (error) return <Text style={styles.errorText}>{error}</Text>;
   if (items.length === 0) return <Text style={styles.muted}>No data yet.</Text>;
   return <View>{items.map((item) => <BucketRow key={item.bucket} kind={kind} item={item} />)}</View>;
 }
 
 function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
+  const { accent, styles } = useWorkforceStyles();
   const [occ, setOcc] = useState<WorkforceOccupation | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -163,7 +175,7 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
         <Text style={styles.backText}>‹ Back to occupations</Text>
       </TouchableOpacity>
       {loading ? (
-        <ActivityIndicator color={COLOR} />
+        <ActivityIndicator color={accent} />
       ) : !occ ? (
         <Text style={styles.muted}>Occupation not found.</Text>
       ) : (
@@ -191,6 +203,7 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
 }
 
 function OccupationsBrowse() {
+  const { tokens, accent, styles } = useWorkforceStyles();
   const [all, setAll] = useState<WorkforceOccupation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -219,7 +232,7 @@ function OccupationsBrowse() {
   }, [all, search, level]);
 
   if (selectedId) return <OccupationDetail id={selectedId} onBack={() => setSelectedId(null)} />;
-  if (loading) return <ActivityIndicator color={COLOR} style={{ marginTop: 24 }} />;
+  if (loading) return <ActivityIndicator color={accent} style={{ marginTop: 24 }} />;
   if (error) return <Text style={styles.errorText}>{error}</Text>;
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -232,7 +245,7 @@ function OccupationsBrowse() {
         value={search}
         onChangeText={(v) => { setSearch(v); setPage(0); }}
         placeholder="Search occupations or sector…"
-        placeholderTextColor="#4B5563"
+        placeholderTextColor={tokens.textMuted}
         style={styles.input}
       />
       <View style={styles.chips}>
@@ -257,7 +270,7 @@ function OccupationsBrowse() {
                 <Text style={styles.rowSub}>{o.sector} · {o.skillLevel}</Text>
               </View>
               <Text style={styles.rowMeta}>{fmt(o.recruited)} / {fmt(o.target)}</Text>
-              <Text style={[styles.rowGap, { color: o.gap > 0 ? '#F97316' : '#22C55E' }]}>
+              <Text style={[styles.rowGap, { color: o.gap > 0 ? accent : tokens.success }]}>
                 {o.gap > 0 ? `${fmt(o.gap)} to fill` : 'filled'}
               </Text>
             </TouchableOpacity>
@@ -283,53 +296,55 @@ export function WorkforceBrowseViews({ tab }: { tab: WorkforceBrowseTab }) {
   return <BucketDrilldown kind="skill-level" fetcher={fetchWorkforceSkillLevelReport} />;
 }
 
-const styles = StyleSheet.create({
-  muted: { fontSize: 13, color: '#6B7280', paddingVertical: 8 },
-  errorText: { fontSize: 14, color: '#EF4444', textAlign: 'center', paddingVertical: 12 },
-  input: {
-    paddingHorizontal: 12, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 8, color: '#E8EAF0', fontSize: 14, marginBottom: 10,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  chipActive: { backgroundColor: COLOR + '20', borderColor: COLOR + '40' },
-  chipText: { fontSize: 12, color: '#9CA3AF', fontWeight: '600' },
-  chipTextActive: { color: COLOR },
-  occRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
-  },
-  rowSub: { fontSize: 11, color: '#6B7280' },
-  rowMeta: { fontSize: 11, color: '#9CA3AF' },
-  rowGap: { fontSize: 13, fontWeight: '700', textAlign: 'right', minWidth: 90 },
-  bucketRow: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  bucketHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
-  bucketChevron: { fontSize: 14, color: '#6B7280', width: 14 },
-  bucketName: { flex: 1, fontSize: 14, color: '#E8EAF0', fontWeight: '600' },
-  bucketBody: { paddingLeft: 24, paddingBottom: 12, gap: 8 },
-  memberCard: {
-    padding: 12, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', marginBottom: 8,
-  },
-  memberHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  memberName: { fontSize: 14, fontWeight: '600', color: '#E8EAF0' },
-  memberMeta: { fontSize: 12, color: '#9CA3AF', marginBottom: 2 },
-  memberSub: { fontSize: 11, color: '#6B7280' },
-  badge: { paddingHorizontal: 7, paddingVertical: 1, borderRadius: 6, borderWidth: 1 },
-  badgeText: { fontSize: 11, fontWeight: '600' },
-  backBtn: { paddingVertical: 8, marginBottom: 8 },
-  backText: { fontSize: 13, color: '#9CA3AF' },
-  detailTitle: { fontSize: 20, fontWeight: '700', color: '#F9FAFB' },
-  statWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14, marginBottom: 14 },
-  statBox: {
-    padding: 12, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', minWidth: 100, flexGrow: 1,
-  },
-  statLabel: { fontSize: 11, color: '#6B7280', marginBottom: 4 },
-  statValue: { fontSize: 18, fontWeight: '700', color: '#F9FAFB' },
-  explain: { fontSize: 12, color: '#6B7280', lineHeight: 19 },
-  pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 },
-  pageBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  pageBtnDisabled: { opacity: 0.4 },
-  pageBtnText: { fontSize: 13, color: '#E8EAF0' },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    muted: { fontSize: 13, color: t.textSecondary, paddingVertical: 8 },
+    errorText: { fontSize: 14, color: t.danger, textAlign: 'center', paddingVertical: 12 },
+    input: {
+      paddingHorizontal: 12, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 8, color: '#E8EAF0', fontSize: 14, marginBottom: 10,
+    },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
+    chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    chipActive: { backgroundColor: accent + '20', borderColor: accent + '40' },
+    chipText: { fontSize: 12, color: '#9CA3AF', fontWeight: '600' },
+    chipTextActive: { color: accent },
+    occRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10,
+      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+    },
+    rowSub: { fontSize: 11, color: t.textSecondary },
+    rowMeta: { fontSize: 11, color: '#9CA3AF' },
+    rowGap: { fontSize: 13, fontWeight: '700', textAlign: 'right', minWidth: 90 },
+    bucketRow: { borderBottomWidth: 1, borderBottomColor: t.borderFaint },
+    bucketHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
+    bucketChevron: { fontSize: 14, color: t.textSecondary, width: 14 },
+    bucketName: { flex: 1, fontSize: 14, color: '#E8EAF0', fontWeight: '600' },
+    bucketBody: { paddingLeft: 24, paddingBottom: 12, gap: 8 },
+    memberCard: {
+      padding: 12, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1, borderColor: t.borderFaint, marginBottom: 8,
+    },
+    memberHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+    memberName: { fontSize: 14, fontWeight: '600', color: '#E8EAF0' },
+    memberMeta: { fontSize: 12, color: '#9CA3AF', marginBottom: 2 },
+    memberSub: { fontSize: 11, color: t.textSecondary },
+    badge: { paddingHorizontal: 7, paddingVertical: 1, borderRadius: t.radiusChip, borderWidth: 1 },
+    badgeText: { fontSize: 11, fontWeight: '600' },
+    backBtn: { paddingVertical: 8, marginBottom: 8 },
+    backText: { fontSize: 13, color: '#9CA3AF' },
+    detailTitle: { fontSize: 20, fontWeight: '700', color: t.textPrimary },
+    statWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14, marginBottom: 14 },
+    statBox: {
+      padding: 12, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1, borderColor: t.borderFaint, minWidth: 100, flexGrow: 1,
+    },
+    statLabel: { fontSize: 11, color: t.textSecondary, marginBottom: 4 },
+    statValue: { fontSize: 18, fontWeight: '700', color: t.textPrimary },
+    explain: { fontSize: 12, color: t.textSecondary, lineHeight: 19 },
+    pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 },
+    pageBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    pageBtnDisabled: { opacity: 0.4 },
+    pageBtnText: { fontSize: 13, color: '#E8EAF0' },
+  });
+}

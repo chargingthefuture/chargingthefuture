@@ -15,8 +15,9 @@
  * Chyme text chat and this audio room, so we reuse the join credentials the
  * chat already fetches — no second token call, no mocked participants.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -31,7 +32,21 @@ import type { ChymeJoinResponse } from './ChymeApi';
 import { postChymeHeartbeat, postChymeHand } from './ChymeApi';
 import { ChymeTipButton } from './ChymeTipModal';
 
-const PRIMARY = '#22C55E';
+// Shared theme wiring for the live audio room. The accent is the Chyme plugin accent for
+// the active theme; both StyleSheets are memoized on the tokens/accent. Each component in
+// this file reads what it needs (the stage/controls use `styles`, the tile uses `tileStyles`).
+function useRoomStyles() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('chyme', theme);
+  return useMemo(
+    () => ({
+      styles: makeStyles(tokens, accent),
+      tileStyles: makeTileStyles(tokens, accent),
+      accent,
+    }),
+    [tokens, accent],
+  );
+}
 
 // Chyme is open social audio (early-Clubhouse style): everyone who joins can
 // speak, so the plain "default" call type — where members may publish audio
@@ -71,6 +86,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   onOpenChat,
   onLeave,
 }) => {
+  const { styles, accent } = useRoomStyles();
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
@@ -168,7 +184,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
           </>
         ) : (
           <>
-            <ActivityIndicator size="large" color={PRIMARY} />
+            <ActivityIndicator size="large" color={accent} />
             <Text style={styles.connectingText}>Connecting to the audio room…</Text>
           </>
         )}
@@ -186,6 +202,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
 };
 
 const ChymeAudioRoomLive: React.FC<{ onOpenChat: () => void; onLeave: () => void }> = ({ onOpenChat, onLeave }) => {
+  const { styles } = useRoomStyles();
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
   const call = useCall();
@@ -248,6 +265,7 @@ const ChymeSpeakerTile: React.FC<{ participant: StreamVideoParticipant; localHan
   participant,
   localHandRaised,
 }) => {
+  const { tileStyles } = useRoomStyles();
   const isSelf = participant.isLocalParticipant;
   const speaking = participant.isSpeaking;
   const publishingAudio = isPublishingAudio(participant);
@@ -306,6 +324,7 @@ const ChymeAudioControls: React.FC<{
   handRaised: boolean;
   onToggleHand: () => void;
 }> = ({ onOpenChat, onLeave, handRaised, onToggleHand }) => {
+  const { styles } = useRoomStyles();
   const { useMicrophoneState } = useCallStateHooks();
   const { microphone, isMute } = useMicrophoneState();
 
@@ -355,7 +374,9 @@ const ChymeAudioControls: React.FC<{
   );
 }
 
-const tileStyles = StyleSheet.create({
+function makeTileStyles(t: ThemeTokens, accent: string) {
+  const PRIMARY = accent;
+  return StyleSheet.create({
   wrapper: { alignItems: 'center', width: 96, marginBottom: 20, marginHorizontal: 8 },
   avatarWrap: { position: 'relative' },
   avatar: {
@@ -377,7 +398,7 @@ const tileStyles = StyleSheet.create({
     right: 0,
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: t.radius,
     borderWidth: 2,
     borderColor: '#021006',
     alignItems: 'center',
@@ -400,10 +421,13 @@ const tileStyles = StyleSheet.create({
   statusBadgeOff: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'transparent' },
   statusText: { fontSize: 10 },
   statusTextOn: { color: PRIMARY },
-  statusTextOff: { color: '#6B7280' },
-});
+  statusTextOff: { color: t.textSecondary },
+  });
+}
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  const PRIMARY = accent;
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: '#04160A' },
   center: {
     flex: 1,
@@ -412,7 +436,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#04160A',
     paddingHorizontal: 24,
   },
-  connectingText: { color: '#4B5563', fontSize: 14, marginTop: 16 },
+  connectingText: { color: t.textMuted, fontSize: 14, marginTop: 16 },
   errorText: { color: '#F87171', fontSize: 14, textAlign: 'center', marginBottom: 20, lineHeight: 22 },
   header: {
     padding: 16,
@@ -429,13 +453,13 @@ const styles = StyleSheet.create({
     backgroundColor: `${PRIMARY}15`,
     borderWidth: 1,
     borderColor: `${PRIMARY}30`,
-    borderRadius: 12,
+    borderRadius: t.radius,
     paddingHorizontal: 8,
     paddingVertical: 1,
   },
   liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: PRIMARY },
   liveText: { fontSize: 10, color: PRIMARY, fontWeight: '700' },
-  roomLabel: { fontSize: 11, color: '#4B5563', flex: 1 },
+  roomLabel: { fontSize: 11, color: t.textMuted, flex: 1 },
   chatBtn: {
     width: 34,
     height: 34,
@@ -451,12 +475,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.2,
-    color: '#4B5563',
+    color: t.textMuted,
     textTransform: 'uppercase',
   },
   stage: { flex: 1, paddingHorizontal: 16, paddingTop: 20 },
   stageGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  emptyText: { color: '#4B5563', fontSize: 14 },
+  emptyText: { color: t.textMuted, fontSize: 14 },
   controls: {
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -479,7 +503,7 @@ const styles = StyleSheet.create({
   controlCircleHand: { backgroundColor: 'rgba(234,179,8,0.15)', borderColor: 'rgba(234,179,8,0.5)' },
   controlCircleNeutral: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' },
   controlIcon: { fontSize: 20 },
-  controlLabel: { fontSize: 11, color: '#6B7280' },
+  controlLabel: { fontSize: 11, color: t.textSecondary },
   controlLabelMuted: { color: '#F87171' },
   controlLabelHand: { color: '#FDE047' },
   leaveBtn: {
@@ -493,4 +517,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   leaveBtnText: { color: '#F87171', fontSize: 15, fontWeight: '700' },
-});
+  });
+}

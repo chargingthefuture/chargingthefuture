@@ -2,14 +2,17 @@
 
 import { MessageSquare } from "lucide-react";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
-import { COLOR, type ChatCreds, type TripRequest } from "./tt-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getTrustTransportTokens, type ChatCreds, type TripRequest } from "./tt-shared";
 
 function ChatEmpty({ onBook }: { onBook: () => void }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "#4B5563" }}>
-      <MessageSquare size={32} style={{ color: "rgba(249,115,22,0.3)" }} />
-      <div style={{ fontSize: 14, color: "#9CA3AF" }}>No trips to chat about yet.</div>
-      <button type="button" onClick={onBook} style={{ padding: "10px 20px", borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: t.FAINT }}>
+      <MessageSquare size={32} style={{ color: t.ACCENT_TINT_BORDER }} />
+      <div style={{ fontSize: 14, color: t.SUBTLE }}>No trips to chat about yet.</div>
+      <button type="button" onClick={onBook} style={{ padding: "10px 20px", borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
         Book a Ride
       </button>
     </div>
@@ -17,23 +20,25 @@ function ChatEmpty({ onBook }: { onBook: () => void }) {
 }
 
 function ChatPane({ selected, creds, loading, error }: { selected: TripRequest | null; creds: ChatCreds | null; loading: boolean; error: string | null }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
   if (!selected) {
-    return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#4B5563", fontSize: 14 }}>Select a trip to chat</div>;
+    return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: t.FAINT, fontSize: 14 }}>Select a trip to chat</div>;
   }
   // An open/pending trip has no driver yet, so there is no one to chat with — fetching chat
   // credentials will always fail. Show a calm waiting state instead of a red error.
   const awaitingDriver = /open|pending|request|search|form|wait/i.test(selected.status ?? "");
   if (awaitingDriver) {
     return (
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, color: "#9CA3AF", fontSize: 14, padding: 24, textAlign: "center" }}>
-        <MessageSquare size={28} style={{ color: "rgba(249,115,22,0.3)" }} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, color: t.SUBTLE, fontSize: 14, padding: 24, textAlign: "center" }}>
+        <MessageSquare size={28} style={{ color: t.ACCENT_TINT_BORDER }} />
         <div>Direct Line opens once a driver accepts your trip.</div>
-        <div style={{ fontSize: 13, color: "#6B7280" }}>We&apos;ll bring you here when you&apos;re matched.</div>
+        <div style={{ fontSize: 13, color: t.MUTED }}>We&apos;ll bring you here when you&apos;re matched.</div>
       </div>
     );
   }
   if (loading) {
-    return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#6B7280", fontSize: 14 }}>Loading chat…</div>;
+    return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: t.MUTED, fontSize: 14 }}>Loading chat…</div>;
   }
   if (error) {
     return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontSize: 14, padding: 24, textAlign: "center" }}>{error}</div>;
@@ -45,7 +50,7 @@ function ChatPane({ selected, creds, loading, error }: { selected: TripRequest |
         streamToken={creds.streamToken}
         streamUserId={creds.streamUserId}
         streamChannelId={creds.streamChannelId}
-        accentColor={COLOR}
+        accentColor={t.ACCENT}
       />
     );
   }
@@ -69,23 +74,25 @@ export function TrustTransportChatTab({
   onSelect: (r: TripRequest) => void;
   onBook: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
   if (requests.length === 0) {
     return <div style={{ flex: 1, display: "flex", minHeight: 0 }}><ChatEmpty onBook={onBook} /></div>;
   }
   return (
     <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-      <div style={{ width: 220, borderRight: "1px solid rgba(255,255,255,0.06)", padding: "12px 8px", overflowY: "auto" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.08em", padding: "0 8px", marginBottom: 8 }}>My Trips</div>
+      <div style={{ width: 220, borderRight: `1px solid ${t.BORDER}`, padding: "12px 8px", overflowY: "auto" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: t.FAINT, textTransform: "uppercase", letterSpacing: "0.08em", padding: "0 8px", marginBottom: 8 }}>My Trips</div>
         {requests.map((r) => {
           const active = selectedRequest?.id === r.id;
           return (
-            <button key={r.id} type="button" onClick={() => onSelect(r)} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: active ? `${COLOR}18` : "transparent", border: active ? `1px solid ${COLOR}30` : "1px solid transparent", marginBottom: 4 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#E8EAF0" }}>
+            <button key={r.id} type="button" onClick={() => onSelect(r)} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: active ? `${t.ACCENT}18` : "transparent", border: active ? `1px solid ${t.ACCENT}30` : "1px solid transparent", marginBottom: 4 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: t.TEXT }}>
                 {(r.pickupCity ?? r.fromLocation) || (r.dropoffCity ?? r.toLocation)
                   ? `${r.pickupCity ?? r.fromLocation ?? "—"} → ${r.dropoffCity ?? r.toLocation ?? "—"}`
                   : (r.title?.trim() || "Your trip")}
               </div>
-              <div style={{ fontSize: 11, color: "#6B7280" }}>{r.status ?? "Pending"}</div>
+              <div style={{ fontSize: 11, color: t.MUTED }}>{r.status ?? "Pending"}</div>
             </button>
           );
         })}

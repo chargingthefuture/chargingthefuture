@@ -21,6 +21,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -45,11 +46,10 @@ import {
   FoundationInstantCallAudio,
   type FoundationCallCredentials,
 } from './FoundationInstantCallAudio';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-const COLOR = '#F59E0B';
-const TEXT = '#F9FAFB';
+// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
 const TEXT_DIM = '#9CA3AF';
-const SUBTLE = '#6B7280';
 
 // Foreground display for the Foundation ring native push (issue #884). When a push
 // arrives while the app is open, show the system alert so the member still notices
@@ -452,6 +452,9 @@ const CallOverlay: React.FC<{
   onEnd: () => void;
   onExtend: () => void;
 }> = ({ side, ringStatus, credentials, error, billing, extending, onAnswer, onDecline, onEnd, onExtend }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('foundation', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const isCallee = side.kind === 'callee';
   const isCaller = side.kind === 'caller';
   const inCall = ringStatus === 'answered' && credentials !== null;
@@ -583,6 +586,9 @@ const CallerBillingStrip: React.FC<{
   extending: boolean;
   onExtend: () => void;
 }> = ({ secondsLeft, blocksCharged, authorizedBlocks, atCap, nearBlockEnd, extendLabel, extending, onExtend }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('foundation', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const countdown = secondsLeft === null ? '—' : formatCountdown(secondsLeft);
   const capText = authorizedBlocks === null ? `${blocksCharged} paid` : `${blocksCharged} of ${authorizedBlocks} blocks`;
   const canExtend = !atCap && !extending;
@@ -620,76 +626,78 @@ const CallerBillingStrip: React.FC<{
   );
 };
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(8,9,13,0.82)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 440,
-    backgroundColor: '#11131A',
-    borderWidth: 1,
-    borderColor: `${COLOR}30`,
-    borderRadius: 16,
-    paddingHorizontal: 22,
-    paddingTop: 26,
-    paddingBottom: 22,
-    alignItems: 'center',
-    gap: 16,
-  },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: `${COLOR}1A`,
-    borderWidth: 1,
-    borderColor: `${COLOR}40`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconGlyph: { fontSize: 26 },
-  heading: { fontSize: 18, fontWeight: '800', color: TEXT, textAlign: 'center' },
-  subline: { fontSize: 13.5, color: TEXT_DIM, textAlign: 'center', marginTop: -8 },
-  errorText: { fontSize: 13, color: '#F87171', textAlign: 'center' },
-  terminalText: { fontSize: 14, color: '#D1D5DB', textAlign: 'center', paddingVertical: 8 },
-  answerRow: { flexDirection: 'row', gap: 12, justifyContent: 'center' },
-  actionBtn: { paddingHorizontal: 22, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
-  fullWidthBtn: { alignSelf: 'stretch' },
-  primaryBtn: { backgroundColor: COLOR },
-  primaryText: { color: '#1a1205', fontSize: 14, fontWeight: '800' },
-  declineBtn: { backgroundColor: 'rgba(239,68,68,0.12)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
-  declineText: { color: '#F87171', fontSize: 14, fontWeight: '700' },
-  billingStrip: {
-    width: '100%',
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    padding: 14,
-    gap: 10,
-  },
-  billingStripHot: { borderColor: `${COLOR}55` },
-  billingTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  billingLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.9, color: SUBTLE, textTransform: 'uppercase' },
-  billingCountdown: { fontSize: 22, fontWeight: '800', color: TEXT, fontVariant: ['tabular-nums'] },
-  billingCountdownHot: { color: COLOR },
-  billingCap: { fontSize: 12.5, color: TEXT_DIM, textAlign: 'right' },
-  billingNote: { fontSize: 12.5, color: TEXT_DIM, lineHeight: 18 },
-  extendBtn: {
-    width: '100%',
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  extendBtnHot: { backgroundColor: COLOR, borderColor: COLOR },
-  extendBtnDisabled: { opacity: 0.6 },
-  extendText: { fontSize: 13.5, fontWeight: '700', color: TEXT },
-  extendTextHot: { color: '#1a1205' },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(8,9,13,0.82)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16,
+    },
+    card: {
+      width: '100%',
+      maxWidth: 440,
+      backgroundColor: '#11131A',
+      borderWidth: 1,
+      borderColor: `${accent}30`,
+      borderRadius: 16,
+      paddingHorizontal: 22,
+      paddingTop: 26,
+      paddingBottom: 22,
+      alignItems: 'center',
+      gap: 16,
+    },
+    iconCircle: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: `${accent}1A`,
+      borderWidth: 1,
+      borderColor: `${accent}40`,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconGlyph: { fontSize: 26 },
+    heading: { fontSize: 18, fontWeight: '800', color: t.textPrimary, textAlign: 'center' },
+    subline: { fontSize: 13.5, color: TEXT_DIM, textAlign: 'center', marginTop: -8 },
+    errorText: { fontSize: 13, color: '#F87171', textAlign: 'center' },
+    terminalText: { fontSize: 14, color: '#D1D5DB', textAlign: 'center', paddingVertical: 8 },
+    answerRow: { flexDirection: 'row', gap: 12, justifyContent: 'center' },
+    actionBtn: { paddingHorizontal: 22, paddingVertical: 12, borderRadius: t.radius, alignItems: 'center' },
+    fullWidthBtn: { alignSelf: 'stretch' },
+    primaryBtn: { backgroundColor: accent },
+    primaryText: { color: '#1a1205', fontSize: 14, fontWeight: '800' },
+    declineBtn: { backgroundColor: 'rgba(239,68,68,0.12)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
+    declineText: { color: '#F87171', fontSize: 14, fontWeight: '700' },
+    billingStrip: {
+      width: '100%',
+      borderRadius: t.radius,
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.10)',
+      padding: 14,
+      gap: 10,
+    },
+    billingStripHot: { borderColor: `${accent}55` },
+    billingTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+    billingLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.9, color: t.textSecondary, textTransform: 'uppercase' },
+    billingCountdown: { fontSize: 22, fontWeight: '800', color: t.textPrimary, fontVariant: ['tabular-nums'] },
+    billingCountdownHot: { color: accent },
+    billingCap: { fontSize: 12.5, color: TEXT_DIM, textAlign: 'right' },
+    billingNote: { fontSize: 12.5, color: TEXT_DIM, lineHeight: 18 },
+    extendBtn: {
+      width: '100%',
+      paddingVertical: 10,
+      borderRadius: 10,
+      alignItems: 'center',
+      backgroundColor: 'rgba(255,255,255,0.06)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.12)',
+    },
+    extendBtnHot: { backgroundColor: accent, borderColor: accent },
+    extendBtnDisabled: { opacity: 0.6 },
+    extendText: { fontSize: 13.5, fontWeight: '700', color: t.textPrimary },
+    extendTextHot: { color: '#1a1205' },
+  });
+}

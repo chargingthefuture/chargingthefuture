@@ -5,8 +5,9 @@
 // of the credit knobs). The richer create/edit flows live on the web admin dashboard; this mirrors
 // the review path one-to-one, which is the day-to-day admin action on mobile.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { useTheme, type ThemeTokens } from '../../theme';
 import {
   fetchAdminConfig,
   fetchAdminSubmissions,
@@ -18,12 +19,9 @@ import {
   type FundraiserResponse,
 } from './ContributionsApi';
 
+// Contributions accent — pink. Not in the plugin-accent table (getAppAccent would fall back to grey),
+// so it stays raw to keep the shipped pixels byte-identical.
 const COLOR = '#F472B6';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT_COLOR = '#F9FAFB';
-const SUBTLE = '#6B7280';
 
 type Tab = 'queue' | 'drive' | 'settings';
 type FilterKey = 'all' | 'pending' | 'confirmed' | 'rejected';
@@ -42,7 +40,8 @@ function statusColor(status: string): string {
   if (status === 'pending') {
     return '#F59E0B';
   }
-  return SUBTLE;
+  // Status palette (confirmed/pending/not-matched) — left raw per token-pass §F3.
+  return '#6B7280';
 }
 
 function statusLabel(status: string): string {
@@ -74,6 +73,8 @@ function QueueRow({
   reviewing: boolean;
   onReview: (_id: string, _body: { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string }) => void;
 }) {
+  const { tokens } = useTheme();
+  const st = useMemo(() => makeStyles(tokens), [tokens]);
   const [expanded, setExpanded] = useState(false);
   const isGiftCard = row.kind === 'gift_card';
   const [value, setValue] = useState(String(row.confirmedAmountUsd ?? (isGiftCard ? row.claimedAmountUsd ?? '' : config?.nonMonetaryUnitValueUsd ?? 1)));
@@ -124,6 +125,8 @@ function QueueRow({
 }
 
 export const ContributionsAdmin: React.FC = () => {
+  const { tokens: t } = useTheme();
+  const st = useMemo(() => makeStyles(t), [t]);
   const [tab, setTab] = useState<Tab>('queue');
   const [filter, setFilter] = useState<FilterKey>('all');
   const [submissions, setSubmissions] = useState<ContributionSubmissionAdminView[]>([]);
@@ -198,7 +201,7 @@ export const ContributionsAdmin: React.FC = () => {
       <View style={st.tabBar}>
         {(['queue', 'drive', 'settings'] as Tab[]).map((k) => (
           <TouchableOpacity key={k} onPress={() => setTab(k)} style={[st.tab, tab === k && st.tabActive]}>
-            <Text style={[st.tabText, { color: tab === k ? COLOR : SUBTLE, fontWeight: tab === k ? '700' : '400' }]}>
+            <Text style={[st.tabText, { color: tab === k ? COLOR : t.textSecondary, fontWeight: tab === k ? '700' : '400' }]}>
               {k === 'queue' ? `Queue${pendingCount > 0 ? ` (${pendingCount})` : ''}` : k === 'drive' ? 'Drive' : 'Settings'}
             </Text>
           </TouchableOpacity>
@@ -216,13 +219,13 @@ export const ContributionsAdmin: React.FC = () => {
                   setFilter(f.key);
                   void loadQueue(f.key);
                 }}
-                style={[st.filterChip, { backgroundColor: filter === f.key ? COLOR : BORDER }]}
+                style={[st.filterChip, { backgroundColor: filter === f.key ? COLOR : t.border }]}
               >
-                <Text style={[st.filterChipText, { color: filter === f.key ? '#fff' : SUBTLE }]}>{f.label}</Text>
+                <Text style={[st.filterChipText, { color: filter === f.key ? '#fff' : t.textSecondary }]}>{f.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          <ScrollView style={{ flex: 1, backgroundColor: BG }}>
+          <ScrollView style={{ flex: 1, backgroundColor: t.bg }}>
             {submissions.length === 0 ? <Text style={[st.bodyText, { padding: 16 }]}>No submissions match this view.</Text> : null}
             {submissions.map((row) => (
               <QueueRow key={String(row.id)} row={row} config={config} reviewing={reviewing === row.id} onReview={onReview} />
@@ -232,7 +235,7 @@ export const ContributionsAdmin: React.FC = () => {
       )}
 
       {tab === 'drive' && (
-        <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 14 }}>
+        <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: 14 }}>
           <Text style={st.sectionHeading}>Active drive</Text>
           {cycle ? (
             <View style={st.infoCard}>
@@ -248,7 +251,7 @@ export const ContributionsAdmin: React.FC = () => {
       )}
 
       {tab === 'settings' && (
-        <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 14 }}>
+        <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: 14 }}>
           <Text style={st.sectionHeading}>ServiceCredits</Text>
           {config ? (
             <View style={st.infoCard}>
@@ -267,39 +270,41 @@ export const ContributionsAdmin: React.FC = () => {
   );
 };
 
-const st = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: BG },
-  center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
-  header: { padding: 16, paddingBottom: 10, backgroundColor: SURFACE, borderBottomWidth: 1, borderBottomColor: BORDER },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: TEXT_COLOR },
-  bodyText: { fontSize: 13, color: SUBTLE, lineHeight: 20 },
-  tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: BORDER, backgroundColor: BG },
-  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabActive: { borderBottomColor: COLOR },
-  tabText: { fontSize: 12 },
-  filterBar: { flexDirection: 'row', gap: 6, padding: 12, borderBottomWidth: 1, borderBottomColor: BORDER, flexWrap: 'wrap' },
-  filterChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  filterChipText: { fontSize: 11, fontWeight: '500' },
-  queueRow: { borderBottomWidth: 1, borderBottomColor: BORDER },
-  queueHead: { flexDirection: 'row', alignItems: 'flex-start', padding: 12, gap: 8 },
-  member: { fontSize: 13, fontWeight: '600', color: TEXT_COLOR },
-  kindLine: { fontSize: 12, color: SUBTLE, marginTop: 2 },
-  signalLine: { fontSize: 11, color: SUBTLE, marginTop: 2 },
-  statusPill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 20 },
-  statusPillText: { fontSize: 10, fontWeight: '600' },
-  reviewPanel: { padding: 12, backgroundColor: `${COLOR}04`, borderTopWidth: 1, borderTopColor: BORDER },
-  valueRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  fieldLabel: { fontSize: 11, color: SUBTLE },
-  valueInput: { width: 60, padding: 6, backgroundColor: BG, borderWidth: 1, borderColor: BORDER, borderRadius: 7, fontSize: 12, color: TEXT_COLOR },
-  scHint: { fontSize: 11, color: SUBTLE },
-  actions: { flexDirection: 'row', gap: 8 },
-  confirmBtn: { flex: 1, backgroundColor: '#22C55E', paddingVertical: 9, borderRadius: 7, alignItems: 'center' },
-  confirmText: { fontSize: 12, fontWeight: '600', color: '#000' },
-  rejectBtn: { flex: 1, borderWidth: 1, borderColor: '#EF4444', paddingVertical: 9, borderRadius: 7, alignItems: 'center' },
-  rejectText: { fontSize: 12, color: '#EF4444' },
-  reviewedText: { fontSize: 12, color: SUBTLE },
-  errorText: { fontSize: 12, color: '#F87171' },
-  sectionHeading: { fontSize: 14, fontWeight: '600', color: TEXT_COLOR, marginBottom: 12 },
-  infoCard: { backgroundColor: SURFACE, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: BORDER },
-  infoRow: { fontSize: 13, color: TEXT_COLOR, marginBottom: 8 },
-});
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
+    fill: { flex: 1, backgroundColor: t.bg },
+    center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+    header: { padding: 16, paddingBottom: 10, backgroundColor: t.surface, borderBottomWidth: 1, borderBottomColor: t.border },
+    headerTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
+    bodyText: { fontSize: 13, color: t.textSecondary, lineHeight: 20 },
+    tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: t.border, backgroundColor: t.bg },
+    tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+    tabActive: { borderBottomColor: COLOR },
+    tabText: { fontSize: 12 },
+    filterBar: { flexDirection: 'row', gap: 6, padding: 12, borderBottomWidth: 1, borderBottomColor: t.border, flexWrap: 'wrap' },
+    filterChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+    filterChipText: { fontSize: 11, fontWeight: '500' },
+    queueRow: { borderBottomWidth: 1, borderBottomColor: t.border },
+    queueHead: { flexDirection: 'row', alignItems: 'flex-start', padding: 12, gap: 8 },
+    member: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
+    kindLine: { fontSize: 12, color: t.textSecondary, marginTop: 2 },
+    signalLine: { fontSize: 11, color: t.textSecondary, marginTop: 2 },
+    statusPill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 20 },
+    statusPillText: { fontSize: 10, fontWeight: '600' },
+    reviewPanel: { padding: 12, backgroundColor: `${COLOR}04`, borderTopWidth: 1, borderTopColor: t.border },
+    valueRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+    fieldLabel: { fontSize: 11, color: t.textSecondary },
+    valueInput: { width: 60, padding: 6, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, borderRadius: 7, fontSize: 12, color: t.textPrimary },
+    scHint: { fontSize: 11, color: t.textSecondary },
+    actions: { flexDirection: 'row', gap: 8 },
+    confirmBtn: { flex: 1, backgroundColor: t.success, paddingVertical: 9, borderRadius: 7, alignItems: 'center' },
+    confirmText: { fontSize: 12, fontWeight: '600', color: '#000' },
+    rejectBtn: { flex: 1, borderWidth: 1, borderColor: t.danger, paddingVertical: 9, borderRadius: 7, alignItems: 'center' },
+    rejectText: { fontSize: 12, color: t.danger },
+    reviewedText: { fontSize: 12, color: t.textSecondary },
+    errorText: { fontSize: 12, color: '#F87171' },
+    sectionHeading: { fontSize: 14, fontWeight: '600', color: t.textPrimary, marginBottom: 12 },
+    infoCard: { backgroundColor: t.surface, borderRadius: t.radius, padding: 16, borderWidth: 1, borderColor: t.border },
+    infoRow: { fontSize: 13, color: t.textPrimary, marginBottom: 8 },
+  });
+}

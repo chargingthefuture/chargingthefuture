@@ -1,6 +1,8 @@
 'use client';
 
 import type { WorkforceMatchedMember, WorkforceMatchReason } from '../../lib/workforce/types';
+import { useTheme } from '@/hooks/useTheme';
+import { getWorkforceTokens } from './workforce-shared';
 
 // Colors for the match-reason badge (mirrors V2: job title = green, skill = purple, sector = blue,
 // no match = red). Workforce shows member names by design — it is a sign-in-only filtered view of the
@@ -13,11 +15,13 @@ const REASON_STYLE: Record<WorkforceMatchReason, { label: string; color: string 
 };
 
 function Chip({ text }: { text: string }) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   return (
     <span
       style={{
         fontSize: 11,
-        color: '#9CA3AF',
+        color: t.SUBTLE,
         background: 'rgba(255,255,255,0.05)',
         border: '1px solid rgba(255,255,255,0.08)',
         borderRadius: 6,
@@ -30,9 +34,11 @@ function Chip({ text }: { text: string }) {
 }
 
 export function WorkforceMemberList({ members }: { members: WorkforceMatchedMember[] }) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   if (members.length === 0) {
     return (
-      <div style={{ fontSize: 13, color: '#6B7280', padding: '8px 2px' }}>
+      <div style={{ fontSize: 13, color: t.MUTED, padding: '8px 2px' }}>
         No matching members yet.
       </div>
     );
@@ -56,7 +62,7 @@ export function WorkforceMemberList({ members }: { members: WorkforceMatchedMemb
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#E8EAF0' }}>{m.displayName}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: t.TEXT }}>{m.displayName}</span>
               <span
                 style={{
                   fontSize: 11,
@@ -71,7 +77,7 @@ export function WorkforceMemberList({ members }: { members: WorkforceMatchedMemb
                 {reason.label}
               </span>
               {m.matchingOccupations.length > 0 ? (
-                <span style={{ fontSize: 11, color: '#6B7280' }}>
+                <span style={{ fontSize: 11, color: t.MUTED }}>
                   {m.matchingOccupations.length} matching occupation
                   {m.matchingOccupations.length === 1 ? '' : 's'}
                 </span>
@@ -89,19 +95,19 @@ export function WorkforceMemberList({ members }: { members: WorkforceMatchedMemb
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {m.jobTitles.length > 0 ? (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: '#6B7280', minWidth: 64 }}>Job titles</span>
+                  <span style={{ fontSize: 11, color: t.MUTED, minWidth: 64 }}>Job titles</span>
                   {m.jobTitles.map((j) => <Chip key={j} text={j} />)}
                 </div>
               ) : null}
               {m.sectors.length > 0 ? (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: '#6B7280', minWidth: 64 }}>Sectors</span>
+                  <span style={{ fontSize: 11, color: t.MUTED, minWidth: 64 }}>Sectors</span>
                   {m.sectors.map((s) => <Chip key={s} text={s} />)}
                 </div>
               ) : null}
               {m.skills.length > 0 ? (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: '#6B7280', minWidth: 64 }}>Skills</span>
+                  <span style={{ fontSize: 11, color: t.MUTED, minWidth: 64 }}>Skills</span>
                   {m.skills.map((s) => <Chip key={s} text={s} />)}
                 </div>
               ) : null}

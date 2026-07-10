@@ -10,7 +10,8 @@ import {
   type Call,
 } from "@stream-io/video-react-sdk";
 import { Mic, MicOff, PhoneOff } from "lucide-react";
-import { COLOR } from "./foundation-ui";
+import { useTheme } from "@/hooks/useTheme";
+import { getFoundationTokens } from "./foundation-ui";
 import { reportError } from "@/lib/observability/report";
 
 // Audio-only 1:1 call room for Foundation "Connect now" (issue #808 task 3). Reuses the same Stream Video
@@ -145,9 +146,11 @@ function CallShell({
   onToggleMute?: () => void;
   onEnd: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getFoundationTokens(theme);
   const stateLabel =
     state === "in-call" ? "In call" : state === "error" ? "Call error" : "Connecting";
-  const stateColor = state === "error" ? "#F87171" : COLOR;
+  const stateColor = state === "error" ? "#F87171" : t.ACCENT;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18, alignItems: "center" }}>
@@ -169,9 +172,9 @@ function CallShell({
             style={{
               display: "inline-flex", alignItems: "center", gap: 8,
               padding: "11px 18px", borderRadius: 12,
-              background: muted ? "rgba(255,255,255,0.06)" : `${COLOR}1A`,
-              border: `1px solid ${muted ? "rgba(255,255,255,0.12)" : COLOR + "40"}`,
-              color: muted ? "#9CA3AF" : COLOR,
+              background: muted ? t.BORDER : `${t.ACCENT}1A`,
+              border: `1px solid ${muted ? "rgba(255,255,255,0.12)" : t.ACCENT + "40"}`,
+              color: muted ? t.SUBTLE : t.ACCENT,
               fontSize: 14, fontWeight: 600, cursor: "pointer",
             }}
           >

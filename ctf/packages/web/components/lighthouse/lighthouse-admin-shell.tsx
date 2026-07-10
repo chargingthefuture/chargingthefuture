@@ -5,16 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Home, EyeOff, Eye, XCircle } from 'lucide-react';
 import type { LighthouseMatch, LighthouseProperty, LighthousePropertyInput } from 'lib/lighthouse/types';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { getLighthouseTokens, type LighthouseTokens } from './shared';
 
-// Admin design tokens (shared admin look). LightHouse accent is blue.
-const COLOR = '#60A5FA';
-const BG = '#0F1117';
-const PANEL = '#0D0F14';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
+// Admin design tokens (shared admin look) come from the theme-aware LightHouse tokens: accent
+// (blue), page background, panel/header, admin card surface, and the solid admin border. The
+// default theme keeps the shipped hex values.
 
 type LighthouseAdminStats = {
   seekers: number;
@@ -30,13 +27,15 @@ type Tab = 'properties' | 'matches';
 // Statuses an admin can force a match into (e.g. to shut down a problematic match).
 const MATCH_CANCELLABLE = new Set(['pending', 'accepted']);
 
-const MATCH_STATUS_STYLE: Record<string, { bg: string; color: string; border: string }> = {
+// Status swatches stay raw (no sanctioned status tokens); only the accent-tinted
+// "completed" entry follows the theme, so the map is built from the active tokens.
+const matchStatusStyle = (t: LighthouseTokens): Record<string, { bg: string; color: string; border: string }> => ({
   pending: { bg: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: 'rgba(245,158,11,0.3)' },
   accepted: { bg: 'rgba(34,197,94,0.12)', color: '#22C55E', border: 'rgba(34,197,94,0.3)' },
-  completed: { bg: 'rgba(6,182,212,0.12)', color: COLOR, border: 'rgba(6,182,212,0.3)' },
+  completed: { bg: 'rgba(6,182,212,0.12)', color: t.ACCENT, border: 'rgba(6,182,212,0.3)' },
   rejected: { bg: 'rgba(239,68,68,0.12)', color: '#EF4444', border: 'rgba(239,68,68,0.3)' },
   cancelled: { bg: 'rgba(107,114,128,0.14)', color: '#9CA3AF', border: 'rgba(107,114,128,0.3)' },
-};
+});
 
 function Pill({ label, bg, color, border }: { label: string; bg: string; color: string; border: string }) {
   return (
@@ -45,10 +44,12 @@ function Pill({ label, bg, color, border }: { label: string; bg: string; color: 
 }
 
 function StatBlock({ label, value, accent }: { label: string; value: number; accent?: string }) {
+  const { theme } = useTheme();
+  const t = getLighthouseTokens(theme);
   return (
-    <div style={{ flex: 1, minWidth: 100, padding: '12px 14px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
-      <div style={{ fontSize: 20, fontWeight: 800, color: accent ?? TEXT }}>{value}</div>
-      <div style={{ fontSize: 11, color: SUBTLE, marginTop: 2 }}>{label}</div>
+    <div style={{ flex: 1, minWidth: 100, padding: '12px 14px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <div style={{ fontSize: 20, fontWeight: 800, color: accent ?? t.TITLE }}>{value}</div>
+      <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>{label}</div>
     </div>
   );
 }
@@ -94,6 +95,8 @@ export function LighthouseAdminShell({
   properties: LighthouseProperty[];
   matches: LighthouseMatch[];
 }) {
+  const { theme } = useTheme();
+  const t = getLighthouseTokens(theme);
   const isMobile = useIsMobile();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('properties');
@@ -158,21 +161,21 @@ export function LighthouseAdminShell({
         // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
         // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
         ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
-        background: BG,
-        color: TEXT,
+        background: t.BG,
+        color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="LightHouse Admin" accent={COLOR} icon={<Home size={18} color={COLOR} />} />
+      <MobileScreenHeader title="LightHouse Admin" accent={t.ACCENT} icon={<Home size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 920, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Home size={18} color={COLOR} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Home size={18} color={t.ACCENT} />
           </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800 }}>LightHouse Admin</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>Listings and matches</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Listings and matches</div>
           </div>
           <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, color: '#6366F1', fontWeight: 700 }}>ADMIN</span>
         </div>
@@ -181,49 +184,49 @@ export function LighthouseAdminShell({
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
           <StatBlock label="Seekers" value={stats.seekers} />
           <StatBlock label="Hosts" value={stats.hosts} />
-          <StatBlock label="Properties" value={stats.properties} accent={COLOR} />
+          <StatBlock label="Properties" value={stats.properties} accent={t.ACCENT} />
           <StatBlock label="Active matches" value={stats.activeMatches} accent="#22C55E" />
           <StatBlock label="Completed" value={stats.completedMatches} />
         </div>
-        <div style={{ fontSize: 11, color: SUBTLE, marginBottom: 20 }}>Snapshot generated {new Date(stats.generatedAtIso).toLocaleString()}</div>
+        <div style={{ fontSize: 11, color: t.MUTED, marginBottom: 20 }}>Snapshot generated {new Date(stats.generatedAtIso).toLocaleString()}</div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          {(['properties', 'matches'] as const).map((t) => (
+          {(['properties', 'matches'] as const).map((tabKey) => (
             <button
-              key={t}
+              key={tabKey}
               type="button"
-              onClick={() => setTab(t)}
-              aria-pressed={tab === t}
-              style={{ padding: '6px 16px', borderRadius: 8, textTransform: 'capitalize', background: tab === t ? COLOR : SURFACE, border: `1px solid ${tab === t ? COLOR : BORDER}`, color: tab === t ? '#06210F' : SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              onClick={() => setTab(tabKey)}
+              aria-pressed={tab === tabKey}
+              style={{ padding: '6px 16px', borderRadius: 8, textTransform: 'capitalize', background: tab === tabKey ? t.ACCENT : t.SURFACE, border: `1px solid ${tab === tabKey ? t.ACCENT : t.BORDER_SOLID}`, color: tab === tabKey ? '#06210F' : t.MUTED, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
-              {t}
+              {tabKey}
             </button>
           ))}
         </div>
 
         {error ? <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: '#EF4444' }}>{error}</div> : null}
-        {message ? <div role="status" style={{ marginBottom: 12, fontSize: 13, color: COLOR }}>{message}</div> : null}
+        {message ? <div role="status" style={{ marginBottom: 12, fontSize: 13, color: t.ACCENT }}>{message}</div> : null}
 
         {tab === 'properties' ? (
           properties.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>No properties yet.</div>
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>No properties yet.</div>
           ) : (
             properties.map((p) => {
               const location = [p.city, p.country].filter(Boolean).join(', ');
               const rent = formatRent(p.monthlyRent);
               return (
-                <div key={p.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+                <div key={p.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 14, fontWeight: 600, flex: 1 }}>{p.title}</span>
                     {p.isActive
                       ? <Pill label="Active" bg="rgba(34,197,94,0.12)" color="#22C55E" border="rgba(34,197,94,0.3)" />
                       : <Pill label="Hidden" bg="rgba(107,114,128,0.14)" color="#9CA3AF" border="rgba(107,114,128,0.3)" />}
                   </div>
-                  <div style={{ fontSize: 12, color: SUBTLE }}>
+                  <div style={{ fontSize: 12, color: t.MUTED }}>
                     {[location || null, p.propertyType, rent].filter(Boolean).join(' · ')}
                   </div>
-                  <div style={{ fontSize: 12, color: SUBTLE, marginTop: 4, marginBottom: 10 }}>Host: {p.hostUserId}</div>
+                  <div style={{ fontSize: 12, color: t.MUTED, marginTop: 4, marginBottom: 10 }}>Host: {p.hostUserId}</div>
                   <button
                     type="button"
                     disabled={busyId === p.id}
@@ -238,18 +241,19 @@ export function LighthouseAdminShell({
           )
         ) : (
           matches.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>No matches yet.</div>
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>No matches yet.</div>
           ) : (
             matches.map((m) => {
-              const s = MATCH_STATUS_STYLE[m.status] ?? MATCH_STATUS_STYLE.pending;
+              const statusStyles = matchStatusStyle(t);
+              const s = statusStyles[m.status] ?? statusStyles.pending;
               return (
-                <div key={m.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+                <div key={m.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>Match on property {m.propertyId}</span>
                     <Pill label={m.status} bg={s.bg} color={s.color} border={s.border} />
                   </div>
-                  <div style={{ fontSize: 12, color: SUBTLE }}>Seeker {m.seekerUserId} → Host {m.hostUserId}</div>
-                  <div style={{ fontSize: 12, color: SUBTLE, marginTop: 4, marginBottom: MATCH_CANCELLABLE.has(m.status) ? 10 : 0 }}>Created {new Date(m.createdAtIso).toLocaleDateString()}</div>
+                  <div style={{ fontSize: 12, color: t.MUTED }}>Seeker {m.seekerUserId} → Host {m.hostUserId}</div>
+                  <div style={{ fontSize: 12, color: t.MUTED, marginTop: 4, marginBottom: MATCH_CANCELLABLE.has(m.status) ? 10 : 0 }}>Created {new Date(m.createdAtIso).toLocaleDateString()}</div>
                   {MATCH_CANCELLABLE.has(m.status) ? (
                     <button type="button" disabled={busyId === m.id} onClick={() => void cancelMatch(m)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busyId === m.id ? 'not-allowed' : 'pointer', opacity: busyId === m.id ? 0.6 : 1 }}>
                       <XCircle size={13} /> Cancel match

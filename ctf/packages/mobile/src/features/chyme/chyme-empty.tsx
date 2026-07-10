@@ -50,8 +50,8 @@ export const ChymeEmpty: React.FC<Props> = ({ onStartRoom, tokens, accent }) => 
 };
 
 function makeStyles(t: ThemeTokens, accent: string) {
-  const chrome = t.isComic ? t.surfaceAlt : '#090B0F';
-  const divider = t.isComic ? t.border : '#1E2A3A';
+  const chrome = t.surfaceAlt;
+  const divider = t.border;
   const r = t.radius;
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: t.bg },
@@ -109,7 +109,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderRadius: r,
       backgroundColor: t.surface,
       borderWidth: t.isComic ? 1.5 : 1,
-      borderColor: t.isComic ? `${t.borderDim}50` : '#1E2A3A',
+      borderColor: t.isComic ? `${t.borderDim}50` : t.border,
       alignItems: 'center',
       justifyContent: 'center',
     },

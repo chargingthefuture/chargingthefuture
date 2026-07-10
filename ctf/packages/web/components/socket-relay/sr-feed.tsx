@@ -3,8 +3,10 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Share2 } from "lucide-react";
-import { COLOR, FAINT, SUBTLE, requestTags, settlementLabel, srHandle, timeAgo, type SrRequest } from "./sr-shared";
+import { FAINT, SUBTLE, requestTags, settlementLabel, srHandle, timeAgo, type SrRequest } from "./sr-shared";
 import { ShareLink } from "@/components/shared/share-link";
+import { useTheme } from '@/hooks/useTheme';
+import { getSocketRelayTokens } from './sr-shared';
 
 const editButtonStyle = { padding: "6px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer" } as const;
 
@@ -25,6 +27,8 @@ function CardAction({
   onEdit: () => void;
   onRepost: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
   // An expired post is no longer in the active feed. The owner sees it under "Mine" with Re-post (which
   // resets the 28-day clock and re-opens it) and Edit; nobody else can claim it.
   if (expired) {
@@ -32,7 +36,7 @@ function CardAction({
       return (
         <>
           <div style={{ fontSize: 12, color: "#F59E0B", fontWeight: 600 }}>Expired</div>
-          <button onClick={onRepost} disabled={submitting} style={{ padding: "8px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 700, cursor: submitting ? "not-allowed" : "pointer" }}>
+          <button onClick={onRepost} disabled={submitting} style={{ padding: "8px 14px", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 12, fontWeight: 700, cursor: submitting ? "not-allowed" : "pointer" }}>
             Re-post
           </button>
           <button onClick={onEdit} style={editButtonStyle}>Edit</button>
@@ -53,7 +57,7 @@ function CardAction({
     );
   }
   return (
-    <button onClick={onClaim} disabled={submitting} style={{ padding: "8px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer" }}>
+    <button onClick={onClaim} disabled={submitting} style={{ padding: "8px 14px", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer" }}>
       I can help
     </button>
   );
@@ -74,28 +78,30 @@ function RequestCard({
   onEdit: (request: SrRequest) => void;
   onRepost: (id: string) => void;
 }) {
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
   const r = request;
   const expired = r.isExpired;
   // Expired posts dim and read as inactive, like a closed one.
   const open = r.status === "open" && !expired;
   return (
-    <div style={{ padding: "18px 20px", borderRadius: 14, background: open ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.01)", border: `1px solid ${COLOR}20`, opacity: open ? 1 : 0.6 }}>
+    <div style={{ padding: "18px 20px", borderRadius: 14, background: open ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.01)", border: `1px solid ${t.ACCENT}20`, opacity: open ? 1 : 0.6 }}>
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: `${COLOR}20`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Share2 size={18} style={{ color: COLOR }} />
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: `${t.ACCENT}20`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Share2 size={18} style={{ color: t.ACCENT }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "center", flexWrap: "wrap" }}>
             {requestTags(r).map((tag) => (
-              <Badge key={tag} style={{ background: "rgba(255,255,255,0.04)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.06)", fontSize: 11 }}>{tag}</Badge>
+              <Badge key={tag} style={{ background: t.INPUT_BG, color: t.SUBTLE, border: "1px solid rgba(255,255,255,0.06)", fontSize: 11 }}>{tag}</Badge>
             ))}
             <Badge style={{ background: "rgba(34,197,94,0.10)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)", fontSize: 11 }}>{settlementLabel(r.priceCurrency, r.priceAmount)}</Badge>
-            <Badge style={{ background: open ? "#22C55E20" : "rgba(255,255,255,0.04)", color: expired ? "#F59E0B" : open ? "#22C55E" : SUBTLE, border: `1px solid ${expired ? "#F59E0B40" : open ? "#22C55E40" : "rgba(255,255,255,0.06)"}`, fontSize: 11, textTransform: "capitalize" }}>{expired ? "expired" : r.status}</Badge>
+            <Badge style={{ background: open ? "#22C55E20" : t.INPUT_BG, color: expired ? "#F59E0B" : open ? "#22C55E" : SUBTLE, border: `1px solid ${expired ? "#F59E0B40" : open ? "#22C55E40" : t.BORDER}`, fontSize: 11, textTransform: "capitalize" }}>{expired ? "expired" : r.status}</Badge>
           </div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#F9FAFB", marginBottom: 4, lineHeight: 1.4 }}>{r.title}</div>
-          {r.details && <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 6, lineHeight: 1.5 }}>{r.details}</div>}
+          <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 4, lineHeight: 1.4 }}>{r.title}</div>
+          {r.details && <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6, lineHeight: 1.5 }}>{r.details}</div>}
           <div style={{ display: "flex", gap: 12, fontSize: 12, color: SUBTLE, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ color: COLOR, fontWeight: 600 }}>{srHandle(r.ownerUsername, r.id)}</span>
+            <span style={{ color: t.ACCENT, fontWeight: 600 }}>{srHandle(r.ownerUsername, r.id)}</span>
             {r.city && <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><MapPin size={11} /> {r.city}</span>}
             <span>· {timeAgo(r.createdAtIso)}</span>
             <ShareLink url={`/apps/socket-relay?request=${r.id}`} label="Share" title="Share this request" className="sr-share" />
@@ -126,17 +132,19 @@ export function SocketRelayFeed({
   onEdit: (request: SrRequest) => void;
   onRepost: (id: string) => void;
 }) {
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
   return (
     <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "20px 24px" }}>
         {requests.length === 0 ? (
           <div style={{ padding: "48px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${COLOR}4D`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Share2 size={20} style={{ color: `${COLOR}66` }} />
+            <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${t.ACCENT}4D`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Share2 size={20} style={{ color: `${t.ACCENT}66` }} />
             </div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "#9CA3AF" }}>No requests yet</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>No requests yet</div>
             <div style={{ fontSize: 13, color: FAINT }}>Be the first to post a need or offer to your community.</div>
-            <button onClick={onPost} style={{ padding: "10px 20px", borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            <button onClick={onPost} style={{ padding: "10px 20px", borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
               Post Now
             </button>
           </div>

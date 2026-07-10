@@ -5,9 +5,9 @@
   display: grid;
   grid-template-columns: 72px 300px minmax(480px, 1fr) 280px;
   height: 100vh;
-  background: #0F1117;
+  background: var(--ctf-bg, #0F1117);
   font-family: Inter, system-ui, -apple-system, sans-serif;
-  color: #F9FAFB;
+  color: var(--ctf-text, #F9FAFB);
   overflow: hidden;
 }
 
@@ -37,8 +37,8 @@
 
 /* ─── Icon rail ──────────────────────────────────────────────────────────── */
 .iconRail {
-  background: #090B0F;
-  border-right: 1px solid #1E2A3A;
+  background: var(--ctf-icon-rail, #090B0F);
+  border-right: 1px solid var(--ctf-border, #1E2A3A);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -68,7 +68,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #6B7280;
+  color: var(--ctf-text-subtle, #6B7280);
 }
 
 .iconRailBtnActive {
@@ -79,8 +79,8 @@
 
 /* ─── Queue sidebar ──────────────────────────────────────────────────────── */
 .queueSidebar {
-  background: #0D0F14;
-  border-right: 1px solid #1E2A3A;
+  background: var(--ctf-panel, #0D0F14);
+  border-right: 1px solid var(--ctf-border, #1E2A3A);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -88,21 +88,21 @@
 
 .queueHeader {
   padding: 20px 16px 12px;
-  border-bottom: 1px solid #1E2A3A;
+  border-bottom: 1px solid var(--ctf-border, #1E2A3A);
 }
 
 .queueKicker {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #6B7280;
+  color: var(--ctf-text-subtle, #6B7280);
   text-transform: uppercase;
   margin-bottom: 4px;
 }
 
 .queueSub {
   font-size: 12px;
-  color: #4B5563;
+  color: var(--ctf-text-muted, #4B5563);
   line-height: 1.5;
 }
 
@@ -130,7 +130,7 @@
   background: rgba(34, 197, 94, 0.12);
   border: 1px solid rgba(34, 197, 94, 0.25);
   font-size: 12px;
-  color: #22C55E;
+  color: var(--ctf-success, #22C55E);
   font-weight: 700;
 }
 
@@ -151,7 +151,7 @@
   margin-bottom: 6px;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid #1E2A3A;
+  border: 1px solid var(--ctf-border-dim, #1E2A3A);
 }
 
 .queueItemActive {
@@ -205,7 +205,7 @@
 
 .queueItemTime {
   font-size: 11px;
-  color: #4B5563;
+  color: var(--ctf-text-muted, #4B5563);
   margin-left: auto;
 }
 
@@ -234,12 +234,12 @@
 .queueEmptyTitle {
   font-size: 13px;
   font-weight: 600;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary, #9CA3AF);
 }
 
 .queueEmptyText {
   font-size: 11.5px;
-  color: #4B5563;
+  color: var(--ctf-text-muted, #4B5563);
   line-height: 1.5;
 }
 
@@ -252,12 +252,12 @@
 
 .mainHeader {
   height: 56px;
-  border-bottom: 1px solid #1E2A3A;
+  border-bottom: 1px solid var(--ctf-border, #1E2A3A);
   display: flex;
   align-items: center;
   padding: 0 24px;
   gap: 12px;
-  background: #0D0F14;
+  background: var(--ctf-panel, #0D0F14);
   flex-shrink: 0;
 }
 
@@ -268,8 +268,8 @@
   padding: 6px 12px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid #1E2A3A;
-  color: #9CA3AF;
+  border: 1px solid var(--ctf-border-dim, #1E2A3A);
+  color: var(--ctf-text-secondary, #9CA3AF);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -289,7 +289,7 @@
 
 .mainHeaderSub {
   font-size: 12px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle, #6B7280);
 }
 
 .headerConfPill {
@@ -301,7 +301,7 @@
   border-radius: 6px;
   font-weight: 600;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid #1E2A3A;
+  border: 1px solid var(--ctf-border-dim, #1E2A3A);
 }
 
 .errorBanner {
@@ -333,7 +333,7 @@
   align-items: center;
   gap: 10px;
   font-size: 12px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle, #6B7280);
 }
 
 .detailChannel {
@@ -343,7 +343,7 @@
   padding: 3px 10px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid #1E2A3A;
+  border: 1px solid var(--ctf-border-dim, #1E2A3A);
 }
 
 .detailTime {
@@ -354,7 +354,7 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: #6B7280;
+  color: var(--ctf-text-subtle, #6B7280);
   text-transform: uppercase;
   margin-bottom: 8px;
 }
@@ -371,9 +371,9 @@
   padding: 16px 18px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid #1E2A3A;
+  border: 1px solid var(--ctf-border-dim, #1E2A3A);
   font-size: 15px;
-  color: #F9FAFB;
+  color: var(--ctf-text, #F9FAFB);
   line-height: 1.55;
 }
 
@@ -392,7 +392,7 @@
   padding: 6px 12px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid #1E2A3A;
+  border: 1px solid var(--ctf-border-dim, #1E2A3A);
   color: #CBD5E1;
   font-size: 12px;
   font-weight: 600;
@@ -411,7 +411,7 @@
 
 .pluginPickerHint {
   font-size: 11px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle, #6B7280);
   margin-top: 6px;
 }
 
@@ -449,7 +449,7 @@
   background: rgba(14, 165, 233, 0.05);
   border: 1px solid rgba(14, 165, 233, 0.25);
   font-size: 14.5px;
-  color: #E8EAF0;
+  color: var(--ctf-text-shell, #E8EAF0);
   line-height: 1.65;
   white-space: pre-wrap;
 }
@@ -481,7 +481,7 @@
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle, #6B7280);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -497,7 +497,7 @@
   border-radius: 12px;
   background: rgba(14, 165, 233, 0.05);
   border: 1px solid rgba(14, 165, 233, 0.4);
-  color: #E8EAF0;
+  color: var(--ctf-text-shell, #E8EAF0);
   font-size: 14px;
   line-height: 1.6;
   font-family: inherit;
@@ -511,7 +511,7 @@
 
 .charCount {
   font-size: 11px;
-  color: #4B5563;
+  color: var(--ctf-text-muted, #4B5563);
   margin-top: 6px;
   text-align: right;
 }
@@ -530,9 +530,9 @@
   padding: 8px 12px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid #1E2A3A;
+  border: 1px solid var(--ctf-border-dim, #1E2A3A);
   font-size: 12.5px;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary, #9CA3AF);
   text-transform: capitalize;
 }
 
@@ -545,7 +545,7 @@
   padding: 14px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid #1E2A3A;
+  border: 1px solid var(--ctf-border-dim, #1E2A3A);
 }
 
 .confCardTop {
@@ -683,7 +683,7 @@
 
 .allCaughtUpText {
   font-size: 14px;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary, #9CA3AF);
   text-align: center;
   max-width: 420px;
   line-height: 1.6;
@@ -691,8 +691,8 @@
 
 /* ─── Right rail ─────────────────────────────────────────────────────────── */
 .rightRail {
-  border-left: 1px solid #1E2A3A;
-  background: #0D0F14;
+  border-left: 1px solid var(--ctf-border, #1E2A3A);
+  background: var(--ctf-panel, #0D0F14);
   padding: 20px 16px;
   overflow-y: auto;
 }
@@ -719,7 +719,7 @@
   gap: 8px;
   margin-bottom: 9px;
   font-size: 12px;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary, #9CA3AF);
   line-height: 1.5;
 }
 
@@ -738,8 +738,8 @@
   padding: 6px 12px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid #1E2A3A;
-  color: #9CA3AF;
+  border: 1px solid var(--ctf-border-dim, #1E2A3A);
+  color: var(--ctf-text-secondary, #9CA3AF);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;

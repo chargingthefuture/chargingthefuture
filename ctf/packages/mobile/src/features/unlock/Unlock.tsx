@@ -4,7 +4,7 @@
 // Real-data-only: timeline dates and quoraProfileUrl are absent from /api/unlock/status
 // and are therefore omitted (no fabrication).
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,23 +13,19 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { fetchUnlockStatus, submitUnlockUrl } from './api';
 import type { UnlockStatus, UnlockReviewStatus } from './api';
 
-const BRAND = '#C084FC';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT_COLOR = '#F9FAFB';
-const SUBTLE = '#6B7280';
-const FAINT = '#4B5563';
-
 type DisplayStatus = 'pending' | 'approved' | 'rejected';
 
+// Verification-state palette — kept raw (not themed): the pending amber, rejected red, and the
+// approved brand purple are verification-state signals. The approved literal matches the unlock
+// accent in the default theme.
 const STATUS_CFG: Record<DisplayStatus, { color: string; bg: string; label: string }> = {
   pending: { color: '#F59E0B', bg: 'rgba(245,158,11,0.08)', label: 'Pending Review' },
-  approved: { color: BRAND, bg: 'rgba(16,185,129,0.08)', label: 'Approved' },
+  approved: { color: '#C084FC', bg: 'rgba(16,185,129,0.08)', label: 'Approved' },
   rejected: { color: '#EF4444', bg: 'rgba(239,68,68,0.08)', label: 'Rejected' },
 };
 
@@ -41,12 +37,14 @@ function toDisplayStatus(r: UnlockReviewStatus | null): DisplayStatus {
   return 'pending';
 }
 
+type Styles = ReturnType<typeof makeStyles>;
+
 // "early Commons access" experiment (parity with web's UnlockCommonsHelp). Shown only to a
 // treatment-bucket member (status.earlyCommonsAccess) so someone stuck — e.g. unable to find their
 // Quora profile URL — can jump into the Commons (the Hub home) to ask for help instead of being
 // confined to the Unlock screen. A control member never sees it. Renders nothing without a
 // navigation handler, so it can't become a dead link.
-function CommonsHelpLink({ onNavigateToCommons }: { onNavigateToCommons?: () => void }) {
+function CommonsHelpLink({ onNavigateToCommons, s }: { onNavigateToCommons?: () => void; s: Styles }) {
   if (!onNavigateToCommons) return null;
   return (
     <TouchableOpacity onPress={onNavigateToCommons} style={s.commonsHelp} accessibilityRole="link">
@@ -56,9 +54,9 @@ function CommonsHelpLink({ onNavigateToCommons }: { onNavigateToCommons?: () => 
 }
 
 // Loading state
-function LoadingView() {
+function LoadingView({ s, t }: { s: Styles; t: ThemeTokens }) {
   return (
-    <View style={[s.fill, s.center, { backgroundColor: BG }]}>
+    <View style={[s.fill, s.center, { backgroundColor: t.bg }]}>
       <Text style={s.tagline}>EXIT THEIR ECONOMY</Text>
       <Text style={s.tagline}>EXIT THE PSYOP</Text>
     </View>
@@ -66,15 +64,15 @@ function LoadingView() {
 }
 
 // Public / unauthenticated state
-function PublicView() {
+function PublicView({ s, t, accent }: { s: Styles; t: ThemeTokens; accent: string }) {
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 24 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: 24 }}>
       <View style={s.header}>
         <Text style={s.headerTitle}>Unlock Access</Text>
       </View>
       <Text style={[s.badge, { marginBottom: 14 }]}>Verified access only</Text>
       <Text style={s.heroTitle}>Create your account to begin{' '}
-        <Text style={{ color: BRAND }}>the verification process</Text>
+        <Text style={{ color: accent }}>the verification process</Text>
       </Text>
       <Text style={[s.bodyText, { marginBottom: 20 }]}>
         Survivor Hub uses Quora profile verification to confirm members are real people. This protects the community.
@@ -104,10 +102,16 @@ function SubmissionView({
   onSubmitted,
   earlyCommonsAccess,
   onNavigateToCommons,
+  s,
+  t,
+  accent,
 }: {
   onSubmitted: () => void;
   earlyCommonsAccess?: boolean;
   onNavigateToCommons?: () => void;
+  s: Styles;
+  t: ThemeTokens;
+  accent: string;
 }) {
   const [url, setUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -129,7 +133,7 @@ function SubmissionView({
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 20 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: 20 }}>
       <View style={s.header}>
         <Text style={s.headerTitle}>Unlock Full Access</Text>
         <Text style={s.headerSub}>Verify your Quora profile to get started</Text>
@@ -138,13 +142,13 @@ function SubmissionView({
       <Text style={[s.bodyText, { marginBottom: 18 }]}>
         To unlock full access, submit your Quora profile URL for manual verification. This helps confirm you're a real person and reduces infiltration risk.
       </Text>
-      <Text style={s.fieldLabel}>Your Quora Profile URL <Text style={{ color: BRAND }}>*</Text></Text>
-      <View style={[s.inputWrap, { borderColor: url ? BRAND + '80' : BORDER }]}>
+      <Text style={s.fieldLabel}>Your Quora Profile URL <Text style={{ color: accent }}>*</Text></Text>
+      <View style={[s.inputWrap, { borderColor: url ? accent + '80' : t.border }]}>
         <TextInput
           value={url}
           onChangeText={setUrl}
           placeholder="https://quora.com/profile/your-name"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={t.textSecondary}
           style={s.input}
           autoCapitalize="none"
           autoCorrect={false}
@@ -152,29 +156,29 @@ function SubmissionView({
         />
       </View>
       <Text style={s.hint}>Make sure your Quora profile is set to public before submitting.</Text>
-      {earlyCommonsAccess ? <CommonsHelpLink onNavigateToCommons={onNavigateToCommons} /> : null}
+      {earlyCommonsAccess ? <CommonsHelpLink onNavigateToCommons={onNavigateToCommons} s={s} /> : null}
       {error ? <Text style={s.errorText}>{error}</Text> : null}
       <TouchableOpacity
         onPress={handleSubmit}
         disabled={!canSubmit}
-        style={[s.primaryBtn, { backgroundColor: canSubmit ? BRAND : 'rgba(255,255,255,0.06)' }]}
+        style={[s.primaryBtn, { backgroundColor: canSubmit ? accent : t.borderFaint }]}
       >
-        <Text style={[s.primaryBtnText, { color: canSubmit ? '#fff' : SUBTLE }]}>
+        <Text style={[s.primaryBtnText, { color: canSubmit ? '#fff' : t.textSecondary }]}>
           {submitting ? 'Submitting…' : 'Submit for Verification'}
         </Text>
       </TouchableOpacity>
       <View style={s.whyCard}>
-        <Text style={[s.cardHeading, { color: BRAND }]}>Why we verify via Quora</Text>
+        <Text style={[s.cardHeading, { color: accent }]}>Why we verify via Quora</Text>
         {[
           { icon: '🔗', t: 'Real-person proof', d: "Quora activity proves you're a real person with history online." },
           { icon: '🛡', t: 'Reduces infiltration', d: 'Makes it harder for traffickers to create fake accounts.' },
           { icon: '✅', t: 'Admin-reviewed', d: 'A human reviews every submission — no automated rejection.' },
-        ].map(({ icon, t, d }) => (
-          <React.Fragment key={t}>
+        ].map(({ icon, t: title, d }) => (
+          <React.Fragment key={title}>
             <View style={s.whyRow}>
               <Text style={{ fontSize: 16, flexShrink: 0 }}>{icon}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={s.whyTitle}>{t}</Text>
+                <Text style={s.whyTitle}>{title}</Text>
                 <Text style={s.whyDesc}>{d}</Text>
               </View>
             </View>
@@ -198,10 +202,16 @@ function StatusView({
   status,
   onResubmitted,
   onNavigateToCommons,
+  s,
+  t,
+  accent,
 }: {
   status: UnlockStatus;
   onResubmitted: () => void;
   onNavigateToCommons?: () => void;
+  s: Styles;
+  t: ThemeTokens;
+  accent: string;
 }) {
   const display = toDisplayStatus(status.reviewStatus);
   const cfg = STATUS_CFG[display];
@@ -225,7 +235,7 @@ function StatusView({
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 16 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: 16 }}>
       <View style={[s.header, { marginBottom: 16 }]}>
         <Text style={s.headerTitle}>Verification Status</Text>
         <View style={[s.statusBadge, { backgroundColor: cfg.bg, borderColor: cfg.color + '50' }]}>
@@ -242,7 +252,7 @@ function StatusView({
         {display === 'approved' && (
           <View style={s.approvedBox}>
             <Text style={{ fontSize: 26, textAlign: 'center' }}>🎉</Text>
-            <Text style={[s.approvedTitle, { color: BRAND }]}>Welcome to the Survivor Hub!</Text>
+            <Text style={[s.approvedTitle, { color: accent }]}>Welcome to the Survivor Hub!</Text>
             <Text style={[s.bodyText, { textAlign: 'center' }]}>All features are now unlocked.</Text>
             <Text style={[s.bodyText, { textAlign: 'center', marginTop: 8 }]}>
               {status.incentiveGrantedAt
@@ -261,7 +271,7 @@ function StatusView({
       </View>
 
       {status.earlyCommonsAccess ? (
-        <CommonsHelpLink onNavigateToCommons={onNavigateToCommons} />
+        <CommonsHelpLink onNavigateToCommons={onNavigateToCommons} s={s} />
       ) : null}
 
       {/* Re-submit form on rejection */}
@@ -272,8 +282,8 @@ function StatusView({
             value={resubUrl}
             onChangeText={setResubUrl}
             placeholder="https://quora.com/profile/…"
-            placeholderTextColor={SUBTLE}
-            style={[s.input, { borderWidth: 1, borderColor: BORDER, borderRadius: 10, padding: 10, marginBottom: 10, color: TEXT_COLOR }]}
+            placeholderTextColor={t.textSecondary}
+            style={[s.input, { borderWidth: 1, borderColor: t.border, borderRadius: 10, padding: 10, marginBottom: 10, color: t.textPrimary }]}
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -293,7 +303,7 @@ function StatusView({
         <Text style={s.benefitsHeading}>What gets unlocked</Text>
         {BENEFITS.map(f => (
           <React.Fragment key={f}>
-            <Text style={[s.benefitItem, { color: display === 'approved' ? TEXT_COLOR : SUBTLE }]}>
+            <Text style={[s.benefitItem, { color: display === 'approved' ? t.textPrimary : t.textSecondary }]}>
               {display === 'approved' ? '✓ ' : '· '}{f}
             </Text>
           </React.Fragment>
@@ -312,6 +322,10 @@ export const Unlock: React.FC<{
   onStatusChanged?: () => void;
   onNavigateToCommons?: () => void;
 }> = ({ onStatusChanged, onNavigateToCommons }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('unlock', theme);
+  const s = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+
   const [phase, setPhase] = useState<'loading' | 'public' | 'submit' | 'status'>('loading');
   const [unlockStatus, setUnlockStatus] = useState<UnlockStatus | null>(null);
 
@@ -331,14 +345,17 @@ export const Unlock: React.FC<{
 
   useEffect(() => { void loadStatus(); }, [loadStatus]);
 
-  if (phase === 'loading') return <LoadingView />;
-  if (phase === 'public') return <PublicView />;
+  if (phase === 'loading') return <LoadingView s={s} t={tokens} />;
+  if (phase === 'public') return <PublicView s={s} t={tokens} accent={accent} />;
   if (phase === 'submit')
     return (
       <SubmissionView
         onSubmitted={() => void loadStatus()}
         earlyCommonsAccess={unlockStatus?.earlyCommonsAccess}
         onNavigateToCommons={onNavigateToCommons}
+        s={s}
+        t={tokens}
+        accent={accent}
       />
     );
   if (phase === 'status' && unlockStatus) {
@@ -347,63 +364,68 @@ export const Unlock: React.FC<{
         status={unlockStatus}
         onResubmitted={() => void loadStatus()}
         onNavigateToCommons={onNavigateToCommons}
+        s={s}
+        t={tokens}
+        accent={accent}
       />
     );
   }
-  return <LoadingView />;
+  return <LoadingView s={s} t={tokens} />;
 };
 
-const s = StyleSheet.create({
-  fill: { flex: 1 },
-  center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
-  tagline: { fontSize: 10, letterSpacing: 2.5, color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', fontWeight: '500', marginBottom: 4 },
-  header: { marginBottom: 12 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: TEXT_COLOR },
-  headerSub: { fontSize: 12, color: SUBTLE, marginTop: 2 },
-  badge: { paddingHorizontal: 12, paddingVertical: 3, borderRadius: 20, backgroundColor: BRAND + '20', borderWidth: 1, borderColor: BRAND + '40', fontSize: 11, color: BRAND, fontWeight: '600', alignSelf: 'flex-start' },
-  heroTitle: { fontSize: 22, fontWeight: '800', color: TEXT_COLOR, lineHeight: 30, marginBottom: 10 },
-  bodyText: { fontSize: 13, color: SUBTLE, lineHeight: 20 },
-  stepCard: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: 12, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, marginBottom: 10, alignItems: 'center' },
-  stepBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: BRAND + '20', borderWidth: 1, borderColor: BRAND + '40', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  stepBadgeText: { fontSize: 12, fontWeight: '700', color: BRAND },
-  stepTitle: { fontSize: 13, fontWeight: '600', color: TEXT_COLOR },
-  stepDesc: { fontSize: 11, color: SUBTLE },
-  formHeading: { fontSize: 20, fontWeight: '800', color: TEXT_COLOR, marginBottom: 8 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 8 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', padding: 11, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderRadius: 12, marginBottom: 6 },
-  input: { flex: 1, fontSize: 14, color: TEXT_COLOR },
-  hint: { fontSize: 11, color: FAINT, marginBottom: 8 },
-  errorText: { fontSize: 12, color: '#F87171', marginBottom: 8 },
-  primaryBtn: { padding: 14, borderRadius: 12, alignItems: 'center', marginBottom: 16 },
-  primaryBtnText: { fontSize: 15, fontWeight: '700' },
-  whyCard: { padding: 16, borderRadius: 14, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, marginBottom: 12 },
-  cardHeading: { fontSize: 13, fontWeight: '700', marginBottom: 12 },
-  whyRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-  whyTitle: { fontSize: 12, fontWeight: '600', color: TEXT_COLOR, marginBottom: 2 },
-  whyDesc: { fontSize: 11, color: SUBTLE, lineHeight: 17 },
-  benefitsCard: { padding: 14, borderRadius: 12, backgroundColor: BRAND + '0F', borderWidth: 1, borderColor: BRAND + '30', marginBottom: 16 },
-  benefitsHeading: { fontSize: 11, fontWeight: '700', color: BRAND, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
-  benefitItem: { fontSize: 12, color: SUBTLE, marginBottom: 5 },
-  statusCard: { padding: 20, borderRadius: 16, borderWidth: 1, marginBottom: 14, alignItems: 'flex-start' },
-  statusIconWrap: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  statusLabel: { fontSize: 18, fontWeight: '800', marginBottom: 10 },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, borderWidth: 1, alignSelf: 'flex-start', marginTop: 4 },
-  statusBadgeText: { fontSize: 11, fontWeight: '600' },
-  approvedBox: { padding: 14, borderRadius: 12, backgroundColor: BRAND + '0D', borderWidth: 1, borderColor: BRAND + '30', width: '100%', alignItems: 'center' },
-  approvedTitle: { fontSize: 15, fontWeight: '700', marginTop: 6, marginBottom: 4 },
-  rejectedBox: { padding: 12, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.05)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)', width: '100%' },
-  rejectedLabel: { fontSize: 12, fontWeight: '600', color: '#EF4444', marginBottom: 4 },
-  resubCard: { padding: 16, borderRadius: 14, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, marginBottom: 14 },
-  commonsHelp: {
-    marginTop: 16,
-    marginBottom: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderRadius: 12,
-    backgroundColor: BRAND + '10',
-    borderWidth: 1,
-    borderColor: BRAND + '33',
-    alignSelf: 'flex-start',
-  },
-  commonsHelpText: { fontSize: 13, fontWeight: '600', color: BRAND },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    fill: { flex: 1 },
+    center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+    tagline: { fontSize: 10, letterSpacing: 2.5, color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', fontWeight: '500', marginBottom: 4 },
+    header: { marginBottom: 12 },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary },
+    headerSub: { fontSize: 12, color: t.textSecondary, marginTop: 2 },
+    badge: { paddingHorizontal: 12, paddingVertical: 3, borderRadius: 20, backgroundColor: accent + '20', borderWidth: 1, borderColor: accent + '40', fontSize: 11, color: accent, fontWeight: '600', alignSelf: 'flex-start' },
+    heroTitle: { fontSize: 22, fontWeight: '800', color: t.textPrimary, lineHeight: 30, marginBottom: 10 },
+    bodyText: { fontSize: 13, color: t.textSecondary, lineHeight: 20 },
+    stepCard: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: t.radius, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, marginBottom: 10, alignItems: 'center' },
+    stepBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: accent + '20', borderWidth: 1, borderColor: accent + '40', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+    stepBadgeText: { fontSize: 12, fontWeight: '700', color: accent },
+    stepTitle: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
+    stepDesc: { fontSize: 11, color: t.textSecondary },
+    formHeading: { fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 8 },
+    fieldLabel: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 8 },
+    inputWrap: { flexDirection: 'row', alignItems: 'center', padding: 11, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderRadius: t.radius, marginBottom: 6 },
+    input: { flex: 1, fontSize: 14, color: t.textPrimary },
+    hint: { fontSize: 11, color: t.textMuted, marginBottom: 8 },
+    errorText: { fontSize: 12, color: '#F87171', marginBottom: 8 },
+    primaryBtn: { padding: 14, borderRadius: t.radius, alignItems: 'center', marginBottom: 16 },
+    primaryBtnText: { fontSize: 15, fontWeight: '700' },
+    whyCard: { padding: 16, borderRadius: 14, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, marginBottom: 12 },
+    cardHeading: { fontSize: 13, fontWeight: '700', marginBottom: 12 },
+    whyRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+    whyTitle: { fontSize: 12, fontWeight: '600', color: t.textPrimary, marginBottom: 2 },
+    whyDesc: { fontSize: 11, color: t.textSecondary, lineHeight: 17 },
+    benefitsCard: { padding: 14, borderRadius: t.radius, backgroundColor: accent + '0F', borderWidth: 1, borderColor: accent + '30', marginBottom: 16 },
+    benefitsHeading: { fontSize: 11, fontWeight: '700', color: accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+    benefitItem: { fontSize: 12, color: t.textSecondary, marginBottom: 5 },
+    statusCard: { padding: 20, borderRadius: 16, borderWidth: 1, marginBottom: 14, alignItems: 'flex-start' },
+    statusIconWrap: { width: 44, height: 44, borderRadius: t.radius, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+    statusLabel: { fontSize: 18, fontWeight: '800', marginBottom: 10 },
+    statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, borderWidth: 1, alignSelf: 'flex-start', marginTop: 4 },
+    statusBadgeText: { fontSize: 11, fontWeight: '600' },
+    approvedBox: { padding: 14, borderRadius: t.radius, backgroundColor: accent + '0D', borderWidth: 1, borderColor: accent + '30', width: '100%', alignItems: 'center' },
+    approvedTitle: { fontSize: 15, fontWeight: '700', marginTop: 6, marginBottom: 4 },
+    rejectedBox: { padding: 12, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.05)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)', width: '100%' },
+    rejectedLabel: { fontSize: 12, fontWeight: '600', color: '#EF4444', marginBottom: 4 },
+    resubCard: { padding: 16, borderRadius: 14, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, marginBottom: 14 },
+    commonsHelp: {
+      marginTop: 16,
+      marginBottom: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 11,
+      borderRadius: t.radius,
+      backgroundColor: accent + '10',
+      borderWidth: 1,
+      borderColor: accent + '33',
+      alignSelf: 'flex-start',
+    },
+    commonsHelpText: { fontSize: 13, fontWeight: '600', color: accent },
+  });
+}

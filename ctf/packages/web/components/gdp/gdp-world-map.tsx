@@ -10,7 +10,8 @@
 // aggregate is overlaid on the map. We never invent per-country values. If a
 // per-country table is added later, `regionFill` can be made data-driven.
 
-import { COLOR, COMMUNITY_VALUE_INDEX_DISCLAIMER, COMMUNITY_VALUE_INDEX_LABEL } from "./gdp-shared";
+import { COLOR, COMMUNITY_VALUE_INDEX_DISCLAIMER, COMMUNITY_VALUE_INDEX_LABEL, getGdpTokens } from "./gdp-shared";
+import { useTheme } from "@/hooks/useTheme";
 
 // Simplified continent outlines on a 1000x500 equirectangular canvas. These are
 // coarse silhouettes, accurate enough to read as a world map at dashboard scale.
@@ -70,6 +71,8 @@ export function GdpWorldMap({
   // True when at least one real aggregate metric is present.
   hasData: boolean;
 }) {
+  const { theme } = useTheme();
+  const t = getGdpTokens(theme);
   const regionFill = `${COLOR}1F`;
   const regionStroke = `${COLOR}55`;
   return (
@@ -89,7 +92,7 @@ export function GdpWorldMap({
           flex: 1,
           minHeight: 280,
           borderRadius: 16,
-          border: "1px solid rgba(255,255,255,0.06)",
+          border: `1px solid ${t.BORDER}`,
           background:
             "radial-gradient(1200px 600px at 50% 30%, rgba(6,182,212,0.07), rgba(15,17,23,0) 70%), #0D0F14",
           overflow: "hidden",
@@ -171,20 +174,20 @@ export function GdpWorldMap({
               fontSize: 11,
               fontWeight: 700,
               letterSpacing: "0.08em",
-              color: "#6B7280",
+              color: t.MUTED,
               textTransform: "uppercase",
             }}
           >
             {COMMUNITY_VALUE_INDEX_LABEL}
           </div>
-          <div style={{ fontSize: 34, fontWeight: 900, color: COLOR, lineHeight: 1 }}>{headline}</div>
+          <div style={{ fontSize: 34, fontWeight: 900, color: t.ACCENT, lineHeight: 1 }}>{headline}</div>
           {membersLabel ? (
-            <div style={{ fontSize: 12, color: "#9CA3AF" }}>{membersLabel} active members</div>
+            <div style={{ fontSize: 12, color: t.SUBTLE }}>{membersLabel} active members</div>
           ) : null}
         </div>
       </div>
 
-      <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5 }}>
+      <div style={{ fontSize: 12, color: t.FAINT, lineHeight: 1.5 }}>
         {hasData
           ? `Regions show where the survivor economy is active (per-country breakdowns are not available yet, so regions are shown in a single neutral state). ${COMMUNITY_VALUE_INDEX_DISCLAIMER}`
           : "No recognized activity yet. The map activates once the community has recognized value."}

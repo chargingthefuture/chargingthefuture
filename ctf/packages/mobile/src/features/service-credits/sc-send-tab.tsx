@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { COLOR, colors } from './sc-styles';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
+import { RAW } from './sc-styles';
 import { sendTransfer } from './api';
 
 type Props = {
@@ -22,6 +23,9 @@ function generateIdempotencyKey(): string {
 type Rail = 'balance' | 'mutual_credit';
 
 export function SendTab({ onSent }: Props) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('service-credits', theme);
+  const s = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [recipientId, setRecipientId] = useState('');
   const [amountText, setAmountText] = useState('');
   const [rail, setRail] = useState<Rail>('balance');
@@ -76,7 +80,7 @@ export function SendTab({ onSent }: Props) {
           value={recipientId}
           onChangeText={setRecipientId}
           placeholder="Recipient user ID"
-          placeholderTextColor={colors.textDim}
+          placeholderTextColor={tokens.textSecondary}
           style={s.input}
           autoCapitalize="none"
           autoCorrect={false}
@@ -86,7 +90,7 @@ export function SendTab({ onSent }: Props) {
           value={amountText}
           onChangeText={setAmountText}
           placeholder="Amount (whole credits)"
-          placeholderTextColor={colors.textDim}
+          placeholderTextColor={tokens.textSecondary}
           style={s.input}
           keyboardType="numeric"
           accessibilityLabel="Amount in credits"
@@ -148,73 +152,75 @@ export function SendTab({ onSent }: Props) {
   );
 }
 
-const s = StyleSheet.create({
-  heading: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 16,
-  },
-  form: { gap: 10 },
-  railRow: { flexDirection: 'row', gap: 8 },
-  railBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  railBtnActive: {
-    backgroundColor: `${COLOR}18`,
-    borderColor: `${COLOR}40`,
-  },
-  railBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSubtle,
-    textAlign: 'center',
-  },
-  railBtnTextActive: { color: COLOR },
-  railHelper: {
-    fontSize: 11,
-    color: colors.textDim,
-    lineHeight: 16,
-  },
-  input: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  sendBtn: {
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: COLOR,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendBtnDisabled: { opacity: 0.6 },
-  sendBtnText: { fontSize: 15, fontWeight: '800', color: '#0F1117' },
-  ledgerNote: {
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: `${COLOR}06`,
-    borderWidth: 1,
-    borderColor: `${COLOR}18`,
-  },
-  ledgerLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLOR,
-    marginBottom: 4,
-  },
-  ledgerText: { fontSize: 11, color: colors.textDim, lineHeight: 16 },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    heading: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: t.textPrimary,
+      marginBottom: 16,
+    },
+    form: { gap: 10 },
+    railRow: { flexDirection: 'row', gap: 8 },
+    railBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 10,
+      borderRadius: t.radius,
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    railBtnActive: {
+      backgroundColor: `${accent}18`,
+      borderColor: `${accent}40`,
+    },
+    railBtnText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: RAW.textSubtle,
+      textAlign: 'center',
+    },
+    railBtnTextActive: { color: accent },
+    railHelper: {
+      fontSize: 11,
+      color: t.textSecondary,
+      lineHeight: 16,
+    },
+    input: {
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+      borderRadius: t.radius,
+      fontSize: 14,
+      color: RAW.textMuted,
+    },
+    sendBtn: {
+      paddingVertical: 14,
+      borderRadius: 14,
+      backgroundColor: accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sendBtnDisabled: { opacity: 0.6 },
+    sendBtnText: { fontSize: 15, fontWeight: '800', color: '#0F1117' },
+    ledgerNote: {
+      padding: 12,
+      borderRadius: t.radius,
+      backgroundColor: `${accent}06`,
+      borderWidth: 1,
+      borderColor: `${accent}18`,
+    },
+    ledgerLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: accent,
+      marginBottom: 4,
+    },
+    ledgerText: { fontSize: 11, color: t.textSecondary, lineHeight: 16 },
+  });
+}

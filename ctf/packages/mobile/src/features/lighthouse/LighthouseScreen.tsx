@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
+import { useTheme, type ThemeTokens } from '../../theme';
 import { fetchProperties } from './api';
 import type { LighthouseProperty } from './types';
 import { fetchCurrencies } from '../currency/api';
@@ -10,9 +11,9 @@ import { LighthousePropertyCard } from './LighthousePropertyCard';
 import { LighthousePropertyDetail } from './LighthousePropertyDetail';
 import { LighthouseListHeader } from './LighthouseListHeader';
 
-const BG = '#0F1117';
-
 export const LighthouseScreen: React.FC = () => {
+  const { tokens } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<LighthouseProperty[]>([]);
   const [currencies, setCurrencies] = useState<CurrencyMap>({});
@@ -86,12 +87,14 @@ export const LighthouseScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  list: {
-    paddingBottom: 24,
-  },
-});
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.bg,
+    },
+    list: {
+      paddingBottom: 24,
+    },
+  });
+}

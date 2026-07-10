@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { SkillsHuntRound, SkillsHuntRoundStatus } from "lib/skills-hunt/types";
-import { COLOR } from "./sha-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
 
 // Round management for the admin shell: create a round and edit an existing
 // one (lifecycle status, schedule, and the ServiceCredits reward config). The
@@ -14,12 +15,12 @@ function toLocalInputValue(source: string | Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-const field: React.CSSProperties = {
-  width: "100%", padding: "9px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.12)", color: "#E8EAF0", fontSize: 13, outline: "none", boxSizing: "border-box", minWidth: 0,
-};
-const label: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 600, color: "#9CA3AF", marginBottom: 5 };
-const help: React.CSSProperties = { fontSize: 11, color: "#6B7280", marginTop: 4 };
+const fieldStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({
+  width: "100%", padding: "9px 12px", borderRadius: 8, background: t.INPUT_BG,
+  border: "1px solid rgba(255,255,255,0.12)", color: t.TEXT, fontSize: 13, outline: "none", boxSizing: "border-box", minWidth: 0,
+});
+const labelStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({ display: "block", fontSize: 12, fontWeight: 600, color: t.SUBTLE, marginBottom: 5 });
+const helpStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({ fontSize: 11, color: t.MUTED, marginTop: 4 });
 
 type FormValues = {
   name: string; description: string; status: SkillsHuntRoundStatus;
@@ -78,6 +79,11 @@ function buildPayloadOrError(v: FormValues): { error: string } | { payload: Subm
 function RoundForm({ initial, submitLabel, onSubmit, onCancel }: {
   initial: FormValues; submitLabel: string; onSubmit: (payload: SubmitPayload) => Promise<void>; onCancel?: () => void;
 }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
+  const field = fieldStyle(t);
+  const label = labelStyle(t);
+  const help = helpStyle(t);
   const [v, setV] = useState<FormValues>(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +131,7 @@ function RoundForm({ initial, submitLabel, onSubmit, onCancel }: {
           <input id="shr-end" type="datetime-local" style={field} value={v.endsAt} onChange={(e) => set({ endsAt: e.target.value })} />
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, padding: "12px 14px", borderRadius: 10, background: `${COLOR}08`, border: `1px solid ${COLOR}25` }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, padding: "12px 14px", borderRadius: 10, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}25` }}>
         <div>
           <label style={label} htmlFor="shr-reward">ServiceCredits per accepted nomination</label>
           <input id="shr-reward" type="number" min={0} step={1} style={field} value={v.rewardPerAccept} onChange={(e) => set({ rewardPerAccept: e.target.value })} />
@@ -139,11 +145,11 @@ function RoundForm({ initial, submitLabel, onSubmit, onCancel }: {
       </div>
       {error && <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <button type="button" onClick={() => void submit()} disabled={saving} style={{ padding: "9px 18px", borderRadius: 8, background: COLOR, border: "none", color: "#111", fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>
+        <button type="button" onClick={() => void submit()} disabled={saving} style={{ padding: "9px 18px", borderRadius: 8, background: t.ACCENT, border: "none", color: "#111", fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>
           {saving ? "Saving…" : submitLabel}
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} disabled={saving} style={{ padding: "9px 18px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+          <button type="button" onClick={onCancel} disabled={saving} style={{ padding: "9px 18px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
             Cancel
           </button>
         )}
@@ -171,24 +177,26 @@ function rewardLabel(r: SkillsHuntRound): string {
 }
 
 export function SkillsHuntRoundManager({ rounds }: { rounds: SkillsHuntRound[] }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   return (
     <div style={{ marginBottom: 8 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB" }}>Rounds</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Rounds</div>
         {!creating && (
           <button type="button" onClick={() => { setCreating(true); setEditingId(null); }}
-            style={{ padding: "9px 16px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}35`, color: COLOR, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+            style={{ padding: "9px 16px", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}35`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
             + New round
           </button>
         )}
       </div>
 
       {creating && (
-        <div style={{ marginBottom: 20, padding: "18px 20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${COLOR}25` }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#F9FAFB", marginBottom: 14 }}>Create a round</div>
+        <div style={{ marginBottom: 20, padding: "18px 20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}25` }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE, marginBottom: 14 }}>Create a round</div>
           <RoundForm
             initial={emptyValues()}
             submitLabel="Create round"
@@ -199,24 +207,24 @@ export function SkillsHuntRoundManager({ rounds }: { rounds: SkillsHuntRound[] }
       )}
 
       {rounds.length === 0 && !creating ? (
-        <div style={{ color: "#6B7280", fontSize: 13 }}>No rounds yet. Use “New round” to create the first one.</div>
+        <div style={{ color: t.MUTED, fontSize: 13 }}>No rounds yet. Use “New round” to create the first one.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {rounds.map((r) => (
-            <div key={r.id} style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div key={r.id} style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER_STRONG}` }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#F9FAFB" }}>{r.name} <span style={{ fontSize: 11, fontWeight: 600, color: COLOR }}>· {r.status}</span></div>
-                  <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{rewardLabel(r)}</div>
-                  <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>{new Date(r.startsAtIso).toLocaleDateString()} → {new Date(r.endsAtIso).toLocaleDateString()}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>{r.name} <span style={{ fontSize: 11, fontWeight: 600, color: t.ACCENT }}>· {r.status}</span></div>
+                  <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 2 }}>{rewardLabel(r)}</div>
+                  <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>{new Date(r.startsAtIso).toLocaleDateString()} → {new Date(r.endsAtIso).toLocaleDateString()}</div>
                 </div>
                 <button type="button" onClick={() => { setEditingId(editingId === r.id ? null : r.id); setCreating(false); }}
-                  style={{ padding: "6px 14px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  style={{ padding: "6px 14px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                   {editingId === r.id ? "Close" : "Edit"}
                 </button>
               </div>
               {editingId === r.id && (
-                <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${t.BORDER}` }}>
                   <RoundForm
                     initial={fromRound(r)}
                     submitLabel="Save changes"

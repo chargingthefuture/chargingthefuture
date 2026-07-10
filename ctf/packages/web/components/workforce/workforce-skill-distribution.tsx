@@ -1,8 +1,9 @@
 'use client';
 
+import { useTheme } from '@/hooks/useTheme';
+import { getWorkforceTokens } from './workforce-shared';
 import type { WorkforceGroupedReportItem } from '../../lib/workforce/types';
 
-const COLOR = '#F97316';
 const RECRUITED_GREEN = '#22C55E';
 
 interface WorkforceSkillDistributionProps {
@@ -10,6 +11,8 @@ interface WorkforceSkillDistributionProps {
 }
 
 export function WorkforceSkillDistribution({ skillItems }: WorkforceSkillDistributionProps) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
   if (skillItems.length === 0) {
     return null;
   }
@@ -25,14 +28,14 @@ export function WorkforceSkillDistribution({ skillItems }: WorkforceSkillDistrib
         padding: '20px 24px',
         borderRadius: 16,
         background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: `1px solid ${t.BORDER}`,
         marginBottom: 24,
       }}
     >
-      <div style={{ fontSize: 16, fontWeight: 700, color: '#F9FAFB', marginBottom: 2 }}>
+      <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE, marginBottom: 2 }}>
         Skill Level Breakdown
       </div>
-      <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 16 }}>
+      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 16 }}>
         Members recruited at each skill level (bar height = people). Target shown for context.
       </div>
       <div style={{ display: 'flex', gap: 16 }}>
@@ -64,17 +67,17 @@ export function WorkforceSkillDistribution({ skillItems }: WorkforceSkillDistrib
                   }}
                 />
               </div>
-              <div style={{ fontSize: 12, color: '#9CA3AF', textTransform: 'capitalize', marginBottom: 2 }}>
+              <div style={{ fontSize: 12, color: t.SUBTLE, textTransform: 'capitalize', marginBottom: 2 }}>
                 {item.bucket}
               </div>
               <div style={{ fontSize: 15, color: RECRUITED_GREEN, fontWeight: 700 }}>
                 {item.recruited.toLocaleString()}
               </div>
-              <div style={{ fontSize: 11, color: '#6B7280' }}>recruited</div>
-              <div style={{ fontSize: 11, color: COLOR, marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: t.MUTED }}>recruited</div>
+              <div style={{ fontSize: 11, color: t.ACCENT, marginTop: 4 }}>
                 {item.target.toLocaleString()} target
               </div>
-              <div style={{ fontSize: 11, color: '#6B7280' }}>
+              <div style={{ fontSize: 11, color: t.MUTED }}>
                 gap {item.gap.toLocaleString()}
               </div>
             </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { useAuth } from '../../auth/auth-context';
 import {
   CurrencyRateEntry,
@@ -21,19 +22,24 @@ import {
 // design/.../survivor-hub/MobileGDPRateAdmin.tsx. These factors exist solely to
 // estimate aggregate GDP — never a redemption rate or per-wallet conversion.
 
-const COLOR = '#06B6D4';
-const BG = '#0F1117';
+// BG_DARK (#0D0F14, header backdrop) and MUTED (#9CA3AF) have no mobile theme token,
+// so they stay raw. Chrome + the gdp accent are read from the active theme.
 const BG_DARK = '#0D0F14';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
 const MUTED = '#9CA3AF';
-const SUBTLE = '#6B7280';
+
+// Resolve the memoized StyleSheet + the gdp accent for the active theme.
+function useGdpRateAdminTheme() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('gdp', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return { styles, accent, tokens };
+}
 
 const DISCLAIMER =
   'These factors exist solely to estimate aggregate GDP. They are never a redemption rate or per-wallet conversion.';
 
 export const GdpRateAdmin = () => {
+  const { styles, accent } = useGdpRateAdminTheme();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const isAdmin = Boolean(user?.isAdmin);
 
@@ -110,7 +116,7 @@ export const GdpRateAdmin = () => {
   if (authLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={COLOR} size="large" />
+        <ActivityIndicator color={accent} size="large" />
       </View>
     );
   }
@@ -148,7 +154,7 @@ export const GdpRateAdmin = () => {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={COLOR} />
+          <ActivityIndicator color={accent} />
           <Text style={styles.loadingText}>Loading currency factors…</Text>
         </View>
       ) : error ? (
@@ -180,6 +186,7 @@ export const GdpRateAdmin = () => {
 };
 
 function Disclaimer() {
+  const { styles } = useGdpRateAdminTheme();
   return (
     <View style={styles.disclaimer}>
       <Text style={styles.disclaimerIcon}>⚠</Text>
@@ -195,6 +202,7 @@ function CurrencyList({
   currencies: CurrencyRateEntry[];
   onRevise: (_c: CurrencyRateEntry) => void;
 }) {
+  const { styles } = useGdpRateAdminTheme();
   return (
     <>
       <Disclaimer />
@@ -266,6 +274,7 @@ function RevisePanel({
   onChangeSource: (_v: string) => void;
   onSave: () => void;
 }) {
+  const { styles, tokens } = useGdpRateAdminTheme();
   if (saved) {
     return (
       <View style={styles.savedWrap}>
@@ -295,7 +304,7 @@ function RevisePanel({
           onChangeText={onChangeRate}
           keyboardType="decimal-pad"
           placeholder="0.00000"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
           style={styles.rateInput}
         />
         {editing.symbol ? <Text style={styles.rateUnit}>/ {editing.symbol}</Text> : null}
@@ -306,7 +315,7 @@ function RevisePanel({
         value={newSource}
         onChangeText={onChangeSource}
         placeholder="e.g. Owner — quarterly review"
-        placeholderTextColor={SUBTLE}
+        placeholderTextColor={tokens.textSecondary}
         style={styles.sourceInput}
       />
 
@@ -345,11 +354,19 @@ function RevisePanel({
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  // Alias the theme values to the names the StyleSheet already uses (exemplar idiom).
+  const COLOR = accent;
+  const BG = t.bg;
+  const SURFACE = t.surface;
+  const BORDER = t.border;
+  const TEXT = t.textPrimary;
+  const SUBTLE = t.textSecondary;
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: BG },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: BG },
   loadingText: { color: SUBTLE, fontSize: 13, marginTop: 12 },
-  errorText: { color: '#EF4444', fontSize: 13, textAlign: 'center', marginVertical: 8 },
+  errorText: { color: t.danger, fontSize: 13, textAlign: 'center', marginVertical: 8 },
   gateTitle: { color: TEXT, fontSize: 18, fontWeight: '800', marginBottom: 8 },
   gateDesc: { color: SUBTLE, fontSize: 13, textAlign: 'center', lineHeight: 20 },
   // Header
@@ -477,7 +494,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  saveBtnDisabled: { backgroundColor: 'rgba(255,255,255,0.06)' },
+  saveBtnDisabled: { backgroundColor: t.borderFaint },
   saveBtnText: { fontSize: 14.5, fontWeight: '700', color: '#0A0E06' },
   saveBtnTextDisabled: { color: SUBTLE },
   // Saved confirmation
@@ -517,4 +534,5 @@ const styles = StyleSheet.create({
   priorRate: { fontSize: 12, fontWeight: '700', color: MUTED },
   priorDate: { fontSize: 11, color: SUBTLE },
   priorSource: { fontSize: 11, color: SUBTLE },
-});
+  });
+}

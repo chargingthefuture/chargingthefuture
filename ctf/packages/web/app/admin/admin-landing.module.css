@@ -8,8 +8,8 @@
      rows (e.g. Bug Reports) get clipped and unreachable. */
   height: 100dvh;
   overflow-y: auto;
-  background: #0f1117;
-  color: #f9fafb;
+  background: var(--ctf-bg, #0f1117);
+  color: var(--ctf-text, #f9fafb);
   font-family: 'Inter', system-ui, sans-serif;
 }
 
@@ -25,8 +25,8 @@
   gap: 10px;
   padding: 14px 16px;
   border-radius: 12px;
-  background: #0d0f14;
-  border: 1px solid #1e2a3a;
+  background: var(--ctf-panel, #0d0f14);
+  border: 1px solid var(--ctf-border-dim, #1e2a3a);
   margin-bottom: 16px;
 }
 
@@ -49,7 +49,7 @@
 
 .subtitle {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--ctf-text-subtle, #6b7280);
 }
 
 .badge {
@@ -82,8 +82,8 @@
   display: block;
   height: 100%;
   border-radius: 12px;
-  background: #161b27;
-  border: 1px solid #1e2a3a;
+  background: var(--ctf-surface, #161b27);
+  border: 1px solid var(--ctf-border-dim, #1e2a3a);
   padding: 16px;
   text-decoration: none;
   transition:
@@ -100,27 +100,27 @@
   display: block;
   font-size: 14px;
   font-weight: 700;
-  color: #f9fafb;
+  color: var(--ctf-text, #f9fafb);
 }
 
 .cardDesc {
   display: block;
   margin-top: 4px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--ctf-text-subtle, #6b7280);
   line-height: 1.5;
 }
 
 .footer {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #1e2a3a;
+  border-top: 1px solid var(--ctf-border-dim, #1e2a3a);
   font-size: 13px;
-  color: #6b7280;
+  color: var(--ctf-text-subtle, #6b7280);
 }
 
 .footerStrong {
-  color: #f9fafb;
+  color: var(--ctf-text, #f9fafb);
   font-weight: 600;
 }
 
@@ -132,8 +132,8 @@
 .denyCard {
   margin-top: 16px;
   border-radius: 12px;
-  background: #161b27;
-  border: 1px solid #1e2a3a;
+  background: var(--ctf-surface, #161b27);
+  border: 1px solid var(--ctf-border-dim, #1e2a3a);
   padding: 16px;
   font-size: 13px;
 }
@@ -149,5 +149,5 @@
 }
 
 .denyLabel {
-  color: #6b7280;
+  color: var(--ctf-text-subtle, #6b7280);
 }
