@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -18,14 +18,11 @@ import {
   rateComicAnswer,
 } from '../comic';
 import type { ComicAnswerRating, ComicStreamItem } from '../comic';
+import { useTheme, type ThemeTokens } from '../../theme';
 
+// The shipped feed accent. The feed hub has no PLUGIN_ACCENTS entry (it is not a plugin),
+// so there is no sanctioned theme mapping for it — kept raw.
 const COLOR = '#84CC16';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-const DIMMER = '#4B5563';
 
 // "URGENT" items: mandatory=true or priority>=80
 function isUrgent(item: FeedTimelineItem): boolean {
@@ -75,16 +72,19 @@ type FeedRow =
 // ---------- sub-components ----------
 
 function LoadingState() {
+  // Loading screens are exempt from theming (comic token spec §11) — static styles by design.
   return (
-    <View style={styles.loadingWrap}>
-      <Text style={styles.loadingText}>EXIT THEIR ECONOMY</Text>
-      <Text style={styles.loadingText}>EXIT THE PSYOP</Text>
+    <View style={loadingStyles.loadingWrap}>
+      <Text style={loadingStyles.loadingText}>EXIT THEIR ECONOMY</Text>
+      <Text style={loadingStyles.loadingText}>EXIT THE PSYOP</Text>
       <ActivityIndicator size="small" color={`${COLOR}80`} style={{ marginTop: 20 }} />
     </View>
   );
 }
 
 function EmptyState() {
+  const { tokens } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   return (
     <View style={styles.emptyWrap}>
       <View style={styles.emptyIcon}>
@@ -105,9 +105,11 @@ function FeedCard({
   item: FeedTimelineItem;
   onRead: (_id: string) => void;
 }) {
+  const { tokens } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const accent = itemAccentColor(item);
   const urgent = isUrgent(item);
-  const borderColor = urgent ? '#EF444440' : BORDER;
+  const borderColor = urgent ? `${tokens.danger}40` : tokens.border;
 
   return (
     <Pressable
@@ -150,6 +152,8 @@ function FeedCard({
 // ---------- main screen ----------
 
 export const FeedStream = () => {
+  const { tokens } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const [channel, setChannel] = useState<FeedChannel>('all');
   const [items, setItems] = useState<FeedTimelineItem[]>([]);
   const [comicItems, setComicItems] = useState<ComicStreamItem[]>([]);
@@ -314,170 +318,9 @@ export const FeedStream = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: '#090B0F',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  headerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: `${COLOR}30`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: TEXT,
-  },
-  headerSub: {
-    fontSize: 11,
-    color: COLOR,
-  },
-  tabBar: {
-    backgroundColor: '#090B0F',
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    flexGrow: 0,
-  },
-  tabBarContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
-    flexDirection: 'row',
-  },
-  tab: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: SURFACE,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  tabActive: {
-    backgroundColor: `${COLOR}20`,
-    borderColor: `${COLOR}50`,
-  },
-  tabText: {
-    fontSize: 12,
-    color: SUBTLE,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: COLOR,
-  },
-  list: {
-    padding: 16,
-    gap: 12,
-  },
-  comicSlot: {
-    marginBottom: 12,
-  },
-  card: {
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
-  },
-  urgentBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#EF444415',
-    borderWidth: 1,
-    borderColor: '#EF444430',
-    marginBottom: 8,
-  },
-  urgentText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#EF4444',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  cardMeta: {
-    flex: 1,
-  },
-  cardAuthor: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: SUBTLE,
-    letterSpacing: 0.5,
-  },
-  cardTime: {
-    fontSize: 11,
-    color: DIMMER,
-    marginTop: 1,
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLOR,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: TEXT,
-    lineHeight: 20,
-    marginBottom: 6,
-  },
-  cardBody: {
-    fontSize: 13,
-    color: SUBTLE,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  typePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-    borderWidth: 1,
-  },
-  typePillText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
+// Loading-screen styles stay static: the comic token spec (§11) exempts loading
+// screens from theming, so these deliberately never read the theme tokens.
+const loadingStyles = StyleSheet.create({
   loadingWrap: {
     flex: 1,
     alignItems: 'center',
@@ -493,60 +336,228 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textAlign: 'center',
   },
-  emptyWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  emptyIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: `${COLOR}15`,
-    borderWidth: 1,
-    borderColor: `${COLOR}40`,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: TEXT,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  emptyBody: {
-    fontSize: 14,
-    color: SUBTLE,
-    lineHeight: 22,
-    textAlign: 'center',
-  },
-  errorWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#EF4444',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: `${COLOR}20`,
-    borderWidth: 1,
-    borderColor: `${COLOR}40`,
-  },
-  retryText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLOR,
-  },
 });
+
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: t.bg,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: t.borderFaint,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    headerIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: `${COLOR}30`,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: t.textPrimary,
+    },
+    headerSub: {
+      fontSize: 11,
+      color: COLOR,
+    },
+    tabBar: {
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+      flexGrow: 0,
+    },
+    tabBarContent: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      gap: 8,
+      flexDirection: 'row',
+    },
+    tab: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    tabActive: {
+      backgroundColor: `${COLOR}20`,
+      borderColor: `${COLOR}50`,
+    },
+    tabText: {
+      fontSize: 12,
+      color: t.textSecondary,
+      fontWeight: '600',
+    },
+    tabTextActive: {
+      color: COLOR,
+    },
+    list: {
+      padding: 16,
+      gap: 12,
+    },
+    comicSlot: {
+      marginBottom: 12,
+    },
+    card: {
+      borderRadius: 16,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      padding: 16,
+      marginBottom: 12,
+    },
+    urgentBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: t.radiusChip,
+      backgroundColor: `${t.danger}15`,
+      borderWidth: 1,
+      borderColor: `${t.danger}30`,
+      marginBottom: 8,
+    },
+    urgentText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: t.danger,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 10,
+    },
+    avatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: {
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    cardMeta: {
+      flex: 1,
+    },
+    cardAuthor: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: t.textSecondary,
+      letterSpacing: 0.5,
+    },
+    cardTime: {
+      fontSize: 11,
+      color: t.textMuted,
+      marginTop: 1,
+    },
+    unreadDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: COLOR,
+    },
+    cardTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: t.textPrimary,
+      lineHeight: 20,
+      marginBottom: 6,
+    },
+    cardBody: {
+      fontSize: 13,
+      color: t.textSecondary,
+      lineHeight: 20,
+      marginBottom: 12,
+    },
+    cardFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    typePill: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 4,
+      borderWidth: 1,
+    },
+    typePillText: {
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    emptyWrap: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 32,
+    },
+    emptyIcon: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: `${COLOR}15`,
+      borderWidth: 1,
+      borderColor: `${COLOR}40`,
+      borderStyle: 'dashed',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 20,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: t.textPrimary,
+      marginBottom: 10,
+      textAlign: 'center',
+    },
+    emptyBody: {
+      fontSize: 14,
+      color: t.textSecondary,
+      lineHeight: 22,
+      textAlign: 'center',
+    },
+    errorWrap: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 32,
+    },
+    errorText: {
+      fontSize: 14,
+      color: t.danger,
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    retryBtn: {
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: `${COLOR}20`,
+      borderWidth: 1,
+      borderColor: `${COLOR}40`,
+    },
+    retryText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: COLOR,
+    },
+  });
+}

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme, type ThemeTokens } from '../../theme';
 
 interface StatCardProps {
   label: string;
@@ -9,6 +10,8 @@ interface StatCardProps {
 
 // Design: stats grid card from MobileWorkforce
 export function WorkforceStatCard({ label, value, color }: StatCardProps) {
+  const { tokens } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   return (
     <View
       style={[
@@ -22,21 +25,23 @@ export function WorkforceStatCard({ label, value, color }: StatCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    padding: 14,
-    paddingVertical: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  value: {
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  label: {
-    fontSize: 11,
-    color: '#6B7280',
-  },
-});
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
+    card: {
+      flex: 1,
+      padding: 14,
+      paddingVertical: 16,
+      borderRadius: 14,
+      borderWidth: 1,
+    },
+    value: {
+      fontSize: 22,
+      fontWeight: '800',
+      marginBottom: 2,
+    },
+    label: {
+      fontSize: 11,
+      color: t.textSecondary,
+    },
+  });
+}

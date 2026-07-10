@@ -17,7 +17,7 @@
  * dev/production build, never in Expo Go — same constraint as the other Stream
  * calls in this app.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   StreamVideo,
@@ -26,8 +26,9 @@ import {
   useCallStateHooks,
   type Call,
 } from '@stream-io/video-react-native-sdk';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-const COLOR = '#F59E0B';
+// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
 const TEXT_DIM = '#9CA3AF';
 
 // Same call type as the web audio room and the other Stream calls in this app:
@@ -171,12 +172,15 @@ const CallShell: React.FC<{
   onToggleMute?: () => void;
   onEnd: () => void;
 }> = ({ state, message, muted, onToggleMute, onEnd }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('foundation', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const stateLabel = state === 'in-call' ? 'In call' : state === 'error' ? 'Call error' : 'Connecting';
-  const stateColor = state === 'error' ? '#F87171' : COLOR;
+  const stateColor = state === 'error' ? '#F87171' : accent;
 
   return (
     <View style={styles.shell}>
-      {state === 'connecting' ? <ActivityIndicator color={COLOR} style={styles.spinner} /> : null}
+      {state === 'connecting' ? <ActivityIndicator color={accent} style={styles.spinner} /> : null}
       <Text style={[styles.stateLabel, { color: stateColor }]}>{stateLabel}</Text>
       <Text style={styles.message}>{message}</Text>
       <View style={styles.controls}>
@@ -207,27 +211,29 @@ const CallShell: React.FC<{
   );
 };
 
-const styles = StyleSheet.create({
-  shell: { alignItems: 'center', gap: 14, paddingVertical: 8, width: '100%' },
-  spinner: { marginBottom: 2 },
-  stateLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
-  message: { fontSize: 14, color: '#D1D5DB', textAlign: 'center', minHeight: 20 },
-  controls: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 4 },
-  controlBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  controlBtnOn: { backgroundColor: `${COLOR}1A`, borderColor: `${COLOR}40` },
-  controlBtnOff: { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' },
-  controlIcon: { fontSize: 18 },
-  controlText: { fontSize: 14, fontWeight: '600' },
-  controlTextOn: { color: COLOR },
-  controlTextOff: { color: TEXT_DIM },
-  endBtn: { backgroundColor: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.3)' },
-  endText: { color: '#F87171', fontSize: 14, fontWeight: '700' },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    shell: { alignItems: 'center', gap: 14, paddingVertical: 8, width: '100%' },
+    spinner: { marginBottom: 2 },
+    stateLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
+    message: { fontSize: 14, color: '#D1D5DB', textAlign: 'center', minHeight: 20 },
+    controls: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 4 },
+    controlBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 18,
+      paddingVertical: 11,
+      borderRadius: t.radius,
+      borderWidth: 1,
+    },
+    controlBtnOn: { backgroundColor: `${accent}1A`, borderColor: `${accent}40` },
+    controlBtnOff: { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' },
+    controlIcon: { fontSize: 18 },
+    controlText: { fontSize: 14, fontWeight: '600' },
+    controlTextOn: { color: accent },
+    controlTextOff: { color: TEXT_DIM },
+    endBtn: { backgroundColor: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.3)' },
+    endText: { color: '#F87171', fontSize: 14, fontWeight: '700' },
+  });
+}

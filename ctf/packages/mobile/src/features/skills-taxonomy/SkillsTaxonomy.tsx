@@ -9,7 +9,7 @@
 // Real data only — bound to GET /api/skills-taxonomy/hierarchy.
 // Omitted (no API backing): per-sector accent color (mockup hardcodes; no color field in API).
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   ScrollView,
@@ -20,40 +20,52 @@ import {
   View,
 } from 'react-native';
 import { useAuth } from '../../auth/auth-context';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { SkillsTaxonomyApi, type TaxonomyHierarchySector, type TaxonomyHierarchyJobTitle, type TaxonomySummary } from './SkillsTaxonomyApi';
 
 // ---------------------------------------------------------------------------
-// Design tokens (from mockup)
-// ---------------------------------------------------------------------------
-
-const BRAND = '#818CF8';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-const STATUS_BG = '#090B0F';
-
-// ---------------------------------------------------------------------------
 // Loading state — matches MobileSkillsTaxonomyLoading.tsx
+// Deliberately raw: the theme has no effect on loading screens (token spec §11),
+// so this keeps the shipped hex instead of theme tokens.
 // ---------------------------------------------------------------------------
+
+const loadingStyles = StyleSheet.create({
+  loadingRoot: {
+    flex: 1,
+    backgroundColor: '#0F1117',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingInner: { alignItems: 'center', paddingHorizontal: 32 },
+  loadingLine: {
+    fontSize: 10,
+    letterSpacing: 2.56,
+    color: 'rgba(255,255,255,0.22)',
+    textTransform: 'uppercase',
+    fontWeight: '500',
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+});
 
 function LoadingScreen() {
   return (
-    <View style={styles.loadingRoot}>
-      <View style={styles.loadingInner}>
-        <Text style={styles.loadingLine}>EXIT THEIR ECONOMY</Text>
-        <Text style={styles.loadingLine}>EXIT THE PSYOP</Text>
+    <View style={loadingStyles.loadingRoot}>
+      <View style={loadingStyles.loadingInner}>
+        <Text style={loadingStyles.loadingLine}>EXIT THEIR ECONOMY</Text>
+        <Text style={loadingStyles.loadingLine}>EXIT THE PSYOP</Text>
       </View>
     </View>
   );
 }
-
 // ---------------------------------------------------------------------------
 // Empty state — matches MobileSkillsTaxonomyEmpty.tsx
 // ---------------------------------------------------------------------------
 
 function EmptyScreen({ isAdmin }: { isAdmin: boolean }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-taxonomy', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View style={styles.root}>
       <View style={styles.statusBar}>
@@ -99,6 +111,9 @@ function EmptyScreen({ isAdmin }: { isAdmin: boolean }) {
 // (the best-effort fetch is still loading or failed) the numeric stat strip is hidden and the hero
 // copy falls back to neutral phrasing, so the splash never shows misleading zeros.
 function PublicScreen({ summary }: { summary: TaxonomySummary | null }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-taxonomy', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View style={styles.root}>
       <View style={styles.statusBar}>
@@ -153,6 +168,9 @@ function PublicScreen({ summary }: { summary: TaxonomySummary | null }) {
 // ---------------------------------------------------------------------------
 
 function SkillPill({ name }: { name: string }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-taxonomy', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View style={styles.skillPill}>
       <Text style={styles.skillPillText}>{name}</Text>
@@ -173,6 +191,9 @@ function JobRow({
   open: boolean;
   onToggle: () => void;
 }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-taxonomy', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View>
       <TouchableOpacity
@@ -215,6 +236,9 @@ function PopulatedScreen({
   sectors: TaxonomyHierarchySector[];
   totalSkills: number;
 }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-taxonomy', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [selectedSectorId, setSelectedSectorId] = useState(sectors[0]?.id ?? '');
   const [openJobId, setOpenJobId] = useState<string | null>(
     sectors[0]?.jobTitles[0]?.id ?? null,
@@ -252,7 +276,7 @@ function PopulatedScreen({
         <Text style={styles.sectorPillCount}>({item.jobTitles.length})</Text>
       </TouchableOpacity>
     ),
-    [selectedSectorId],
+    [selectedSectorId, styles],
   );
 
   return (
@@ -282,7 +306,7 @@ function PopulatedScreen({
             value={search}
             onChangeText={setSearch}
             placeholder="Search skills…"
-            placeholderTextColor="#4B5563"
+            placeholderTextColor={tokens.textMuted}
             style={styles.searchInput}
             accessibilityLabel="Search skills"
           />
@@ -357,6 +381,9 @@ function PopulatedScreen({
 // ---------------------------------------------------------------------------
 
 export function SkillsTaxonomy() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('skills-taxonomy', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const { user, isAuthenticated } = useAuth();
   const isAdmin = user?.isAdmin ?? false;
 
@@ -432,44 +459,27 @@ export default SkillsTaxonomy;
 // Styles
 // ---------------------------------------------------------------------------
 
-const styles = StyleSheet.create({
-  // Loading
-  loadingRoot: {
-    flex: 1,
-    backgroundColor: BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingInner: { alignItems: 'center', paddingHorizontal: 32 },
-  loadingLine: {
-    fontSize: 10,
-    letterSpacing: 2.56,
-    color: 'rgba(255,255,255,0.22)',
-    textTransform: 'uppercase',
-    fontWeight: '500',
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
   // Shared shell
-  root: { flex: 1, backgroundColor: BG },
+  root: { flex: 1, backgroundColor: t.bg },
   statusBar: {
     height: 44,
-    backgroundColor: STATUS_BG,
+    backgroundColor: t.surfaceAlt,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
-  statusTime: { fontSize: 13, fontWeight: '700', color: TEXT },
-  statusDots: { fontSize: 12, color: SUBTLE },
+  statusTime: { fontSize: 13, fontWeight: '700', color: t.textPrimary },
+  statusDots: { fontSize: 12, color: t.textSecondary },
 
   // Header
   header: {
     padding: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: t.border,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -479,7 +489,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: t.border,
   },
   headerRowSpaced: {
     flexDirection: 'row',
@@ -493,22 +503,22 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 9,
-    backgroundColor: `${BRAND}20`,
+    backgroundColor: `${accent}20`,
     borderWidth: 1,
-    borderColor: `${BRAND}35`,
+    borderColor: `${accent}35`,
     alignItems: 'center',
     justifyContent: 'center',
   },
   bookIcon: { fontSize: 16 },
-  bookIconSmall: { fontSize: 16, color: BRAND },
+  bookIconSmall: { fontSize: 16, color: accent },
   bookIconNav: { fontSize: 18 },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
-  headerSubtitle: { fontSize: 11, color: SUBTLE },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
+  headerSubtitle: { fontSize: 11, color: t.textSecondary },
 
   // Public header
   publicHeader: {
-    backgroundColor: `${BRAND}10`,
-    borderBottomColor: `${BRAND}25`,
+    backgroundColor: `${accent}10`,
+    borderBottomColor: `${accent}25`,
     justifyContent: 'space-between',
     flexDirection: 'row',
   },
@@ -516,17 +526,17 @@ const styles = StyleSheet.create({
   signInBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: t.radiusChip,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
   },
-  signInBtnText: { color: TEXT, fontSize: 11, fontWeight: '600' },
+  signInBtnText: { color: t.textPrimary, fontSize: 11, fontWeight: '600' },
   joinBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 6,
-    backgroundColor: BRAND,
+    borderRadius: t.radiusChip,
+    backgroundColor: accent,
   },
   joinBtnText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 
@@ -534,22 +544,22 @@ const styles = StyleSheet.create({
   statsStrip: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    backgroundColor: SURFACE,
+    borderBottomColor: t.border,
+    backgroundColor: t.surface,
   },
   statCell: { flex: 1, paddingVertical: 10, alignItems: 'center' },
   statCellBorder: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
   },
-  statValue: { fontSize: 16, fontWeight: '900', color: BRAND },
-  statLabel: { fontSize: 10, color: SUBTLE },
+  statValue: { fontSize: 16, fontWeight: '900', color: accent },
+  statLabel: { fontSize: 10, color: t.textSecondary },
 
   // Public hero
   publicHero: { padding: 16 },
-  publicHeroTitle: { fontSize: 20, fontWeight: '800', color: TEXT, marginBottom: 8 },
-  publicHeroBody: { fontSize: 13, color: SUBTLE, lineHeight: 20.8 },
+  publicHeroTitle: { fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 8 },
+  publicHeroBody: { fontSize: 13, color: t.textSecondary, lineHeight: 20.8 },
 
   // Search
   searchWrap: {},
@@ -559,7 +569,7 @@ const styles = StyleSheet.create({
     paddingLeft: 30,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
     borderRadius: 10,
     fontSize: 13,
     color: '#9CA3AF',
@@ -569,7 +579,7 @@ const styles = StyleSheet.create({
   pillsBar: {
     flexGrow: 0,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: t.border,
   },
   pillsBarContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 8, flexDirection: 'row' },
   sectorPill: {
@@ -581,34 +591,34 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
   },
   sectorPillActive: {
-    backgroundColor: `${BRAND}20`,
-    borderColor: `${BRAND}50`,
+    backgroundColor: `${accent}20`,
+    borderColor: `${accent}50`,
   },
   sectorDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    // Per-sector accent color not in API data; using BRAND as neutral fallback
-    backgroundColor: BRAND,
+    // Per-sector accent color not in API data; using the plugin accent as neutral fallback
+    backgroundColor: accent,
   },
-  sectorPillText: { color: SUBTLE, fontSize: 12 },
-  sectorPillTextActive: { color: BRAND, fontWeight: '700' },
-  sectorPillCount: { fontSize: 10, color: SUBTLE, opacity: 0.7 },
+  sectorPillText: { color: t.textSecondary, fontSize: 12 },
+  sectorPillTextActive: { color: accent, fontWeight: '700' },
+  sectorPillCount: { fontSize: 10, color: t.textSecondary, opacity: 0.7 },
 
   // Accordion
   accordionScroll: { flex: 1 },
   accordionContent: { padding: 14, paddingBottom: 80 },
-  sectorHeading: { fontSize: 13, fontWeight: '600', color: TEXT, marginBottom: 12 },
+  sectorHeading: { fontSize: 13, fontWeight: '600', color: t.textPrimary, marginBottom: 12 },
   accordionCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
     overflow: 'hidden',
   },
-  noResults: { color: SUBTLE, padding: 16, textAlign: 'center' },
+  noResults: { color: t.textSecondary, padding: 16, textAlign: 'center' },
 
   // Job row
   jobRowBtn: {
@@ -618,18 +628,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: t.border,
     backgroundColor: 'transparent',
   },
-  jobRowBtnOpen: { backgroundColor: `${BRAND}10` },
-  jobRowLabel: { fontSize: 14, fontWeight: '600', color: TEXT },
-  jobRowLabelOpen: { color: BRAND },
+  jobRowBtnOpen: { backgroundColor: `${accent}10` },
+  jobRowLabel: { fontSize: 14, fontWeight: '600', color: t.textPrimary },
+  jobRowLabelOpen: { color: accent },
   jobRowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  jobRowCount: { fontSize: 11, color: SUBTLE },
-  jobRowCountOpen: { color: BRAND },
+  jobRowCount: { fontSize: 11, color: t.textSecondary },
+  jobRowCountOpen: { color: accent },
   chevron: {
     fontSize: 18,
-    color: SUBTLE,
+    color: t.textSecondary,
     transform: [{ rotate: '90deg' }],
   },
   chevronOpen: {
@@ -641,25 +651,25 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     backgroundColor: 'rgba(255,255,255,0.01)',
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: t.border,
   },
   skillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   skillPill: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
-    backgroundColor: `${BRAND}12`,
+    backgroundColor: `${accent}12`,
     borderWidth: 1,
-    borderColor: `${BRAND}25`,
+    borderColor: `${accent}25`,
   },
-  skillPillText: { fontSize: 12, color: BRAND },
+  skillPillText: { fontSize: 12, color: accent },
 
   // Bottom nav
   bottomNav: {
     height: 72,
-    backgroundColor: STATUS_BG,
+    backgroundColor: t.surfaceAlt,
     borderTopWidth: 1,
-    borderTopColor: BORDER,
+    borderTopColor: t.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -669,7 +679,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: `${BRAND}20`,
+    backgroundColor: `${accent}20`,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -680,9 +690,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navIconGlyph: { fontSize: 18, color: SUBTLE },
-  navLabelActive: { fontSize: 10, color: BRAND, fontWeight: '600' },
-  navLabelInactive: { fontSize: 10, color: '#4B5563' },
+  navIconGlyph: { fontSize: 18, color: t.textSecondary },
+  navLabelActive: { fontSize: 10, color: accent, fontWeight: '600' },
+  navLabelInactive: { fontSize: 10, color: t.textMuted },
 
   // Empty state
   emptyContainer: {
@@ -697,18 +707,18 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 22,
-    backgroundColor: `${BRAND}10`,
+    backgroundColor: `${accent}10`,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: `${BRAND}30`,
+    borderColor: `${accent}30`,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyIcon: { fontSize: 34, opacity: 0.4 },
-  emptyHeadline: { fontSize: 22, fontWeight: '800', color: TEXT, textAlign: 'center' },
+  emptyHeadline: { fontSize: 22, fontWeight: '800', color: t.textPrimary, textAlign: 'center' },
   emptyBody: {
     fontSize: 14,
-    color: SUBTLE,
+    color: t.textSecondary,
     lineHeight: 22.4,
     textAlign: 'center',
     maxWidth: 320,
@@ -722,17 +732,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: t.border,
   },
-  emptyWaitText: { fontSize: 12, color: SUBTLE },
+  emptyWaitText: { fontSize: 12, color: t.textSecondary },
 
   // Error
   errorRoot: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: BG,
+    backgroundColor: t.bg,
     padding: 24,
   },
-  errorText: { color: '#EF4444', fontSize: 15, textAlign: 'center' },
-});
+  errorText: { color: t.danger, fontSize: 15, textAlign: 'center' },
+  });
+}

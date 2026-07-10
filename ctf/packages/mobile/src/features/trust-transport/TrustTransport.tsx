@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { useAuth } from './auth-context';
 import { TrustTransportLoadingState } from './TrustTransportLoadingState';
 import { TrustTransportOffersSection } from './TrustTransportOffersSection';
@@ -23,12 +24,7 @@ import { ttSettlementLabel, type TrustTransportMode, type TrustTransportRequest 
 import { CurrencySelect } from '../currency';
 import type { Currency } from '../currency';
 
-const COLOR = '#38BDF8';
-const BG = '#0F1117';
-const SURFACE = '#090B0F';
-const BORDER = 'rgba(255,255,255,0.06)';
-const TEXT = '#F9FAFB';
-const MUTED = '#6B7280';
+// Left raw by design: SUBTLE (#9CA3AF) has no exact-value mobile token equivalent.
 const SUBTLE = '#9CA3AF';
 
 type Tab = 'ride' | 'package' | 'track' | 'help' | 'earnings';
@@ -37,6 +33,9 @@ type Tab = 'ride' | 'package' | 'track' | 'help' | 'earnings';
 // Header
 // ---------------------------------------------------------------------------
 function Header({ isLive }: { isLive: boolean }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
@@ -69,6 +68,9 @@ const NAV_ITEMS: { label: string; key: Tab; emoji: string }[] = [
 ];
 
 function BottomNav({ active, onPress }: { active: Tab; onPress: (_t: Tab) => void }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View style={styles.nav}>
       {NAV_ITEMS.map(({ label, key, emoji }) => (
@@ -98,6 +100,9 @@ interface BookTabProps {
 }
 
 function BookTab({ mode, onSubmitted }: BookTabProps) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   // How the requester will settle the ride (issue #420): default Free; amount only for priced types.
@@ -181,7 +186,7 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
             value={from}
             onChangeText={setFrom}
             placeholder="Pickup location (private)"
-            placeholderTextColor={MUTED}
+            placeholderTextColor={tokens.textSecondary}
             style={styles.input}
             accessibilityLabel="Pickup location"
           />
@@ -192,7 +197,7 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
             value={to}
             onChangeText={setTo}
             placeholder="Where to?"
-            placeholderTextColor={MUTED}
+            placeholderTextColor={tokens.textSecondary}
             style={styles.input}
             accessibilityLabel="Destination"
           />
@@ -213,7 +218,7 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
           value={priceAmount}
           onChangeText={(t) => setPriceAmount(t.replace(/[^0-9.]/g, ''))}
           placeholder="Amount (e.g. 20)"
-          placeholderTextColor={MUTED}
+          placeholderTextColor={tokens.textSecondary}
           keyboardType="decimal-pad"
           style={styles.input}
           accessibilityLabel="Amount"
@@ -238,9 +243,11 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
 // ---------------------------------------------------------------------------
 // Track tab — real requests from API
 // ---------------------------------------------------------------------------
+// Trip status palette — deliberately raw (green/blue/red set), per the design-cohesion
+// pass policy that status palettes are not tokenized.
 function statusColor(status: string): string {
   if (status === 'completed') return '#22C55E';
-  if (status === 'in_progress' || status === 'accepted') return COLOR;
+  if (status === 'in_progress' || status === 'accepted') return '#38BDF8';
   if (status === 'cancelled' || status === 'disputed' || status === 'emergency_frozen') return '#EF4444';
   return SUBTLE;
 }
@@ -254,10 +261,13 @@ function TrackTab({
   loading: boolean;
   onRefresh: () => void;
 }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLOR} />
+        <ActivityIndicator size="large" color={accent} />
       </View>
     );
   }
@@ -310,6 +320,9 @@ function TrackTab({
 // Empty / unauthenticated / loading states
 // ---------------------------------------------------------------------------
 function PublicState({ onSignIn }: { onSignIn: () => void }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <ScrollView contentContainerStyle={styles.publicContent}>
       <View style={styles.publicHeadRow}>
@@ -355,6 +368,9 @@ function PublicState({ onSignIn }: { onSignIn: () => void }) {
 // ---------------------------------------------------------------------------
 export const TrustTransport = () => {
   const { isAuthenticated, isLoading, signIn } = useAuth();
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [tab, setTab] = useState<Tab>('ride');
   const [requests, setRequests] = useState<TrustTransportRequest[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
@@ -411,13 +427,14 @@ export const TrustTransport = () => {
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: BG },
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+  root: { flex: 1, backgroundColor: t.bg },
   header: {
     height: 60,
-    backgroundColor: SURFACE,
+    backgroundColor: t.surfaceAlt,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: t.borderFaint,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -428,27 +445,27 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: `${COLOR}30`,
+    backgroundColor: `${accent}30`,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerIconText: { fontSize: 18 },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: TEXT },
+  headerTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary },
   liveBadge: {
-    backgroundColor: '#22C55E20',
+    backgroundColor: `${t.success}20`,
     borderWidth: 1,
-    borderColor: '#22C55E35',
+    borderColor: `${t.success}35`,
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  liveBadgeText: { fontSize: 11, color: '#22C55E', fontWeight: '700' },
+  liveBadgeText: { fontSize: 11, color: t.success, fontWeight: '700' },
   scroll: { flex: 1 },
   nav: {
     height: 72,
-    backgroundColor: SURFACE,
+    backgroundColor: t.surfaceAlt,
     borderTopWidth: 1,
-    borderTopColor: BORDER,
+    borderTopColor: t.borderFaint,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -462,23 +479,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navIconWrapActive: { backgroundColor: `${COLOR}20` },
+  navIconWrapActive: { backgroundColor: `${accent}20` },
   navEmoji: { fontSize: 18 },
-  navLabel: { fontSize: 10, color: '#4B5563', fontWeight: '400' },
-  navLabelActive: { color: COLOR, fontWeight: '600' },
+  navLabel: { fontSize: 10, color: t.textMuted, fontWeight: '400' },
+  navLabelActive: { color: accent, fontWeight: '600' },
   bookSection: { padding: 16 },
   sectionBox: {
     padding: 16,
     borderRadius: 14,
-    backgroundColor: `${COLOR}08`,
+    backgroundColor: `${accent}08`,
     borderWidth: 1,
-    borderColor: `${COLOR}18`,
+    borderColor: `${accent}18`,
     marginBottom: 16,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: TEXT, marginBottom: 4 },
-  sectionDesc: { fontSize: 12, color: MUTED },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary, marginBottom: 4 },
+  sectionDesc: { fontSize: 12, color: t.textSecondary },
   inputGroup: { marginBottom: 16, gap: 10 },
   inputWrap: { position: 'relative', flexDirection: 'row', alignItems: 'center' },
+  // Pickup/destination location-dot pair (green pickup / accent destination) — the green is a
+  // map-marker convention, not a success role, so it stays raw.
   dotGreen: {
     position: 'absolute',
     left: 14,
@@ -494,7 +513,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLOR,
+    backgroundColor: accent,
     zIndex: 1,
   },
   input: {
@@ -502,7 +521,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
+    borderRadius: t.radius,
     fontSize: 14,
     color: '#E8EAF0',
     paddingVertical: 14,
@@ -510,15 +529,15 @@ const styles = StyleSheet.create({
     paddingRight: 14,
     marginBottom: 0,
   },
-  errorText: { fontSize: 13, color: '#EF4444', marginBottom: 12 },
+  errorText: { fontSize: 13, color: t.danger, marginBottom: 12 },
   primaryBtn: {
     padding: 16,
     borderRadius: 14,
-    backgroundColor: COLOR,
+    backgroundColor: accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryBtnDisabled: { backgroundColor: `${COLOR}40` },
+  primaryBtnDisabled: { backgroundColor: `${accent}40` },
   primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
   secondaryBtn: {
     marginTop: 12,
@@ -534,34 +553,34 @@ const styles = StyleSheet.create({
     margin: 16,
     padding: 20,
     borderRadius: 14,
-    backgroundColor: '#22C55E10',
+    backgroundColor: `${t.success}10`,
     borderWidth: 1,
-    borderColor: '#22C55E30',
+    borderColor: `${t.success}30`,
   },
-  bookedTitle: { fontSize: 16, fontWeight: '700', color: '#22C55E', marginBottom: 6 },
+  bookedTitle: { fontSize: 16, fontWeight: '700', color: t.success, marginBottom: 6 },
   bookedDesc: { fontSize: 13, color: SUBTLE },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, minHeight: 300 },
   emptyEmoji: { fontSize: 40, marginBottom: 12 },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: TEXT, marginBottom: 6 },
-  emptyDesc: { fontSize: 13, color: MUTED, textAlign: 'center' },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: t.textPrimary, marginBottom: 6 },
+  emptyDesc: { fontSize: 13, color: t.textSecondary, textAlign: 'center' },
   trackList: { padding: 16, gap: 12 },
   refreshBtn: {
     alignSelf: 'flex-end',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: `${COLOR}15`,
+    backgroundColor: `${accent}15`,
     borderWidth: 1,
-    borderColor: `${COLOR}30`,
+    borderColor: `${accent}30`,
     marginBottom: 12,
   },
-  refreshBtnText: { fontSize: 12, color: COLOR, fontWeight: '600' },
+  refreshBtnText: { fontSize: 12, color: accent, fontWeight: '600' },
   requestCard: {
     padding: 14,
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
-    borderColor: `${COLOR}20`,
+    borderColor: `${accent}20`,
     marginBottom: 10,
   },
   requestCardRow: {
@@ -570,38 +589,38 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 6,
   },
-  requestMode: { fontSize: 11, fontWeight: '700', color: COLOR, letterSpacing: 1 },
+  requestMode: { fontSize: 11, fontWeight: '700', color: accent, letterSpacing: 1 },
   statusBadge: {
     borderWidth: 1,
-    borderRadius: 6,
+    borderRadius: t.radiusChip,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   statusBadgeText: { fontSize: 11, fontWeight: '600' },
   requestLocation: { fontSize: 13, color: SUBTLE, marginBottom: 2 },
-  requestSettle: { fontSize: 12, fontWeight: '700', color: '#22C55E', marginTop: 2, marginBottom: 2 },
-  settleLabel: { fontSize: 13, color: MUTED, marginTop: 10, marginBottom: 6 },
+  requestSettle: { fontSize: 12, fontWeight: '700', color: t.success, marginTop: 2, marginBottom: 2 },
+  settleLabel: { fontSize: 13, color: t.textSecondary, marginTop: 10, marginBottom: 6 },
   publicContent: { padding: 20 },
   publicHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  publicTitle: { fontSize: 20, fontWeight: '800', color: TEXT },
+  publicTitle: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
   publicDesc: { fontSize: 14, color: SUBTLE, lineHeight: 21, marginBottom: 16 },
   serviceRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   serviceCard: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: t.radius,
     borderWidth: 1,
-    borderColor: `${COLOR}40`,
+    borderColor: `${accent}40`,
     padding: 14,
     alignItems: 'center',
     gap: 6,
-    backgroundColor: `${COLOR}08`,
+    backgroundColor: `${accent}08`,
   },
   serviceEmoji: { fontSize: 20 },
-  serviceLabel: { fontSize: 12, fontWeight: '600', color: TEXT },
+  serviceLabel: { fontSize: 12, fontWeight: '600', color: t.textPrimary },
   joinBtn: {
     padding: 14,
-    borderRadius: 12,
-    backgroundColor: COLOR,
+    borderRadius: t.radius,
+    backgroundColor: accent,
     alignItems: 'center',
     marginBottom: 20,
   },
@@ -619,18 +638,19 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: `${COLOR}50`,
-    backgroundColor: `${COLOR}10`,
+    borderColor: `${accent}50`,
+    backgroundColor: `${accent}10`,
     alignItems: 'center',
     justifyContent: 'center',
   },
   lockEmoji: { fontSize: 20 },
-  lockTitle: { fontSize: 15, fontWeight: '700', color: TEXT, textAlign: 'center' },
+  lockTitle: { fontSize: 15, fontWeight: '700', color: t.textPrimary, textAlign: 'center' },
   signInBtn: {
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 9,
-    backgroundColor: COLOR,
+    backgroundColor: accent,
   },
   signInBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-});
+  });
+}

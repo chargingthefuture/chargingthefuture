@@ -1,11 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import type { Provider } from './api';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-const TEXT = '#F9FAFB';
+// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
 const SUBTLE = '#9CA3AF';
-const COLOR = '#F59E0B';
-const BORDER_COLOR = `${COLOR}15`;
 
 function initials(name: string): string {
   return name
@@ -28,6 +27,9 @@ interface FoundationProviderCardProps {
  * Fields with no backend backing (rating, availability, price, job count) are omitted.
  */
 export function FoundationProviderCard({ provider, onPress, onFilterSkill }: FoundationProviderCardProps) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('foundation', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const initText = initials(provider.displayName);
   const offeredSkills = provider.offeredSkills ?? [];
   return (
@@ -75,79 +77,81 @@ export function FoundationProviderCard({ provider, onPress, onFilterSkill }: Fou
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    marginBottom: 10,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: `${COLOR}20`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  avatarText: {
-    color: COLOR,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  content: {
-    flex: 1,
-    minWidth: 0,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 2,
-  },
-  name: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: TEXT,
-    flexShrink: 1,
-  },
-  checkIcon: {
-    color: COLOR,
-    fontSize: 12,
-    flexShrink: 0,
-  },
-  headline: {
-    fontSize: 12,
-    color: SUBTLE,
-  },
-  skillRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 6,
-  },
-  skillChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: `${COLOR}12`,
-    borderWidth: 1,
-    borderColor: `${COLOR}30`,
-  },
-  skillChipText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLOR,
-  },
-  chevron: {
-    color: '#4B5563',
-    fontSize: 24,
-    flexShrink: 0,
-  },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 14,
+      borderRadius: 14,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      borderColor: `${accent}15`,
+      marginBottom: 10,
+    },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: `${accent}20`,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    avatarText: {
+      color: accent,
+      fontSize: 18,
+      fontWeight: '800',
+    },
+    content: {
+      flex: 1,
+      minWidth: 0,
+    },
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 2,
+    },
+    name: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: t.textPrimary,
+      flexShrink: 1,
+    },
+    checkIcon: {
+      color: accent,
+      fontSize: 12,
+      flexShrink: 0,
+    },
+    headline: {
+      fontSize: 12,
+      color: SUBTLE,
+    },
+    skillRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 6,
+    },
+    skillChip: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: t.radiusChip,
+      backgroundColor: `${accent}12`,
+      borderWidth: 1,
+      borderColor: `${accent}30`,
+    },
+    skillChipText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: accent,
+    },
+    chevron: {
+      color: t.textMuted,
+      fontSize: 24,
+      flexShrink: 0,
+    },
+  });
+}

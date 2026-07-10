@@ -1,19 +1,20 @@
 // Mirrors ctf/packages/web/components/trust-transport/tt-earnings-tab.tsx: per-currency balance
 // cards, a payout request form scoped to the selected currency, and payout history.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { getEarningsBalances, listPayouts, requestPayout } from './api';
 import type { TrustTransportEarningsBalance, TrustTransportPayoutRequest } from './types';
 
-const COLOR = '#38BDF8';
-const TEXT = '#F9FAFB';
-const MUTED = '#6B7280';
+// Left raw by design: SUBTLE (#9CA3AF) has no exact-value mobile token equivalent.
 const SUBTLE = '#9CA3AF';
 
 function payoutStatusLabel(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// Payout status palette — deliberately raw (green/red/amber set), per the design-cohesion
+// pass policy that status palettes are not tokenized. This is money/payout UI.
 function payoutStatusColor(s: string): string {
   if (s === 'paid' || s === 'approved') return '#22C55E';
   if (s === 'rejected') return '#EF4444';
@@ -21,6 +22,9 @@ function payoutStatusColor(s: string): string {
 }
 
 export function TrustTransportEarningsTab() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<TrustTransportEarningsBalance[]>([]);
@@ -78,7 +82,7 @@ export function TrustTransportEarningsTab() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLOR} />
+        <ActivityIndicator size="large" color={accent} />
       </View>
     );
   }
@@ -137,7 +141,7 @@ export function TrustTransportEarningsTab() {
                 value={amount}
                 onChangeText={(t) => setAmount(t.replace(/[^0-9.]/g, ''))}
                 placeholder={`Amount (max ${selectedBalance})`}
-                placeholderTextColor={MUTED}
+                placeholderTextColor={tokens.textSecondary}
                 keyboardType="decimal-pad"
                 style={styles.amountInput}
                 accessibilityLabel="Payout amount"
@@ -149,7 +153,7 @@ export function TrustTransportEarningsTab() {
                 disabled={submitting}
                 accessibilityRole="button"
               >
-                {submitting ? <ActivityIndicator size="small" color={COLOR} /> : <Text style={styles.requestBtnText}>Request payout</Text>}
+                {submitting ? <ActivityIndicator size="small" color={accent} /> : <Text style={styles.requestBtnText}>Request payout</Text>}
               </TouchableOpacity>
             </>
           )}
@@ -173,13 +177,14 @@ export function TrustTransportEarningsTab() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, minHeight: 300 },
   section: { padding: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: TEXT, marginBottom: 6 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 6 },
   sectionDesc: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginBottom: 20 },
   subheading: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: SUBTLE, marginBottom: 10, marginTop: 8 },
-  errorText: { fontSize: 12, color: '#EF4444', marginBottom: 8 },
+  errorText: { fontSize: 12, color: t.danger, marginBottom: 8 },
   emptyBox: {
     padding: 18,
     borderRadius: 14,
@@ -188,7 +193,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.06)',
     marginBottom: 20,
   },
-  emptyText: { fontSize: 13, color: MUTED },
+  emptyText: { fontSize: 13, color: t.textSecondary },
   balanceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
   balanceCard: {
     minWidth: 120,
@@ -198,10 +203,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
-  balanceCardActive: { backgroundColor: `${COLOR}14`, borderColor: `${COLOR}40` },
+  balanceCardActive: { backgroundColor: `${accent}14`, borderColor: `${accent}40` },
   balanceCurrency: { fontSize: 12, color: SUBTLE },
-  balanceAmount: { marginTop: 6, fontSize: 22, fontWeight: '800', color: TEXT },
-  requestedText: { fontSize: 13, color: COLOR, fontWeight: '600', marginBottom: 10 },
+  balanceAmount: { marginTop: 6, fontSize: 22, fontWeight: '800', color: t.textPrimary },
+  requestedText: { fontSize: 13, color: accent, fontWeight: '600', marginBottom: 10 },
   currencyPickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
   currencyChip: {
     paddingHorizontal: 12,
@@ -211,9 +216,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
   },
-  currencyChipActive: { backgroundColor: `${COLOR}20`, borderColor: `${COLOR}40` },
+  currencyChipActive: { backgroundColor: `${accent}20`, borderColor: `${accent}40` },
   currencyChipText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
-  currencyChipTextActive: { color: COLOR },
+  currencyChipTextActive: { color: accent },
   amountInput: {
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
@@ -227,14 +232,14 @@ const styles = StyleSheet.create({
   requestBtn: {
     padding: 12,
     borderRadius: 9,
-    backgroundColor: `${COLOR}1F`,
+    backgroundColor: `${accent}1F`,
     borderWidth: 1,
-    borderColor: `${COLOR}40`,
+    borderColor: `${accent}40`,
     alignItems: 'center',
     marginBottom: 20,
   },
   requestBtnDisabled: { opacity: 0.6 },
-  requestBtnText: { fontSize: 14, fontWeight: '600', color: COLOR },
+  requestBtnText: { fontSize: 14, fontWeight: '600', color: accent },
   payoutRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -245,6 +250,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.06)',
     marginBottom: 8,
   },
-  payoutAmount: { fontSize: 14, fontWeight: '700', color: TEXT },
+  payoutAmount: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
   payoutStatus: { marginLeft: 'auto', fontSize: 12, fontWeight: '600' },
-});
+  });
+}

@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { listOffersForRequest, acceptOffer } from './api';
 import type { TrustTransportOffer } from './types';
 
-const COLOR = '#38BDF8';
-const TEXT = '#F9FAFB';
-const MUTED = '#6B7280';
+// Left raw by design: SUBTLE (#9CA3AF) has no exact-value mobile token equivalent.
 const SUBTLE = '#9CA3AF';
 
 // Offers on one of the caller's own open requests, with Accept. Accepting opens a trip and (per
 // discovery model B) is the point at which the chosen provider gains the pickup/drop-off via the trip.
 export function TrustTransportOffersSection({ requestId, onAccepted }: { requestId: string; onAccepted: () => void }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [offers, setOffers] = useState<TrustTransportOffer[]>([]);
@@ -57,7 +59,7 @@ export function TrustTransportOffersSection({ requestId, onAccepted }: { request
   return (
     <View style={styles.section}>
       {loading ? (
-        <ActivityIndicator size="small" color={COLOR} />
+        <ActivityIndicator size="small" color={accent} />
       ) : error ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : pending.length === 0 ? (
@@ -75,7 +77,7 @@ export function TrustTransportOffersSection({ requestId, onAccepted }: { request
               disabled={acceptingId !== null}
               accessibilityRole="button"
             >
-              {acceptingId === offer.id ? <ActivityIndicator size="small" color={COLOR} /> : <Text style={styles.acceptBtnText}>✓ Accept offer</Text>}
+              {acceptingId === offer.id ? <ActivityIndicator size="small" color={accent} /> : <Text style={styles.acceptBtnText}>✓ Accept offer</Text>}
             </TouchableOpacity>
           </View>
         ))
@@ -84,7 +86,8 @@ export function TrustTransportOffersSection({ requestId, onAccepted }: { request
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
   viewBtn: {
     marginTop: 10,
     padding: 8,
@@ -96,8 +99,8 @@ const styles = StyleSheet.create({
   },
   viewBtnText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
   section: { marginTop: 10, gap: 8 },
-  errorText: { fontSize: 12, color: '#EF4444' },
-  emptyText: { fontSize: 12, color: MUTED },
+  errorText: { fontSize: 12, color: t.danger },
+  emptyText: { fontSize: 12, color: t.textSecondary },
   offerCard: {
     padding: 10,
     borderRadius: 10,
@@ -105,17 +108,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
-  offerText: { fontSize: 13, color: TEXT, fontWeight: '600' },
+  offerText: { fontSize: 13, color: t.textPrimary, fontWeight: '600' },
   offerNote: { fontSize: 12, color: SUBTLE, marginTop: 4, lineHeight: 17 },
   acceptBtn: {
     marginTop: 8,
     padding: 8,
     borderRadius: 8,
-    backgroundColor: `${COLOR}1F`,
+    backgroundColor: `${accent}1F`,
     borderWidth: 1,
-    borderColor: `${COLOR}40`,
+    borderColor: `${accent}40`,
     alignItems: 'center',
   },
   acceptBtnDisabled: { opacity: 0.5 },
-  acceptBtnText: { fontSize: 12, fontWeight: '600', color: COLOR },
-});
+  acceptBtnText: { fontSize: 12, fontWeight: '600', color: accent },
+  });
+}

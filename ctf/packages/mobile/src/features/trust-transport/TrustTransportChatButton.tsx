@@ -1,13 +1,15 @@
 // "Chat" button + full-screen modal for a trip thread, shown to either party once a trip exists.
 // Mirrors the ChymeTipButton/Modal pattern (../chyme/ChymeTipModal.tsx) — this app has no
 // react-navigation, so a contextual per-item feature is a button that opens an RN Modal directly.
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { TrustTransportStreamTab } from './TrustTransportStreamTab';
 
-const COLOR = '#38BDF8';
-
 export const TrustTransportChatButton: React.FC<{ tripId: string }> = ({ tripId }) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('trust-transport', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -29,27 +31,29 @@ export const TrustTransportChatButton: React.FC<{ tripId: string }> = ({ tripId 
   );
 };
 
-const styles = StyleSheet.create({
-  chatBtn: {
-    marginTop: 8,
-    padding: 10,
-    borderRadius: 9,
-    backgroundColor: `${COLOR}15`,
-    borderWidth: 1,
-    borderColor: `${COLOR}30`,
-    alignItems: 'center',
-  },
-  chatBtnText: { fontSize: 13, fontWeight: '600', color: COLOR },
-  modalRoot: { flex: 1, backgroundColor: '#0F1117' },
-  modalHeader: {
-    height: 56,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  modalTitle: { fontSize: 15, fontWeight: '700', color: '#F9FAFB' },
-  closeText: { fontSize: 13, fontWeight: '600', color: COLOR },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    chatBtn: {
+      marginTop: 8,
+      padding: 10,
+      borderRadius: 9,
+      backgroundColor: `${accent}15`,
+      borderWidth: 1,
+      borderColor: `${accent}30`,
+      alignItems: 'center',
+    },
+    chatBtnText: { fontSize: 13, fontWeight: '600', color: accent },
+    modalRoot: { flex: 1, backgroundColor: t.bg },
+    modalHeader: {
+      height: 56,
+      borderBottomWidth: 1,
+      borderBottomColor: t.borderFaint,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+    },
+    modalTitle: { fontSize: 15, fontWeight: '700', color: t.textPrimary },
+    closeText: { fontSize: 13, fontWeight: '600', color: accent },
+  });
+}

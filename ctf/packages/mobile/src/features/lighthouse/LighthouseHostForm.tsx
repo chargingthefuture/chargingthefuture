@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
 import type { PropertyCreateInput } from './types';
 
-const COLOR = '#60A5FA';
 const SURFACE = 'rgba(255,255,255,0.02)';
-const BORDER = `${COLOR}20`;
 const MUTED = '#9CA3AF';
 
 // Currency code for ServiceCredits — mirrors SERVICE_CREDITS_CODE in
@@ -98,21 +97,27 @@ interface FieldProps {
   multiline?: boolean;
 }
 
-const Field: React.FC<FieldProps> = ({ label, value, onChange, placeholder, keyboardType, multiline }) => (
-  <View style={styles.field}>
-    <Text style={styles.label}>{label}</Text>
-    <TextInput
-      style={[styles.input, multiline && styles.textarea]}
-      value={value}
-      onChangeText={onChange}
-      placeholder={placeholder}
-      placeholderTextColor="#4B5563"
-      keyboardType={keyboardType ?? 'default'}
-      multiline={multiline}
-      autoCapitalize="sentences"
-    />
-  </View>
-);
+const Field: React.FC<FieldProps> = ({ label, value, onChange, placeholder, keyboardType, multiline }) => {
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('lighthouse', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        style={[styles.input, multiline && styles.textarea]}
+        value={value}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        placeholderTextColor={tokens.textMuted}
+        keyboardType={keyboardType ?? 'default'}
+        multiline={multiline}
+        autoCapitalize="sentences"
+      />
+    </View>
+  );
+};
 
 interface Props {
   submitting: boolean;
@@ -121,6 +126,9 @@ interface Props {
 }
 
 export const LighthouseHostForm: React.FC<Props> = ({ submitting, error, onSubmit }) => {
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('lighthouse', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [form, setForm] = useState<HostForm>(EMPTY_FORM);
 
   const setField = (key: Exclude<keyof HostForm, 'acceptedCurrencies'>, value: string) => {
@@ -226,103 +234,105 @@ export const LighthouseHostForm: React.FC<Props> = ({ submitting, error, onSubmi
   );
 };
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: SURFACE,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    padding: 16,
-    marginBottom: 16,
-  },
-  field: {
-    marginBottom: 12,
-  },
-  label: {
-    fontSize: 12,
-    color: MUTED,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  input: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 8,
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    fontSize: 13,
-    color: '#F9FAFB',
-  },
-  textarea: {
-    minHeight: 72,
-    textAlignVertical: 'top',
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  chipOn: {
-    backgroundColor: `${COLOR}14`,
-    borderColor: `${COLOR}40`,
-  },
-  chipText: {
-    fontSize: 13,
-    color: '#F9FAFB',
-    fontWeight: '600',
-  },
-  chipTextOn: {
-    color: COLOR,
-  },
-  toggle: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignSelf: 'flex-start',
-  },
-  toggleOn: {
-    backgroundColor: `${COLOR}14`,
-    borderColor: `${COLOR}40`,
-  },
-  toggleText: {
-    fontSize: 13,
-    color: '#F9FAFB',
-    fontWeight: '600',
-  },
-  toggleTextOn: {
-    color: COLOR,
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  submitBtn: {
-    marginTop: 8,
-    backgroundColor: COLOR,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  submitBtnDisabled: {
-    opacity: 0.6,
-  },
-  submitBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0B0B0F',
-  },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: SURFACE,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: `${accent}20`,
+      padding: 16,
+      marginBottom: 16,
+    },
+    field: {
+      marginBottom: 12,
+    },
+    label: {
+      fontSize: 12,
+      color: MUTED,
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    input: {
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+      borderRadius: 8,
+      paddingVertical: 9,
+      paddingHorizontal: 10,
+      fontSize: 13,
+      color: t.textPrimary,
+    },
+    textarea: {
+      minHeight: 72,
+      textAlignVertical: 'top',
+    },
+    chipRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    chip: {
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+      borderRadius: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+    },
+    chipOn: {
+      backgroundColor: `${accent}14`,
+      borderColor: `${accent}40`,
+    },
+    chipText: {
+      fontSize: 13,
+      color: t.textPrimary,
+      fontWeight: '600',
+    },
+    chipTextOn: {
+      color: accent,
+    },
+    toggle: {
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+      borderRadius: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      alignSelf: 'flex-start',
+    },
+    toggleOn: {
+      backgroundColor: `${accent}14`,
+      borderColor: `${accent}40`,
+    },
+    toggleText: {
+      fontSize: 13,
+      color: t.textPrimary,
+      fontWeight: '600',
+    },
+    toggleTextOn: {
+      color: accent,
+    },
+    errorText: {
+      color: t.danger,
+      fontSize: 13,
+      marginTop: 4,
+      marginBottom: 4,
+    },
+    submitBtn: {
+      marginTop: 8,
+      backgroundColor: accent,
+      borderRadius: 10,
+      paddingVertical: 12,
+      alignItems: 'center',
+    },
+    submitBtnDisabled: {
+      opacity: 0.6,
+    },
+    submitBtnText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#0B0B0F',
+    },
+  });
+}

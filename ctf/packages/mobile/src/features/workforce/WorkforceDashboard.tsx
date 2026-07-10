@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import { WorkforceLoading } from './WorkforceLoading';
 import { WorkforceEmpty } from './WorkforceEmpty';
@@ -21,7 +22,13 @@ import type {
 } from './api';
 
 // Live workforce tracker: demand from Skills Taxonomy (population-scaled) vs supply from Directory.
-const COLOR = '#F97316';
+
+function useWorkforceStyles() {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('workforce', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return { tokens, accent, styles };
+}
 
 function formatCount(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
@@ -30,6 +37,7 @@ function formatCount(n: number): string {
 }
 
 function DashboardHeader({ subtitle }: { subtitle: string }) {
+  const { styles } = useWorkforceStyles();
   return (
     <View style={styles.header}>
       <View style={styles.headerIconWrap}>
@@ -44,9 +52,11 @@ function DashboardHeader({ subtitle }: { subtitle: string }) {
 }
 
 function StatGrid({ dashboard }: { dashboard: WorkforceDashboardData }) {
+  const { accent, styles } = useWorkforceStyles();
+  // Stat-tile series palette (indigo/red/green data colors) stays raw; only the plugin accent is themed.
   const stats = [
     { label: 'Population', value: formatCount(dashboard.population), color: '#6366F1' },
-    { label: 'Workforce Total', value: formatCount(dashboard.workforceTotal), color: COLOR },
+    { label: 'Workforce Total', value: formatCount(dashboard.workforceTotal), color: accent },
     { label: 'Headcount Target', value: formatCount(dashboard.totalHeadcountTarget), color: '#EF4444' },
     { label: 'Recruited', value: formatCount(dashboard.recruitedTotal), color: '#22C55E' },
   ];
@@ -63,6 +73,7 @@ function StatGrid({ dashboard }: { dashboard: WorkforceDashboardData }) {
 }
 
 function SectorGaps({ items }: { items: WorkforceGroupedReportItem[] }) {
+  const { styles } = useWorkforceStyles();
   if (items.length === 0) return null;
   return (
     <View style={styles.card}>
@@ -79,6 +90,7 @@ function SectorGaps({ items }: { items: WorkforceGroupedReportItem[] }) {
 }
 
 function TrainingGaps({ items }: { items: WorkforceOccupationGapItem[] }) {
+  const { styles } = useWorkforceStyles();
   const gaps = items.filter((o) => o.gap > 0);
   if (gaps.length === 0) return null;
   return (
@@ -100,6 +112,7 @@ function TrainingGaps({ items }: { items: WorkforceOccupationGapItem[] }) {
 type WorkforceTab = 'overview' | WorkforceBrowseTab;
 
 export function WorkforceDashboard() {
+  const { styles } = useWorkforceStyles();
   const { auth, loading: authLoading } = usePluginAuth('clerk');
   const isAuthenticated = auth?.isAuthenticated ?? false;
 
@@ -227,149 +240,151 @@ export function WorkforceDashboard() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F1117',
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: '#0F1117',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#EF4444',
-    textAlign: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 12,
-    backgroundColor: '#090B0F',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-  },
-  headerIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: COLOR + '30',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerIconText: {
-    fontSize: 16,
-    color: COLOR,
-    fontWeight: '700',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#F9FAFB',
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    color: COLOR,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#0D0F14',
-  },
-  tab: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  tabActive: {
-    backgroundColor: COLOR + '20',
-    borderColor: COLOR + '40',
-  },
-  tabText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: COLOR,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  statGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 16,
-  },
-  card: {
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    marginBottom: 16,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#F9FAFB',
-    marginBottom: 12,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 6,
-  },
-  rowLabelWrap: {
-    flex: 1,
-  },
-  rowLabel: {
-    flex: 1,
-    fontSize: 13,
-    color: '#E8EAF0',
-    fontWeight: '600',
-  },
-  rowSub: {
-    fontSize: 11,
-    color: '#6B7280',
-  },
-  rowMeta: {
-    fontSize: 11,
-    color: '#9CA3AF',
-  },
-  rowGap: {
-    fontSize: 13,
-    color: '#F97316',
-    fontWeight: '700',
-    textAlign: 'right',
-    minWidth: 90,
-  },
-  noProfileCard: {
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    marginBottom: 16,
-  },
-  noProfileText: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.bg,
+    },
+    centered: {
+      flex: 1,
+      backgroundColor: t.bg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    },
+    errorText: {
+      fontSize: 14,
+      color: t.danger,
+      textAlign: 'center',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 20,
+      paddingTop: 14,
+      paddingBottom: 12,
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: t.borderFaint,
+    },
+    headerIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: accent + '30',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerIconText: {
+      fontSize: 16,
+      color: accent,
+      fontWeight: '700',
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: t.textPrimary,
+    },
+    headerSubtitle: {
+      fontSize: 11,
+      color: accent,
+    },
+    tabBar: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      backgroundColor: '#0D0F14',
+    },
+    tab: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.1)',
+    },
+    tabActive: {
+      backgroundColor: accent + '20',
+      borderColor: accent + '40',
+    },
+    tabText: {
+      fontSize: 13,
+      color: '#9CA3AF',
+      fontWeight: '600',
+    },
+    tabTextActive: {
+      color: accent,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 16,
+    },
+    statGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginBottom: 16,
+    },
+    card: {
+      padding: 16,
+      borderRadius: 14,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      borderColor: t.borderFaint,
+      marginBottom: 16,
+    },
+    cardTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: t.textPrimary,
+      marginBottom: 12,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 6,
+    },
+    rowLabelWrap: {
+      flex: 1,
+    },
+    rowLabel: {
+      flex: 1,
+      fontSize: 13,
+      color: '#E8EAF0',
+      fontWeight: '600',
+    },
+    rowSub: {
+      fontSize: 11,
+      color: t.textSecondary,
+    },
+    rowMeta: {
+      fontSize: 11,
+      color: '#9CA3AF',
+    },
+    rowGap: {
+      fontSize: 13,
+      color: accent,
+      fontWeight: '700',
+      textAlign: 'right',
+      minWidth: 90,
+    },
+    noProfileCard: {
+      padding: 16,
+      borderRadius: 14,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      borderColor: t.borderFaint,
+      marginBottom: 16,
+    },
+    noProfileText: {
+      fontSize: 13,
+      color: t.textSecondary,
+      lineHeight: 20,
+    },
+  });
+}

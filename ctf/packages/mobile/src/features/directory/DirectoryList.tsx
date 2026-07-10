@@ -7,7 +7,7 @@
 //   - "Book Session" / "Message" CTAs (no booking/messaging API in this plugin)
 //   - endorsements (no endorsements API)
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   ScrollView,
@@ -32,12 +32,9 @@ import {
 import { TrustEvidencePanel } from '../trust/TrustEvidencePanel';
 import { ShareLink } from '../../components/shared/ShareLink';
 import { getApiBaseUrl } from '../../auth/authedFetch';
+import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
 
-const COLOR = '#93C5FD';
 const COMMUNITY_COLOR = '#FBBF24';
-const BG = '#0F1117';
-const SURFACE = '#090B0F';
-const BORDER = 'rgba(255,255,255,0.06)';
 
 function initials(name: string): string {
   return name
@@ -54,6 +51,9 @@ function fullName(p: { firstName: string; lastName: string | null }): string {
 // ── Loading state ─────────────────────────────────────────────────────────────
 
 function DirectoryLoading() {
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('directory', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View style={styles.loadingContainer}>
       <Text style={styles.loadingTagline}>EXIT THEIR ECONOMY</Text>
@@ -65,6 +65,9 @@ function DirectoryLoading() {
 // ── Empty state ───────────────────────────────────────────────────────────────
 
 function DirectoryEmpty({ onRetry }: { onRetry: () => void }) {
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('directory', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIcon}>
@@ -92,6 +95,9 @@ function ProfileDetail({
   onBack: () => void;
   onNavigateToFoundation?: () => void;
 }) {
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('directory', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const acceptsCredits = !!(
     profile.serviceCreditsAddress ||
     profile.venmoAddress ||
@@ -160,7 +166,7 @@ function ProfileDetail({
         <Text style={styles.detailNavTitle}>Profile</Text>
         {shareUrl ? (
           <View style={styles.detailNavShare}>
-            <ShareLink url={shareUrl} title="Share this profile" color={COLOR} />
+            <ShareLink url={shareUrl} title="Share this profile" color={accent} />
           </View>
         ) : (
           <View style={styles.detailNavSpacer} />
@@ -312,6 +318,9 @@ function ProfileCard({
   profile: DirectoryListItem;
   onPress: () => void;
 }) {
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('directory', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const isCommunity = profile.source === 'community-generated';
   const acceptsCredits = !!(
     profile.serviceCreditsAddress ||
@@ -360,6 +369,9 @@ export const DirectoryList = ({
 }: {
   onNavigateToFoundation?: () => void;
 } = {}) => {
+  const { theme, tokens } = useTheme();
+  const accent = getAppAccent('directory', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [profiles, setProfiles] = useState<DirectoryListItem[]>([]);
   const [sectors, setSectors] = useState<DirectorySector[]>([]);
   const [loading, setLoading] = useState(true);
@@ -428,7 +440,7 @@ export const DirectoryList = ({
           <TextInput
             style={styles.searchInput}
             placeholder="Search providers, skills…"
-            placeholderTextColor="#4B5563"
+            placeholderTextColor={tokens.textMuted}
             value={query}
             onChangeText={setQuery}
             returnKeyType="search"
@@ -495,337 +507,339 @@ export const DirectoryList = ({
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: BG },
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: t.bg },
 
-  // Status bar
-  statusBar: {
-    height: 44,
-    backgroundColor: SURFACE,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-  },
-  statusBarTime: { fontSize: 13, fontWeight: '700', color: '#E8EAF0' },
-  statusBarBattery: { fontSize: 12, color: '#9CA3AF' },
+    // Status bar
+    statusBar: {
+      height: 44,
+      backgroundColor: t.surfaceAlt,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+    },
+    statusBarTime: { fontSize: 13, fontWeight: '700', color: '#E8EAF0' },
+    statusBarBattery: { fontSize: 12, color: '#9CA3AF' },
 
-  // Header
-  headerWrap: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 10,
-    backgroundColor: SURFACE,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  headerIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: `${COLOR}30`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  headerIconText: { fontSize: 18 },
-  headerTitleWrap: { flex: 1 },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: '#F9FAFB' },
+    // Header
+    headerWrap: {
+      paddingHorizontal: 20,
+      paddingTop: 14,
+      paddingBottom: 10,
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: t.borderFaint,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    headerIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: `${accent}30`,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 10,
+    },
+    headerIconText: { fontSize: 18 },
+    headerTitleWrap: { flex: 1 },
+    headerTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary },
 
-  // Search
-  searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 12,
-    height: 40,
-  },
-  searchIcon: { fontSize: 13, marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 14, color: '#E8EAF0' },
+    // Search
+    searchWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      borderRadius: t.radius,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+      paddingHorizontal: 12,
+      height: 40,
+    },
+    searchIcon: { fontSize: 13, marginRight: 8 },
+    searchInput: { flex: 1, fontSize: 14, color: '#E8EAF0' },
 
-  // Filters
-  filtersScroll: {
-    backgroundColor: SURFACE,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    maxHeight: 46,
-  },
-  filtersContainer: { paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', gap: 6 },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    marginRight: 6,
-  },
-  filterChipActive: {
-    backgroundColor: `${COLOR}20`,
-    borderColor: `${COLOR}50`,
-  },
-  filterChipText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
-  filterChipTextActive: { color: COLOR },
+    // Filters
+    filtersScroll: {
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: t.borderFaint,
+      maxHeight: 46,
+    },
+    filtersContainer: { paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', gap: 6 },
+    filterChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.06)',
+      marginRight: 6,
+    },
+    filterChipActive: {
+      backgroundColor: `${accent}20`,
+      borderColor: `${accent}50`,
+    },
+    filterChipText: { fontSize: 12, fontWeight: '600', color: t.textSecondary },
+    filterChipTextActive: { color: accent },
 
-  // List
-  list: { flex: 1 },
-  listContent: { padding: 16 },
+    // List
+    list: { flex: 1 },
+    listContent: { padding: 16 },
 
-  // Card
-  card: {
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: `${COLOR}15`,
-    marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  cardAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: `${COLOR}25`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    flexShrink: 0,
-  },
-  cardAvatarText: { fontSize: 18, fontWeight: '800', color: COLOR },
-  cardInfo: { flex: 1, minWidth: 0 },
-  cardNameRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 2 },
-  cardName: { fontSize: 14, fontWeight: '700', color: '#F9FAFB', flexShrink: 1 },
-  cardCommunityBadge: {
-    backgroundColor: `${COMMUNITY_COLOR}20`,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: `${COMMUNITY_COLOR}30`,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    flexShrink: 0,
-  },
-  cardCommunityBadgeText: { fontSize: 9, fontWeight: '700', color: COMMUNITY_COLOR },
-  cardHandle: { fontSize: 10, color: '#374151', fontFamily: 'monospace', marginBottom: 2 },
-  cardRole: { fontSize: 12, color: '#9CA3AF', marginBottom: 3 },
-  cardCredits: { fontSize: 10, color: '#F59E0B' },
-  cardChevron: { fontSize: 22, color: '#4B5563', marginLeft: 8, flexShrink: 0 },
+    // Card
+    card: {
+      padding: 14,
+      borderRadius: 14,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      borderColor: `${accent}15`,
+      marginBottom: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    cardAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: `${accent}25`,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+      flexShrink: 0,
+    },
+    cardAvatarText: { fontSize: 18, fontWeight: '800', color: accent },
+    cardInfo: { flex: 1, minWidth: 0 },
+    cardNameRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 2 },
+    cardName: { fontSize: 14, fontWeight: '700', color: t.textPrimary, flexShrink: 1 },
+    cardCommunityBadge: {
+      backgroundColor: `${COMMUNITY_COLOR}20`,
+      borderRadius: 5,
+      borderWidth: 1,
+      borderColor: `${COMMUNITY_COLOR}30`,
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      flexShrink: 0,
+    },
+    cardCommunityBadgeText: { fontSize: 9, fontWeight: '700', color: COMMUNITY_COLOR },
+    cardHandle: { fontSize: 10, color: '#374151', fontFamily: 'monospace', marginBottom: 2 },
+    cardRole: { fontSize: 12, color: '#9CA3AF', marginBottom: 3 },
+    cardCredits: { fontSize: 10, color: '#F59E0B' },
+    cardChevron: { fontSize: 22, color: t.textMuted, marginLeft: 8, flexShrink: 0 },
 
-  // Loading state
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  loadingTagline: {
-    fontSize: 10,
-    letterSpacing: 2.5,
-    color: 'rgba(255,255,255,0.22)',
-    textTransform: 'uppercase',
-    fontWeight: '500',
-    lineHeight: 20,
-    textAlign: 'center',
-  },
+    // Loading state
+    loadingContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 32,
+    },
+    loadingTagline: {
+      fontSize: 10,
+      letterSpacing: 2.5,
+      color: 'rgba(255,255,255,0.22)',
+      textTransform: 'uppercase',
+      fontWeight: '500',
+      lineHeight: 20,
+      textAlign: 'center',
+    },
 
-  // Empty state
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  emptyIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: `${COLOR}15`,
-    borderWidth: 1,
-    borderColor: `${COLOR}40`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  emptyIconText: { fontSize: 30 },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#F9FAFB', marginBottom: 10 },
-  emptyBody: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 22,
-    textAlign: 'center',
-    marginBottom: 28,
-  },
-  emptyRetry: {
-    backgroundColor: COLOR,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-  },
-  emptyRetryText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    // Empty state
+    emptyContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 32,
+    },
+    emptyIcon: {
+      width: 72,
+      height: 72,
+      borderRadius: 20,
+      backgroundColor: `${accent}15`,
+      borderWidth: 1,
+      borderColor: `${accent}40`,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 20,
+    },
+    emptyIconText: { fontSize: 30 },
+    emptyTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 10 },
+    emptyBody: {
+      fontSize: 14,
+      color: t.textSecondary,
+      lineHeight: 22,
+      textAlign: 'center',
+      marginBottom: 28,
+    },
+    emptyRetry: {
+      backgroundColor: accent,
+      borderRadius: t.radius,
+      paddingVertical: 12,
+      paddingHorizontal: 32,
+    },
+    emptyRetryText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 
-  // Detail nav bar
-  detailNavBar: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: SURFACE,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backBtn: { flexDirection: 'row', alignItems: 'center' },
-  backBtnText: { fontSize: 13, fontWeight: '700', color: COLOR },
-  detailNavTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#F9FAFB',
-    textAlign: 'center',
-  },
-  detailNavSpacer: { width: 40 },
-  detailNavShare: { minWidth: 40, alignItems: 'flex-end' },
+    // Detail nav bar
+    detailNavBar: {
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: t.borderFaint,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    backBtn: { flexDirection: 'row', alignItems: 'center' },
+    backBtnText: { fontSize: 13, fontWeight: '700', color: accent },
+    detailNavTitle: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '800',
+      color: t.textPrimary,
+      textAlign: 'center',
+    },
+    detailNavSpacer: { width: 40 },
+    detailNavShare: { minWidth: 40, alignItems: 'flex-end' },
 
-  detailScroll: { flex: 1 },
-  detailContent: { padding: 24 },
-  detailAvatarWrap: { alignItems: 'center', marginBottom: 12 },
-  detailAvatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: `${COLOR}30`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  detailAvatarText: { fontSize: 28, fontWeight: '800', color: COLOR },
-  detailNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 4,
-  },
-  detailName: { fontSize: 20, fontWeight: '800', color: '#F9FAFB' },
-  communityBadge: {
-    backgroundColor: `${COMMUNITY_COLOR}20`,
-    borderRadius: 7,
-    borderWidth: 1,
-    borderColor: `${COMMUNITY_COLOR}30`,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  communityBadgeText: { fontSize: 10, fontWeight: '700', color: COMMUNITY_COLOR },
-  detailHandle: {
-    fontSize: 11,
-    color: '#374151',
-    fontFamily: 'monospace',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  detailRole: { fontSize: 14, color: '#9CA3AF', marginBottom: 8, textAlign: 'center' },
-  sectorBadgeRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 6 },
-  sectorBadge: {
-    backgroundColor: `${COLOR}10`,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: `${COLOR}25`,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  sectorBadgeText: { fontSize: 11, color: COLOR },
-  creditsBadgeRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 20 },
-  creditsBadge: {
-    backgroundColor: '#F59E0B10',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#F59E0B25',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  creditsBadgeText: { fontSize: 11, color: '#F59E0B' },
+    detailScroll: { flex: 1 },
+    detailContent: { padding: 24 },
+    detailAvatarWrap: { alignItems: 'center', marginBottom: 12 },
+    detailAvatar: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: `${accent}30`,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    detailAvatarText: { fontSize: 28, fontWeight: '800', color: accent },
+    detailNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginBottom: 4,
+    },
+    detailName: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
+    communityBadge: {
+      backgroundColor: `${COMMUNITY_COLOR}20`,
+      borderRadius: 7,
+      borderWidth: 1,
+      borderColor: `${COMMUNITY_COLOR}30`,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+    },
+    communityBadgeText: { fontSize: 10, fontWeight: '700', color: COMMUNITY_COLOR },
+    detailHandle: {
+      fontSize: 11,
+      color: '#374151',
+      fontFamily: 'monospace',
+      marginBottom: 4,
+      textAlign: 'center',
+    },
+    detailRole: { fontSize: 14, color: '#9CA3AF', marginBottom: 8, textAlign: 'center' },
+    sectorBadgeRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 6 },
+    sectorBadge: {
+      backgroundColor: `${accent}10`,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: `${accent}25`,
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+    },
+    sectorBadgeText: { fontSize: 11, color: accent },
+    creditsBadgeRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 20 },
+    creditsBadge: {
+      backgroundColor: '#F59E0B10',
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#F59E0B25',
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+    },
+    creditsBadgeText: { fontSize: 11, color: '#F59E0B' },
 
-  detailSection: { marginBottom: 20 },
-  detailSectionLabel: { fontSize: 14, fontWeight: '700', color: '#9CA3AF', marginBottom: 10 },
-  skillsRow: { flexDirection: 'row', flexWrap: 'wrap' },
-  skillChip: {
-    backgroundColor: `${COLOR}10`,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: `${COLOR}25`,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginRight: 6,
-    marginBottom: 6,
-  },
-  skillChipText: { fontSize: 11, color: COLOR },
-  pendingSkillChip: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(255,255,255,0.18)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginRight: 6,
-    marginBottom: 6,
-  },
-  pendingSkillChipText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
-  pendingSkillChipMuted: { fontSize: 11, color: '#6B7280', fontWeight: '400' },
-  connectBox: {
-    backgroundColor: `${COLOR}0F`,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: `${COLOR}25`,
-    padding: 14,
-    marginBottom: 20,
-  },
-  connectTitle: { fontSize: 13, fontWeight: '700', color: COLOR, marginBottom: 6 },
-  connectBody: { fontSize: 13, color: '#9CA3AF', lineHeight: 20 },
-  connectLink: { color: COLOR, fontWeight: '600' },
-  presenceList: { marginBottom: 14 },
-  presenceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: `${COLOR}0A`,
-    borderWidth: 1,
-    borderColor: `${COLOR}25`,
-    marginBottom: 8,
-  },
-  presenceIcon: { fontSize: 14, color: COLOR },
-  presenceLabel: { flex: 1, fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
-  presenceEmpty: { fontSize: 13, color: '#6B7280', marginBottom: 14 },
-  trustRestricted: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  trustRestrictedText: { fontSize: 13, color: '#9CA3AF', lineHeight: 19 },
-  detailBio: { fontSize: 13, color: '#9CA3AF', lineHeight: 20 },
+    detailSection: { marginBottom: 20 },
+    detailSectionLabel: { fontSize: 14, fontWeight: '700', color: '#9CA3AF', marginBottom: 10 },
+    skillsRow: { flexDirection: 'row', flexWrap: 'wrap' },
+    skillChip: {
+      backgroundColor: `${accent}10`,
+      borderRadius: t.radiusChip,
+      borderWidth: 1,
+      borderColor: `${accent}25`,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      marginRight: 6,
+      marginBottom: 6,
+    },
+    skillChipText: { fontSize: 11, color: accent },
+    pendingSkillChip: {
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderRadius: t.radiusChip,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: 'rgba(255,255,255,0.18)',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      marginRight: 6,
+      marginBottom: 6,
+    },
+    pendingSkillChipText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
+    pendingSkillChipMuted: { fontSize: 11, color: t.textSecondary, fontWeight: '400' },
+    connectBox: {
+      backgroundColor: `${accent}0F`,
+      borderRadius: t.radius,
+      borderWidth: 1,
+      borderColor: `${accent}25`,
+      padding: 14,
+      marginBottom: 20,
+    },
+    connectTitle: { fontSize: 13, fontWeight: '700', color: accent, marginBottom: 6 },
+    connectBody: { fontSize: 13, color: '#9CA3AF', lineHeight: 20 },
+    connectLink: { color: accent, fontWeight: '600' },
+    presenceList: { marginBottom: 14 },
+    presenceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      backgroundColor: `${accent}0A`,
+      borderWidth: 1,
+      borderColor: `${accent}25`,
+      marginBottom: 8,
+    },
+    presenceIcon: { fontSize: 14, color: accent },
+    presenceLabel: { flex: 1, fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
+    presenceEmpty: { fontSize: 13, color: t.textSecondary, marginBottom: 14 },
+    trustRestricted: {
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.1)',
+    },
+    trustRestrictedText: { fontSize: 13, color: '#9CA3AF', lineHeight: 19 },
+    detailBio: { fontSize: 13, color: '#9CA3AF', lineHeight: 20 },
 
-  privacyBox: {
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: `${COLOR}08`,
-    borderWidth: 1,
-    borderColor: `${COLOR}18`,
-    marginBottom: 16,
-  },
-  privacyTitle: { fontSize: 12, fontWeight: '700', color: COLOR, marginBottom: 6 },
-  privacyBody: { fontSize: 12, color: '#6B7280', lineHeight: 19 },
-});
+    privacyBox: {
+      padding: 16,
+      borderRadius: 14,
+      backgroundColor: `${accent}08`,
+      borderWidth: 1,
+      borderColor: `${accent}18`,
+      marginBottom: 16,
+    },
+    privacyTitle: { fontSize: 12, fontWeight: '700', color: accent, marginBottom: 6 },
+    privacyBody: { fontSize: 12, color: t.textSecondary, lineHeight: 19 },
+  });
+}

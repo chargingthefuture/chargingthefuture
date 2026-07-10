@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -16,9 +16,7 @@ import {
   type SocketRelayResolveOutcome,
 } from './api';
 import { SocketRelayLoading } from './SocketRelayLoading';
-
-// Design color — matches the SocketRelay shell accent.
-const COLOR = '#FB923C';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
 // The four outcomes a requester can pick. Mirrors the web ResolveBar (sr-chat.tsx) exactly:
 // labels, colors, and the meaning of each outcome are kept in sync with the web Direct Line.
@@ -52,6 +50,9 @@ function DirectLineCard({
   resolving: boolean;
   onResolve: (_fulfillmentId: string, _outcome: SocketRelayResolveOutcome) => void;
 }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('socket-relay', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const isActive = fulfillment.status === 'active';
   return (
     <View style={styles.card}>
@@ -98,6 +99,9 @@ function DirectLineCard({
 // A pending request card: a request the member posted that no helper has claimed yet. There is no
 // helper to chat with, so it explains what happens next instead of showing resolve actions.
 function PendingRequestCard({ request }: { request: SocketRelayRequest }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('socket-relay', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{request.title}</Text>
@@ -115,6 +119,9 @@ function PendingRequestCard({ request }: { request: SocketRelayRequest }) {
 // placeholders. Cancelled/closed fulfillments drop out. `currentUserId` decides requester-vs-helper
 // (from useAuth().user.id) and surfaces requester-only resolve controls.
 export function SocketRelayDirectLines({ currentUserId }: { currentUserId?: string }) {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('socket-relay', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const [fulfillments, setFulfillments] = useState<SocketRelayFulfillment[]>([]);
   const [myRequests, setMyRequests] = useState<SocketRelayRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,7 +202,7 @@ export function SocketRelayDirectLines({ currentUserId }: { currentUserId?: stri
       <View style={styles.pad}>
         {resolving ? (
           <View style={styles.resolvingRow}>
-            <ActivityIndicator size="small" color={COLOR} />
+            <ActivityIndicator size="small" color={accent} />
             <Text style={styles.resolvingText}>Resolving…</Text>
           </View>
         ) : null}
@@ -217,7 +224,8 @@ export function SocketRelayDirectLines({ currentUserId }: { currentUserId?: stri
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens, accent: string) {
+  return StyleSheet.create({
   scroll: { flex: 1 },
   pad: { padding: 16 },
   card: {
@@ -225,12 +233,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
-    borderColor: `${COLOR}30`,
+    borderColor: `${accent}30`,
     marginBottom: 10,
   },
   cardTitle: { fontSize: 14, fontWeight: '700', color: '#F0FDF4', marginBottom: 4, lineHeight: 20 },
-  cardRole: { fontSize: 12, color: '#6B7280', marginBottom: 10 },
-  note: { fontSize: 12, color: '#6B7280', lineHeight: 18 },
+  cardRole: { fontSize: 12, color: t.textSecondary, marginBottom: 10 },
+  note: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   actionBtn: {
     paddingHorizontal: 12,
@@ -244,7 +252,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 15, fontWeight: '600', color: '#9CA3AF', marginBottom: 8 },
   emptyBody: {
     fontSize: 13,
-    color: '#4B5563',
+    color: t.textMuted,
     textAlign: 'center',
     maxWidth: 320,
     lineHeight: 20,
@@ -254,11 +262,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 10,
-    backgroundColor: `${COLOR}20`,
+    backgroundColor: `${accent}20`,
     borderWidth: 1,
-    borderColor: `${COLOR}40`,
+    borderColor: `${accent}40`,
   },
-  retryBtnText: { color: COLOR, fontWeight: '700', fontSize: 13 },
+  retryBtnText: { color: accent, fontWeight: '700', fontSize: 13 },
   resolvingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  resolvingText: { color: COLOR, fontSize: 13, fontWeight: '600' },
-});
+  resolvingText: { color: accent, fontSize: 13, fontWeight: '600' },
+  });
+}
