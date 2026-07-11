@@ -23,12 +23,6 @@ const COMMUNITY_VALUE_INDEX_LABEL = 'Community Value Index';
 const COMMUNITY_VALUE_INDEX_DISCLAIMER =
   "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through community-set weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
 
-// ─── Raw palette left un-tokenized ───────────────────────────────────────────
-// #E8EAF0 (body ink) and #9CA3AF (muted) have no mobile theme token, so they stay
-// raw. Chrome + the gdp accent are read from the active theme inside makeStyles.
-const TEXT_BODY = '#E8EAF0';
-const TEXT_MUTED = '#9CA3AF';
-
 // Resolve the memoized StyleSheet + the gdp accent for the active theme.
 function useGdpTheme() {
   const { tokens, theme } = useTheme();
@@ -523,6 +517,9 @@ function makeStyles(t: ThemeTokens, accent: string) {
   const BG_DARK = t.surfaceAlt;
   const TEXT_PRIMARY = t.textPrimary;
   const TEXT_DIM = t.textSecondary;
+  // Body ink and muted text now theme through the palette (comic-aware); default is byte-identical.
+  const TEXT_BODY = t.textShell;
+  const TEXT_MUTED = t.textSecondary;
   const BORDER = t.borderFaint;
   return StyleSheet.create({
   root: {

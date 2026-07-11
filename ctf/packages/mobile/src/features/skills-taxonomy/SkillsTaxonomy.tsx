@@ -572,7 +572,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderColor: t.border,
     borderRadius: 10,
     fontSize: 13,
-    color: '#9CA3AF',
+    color: t.textSecondary,
   },
 
   // Sector pills

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '../../theme';
+import { useTheme, type ThemeTokens } from '../../theme';
 import type { ComicAnswerRating, ComicStreamItem } from './api';
 
 // AI Assistant accent. Standard theme uses cyan (the locked MobileHome ai_qa / ai_pending mockup);
@@ -25,6 +25,8 @@ function formatTime(iso: string): string {
 }
 
 function CardHead({ askedByLabel, time, accent }: { askedByLabel: string; time: string; accent: string }) {
+  const { tokens } = useTheme();
+  const styles = React.useMemo(() => makeStyles(tokens), [tokens]);
   return (
     <View style={styles.head}>
       <View style={styles.avatar}>
@@ -53,6 +55,7 @@ type ComicAnswerCardProps = {
 // avatar, "AI Assistant" label, 🤖 AI Q&A badge, Q/A layout, and a helpful / not helpful / flag row.
 export function ComicAnswerCard({ item, askedByLabel, onRate }: ComicAnswerCardProps) {
   const { tokens } = useTheme();
+  const styles = React.useMemo(() => makeStyles(tokens), [tokens]);
   const accent = tokens.isComic ? AI_ACCENT_COMIC : AI_ACCENT_STANDARD;
   const ratable = item.answerTurnId !== null;
   const rating = item.currentUserRating;
@@ -139,6 +142,7 @@ type ComicPendingCardProps = {
 // reflects that holding state.
 export function ComicPendingCard({ item, askedByLabel }: ComicPendingCardProps) {
   const { tokens } = useTheme();
+  const styles = React.useMemo(() => makeStyles(tokens), [tokens]);
   const accent = tokens.isComic ? AI_ACCENT_COMIC : AI_ACCENT_STANDARD;
   return (
     <View style={[styles.card, styles.pendingCard]}>
@@ -172,7 +176,8 @@ export function ComicPendingCard({ item, askedByLabel }: ComicPendingCardProps) 
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
   card: {
     borderRadius: 14,
     padding: 14,
@@ -262,7 +267,7 @@ const styles = StyleSheet.create({
   },
   bodyText: {
     fontSize: 12,
-    color: SUBTLE,
+    color: t.textSecondary,
     lineHeight: 18,
   },
   answerText: {
@@ -324,7 +329,7 @@ const styles = StyleSheet.create({
   rateText: {
     fontSize: 11,
     fontWeight: '600',
-    color: SUBTLE,
+    color: t.textSecondary,
   },
   rateTextUp: {
     color: '#4ADE80',
@@ -346,4 +351,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(239,68,68,0.12)',
     borderColor: 'rgba(239,68,68,0.35)',
   },
-});
+  });
+}

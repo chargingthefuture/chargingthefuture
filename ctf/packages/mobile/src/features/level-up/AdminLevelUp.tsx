@@ -20,7 +20,6 @@ import type { Cohort } from './api';
 
 // Brand tokens (from design/.../survivor-hub/MobileLevelUpAdmin.tsx).
 const PANEL = '#0D0F14';
-const SUBTLE = '#9CA3AF';
 const WARN = '#F59E0B';
 
 export const AdminLevelUp = () => {
@@ -249,7 +248,7 @@ export const AdminLevelUp = () => {
           value={targetUserId}
           onChangeText={setTargetUserId}
           placeholder="user_…"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
           autoCapitalize="none"
           editable={!confirming && !submitting}
         />
@@ -260,7 +259,7 @@ export const AdminLevelUp = () => {
           value={amountText}
           onChangeText={setAmountText}
           placeholder="e.g. 25"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
           keyboardType="numeric"
           editable={!confirming && !submitting}
         />
@@ -271,7 +270,7 @@ export const AdminLevelUp = () => {
           value={reason}
           onChangeText={setReason}
           placeholder="Why this adjustment is being made"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
           multiline
           editable={!confirming && !submitting}
         />
@@ -282,7 +281,7 @@ export const AdminLevelUp = () => {
           value={governanceTicketId}
           onChangeText={setGovernanceTicketId}
           placeholder="e.g. GOV-1234"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
           autoCapitalize="characters"
           editable={!confirming && !submitting}
         />
@@ -338,7 +337,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     headerTextWrap: { flex: 1 },
     title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
-    subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginTop: 2 },
+    subtitle: { fontSize: 13, color: t.textSecondary, lineHeight: 19, marginTop: 2 },
     adminBadge: {
       paddingHorizontal: 8,
       paddingVertical: 3,
@@ -348,7 +347,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: 'rgba(99,102,241,0.3)',
     },
     adminBadgeText: { fontSize: 11, fontWeight: '700', color: '#6366F1' },
-    noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+    noticeText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' },
     errorBanner: {
       fontSize: 13,
       color: '#FCA5A5',
@@ -378,7 +377,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       gap: 10,
     },
     cardTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
-    cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+    cardMeta: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
     cohortRow: {
       backgroundColor: t.surface,
       borderWidth: 1,
@@ -389,7 +388,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     cohortHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     cohortTitle: { fontSize: 14, fontWeight: '700', color: t.textPrimary, flex: 1 },
-    cohortStatus: { fontSize: 11, color: SUBTLE, textTransform: 'capitalize' },
+    cohortStatus: { fontSize: 11, color: t.textSecondary, textTransform: 'capitalize' },
     badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
     autoBadge: {
       paddingHorizontal: 8,
@@ -409,7 +408,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: 'rgba(245,158,11,0.4)',
     },
     needsTrainerBadgeText: { fontSize: 11, fontWeight: '700', color: '#FBBF24' },
-    cohortMeta: { fontSize: 11, color: SUBTLE, lineHeight: 16 },
+    cohortMeta: { fontSize: 11, color: t.textSecondary, lineHeight: 16 },
     label: { fontSize: 12, fontWeight: '600', color: '#D1D5DB', marginTop: 4 },
     input: {
       borderWidth: 1,
@@ -441,7 +440,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       padding: 12,
     },
     confirmText: { fontSize: 13, fontWeight: '700', color: WARN },
-    confirmMeta: { fontSize: 11, color: SUBTLE, lineHeight: 16 },
+    confirmMeta: { fontSize: 11, color: t.textSecondary, lineHeight: 16 },
     confirmBtn: {
       alignItems: 'center',
       justifyContent: 'center',
@@ -458,7 +457,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderWidth: 1,
       borderColor: t.border,
     },
-    cancelBtnText: { fontSize: 13, fontWeight: '600', color: SUBTLE },
+    cancelBtnText: { fontSize: 13, fontWeight: '600', color: t.textSecondary },
     btnBusy: { opacity: 0.7 },
   });
 }

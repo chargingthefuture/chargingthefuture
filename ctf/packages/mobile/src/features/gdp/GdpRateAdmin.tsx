@@ -22,10 +22,9 @@ import {
 // design/.../survivor-hub/MobileGDPRateAdmin.tsx. These factors exist solely to
 // estimate aggregate GDP — never a redemption rate or per-wallet conversion.
 
-// BG_DARK (#0D0F14, header backdrop) and MUTED (#9CA3AF) have no mobile theme token,
-// so they stay raw. Chrome + the gdp accent are read from the active theme.
+// BG_DARK (#0D0F14, header backdrop) has no mobile theme token, so it stays raw.
+// Chrome + the gdp accent are read from the active theme.
 const BG_DARK = '#0D0F14';
-const MUTED = '#9CA3AF';
 
 // Resolve the memoized StyleSheet + the gdp accent for the active theme.
 function useGdpRateAdminTheme() {
@@ -362,6 +361,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   const BORDER = t.border;
   const TEXT = t.textPrimary;
   const SUBTLE = t.textSecondary;
+  const MUTED = t.textSecondary;
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: BG },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: BG },

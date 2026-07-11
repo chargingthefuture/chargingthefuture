@@ -27,8 +27,6 @@ import * as Notifications from 'expo-notifications';
 import { authedFetch } from '../../auth/authedFetch';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
-const TEXT_DIM = '#9CA3AF';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' };
 
@@ -299,7 +297,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     titleIcon: { fontSize: 14, color: accent },
     title: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
-    note: { fontSize: 13, color: TEXT_DIM, lineHeight: 19 },
+    note: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
     onLabel: { fontSize: 13, color: accent, fontWeight: '600' },
     errorBox: {
       paddingHorizontal: 12,

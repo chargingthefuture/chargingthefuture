@@ -224,7 +224,7 @@ function makeStyles(t: ThemeTokens) {
     maxHeight: 120,
     minHeight: 28,
     fontSize: 14,
-    color: '#E8EAF0',
+    color: t.textShell,
     paddingVertical: 2,
   },
   sendBtn: {

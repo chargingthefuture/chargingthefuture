@@ -28,11 +28,10 @@ function memberName(member: CohortMember): string {
 }
 import type { PeerProgrammingTopic } from './api';
 
-// PANEL (#0D0F14) has no exact mobile token; BORDER is a white-alpha ≠ 0.06; SUBTLE (#9CA3AF) has
-// no mobile token — all three stay raw.
+// PANEL (#0D0F14) has no exact mobile token; BORDER is a white-alpha ≠ 0.06 — both stay raw.
+// Secondary text uses the themed textSecondary token (tokens.textSecondary / t.textSecondary).
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
-const SUBTLE = '#9CA3AF';
 
 // Monday (UTC) of the current week — matches the server getWeekStartDate so the
 // form defaults to the week the room reads.
@@ -191,7 +190,7 @@ export const AdminPeerProgramming = () => {
           value={weekStartDate}
           onChangeText={setWeekStartDate}
           placeholder="2026-06-01"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
           autoCapitalize="none"
         />
 
@@ -201,7 +200,7 @@ export const AdminPeerProgramming = () => {
           value={title}
           onChangeText={setTitle}
           placeholder="This week's focus"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
         />
 
         <Text style={styles.label}>Guidance</Text>
@@ -210,7 +209,7 @@ export const AdminPeerProgramming = () => {
           value={guidance}
           onChangeText={setGuidance}
           placeholder="What should cohorts work on together this week?"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
           multiline
         />
 
@@ -220,7 +219,7 @@ export const AdminPeerProgramming = () => {
           value={revisionNote}
           onChangeText={setRevisionNote}
           placeholder="Why this guidance changed"
-          placeholderTextColor={SUBTLE}
+          placeholderTextColor={tokens.textSecondary}
         />
 
         <View style={styles.switchRow}>
@@ -259,7 +258,7 @@ export const AdminPeerProgramming = () => {
             value={idsText}
             onChangeText={setIdsText}
             placeholder="One user ID per line, or comma-separated"
-            placeholderTextColor={SUBTLE}
+            placeholderTextColor={tokens.textSecondary}
             multiline
             autoCapitalize="none"
           />
@@ -323,8 +322,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
   content: { padding: 16, gap: 16 },
   center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
   title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
-  subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
-  noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+  subtitle: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
+  noticeText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' },
   errorBanner: {
     fontSize: 13,
     color: '#FCA5A5',
@@ -369,7 +368,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   cohortMembers: { fontSize: 12, color: '#D1D5DB', lineHeight: 18 },
   cohortLeft: { flex: 1 },
   cohortLabel: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
-  cohortMeta: { fontSize: 12, color: SUBTLE, marginTop: 1 },
+  cohortMeta: { fontSize: 12, color: t.textSecondary, marginTop: 1 },
   cohortOpenBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -379,7 +378,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderColor: `${accent}40`,
   },
   cohortOpenText: { fontSize: 10, fontWeight: '700', color: accent },
-  cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+  cardMeta: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
   label: { fontSize: 12, fontWeight: '600', color: '#D1D5DB', marginTop: 4 },
   input: {
     borderWidth: 1,

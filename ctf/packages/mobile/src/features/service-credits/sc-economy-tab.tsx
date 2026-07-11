@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
-import { RAW } from './sc-styles';
 import { fetchCirculation, type CirculationMetrics } from './api';
 
 // Member-facing view of the public ServiceCredits circulation metrics.
@@ -146,7 +145,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     tileLabel: {
       fontSize: 11,
-      color: RAW.textSubtle,
+      color: t.textSecondary,
     },
     caption: {
       fontSize: 11,

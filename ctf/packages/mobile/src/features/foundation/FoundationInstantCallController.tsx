@@ -48,8 +48,6 @@ import {
 } from './FoundationInstantCallAudio';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
-const TEXT_DIM = '#9CA3AF';
 
 // Foreground display for the Foundation ring native push (issue #884). When a push
 // arrives while the app is open, show the system alert so the member still notices
@@ -660,7 +658,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     iconGlyph: { fontSize: 26 },
     heading: { fontSize: 18, fontWeight: '800', color: t.textPrimary, textAlign: 'center' },
-    subline: { fontSize: 13.5, color: TEXT_DIM, textAlign: 'center', marginTop: -8 },
+    subline: { fontSize: 13.5, color: t.textSecondary, textAlign: 'center', marginTop: -8 },
     errorText: { fontSize: 13, color: '#F87171', textAlign: 'center' },
     terminalText: { fontSize: 14, color: '#D1D5DB', textAlign: 'center', paddingVertical: 8 },
     answerRow: { flexDirection: 'row', gap: 12, justifyContent: 'center' },
@@ -684,8 +682,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     billingLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.9, color: t.textSecondary, textTransform: 'uppercase' },
     billingCountdown: { fontSize: 22, fontWeight: '800', color: t.textPrimary, fontVariant: ['tabular-nums'] },
     billingCountdownHot: { color: accent },
-    billingCap: { fontSize: 12.5, color: TEXT_DIM, textAlign: 'right' },
-    billingNote: { fontSize: 12.5, color: TEXT_DIM, lineHeight: 18 },
+    billingCap: { fontSize: 12.5, color: t.textSecondary, textAlign: 'right' },
+    billingNote: { fontSize: 12.5, color: t.textSecondary, lineHeight: 18 },
     extendBtn: {
       width: '100%',
       paddingVertical: 10,

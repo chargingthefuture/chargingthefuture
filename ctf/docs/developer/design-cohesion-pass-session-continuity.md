@@ -103,10 +103,21 @@ Admin pages/components are in scope for the SAME token treatment (they share the
   `--ctf-danger: #b91c1c` and `--ctf-success: #22c55e` IDENTICAL in both `:root` and
   `[data-theme='comic']` — the sanctioned behavior is that status colors do not change under comic.
   Keeping bright status/data-viz swatches RAW is therefore spec-consistent, not a gap. Closed.
-- **Q2 (cross-platform reconciliation): STILL OPEN.** Which side wins the F4 deltas — web `#B91C1C`
-  danger vs mobile `#EF4444`; the textSecondary/textSubtle naming; card radius 14 vs 12? Changing
-  either touches prod pixels, so it stays gated on the owner's call. (Mobile tokenization can proceed
-  with mobile's own current values without this — see §10.)
+- **Q2 (cross-platform reconciliation): RESOLVED (2026-07-10) — web is the reference; make mobile
+  identical to web (owner directive).** The mobile flat palette in
+  `packages/mobile/src/theme/theme-tokens.ts` now mirrors web's `app/globals.css` `:root` values
+  field-for-field (the comic palette already matched web comic):
+  - `borderDim` `#283548` → `#1E2A3A` (`--ctf-border-dim`)
+  - `textSecondary` `#6B7280` → `#9CA3AF` (`--ctf-text-secondary`)
+  - `danger` `#EF4444` → `#B91C1C` (`--ctf-danger`)
+  - `gold` `#C8A84B` → `#38BDF8` (`--ctf-gold`; warm gold stays in comic, matching web comic)
+  - `radius` `12` → `14` (`--ctf-card-radius`)
+  - added `textShell` `#E8EAF0`/comic `#EDE3CB` (`--ctf-text-shell`).
+  These change shipped mobile default pixels — sanctioned by the owner directive. Raw `#9CA3AF`
+  (108 occurrences) and `#E8EAF0` (39) literals across mobile were then repointed to the
+  `textSecondary`/`textShell` tokens (byte-identical in default) so the comic theme themes them too.
+  Note: web's own `--ctf-control-radius` (10) and `--ctf-surface-raised` have no distinct mobile
+  consumer, so no separate mobile control-radius/surface-raised token was added.
 - **Q3 (admin token group): RESOLVED (2026-07-08).** `getPluginShellTokens` now carries
   `SURFACE` (`#161B27` → comic `#141414`) and `BORDER_SOLID` (`#1E2A3A` → comic `#D4C49A1A`,
   the click-log precedent). All admin shells were converted with it.

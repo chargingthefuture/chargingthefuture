@@ -11,7 +11,6 @@ import {
 
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
-const SUBTLE = '#9CA3AF';
 
 type ConfigForm = {
   population: string;
@@ -149,7 +148,7 @@ export const AdminWorkforce = () => {
                 value={form[f.key]}
                 editable={!busy}
                 onChangeText={(v) => setForm((c) => (c ? { ...c, [f.key]: v } : c))}
-                placeholderTextColor={SUBTLE}
+                placeholderTextColor={tokens.textSecondary}
               />
               {f.hint ? <Text style={styles.fieldHint}>{f.hint}</Text> : null}
             </View>
@@ -169,8 +168,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     content: { padding: 16, gap: 16 },
     center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
     title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
-    subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
-    noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+    subtitle: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
+    noticeText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' },
     errorBanner: {
       fontSize: 13,
       color: '#FCA5A5',
@@ -201,7 +200,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderRadius: t.radius,
       padding: 14,
     },
-    statLabel: { fontSize: 11, color: SUBTLE, marginBottom: 4 },
+    statLabel: { fontSize: 11, color: t.textSecondary, marginBottom: 4 },
     statValue: { fontSize: 20, fontWeight: '800' },
     card: {
       backgroundColor: PANEL,
@@ -213,8 +212,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     cardTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
     fieldRow: { gap: 6 },
-    fieldLabel: { fontSize: 12, color: SUBTLE, fontWeight: '600' },
-    fieldHint: { fontSize: 11, color: SUBTLE },
+    fieldLabel: { fontSize: 12, color: t.textSecondary, fontWeight: '600' },
+    fieldHint: { fontSize: 11, color: t.textSecondary },
     input: {
       backgroundColor: 'rgba(255,255,255,0.04)',
       borderWidth: 1,

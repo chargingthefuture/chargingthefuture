@@ -390,7 +390,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     stepTitle: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
     stepDesc: { fontSize: 11, color: t.textSecondary },
     formHeading: { fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 8 },
-    fieldLabel: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 8 },
+    fieldLabel: { fontSize: 13, fontWeight: '600', color: t.textSecondary, marginBottom: 8 },
     inputWrap: { flexDirection: 'row', alignItems: 'center', padding: 11, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderRadius: t.radius, marginBottom: 6 },
     input: { flex: 1, fontSize: 14, color: t.textPrimary },
     hint: { fontSize: 11, color: t.textMuted, marginBottom: 8 },

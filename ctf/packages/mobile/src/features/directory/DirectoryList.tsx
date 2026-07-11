@@ -520,8 +520,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
       justifyContent: 'space-between',
       paddingHorizontal: 20,
     },
-    statusBarTime: { fontSize: 13, fontWeight: '700', color: '#E8EAF0' },
-    statusBarBattery: { fontSize: 12, color: '#9CA3AF' },
+    statusBarTime: { fontSize: 13, fontWeight: '700', color: t.textShell },
+    statusBarBattery: { fontSize: 12, color: t.textSecondary },
 
     // Header
     headerWrap: {
@@ -563,7 +563,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       height: 40,
     },
     searchIcon: { fontSize: 13, marginRight: 8 },
-    searchInput: { flex: 1, fontSize: 14, color: '#E8EAF0' },
+    searchInput: { flex: 1, fontSize: 14, color: t.textShell },
 
     // Filters
     filtersScroll: {
@@ -629,7 +629,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     cardCommunityBadgeText: { fontSize: 9, fontWeight: '700', color: COMMUNITY_COLOR },
     cardHandle: { fontSize: 10, color: '#374151', fontFamily: 'monospace', marginBottom: 2 },
-    cardRole: { fontSize: 12, color: '#9CA3AF', marginBottom: 3 },
+    cardRole: { fontSize: 12, color: t.textSecondary, marginBottom: 3 },
     cardCredits: { fontSize: 10, color: '#F59E0B' },
     cardChevron: { fontSize: 22, color: t.textMuted, marginLeft: 8, flexShrink: 0 },
 
@@ -744,7 +744,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       marginBottom: 4,
       textAlign: 'center',
     },
-    detailRole: { fontSize: 14, color: '#9CA3AF', marginBottom: 8, textAlign: 'center' },
+    detailRole: { fontSize: 14, color: t.textSecondary, marginBottom: 8, textAlign: 'center' },
     sectorBadgeRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 6 },
     sectorBadge: {
       backgroundColor: `${accent}10`,
@@ -767,7 +767,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     creditsBadgeText: { fontSize: 11, color: '#F59E0B' },
 
     detailSection: { marginBottom: 20 },
-    detailSectionLabel: { fontSize: 14, fontWeight: '700', color: '#9CA3AF', marginBottom: 10 },
+    detailSectionLabel: { fontSize: 14, fontWeight: '700', color: t.textSecondary, marginBottom: 10 },
     skillsRow: { flexDirection: 'row', flexWrap: 'wrap' },
     skillChip: {
       backgroundColor: `${accent}10`,
@@ -791,7 +791,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       marginRight: 6,
       marginBottom: 6,
     },
-    pendingSkillChipText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
+    pendingSkillChipText: { fontSize: 11, color: t.textSecondary, fontWeight: '500' },
     pendingSkillChipMuted: { fontSize: 11, color: t.textSecondary, fontWeight: '400' },
     connectBox: {
       backgroundColor: `${accent}0F`,
@@ -802,7 +802,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       marginBottom: 20,
     },
     connectTitle: { fontSize: 13, fontWeight: '700', color: accent, marginBottom: 6 },
-    connectBody: { fontSize: 13, color: '#9CA3AF', lineHeight: 20 },
+    connectBody: { fontSize: 13, color: t.textSecondary, lineHeight: 20 },
     connectLink: { color: accent, fontWeight: '600' },
     presenceList: { marginBottom: 14 },
     presenceRow: {
@@ -818,7 +818,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       marginBottom: 8,
     },
     presenceIcon: { fontSize: 14, color: accent },
-    presenceLabel: { flex: 1, fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
+    presenceLabel: { flex: 1, fontSize: 13, fontWeight: '600', color: t.textSecondary },
     presenceEmpty: { fontSize: 13, color: t.textSecondary, marginBottom: 14 },
     trustRestricted: {
       paddingVertical: 14,
@@ -828,8 +828,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.1)',
     },
-    trustRestrictedText: { fontSize: 13, color: '#9CA3AF', lineHeight: 19 },
-    detailBio: { fontSize: 13, color: '#9CA3AF', lineHeight: 20 },
+    trustRestrictedText: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
+    detailBio: { fontSize: 13, color: t.textSecondary, lineHeight: 20 },
 
     privacyBox: {
       padding: 16,

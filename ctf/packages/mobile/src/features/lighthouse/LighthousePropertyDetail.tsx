@@ -84,7 +84,7 @@ export const LighthousePropertyDetail: React.FC<Props> = ({ property, currencies
           <Text style={styles.title}>{property.title}</Text>
           {location ? (
             <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+              <Ionicons name="location-outline" size={12} color={tokens.textSecondary} />
               <Text style={styles.locationText}>{location}</Text>
             </View>
           ) : null}
@@ -226,7 +226,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     locationText: {
       fontSize: 12,
-      color: '#9CA3AF',
+      color: t.textSecondary,
       marginLeft: 2,
     },
     typeChip: {
@@ -256,7 +256,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     metaText: {
       fontSize: 13,
-      color: '#9CA3AF',
+      color: t.textSecondary,
     },
     metaDivider: {
       fontSize: 13,
@@ -264,7 +264,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     description: {
       fontSize: 14,
-      color: '#9CA3AF',
+      color: t.textSecondary,
       lineHeight: 21,
       marginBottom: 16,
     },
@@ -296,7 +296,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     acceptsLabel: {
       fontSize: 11,
-      color: '#9CA3AF',
+      color: t.textSecondary,
       textTransform: 'uppercase',
       letterSpacing: 0.8,
       marginBottom: 6,
@@ -349,11 +349,11 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     tagText: {
       fontSize: 11,
-      color: '#9CA3AF',
+      color: t.textSecondary,
     },
     ruleText: {
       fontSize: 13,
-      color: '#9CA3AF',
+      color: t.textSecondary,
       lineHeight: 20,
       marginBottom: 4,
     },

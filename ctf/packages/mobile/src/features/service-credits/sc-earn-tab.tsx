@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
-import { LEDGER, RAW } from './sc-styles';
+import { LEDGER } from './sc-styles';
 
 // Static educational content about how to earn and where to spend ServiceCredits.
 // Credit amounts shown here are platform documentation, not user-specific data.
@@ -111,6 +111,6 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderRadius: 3,
       backgroundColor: LEDGER.green,
     },
-    spendText: { fontSize: 13, color: RAW.textSubtle },
+    spendText: { fontSize: 13, color: t.textSecondary },
   });
 }

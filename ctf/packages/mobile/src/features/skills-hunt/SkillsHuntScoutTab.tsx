@@ -411,7 +411,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
 
     // Scout form
     scoutTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary, marginBottom: 4 },
-    fieldLabel: { color: '#9CA3AF', fontSize: 11, fontWeight: '600', marginTop: 12, marginBottom: 4 },
+    fieldLabel: { color: t.textSecondary, fontSize: 11, fontWeight: '600', marginTop: 12, marginBottom: 4 },
     fieldHint: { color: t.textMuted, fontWeight: '400' },
     input: {
       backgroundColor: 'rgba(255,255,255,0.04)',
@@ -419,7 +419,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderWidth: 1,
       borderRadius: 10,
       padding: 10,
-      color: '#E8EAF0',
+      color: t.textShell,
       fontSize: 14,
     },
 
@@ -461,7 +461,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderBottomWidth: 1,
       borderBottomColor: 'rgba(255,255,255,0.05)',
     },
-    accordionLabel: { color: '#9CA3AF', fontSize: 12, fontWeight: '600' },
+    accordionLabel: { color: t.textSecondary, fontSize: 12, fontWeight: '600' },
     accordionRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     accordionBadge: {
       backgroundColor: accent + '25',
@@ -485,7 +485,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.08)',
     },
-    skillBtnText: { fontSize: 11, color: '#9CA3AF' },
+    skillBtnText: { fontSize: 11, color: t.textSecondary },
 
     // Free-text
     freeTextBlock: { marginTop: 4 },
@@ -498,7 +498,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: 'rgba(255,255,255,0.07)',
       borderRadius: 8,
       fontSize: 12,
-      color: '#E8EAF0',
+      color: t.textShell,
     },
     addBtn: {
       padding: 8,

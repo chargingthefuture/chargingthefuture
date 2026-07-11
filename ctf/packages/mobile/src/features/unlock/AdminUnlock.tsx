@@ -29,7 +29,6 @@ const QUEUE_TABS: { key: UnlockAdminQueueFilter; label: string }[] = [
 
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
-const SUBTLE = '#9CA3AF';
 
 export const AdminUnlock = () => {
   const { tokens, theme } = useTheme();
@@ -267,8 +266,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     content: { padding: 16, gap: 16 },
     center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
     title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
-    subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
-    noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+    subtitle: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
+    noticeText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' },
     errorBanner: {
       fontSize: 13,
       color: '#FCA5A5',
@@ -299,7 +298,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: `${accent}4D`,
     },
     reconcileBtnText: { fontSize: 13, fontWeight: '700', color: accent },
-    emptyText: { fontSize: 13, color: SUBTLE },
+    emptyText: { fontSize: 13, color: t.textSecondary },
     tabRow: { flexDirection: 'row', gap: 8 },
     tab: {
       flex: 1,
@@ -312,7 +311,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       backgroundColor: PANEL,
     },
     tabActive: { backgroundColor: `${accent}1F`, borderColor: `${accent}4D` },
-    tabText: { fontSize: 13, fontWeight: '600', color: SUBTLE },
+    tabText: { fontSize: 13, fontWeight: '600', color: t.textSecondary },
     tabTextActive: { color: accent },
     sectionHeading: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
     card: {
@@ -332,7 +331,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     rewardPillText: { fontSize: 11, fontWeight: '700' },
     rewardPillTextGranted: { color: '#22C55E' },
     rewardPillTextPending: { color: '#F59E0B' },
-    cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+    cardMeta: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
     cardUrl: { fontSize: 12, color: '#D1D5DB', lineHeight: 18 },
     actionRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
     actionBtn: {

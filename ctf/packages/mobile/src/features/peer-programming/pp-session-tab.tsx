@@ -175,7 +175,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderBottomColor: t.borderFaint,
   },
   sessionTitle: { fontSize: 15, fontWeight: '700', color: t.textPrimary, marginBottom: 2 },
-  sessionSubtitle: { fontSize: 12, color: '#9CA3AF' },
+  sessionSubtitle: { fontSize: 12, color: t.textSecondary },
   listenNotice: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -229,7 +229,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderColor: 'rgba(255,255,255,0.07)',
     padding: 10,
   },
-  messageBody: { fontSize: 13, color: '#E8EAF0', lineHeight: 18, marginBottom: 4 },
+  messageBody: { fontSize: 13, color: t.textShell, lineHeight: 18, marginBottom: 4 },
   messageTime: { fontSize: 10, color: t.textSecondary },
   emptyState: { alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyText: { fontSize: 14, color: t.textSecondary, textAlign: 'center', lineHeight: 22 },

@@ -8,9 +8,6 @@ import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { getRecordedEarnings } from './api';
 import type { TrustTransportRecordedEarning } from './types';
 
-// Left raw by design: SUBTLE (#9CA3AF) has no exact-value mobile token equivalent.
-const SUBTLE = '#9CA3AF';
-
 export function TrustTransportEarningsTab() {
   const { tokens, theme } = useTheme();
   const accent = getAppAccent('trust-transport', theme);
@@ -83,8 +80,8 @@ function makeStyles(t: ThemeTokens) {
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, minHeight: 300 },
     section: { padding: 16 },
     sectionTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 6 },
-    sectionDesc: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginBottom: 20 },
-    subheading: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: SUBTLE, marginBottom: 10 },
+    sectionDesc: { fontSize: 13, color: t.textSecondary, lineHeight: 19, marginBottom: 20 },
+    subheading: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: t.textSecondary, marginBottom: 10 },
     errorText: { fontSize: 12, color: t.danger, marginBottom: 8 },
     emptyBox: {
       padding: 18,
@@ -103,7 +100,7 @@ function makeStyles(t: ThemeTokens) {
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.08)',
     },
-    cardCurrency: { fontSize: 12, color: SUBTLE },
+    cardCurrency: { fontSize: 12, color: t.textSecondary },
     cardAmount: { marginTop: 6, fontSize: 22, fontWeight: '800', color: t.textPrimary },
     cardHint: { marginTop: 4, fontSize: 11, color: t.textSecondary },
   });

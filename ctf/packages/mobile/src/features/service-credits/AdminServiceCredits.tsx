@@ -28,9 +28,6 @@ import {
   type CreditLimit,
 } from './admin-api';
 
-// Neutral secondary ink — no mobile token, left raw per the token-pass.
-const SUBTLE = '#9CA3AF';
-
 type ActionKey =
   | 'mint'
   | 'burn'
@@ -103,7 +100,7 @@ function LabeledInput({
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor={SUBTLE}
+        placeholderTextColor={tokens.textSecondary}
         keyboardType={numeric ? 'numeric' : 'default'}
         autoCapitalize="none"
       />
@@ -611,8 +608,8 @@ function makeStyles(t: ThemeTokens) {
     // warning strip, mirroring the web fixed-position banner.
     demoBanner: { marginTop: -16, marginHorizontal: -16, marginBottom: 4 },
     title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
-    subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
-    noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+    subtitle: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
+    noticeText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' },
     errorBanner: {
       fontSize: 13,
       color: '#FCA5A5',
@@ -635,7 +632,7 @@ function makeStyles(t: ThemeTokens) {
     },
     card: { backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, borderRadius: 14, padding: 16, gap: 10 },
     cardTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
-    cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+    cardMeta: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
     policyText: {
       fontFamily: 'monospace',
       fontSize: 12,
@@ -691,6 +688,6 @@ function makeStyles(t: ThemeTokens) {
       borderColor: t.border,
     },
     metricValue: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 2 },
-    metricLabel: { fontSize: 11, color: SUBTLE },
+    metricLabel: { fontSize: 11, color: t.textSecondary },
   });
 }

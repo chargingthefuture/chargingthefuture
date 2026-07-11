@@ -16,8 +16,6 @@ import type { Provider } from './api';
 import { useInstantCall, type ConnectNowProvider } from './FoundationInstantCallController';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
-const TEXT_DIM = '#9CA3AF';
 
 // Whole ServiceCredits per block of N minutes, e.g. "5 ServiceCredits / 10 min".
 // ServiceCredits is one joined word per the brand lexicon. Mirrors instantCallRateLabel
@@ -310,8 +308,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     cardScroll: { padding: 22 },
     cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
     cardTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary },
-    closeIcon: { fontSize: 24, color: TEXT_DIM, paddingHorizontal: 4 },
-    intro: { fontSize: 13.5, color: TEXT_DIM, lineHeight: 21, marginBottom: 14 },
+    closeIcon: { fontSize: 24, color: t.textSecondary, paddingHorizontal: 4 },
+    intro: { fontSize: 13.5, color: t.textSecondary, lineHeight: 21, marginBottom: 14 },
     introStrong: { color: t.textPrimary, fontWeight: '700' },
     rateBox: {
       padding: 14,
@@ -323,7 +321,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     rateBoxLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.9, color: t.textSecondary, textTransform: 'uppercase', marginBottom: 6 },
     rateBoxValue: { fontSize: 17, fontWeight: '800', color: accent },
-    rateBoxNote: { fontSize: 12.5, color: TEXT_DIM, marginTop: 4, lineHeight: 18 },
+    rateBoxNote: { fontSize: 12.5, color: t.textSecondary, marginTop: 4, lineHeight: 18 },
     fieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.9, color: t.textSecondary, textTransform: 'uppercase', marginBottom: 8 },
     capRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
     capChip: {
@@ -335,11 +333,11 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: 'rgba(255,255,255,0.12)',
     },
     capChipOn: { backgroundColor: `${accent}20`, borderColor: `${accent}55` },
-    capChipText: { fontSize: 13, fontWeight: '600', color: TEXT_DIM },
+    capChipText: { fontSize: 13, fontWeight: '600', color: t.textSecondary },
     capChipTextOn: { color: accent },
-    helpText: { fontSize: 12.5, color: TEXT_DIM, lineHeight: 18, marginBottom: 14 },
+    helpText: { fontSize: 12.5, color: t.textSecondary, lineHeight: 18, marginBottom: 14 },
     helpStrong: { color: t.textPrimary, fontWeight: '700' },
-    disclaimer: { fontSize: 12.5, color: TEXT_DIM, lineHeight: 20, marginBottom: 14 },
+    disclaimer: { fontSize: 12.5, color: t.textSecondary, lineHeight: 20, marginBottom: 14 },
     errorText: { fontSize: 13, color: '#F87171', lineHeight: 18, marginBottom: 12 },
     consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 16 },
     checkbox: {
@@ -361,6 +359,6 @@ function makeStyles(t: ThemeTokens, accent: string) {
     startText: { fontSize: 14, fontWeight: '700' },
     startTextOn: { color: '#1a1205' },
     startTextOff: { color: t.textSecondary },
-    footerNote: { marginTop: 10, fontSize: 12, color: TEXT_DIM, lineHeight: 18, textAlign: 'center' },
+    footerNote: { marginTop: 10, fontSize: 12, color: t.textSecondary, lineHeight: 18, textAlign: 'center' },
   });
 }

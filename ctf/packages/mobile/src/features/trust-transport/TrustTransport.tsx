@@ -27,7 +27,8 @@ import { ttSettlementLabel, type TrustTransportMode, type TrustTransportRequest 
 import { CurrencySelect } from '../currency';
 import type { Currency } from '../currency';
 
-// Left raw by design: SUBTLE (#9CA3AF) has no exact-value mobile token equivalent.
+// The grey used by statusColor() for closed/unknown trip states — a status-map swatch, kept raw
+// (status colors do not theme, matching web) alongside its green/accent/red siblings.
 const SUBTLE = '#9CA3AF';
 
 type Tab = 'ride' | 'package' | 'track' | 'help' | 'earnings';
@@ -624,7 +625,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: t.radius,
     fontSize: 14,
-    color: '#E8EAF0',
+    color: t.textShell,
     paddingVertical: 14,
     paddingLeft: 32,
     paddingRight: 14,
@@ -649,7 +650,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderColor: 'rgba(255,255,255,0.10)',
     alignItems: 'center',
   },
-  secondaryBtnText: { color: SUBTLE, fontSize: 13 },
+  secondaryBtnText: { color: t.textSecondary, fontSize: 13 },
   bookedBox: {
     margin: 16,
     padding: 20,
@@ -659,7 +660,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderColor: `${t.success}30`,
   },
   bookedTitle: { fontSize: 16, fontWeight: '700', color: t.success, marginBottom: 6 },
-  bookedDesc: { fontSize: 13, color: SUBTLE },
+  bookedDesc: { fontSize: 13, color: t.textSecondary },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, minHeight: 300 },
   emptyEmoji: { fontSize: 40, marginBottom: 12 },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: t.textPrimary, marginBottom: 6 },
@@ -698,7 +699,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     paddingVertical: 2,
   },
   statusBadgeText: { fontSize: 11, fontWeight: '600' },
-  requestLocation: { fontSize: 13, color: SUBTLE, marginBottom: 2 },
+  requestLocation: { fontSize: 13, color: t.textSecondary, marginBottom: 2 },
   requestSettle: { fontSize: 12, fontWeight: '700', color: t.success, marginTop: 2, marginBottom: 2 },
   settleLabel: { fontSize: 13, color: t.textSecondary, marginTop: 10, marginBottom: 6 },
   cancelBtn: {
@@ -736,7 +737,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   publicContent: { padding: 20 },
   publicHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   publicTitle: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
-  publicDesc: { fontSize: 14, color: SUBTLE, lineHeight: 21, marginBottom: 16 },
+  publicDesc: { fontSize: 14, color: t.textSecondary, lineHeight: 21, marginBottom: 16 },
   serviceRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   serviceCard: {
     flex: 1,

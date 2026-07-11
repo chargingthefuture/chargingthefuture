@@ -286,7 +286,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     tabBar: { paddingHorizontal: 12, paddingVertical: 8, gap: 6, borderBottomWidth: 1, borderBottomColor: t.border },
     tab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
     tabActive: { backgroundColor: 'rgba(16,185,129,0.12)', borderColor: 'rgba(16,185,129,0.4)' },
-    tabText: { fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
+    tabText: { fontSize: 13, fontWeight: '600', color: t.textSecondary },
     tabTextActive: { color: accent },
 
 

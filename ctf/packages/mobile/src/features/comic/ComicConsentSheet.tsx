@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '../../theme';
+import { useTheme, type ThemeTokens } from '../../theme';
 
 // First-use AI-processing consent bottom sheet (the llm_consent_granted gate). Matches the locked
 // MobileAIConsent mockup: self-hosted, no third parties, a teammate reviews answers, safety first.
@@ -11,7 +11,6 @@ const BRAND = '#7C3AED';
 // matching the web consent fix. Resolved per-render from the active theme, never hardcoded.
 const AI_ACCENT_STANDARD = '#A78BFA';
 const AI_ACCENT_COMIC = '#7A6A50';
-const TEXT = '#E8EAF0';
 const SUBTLE = '#6B7280';
 
 type ConsentPoint = {
@@ -52,6 +51,7 @@ type ComicConsentSheetProps = {
 export function ComicConsentSheet({ open, onConfirm, onDismiss }: ComicConsentSheetProps) {
   const { tokens } = useTheme();
   const accent = tokens.isComic ? AI_ACCENT_COMIC : AI_ACCENT_STANDARD;
+  const styles = React.useMemo(() => makeStyles(tokens), [tokens]);
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onDismiss}>
       <Pressable style={styles.backdrop} onPress={onDismiss} />
@@ -105,7 +105,8 @@ export function ComicConsentSheet({ open, onConfirm, onDismiss }: ComicConsentSh
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(8,9,13,0.55)',
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
   },
   lede: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: t.textSecondary,
     lineHeight: 20,
     marginBottom: 14,
   },
@@ -197,7 +198,7 @@ const styles = StyleSheet.create({
   pointTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: TEXT,
+    color: t.textShell,
     marginBottom: 2,
   },
   pointDesc: {
@@ -232,6 +233,7 @@ const styles = StyleSheet.create({
   dismissText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: t.textSecondary,
   },
-});
+  });
+}

@@ -154,7 +154,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   },
   topicLabel: { fontSize: 11, color: t.textSecondary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
   topicTitle: { fontSize: 14, fontWeight: '700', color: t.textPrimary, marginBottom: 6 },
-  topicGuidance: { fontSize: 12, color: '#9CA3AF', lineHeight: 18 },
+  topicGuidance: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
   rosterBox: {
     borderTopWidth: 1,
     borderTopColor: t.borderFaint,
@@ -169,7 +169,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     letterSpacing: 0.8,
     marginBottom: 6,
   },
-  rosterMember: { fontSize: 13, color: '#E8EAF0', lineHeight: 20 },
+  rosterMember: { fontSize: 13, color: t.textShell, lineHeight: 20 },
   runningSection: { marginTop: 16 },
   runningTitle: {
     fontSize: 11,
