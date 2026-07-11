@@ -21,7 +21,7 @@ const GDP_ESTIMATE_CHIP_LABEL = 'Estimate';
 // gdp-shared.ts so the legal wording cannot drift across platforms.
 const COMMUNITY_VALUE_INDEX_LABEL = 'Community Value Index';
 const COMMUNITY_VALUE_INDEX_DISCLAIMER =
-  "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through community-set weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
+  "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through a fixed set of weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
 
 // Resolve the memoized StyleSheet + the gdp accent for the active theme.
 function useGdpTheme() {

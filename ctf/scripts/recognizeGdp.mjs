@@ -3,7 +3,7 @@ import crypto from 'crypto';
 
 // Community Value Index rollup (issue #121). Recognizes ACTUAL economic activity across the applicable
 // plugins and folds every value type (fiat, crypto, ServiceCredits, barter, free) into ONE relative index via
-// owner-set contribution weights (currency_usd_rates; USD is the reference base = 1). Writes the
+// fixed, built-in contribution weights (WEIGHTS below; USD is the reference base = 1). Writes the
 // `gdp_value_index` metric for the week — ALONGSIDE the projection target, not replacing it. A
 // production scheduler runs this weekly.
 //
@@ -106,6 +106,30 @@ const SOURCES = [
   // transfer outside a plugin transaction is economic activity and is counted (service-credits above).
 ];
 
+// Fixed, built-in contribution weights — mirror ctf/packages/web/lib/gdp/recognition.ts
+// (DEFAULT_CONTRIBUTION_WEIGHTS). There is no database or admin step, so the index is always live and
+// needs no owner action. ServiceCredits is the native unit and counts 1:1; each completed non-money
+// exchange (FREE favor, BARTER trade) counts one point; foreign-currency settled value normalizes to a
+// USD reference. RACT (recurring activity, a by-count code produced only by this weekly rollup) counts one
+// point per confirmed line. Notional index weights only — never a price, exchange rate, or redemption value.
+const WEIGHTS = new Map([
+  ['SC', 1],
+  ['FREE', 1],
+  ['BARTER', 1],
+  ['RACT', 1],
+  ['USD', 1],
+  ['EUR', 1.08],
+  ['GBP', 1.27],
+  ['CHF', 1.12],
+  ['CAD', 0.73],
+  ['AUD', 0.66],
+  ['CNY', 0.14],
+  ['INR', 0.012],
+  ['BRL', 0.18],
+  ['JPY', 0.0067],
+  ['BTC', 65000],
+]);
+
 function currentWeekStartIso() {
   const now = new Date();
   const day = now.getUTCDay(); // 0 = Sunday … 6 = Saturday
@@ -123,17 +147,10 @@ async function run() {
   });
   const client = await pool.connect();
   try {
-    const ratesResult = await client.query(
-      `SELECT DISTINCT ON (currency_code) currency_code, usd_rate
-         FROM currency_usd_rates
-         ORDER BY currency_code, as_of DESC`,
-    );
-    const rates = new Map(ratesResult.rows.map((row) => [row.currency_code, Number(row.usd_rate)]));
-
     // Community Value Index: fold EVERY value type (fiat, crypto, ServiceCredits, barter, free) into one
-    // relative figure via its owner-set contribution weight. The index is NOT money and carries no
-    // currency symbol; the weights (here USD is the reference base = 1) are never a price or redemption
-    // rate. A value type with no active weight is surfaced and excluded, never silently zeroed.
+    // relative figure via its fixed, built-in contribution weight (WEIGHTS). The index is NOT money and
+    // carries no currency symbol; the weights (USD is the reference base = 1) are never a price or
+    // redemption rate. A value type with no built-in weight is surfaced and excluded, never silently zeroed.
     let valueIndex = 0;
     const unweighted = new Set();
     for (const source of SOURCES) {
@@ -142,7 +159,7 @@ async function run() {
         const code = row.currency_code;
         if (!code) continue;
         const amount = Number(row.total) || 0;
-        const weight = rates.get(code);
+        const weight = WEIGHTS.get(code);
         if (weight === undefined) {
           unweighted.add(code);
           continue;

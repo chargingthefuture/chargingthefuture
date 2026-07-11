@@ -24,10 +24,9 @@ import { GdpIconRail } from "./gdp-icon-rail";
 import { GdpSidebar } from "./gdp-sidebar";
 import { GdpDashboard } from "./gdp-dashboard";
 import { GdpMap } from "./gdp-map";
-import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
-function ShellHeader({ t, metrics, isAdmin }: { t: GdpTokens; metrics: GdpMetrics; isAdmin?: boolean }) {
+function ShellHeader({ t, metrics }: { t: GdpTokens; metrics: GdpMetrics }) {
   return (
     <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
       <Globe size={18} style={{ color: t.ACCENT }} />
@@ -38,7 +37,6 @@ function ShellHeader({ t, metrics, isAdmin }: { t: GdpTokens; metrics: GdpMetric
         </div>
       </div>
       <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>↑ Live</Badge>
-      <PluginAdminButton href="/admin/gdp" isAdmin={isAdmin} accent={t.ACCENT} />
     </header>
   );
 }
@@ -91,7 +89,7 @@ function deriveIsEstimate(rawMetrics: unknown): boolean {
   );
 }
 
-export default function GdpShell({ isAdmin }: { isAdmin?: boolean } = {}) {
+export default function GdpShell() {
   const [tab, setTab] = useState<GdpTab>("dashboard");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -151,7 +149,6 @@ export default function GdpShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             <Globe size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>GDP</span>
             <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>↑ Live</Badge>
-            <PluginAdminButton href="/admin/gdp" isAdmin={isAdmin} accent={t.ACCENT} />
             <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
@@ -170,7 +167,7 @@ export default function GdpShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       <GdpIconRail tab={tab} onTab={setTab} />
       <GdpSidebar metrics={metrics} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader t={t} metrics={metrics} isAdmin={isAdmin} />
+        <ShellHeader t={t} metrics={metrics} />
         <GdpContent t={t} error={error} report={report} tab={tab} sectors={sectors} countries={countries} metrics={metrics} metricRows={metricRows} />
       </div>
     </div>

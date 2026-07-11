@@ -100,7 +100,7 @@ export const COMMUNITY_VALUE_INDEX_METRIC_KEY = "gdp_value_index";
 // figure as a custom, community-specific measure in the spirit of GDP.
 export const COMMUNITY_VALUE_INDEX_LABEL = "Community Value Index";
 export const COMMUNITY_VALUE_INDEX_DISCLAIMER =
-  "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through community-set weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
+  "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through a fixed set of weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
 
 // Format a USD aggregate into the compact $B/$M/$K form the design uses. Returns a
 // dash when the figure is absent so the map never invents a number.
