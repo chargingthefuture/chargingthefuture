@@ -190,6 +190,7 @@ export function ShareLink({
       </button>
 
       {open ? (
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- stopPropagation only prevents the outside-click-close from firing on the popover's own content; it is event management, not a user action. The popover's controls are focusable buttons.
         <div
           id={dialogId}
           role="dialog"

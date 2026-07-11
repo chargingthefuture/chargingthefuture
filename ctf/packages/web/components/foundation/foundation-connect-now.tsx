@@ -198,6 +198,7 @@ function ConnectNowDialog({
   }, [onClose]);
 
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- backdrop click-to-close is a mouse convenience; keyboard users close via Escape (handler above) or the visible close button.
     <div
       role="dialog"
       aria-modal="true"
