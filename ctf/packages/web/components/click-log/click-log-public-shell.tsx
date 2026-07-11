@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Lock, ShieldCheck, Clock, FileText, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { AlertTriangle, Lock, ShieldCheck, Clock, FileText, UserPlus, Eye, EyeOff, Pointer, MapPin } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
@@ -132,9 +132,8 @@ function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 24px', textAlign: 'center', gap: 22 }}>
         {/* Locked button */}
         <div style={{ position: 'relative' }}>
-          <div style={{ width: 140, height: 140, borderRadius: '50%', background: 'rgba(233,30,140,0.1)', border: '3px solid rgba(233,30,140,0.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, filter: 'blur(2px)', opacity: 0.5 }}>
-            <AlertTriangle size={34} color={t.ACCENT} />
-            <span style={{ fontSize: 13, fontWeight: 800, color: t.ACCENT }}>Log Incident</span>
+          <div style={{ width: 140, height: 140, borderRadius: '50%', background: 'rgba(233,30,140,0.1)', border: '3px solid rgba(233,30,140,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'blur(2px)', opacity: 0.5 }}>
+            <AlertTriangle size={40} color={t.ACCENT} />
           </div>
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(233,30,140,0.12)', border: `2px solid ${t.ACCENT}50`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -158,12 +157,12 @@ function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
 
         <div style={{ display: 'flex', gap: 8, width: '100%' }}>
           {[
-            { icon: '👆', label: 'One tap' },
-            { icon: '🔒', label: 'Private' },
-            { icon: '📍', label: 'Location' },
-          ].map(({ icon, label }) => (
+            { Icon: Pointer, label: 'One tap' },
+            { Icon: ShieldCheck, label: 'Private' },
+            { Icon: MapPin, label: 'Location' },
+          ].map(({ Icon, label }) => (
             <div key={label} style={{ flex: 1, padding: '12px 8px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, textAlign: 'center' }}>
-              <div style={{ fontSize: 18, marginBottom: 5 }}>{icon}</div>
+              <Icon size={18} color={t.ACCENT} style={{ marginBottom: 6, opacity: 0.75 }} />
               <div style={{ fontSize: 11, fontWeight: 600, color: t.MUTED }}>{label}</div>
             </div>
           ))}
