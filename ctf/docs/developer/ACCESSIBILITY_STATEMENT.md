@@ -31,9 +31,9 @@ brand voice. These are enhancements on top of the AA target, not part of the pub
 
 - Web, static scan: 2026-07-11. A repeatable static accessibility scan (`pnpm --dir ctf run
   lint:a11y`, `eslint-plugin-jsx-a11y` recommended rules over `packages/web/app` and
-  `packages/web/components`) ran over 338 component files and found 66 issues in 30 files. This is the
-  statically-detectable subset only; it does not cover contrast, focus order, keyboard traps, or
-  screen-reader behavior.
+  `packages/web/components`) ran over 338 component files. The first run found 66 issues in 30 files;
+  after fixing every label-association issue, 41 remain. This is the statically-detectable subset
+  only; it does not cover contrast, focus order, keyboard traps, or screen-reader behavior.
 - Web, full runtime audit: not yet run (axe sweep of every route + manual review).
 - Android: not yet audited.
 
@@ -45,18 +45,20 @@ audit runs.
 
 Filled in from audit findings.
 
-- Web (from the 2026-07-11 static scan, 66 issues in 30 files):
-  - 25 controls where a label is not programmatically tied to its input
-    (`jsx-a11y/label-has-associated-control`).
+- Web (from the 2026-07-11 static scan; 66 issues found, 41 remaining after the label fix):
+  - Fixed: all 25 controls where a label was not programmatically tied to its input
+    (`jsx-a11y/label-has-associated-control`) — native inputs now use `htmlFor`/`id`, custom
+    select components take an `id`, group captions no longer misuse `<label>`, and two wrapping
+    labels gained an explicit control name.
   - 19 click handlers with no matching keyboard handler
     (`jsx-a11y/click-events-have-key-events`), plus 13 interactive handlers on non-interactive
     elements (`jsx-a11y/no-static-element-interactions`) and 6 on non-interactive roles
     (`jsx-a11y/no-noninteractive-element-interactions`) — these are keyboard-operability gaps.
   - 1 media element without a captions track (`jsx-a11y/media-has-caption`), 1 redundant role, and 1
     element missing a required ARIA prop.
-  - The files with the most issues: `lighthouse-host.tsx`, `chyme-tip-dialog.tsx`,
-    `directory-profile-edit.tsx`, `directory-right-panel.tsx`, `foundation-connect-now.tsx`,
-    `shared/stream-chat-panel.tsx`. Re-run `pnpm --dir ctf run lint:a11y` for the current full list.
+  - The files with the most remaining issues (all keyboard-operability): `chyme-tip-dialog.tsx`,
+    `directory-profile-edit.tsx`, `directory-right-panel.tsx`, `foundation-connect-now.tsx`. Re-run
+    `pnpm --dir ctf run lint:a11y` for the current full list.
   - Not yet measured (needs the runtime audit): contrast, focus order, keyboard traps, and
     screen-reader announcements.
 - Android: no completed AA audit; a meaningful share of screens still lack accessibility props, and

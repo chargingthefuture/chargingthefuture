@@ -323,8 +323,9 @@ export function LighthouseHost({
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
             {field("title", "Title *", { placeholder: "Quiet 1-bed near transit" })}
             <div style={{ flex: "1 1 160px", minWidth: 140 }}>
-              <label style={labelStyle}>Type</label>
+              <label htmlFor="lighthouse-property-type" style={labelStyle}>Type</label>
               <select
+                id="lighthouse-property-type"
                 value={form.propertyType}
                 onChange={(e) => setField("propertyType", e.target.value)}
                 style={inputStyle}
@@ -343,20 +344,21 @@ export function LighthouseHost({
             {field("addressLine", "Address")}
             {field("city", "City")}
             <div style={{ flex: "1 1 160px", minWidth: 140 }}>
-              <label style={labelStyle}>Country</label>
-              <CountrySelect value={form.country} onChange={(v) => setField("country", v)} style={inputStyle} />
+              <label htmlFor="lighthouse-country" style={labelStyle}>Country</label>
+              <CountrySelect id="lighthouse-country" value={form.country} onChange={(v) => setField("country", v)} style={inputStyle} />
             </div>
             <div style={{ flex: "1 1 160px", minWidth: 140 }}>
-              <label style={labelStyle}>State / region</label>
-              <StateField country={form.country} value={form.state} onChange={(v) => setField("state", v)} style={inputStyle} />
+              <label htmlFor="lighthouse-state" style={labelStyle}>State / region</label>
+              <StateField id="lighthouse-state" country={form.country} value={form.state} onChange={(v) => setField("state", v)} style={inputStyle} />
             </div>
             {field("zipCode", "Postal code")}
             {field("bedrooms", "Bedrooms", { type: "number" })}
             {field("bathrooms", "Bathrooms", { type: "number" })}
             {field("monthlyRent", "Monthly rent", { type: "number", placeholder: "0 for ServiceCredits / free" })}
             <div style={{ flex: "1 1 160px", minWidth: 140 }}>
-              <label style={labelStyle}>Rent currency</label>
+              <label htmlFor="lighthouse-rent-currency" style={labelStyle}>Rent currency</label>
               <CurrencySelect
+                id="lighthouse-rent-currency"
                 value={form.rentCurrency}
                 currencies={currencies.length > 0 ? currencies : undefined}
                 onChange={(code) => setField("rentCurrency", code)}
@@ -370,7 +372,7 @@ export function LighthouseHost({
             {field("airbnbProfileUrl", "Listing URL (optional)")}
           </div>
           <div style={{ marginTop: 14 }}>
-            <label style={labelStyle}>Accepted currencies</label>
+            <div style={labelStyle}>Accepted currencies</div>
             <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>
               Choose every currency this listing accepts. Checking {SERVICE_CREDITS_LABEL} means your
               listing accepts {SERVICE_CREDITS_LABEL} — this is separate from the rent currency above.

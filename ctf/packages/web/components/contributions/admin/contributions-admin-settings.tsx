@@ -23,9 +23,10 @@ export type SettingsProps = {
   isMobile: boolean;
 };
 
-function numInput(t: ContributionsTokens, value: string, onChange: (v: string) => void, width = 90) {
+function numInput(t: ContributionsTokens, id: string, value: string, onChange: (v: string) => void, width = 90) {
   return (
     <input
+      id={id}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       inputMode="numeric"
@@ -73,19 +74,19 @@ export function ContributionsAdminSettings({ t, config, saving, error, onSave, i
       <div style={cardStyle}>
         <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 16 }}>ServiceCredits</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <label style={{ fontSize: 12, color: t.MUTED, flex: 1 }}>Credits per dollar (gift card)</label>
-          {numInput(t, creditsPerUsd, setCreditsPerUsd)}
+          <label htmlFor="contrib-credits-per-usd" style={{ fontSize: 12, color: t.MUTED, flex: 1 }}>Credits per dollar (gift card)</label>
+          {numInput(t, 'contrib-credits-per-usd', creditsPerUsd, setCreditsPerUsd)}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-          <label style={{ fontSize: 12, color: t.MUTED, flex: 1 }}>Credits per comment or star</label>
-          {numInput(t, creditsPerAction, setCreditsPerAction)}
+          <label htmlFor="contrib-credits-per-action" style={{ fontSize: 12, color: t.MUTED, flex: 1 }}>Credits per comment or star</label>
+          {numInput(t, 'contrib-credits-per-action', creditsPerAction, setCreditsPerAction)}
         </div>
         <div style={{ fontSize: 11, color: t.MUTED, marginBottom: 12 }}>
           Stored as a USD-equivalent unit value ({(Number(creditsPerAction) / (Number(creditsPerUsd) || 1) || 0).toFixed(2)} USD) × credits per dollar.
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <label style={{ fontSize: 12, color: t.MUTED, flex: 1 }}>Per-member per-drive cap (SC)</label>
-          {numInput(t, cap, setCap)}
+          <label htmlFor="contrib-per-drive-cap" style={{ fontSize: 12, color: t.MUTED, flex: 1 }}>Per-member per-drive cap (SC)</label>
+          {numInput(t, 'contrib-per-drive-cap', cap, setCap)}
         </div>
       </div>
 

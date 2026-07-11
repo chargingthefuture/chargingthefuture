@@ -132,6 +132,7 @@ export function BlockMemberButton({ targetUserId, displayName, onBlocked, style 
                 <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: status === 'submitting' ? 'not-allowed' : 'pointer' }}>
                   <input
                     type="checkbox"
+                    aria-label="Report this person to the admins as a safety concern"
                     checked={safetyConcern}
                     disabled={status === 'submitting'}
                     onChange={(e) => setSafetyConcern(e.target.checked)}

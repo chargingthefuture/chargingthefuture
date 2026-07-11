@@ -143,10 +143,10 @@ export function SkillsPicker(props: SkillsPickerProps) {
   const occupationNames = Object.keys(occupations);
   return (
     <div>
-      <label style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
         Skills <span style={{ color: t.ACCENT }}>*</span>
         <span style={{ fontSize: 11, color: t.FAINT, fontWeight: 400, marginLeft: 6 }}>pick from taxonomy (max 10)</span>
-      </label>
+      </div>
 
       <SelectedChips skills={skills} proposedSkills={proposedSkills} onToggleSkill={onToggleSkill} onRemoveProposed={onRemoveProposed} />
 
