@@ -70,3 +70,22 @@ Each case is tagged by **role** (member / admin) and **surface** (web desktop, w
 at ~390px, android), because not every plugin is tested as a logged-in member: most are member-facing,
 `weekly-performance` is admin-only, and `unlock` / `trust` / `bug-reporting` are internal surfaces
 tested through their admin/internal entry points.
+
+## Accessibility check (every sweep)
+
+The product's accessibility target is WCAG 2.2 Level AA — see
+`../ACCESSIBILITY_STATEMENT.md`. On each sweep, and before every release, run this short check on the
+core flow you are testing and file any failure as a Bug Reporting row:
+
+- Keyboard only (web): tab through the flow. Every control is reachable, the focus ring is always
+  visible, focus order is logical, and focus moves to errors and dialogs when they open. No keyboard
+  trap.
+- Screen reader spot-check: VoiceOver or NVDA on web, TalkBack on android. Every control announces a
+  clear label (including icon-only buttons: share, copy, close, back), and loading/success/error
+  states are announced, not only shown.
+- Contrast and non-color cues: text and meaningful UI are readable against the theme; meaning is never
+  carried by color alone.
+- Touch targets on android and mobile-responsive web are at least 44×44px.
+
+This is a manual AA spot-check, not a full audit. The full per-route audit and the automated
+accessibility gates are tracked in issue #1432 and listed in `../ACCESSIBILITY_STATEMENT.md`.
