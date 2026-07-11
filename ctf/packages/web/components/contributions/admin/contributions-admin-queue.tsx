@@ -104,13 +104,13 @@ function ReviewPanel({
         </div>
       )}
       <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <label style={{ fontSize: 11, color: t.MUTED, flexShrink: 0 }}>Confirmed value (USD)</label>
-        <input value={confirmedValue} onChange={(e) => setConfirmedValue(e.target.value)} inputMode="decimal" disabled={!isPending} style={inputStyle(t, 80)} />
+        <label htmlFor="contrib-q-confirmed-value" style={{ fontSize: 11, color: t.MUTED, flexShrink: 0 }}>Confirmed value (USD)</label>
+        <input id="contrib-q-confirmed-value" value={confirmedValue} onChange={(e) => setConfirmedValue(e.target.value)} inputMode="decimal" disabled={!isPending} style={inputStyle(t, 80)} />
         <span style={{ fontSize: 11, color: t.MUTED }}>→ {resultingSc.toLocaleString()} SC (credits granted automatically, subject to per-cycle cap)</span>
       </div>
       <div style={{ marginBottom: 14 }}>
-        <label style={{ fontSize: 11, color: t.MUTED, display: 'block', marginBottom: 5 }}>Note (optional)</label>
-        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Internal note…" disabled={!isPending} style={inputStyle(t, 400)} />
+        <label htmlFor="contrib-q-note" style={{ fontSize: 11, color: t.MUTED, display: 'block', marginBottom: 5 }}>Note (optional)</label>
+        <input id="contrib-q-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Internal note…" disabled={!isPending} style={inputStyle(t, 400)} />
       </div>
       {isPending ? (
         <div style={{ display: 'flex', gap: 8 }}>

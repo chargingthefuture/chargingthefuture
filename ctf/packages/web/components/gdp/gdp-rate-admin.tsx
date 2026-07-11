@@ -168,18 +168,18 @@ export default function GdpRateAdmin() {
         <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 20 }}>Creates a new dated row. History is preserved.</div>
 
         <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>New USD factor *</label>
+          <label htmlFor="gdp-new-factor" style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>New USD factor *</label>
           <div style={{ display: "flex", alignItems: "center", padding: "10px 13px", background: t.INPUT_BG, border: `1px solid ${newRate ? t.ACCENT + "50" : t.BORDER_SOLID}`, borderRadius: 10, gap: 8 }}>
             <span style={{ fontSize: 13, color: t.MUTED }}>$</span>
-            <input value={newRate} onChange={(e) => setNewRate(e.target.value)} inputMode="decimal" style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: t.TITLE }} placeholder="0.00000" />
+            <input id="gdp-new-factor" value={newRate} onChange={(e) => setNewRate(e.target.value)} inputMode="decimal" style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: t.TITLE }} placeholder="0.00000" />
             {editing.symbol ? <span style={{ fontSize: 12, color: t.MUTED }}>/ {editing.symbol}</span> : null}
           </div>
           <div style={{ fontSize: 10.5, color: t.MUTED, marginTop: 5, lineHeight: 1.5 }}>GDP estimate factor only — not a redemption or per-user rate.</div>
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>Source / note *</label>
-          <input value={newSource} onChange={(e) => setNewSource(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "10px 13px", background: t.INPUT_BG, border: `1px solid ${newSource ? t.ACCENT + "50" : t.BORDER_SOLID}`, borderRadius: 10, fontSize: 13, color: t.TITLE, outline: "none" }} placeholder="e.g. Owner — quarterly review" />
+          <label htmlFor="gdp-new-source" style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>Source / note *</label>
+          <input id="gdp-new-source" value={newSource} onChange={(e) => setNewSource(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "10px 13px", background: t.INPUT_BG, border: `1px solid ${newSource ? t.ACCENT + "50" : t.BORDER_SOLID}`, borderRadius: 10, fontSize: 13, color: t.TITLE, outline: "none" }} placeholder="e.g. Owner — quarterly review" />
         </div>
 
         {saveError ? (
