@@ -84,8 +84,9 @@ Accessibility reports are triaged as user-facing defects, not cosmetic requests.
 
 - Owner: accessibility target and this statement are owned by the product owner; a named maintainer is
   assigned when the first audit is scheduled.
-- Every pull request: automated accessibility checks run in CI once the gates below are in place, so
-  regressions cannot ship silently.
+- Every pull request: the static accessibility gate runs in CI (the "Run web accessibility gate" step
+  in the `quality-gates` job), so a new web accessibility violation fails the build and cannot ship
+  silently.
 - Every release (or quarterly, whichever comes first): re-run the manual audit on the core flows and
   update the "last tested" date and "known gaps" here. An accessibility line is part of the manual
   test and release checklist.
@@ -104,12 +105,20 @@ Ordered; later items depend on earlier ones.
    errors).
 5. Fix the Android gaps found in step 3 (accessibility labels/roles/state on interactive elements,
    focus order, contrast, touch-target size, TalkBack announcements).
-6. Add automated gates so regressions cannot ship silently. Started: a report-only static scan exists
-   (`pnpm --dir ctf run lint:a11y`, config `ctf/a11y-audit.config.mjs`). Still to do: wire
-   `eslint-plugin-jsx-a11y` into the blocking CI lint gate at max warnings 0 (only after the web gaps
-   above are fixed), add an axe check in the end-to-end/CI path, a contrast-token check against the
-   theme palette, and an equivalent React Native accessibility lint for mobile.
+6. Add automated gates so regressions cannot ship silently. Done: `eslint-plugin-jsx-a11y` runs as a
+   blocking CI check — the "Run web accessibility gate" step in the `quality-gates` job of
+   `.github/workflows/ci.yml` runs `pnpm --dir ctf run lint:a11y` at max-warnings 0, so a new web
+   accessibility violation fails the build. The remaining intentional exceptions carry an inline
+   `eslint-disable-next-line` with a rationale at the call site (the 5 modal backdrops, the share-link
+   popover, and the not-yet-captioned Beacon replay video listed under "Known gaps"). Still to do: add
+   an axe check in the end-to-end/CI path, a contrast-token check against the theme palette, and an
+   equivalent React Native accessibility lint for mobile.
 7. Manual assistive-technology passes on the core flows: VoiceOver/NVDA plus keyboard-only on web, and
    TalkBack on Android. Document each pass in a checklist.
-8. Publish this statement as a public, rendered page the landing-page claim can point to, once the
-   audits and gap list above are real.
+8. Publish this statement as a public, rendered page the landing-page claim can point to. Done: the
+   public page is at `/accessibility` (`ctf/packages/web/app/accessibility/page.tsx`), a signed-out
+   static route. It is linked from the web `/terms` footer and from the mobile Account & Data screen
+   (an out-link next to Terms, mirroring how mobile links to `/terms`). Keep the page's "Last reviewed"
+   date and known-limitations list in step with this developer document as the status changes; the page
+   is phrased as an aim ("we aim to meet WCAG 2.2 AA"), not a finished guarantee, until the runtime
+   audits land.

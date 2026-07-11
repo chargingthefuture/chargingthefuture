@@ -459,6 +459,9 @@ jobs:
       - name: Run lint gate
         run: pnpm --dir ctf run lint
 
+      - name: Run web accessibility gate
+        run: pnpm --dir ctf run lint:a11y
+
       - name: Run typecheck gate
         run: pnpm --dir ctf run typecheck
 
