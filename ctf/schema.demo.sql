@@ -1952,6 +1952,19 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS announcements ALTER COLUMN id SET DEFAULT gen_random_uuid();
 UPDATE announcements SET id = gen_random_uuid() WHERE id IS NULL;
 ALTER TABLE IF EXISTS announcements ALTER COLUMN id SET NOT NULL;
+-- Convert a legacy text/varchar id column to uuid (see schema.sql for the full rationale): publish,
+-- archive and edit-draft run `WHERE id = $1::uuid`, which errors on a text column. Lossless cast;
+-- guarded so it only runs when the column is not already uuid; a no-op on a fresh DB.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'announcements' AND column_name = 'id' AND data_type <> 'uuid'
+  ) THEN
+    ALTER TABLE announcements ALTER COLUMN id TYPE uuid USING id::uuid;
+    ALTER TABLE announcements ALTER COLUMN id SET DEFAULT gen_random_uuid();
+  END IF;
+END $$;
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT '';

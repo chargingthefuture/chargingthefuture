@@ -1954,6 +1954,22 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS announcements ALTER COLUMN id SET DEFAULT gen_random_uuid();
 UPDATE announcements SET id = gen_random_uuid() WHERE id IS NULL;
 ALTER TABLE IF EXISTS announcements ALTER COLUMN id SET NOT NULL;
+-- Convert a legacy text/varchar id column to uuid. schema.sql declares announcements.id UUID, but
+-- some legacy databases stored it as text. Publish, archive and edit-draft all run
+-- `WHERE id = $1::uuid`, which errors on a text column ("operator does not exist: character varying
+-- = uuid") and surfaced as "Unable to publish announcement.". Every stored id is a uuid string
+-- (gen_random_uuid default), so the in-place cast is lossless. Guarded so it only runs when the
+-- column is not already uuid; a no-op on a fresh DB (id is uuid from CREATE TABLE).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'announcements' AND column_name = 'id' AND data_type <> 'uuid'
+  ) THEN
+    ALTER TABLE announcements ALTER COLUMN id TYPE uuid USING id::uuid;
+    ALTER TABLE announcements ALTER COLUMN id SET DEFAULT gen_random_uuid();
+  END IF;
+END $$;
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT '';
