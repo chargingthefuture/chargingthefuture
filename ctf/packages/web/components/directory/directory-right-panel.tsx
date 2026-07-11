@@ -26,7 +26,7 @@ export function DirectoryRightPanel({
     <aside style={{ width: 280, borderLeft: `1px solid ${t.BORDER}`, background: t.HEADER, display: "flex", flexDirection: "column", padding: "20px 16px", flexShrink: 0 }}>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.FAINT, textTransform: "uppercase", marginBottom: 12 }}>Top Providers</div>
       {members.slice(0, 4).map((p) => (
-        <div key={p.id} onClick={() => onSelect(p)} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}15`, marginBottom: 8, cursor: "pointer" }}>
+        <div key={p.id} role="button" tabIndex={0} onClick={() => onSelect(p)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(p); } }} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}15`, marginBottom: 8, cursor: "pointer" }}>
           <Avatar style={{ width: 36, height: 36 }}>
             <AvatarFallback style={{ background: `${t.ACCENT}25`, color: t.ACCENT, fontSize: 14, fontWeight: 700 }}>{initials(p.name)}</AvatarFallback>
           </Avatar>
@@ -52,7 +52,7 @@ export function DirectoryRightPanel({
         <div style={{ marginTop: 12, padding: "16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}` }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.FAINT, textTransform: "uppercase", marginBottom: 10 }}>Sectors</div>
           {sectors.slice(0, 5).map((s) => (
-            <div key={s.id} onClick={() => onFilter(s.name)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", cursor: "pointer" }}>
+            <div key={s.id} role="button" tabIndex={0} onClick={() => onFilter(s.name)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onFilter(s.name); } }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", cursor: "pointer" }}>
               <span style={{ fontSize: 12, color: activeFilter === s.name ? t.ACCENT : t.SUBTLE }}>{s.name}</span>
               {activeFilter === s.name && <CheckCircle size={11} style={{ color: t.ACCENT }} />}
             </div>

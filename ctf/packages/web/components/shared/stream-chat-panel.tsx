@@ -200,6 +200,7 @@ const ChannelSearchBar: React.FC = () => {
                 type="button"
                 className="ctf-chat-search__hit"
                 role="option"
+                aria-selected={false}
                 onClick={() => onPickHit(hit.id)}
               >
                 <span className="ctf-chat-search__hit-author">{hit.authorName}</span>
