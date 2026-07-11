@@ -27,7 +27,7 @@ export function GentlePulseSidebar({
       <ScrollArea style={{ flex: 1 }}>
         <div style={{ padding: "0 8px 16px" }}>
           {categories.map((c) => (
-            <div key={c} onClick={() => onCategory(c)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "pointer", background: category === c ? `${t.ACCENT}18` : "transparent", borderLeft: category === c ? `2px solid ${t.ACCENT}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
+            <div key={c} role="button" tabIndex={0} onClick={() => onCategory(c)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCategory(c); } }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "pointer", background: category === c ? `${t.ACCENT}18` : "transparent", borderLeft: category === c ? `2px solid ${t.ACCENT}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
               <span style={{ fontSize: 13, color: category === c ? t.TEXT : t.MUTED, flex: 1 }}>{c}</span>
             </div>
           ))}

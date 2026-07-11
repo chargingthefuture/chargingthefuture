@@ -54,7 +54,6 @@ export function UnlockVerifyBanner({
 
   return (
     <section
-      role="region"
       aria-label="Verify your account"
       style={{
         margin: '0 0 14px',

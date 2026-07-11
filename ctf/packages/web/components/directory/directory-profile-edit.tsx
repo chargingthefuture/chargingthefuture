@@ -262,16 +262,22 @@ export function DirectoryProfileEdit({
   // currently selected sector.
   const sectorJobTitles = jobTitles.filter((j) => j.sectorId === form.sectorId);
 
+  // Close on Escape so keyboard users have the same "dismiss" the backdrop click gives mouse users.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Edit your directory profile"
-      onClick={onClose}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "32px 16px", fontFamily: "'Inter', system-ui, sans-serif" }}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{ width: "100%", maxWidth: 560, background: t.HEADER, border: `1px solid ${t.BORDER_HI}`, borderRadius: 16, color: t.TEXT, boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}
       >
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${t.BORDER}` }}>

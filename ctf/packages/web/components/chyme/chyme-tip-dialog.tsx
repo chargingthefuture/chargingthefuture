@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Coins, X } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getChymeTokens, requestJson } from "./chyme-shared";
@@ -73,6 +73,13 @@ function ChymeTipDialog({
   const numeric = Number(amount);
   const canSend = !submitting && !success && amount.length > 0 && !Number.isNaN(numeric) && numeric > 0;
 
+  // Close on Escape so keyboard users have the same "dismiss" the backdrop click gives mouse users.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   async function send() {
     if (!canSend) return;
     setSubmitting(true);
@@ -117,7 +124,7 @@ function ChymeTipDialog({
       role="dialog"
       aria-modal="true"
       aria-label={`Tip ${recipientName}`}
-      onClick={onClose}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
         position: "fixed",
         inset: 0,
@@ -130,7 +137,6 @@ function ChymeTipDialog({
       }}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{ width: 320, maxWidth: "100%", background: "#041a0b", border: `1px solid ${t.ACCENT}30`, borderRadius: 16, padding: 20 }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>

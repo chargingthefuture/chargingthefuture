@@ -317,7 +317,7 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
         <ScrollArea style={{ flex: 1 }}>
           <div style={{ padding: "0 8px 16px" }}>
             {sectorFilters.map((f) => (
-              <div key={f} onClick={() => setActiveFilter(f)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "pointer", background: activeFilter === f ? `${t.ACCENT}18` : "transparent", borderLeft: activeFilter === f ? `2px solid ${t.ACCENT}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
+              <div key={f} role="button" tabIndex={0} onClick={() => setActiveFilter(f)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveFilter(f); } }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "pointer", background: activeFilter === f ? `${t.ACCENT}18` : "transparent", borderLeft: activeFilter === f ? `2px solid ${t.ACCENT}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
                 <span style={{ fontSize: 13, color: activeFilter === f ? t.TEXT : t.SUBTLE, flex: 1 }}>{f}</span>
               </div>
             ))}

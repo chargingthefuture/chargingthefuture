@@ -11,7 +11,7 @@ export function GentlePulseRightPanel({ sessions, onPlay }: { sessions: Session[
     <aside style={{ width: 280, borderLeft: "1px solid rgba(20,184,166,0.08)", background: t.HEADER, padding: "20px 16px", flexShrink: 0 }}>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.FAINT, textTransform: "uppercase", marginBottom: 12 }}>Popular Now</div>
       {sessions.slice(0, 4).map((s) => (
-        <div key={s.id} onClick={() => onPlay(s.id)} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px", borderRadius: 10, background: `${t.ACCENT}06`, border: `1px solid ${t.ACCENT}15`, marginBottom: 8, cursor: "pointer" }}>
+        <div key={s.id} role="button" tabIndex={0} onClick={() => onPlay(s.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPlay(s.id); } }} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px", borderRadius: 10, background: `${t.ACCENT}06`, border: `1px solid ${t.ACCENT}15`, marginBottom: 8, cursor: "pointer" }}>
           <div style={{ fontSize: 24, flexShrink: 0 }}>{s.emoji ?? "💚"}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: t.TEXT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.title}</div>

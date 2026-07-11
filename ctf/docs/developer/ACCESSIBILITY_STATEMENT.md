@@ -31,9 +31,10 @@ brand voice. These are enhancements on top of the AA target, not part of the pub
 
 - Web, static scan: 2026-07-11. A repeatable static accessibility scan (`pnpm --dir ctf run
   lint:a11y`, `eslint-plugin-jsx-a11y` recommended rules over `packages/web/app` and
-  `packages/web/components`) ran over 338 component files. The first run found 66 issues in 30 files;
-  after fixing every label-association issue, 41 remain. This is the statically-detectable subset
-  only; it does not cover contrast, focus order, keyboard traps, or screen-reader behavior.
+  `packages/web/components`) ran over 338 component files. The first run found 66 issues; after fixing
+  the label-association issues (25) and the keyboard-operability issues (28), 13 remain. This is the
+  statically-detectable subset only; it does not cover contrast, focus order, keyboard traps, or
+  screen-reader behavior.
 - Web, full runtime audit: not yet run (axe sweep of every route + manual review).
 - Android: not yet audited.
 
@@ -45,20 +46,28 @@ audit runs.
 
 Filled in from audit findings.
 
-- Web (from the 2026-07-11 static scan; 66 issues found, 41 remaining after the label fix):
+- Web (from the 2026-07-11 static scan; 66 issues found, 13 remaining):
   - Fixed: all 25 controls where a label was not programmatically tied to its input
     (`jsx-a11y/label-has-associated-control`) — native inputs now use `htmlFor`/`id`, custom
     select components take an `id`, group captions no longer misuse `<label>`, and two wrapping
     labels gained an explicit control name.
-  - 19 click handlers with no matching keyboard handler
-    (`jsx-a11y/click-events-have-key-events`), plus 13 interactive handlers on non-interactive
-    elements (`jsx-a11y/no-static-element-interactions`) and 6 on non-interactive roles
-    (`jsx-a11y/no-noninteractive-element-interactions`) — these are keyboard-operability gaps.
-  - 1 media element without a captions track (`jsx-a11y/media-has-caption`), 1 redundant role, and 1
-    element missing a required ARIA prop.
-  - The files with the most remaining issues (all keyboard-operability): `chyme-tip-dialog.tsx`,
-    `directory-profile-edit.tsx`, `directory-right-panel.tsx`, `foundation-connect-now.tsx`. Re-run
-    `pnpm --dir ctf run lint:a11y` for the current full list.
+  - Fixed: 28 keyboard-operability issues — 10 clickable cards/list rows/filters became keyboard
+    operable (`role="button"`, `tabIndex`, and an Enter/Space handler); three modal dialogs
+    (Chyme tip, directory profile edit, Foundation connect-now) gained close-on-Escape and dropped an
+    unneeded inner click handler; a redundant `role="region"` was removed; and a listbox option got
+    its required `aria-selected`.
+  - Remaining (13), each with a rationale:
+    - 5 modal backdrops still show a click-to-close handler on the dialog element
+      (`click-events-have-key-events` + `no-noninteractive-element-interactions`): Chyme tip,
+      directory profile edit, Foundation connect-now, comic-consent, bug-report. Each has a real
+      keyboard path — Escape closes and a visible close button is present — so the backdrop click is a
+      mouse convenience, not a barrier.
+    - 1 share-link popover keeps a `stopPropagation` click handler to stop an outside-click-close from
+      firing on its own content; it is event management, not a user action, and its controls are
+      focusable buttons.
+    - 1 recorded video in the Beacon replay view has no captions track
+      (`jsx-a11y/media-has-caption`). This is a genuine WCAG 1.2.2 gap: captions are not produced for
+      recorded broadcasts yet, so a captions pipeline is needed rather than an empty track.
   - Not yet measured (needs the runtime audit): contrast, focus order, keyboard traps, and
     screen-reader announcements.
 - Android: no completed AA audit; a meaningful share of screens still lack accessibility props, and
