@@ -1,0 +1,42 @@
+# AI Behavior Change Log and Standing User Preferences
+
+## Intent
+Give the owner a single place to (1) see the AI's standing behavioral rules that must never be
+changed silently, and (2) track, with timestamps, every time the AI drifted from expected behavior.
+This file is both the rulebook for a small set of locked preferences and the running error log.
+
+All timestamps in this file use **US Eastern Time in 12-hour format** (see the time rule below).
+
+## Standing Preferences (locked — do not change without explicit owner confirmation)
+
+These are owner-directed and override any default AI behavior. An agent must not change any of them on
+its own. If an agent believes a change is needed, it must ask the owner and get an explicit "yes"
+first — for each change, every time.
+
+1. **Time format and zone.** Always display dates and times in **US Eastern Time (America/New_York),
+   12-hour clock with AM/PM** (e.g. `2026-07-11 01:57 PM EDT`). Never switch to a 24-hour clock.
+   Never switch to a different time zone. This applies everywhere the AI shows a time to the owner:
+   chat replies, this log, and any human-facing output.
+
+2. **Vocabulary and wording.** Do not change established vocabulary or terminology the owner is used
+   to. Each time an agent wants to change a word, term, or phrasing convention, it must get **explicit
+   confirmation from the owner first** — every single time, not once. (This is in addition to the
+   existing banned-term/brand-voice rules; those still apply.)
+
+3. **No silent behavioral changes.** More generally, do not silently change a behavior the owner has
+   come to rely on. When in doubt, ask before changing; then log the change below.
+
+## How to use the log
+
+- Every time an agent notices it drifted from expected behavior (or the owner points one out), add a
+  new row to the table below.
+- Fill in the timestamp in US Eastern Time, 12-hour format.
+- Keep entries short and factual: what changed, what it should have been, whether it is corrected.
+- Never delete rows. This is an append-only history so the owner can track the AI over time.
+
+## Behavior Change Log
+
+| Timestamp (US Eastern, 12-hour) | Behavior observed | Expected behavior | Status |
+|---|---|---|---|
+| 2026-07-11 01:57 PM EDT | Across sessions the AI switched from a 12-hour clock to a 24-hour clock without being asked. | Always use US Eastern Time, 12-hour clock (AM/PM). | Corrected — locked as standing preference #1 above. |
+| 2026-07-11 01:57 PM EDT | Owner reported unrequested vocabulary changes across sessions. | Do not change established vocabulary/terminology without explicit owner confirmation each time. | Corrected — locked as standing preference #2 above. |

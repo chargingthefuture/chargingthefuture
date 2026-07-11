@@ -61,7 +61,7 @@ function DesktopPeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: str
           <a href={verifyUrl ?? signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Globe size={14} color={t.MUTED} />
-            <span style={{ fontSize: 13, color: t.MUTED }}>Active cohorts across 47 countries</span>
+            <span style={{ fontSize: 13, color: t.MUTED }}>Open to members worldwide</span>
           </div>
         </div>
       </div>
@@ -95,10 +95,10 @@ function MobilePeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: stri
           <span style={{ fontSize: 20, fontWeight: 800 }}>PeerProgramming</span>
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Deterministic global cohorts</span>
-        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>12-person weekly cohorts across 47 countries. You&apos;re always placed — no competitive selection, guaranteed spot.</p>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>12-person weekly cohorts, open worldwide. You&apos;re always placed — no competitive selection, guaranteed spot.</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Globe size={13} color={t.MUTED} />
-          <span style={{ fontSize: 12, color: t.MUTED }}>Active cohorts in 47 countries</span>
+          <span style={{ fontSize: 12, color: t.MUTED }}>Open to members worldwide</span>
         </div>
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
