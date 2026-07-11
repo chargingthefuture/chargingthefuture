@@ -41,6 +41,7 @@ import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { getDirectoryTokens } from "./shared";
 import { DirectorySkillsPicker } from "./directory-skills-picker";
+import { CountrySelect, StateField } from "@/components/shared/location-select";
 
 const COLOR = "#93C5FD";
 const COMMUNITY = "#A855F7";
@@ -78,6 +79,10 @@ export interface AdminDirectoryProfile {
   moneroAddress?: string | null;
   bitcoinAddress?: string | null;
   serviceCreditsAddress?: string | null;
+  // Member location (shared location standard — plain names).
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
 }
 
 type FilterKey = "All" | "Claimed" | "Unclaimed";
@@ -90,6 +95,9 @@ type EditForm = {
   bio: string;
   profileUrl: string;
   skillIds: string[];
+  city: string;
+  state: string;
+  country: string;
 };
 
 type TaxonomyOption = { id: string; name: string };
@@ -129,6 +137,9 @@ function toForm(p: AdminDirectoryProfile): EditForm {
     bio: p.bio ?? "",
     profileUrl: p.profileUrl ?? "",
     skillIds: (p.skills ?? []).map((s) => s.id),
+    city: p.city ?? "",
+    state: p.state ?? "",
+    country: p.country ?? "",
   };
 }
 
@@ -142,7 +153,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
   const [filter, setFilter] = useState<FilterKey>("All");
   const [query, setQuery] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<EditForm>({ firstName: "", lastName: "", headline: "", bio: "", profileUrl: "", skillIds: [] });
+  const [form, setForm] = useState<EditForm>({ firstName: "", lastName: "", headline: "", bio: "", profileUrl: "", skillIds: [], city: "", state: "", country: "" });
   const [assignInput, setAssignInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
@@ -257,6 +268,10 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
           sectorId: editing.sectorId,
           jobTitleId: editing.jobTitleId,
           skillIds: form.skillIds,
+          // Location is editable here; an emptied field clears the stored value.
+          city: form.city.trim(),
+          state: form.state.trim(),
+          country: form.country.trim(),
         }),
       });
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; profile?: AdminDirectoryProfile; message?: string };
@@ -360,6 +375,36 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
             />
           </div>
         ))}
+
+        {/* Location — shared Country/State controls (lib/geo/locations.ts), same standard as the
+            member self-edit form: Country dropdown; US-state dropdown or free-text region. */}
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: SUBTLE, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Country</div>
+          <CountrySelect
+            value={form.country}
+            onChange={(country) => setForm((f) => ({ ...f, country }))}
+            style={{ width: "100%", padding: "8px 11px", background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, outline: "none", boxSizing: "border-box", cursor: "pointer" }}
+          />
+        </div>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: SUBTLE, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>State / Region</div>
+          <StateField
+            country={form.country}
+            value={form.state}
+            onChange={(state) => setForm((f) => ({ ...f, state }))}
+            style={{ width: "100%", padding: "8px 11px", background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, outline: "none", boxSizing: "border-box" }}
+          />
+        </div>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: SUBTLE, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>City</div>
+          <input
+            value={form.city}
+            onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+            placeholder="City"
+            disabled={saving}
+            style={{ width: "100%", padding: "8px 11px", background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT, outline: "none", boxSizing: "border-box" }}
+          />
+        </div>
 
         {/* Skills use the same structured picker as the member self-edit form and SkillsHunt.
             Free-text proposed skills are member-owned, so the picker's proposed section is omitted

@@ -20,6 +20,9 @@ function parseBody(body: AdminProfileBody): DirectoryProfileInput {
     skillIds: Array.isArray(body.skillIds)
       ? body.skillIds.filter((value): value is string => typeof value === 'string')
       : [],
+    city: typeof body.city === 'string' ? body.city : undefined,
+    state: typeof body.state === 'string' ? body.state : undefined,
+    country: typeof body.country === 'string' ? body.country : undefined,
   };
 }
 

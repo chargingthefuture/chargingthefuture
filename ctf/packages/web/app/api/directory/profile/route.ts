@@ -27,6 +27,9 @@ function toProfileInput(body: ProfileBody): DirectoryProfileInput {
     moneroAddress: typeof body.moneroAddress === 'string' ? body.moneroAddress : null,
     bitcoinAddress: typeof body.bitcoinAddress === 'string' ? body.bitcoinAddress : null,
     serviceCreditsAddress: typeof body.serviceCreditsAddress === 'string' ? body.serviceCreditsAddress : null,
+    city: typeof body.city === 'string' ? body.city : null,
+    state: typeof body.state === 'string' ? body.state : null,
+    country: typeof body.country === 'string' ? body.country : null,
   };
 }
 

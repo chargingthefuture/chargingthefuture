@@ -23,6 +23,12 @@ export const DIRECTORY_MAX_ANNOUNCEMENT_BODY_LENGTH = 4000;
 export const DIRECTORY_MAX_PROPOSED_SKILL_LENGTH = 40;
 export const DIRECTORY_MAX_PROPOSED_SKILLS = 10;
 
+// Location fields (city / state or region / country). Values are plain names from the shared
+// location standard (lib/geo/locations.ts). Capped at 100 to match the carried-over v2 column type
+// (directory_profiles.city/state/country are varchar(100) on the cloned production database, so a
+// longer value would fail the write there).
+export const DIRECTORY_MAX_LOCATION_LENGTH = 100;
+
 export const DIRECTORY_DEFAULT_PAGE = 1;
 export const DIRECTORY_DEFAULT_PAGE_SIZE = 20;
 export const DIRECTORY_MAX_PAGE_SIZE = 100;

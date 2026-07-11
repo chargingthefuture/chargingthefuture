@@ -2244,6 +2244,18 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
   monero_address TEXT,
   bitcoin_address TEXT,
   service_credits_address TEXT,
+  -- Member location (city / state or region / country). Standard fields so non-US members are
+  -- represented accurately — Directory feeds nearly every other plugin. These are the SAME column
+  -- names v2 used (directory_profiles.city / state / country, varchar(100) in the prod snapshot
+  -- ctf/schema-prod4.6.2026.sql), so on the cloned production database the ADD COLUMN IF NOT EXISTS
+  -- below is a no-op and the carried-over v2 values are preserved in place — no data-copy migration
+  -- is needed (unlike skills/bio/profile_url, whose v3 targets differ from v2 and are backfilled in
+  -- post/0005–0007). v3 simply never declared or read these columns before, which is why the data
+  -- looked missing. Values are plain names ("United States", "California") per the shared location
+  -- standard (packages/web/lib/geo/locations.ts).
+  city TEXT,
+  state TEXT,
+  country TEXT,
   deleted_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -2282,6 +2294,9 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS venmo_address 
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS monero_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bitcoin_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS service_credits_address TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS state TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS country TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- SkillsHunt + Clerk username co-change (2026-05-11). See
