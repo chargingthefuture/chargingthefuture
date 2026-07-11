@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
-| **Generated** | 2026-07-01 (hand-updated for the right-rail "Browse All Providers" clear-filters fix; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-11 (hand-updated for provider location read from the shared directory profile; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -58,9 +58,12 @@ checks. Member role unless noted.
    then press "Browse All Providers" in the right rail.
 **Expected:** Only providers who opted in to offer at least one skill appear. Each card shows name,
 headline, bio, and offered-skill chips; tapping a chip filters the list by that skill with a
-clear-filter banner. The viewer's own card does not offer "Connect now". Pressing "Browse All
-Providers" always returns to the full, unfiltered list — it clears the trade, search text, and skill
-filters and opens the Browse tab (never a no-op, even when Browse is already the open tab).
+clear-filter banner. Opening a provider whose directory profile has a location shows a "City, State,
+Country" line under the headline (only the parts that are set — a non-US provider may show just a
+country), read from the shared directory profile, not a Foundation-owned field. The viewer's own card
+does not offer "Connect now". Pressing "Browse All Providers" always returns to the full, unfiltered
+list — it clears the trade, search text, and skill filters and opens the Browse tab (never a no-op,
+even when Browse is already the open tab).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### FND-2 · Offer skills (provider opt-in)
