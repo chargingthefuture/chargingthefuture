@@ -375,6 +375,22 @@ Result: web ☐
 
 ---
 
+### SH-A2b — Manual leaderboard rebuild button
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** A round with at least one accepted submission exists.
+
+**Steps:**
+1. In the admin Rounds tab, find the round and click "Rebuild leaderboard"; confirm the prompt.
+2. Open that round's Leaderboard tab and check the standings.
+
+**Expected:** The button shows "Rebuilding…" then "Rebuilt ✓". The Leaderboard reflects the current accepted submissions (individual and team) — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action.
+
+Result: web ☐
+
+---
+
 ### SH-A3 — Review a submission: accept, then verify leaderboard rebuild and notification
 
 **Role:** admin/moderator · **Surfaces:** web, android

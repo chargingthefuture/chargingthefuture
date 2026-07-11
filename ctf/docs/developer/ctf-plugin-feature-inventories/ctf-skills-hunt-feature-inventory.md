@@ -141,6 +141,7 @@ Admin/moderator routes:
 - `POST /api/skills-hunt/admin/rounds`
 - `PUT /api/skills-hunt/admin/rounds/:roundId`
 - `GET /api/skills-hunt/admin/rounds/:roundId/submissions`
+- `POST /api/skills-hunt/admin/rounds/:roundId/leaderboard/rebuild` — admin-gated (`requireSkillsHuntAdminAccess`), CSRF. Recomputes the round's cached `skills_hunt_leaderboard` (individual + team) from current accepted submissions via `rebuildLeaderboard`. Command `skills-hunt.leaderboard.rebuild`. Returns `{ ok: true }`. Exposed as a "Rebuild leaderboard" button per round in the admin Rounds tab.
 - `POST /api/skills-hunt/admin/submissions/:submissionId/review`
 - `PUT /api/skills-hunt/admin/feature-reward-card`
 - `POST /api/skills-hunt/admin/submissions/:submissionId/generate-directory-profile`
@@ -446,6 +447,8 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
 - [ ] Dispute escalation: second-admin sign-off vs flagged queue. Default: flagged queue.
 
 ### Change Log
+
+- 2026-07-08: **Admin manual leaderboard rebuild.** New admin-gated `POST /api/skills-hunt/admin/rounds/:roundId/leaderboard/rebuild` (command `skills-hunt.leaderboard.rebuild`) recomputes the round's cached `skills_hunt_leaderboard` from current accepted submissions via the existing `rebuildLeaderboard`, and a "Rebuild leaderboard" button per round in the admin Rounds tab. Fills a gap: the leaderboard is a cached table that only refreshed as a side effect of a review action, so there was no way to refresh it after an out-of-band change (e.g. a data fix that rejected an already-accepted submission). Added the command/access-policy/audit contract entries. **Android parity deferred** — tracked separately; web + mobile-responsive shipped here.
 
 - 2026-07-08: **One person = one Quora profile URL.** `createSubmission` now blocks a second *active* (not rejected, not deleted) submission for the same normalized Quora URL, across all rounds, under a transaction-scoped advisory lock. Reuses the existing `skills_hunt_duplicate_submission` error, so the API returns the same friendly "already nominated" message. Root cause of an incident where the same person was nominated twice in one round with different skill lists: the per-round url + skills signature hashed them differently, so both were accepted and each minted a Directory profile and a ServiceCredits reward. A follow-up may add a global partial unique index on `quora_profile_url_normalized` (WHERE not rejected/deleted) as a hard DB backstop, once production is confirmed free of other active URL duplicates.
 

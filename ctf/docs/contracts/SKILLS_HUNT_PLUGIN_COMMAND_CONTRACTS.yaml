@@ -258,6 +258,24 @@ contracts:
     idempotency: true
 
   - pluginId: skills-hunt
+    command: skills-hunt.leaderboard.rebuild
+    version: 1.0.0
+    description: Admin-only manual rebuild of a round's cached leaderboard (individual and team) from its current accepted submissions.
+    inputSchema:
+      roundId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - skills_hunt_leaderboard
+      - skills_hunt_submissions
+    purpose: progress_visibility
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: skills-hunt
     command: skills-hunt.achievement.list
     version: 1.0.0
     description: List achievements awarded to the authenticated user.
