@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../../_lib';
+import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../../../_lib';
 import { withDbTransaction } from 'lib/db/postgres';
 import { insertSkillsHuntAudit, rebuildLeaderboard } from 'lib/skills-hunt/repository';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
