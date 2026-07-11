@@ -1968,6 +1968,22 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_by_user_id 
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS linked_plugin_slug TEXT;
+-- Drop the pre-v3 `content` column. Legacy databases carried a NOT NULL `content` column that the
+-- v3 app (which authors into `body`) never fills, so every "Create draft" failed with
+-- "null value in column content violates not-null constraint". schema.sql has no `content` column,
+-- so bring legacy tables in line: preserve any old text into `body` where `body` is empty, then drop
+-- the defunct column. Guarded + idempotent — a no-op on a fresh database where `content` never
+-- existed, and safe to run repeatedly.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'announcements' AND column_name = 'content'
+  ) THEN
+    UPDATE announcements SET body = content WHERE (body IS NULL OR body = '') AND content IS NOT NULL;
+    ALTER TABLE announcements DROP COLUMN content;
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_announcements_status ON announcements(status);
 
 -- === FEED TIMELINE PROJECTION ===
