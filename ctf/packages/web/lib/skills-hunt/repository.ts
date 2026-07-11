@@ -1613,6 +1613,29 @@ export async function createSubmission(
     await ensureSubmissionRateLimits(client, submitterUserId);
 
     const normalizedUrl = normalizedUrlForCheck;
+
+    // One person = one Quora profile URL. Quora does not recycle handles, so a
+    // normalized profile URL uniquely identifies a person. Block a second *active*
+    // submission for the same URL — across all rounds, not just this one — so the
+    // same person can't be nominated (and rewarded) twice. A rejected or deleted
+    // submission does NOT block a legitimate re-nomination. The transaction-scoped
+    // advisory lock closes the race between two concurrent submissions of the same
+    // URL (the earlier url+skills signature key missed this: same URL, different
+    // skills, hashed differently, so both slipped through and were accepted).
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`skills_hunt_submission_url:${normalizedUrl}`]);
+    const existingActive = await client.query<{ id: string }>(
+      `SELECT id
+         FROM skills_hunt_submissions
+        WHERE quora_profile_url_normalized = $1
+          AND status <> 'rejected'
+          AND deleted_at IS NULL
+        LIMIT 1`,
+      [normalizedUrl],
+    );
+    if (existingActive.rowCount && existingActive.rowCount > 0) {
+      throw new Error('skills_hunt_duplicate_submission');
+    }
+
     const skills = normalizeArray(input.skills);
     const proposedSkills = normalizeArray(input.proposedSkills ?? []);
     const claimedProfessions = normalizeArray(input.claimedProfessions);
