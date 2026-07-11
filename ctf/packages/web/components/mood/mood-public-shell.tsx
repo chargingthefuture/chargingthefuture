@@ -96,10 +96,14 @@ function MobileMoodPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyU
   const t = getMoodTokens(theme);
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: t.TITLE }}>
-      {/* This mobile layout is a centered hero with no header row, so the back
-          control sits alone at the top-left — it is the only navigation here. */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px' }}>
+      {/* Top row: back control on the left, and a Sign In link on the right so both paths are clear
+          (the main button below is the sign-up / join path). In verify mode the single "Finish
+          verifying" button below is the only action, so no Sign In is shown here. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
         <PublicShellBackLink />
+        {!verifyUrl ? (
+          <a href={signInUrl} style={{ padding: '6px 14px', borderRadius: 8, background: t.BORDER_STRONG, border: '1px solid rgba(255,255,255,0.15)', color: t.TITLE, fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>Sign In</a>
+        ) : null}
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 40px', gap: 20, textAlign: 'center' }}>
         <div style={{ width: 64, height: 64, borderRadius: 32, background: t.ACCENT + '20', border: `2px solid ${t.ACCENT}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
