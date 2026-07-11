@@ -111,7 +111,7 @@ contracts:
     version: 1.0.0
     description: >-
       Real per-country member distribution for the dashboard's "Top Countries" panel — a people-count
-      per country read from members' claimed directory profiles (the shared member profile), most
+      per country read from members' directory profiles (the shared member profile), most
       members first. Community-wide aggregate, never a per-user figure and never an invented per-country
       money figure. No small-count suppression (owner decision, 2026-07-11): every country with a member
       is shown.
