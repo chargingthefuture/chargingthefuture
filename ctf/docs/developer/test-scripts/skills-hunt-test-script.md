@@ -149,17 +149,18 @@ Result: web ☐
 
 ---
 
-### SH-6 — Submission validation: duplicate submission in same round is blocked
+### SH-6 — Submission validation: a Quora URL can only be nominated once
 
 **Role:** member · **Surfaces:** web
 
-**Precondition:** Member has already submitted a nomination with a specific Quora URL + skills combination in the active round (SH-2 above satisfies this).
+**Precondition:** An active submission (pending or accepted, not rejected) already exists for a specific Quora URL — SH-2 above satisfies this.
 
 **Steps:**
 1. Navigate to the Scout tab of the same active round.
-2. Submit the same Quora URL and the same skills as the earlier submission.
+2. Submit the same Quora URL again but with a **different** set of skills.
+3. If a second round is open, also try submitting the same Quora URL in that other round.
 
-**Expected:** The API returns an error indicating a duplicate submission was detected. A second submission row is not created.
+**Expected:** Both attempts are blocked with a duplicate-submission message — a Quora URL uniquely identifies a person, so at most one active submission may exist for it, regardless of the skills chosen or the round. A second submission row is not created. (A previously *rejected* submission for that URL would not block a fresh nomination.)
 
 Result: web ☐
 
