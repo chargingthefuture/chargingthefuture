@@ -28,11 +28,13 @@ export interface GdpSector {
   share?: number;
 }
 
+// A real per-country row for the "Top Countries" panel — member distribution read from claimed
+// directory profiles (location tied to people). `members` is the real count; `share` is that count
+// as a percentage of all located members. No invented per-country money figure.
 export interface GdpCountry {
   country: string;
-  flag: string;
-  gdp: string;
   members: number;
+  share: number;
 }
 
 export interface GdpMetrics {

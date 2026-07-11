@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-11 (hand-updated for the real Top Countries member distribution — see GDP-3b; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -84,6 +84,21 @@ chip does not appear on values that are not estimates.
 the same neutral "unpopulated" state — there is no invented per-country figure. With no published
 report, an honest empty caption shows.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### GDP-3b · Top Countries panel (real member distribution)
+**Role:** member · **Surfaces:** web (android omits this panel)
+**Steps:**
+1. On the web dashboard, find the "Top Countries" panel (subtitle "Members by country").
+2. Cross-check a country's member count against `SELECT country, COUNT(*) FROM directory_profiles WHERE
+   claimed_by_user_id IS NOT NULL AND is_active = TRUE AND deleted_at IS NULL AND btrim(country) <> ''
+   GROUP BY country`.
+**Expected:** Each row shows a country, its real member count, and a share bar that is that country's
+percentage of all located members (a real metric — not a width derived from list position). Every
+country with at least one located member appears (no small-count suppression). The figures are
+people-counts read from members' directory profiles — there is no per-country money figure. The hero
+"N countries" line matches the number of distinct countries shown. If no member has a country set, the
+panel is simply empty (never a fabricated row).
+**Result:** web ☐ — notes:
 
 ### GDP-4 · No fiat parity anywhere
 **Role:** member · **Surfaces:** all
