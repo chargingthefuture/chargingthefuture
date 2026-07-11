@@ -33,8 +33,8 @@
 Transparency-reporting plugin — these confirm the community figure shows and never reads as a
 per-wallet money value. Member role unless noted.
 
-1. **Dashboard loads.** Open the GDP report. The headline community figure and active-member count
-   render with numbers, not a spinner or error. → web ☐ mobile ☐ android ☐
+1. **Dashboard loads.** Open the GDP report. The headline community figure and total member count
+   render with numbers, not a spinner or error. There is no "active members" stat. → web ☐ mobile ☐ android ☐
 2. **Sign-in required.** Sign out and try to reach the GDP report. Access is denied — there is no
    unauthenticated public view. → web ☐ mobile ☐ android ☐
 3. **Estimate is labelled.** Where the figure is an estimate, an "Estimate" chip and a short
@@ -54,7 +54,7 @@ per-wallet money value. Member role unless noted.
 **Role:** member · **Surfaces:** all · **Seed:** `seed:demo`
 **Steps:**
 1. Open the GDP report.
-2. Read the headline community figure and the active-member count.
+2. Read the headline community figure and the total member count.
 **Expected:** Both values render from real data with plain-language labels. No tile is blank, a
 spinner, or a raw metric key. The figure is computed live on each load — there is no publish step. If
 there is no recognized activity yet, an honest empty/zero state shows instead of an invented number.

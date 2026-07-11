@@ -5,7 +5,7 @@
 // SVG paths on an equirectangular 1000x500 canvas.
 //
 // Real-data note: the GDP module exposes only community-wide aggregates
-// (gdp_total_revenue, weekly_active_users) — there is NO per-country GDP table. So
+// (gdp_value_index, total_members) — there is NO per-country GDP table. So
 // every region renders in one neutral cyan "unpopulated" state and the headline
 // aggregate is overlaid on the map. We never invent per-country values. If a
 // per-country table is added later, `regionFill` can be made data-driven.
@@ -182,7 +182,7 @@ export function GdpWorldMap({
           </div>
           <div style={{ fontSize: 34, fontWeight: 900, color: t.ACCENT, lineHeight: 1 }}>{headline}</div>
           {membersLabel ? (
-            <div style={{ fontSize: 12, color: t.SUBTLE }}>{membersLabel} active members</div>
+            <div style={{ fontSize: 12, color: t.SUBTLE }}>{membersLabel} members</div>
           ) : null}
         </div>
       </div>

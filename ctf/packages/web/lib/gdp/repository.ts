@@ -1,5 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
-import { countActiveUsersLastDays, countTotalMembers } from 'lib/engagement/login-activity';
+import { countTotalMembers } from 'lib/engagement/login-activity';
 import { recognizeCommunityValueIndex } from 'lib/gdp/recognition';
 
 export async function getGdpShellStats(): Promise<{ memberCount: number | null; gdpValueUsd: number | null }> {
@@ -53,10 +53,9 @@ function currentWeekStartIso(now = new Date()): string {
 }
 
 export async function buildLiveGdpReport(): Promise<GdpLiveReport> {
-  const [breakdown, totalMembers, activeMembers] = await Promise.all([
+  const [breakdown, totalMembers] = await Promise.all([
     recognizeCommunityValueIndex(),
     countTotalMembers().catch(() => null),
-    countActiveUsersLastDays(7).catch(() => null),
   ]);
 
   // Community Value Index is the headline: a normalized, weighted estimate (no currency symbol), so it
@@ -71,16 +70,6 @@ export async function buildLiveGdpReport(): Promise<GdpLiveReport> {
       isEstimate: true,
     },
   ];
-  if (activeMembers !== null) {
-    metrics.push({
-      metricKey: 'weekly_active_users',
-      metricValue: activeMembers,
-      dpSuppressed: false,
-      lawfulBasis: 'engagement',
-      sourcePlugin: 'gdp',
-      isEstimate: false,
-    });
-  }
   if (totalMembers !== null) {
     metrics.push({
       metricKey: 'total_members',

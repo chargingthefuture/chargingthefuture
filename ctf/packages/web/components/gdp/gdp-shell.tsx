@@ -97,7 +97,7 @@ export default function GdpShell() {
   const [isEstimate, setIsEstimate] = useState(false);
   // Raw per-metric rows from the report payload. Kept separately from the shaped
   // GdpMetrics so the world map can read the real community-wide aggregates
-  // (gdp_value_index, weekly_active_users) by key. No per-country data exists.
+  // (gdp_value_index, total_members) by key. No per-country data exists.
   const [metricRows, setMetricRows] = useState<GdpMetricRow[]>([]);
   // Real per-country member distribution (location tied to people), fetched from /api/gdp/countries.
   const [countries, setCountries] = useState<GdpCountry[]>([]);

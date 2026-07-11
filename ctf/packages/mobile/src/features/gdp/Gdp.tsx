@@ -147,7 +147,7 @@ function GdpMainView({ report }: { report: GdpReport }) {
   // ServiceCredits, barter), shown as a plain number with no currency symbol (a relative measure, not
   // money). Replaces the prior USD revenue figure as the prominent economy number.
   const valueIndex = pickMetric(report.metrics, 'gdp_value_index');
-  const weeklyActiveUsers = pickMetric(report.metrics, 'weekly_active_users');
+  const totalMembers = pickMetric(report.metrics, 'total_members');
   const valueIndexIsEstimate = pickMetricIsEstimate(report.metrics, 'gdp_value_index');
 
   // Format helpers
@@ -196,7 +196,7 @@ function GdpMainView({ report }: { report: GdpReport }) {
           <GdpOverviewTab
             valueIndex={valueIndex}
             valueIndexIsEstimate={valueIndexIsEstimate}
-            weeklyActiveUsers={weeklyActiveUsers}
+            totalMembers={totalMembers}
             fmtIndex={fmtIndex}
             fmtCount={fmtCount}
             publication={report.publication}
@@ -209,7 +209,7 @@ function GdpMainView({ report }: { report: GdpReport }) {
           <GdpTrendTab valueIndex={valueIndex} fmtIndex={fmtIndex} />
         )}
         {activeNav === 'home' && (
-          <GdpHomeTab valueIndex={valueIndex} weeklyActiveUsers={weeklyActiveUsers} fmtIndex={fmtIndex} fmtCount={fmtCount} />
+          <GdpHomeTab valueIndex={valueIndex} totalMembers={totalMembers} fmtIndex={fmtIndex} fmtCount={fmtCount} />
         )}
       </ScrollView>
 
@@ -247,14 +247,14 @@ function navIcon(key: NavKey): string {
 function GdpOverviewTab({
   valueIndex,
   valueIndexIsEstimate,
-  weeklyActiveUsers,
+  totalMembers,
   fmtIndex,
   fmtCount,
   publication,
 }: {
   valueIndex: number | null;
   valueIndexIsEstimate: boolean;
-  weeklyActiveUsers: number | null;
+  totalMembers: number | null;
   fmtIndex: (_n: number | null) => string;
   fmtCount: (_n: number | null) => string;
   publication: GdpReport['publication'];
@@ -280,8 +280,8 @@ function GdpOverviewTab({
       {/* Stat chips */}
       <View style={styles.statRow}>
         <View style={[styles.statChip, { borderColor: '#A78BFA20', backgroundColor: '#A78BFA08' }]}>
-          <Text style={[styles.statChipValue, { color: '#A78BFA' }]}>{fmtCount(weeklyActiveUsers)}</Text>
-          <Text style={styles.statChipLabel}>Active users</Text>
+          <Text style={[styles.statChipValue, { color: '#A78BFA' }]}>{fmtCount(totalMembers)}</Text>
+          <Text style={styles.statChipLabel}>Members</Text>
         </View>
         {/*
           Countries (127) and "This week" (+$1.2B) figures are not backed
@@ -406,25 +406,25 @@ const MAP_REGIONS: { key: string; top: DimensionValue; left: DimensionValue; wid
 
 function GdpHomeTab({
   valueIndex,
-  weeklyActiveUsers,
+  totalMembers,
   fmtIndex,
   fmtCount,
 }: {
   valueIndex: number | null;
-  weeklyActiveUsers: number | null;
+  totalMembers: number | null;
   fmtIndex: (_n: number | null) => string;
   fmtCount: (_n: number | null) => string;
 }) {
   const { styles } = useGdpTheme();
-  const hasData = valueIndex !== null || weeklyActiveUsers !== null;
+  const hasData = valueIndex !== null || totalMembers !== null;
   return (
     <View>
       <View style={styles.mapHeaderRow}>
         <Text style={styles.mapHeadline}>{fmtIndex(valueIndex)}</Text>
         <Text style={styles.mapHeadlineLabel}>{COMMUNITY_VALUE_INDEX_LABEL}</Text>
       </View>
-      {weeklyActiveUsers !== null && (
-        <Text style={styles.mapMembers}>{fmtCount(weeklyActiveUsers)} active members</Text>
+      {totalMembers !== null && (
+        <Text style={styles.mapMembers}>{fmtCount(totalMembers)} members</Text>
       )}
       <View style={styles.mapCanvas}>
         {MAP_REGIONS.map((r) => (
