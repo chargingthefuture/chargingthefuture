@@ -55,12 +55,13 @@ export function UnlockSubmissionView({
 
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div>
-              <label style={{ fontSize: 13, fontWeight: 600, color: tok.SUBTLE, display: "block", marginBottom: 8 }}>
+              <label htmlFor="unlock-quora-url" style={{ fontSize: 13, fontWeight: 600, color: tok.SUBTLE, display: "block", marginBottom: 8 }}>
                 Your Quora Profile URL <span style={{ color: tok.ACCENT }}>*</span>
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", background: tok.INPUT_BG, border: `1px solid ${url ? tok.ACCENT + "50" : tok.BORDER_SOLID}`, borderRadius: 12 }}>
                 <ExternalLink size={14} color={tok.MUTED} style={{ flexShrink: 0 }} />
                 <input
+                  id="unlock-quora-url"
                   value={url}
                   onChange={(e) => onUrlChange(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && canSubmit) onSubmit(); }}

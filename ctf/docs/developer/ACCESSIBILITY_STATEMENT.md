@@ -29,19 +29,38 @@ brand voice. These are enhancements on top of the AA target, not part of the pub
 
 ## Last tested
 
-Not yet audited. No formal WCAG 2.2 AA audit has been completed for either the web app or the Android
-app as of 2026-07-11. Until an audit is complete, public claims are phrased as an aim ("built to WCAG
-2.2 AA"), not a present-tense guarantee.
+- Web, static scan: 2026-07-11. A repeatable static accessibility scan (`pnpm --dir ctf run
+  lint:a11y`, `eslint-plugin-jsx-a11y` recommended rules over `packages/web/app` and
+  `packages/web/components`) ran over 338 component files. The first run found 66 issues in 30 files;
+  after fixing every label-association issue, 41 remain. This is the statically-detectable subset
+  only; it does not cover contrast, focus order, keyboard traps, or screen-reader behavior.
+- Web, full runtime audit: not yet run (axe sweep of every route + manual review).
+- Android: not yet audited.
 
-Update this line with the date and scope each time an audit runs (for example: "Web audited against
-WCAG 2.2 AA on YYYY-MM-DD; Android audited on YYYY-MM-DD").
+Until the full runtime audits are complete, public claims are phrased as an aim ("built to WCAG 2.2
+AA"), not a present-tense guarantee. Update these lines with the date and scope each time a scan or
+audit runs.
 
 ## Known gaps
 
-Filled in from audit findings. Until the audits run, the honest statement is that gaps are not yet
-enumerated:
+Filled in from audit findings.
 
-- Web: no completed AA audit; per-criterion pass/fail not yet recorded.
+- Web (from the 2026-07-11 static scan; 66 issues found, 41 remaining after the label fix):
+  - Fixed: all 25 controls where a label was not programmatically tied to its input
+    (`jsx-a11y/label-has-associated-control`) — native inputs now use `htmlFor`/`id`, custom
+    select components take an `id`, group captions no longer misuse `<label>`, and two wrapping
+    labels gained an explicit control name.
+  - 19 click handlers with no matching keyboard handler
+    (`jsx-a11y/click-events-have-key-events`), plus 13 interactive handlers on non-interactive
+    elements (`jsx-a11y/no-static-element-interactions`) and 6 on non-interactive roles
+    (`jsx-a11y/no-noninteractive-element-interactions`) — these are keyboard-operability gaps.
+  - 1 media element without a captions track (`jsx-a11y/media-has-caption`), 1 redundant role, and 1
+    element missing a required ARIA prop.
+  - The files with the most remaining issues (all keyboard-operability): `chyme-tip-dialog.tsx`,
+    `directory-profile-edit.tsx`, `directory-right-panel.tsx`, `foundation-connect-now.tsx`. Re-run
+    `pnpm --dir ctf run lint:a11y` for the current full list.
+  - Not yet measured (needs the runtime audit): contrast, focus order, keyboard traps, and
+    screen-reader announcements.
 - Android: no completed AA audit; a meaningful share of screens still lack accessibility props, and
   no assistive-technology (TalkBack) pass has been documented.
 
@@ -76,9 +95,11 @@ Ordered; later items depend on earlier ones.
    errors).
 5. Fix the Android gaps found in step 3 (accessibility labels/roles/state on interactive elements,
    focus order, contrast, touch-target size, TalkBack announcements).
-6. Add automated gates so regressions cannot ship silently: `eslint-plugin-jsx-a11y` for web (CI,
-   max warnings 0), an axe check in the end-to-end/CI path, a contrast-token check against the theme
-   palette, and an equivalent React Native accessibility lint for mobile.
+6. Add automated gates so regressions cannot ship silently. Started: a report-only static scan exists
+   (`pnpm --dir ctf run lint:a11y`, config `ctf/a11y-audit.config.mjs`). Still to do: wire
+   `eslint-plugin-jsx-a11y` into the blocking CI lint gate at max warnings 0 (only after the web gaps
+   above are fixed), add an axe check in the end-to-end/CI path, a contrast-token check against the
+   theme palette, and an equivalent React Native accessibility lint for mobile.
 7. Manual assistive-technology passes on the core flows: VoiceOver/NVDA plus keyboard-only on web, and
    TalkBack on Android. Document each pass in a checklist.
 8. Publish this statement as a public, rendered page the landing-page claim can point to, once the
