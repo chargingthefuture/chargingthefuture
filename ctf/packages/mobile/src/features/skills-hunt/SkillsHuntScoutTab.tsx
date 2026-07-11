@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SkillsHuntApi, type Round, type TaxonomyFlattenedItem } from './SkillsHuntApi';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
+import { CountryPicker, StateFieldMobile } from '../../components/LocationPickers';
 
 const BIO_MAX = 280;
 
@@ -151,6 +152,9 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
   const [fullName, setFullName] = useState('');
   const [bio, setBio] = useState('');
   const [quora, setQuora] = useState('');
+  const [country, setCountry] = useState('');
+  const [stateRegion, setStateRegion] = useState('');
+  const [city, setCity] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [proposed, setProposed] = useState<string[]>([]);
   const [freeText, setFreeText] = useState('');
@@ -196,13 +200,16 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
   };
 
   const removeProposed = (s: string) => setProposed(prev => prev.filter(x => x !== s));
-  const canSubmit = fullName.trim().length >= 2 && allSkillCount > 0 && !submitting;
+  const canSubmit = fullName.trim().length >= 2 && allSkillCount > 0 && country.trim().length > 0 && !submitting;
 
   const onReset = () => {
     setSubmitted(false);
     setFullName('');
     setBio('');
     setQuora('');
+    setCountry('');
+    setStateRegion('');
+    setCity('');
     setSkills([]);
     setProposed([]);
     setFreeText('');
@@ -221,6 +228,9 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
         skills: skills.slice(0, 10),
         proposedSkills: proposed,
         claimedProfessions: [],
+        country: country.trim(),
+        state: stateRegion.trim() ? stateRegion.trim() : null,
+        city: city.trim() ? city.trim() : null,
       });
       setSubmitted(true);
     } catch (e) {
@@ -283,6 +293,27 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
         placeholder="quora.com/profile/..."
         placeholderTextColor={tokens.textSecondary}
         style={[styles.input, quora && { borderColor: accent + '50' }]}
+      />
+
+      {/* Location — Country required (matters for non-US members and the GDP country view);
+          State/City optional. Searchable country picker keeps the data clean. */}
+      <Text style={styles.fieldLabel}>
+        Country <Text style={{ color: accent }}>*</Text>
+      </Text>
+      <CountryPicker value={country} onChange={setCountry} />
+      <Text style={styles.fieldLabel}>
+        State / Region <Text style={styles.fieldHint}>(optional)</Text>
+      </Text>
+      <StateFieldMobile country={country} value={stateRegion} onChange={setStateRegion} />
+      <Text style={styles.fieldLabel}>
+        City <Text style={styles.fieldHint}>(optional)</Text>
+      </Text>
+      <TextInput
+        value={city}
+        onChangeText={setCity}
+        placeholder="City"
+        placeholderTextColor={tokens.textSecondary}
+        style={styles.input}
       />
 
       {/* Skills */}

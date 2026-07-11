@@ -116,8 +116,11 @@ contracts:
 
   - pluginId: skills-hunt
     command: skills-hunt.submission.create
-    version: 1.0.0
-    description: Create a contributor submission with validated profile URL, skill set, and profession claims.
+    version: 1.1.0
+    description: >-
+      Create a contributor submission with validated profile URL, skill set, profession claims, and
+      the nominee's location. `country` is required; `state`/`city` are optional. On accept the
+      location carries into the generated directory profile (the shared member profile).
     inputSchema:
       roundId:
         type: string
@@ -136,6 +139,15 @@ contracts:
         required: true
       claimedProfessions:
         type: array
+        required: false
+      country:
+        type: string
+        required: true
+      state:
+        type: string
+        required: false
+      city:
+        type: string
         required: false
     outputSchema:
       submissionId:

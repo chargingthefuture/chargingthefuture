@@ -11,7 +11,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-07-08 (commit 60e49c8e) |
+| **Generated** | 2026-07-11 (hand-updated for the nominee-location fields) |
 
 ---
 
@@ -33,7 +33,7 @@ Open `/apps/skills-hunt` (web) and the SkillsHunt screen (Android). Confirm at l
 web ☐ android ☐
 
 **CS-2 — Scout tab / nomination form is reachable**
-From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Full name, Bio, Quora URL, and a skills picker.
+From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Full name, Bio, Quora URL, a skills picker, and a location block (Country — required, State/region and City — optional). On web the Country field is a dropdown; on Android it is a button that opens a searchable country list.
 web ☐ android ☐
 
 **CS-3 — Leaderboard tab loads**
@@ -81,10 +81,33 @@ Result: web ☐ android ☐
    - Full name: `Amara Williams` (letters and spaces, within 2–100 chars)
    - Bio: `A software engineer focused on climate tech.` (under 280 chars)
    - Quora URL: a valid-format Quora profile URL (e.g. `https://www.quora.com/profile/seed-test-user`)
+   - Country: `United States` (required). State: `California`. City: `Oakland`.
    - Select 2 taxonomy skills from the accordion/picker.
 3. Submit.
 
-**Expected:** Submission succeeds. A confirmation message or pending status appears. The submission shows up in the My Finds tab / "My Finds" section with status "pending".
+**Expected:** Submission succeeds. A confirmation message or pending status appears. The submission shows up in the My Finds tab / "My Finds" section with status "pending". When this submission is later accepted (SH-A3) the generated Directory profile carries the same country/state/city.
+
+Result: web ☐ android ☐
+
+---
+
+### SH-2b — Submission validation: country is required, state/city optional
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Active round exists. Member is signed in.
+
+**Steps:**
+1. Navigate to the Scout tab.
+2. Fill Full name, Bio, Quora URL, and at least one skill validly, but leave Country unset. Leave State and City blank.
+3. Attempt to submit.
+4. Set Country to a non-US country (e.g. `Nigeria`). Confirm the State field becomes a free-text region box rather than the US-state list. Leave State and City blank.
+5. Submit.
+
+**Expected:**
+- Step 3: submit is blocked while Country is empty (button disabled or an error naming Country).
+- Step 4: for a non-US country the State control is free text; for `United States` it is a searchable state list.
+- Step 5: submission with a country but no state/city succeeds — state and city are optional.
 
 Result: web ☐ android ☐
 
@@ -645,6 +668,7 @@ The following cases must produce identical behavior on both surfaces. Rerun them
 |---|---|
 | SH-1 | Round list shows same rounds with same statuses |
 | SH-2 | Submission happy path succeeds and shows in My Finds |
+| SH-2b | Country required, state/city optional; US shows a state list, other countries a free-text region |
 | SH-4 | Full name and bio validation errors fire on the same conditions |
 | SH-7 | Proposed-skill chips appear and are submitted correctly |
 | SH-8 | Leaderboard individual rankings match (same data, same order) |

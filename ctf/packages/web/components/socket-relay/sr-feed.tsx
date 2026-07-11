@@ -102,7 +102,11 @@ function RequestCard({
           {r.details && <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6, lineHeight: 1.5 }}>{r.details}</div>}
           <div style={{ display: "flex", gap: 12, fontSize: 12, color: SUBTLE, flexWrap: "wrap", alignItems: "center" }}>
             <span style={{ color: t.ACCENT, fontWeight: 600 }}>{srHandle(r.ownerUsername, r.id)}</span>
-            {r.city && <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><MapPin size={11} /> {r.city}</span>}
+            {[r.city, r.state, r.country].some((v) => v && v.trim()) && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <MapPin size={11} /> {[r.city, r.state, r.country].map((v) => v?.trim()).filter(Boolean).join(", ")}
+              </span>
+            )}
             <span>· {timeAgo(r.createdAtIso)}</span>
             <ShareLink url={`/apps/socket-relay?request=${r.id}`} label="Share" title="Share this request" className="sr-share" />
           </div>

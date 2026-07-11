@@ -99,6 +99,8 @@ export default function GdpShell() {
   // GdpMetrics so the world map can read the real community-wide aggregates
   // (gdp_value_index, weekly_active_users) by key. No per-country data exists.
   const [metricRows, setMetricRows] = useState<GdpMetricRow[]>([]);
+  // Real per-country member distribution (location tied to people), fetched from /api/gdp/countries.
+  const [countries, setCountries] = useState<GdpCountry[]>([]);
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getGdpTokens(theme);
@@ -128,11 +130,34 @@ export default function GdpShell() {
     return () => { controller.abort(); };
   }, []);
 
+  // Load the real per-country member distribution for the "Top Countries" panel. Independent of the
+  // main report (a failure here just leaves the panel empty; it never blocks the dashboard).
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const res = await fetch("/api/gdp/countries", { signal: controller.signal });
+        if (!res.ok || controller.signal.aborted) return;
+        const data = (await res.json()) as { countries?: Array<{ country: string; members: number }>; totalMembers?: number };
+        const rows = data.countries ?? [];
+        const total = data.totalMembers ?? rows.reduce((sum, r) => sum + r.members, 0);
+        if (controller.signal.aborted) return;
+        setCountries(rows.map((r) => ({ country: r.country, members: r.members, share: total > 0 ? (r.members / total) * 100 : 0 })));
+      } catch {
+        // Leave the panel empty.
+      }
+    })();
+    return () => { controller.abort(); };
+  }, []);
+
   if (loading) return <GdpLoading />;
 
   const sectors = shapeSourceSectors(report?.sources);
-  const countries: GdpCountry[] = [];
   const metrics: GdpMetrics = shapeLiveGdpMetrics(metricRows, isEstimate);
+  // Surface the real number of countries with located members in the hero/sidebar line.
+  if (countries.length > 0) {
+    metrics.countries = String(countries.length);
+  }
 
   if (isMobile) {
     const tabs: { key: GdpTab; label: string }[] = [

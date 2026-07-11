@@ -35,6 +35,8 @@ export type SrRequest = {
   category: string;
   tags: string[];
   city: string | null;
+  state: string | null;
+  country: string | null;
   isPublic: boolean;
   status: SrRequestStatus;
   reopenedCount: number;

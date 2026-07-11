@@ -131,6 +131,10 @@ export const SkillsHuntApi = {
       skills: string[];
       proposedSkills: string[];
       claimedProfessions: string[];
+      // Nominee location — country required (validated server-side), state/city optional.
+      country: string;
+      state?: string | null;
+      city?: string | null;
     },
   ) => postJson<{ ok: true; submission: Submission }>(`/rounds/${roundId}/submissions`, body),
 };

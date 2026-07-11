@@ -109,19 +109,19 @@ function GdpCountries({ countries }: { countries: GdpCountry[] }) {
   const t = getGdpTokens(theme);
   return (
     <div style={{ padding: "20px 24px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-      <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE, marginBottom: 16 }}>Top Countries</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE, marginBottom: 4 }}>Top Countries</div>
+      <div style={{ fontSize: 12, color: t.FAINT, marginBottom: 16 }}>Members by country</div>
       {countries.map((c) => (
-        <div key={c.country} style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 14 }}>
-          <div style={{ fontSize: 24, flexShrink: 0 }}>{c.flag}</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 13, color: t.TEXT, fontWeight: 600 }}>{c.country}</span>
-              <span style={{ fontSize: 13, color: t.ACCENT, fontWeight: 700 }}>{c.gdp}</span>
-            </div>
-            {/* No per-country numeric share exists, so no progress bar is drawn — a width derived from
-                list position would be a fabricated visual metric (real-data-only rule). */}
-            <div style={{ fontSize: 11, color: t.FAINT, marginTop: 2 }}>{c.members.toLocaleString()} members</div>
+        <div key={c.country} style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+            <span style={{ fontSize: 13, color: t.TEXT, fontWeight: 600 }}>{c.country}</span>
+            <span style={{ fontSize: 13, color: t.ACCENT, fontWeight: 700 }}>{c.members.toLocaleString()} {c.members === 1 ? "member" : "members"}</span>
           </div>
+          {/* The bar width IS a real metric: this country's share of all located members. */}
+          <div style={{ height: 6, borderRadius: 999, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${Math.max(2, Math.min(100, c.share))}%`, background: t.ACCENT, borderRadius: 999 }} />
+          </div>
+          <div style={{ fontSize: 11, color: t.FAINT, marginTop: 2 }}>{c.share.toFixed(0)}% of located members</div>
         </div>
       ))}
     </div>
