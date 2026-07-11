@@ -22,6 +22,9 @@ function toSubmissionInput(roundId: string, body: SubmissionBody): SkillsHuntSub
     claimedProfessions: Array.isArray(body.claimedProfessions)
       ? body.claimedProfessions.filter((item): item is string => typeof item === 'string')
       : [],
+    country: typeof body.country === 'string' ? body.country : '',
+    state: typeof body.state === 'string' ? body.state : null,
+    city: typeof body.city === 'string' ? body.city : null,
   };
 }
 

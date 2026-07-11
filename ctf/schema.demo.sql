@@ -398,6 +398,13 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   bio TEXT NOT NULL,
   quora_profile_url TEXT NOT NULL,
   quora_profile_url_normalized TEXT NOT NULL,
+  -- Nominee location. `country` is required at submit time (enforced in validateSubmissionInput);
+  -- `state`/`city` are optional. Columns are nullable so legacy rows and the guarded ALTER are safe;
+  -- on accept these carry into the generated directory_profiles row (the shared member profile).
+  -- Plain names per the shared location standard (packages/web/lib/geo/locations.ts).
+  country TEXT NULL,
+  state TEXT NULL,
+  city TEXT NULL,
   skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -4113,6 +4120,9 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_pro
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS skills JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS signature_hash TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS country TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS state TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS city TEXT NULL;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS review_action TEXT;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id TEXT;
