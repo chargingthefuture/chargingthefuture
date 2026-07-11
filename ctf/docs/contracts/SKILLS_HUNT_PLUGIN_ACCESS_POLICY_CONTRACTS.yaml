@@ -52,6 +52,30 @@ policies:
       - invalid_status_transition
 
   - pluginId: skills-hunt
+    command: skills-hunt.leaderboard.rebuild
+    version: 1.0.0
+    requiredRoles:
+      - admin
+      - operations
+    attributePolicies:
+      tenancy: same_workspace
+      roundExists: required
+    consentRequirements:
+      scopes:
+        - skills_hunt_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - round_not_found
+
+  - pluginId: skills-hunt
     command: skills-hunt.round.list
     version: 1.0.0
     requiredRoles:
