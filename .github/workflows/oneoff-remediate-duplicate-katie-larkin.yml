@@ -42,13 +42,17 @@ jobs:
         with:
           node-version: 22
 
-      - name: Enable pnpm
-        run: corepack enable
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run the remediation
+      # The script only needs `pg`. Install it standalone in a temp dir and run the
+      # script from there, so we avoid a full monorepo `pnpm install` (which fails
+      # here because the committed lockfile is out of date with the app package.json).
+      - name: Install pg and run the remediation
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: node ctf/scripts/oneoffRemediateDuplicateKatieLarkin.mjs
+        run: |
+          set -euo pipefail
+          workdir="$(mktemp -d)"
+          cp ctf/scripts/oneoffRemediateDuplicateKatieLarkin.mjs "$workdir/"
+          cd "$workdir"
+          npm init -y >/dev/null 2>&1
+          npm install pg@8 >/dev/null 2>&1
+          node oneoffRemediateDuplicateKatieLarkin.mjs
