@@ -27,6 +27,7 @@ function buildTiles(m: AdminCirculationMetrics): Tile[] {
     { label: 'Total burned', value: fmt(m.totalBurned) },
     { label: 'Treasury balance', value: fmtNullable(m.treasuryBalance) },
     { label: 'On community credit', value: fmt(m.outstandingMutualCreditDebt) },
+    { label: 'Sent in last 30 days', value: fmt(m.transferVolume30d) },
     { label: '30-day velocity', value: m.velocity.toFixed(2) },
     { label: 'Mint budget remaining', value: fmtNullable(m.mintBudgetRemaining, 'Not enforced') },
     { label: 'Mint budget ceiling', value: fmtNullable(m.mintBudgetCeiling) },

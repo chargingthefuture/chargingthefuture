@@ -247,6 +247,17 @@ export function canonicalizePluginSlug(input: string): string {
   return pluginAliasMap[normalized] ?? normalized;
 }
 
+// The canonical set of real plugin slugs, taken from the in-code fallback registry so it holds even
+// when the DB registry is unavailable. Use this to allowlist a caller-supplied plugin identifier
+// (e.g. the originPlugin on a ServiceCredits transfer) instead of accepting any arbitrary string.
+const REGISTERED_PLUGIN_SLUGS: ReadonlySet<string> = new Set(fallbackPluginRegistry.map((plugin) => plugin.slug));
+
+// True when `slug` names a real plugin (aliases are resolved first). Used to reject an unknown
+// originPlugin at the money-transfer boundary so stored cross-plugin paths are always valid.
+export function isRegisteredPluginSlug(slug: string): boolean {
+  return REGISTERED_PLUGIN_SLUGS.has(canonicalizePluginSlug(slug));
+}
+
 export function getPluginRoute(slug: string): string {
   return `/apps/${encodeURIComponent(slug)}`;
 }

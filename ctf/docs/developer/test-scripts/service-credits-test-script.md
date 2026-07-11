@@ -76,6 +76,17 @@ transfer is marked **completed** in one step. It must **not** sit in escrow / `p
 guard — a plain send is not an escrow hold).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### SC-3b · Transfer origin-plugin validation
+**Role:** member · **Surfaces:** web (API) · mobile · android
+**Steps:**
+1. Send a normal transfer with no `originPlugin` (the standard in-app send).
+2. Using the API directly, send a transfer with `originPlugin` set to a made-up value (e.g. `not-a-plugin`).
+**Expected:** (1) succeeds and is stored with origin `service-credits`. (2) is rejected with a 400
+`service_credits_invalid_origin_plugin` — an unknown plugin path can never be recorded. (The mobile
+and web send screens build the idempotency key from a cryptographically strong UUID, so two rapid
+sends never collide and replay the wrong transfer.)
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ### SC-4 · Escrow hold / release / refund
 **Role:** member · **Surfaces:** all
 **Steps:**
@@ -131,7 +142,18 @@ control is exposed in the burn path.
 1. Trigger a treasury fee collection tied to a transaction context.
 2. Post a dispute-linked adjustment with a reason category.
 **Expected:** Both land in the treasury/adjustment records with reason and audit trail; member-side
-visibility (SC-5) reflects the adjustment.
+visibility (SC-5) reflects the adjustment. The mint-grant audit row records the governing command
+version (`commandVersion` in its metadata). If the treasury policy save hits a backend error, the
+admin sees a readable failure notice, not a blank 500.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### SC-A5 · Circulation tiles (admin ↔ member parity)
+**Role:** admin + member · **Surfaces:** web (admin + economy) · android (admin)
+**Steps:**
+1. Open the admin circulation panel and the member "Economy" tab.
+**Expected:** Both show the same public aggregates, including a **"Sent in last 30 days"** tile
+(`transferVolume30d`) — present on the web admin panel, the member economy view, and the mobile admin.
+Every figure is a bare credit quantity; no fiat equivalent anywhere.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### SC-A4 · Deletion reclaim to treasury
