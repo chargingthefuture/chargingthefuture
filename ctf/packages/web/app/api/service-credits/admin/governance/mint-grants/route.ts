@@ -53,7 +53,10 @@ export async function POST(request: Request) {
       reason: 'ok',
       targetType: 'governance_event',
       targetId: grant.governanceEventId,
-      metadata: { targetUserId: body.targetUserId, amount: body.amount, governanceTicketId: body.governanceTicketId },
+      // Record the governing command-contract version so compliance review can tell which mint rules
+      // applied. The audit-trail table has no version column, so it rides in metadata. Keep in step
+      // with the governance.mint.grant version in SERVICE_CREDITS_PLUGIN_COMMAND_CONTRACTS.yaml.
+      metadata: { commandVersion: '1.1.0', targetUserId: body.targetUserId, amount: body.amount, governanceTicketId: body.governanceTicketId },
     });
 
     return NextResponse.json({ ok: true, grant }, { status: 201 });

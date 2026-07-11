@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import * as Crypto from 'expo-crypto';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { sendTransfer } from './api';
 
@@ -15,8 +16,16 @@ type Props = {
   onSent: () => void; // callback to refresh wallet balance after a successful send
 };
 
+// A unique idempotency key per send. This is a money-moving operation, so the key uses a
+// cryptographically strong UUID from expo-crypto — a collision would make the server replay the
+// wrong prior transfer. Mirrors the admin client (admin-api.ts) and web (sca-shared.ts). Falls back
+// to Date.now()+Math.random only if randomUUID is somehow unavailable at runtime.
 function generateIdempotencyKey(): string {
-  return `mobile-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const random =
+    typeof Crypto.randomUUID === 'function'
+      ? Crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `mobile-${random}`;
 }
 
 type Rail = 'balance' | 'mutual_credit';
