@@ -266,6 +266,26 @@ type CurrencyMetaRow = {
   sort_order: number;
 };
 
+// Real per-country member distribution — the honest "location tied to people" signal for the GDP
+// country breakdown. Location lives once on the member's claimed directory profile (the shared
+// member profile); this counts CLAIMED, active directory profiles that have a country set. Ordered
+// most members first. No small-count suppression (owner decision, 2026-07-11): every country with a
+// member is shown. This is a people-count, never an invented per-country money figure.
+export async function listMemberCountsByCountry(): Promise<Array<{ country: string; members: number }>> {
+  const result = await queryDb<{ country: string; members: string }>(
+    `SELECT btrim(country) AS country, COUNT(*)::text AS members
+       FROM directory_profiles
+       WHERE claimed_by_user_id IS NOT NULL
+         AND country IS NOT NULL
+         AND btrim(country) <> ''
+         AND is_active = true
+         AND deleted_at IS NULL
+       GROUP BY btrim(country)
+       ORDER BY COUNT(*) DESC, btrim(country) ASC`,
+  );
+  return result.rows.map((row) => ({ country: row.country, members: Number(row.members) }));
+}
+
 // Build the full rate-admin view: every active currency with its current factor
 // (latest as_of) and its prior factors (newest first).
 export async function listCurrencyRateAdmin(): Promise<CurrencyRateAdminEntry[]> {
