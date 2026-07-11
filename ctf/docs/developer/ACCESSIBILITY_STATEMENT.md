@@ -115,5 +115,10 @@ Ordered; later items depend on earlier ones.
    equivalent React Native accessibility lint for mobile.
 7. Manual assistive-technology passes on the core flows: VoiceOver/NVDA plus keyboard-only on web, and
    TalkBack on Android. Document each pass in a checklist.
-8. Publish this statement as a public, rendered page the landing-page claim can point to, once the
-   audits and gap list above are real.
+8. Publish this statement as a public, rendered page the landing-page claim can point to. Done: the
+   public page is at `/accessibility` (`ctf/packages/web/app/accessibility/page.tsx`), a signed-out
+   static route. It is linked from the web `/terms` footer and from the mobile Account & Data screen
+   (an out-link next to Terms, mirroring how mobile links to `/terms`). Keep the page's "Last reviewed"
+   date and known-limitations list in step with this developer document as the status changes; the page
+   is phrased as an aim ("we aim to meet WCAG 2.2 AA"), not a finished guarantee, until the runtime
+   audits land.
