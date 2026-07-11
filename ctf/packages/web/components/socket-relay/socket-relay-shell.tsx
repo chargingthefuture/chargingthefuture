@@ -32,7 +32,16 @@ import { SocketRelayRightPanel } from "./sr-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
-const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", isPublic: false, priceCurrency: "FREE", priceAmount: "", requiresAmount: false };
+const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", state: "", country: "", isPublic: false, priceCurrency: "FREE", priceAmount: "", requiresAmount: false };
+
+type MemberLocation = { city: string; state: string; country: string };
+const EMPTY_LOCATION: MemberLocation = { city: "", state: "", country: "" };
+
+// A fresh post draft, seeded with the member's own directory location so a new request defaults to
+// where they are (still fully editable / clearable in the form — a request can be for elsewhere).
+function freshDraft(loc: MemberLocation): PostDraft {
+  return { ...EMPTY_DRAFT, city: loc.city, state: loc.state, country: loc.country };
+}
 
 async function getJson<T>(url: string): Promise<T | null> {
   const res = await fetch(url, { cache: "no-store" });
@@ -76,6 +85,8 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState<PostDraft>(EMPTY_DRAFT);
+  // The member's own location from their directory profile, used to default a new request's location.
+  const [myLocation, setMyLocation] = useState<MemberLocation>(EMPTY_LOCATION);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [postError, setPostError] = useState<string | null>(null);
   const [postSuccess, setPostSuccess] = useState(false);
@@ -106,12 +117,42 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
 
   useEffect(() => { void fetchData(); }, [fetchData]);
 
+  // Best-effort load of the member's own directory location to default a new request's location.
+  // A missing profile or a failed fetch simply leaves the default blank — never blocks posting.
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const res = await fetch("/api/directory/profile", { signal: controller.signal });
+        if (!res.ok || controller.signal.aborted) return;
+        const data = (await res.json()) as { profile?: { city?: string | null; state?: string | null; country?: string | null } | null };
+        const p = data.profile;
+        if (!p || controller.signal.aborted) return;
+        const loc: MemberLocation = { city: p.city ?? "", state: p.state ?? "", country: p.country ?? "" };
+        setMyLocation(loc);
+        // Seed the current draft only if it is a pristine, untouched post (no title/details and no
+        // location typed). The content guard is what protects an in-progress compose or an open edit
+        // (both have a title), so this never clobbers real work regardless of the current tab.
+        setDraft((d) =>
+          !d.title && !d.details && !d.city && !d.state && !d.country
+            ? { ...d, city: loc.city, state: loc.state, country: loc.country }
+            : d,
+        );
+      } catch {
+        // Leave the default blank.
+      }
+    })();
+    return () => controller.abort();
+  }, []);
+
   function startEdit(request: SrRequest) {
     setDraft({
       title: request.title,
       details: request.details,
       tags: requestTags(request),
       city: request.city ?? "",
+      state: request.state ?? "",
+      country: request.country ?? "",
       isPublic: request.isPublic,
       priceCurrency: request.priceCurrency ?? "FREE",
       priceAmount: request.priceAmount != null ? String(request.priceAmount) : "",
@@ -124,7 +165,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   }
 
   function cancelEdit() {
-    setDraft(EMPTY_DRAFT);
+    setDraft(freshDraft(myLocation));
     setEditingId(null);
     setPostError(null);
     setPostSuccess(false);
@@ -163,6 +204,8 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
           details: draft.details.trim(),
           tags: draft.tags,
           city: draft.city.trim() ? draft.city.trim() : null,
+          state: draft.state.trim() ? draft.state.trim() : null,
+          country: draft.country.trim() ? draft.country.trim() : null,
           isPublic: draft.isPublic,
           // The chosen value type (default 'FREE'); amount only for priced types (the form clears it
           // for Free/Barter, so a blank amount becomes null).
@@ -177,7 +220,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
         const payload = (await res.json().catch(() => null)) as { message?: string } | null;
         throw new Error(payload?.message ?? "Failed to save request.");
       }
-      setDraft(EMPTY_DRAFT);
+      setDraft(freshDraft(myLocation));
       setEditingId(null);
       setPostSuccess(true);
       await fetchData(false);
@@ -300,7 +343,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      if (!`${r.title} ${r.details} ${r.city ?? ""}`.toLowerCase().includes(q)) return false;
+      if (!`${r.title} ${r.details} ${r.city ?? ""} ${r.state ?? ""} ${r.country ?? ""}`.toLowerCase().includes(q)) return false;
     }
     return true;
   });
