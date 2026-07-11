@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { MAX_TAG_LENGTH, MAX_TAGS_PER_POST, SUBTLE } from "./sr-shared";
 import { CurrencySelect } from "@/components/shared/currency-select";
+import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { FormField } from "@/components/shared/form-field";
 import type { Currency } from "lib/currency/types";
 import { useTheme } from '@/hooks/useTheme';
@@ -13,7 +14,11 @@ export type PostDraft = {
   title: string;
   details: string;
   tags: string[];
+  // Location for this request. Defaults from the member's directory profile when creating a new
+  // request, but is fully editable per request (and can be cleared). City stays coarse for privacy.
   city: string;
+  state: string;
+  country: string;
   isPublic: boolean;
   // How the request is settled (issue #420): the chosen value type code (default 'FREE' for mutual
   // aid). priceAmount is the entered amount as a string, used only for priced types; it is cleared for
@@ -138,6 +143,15 @@ export function SocketRelayPost({
         </FormField>
         <FormField label={`Tags (up to ${MAX_TAGS_PER_POST})`}>
           {(a) => <TagEditor tags={draft.tags} onChange={(tags) => onChange({ tags })} suggest={suggest} a11y={a} />}
+        </FormField>
+        {/* Location — defaults from the member's directory profile when posting a new request, fully
+            editable/clearable here since a request can be for a different place. Country dropdown;
+            State is a US-state dropdown for the United States and a free-text region otherwise. */}
+        <FormField label="Country" optional>
+          {(a) => <CountrySelect id={a.id} value={draft.country} onChange={(country) => onChange({ country })} style={fieldStyle} />}
+        </FormField>
+        <FormField label="State / Region" optional>
+          {(a) => <StateField id={a.id} country={draft.country} value={draft.state} onChange={(state) => onChange({ state })} style={fieldStyle} />}
         </FormField>
         <FormField label="City" optional hint="City or neighborhood only — never an exact address. Privacy-protected.">
           {(a) => <input {...a} value={draft.city} onChange={(e) => onChange({ city: e.target.value })} placeholder="City or neighborhood" style={fieldStyle} />}

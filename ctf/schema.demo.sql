@@ -3249,7 +3249,13 @@ CREATE TABLE IF NOT EXISTS socket_relay_requests (
   details TEXT NOT NULL,
   category TEXT NOT NULL,
   tags TEXT[] NOT NULL DEFAULT '{}',
+  -- Per-request location (a request can be for a different place than where the member lives — a
+  -- second property, a cross-city errand, a package delivery abroad). city/state/country default from
+  -- the member's directory profile in the create form, but are freely overridable per request. City
+  -- stays "city or neighborhood only, never an exact address" for privacy.
   city TEXT,
+  state TEXT,
+  country TEXT,
   is_public BOOLEAN NOT NULL DEFAULT FALSE,
   status TEXT NOT NULL DEFAULT 'open',
   reopened_count INTEGER NOT NULL DEFAULT 0,
@@ -3270,6 +3276,8 @@ ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS details TEX
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS state TEXT;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS country TEXT;
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS reopened_count INTEGER NOT NULL DEFAULT 0;
