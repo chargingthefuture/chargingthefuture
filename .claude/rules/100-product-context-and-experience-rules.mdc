@@ -23,10 +23,12 @@ Provide mandatory context so implementation decisions protect users and prevent 
 - Use plain, non-stigmatizing language in UI and error messages.
 
 ## Accessibility Rules
-- Target WCAG AAA wherever feasible, including 7:1 contrast for critical content.
+- Public conformance target: WCAG 2.2 Level AA, for both the web app and the Android app. This is the claim we make and maintain (owner decision, 2026-07-11, issue #1432). Do not claim Level AAA as a blanket, site-wide guarantee: WCAG 2.2 itself advises against requiring AAA across an entire site, and several AAA criteria are not achievable for the live and recorded audio-video features (Beacon, Chyme, GentlePulse).
+- AAA enhancements where feasible: apply individual AAA success criteria only where the product can meet them without constraining the whole experience — for example 7:1 contrast on primary text and a 6th-grade reading level per the brand voice. These are internal stretch goals, not part of the public claim.
 - Require keyboard navigability for all core workflows.
 - Require semantic labels and compatibility with screen readers.
 - Preserve accessibility in all responsive breakpoints.
+- Any public accessibility claim (landing page, marketing, in-app) must be backed by the dated Accessibility Statement (`ctf/docs/developer/ACCESSIBILITY_STATEMENT.md`), which records the target, the last test date, and the known gaps. Until an audit backs it, phrase a claim as an aim ("built to WCAG 2.2 AA"), not a present-tense guarantee.
 
 ## User Safety and Harm Prevention
 - Default to least-exposure experiences for sensitive profile and community data.
