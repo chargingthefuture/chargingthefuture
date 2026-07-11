@@ -41,6 +41,9 @@ type DirectoryListItem = {
   bio: string | null;
   source: string | null;
   invitedByUsername: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
 };
 
 export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: string; isAdmin: boolean; initialProfileId?: string }) {
@@ -141,6 +144,9 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
             bio: item.bio ?? null,
             source: item.source ?? null,
             invitedByUsername: item.invitedByUsername ?? null,
+            city: item.city ?? null,
+            state: item.state ?? null,
+            country: item.country ?? null,
           }));
           setMembers(mapped);
           // Keep the open detail view in sync with the refreshed list (e.g. after the owner
@@ -184,6 +190,9 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
           bio: item.bio ?? null,
           source: item.source ?? null,
           invitedByUsername: item.invitedByUsername ?? null,
+          city: item.city ?? null,
+          state: item.state ?? null,
+          country: item.country ?? null,
         });
       } catch {
         // Aborted or unavailable: the browse view stays open instead of the deep-linked detail.

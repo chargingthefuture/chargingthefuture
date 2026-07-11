@@ -105,6 +105,11 @@ function ProfileDetail({
     profile.bitcoinAddress
   );
   const avatarText = initials(fullName(profile));
+  // "City, State, Country" from whichever parts are set (non-US members may have only a country).
+  const locationText = [profile.city, profile.state, profile.country]
+    .map((v) => (typeof v === 'string' ? v.trim() : ''))
+    .filter((v) => v.length > 0)
+    .join(', ');
   const isCommunity = profile.source === 'community-generated';
   // handle: unclaimed_handle for community profiles; omit otherwise
   const handle = isCommunity && profile.unclaimedHandle ? `@${profile.unclaimedHandle}` : null;
@@ -203,6 +208,10 @@ function ProfileDetail({
                 <Text style={styles.sectorBadgeText}>{profile.sectorName}</Text>
               </View>
             </View>
+          ) : null}
+          {/* Location */}
+          {locationText ? (
+            <Text style={styles.detailLocation}>{locationText}</Text>
           ) : null}
           {/* Credits badge */}
           {acceptsCredits ? (
@@ -745,6 +754,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       textAlign: 'center',
     },
     detailRole: { fontSize: 14, color: t.textSecondary, marginBottom: 8, textAlign: 'center' },
+    detailLocation: { fontSize: 13, color: t.textSecondary, marginBottom: 8, textAlign: 'center' },
     sectorBadgeRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 6 },
     sectorBadge: {
       backgroundColor: `${accent}10`,

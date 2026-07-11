@@ -40,6 +40,11 @@ export type DirectoryProfile = {
   moneroAddress?: string | null;
   bitcoinAddress?: string | null;
   serviceCreditsAddress?: string | null;
+  // Member location. Plain names per the shared location standard (lib/geo/locations.ts):
+  // country e.g. "United States", state a US state name or a free-text region, city free text.
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
 };
 
 export type DirectoryAnnouncement = {
@@ -76,6 +81,9 @@ export type DirectoryProfileInput = {
   moneroAddress?: string | null;
   bitcoinAddress?: string | null;
   serviceCreditsAddress?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
 };
 
 export type DirectoryAnnouncementInput = {

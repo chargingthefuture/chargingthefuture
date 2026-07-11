@@ -41,6 +41,11 @@ export interface Member {
   // @handle" label. Optional so list payloads that omit them still typecheck.
   source?: string | null;
   invitedByUsername?: string | null;
+  // Member location (city / state or region / country) — plain names per the shared location
+  // standard. Optional so list payloads that omit them still typecheck.
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
 }
 
 export interface Sector {

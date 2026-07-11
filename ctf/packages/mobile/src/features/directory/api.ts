@@ -43,6 +43,10 @@ export interface DirectoryListItem {
   venmoAddress?: string | null;
   moneroAddress?: string | null;
   bitcoinAddress?: string | null;
+  // Member location (city / state or region / country) — plain names. Optional for older payloads.
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
   createdAtIso: string;
   updatedAtIso: string;
 }

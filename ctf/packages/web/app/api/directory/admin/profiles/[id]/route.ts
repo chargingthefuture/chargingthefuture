@@ -22,6 +22,16 @@ function parseBody(body: AdminProfileBody): DirectoryProfileInput {
     skillIds: Array.isArray(body.skillIds)
       ? body.skillIds.filter((value): value is string => typeof value === 'string')
       : [],
+    // Fields the admin form may leave out stay undefined so updateAdminProfile preserves
+    // the stored value instead of nulling it (payment addresses are member-owned and are
+    // never sent by the admin drawer; location is sent, and an empty string clears it).
+    venmoAddress: typeof body.venmoAddress === 'string' ? body.venmoAddress : undefined,
+    moneroAddress: typeof body.moneroAddress === 'string' ? body.moneroAddress : undefined,
+    bitcoinAddress: typeof body.bitcoinAddress === 'string' ? body.bitcoinAddress : undefined,
+    serviceCreditsAddress: typeof body.serviceCreditsAddress === 'string' ? body.serviceCreditsAddress : undefined,
+    city: typeof body.city === 'string' ? body.city : undefined,
+    state: typeof body.state === 'string' ? body.state : undefined,
+    country: typeof body.country === 'string' ? body.country : undefined,
   };
 }
 
