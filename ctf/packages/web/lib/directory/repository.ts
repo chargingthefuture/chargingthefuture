@@ -697,6 +697,9 @@ export async function getDirectoryProfileForMember(profileId: string): Promise<D
           p.source,
           p.invited_by_username,
           p.unclaimed_handle,
+          p.city,
+          p.state,
+          p.country,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
@@ -791,6 +794,9 @@ export async function listDirectoryForMember(
           p.source,
           p.invited_by_username,
           p.unclaimed_handle,
+          p.city,
+          p.state,
+          p.country,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
