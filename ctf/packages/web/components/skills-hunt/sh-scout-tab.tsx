@@ -3,6 +3,7 @@
 import { Search, CheckCircle, ExternalLink, Send } from "lucide-react";
 import { BIO_MAX, type Tab } from "./sh-shared";
 import { SkillsPicker } from "./sh-skills-picker";
+import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { useTheme } from '@/hooks/useTheme';
 import { getSkillsHuntTokens } from './sh-shared';
 
@@ -10,6 +11,9 @@ export interface ScoutFormModel {
   fullName: string;
   bio: string;
   quora: string;
+  country: string;
+  state: string;
+  city: string;
   skills: string[];
   proposedSkills: string[];
   freeText: string;
@@ -21,6 +25,9 @@ export interface ScoutFormModel {
   onFullName: (v: string) => void;
   onBio: (v: string) => void;
   onQuora: (v: string) => void;
+  onCountry: (v: string) => void;
+  onState: (v: string) => void;
+  onCity: (v: string) => void;
   onToggleSkill: (s: string) => void;
   onAddOccupationSkills: (skillNames: string[]) => void;
   onRemoveProposed: (s: string) => void;
@@ -131,6 +138,39 @@ function NominationFields({ form }: { form: ScoutFormModel }) {
         </div>
         <div style={{ fontSize: 11, color: t.FAINT, marginTop: 4 }}>Quora activity helps verify this is a real person — reduces risk of trafficker infiltration.</div>
       </div>
+
+      {/* Location. Country is required (it matters for non-US members and the GDP country view);
+          State/City are optional. Shared controls keep the data clean. */}
+      <div>
+        <label htmlFor="sh-scout-country" style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
+          Country <span style={{ color: t.ACCENT }}>*</span>
+        </label>
+        <CountrySelect
+          id="sh-scout-country"
+          value={form.country}
+          onChange={form.onCountry}
+          style={{ width: "100%", padding: "10px 14px", background: t.INPUT_BG, border: fieldBorder(Boolean(form.country), t), borderRadius: 10, fontSize: 14, color: t.TEXT, outline: "none", boxSizing: "border-box" }}
+        />
+      </div>
+      <div>
+        <label htmlFor="sh-scout-state" style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
+          State / Region <span style={{ fontSize: 11, color: t.FAINT, fontWeight: 400 }}>(optional)</span>
+        </label>
+        <StateField
+          id="sh-scout-state"
+          country={form.country}
+          value={form.state}
+          onChange={form.onState}
+          style={{ width: "100%", padding: "10px 14px", background: t.INPUT_BG, border: fieldBorder(Boolean(form.state), t), borderRadius: 10, fontSize: 14, color: t.TEXT, outline: "none", boxSizing: "border-box" }}
+        />
+      </div>
+      <div>
+        <label htmlFor="sh-scout-city" style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
+          City <span style={{ fontSize: 11, color: t.FAINT, fontWeight: 400 }}>(optional)</span>
+        </label>
+        <input id="sh-scout-city" value={form.city} onChange={(e) => form.onCity(e.target.value)} placeholder="City"
+          style={{ width: "100%", padding: "10px 14px", background: t.INPUT_BG, border: fieldBorder(Boolean(form.city), t), borderRadius: 10, fontSize: 14, color: t.TEXT, outline: "none", boxSizing: "border-box" }} />
+      </div>
     </>
   );
 }
@@ -138,7 +178,7 @@ function NominationFields({ form }: { form: ScoutFormModel }) {
 function NominationForm({ form }: { form: ScoutFormModel }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
-  const canSubmit = form.fullName.trim().length >= 2 && form.allSkillCount > 0 && !form.submitting;
+  const canSubmit = form.fullName.trim().length >= 2 && form.allSkillCount > 0 && form.country.trim().length > 0 && !form.submitting;
   return (
     <div style={{ flex: "1 1 320px", maxWidth: 580 }}>
       <div style={{ marginBottom: 20 }}>

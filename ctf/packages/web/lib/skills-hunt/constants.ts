@@ -12,6 +12,10 @@ export const SKILLS_HUNT_FULL_NAME_PATTERN = /^[A-Za-z0-9 ]+$/;
 export const SKILLS_HUNT_MAX_BIO_LENGTH = 280;
 export const SKILLS_HUNT_MAX_URL_LENGTH = 512;
 export const SKILLS_HUNT_MAX_REVIEW_NOTES_LENGTH = 1000;
+// Nominee location (city / state or region / country). Country is required at submit time; state/city
+// optional. Capped at 100 to match the directory_profiles location columns (varchar(100) on cloned
+// data) these carry into on accept.
+export const SKILLS_HUNT_MAX_LOCATION_LENGTH = 100;
 // Taxonomy-first skills field: user picks N chips from skills_taxonomy_skills
 // and may type up to M free-text proposed skills (each ≤ 40 chars). Both go
 // into the same submission record but live in different columns.
