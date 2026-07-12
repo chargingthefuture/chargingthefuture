@@ -155,7 +155,7 @@ export function UnlockVerifyBanner({
               lineHeight: 1.55,
             }}
           >
-            If you have trouble finding your Quora profile URL, comment on any post at{' '}
+            <strong style={{ color: 'var(--ctf-text)' }}>Can’t find your Quora profile URL?</strong> Go to{' '}
             <a
               href="https://tiskillsnetwork.quora.com"
               target="_blank"
@@ -164,7 +164,7 @@ export function UnlockVerifyBanner({
             >
               tiskillsnetwork.quora.com
             </a>{' '}
-            and I will provide you with your URL.
+            and comment on any post asking for help — I&apos;ll reply with your profile URL.
           </div>
         </>
       )}

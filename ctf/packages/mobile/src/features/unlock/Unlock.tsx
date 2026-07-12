@@ -48,8 +48,9 @@ const UNLOCK_QUORA_HELP_URL = 'https://tiskillsnetwork.quora.com';
 function QuoraHelp({ s }: { s: Styles }) {
   return (
     <View style={s.quoraHelp} accessibilityRole="summary">
+      <Text style={s.quoraHelpTitle}>Can&apos;t find your Quora profile URL?</Text>
       <Text style={s.quoraHelpBody}>
-        If you have trouble finding your Quora profile URL, comment on any post at{' '}
+        Go to{' '}
         <Text
           style={s.quoraHelpLink}
           accessibilityRole="link"
@@ -59,7 +60,7 @@ function QuoraHelp({ s }: { s: Styles }) {
         >
           tiskillsnetwork.quora.com
         </Text>{' '}
-        and I will provide you with your URL.
+        and comment on any post asking for help — I&apos;ll reply with your profile URL.
       </Text>
     </View>
   );
@@ -422,7 +423,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderWidth: 1.5,
       borderColor: accent + '66',
     },
-    quoraHelpBody: { fontSize: 13, fontWeight: '500', color: t.textPrimary, lineHeight: 19 },
+    quoraHelpTitle: { fontSize: 14, fontWeight: '800', color: t.textPrimary, marginBottom: 5 },
+    quoraHelpBody: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
     quoraHelpLink: { color: accent, fontWeight: '700', textDecorationLine: 'underline' },
   });
 }
