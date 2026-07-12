@@ -14,7 +14,7 @@ import './globals.css';
 // The site title doubles as the link-preview descriptor other sites (e.g. Quora) show when a page
 // here is shared: they read og:title, falling back to <title>. Both are set to the same string so
 // the unfurl reads exactly this, on every surface.
-const SITE_TITLE = 'TI Skills Economy (TSE); Exit the economy, exit the psyop.';
+const SITE_TITLE = 'TI Skills Economy (TSE); Exit their economy, exit the psyop.';
 const SITE_DESCRIPTION = 'A skills-based community economy for survivors — mutual support, real participation, no outside systems needed.';
 
 export const metadata: Metadata = {
