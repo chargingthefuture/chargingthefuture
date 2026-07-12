@@ -27,20 +27,21 @@ export function UnlockQuoraHelp() {
         border: `1.5px solid ${tok.ACCENT}66`,
       }}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-        <HelpCircle size={16} color={tok.ACCENT} style={{ flexShrink: 0, marginTop: 2 }} />
-        <span style={{ fontSize: 13.5, fontWeight: 600, color: tok.TITLE, lineHeight: 1.6 }}>
-          If you have trouble finding your Quora profile URL, comment on any post at{" "}
-          <a
-            href={UNLOCK_QUORA_HELP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: tok.ACCENT, fontWeight: 700, textDecoration: "underline" }}
-          >
-            {UNLOCK_QUORA_HELP_DOMAIN}
-          </a>{" "}
-          and I will provide you with your URL.
-        </span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <HelpCircle size={16} color={tok.ACCENT} style={{ flexShrink: 0 }} />
+        <span style={{ fontSize: 14, fontWeight: 800, color: tok.TITLE }}>Can’t find your Quora profile URL?</span>
+      </div>
+      <div style={{ fontSize: 13, color: tok.MUTED, lineHeight: 1.6 }}>
+        Go to{" "}
+        <a
+          href={UNLOCK_QUORA_HELP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: tok.ACCENT, fontWeight: 700, textDecoration: "underline" }}
+        >
+          {UNLOCK_QUORA_HELP_DOMAIN}
+        </a>{" "}
+        and comment on any post asking for help — I’ll reply with your profile URL.
       </div>
     </div>
   );

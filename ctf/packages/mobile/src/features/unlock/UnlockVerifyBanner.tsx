@@ -105,7 +105,8 @@ export function UnlockVerifyBanner() {
           {/* Prominent, universal help for a member who can't find their Quora profile URL. */}
           <View style={s.quoraHelp}>
             <Text style={s.quoraHelpText}>
-              If you have trouble finding your Quora profile URL, comment on any post at{' '}
+              <Text style={s.quoraHelpStrong}>Can&apos;t find your Quora profile URL? </Text>
+              Go to{' '}
               <Text
                 style={s.quoraHelpLink}
                 accessibilityRole="link"
@@ -115,7 +116,7 @@ export function UnlockVerifyBanner() {
               >
                 tiskillsnetwork.quora.com
               </Text>{' '}
-              and I will provide you with your URL.
+              and comment on any post asking for help — I&apos;ll reply with your profile URL.
             </Text>
           </View>
         </>
@@ -167,7 +168,8 @@ function makeStyles(t: ThemeTokens, _theme: ThemeName, accent: string) {
       borderWidth: 1.5,
       borderColor: `${accent}73`,
     },
-    quoraHelpText: { fontSize: 12.5, fontWeight: '500', color: t.textPrimary, lineHeight: 18 },
+    quoraHelpText: { fontSize: 12.5, color: t.textSecondary, lineHeight: 18 },
+    quoraHelpStrong: { fontWeight: '800', color: t.textPrimary },
     quoraHelpLink: { color: accent, fontWeight: '700', textDecorationLine: 'underline' },
   });
 }
