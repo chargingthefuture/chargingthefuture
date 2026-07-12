@@ -192,7 +192,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     summary: 'Community reputation and verification. Trust signals built through real participation — your credibility, visible and portable.',
     availabilityState: 'implemented_shell',
     navRank: 190,
-    isVisible: false,
+    isVisible: true,
   },
   {
     slug: 'what-works',
