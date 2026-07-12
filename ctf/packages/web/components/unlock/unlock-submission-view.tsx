@@ -4,7 +4,7 @@ import { CheckCircle, ExternalLink, Send, Shield, Unlock as UnlockIcon } from "l
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { getUnlockTokens, UNLOCK_BENEFITS } from "./unlock-shared";
-import { UnlockCommonsHelp } from "./unlock-commons-help";
+import { UnlockQuoraHelp } from "./unlock-quora-help";
 
 const WHY = [
   { icon: "🔗", t: "Real-person proof", d: "Quora activity proves you're a real person with history online." },
@@ -21,14 +21,12 @@ export function UnlockSubmissionView({
   onSubmit,
   submitting,
   error,
-  earlyCommonsAccess = false,
 }: {
   url: string;
   onUrlChange: (value: string) => void;
   onSubmit: () => void;
   submitting: boolean;
   error: string | null;
-  earlyCommonsAccess?: boolean;
 }) {
   const canSubmit = url.trim().length > 0 && !submitting;
   const isMobile = useIsMobile();
@@ -83,7 +81,7 @@ export function UnlockSubmissionView({
               <Send size={16} /> {submitting ? "Submitting…" : "Submit for Verification"}
             </button>
 
-            {earlyCommonsAccess && <UnlockCommonsHelp />}
+            <UnlockQuoraHelp />
           </div>
         </div>
 
