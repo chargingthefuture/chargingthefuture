@@ -95,6 +95,29 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
     void reviewAndRefresh(id, "reject", reason);
   }
 
+  // Remove = soft-delete. Use for a void that should not count against the scout
+  // (a duplicate, a test row, an admin mistake) — unlike Reject, it does not raise
+  // the scout's rejection rate. It does not reverse any ServiceCredits reward.
+  async function onRemove(id: string) {
+    if (!window.confirm("Remove this submission? It is soft-deleted and no longer counts toward scores, missions, or the scout's reputation — unlike Reject, it does not count against the scout. This does not reverse any ServiceCredits reward; burn that separately if needed.")) return;
+    setActing(id);
+    try {
+      const res = await fetch(`/api/skills-hunt/admin/submissions/${id}/remove`, {
+        method: "POST",
+        headers: { "x-ctf-csrf": "1" },
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(body?.message ?? "Unable to remove submission.");
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Unable to remove submission.");
+    } finally {
+      setActing(null);
+    }
+    await refresh();
+  }
+
   async function bulkReview(action: "accept" | "reject") {
     if (selected.size === 0) return;
     const pendingIds = new Set(submissions.filter((s) => s.status === "pending").map((s) => s.id));
@@ -162,6 +185,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
               onAccept={(id) => void reviewAndRefresh(id, "accept", null)}
               onReject={onReject}
               onFlag={(id) => void reviewAndRefresh(id, "flag", null)}
+              onRemove={(id) => void onRemove(id)}
             />
           </div>
         </div>

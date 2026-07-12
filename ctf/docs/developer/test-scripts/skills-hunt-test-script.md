@@ -459,6 +459,20 @@ Result: web ☐ android ☐
 
 ---
 
+### SH-A4b — Remove (soft-delete) a submission without penalising the scout
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** Any submission exists (any status). Ideally an accepted one so you can see the leaderboard change.
+
+**Steps:**
+1. In the admin submissions table, click "Remove" on a row and confirm the prompt.
+2. Re-open the round's Leaderboard and, as the affected scout, open the Scout tab and My Finds.
+
+**Expected:** The row disappears from the admin table (soft-deleted). The leaderboard no longer counts it. Crucially, unlike Reject, it does **not** add to the scout's rejection rate — a scout removed this way is not pushed toward the restricted/pre-approval state. It is gone from the scout's My Finds. No ServiceCredits are reversed by this action (that is a separate admin burn). A non-admin cannot reach the Remove action.
+
+Result: web ☐
+
 ### SH-A5 — Bulk review: accept multiple pending submissions at once
 
 **Role:** admin/moderator · **Surfaces:** web
