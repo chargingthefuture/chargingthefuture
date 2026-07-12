@@ -16,14 +16,12 @@ import {
   type GdpMetrics,
   type GdpReportPayload,
   type GdpSector,
-  type GdpTab,
   type GdpTokens,
 } from "./gdp-shared";
 import { GdpLoading } from "./gdp-loading";
 import { GdpIconRail } from "./gdp-icon-rail";
 import { GdpSidebar } from "./gdp-sidebar";
 import { GdpDashboard } from "./gdp-dashboard";
-import { GdpMap } from "./gdp-map";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 function ShellHeader({ t, metrics }: { t: GdpTokens; metrics: GdpMetrics }) {
@@ -55,27 +53,22 @@ function GdpContent({
   t,
   error,
   report,
-  tab,
   sectors,
   countries,
   metrics,
-  metricRows,
 }: {
   t: GdpTokens;
   error: string | null;
   report: GdpReportPayload | null;
-  tab: GdpTab;
   sectors: GdpSector[];
   countries: GdpCountry[];
   metrics: GdpMetrics;
-  metricRows: GdpMetricRow[];
 }) {
   if (error) {
     return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontSize: 14, padding: 24 }}>{error}</div>;
   }
   if (!report) return <EmptyReport t={t} />;
-  if (tab === "dashboard") return <GdpDashboard sectors={sectors} countries={countries} metrics={metrics} />;
-  return <GdpMap metricRows={metricRows} />;
+  return <GdpDashboard sectors={sectors} countries={countries} metrics={metrics} />;
 }
 
 // Read the live headline figure (the Community Value Index) off the report payload and report whether it
@@ -90,14 +83,12 @@ function deriveIsEstimate(rawMetrics: unknown): boolean {
 }
 
 export default function GdpShell() {
-  const [tab, setTab] = useState<GdpTab>("dashboard");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<GdpReportPayload | null>(null);
   const [isEstimate, setIsEstimate] = useState(false);
-  // Raw per-metric rows from the report payload. Kept separately from the shaped
-  // GdpMetrics so the world map can read the real community-wide aggregates
-  // (gdp_value_index, total_members) by key. No per-country data exists.
+  // Raw per-metric rows from the report payload, kept so shapeLiveGdpMetrics can read the community-wide
+  // aggregates (gdp_value_index, total_members) by key for the hero. No per-country data exists here.
   const [metricRows, setMetricRows] = useState<GdpMetricRow[]>([]);
   // Real per-country member distribution (location tied to people), fetched from /api/gdp/countries.
   const [countries, setCountries] = useState<GdpCountry[]>([]);
@@ -130,7 +121,7 @@ export default function GdpShell() {
     return () => { controller.abort(); };
   }, []);
 
-  // Load the real per-country member distribution for the "Top Countries" panel. Independent of the
+  // Load the real per-country member distribution for the "All Countries" panel. Independent of the
   // main report (a failure here just leaves the panel empty; it never blocks the dashboard).
   useEffect(() => {
     const controller = new AbortController();
@@ -160,10 +151,6 @@ export default function GdpShell() {
   }
 
   if (isMobile) {
-    const tabs: { key: GdpTab; label: string }[] = [
-      { key: "dashboard", label: "Dashboard" },
-      { key: "map", label: "Map" },
-    ];
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "Inter, system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column" }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
@@ -176,24 +163,19 @@ export default function GdpShell() {
             <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>↑ Live</Badge>
             <MobileTopActions />
           </div>
-          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
-            {tabs.map(({ key, label }) => (
-              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${t.ACCENT}1A` : "transparent", border: `1px solid ${tab === key ? t.ACCENT + "40" : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
-            ))}
-          </div>
         </div>
-        <GdpContent t={t} error={error} report={report} tab={tab} sectors={sectors} countries={countries} metrics={metrics} metricRows={metricRows} />
+        <GdpContent t={t} error={error} report={report} sectors={sectors} countries={countries} metrics={metrics} />
       </div>
     );
   }
 
   return (
     <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "Inter, system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      <GdpIconRail tab={tab} onTab={setTab} />
+      <GdpIconRail />
       <GdpSidebar metrics={metrics} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
         <ShellHeader t={t} metrics={metrics} />
-        <GdpContent t={t} error={error} report={report} tab={tab} sectors={sectors} countries={countries} metrics={metrics} metricRows={metricRows} />
+        <GdpContent t={t} error={error} report={report} sectors={sectors} countries={countries} metrics={metrics} />
       </div>
     </div>
   );

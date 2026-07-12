@@ -81,8 +81,6 @@ export const GDP_ESTIMATE_CHIP_LABEL = "Estimate";
 export const GDP_ESTIMATE_FOOTNOTE =
   "* USD total is a normalized estimate across currencies — a morale and transparency metric, not a financial ledger.";
 
-export type GdpTab = "dashboard" | "map";
-
 // Total signed-up members, carried as a live metric row alongside the value index and surfaced on the
 // dashboard hero and the world-map overlay. Community-wide count only — never a per-user figure.
 export const GDP_TOTAL_MEMBERS_METRIC_KEY = "total_members";
