@@ -211,3 +211,7 @@ of these, it is already tracked, not a new bug:
 - (2026-07-03 sweep) The unused summary report endpoint, an in-process sync cron that failed on
   every run, two never-shown mobile screens, and a button with no action were removed; no test case
   covered them, so no case changes — recorded here so the script and inventory move together.
+- Sector placement follows the taxonomy spec: a member with skills but no occupation set appears
+  under the sector their skills map to, not under "Unassigned". The "Unassigned" row renders only
+  when a member has no occupation, no skills, and no sector — seeing it means a genuinely empty
+  profile exists, which is real information, not a bug.
