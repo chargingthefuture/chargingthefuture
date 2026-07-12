@@ -11,9 +11,26 @@ import {
 } from '@/lib/auth/clerk-env';
 import './globals.css';
 
+// The site title doubles as the link-preview descriptor other sites (e.g. Quora) show when a page
+// here is shared: they read og:title, falling back to <title>. Both are set to the same string so
+// the unfurl reads exactly this, on every surface.
+const SITE_TITLE = 'TI Skills Economy (TSE); Exit their economy, exit the psyop.';
+const SITE_DESCRIPTION = 'A skills-based community economy for survivors — mutual support, real participation, no outside systems needed.';
+
 export const metadata: Metadata = {
-  title: 'CTF Survivor Hub',
-  description: 'Dark theme plugin-first community shell for survivor-centered support.',
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  applicationName: 'TI Skills Economy (TSE)',
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    siteName: 'TI Skills Economy (TSE)',
+  },
+  twitter: {
+    card: 'summary',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 // Explicit phone viewport so the page lays out at device width (not a ~980px
