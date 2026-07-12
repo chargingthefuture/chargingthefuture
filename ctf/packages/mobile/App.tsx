@@ -173,7 +173,7 @@ function buildFeatureViews(
     'service-credits': () => <ServiceCredits />,
     'service-credits-admin': () => <AdminServiceCredits />,
     'level-up': () => <LevelUp />,
-    unlock: () => <Unlock onNavigateToCommons={() => setSelected('home')} />,
+    unlock: () => <Unlock />,
     'unlock-admin': () => <AdminUnlock />,
     'account-data': () => <AccountData />,
     'blocked-members': () => <BlockedMembers />,

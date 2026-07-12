@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTheme, getAppAccent, type ThemeName, type ThemeTokens } from '../../theme';
 import { fetchUnlockStatus, submitUnlockUrl, type UnlockStatus } from './api';
 
@@ -67,15 +67,14 @@ export function UnlockVerifyBanner() {
       {isPending ? (
         <Text style={s.body}>
           Thanks — your Quora profile is submitted and a human is reviewing it. You have Commons access
-          while you wait. Questions? Just send a message below in the Commons and we’ll help.
+          while you wait.
         </Text>
       ) : (
         <>
           <Text style={s.body}>
             {wasRejected
               ? 'Your last submission could not be verified. Re-submit your Quora profile URL below — a human reviews every one.'
-              : 'Submit your Quora profile URL so we can confirm you are a real person. A human reviews every submission.'}{' '}
-            Having trouble finding your URL? Just send a message below in the Commons and we’ll help.
+              : 'Submit your Quora profile URL so we can confirm you are a real person. A human reviews every submission.'}
           </Text>
           <TextInput
             style={s.input}
@@ -102,6 +101,24 @@ export function UnlockVerifyBanner() {
             )}
           </Pressable>
           {error ? <Text style={s.error}>{error}</Text> : null}
+
+          {/* Prominent, universal help for a member who can't find their Quora profile URL. */}
+          <View style={s.quoraHelp}>
+            <Text style={s.quoraHelpText}>
+              <Text style={s.quoraHelpStrong}>Can&apos;t find your Quora profile URL? </Text>
+              Go to{' '}
+              <Text
+                style={s.quoraHelpLink}
+                accessibilityRole="link"
+                onPress={() => {
+                  void Linking.openURL('https://tiskillsnetwork.quora.com');
+                }}
+              >
+                tiskillsnetwork.quora.com
+              </Text>{' '}
+              and comment on any post asking for help — we&apos;ll reply with your profile URL.
+            </Text>
+          </View>
         </>
       )}
     </View>
@@ -143,5 +160,16 @@ function makeStyles(t: ThemeTokens, _theme: ThemeName, accent: string) {
     btnDisabled: { opacity: 0.5 },
     btnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
     error: { fontSize: 12, color: t.danger, marginTop: 8 },
+    quoraHelp: {
+      marginTop: 12,
+      padding: 12,
+      borderRadius: t.radius,
+      backgroundColor: `${accent}1F`,
+      borderWidth: 1.5,
+      borderColor: `${accent}73`,
+    },
+    quoraHelpText: { fontSize: 12.5, color: t.textSecondary, lineHeight: 18 },
+    quoraHelpStrong: { fontWeight: '800', color: t.textPrimary },
+    quoraHelpLink: { color: accent, fontWeight: '700', textDecorationLine: 'underline' },
   });
 }
