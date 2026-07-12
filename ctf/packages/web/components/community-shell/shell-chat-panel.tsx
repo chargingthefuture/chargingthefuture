@@ -437,7 +437,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
 
       {needsUsername ? (
         <section className={styles.usernameAlert} role="status">
-          You&apos;re posting as <strong>{ownHandle}</strong>. Set a username from your account menu (top-right) so members recognize you.
+          You&apos;re posting as <strong>{ownHandle}</strong>. Open your account menu (your profile picture) and set a username so members recognize you.
         </section>
       ) : null}
 
