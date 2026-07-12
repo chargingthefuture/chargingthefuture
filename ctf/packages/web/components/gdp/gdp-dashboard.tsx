@@ -61,9 +61,9 @@ function GdpHero({ metrics }: { metrics: GdpMetrics }) {
               <div style={{ height: "100%", background: `linear-gradient(to right,${t.ACCENT},#22D3EE)`, borderRadius: 4, width: metrics.progress }} />
             </div>
           ) : null}
-          {isEstimate ? (
-            <div style={{ fontSize: 11, color: t.FAINT, marginTop: 12, lineHeight: 1.55, fontStyle: "italic" }}>{COMMUNITY_VALUE_INDEX_DISCLAIMER}</div>
-          ) : null}
+          {/* The Community Value disclaimer always shows on the dashboard (it moved here when the Map
+              tab, which used to carry it, was removed): the index is a relative measure, never money. */}
+          <div style={{ fontSize: 11, color: t.FAINT, marginTop: 12, lineHeight: 1.55, fontStyle: "italic" }}>{COMMUNITY_VALUE_INDEX_DISCLAIMER}</div>
         </div>
         {stats.length > 0 ? (
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -109,7 +109,7 @@ function GdpCountries({ countries }: { countries: GdpCountry[] }) {
   const t = getGdpTokens(theme);
   return (
     <div style={{ padding: "20px 24px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-      <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE, marginBottom: 4 }}>Top Countries</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE, marginBottom: 4 }}>All Countries</div>
       <div style={{ fontSize: 12, color: t.FAINT, marginBottom: 16 }}>Members by country</div>
       {countries.map((c) => (
         <div key={c.country} style={{ marginBottom: 14 }}>

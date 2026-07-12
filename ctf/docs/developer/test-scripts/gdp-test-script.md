@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md` |
-| **Generated** | 2026-07-11 (GDP admin retired + Community Value Index live-by-default on built-in weights; Top Countries panel shows real member distribution — see GDP-3b) |
+| **Generated** | 2026-07-11 (GDP admin retired + Community Value Index live-by-default; decorative Map tab removed; All Countries panel shows real member distribution — see GDP-3) |
 
 ## How to run this
 
@@ -80,19 +80,11 @@ footnote appear; the copy describes a community-wide figure, never a per-member 
 chip does not appear on values that are not estimates.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### GDP-3 · Map tab
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Open the "Map" tab.
-**Expected:** A world map renders with the real community-wide aggregates overlaid. Every region is
-the same neutral "unpopulated" state — there is no invented per-country figure. With no published
-report, an honest empty caption shows.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
-
-### GDP-3b · Top Countries panel (real member distribution)
+### GDP-3 · All Countries panel (real member distribution)
 **Role:** member · **Surfaces:** web (android omits this panel)
 **Steps:**
-1. On the web dashboard, find the "Top Countries" panel (subtitle "Members by country").
+1. On the web dashboard, find the "All Countries" panel (subtitle "Members by country"). There is no
+   longer a "Map" tab — the dashboard is a single view.
 2. Cross-check a country's member count against `SELECT country, COUNT(*) FROM directory_profiles WHERE
    is_active = TRUE AND deleted_at IS NULL AND btrim(country) <> '' GROUP BY country`.
 **Expected:** Each row shows a country, its real member count, and a share bar that is that country's
@@ -108,7 +100,7 @@ row).
 ### GDP-4 · No fiat parity anywhere
 **Role:** member · **Surfaces:** all
 **Steps:**
-1. Walk the overview, the sidebar aggregate, and the map.
+1. Walk the overview, the sidebar aggregate, and the All Countries panel.
 **Expected:** The community figure never reads as money for one wallet, a price, an exchange rate, or
 a redemption value for ServiceCredits or any token. Currencies, where named, appear by label (e.g.
 "ServiceCredits", "United States Dollar"), never a bare code used as a value.
@@ -138,9 +130,10 @@ member.
 
 ## Parity check (web ↔ android)
 
-For GDP-1, GDP-2, and GDP-3, the android app and the mobile-responsive web layout must show the same
-figure: both read the same live report payload, so the headline value, the estimate label, and the
-map aggregate must match. Note any drift here rather than filing separate bugs.
+For GDP-1 and GDP-2, the android app and the mobile-responsive web layout must show the same figure:
+both read the same live report payload, so the headline value and the estimate label must match. Note
+any drift here rather than filing separate bugs. (GDP-3, the All Countries panel, is web-only — the
+Android app omits the country breakdown.)
 
 **Result:** matches ☐ — drift notes:
 
