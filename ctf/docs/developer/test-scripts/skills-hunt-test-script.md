@@ -400,17 +400,17 @@ Result: web ☐
 
 ### SH-A2b — Manual leaderboard rebuild button
 
-**Role:** admin · **Surfaces:** web
+**Role:** admin · **Surfaces:** web, android
 
 **Precondition:** A round with at least one accepted submission exists.
 
 **Steps:**
-1. In the admin Rounds tab, find the round and click "Rebuild leaderboard"; confirm the prompt.
+1. In the admin Rounds tab (web) / on the admin screen with the round selected (Android), find the round's "Rebuild leaderboard" button and tap/click it; confirm the prompt.
 2. Open that round's Leaderboard tab and check the standings.
 
-**Expected:** The button shows "Rebuilding…" then "Rebuilt ✓". The Leaderboard reflects the current accepted submissions (individual and team) — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action.
+**Expected:** The button shows a busy state, then a success notice ("Leaderboard rebuilt…" on Android). The Leaderboard reflects the current accepted submissions (individual and team) — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action. On Android the button sits in a "Leaderboard" card under the selected round and sends `x-ctf-csrf: '1'`.
 
-Result: web ☐
+Result: web ☐ android ☐
 
 ---
 
@@ -458,6 +458,20 @@ Result: web ☐ android ☐
 Result: web ☐ android ☐
 
 ---
+
+### SH-A4b — Remove (soft-delete) a submission without penalising the scout
+
+**Role:** admin · **Surfaces:** web, android
+
+**Precondition:** Any submission exists (any status). Ideally an accepted one so you can see the leaderboard change.
+
+**Steps:**
+1. In the admin submissions table (web) / on each submission card (Android), tap/click "Remove" on a row and confirm the prompt.
+2. Re-open the round's Leaderboard and, as the affected scout, open the Scout tab and My Finds.
+
+**Expected:** The row disappears from the admin list (soft-deleted). The leaderboard no longer counts it. Crucially, unlike Reject, it does **not** add to the scout's rejection rate — a scout removed this way is not pushed toward the restricted/pre-approval state. It is gone from the scout's My Finds. No ServiceCredits are reversed by this action (that is a separate admin burn). A non-admin cannot reach the Remove action. On Android the "Remove" button shows on every submission card (any status) and sends `x-ctf-csrf: '1'`.
+
+Result: web ☐ android ☐
 
 ### SH-A5 — Bulk review: accept multiple pending submissions at once
 

@@ -6,6 +6,8 @@ import type { Round, Submission } from './SkillsHuntApi';
 import {
   fetchAdminRounds,
   fetchAdminSubmissions,
+  rebuildRoundLeaderboard,
+  removeAdminSubmission,
   reviewAdminSubmission,
   type ReviewAction,
   type RoundRewardSummary,
@@ -48,6 +50,7 @@ export const AdminSkillsHunt = () => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [acting, setActing] = useState<string | null>(null);
+  const [rebuilding, setRebuilding] = useState(false);
 
   const loadRounds = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
@@ -129,6 +132,68 @@ export const AdminSkillsHunt = () => {
     },
     [runReview],
   );
+
+  // Soft-delete a submission. Unlike Reject, it does not count as a scout
+  // rejection — use it to void a duplicate, spam, or test row.
+  const runRemove = useCallback(
+    async (submissionId: string) => {
+      if (!auth?.userId) return;
+      setActing(submissionId);
+      setError(null);
+      setNotice(null);
+      try {
+        await removeAdminSubmission(submissionId);
+        setNotice('Submission removed. It no longer counts toward the leaderboard or the scout.');
+        await loadSubmissions();
+      } catch {
+        setError('Could not remove the submission. Try again.');
+      } finally {
+        setActing(null);
+      }
+    },
+    [auth, loadSubmissions],
+  );
+
+  const confirmRemove = useCallback(
+    (submission: Submission) => {
+      Alert.alert(
+        'Remove submission',
+        `Remove the nomination from ${submission.fullName}? It stops counting toward the leaderboard and does not register as a rejection for the scout. This does not reverse any ServiceCredits already paid.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Remove', style: 'destructive', onPress: () => void runRemove(submission.id) },
+        ],
+      );
+    },
+    [runRemove],
+  );
+
+  // Manual leaderboard rebuild for the selected round.
+  const runRebuild = useCallback(async () => {
+    if (!auth?.userId || !activeRoundId) return;
+    setRebuilding(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await rebuildRoundLeaderboard(activeRoundId);
+      setNotice('Leaderboard rebuilt from the current accepted nominations.');
+    } catch {
+      setError('Could not rebuild the leaderboard. Try again.');
+    } finally {
+      setRebuilding(false);
+    }
+  }, [auth, activeRoundId]);
+
+  const confirmRebuild = useCallback(() => {
+    Alert.alert(
+      'Rebuild leaderboard',
+      'Recompute this round’s individual and team boards from the current accepted nominations?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Rebuild', style: 'default', onPress: () => void runRebuild() },
+      ],
+    );
+  }, [runRebuild]);
 
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
@@ -228,6 +293,28 @@ export const AdminSkillsHunt = () => {
         </View>
       ) : null}
 
+      {activeRoundId ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Leaderboard</Text>
+          <Text style={styles.cardMeta}>
+            Recompute this round’s individual and team boards from the current accepted nominations.
+            Use it after an out-of-band data fix — the board otherwise only refreshes when you review a
+            nomination.
+          </Text>
+          <Pressable
+            style={[styles.rebuildBtn, rebuilding ? styles.btnBusy : null]}
+            onPress={confirmRebuild}
+            disabled={rebuilding}
+          >
+            {rebuilding ? (
+              <ActivityIndicator size="small" color={accent} />
+            ) : (
+              <Text style={styles.rebuildText}>Rebuild leaderboard</Text>
+            )}
+          </Pressable>
+        </View>
+      ) : null}
+
       {submissions.length === 0 ? (
         <Text style={styles.emptyText}>No submissions matching this filter.</Text>
       ) : (
@@ -274,6 +361,13 @@ export const AdminSkillsHunt = () => {
                 </Pressable>
               </View>
             ) : null}
+            <Pressable
+              style={[styles.removeBtn, acting === submission.id ? styles.btnBusy : null]}
+              onPress={() => confirmRemove(submission)}
+              disabled={acting === submission.id}
+            >
+              <Text style={styles.removeText}>Remove</Text>
+            </Pressable>
           </View>
           </React.Fragment>
         ))
@@ -384,5 +478,29 @@ function makeStyles(t: ThemeTokens, accent: string) {
   acceptText: { color: '#22C55E' },
   rejectText: { color: '#EF4444' },
   flagText: { color: '#F59E0B' },
+  // "Remove" (soft-delete) is a quieter, full-width destructive control below the
+  // review row — it voids a row without counting as a scout rejection.
+  removeBtn: {
+    marginTop: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.25)',
+    backgroundColor: 'transparent',
+  },
+  removeText: { fontSize: 12, fontWeight: '600', color: '#EF4444' },
+  rebuildBtn: {
+    marginTop: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: `${accent}40`,
+    backgroundColor: `${accent}1F`,
+  },
+  rebuildText: { fontSize: 13, fontWeight: '600', color: accent },
   });
 }

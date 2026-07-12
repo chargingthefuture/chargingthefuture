@@ -245,6 +245,35 @@ contracts:
     idempotency: true
 
   - pluginId: skills-hunt
+    command: skills-hunt.submission.remove
+    version: 1.0.0
+    description: >-
+      Admin-only soft-delete of a submission (sets deleted_at). Voids a duplicate,
+      test, or mistaken row WITHOUT it counting as a scout rejection — a soft-deleted
+      row is excluded from reputation/rate-limit, leaderboard, mission progress, My
+      Finds, and directory eligibility. Rebuilds the round leaderboard and recomputes
+      the scout's mission progress. Does not touch the ServiceCredits ledger.
+    inputSchema:
+      submissionId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      alreadyRemoved:
+        type: boolean
+      roundId:
+        type: string
+    dataAccess:
+      - skills_hunt_submissions
+      - skills_hunt_leaderboard
+      - skills_hunt_mission_progress
+      - skills_hunt_audit_log
+    purpose: moderation_and_scoring
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: skills-hunt
     command: skills-hunt.leaderboard.list
     version: 1.0.0
     description: Retrieve round leaderboard entries in individual or team mode.

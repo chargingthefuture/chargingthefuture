@@ -13,6 +13,7 @@ interface RowProps {
   onAccept: (id: string) => void;
   onReject: (id: string) => void;
   onFlag: (id: string) => void;
+  onRemove: (id: string) => void;
 }
 
 function SkillsCell({ submission }: { submission: SkillsHuntSubmission }) {
@@ -30,20 +31,34 @@ function SkillsCell({ submission }: { submission: SkillsHuntSubmission }) {
   );
 }
 
-function RowActions({ submission, acting, onAccept, onReject, onFlag }: Omit<RowProps, "selected" | "onToggle">) {
+function RowActions({ submission, acting, onAccept, onReject, onFlag, onRemove }: Omit<RowProps, "selected" | "onToggle">) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
-  if (submission.status !== "pending") {
-    return <span style={{ fontSize: 11, color: t.MUTED }}>{submission.reviewAction ?? submission.status}</span>;
-  }
   const btn = (bg: string, border: string, color: string): React.CSSProperties => ({
     padding: "4px 10px", borderRadius: 6, background: bg, border, color, fontSize: 11, fontWeight: 700, cursor: "pointer", opacity: acting ? 0.5 : 1,
   });
+  // Remove (soft-delete) is available for any status — it voids a submission
+  // (duplicate/spam/mistake) without it counting as a scout rejection.
+  const removeBtn = (
+    <button type="button" disabled={acting} onClick={() => onRemove(submission.id)}
+      style={{ ...btn("transparent", `1px solid ${t.MUTED}`, t.MUTED), fontWeight: 600 }}>
+      Remove
+    </button>
+  );
+  if (submission.status !== "pending") {
+    return (
+      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <span style={{ fontSize: 11, color: t.MUTED }}>{submission.reviewAction ?? submission.status}</span>
+        {removeBtn}
+      </div>
+    );
+  }
   return (
-    <div style={{ display: "flex", gap: 6 }}>
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
       <button type="button" disabled={acting} onClick={() => onAccept(submission.id)} style={btn("#22C55E", "none", "#fff")}>Accept</button>
       <button type="button" disabled={acting} onClick={() => onReject(submission.id)} style={btn("#EF4444", "none", "#fff")}>Reject</button>
       <button type="button" disabled={acting} onClick={() => onFlag(submission.id)} style={btn(`${t.ACCENT}30`, `1px solid ${t.ACCENT}60`, t.ACCENT)}>Flag</button>
+      {removeBtn}
     </div>
   );
 }
@@ -89,6 +104,7 @@ export function SkillsHuntAdminTable({
   onAccept,
   onReject,
   onFlag,
+  onRemove,
 }: {
   submissions: SkillsHuntSubmission[];
   selected: Set<string>;
@@ -99,6 +115,7 @@ export function SkillsHuntAdminTable({
   onAccept: (id: string) => void;
   onReject: (id: string) => void;
   onFlag: (id: string) => void;
+  onRemove: (id: string) => void;
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
@@ -131,6 +148,7 @@ export function SkillsHuntAdminTable({
             onAccept={onAccept}
             onReject={onReject}
             onFlag={onFlag}
+            onRemove={onRemove}
           />
         ))}
       </tbody>
