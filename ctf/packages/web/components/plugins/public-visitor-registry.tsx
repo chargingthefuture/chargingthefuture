@@ -18,7 +18,6 @@ import { SkillsTaxonomyPublicShell } from '@/components/skills-taxonomy/skills-t
 import { SocketRelayPublicShell } from '@/components/socket-relay/socket-relay-public-shell';
 import { TrustPublicShell } from '@/components/trust/trust-public-shell';
 import { TrustTransportPublicShell } from '@/components/trust-transport/trust-transport-public-shell';
-import { UnlockPublicShell } from '@/components/unlock/unlock-public-shell';
 import { WeeklyPerformancePublicShell } from '@/components/weekly-performance/weekly-performance-public-shell';
 import { WhatWorksPublicShell } from '@/components/what-works/what-works-public-shell';
 import { WorkforcePublicShell } from '@/components/workforce/workforce-public-shell';
@@ -77,7 +76,6 @@ const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   'socket-relay': SocketRelayPublicShell,
   trust: TrustPublicShell,
   'trust-transport': TrustTransportPublicShell,
-  unlock: UnlockPublicShell,
   'weekly-performance': WeeklyPerformancePublicShell,
   'what-works': WhatWorksPublicShell,
   workforce: WorkforcePublicShell,
