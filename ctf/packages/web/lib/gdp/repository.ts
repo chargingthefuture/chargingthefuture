@@ -96,16 +96,19 @@ export async function buildLiveGdpReport(): Promise<GdpLiveReport> {
 
 // === Country distribution (Top Countries panel) ===
 // Real per-country member distribution — the honest "location tied to people" signal for the GDP
-// country breakdown. Location lives once on the member's claimed directory profile (the shared
-// member profile); this counts CLAIMED, active directory profiles that have a country set. Ordered
-// most members first. No small-count suppression (owner decision, 2026-07-11): every country with a
-// member is shown. This is a people-count, never an invented per-country money figure.
+// country breakdown. Location lives once on the member's directory profile (the shared member profile,
+// where country is a required field). This counts EVERY active directory profile that has a country —
+// claimed or not — so it uses the SAME member population as the dashboard's total member count
+// (countActiveDirectoryProfiles: is_active AND not deleted), not just the claimed subset. Filtering to
+// claimed_by_user_id previously collapsed the panel to the one claimed profile even though the member
+// total counts every active profile. Ordered most members first. No small-count suppression (owner
+// decision, 2026-07-11): every country with a member is shown. A people-count, never a per-country
+// money figure.
 export async function listMemberCountsByCountry(): Promise<Array<{ country: string; members: number }>> {
   const result = await queryDb<{ country: string; members: string }>(
     `SELECT btrim(country) AS country, COUNT(*)::text AS members
        FROM directory_profiles
-       WHERE claimed_by_user_id IS NOT NULL
-         AND country IS NOT NULL
+       WHERE country IS NOT NULL
          AND btrim(country) <> ''
          AND is_active = true
          AND deleted_at IS NULL
