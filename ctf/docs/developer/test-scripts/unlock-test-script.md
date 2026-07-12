@@ -53,9 +53,8 @@ Access-gating plugin — these are the can't-ship-broken checks. Admin / reviewe
 regardless of the `feature-unlock-early-commons-access` flag.
 **Steps:**
 1. Open the Unlock submission form (a member with no submission).
-2. Confirm a standout callout reads: "Can't find your Quora profile URL? Go to
-   tiskillsnetwork.quora.com and comment on any post asking for help — we'll reply with your profile
-   URL."
+2. Confirm a standout callout reads: "If you have trouble finding your Quora profile URL, comment on
+   any post at tiskillsnetwork.quora.com and I will provide you with your URL."
 3. Tap the `tiskillsnetwork.quora.com` link and confirm it opens that Quora space (new tab on web;
    the system browser on android).
 4. On a **rejected** submission, open the status / re-submit view and confirm the same callout appears
@@ -75,8 +74,9 @@ submission.
 **Steps (web):**
 1. As an unverified treatment member with **no** submission, open the home page (the Commons).
 2. Confirm a "Verify your account to unlock full access" banner shows at the top of the content area,
-   with a Quora URL input, a "Submit for verification" button, and the standout "Can't find your Quora
-   profile URL?" callout pointing to tiskillsnetwork.quora.com.
+   with a Quora URL input, a "Submit for verification" button, and the standout Quora-URL help callout
+   ("If you have trouble finding your Quora profile URL, comment on any post at
+   tiskillsnetwork.quora.com and I will provide you with your URL.").
 3. Paste a valid Quora profile URL and submit.
 4. Confirm the banner switches to an "under review" note without a full reload.
 5. Reload; confirm the banner still shows the "under review" note (pending submission).
