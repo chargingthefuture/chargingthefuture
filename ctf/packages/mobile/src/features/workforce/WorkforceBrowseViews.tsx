@@ -58,13 +58,25 @@ function MemberCard({ m }: { m: WorkforceMatchedMember }) {
           <Text style={[styles.badgeText, { color: r.color }]}>{r.label}</Text>
         </View>
       </View>
-      {m.matchingOccupations.length > 0 ? (
-        <Text style={styles.memberMeta} numberOfLines={2}>
-          {m.matchingOccupations.map((o) => o.title).join(', ')}
-        </Text>
-      ) : null}
+      {m.matchingOccupations.map((o) => {
+        const or_ = REASON[o.reason];
+        return (
+          <View key={o.id} style={styles.memberOccRow}>
+            <Text style={styles.memberMeta} numberOfLines={2}>
+              {o.title} ({o.sector})
+              {o.viaSkills.length > 0 ? ` — via ${o.viaSkills.join(', ')}` : ''}
+            </Text>
+            <View style={styles.memberOccMetaRow}>
+              <View style={[styles.badge, { backgroundColor: or_.color + '1A', borderColor: or_.color + '40' }]}>
+                <Text style={[styles.badgeText, { color: or_.color }]}>{or_.label}</Text>
+              </View>
+              <Text style={styles.memberSub}>{o.gap > 0 ? `${fmt(o.gap)} to fill` : 'filled'}</Text>
+            </View>
+          </View>
+        );
+      })}
       {m.skills.length > 0 ? (
-        <Text style={styles.memberSub} numberOfLines={2}>Skills: {m.skills.join(', ')}</Text>
+        <Text style={styles.memberSub} numberOfLines={2}>All skills: {m.skills.join(', ')}</Text>
       ) : null}
     </View>
   );
@@ -163,8 +175,9 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
     ? [
         { l: 'Headcount target', v: fmt(occ.target) },
         { l: 'Annual training target', v: fmt(occ.annualTrainingTarget) },
-        { l: 'Members', v: fmt(occ.members) },
-        { l: 'Recruited', v: fmt(occ.recruited) },
+        // No declared-occupation "Members" stat: members join jobless but skilled, so the declared
+        // count is ~always 0. Recruited (matched) carries the story; occ.members stays in the API.
+        { l: 'Recruited (matched)', v: fmt(occ.recruited) },
         { l: 'Roles to fill', v: occ.gap > 0 ? fmt(occ.gap) : '—' },
       ]
     : [];
@@ -324,6 +337,15 @@ function makeStyles(t: ThemeTokens, accent: string) {
     memberCard: {
       padding: 12, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.02)',
       borderWidth: 1, borderColor: t.borderFaint, marginBottom: 8,
+    },
+    memberOccRow: {
+      marginTop: 4,
+      gap: 2,
+    },
+    memberOccMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
     },
     memberHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
     memberName: { fontSize: 14, fontWeight: '600', color: t.textShell },

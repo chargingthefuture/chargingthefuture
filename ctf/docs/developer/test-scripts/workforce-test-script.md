@@ -215,3 +215,11 @@ of these, it is already tracked, not a new bug:
   under the sector their skills map to, not under "Unassigned". The "Unassigned" row renders only
   when a member has no occupation, no skills, and no sector — seeing it means a genuinely empty
   profile exists, which is real information, not a bug.
+- In the Sectors / Skill Level drilldowns, every matched occupation on a member card carries its own
+  reason badge (Job title / Skill / Sector), a "via <skills>" note when the skill arm produced it,
+  and the occupation's "N to fill" figure; the member's complete skill list is labeled "All skills".
+  A Sector-badged occupation with no "via" skills is correct — it means same-sector adjacency, not a
+  skill relationship.
+- The occupation detail screen shows no "Members" (declared-occupation) card — members join jobless
+  but skilled, so the declared count is ~always 0; "Recruited (matched)" is the number that matters
+  there. The `members` field still exists in the API response.

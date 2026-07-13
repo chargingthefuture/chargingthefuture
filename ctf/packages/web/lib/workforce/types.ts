@@ -110,7 +110,18 @@ export type WorkforceMatchedMember = {
   skills: string[];
   sectors: string[];
   jobTitles: string[];
-  matchingOccupations: Array<{ id: string; title: string; sector: string }>;
+  // Each matched occupation carries its own reason, the member's skills that produced it (empty
+  // unless the skill arm fired), and how many positions that occupation still has to fill in the
+  // population model — so the display can show HOW a skilled member fills the demand instead of
+  // implying their whole skill list caused every match.
+  matchingOccupations: Array<{
+    id: string;
+    title: string;
+    sector: string;
+    reason: WorkforceMatchReason;
+    viaSkills: string[];
+    gap: number;
+  }>;
   matchReason: WorkforceMatchReason;
 };
 
