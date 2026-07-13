@@ -240,17 +240,22 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
   const jobTitles = jobTitlesRes.rows;
   const members = membersRes.rows;
 
-  // Skill arm of the recruited match, loaded separately and defensively. A profile counts toward an
-  // occupation if it carries a skill registered under that job title. These rows are keyed by profile
-  // and only read for the active members loaded above, so there is no need to re-join (and filter)
-  // directory_profiles here. If this optional query fails on a given database, recruited degrades to
-  // the sector and job-title arms rather than failing the whole read-only dashboard with a 503.
+  // Skill arm of the recruited match, loaded separately and defensively. Skills match by NAME, not
+  // by row (owner decision 2026-07-04): a profile counts toward EVERY occupation that lists an
+  // active skill with the same normalized name as one the profile holds. A skill is a capability,
+  // not a pointer to the one occupation whose copy the member happened to pick — row-based matching
+  // funneled every holder of a shared skill into a single sector. The `held` join is the member's
+  // own skill row; `other` is every active same-named row across the taxonomy. If this optional
+  // query fails on a given database, recruited degrades to the sector and job-title arms rather
+  // than failing the whole read-only dashboard with a 503.
   let profileSkillRows: ProfileSkillJobTitleRow[] = [];
   try {
     const profileSkillsRes = await queryDb<ProfileSkillJobTitleRow>(
-      `SELECT DISTINCT dps.profile_id::text AS profile_id, sts.job_title_id::text AS job_title_id
+      `SELECT DISTINCT dps.profile_id::text AS profile_id, other.job_title_id::text AS job_title_id
        FROM directory_profile_skills dps
-       JOIN skills_taxonomy_skills sts ON sts.id = dps.skill_id AND sts.is_active = TRUE`,
+       JOIN skills_taxonomy_skills held ON held.id = dps.skill_id AND held.is_active = TRUE
+       JOIN skills_taxonomy_skills other
+         ON lower(btrim(other.name)) = lower(btrim(held.name)) AND other.is_active = TRUE`,
     );
     profileSkillRows = profileSkillsRes.rows;
   } catch (error) {

@@ -223,3 +223,7 @@ of these, it is already tracked, not a new bug:
 - The occupation detail screen shows no "Members" (declared-occupation) card — members join jobless
   but skilled, so the declared count is ~always 0; "Recruited (matched)" is the number that matters
   there. The `members` field still exists in the API response.
+- Skill matches are name-based: a member holding a skill name that appears under several occupations
+  matches all of them, across sectors ("via <that skill>" on each). A member whose skills exist under
+  only one occupation still matches only there — if that looks too narrow, the fix is a taxonomy
+  change op listing the skill name under the other occupation(s), not a matcher change.
