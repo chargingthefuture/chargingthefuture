@@ -16,7 +16,10 @@ function DesktopClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
   const { theme } = useTheme();
   const t = getClickLogTokens(theme);
   return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
+    // ctf-self-responsive opts this flex column out of the global small-screen "un-row" fallback
+    // (.ctf-app-viewport > * → display:block on phones), which would otherwise collapse the column
+    // and stop flex:1 from pushing the bottom nav to the bottom.
+    <div className="ctf-self-responsive" style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
         <PublicShellBackLink />
@@ -107,7 +110,10 @@ function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
   const { theme } = useTheme();
   const t = getClickLogTokens(theme);
   return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
+    // ctf-self-responsive: keep this a real flex column on phones so the middle (flex:1) pushes the
+    // locked bottom nav to the bottom edge. Without it the global mobile un-row rule forces
+    // display:block and the nav floats mid-screen with empty space beneath it.
+    <div className="ctf-self-responsive" style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ padding: '12px 16px', background: `${t.ACCENT}10`, borderBottom: `1px solid ${t.ACCENT}25`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
