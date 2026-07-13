@@ -111,7 +111,16 @@ export interface WorkforceMatchedMember {
   skills: string[];
   sectors: string[];
   jobTitles: string[];
-  matchingOccupations: Array<{ id: string; title: string; sector: string }>;
+  // Per-occupation match detail (mirrors web): the reason THIS occupation matched, the member's
+  // skills that produced it (skill matches only), and the occupation's remaining demand gap.
+  matchingOccupations: Array<{
+    id: string;
+    title: string;
+    sector: string;
+    reason: WorkforceMatchReason;
+    viaSkills: string[];
+    gap: number;
+  }>;
   matchReason: WorkforceMatchReason;
 }
 
