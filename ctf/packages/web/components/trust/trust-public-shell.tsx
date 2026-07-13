@@ -11,23 +11,27 @@ import { getTrustTokens } from './trust-shared';
 // TrustPublic / MobileTrustPublic mockup values, so the default UI is pixel-identical).
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-// Static description of the voluntary signals Trust aggregates (marketing copy). These mirror the
-// real signals in lib/trust: participation and social proof — never identity verification (there is
-// none) and never a numeric score (none is ever produced). "ServiceCredits activity" reads as social
-// proof: how many distinct members chose to transact with you, not your balance.
+// Static description of the voluntary signals Trust aggregates (marketing copy). Every item mirrors a
+// real signal in lib/trust (buildTrustEvidence): social proof and participation — never identity
+// verification (there is none) and never a numeric score (none is ever produced). Mapping:
+//   Quora social proof        → the public Quora profile checked at onboarding
+//   Admin-reviewed verification → the admin-set "Verified by an administrator" status
+//   ServiceCredits activity   → distinct members who completed a ServiceCredits transfer with you
+//   Community connections     → Foundation connections-as-provider + ongoing recurring activities
+//   Cohort completion record  → completed LevelUp / joined PeerProgramming cohorts
 const DESKTOP_SIGNALS = [
   'Quora social proof',
-  'Survivor-status attestation (non-coercive)',
+  'Admin-reviewed verification',
   'ServiceCredits activity',
-  'Community peer vouches',
+  'Community connections',
   'Cohort completion record',
 ];
 
 const MOBILE_SIGNALS = [
   'Quora social proof',
-  'Survivor-status attestation',
+  'Admin-reviewed verification',
   'ServiceCredits activity',
-  'Community peer vouches',
+  'Community connections',
   'Cohort completion record',
 ];
 
