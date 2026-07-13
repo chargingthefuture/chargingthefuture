@@ -175,8 +175,9 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
     ? [
         { l: 'Headcount target', v: fmt(occ.target) },
         { l: 'Annual training target', v: fmt(occ.annualTrainingTarget) },
-        { l: 'Members', v: fmt(occ.members) },
-        { l: 'Recruited', v: fmt(occ.recruited) },
+        // No declared-occupation "Members" stat: members join jobless but skilled, so the declared
+        // count is ~always 0. Recruited (matched) carries the story; occ.members stays in the API.
+        { l: 'Recruited (matched)', v: fmt(occ.recruited) },
         { l: 'Roles to fill', v: occ.gap > 0 ? fmt(occ.gap) : '—' },
       ]
     : [];

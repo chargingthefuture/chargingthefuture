@@ -220,3 +220,6 @@ of these, it is already tracked, not a new bug:
   and the occupation's "N to fill" figure; the member's complete skill list is labeled "All skills".
   A Sector-badged occupation with no "via" skills is correct — it means same-sector adjacency, not a
   skill relationship.
+- The occupation detail screen shows no "Members" (declared-occupation) card — members join jobless
+  but skilled, so the declared count is ~always 0; "Recruited (matched)" is the number that matters
+  there. The `members` field still exists in the API response.
