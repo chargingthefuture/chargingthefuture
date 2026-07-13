@@ -404,18 +404,28 @@
     {
       "name": "service-credits",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-13T09:51:55.954Z",
+      "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/service-credits",
+        "ctf/packages/web/app/api/service-credits",
+        "ctf/packages/web/components/service-credits",
+        "ctf/packages/web/lib/service-credits"
+      ]
     },
     {
       "name": "shared",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-09T10:05:36.491Z",
+      "lastRunIssues": 7,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/components/shared",
+        "ctf/packages/web/lib/shared"
+      ]
     },
     {
       "name": "skills-hunt",
