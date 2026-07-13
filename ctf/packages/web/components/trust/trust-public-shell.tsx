@@ -11,19 +11,22 @@ import { getTrustTokens } from './trust-shared';
 // TrustPublic / MobileTrustPublic mockup values, so the default UI is pixel-identical).
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-// Static description of the voluntary signals Trust aggregates (marketing copy).
+// Static description of the voluntary signals Trust aggregates (marketing copy). These mirror the
+// real signals in lib/trust: participation and social proof — never identity verification (there is
+// none) and never a numeric score (none is ever produced). "ServiceCredits activity" reads as social
+// proof: how many distinct members chose to transact with you, not your balance.
 const DESKTOP_SIGNALS = [
-  'Identity verification',
+  'Quora social proof',
   'Survivor-status attestation (non-coercive)',
-  'Service Credit transaction history',
+  'ServiceCredits activity',
   'Community peer vouches',
   'Cohort completion record',
 ];
 
 const MOBILE_SIGNALS = [
-  'Identity verification',
+  'Quora social proof',
   'Survivor-status attestation',
-  'Service Credit history',
+  'ServiceCredits activity',
   'Community peer vouches',
   'Cohort completion record',
 ];
@@ -54,7 +57,7 @@ function DesktopTrustPublic({ signInUrl, verifyUrl }: { signInUrl: string; verif
               Privacy-respecting identity
             </span>
             <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}>
-              Your Trust score proves<br />
+              Your trust signals prove<br />
               <span style={{ color: t.ACCENT }}>you&apos;re real — without exposing who you are</span>
             </h1>
             <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE }}>
@@ -73,13 +76,13 @@ function DesktopTrustPublic({ signInUrl, verifyUrl }: { signInUrl: string; verif
             </a>
           </div>
 
-          {/* Trust score preview (empty state — no fabricated score) */}
+          {/* Trust status preview (empty state — no numeric score exists) */}
           <div style={{ width: 240, borderRadius: 16, border: `1px solid ${t.ACCENT}30`, padding: '24px 20px', background: t.ACCENT + '06', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', flexShrink: 0 }}>
             <div style={{ width: 72, height: 72, borderRadius: 36, border: `3px solid ${t.ACCENT}`, background: t.ACCENT + '15', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Shield size={32} color={t.ACCENT} />
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 11, color: t.MUTED }}>Your Trust Score</div>
+              <div style={{ fontSize: 11, color: t.MUTED }}>Your trust status</div>
               <div style={{ fontSize: 32, fontWeight: 900, color: t.ACCENT, marginTop: 2 }}>—</div>
               <div style={{ fontSize: 12, color: t.MUTED, marginTop: 2 }}>Sign in to build yours</div>
             </div>
@@ -128,13 +131,13 @@ function MobileTrustPublic({ signInUrl, verifyUrl }: { signInUrl: string; verify
           ))}
         </div>
 
-        {/* Trust score preview card (empty state) */}
+        {/* Trust status preview card (empty state) */}
         <div style={{ borderRadius: 16, border: `1px solid ${t.ACCENT}30`, padding: '20px', background: t.ACCENT + '06', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 60, height: 60, borderRadius: 30, border: `3px solid ${t.ACCENT}`, background: t.ACCENT + '15', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Shield size={26} color={t.ACCENT} />
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 11, color: t.MUTED }}>Your Trust Score</div>
+            <div style={{ fontSize: 11, color: t.MUTED }}>Your trust status</div>
             <div style={{ fontSize: 28, fontWeight: 900, color: t.ACCENT, marginTop: 2 }}>—</div>
             <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>Sign in to build yours</div>
           </div>
@@ -152,11 +155,13 @@ function MobileTrustPublic({ signInUrl, verifyUrl }: { signInUrl: string; verify
  * and MobileTrustPublic (phone) design mockups, with every sign-in affordance
  * pointing at the real hosted sign-in URL.
  *
- * Real-data-only note: the mockup already renders the score as an em-dash ("—")
- * empty state and the signal list is static marketing copy describing what Trust
- * aggregates, so there is no fabricated per-user data to remove. The simulated
- * phone status bar is dropped because the real app renders inside the browser
- * chrome.
+ * Real-data-only note: Trust produces no numeric score (see lib/trust —
+ * TrustSignalMetrics are coarse counts used to build qualitative evidence, never a
+ * score), so the preview card is a non-numeric trust-status empty state (an em-dash),
+ * not a score gauge. The signal list is static marketing copy that mirrors the real
+ * signals — social proof and participation, no identity verification — so there is no
+ * fabricated per-user data. The simulated phone status bar is dropped because the real
+ * app renders inside the browser chrome.
  */
 export function TrustPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
