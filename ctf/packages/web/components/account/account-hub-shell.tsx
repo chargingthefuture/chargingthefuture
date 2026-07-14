@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { UserButton } from '@clerk/nextjs';
-import { ChevronRight, Database, HeartHandshake, Home, ShieldCheck, ShieldOff, Sparkles, UserCircle } from 'lucide-react';
+import { ChevronRight, Database, HeartHandshake, ShieldCheck, ShieldOff, Sparkles, UserCircle } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { getAccountDataTokens } from '@/components/account-data/account-data-shared';
@@ -98,28 +98,18 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
           />
         </section>
 
-        {/* Manage each part of the profile where it lives */}
+        {/* Verification lives on the account page because it is not part of any plugin's profile —
+            it confirms the member with their Quora URL to unlock full access. The member's actual
+            profile (headline, skills, pay info) is the shared directory_profiles row, edited inside
+            the Directory plugin; housing is a collection of posts in LightHouse. Neither is a second
+            "profile" to manage here, so this section carries only verification. */}
         <section style={cardStyle}>
-          <div style={sectionLabel}>Manage your profile</div>
+          <div style={sectionLabel}>Verification</div>
           <AccountLinkRow
             href="/plugin/unlock"
             icon={<ShieldCheck size={18} />}
             title="Verification"
             desc="Confirm you are a real person with your Quora profile to unlock full access."
-            tok={tok}
-          />
-          <AccountLinkRow
-            href="/apps/directory"
-            icon={<UserCircle size={18} />}
-            title="Your skills profile"
-            desc="Your headline, skills, and how people can reach and pay you."
-            tok={tok}
-          />
-          <AccountLinkRow
-            href="/apps/lighthouse"
-            icon={<Home size={18} />}
-            title="Your housing listings"
-            desc="Places you host and offer to the community."
             tok={tok}
             last
           />
