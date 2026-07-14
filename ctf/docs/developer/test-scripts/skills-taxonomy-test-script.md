@@ -86,18 +86,18 @@ state, not a spinner stuck forever or a raw error.
 
 ### TAX-5 · Promoted skill appears under its occupation
 **Role:** member · **Surfaces:** all
-**Precondition:** the taxonomy change-ops apply (`pnpm --dir ctf seed:skills-taxonomy`, i.e.
-`seedSkillsTaxonomy.mjs`, normally run via the owner-dispatched `seed-skills-taxonomy.yml` workflow)
+**Precondition:** the taxonomy change apply (`pnpm --dir ctf seed:skills-taxonomy`, i.e.
+`seedSkillsTaxonomy.mjs`, normally run via the owner-run `seed-skills-taxonomy.yml` workflow)
 has run against the live DB.
 **Steps:**
 1. Browse to **Retail & Services › Supply Managers › Skills**.
 2. Read the skills listed.
 **Expected:** The occupation shows **Merchandising** (promoted from skill proposal #1180) alongside the
 occupation's other skills (Inventory control, Supplier negotiation, Demand forecasting). Skills are added
-by appending an op to `ctf/scripts/lib/taxonomyChangeOps.mjs` and applying against the **live** taxonomy
+by appending a change to `ctf/scripts/lib/taxonomyChange.mjs` and applying against the **live** taxonomy
 (there is no legacy backfill — the legacy dataset and its sync were removed), so a re-apply keeps the skill.
 The apply run is one transaction: if it fails (for example on an audit-log constraint), nothing partial
-appears in the app — every op lands together or not at all, and each applied mutation leaves an audit
+appears in the app — every change lands together or not at all, and each applied mutation leaves an audit
 row whose `action` is one of `create`, `update`, `delete`, `rename`, `reparent`, `deactivate`,
 `reactivate`, and whose `target_type` is one of `sector`, `job-title`, `skill` (checks apply to new
 rows only — historical audit rows keep their original values and are never rewritten). The same skill
