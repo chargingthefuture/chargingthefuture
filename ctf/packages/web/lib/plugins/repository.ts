@@ -27,6 +27,19 @@ export function isAdminOnlyPlugin(slug: string): boolean {
   return ADMIN_ONLY_PLUGIN_SLUGS.has(slug);
 }
 
+// Plugins whose /apps/<slug> route does NOT require the member to have set a username. Most plugins
+// require a username at the page gate, but these must still open for an approved member who has not
+// chosen a username yet (e.g. a temporary handle before they set one in Clerk): chyme and beacon are
+// watch-first public surfaces, and LightHouse requires no per-plugin profile at all (owner decision,
+// see rule 114 / the LightHouse inventory) and composes its host identity with a "Your account"
+// fallback when no username is set. Its API routes already gate with requireUsername: false; this
+// keeps the page gate in step.
+export const USERNAME_OPTIONAL_PLUGIN_SLUGS = new Set<string>(['chyme', 'beacon', 'lighthouse']);
+
+export function pluginRequiresUsername(slug: string): boolean {
+  return !USERNAME_OPTIONAL_PLUGIN_SLUGS.has(slug);
+}
+
 // Drop operator-only plugins for non-admin viewers; admins see the full list.
 export function filterPluginsForViewer<T extends { slug: string }>(plugins: T[], isAdmin: boolean): T[] {
   return isAdmin ? plugins : plugins.filter((plugin) => !ADMIN_ONLY_PLUGIN_SLUGS.has(plugin.slug));
