@@ -163,6 +163,12 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 
 ## Change Log
 
+- 2026-07-14: Added refresh controls (app-wide refresh rollout). Web: the shared `RefreshButton` now
+  sits in the member shell's desktop header (after the search box) and the mobile-responsive header
+  (before the shared top actions), wired to a `refreshAll` that re-runs `loadList()` and
+  `loadProblemOptions()` without the full-screen loading state. Android: native pull-to-refresh via
+  `RefreshControl` on the `WhatWorksList` `ScrollView`, wired to the existing `load()` (which only
+  toggles the loading state on the initial mount). UI-only; no schema, route, or contract change.
 - 2026-07-01: Admins can now edit a suggested tool's own details after the fact. Added a
   `what-works.admin.product.update` command (command/access/audit contracts), a repository
   `updateProduct` (COALESCE update of emoji/name/kind/note/purchase_url; status, endorsements, and

@@ -262,6 +262,22 @@ Result: web ☐ android ☐
 
 ---
 
+### SC-12 — Refresh the wallet
+
+**Role:** member
+**Surfaces:** web, android
+
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open ServiceCredits and tap the refresh icon in the header.
+2. On android, open ServiceCredits and pull down on the content.
+3. In another session, change the balance (e.g. send this member credits), then refresh as above.
+
+**Expected:** The refresh icon spins while loading (web) or the pull-to-refresh spinner shows (android), the wallet re-pulls from the server, and after step 3 the new balance appears without closing and reopening the app. Refreshing never clears the current screen to the full-screen loading state.
+
+Result: web ☐ android ☐
+
+---
+
 ## Admin walkthrough
 
 ### SC-A1 — Treasury policy view and edit

@@ -289,6 +289,13 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-07-14: Added refresh controls (app-wide refresh rollout). Web: the shared `RefreshButton` now
+  sits next to the desktop drive heading and in the mobile-responsive frame's title band (the shared
+  `MobileScreenHeader` cannot carry per-shell actions), wired to the shell's existing `loadData`
+  reload, which re-pulls the fundraiser and the member's submissions without the full-screen loading
+  state. Android: native pull-to-refresh via `RefreshControl` on the `Contributions` screen's
+  `ScrollView`, wired to a new background variant of `load`. UI-only; no schema, route, or contract
+  change.
 - 2026-07-01: Member credit valuations now come from the live config (owner-reported bug). The member
   cards and disclaimer showed a hardcoded "50 SC" per comment/star while the admin "Credits per comment
   or star" setting was 10. The fundraiser route (`GET /api/contributions/fundraiser`) now returns

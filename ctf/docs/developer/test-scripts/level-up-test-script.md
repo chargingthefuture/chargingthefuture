@@ -97,6 +97,20 @@ trainer appears with tracks Tech and Finance. No action mutates a trainer.
 **Expected:** The dispute is created with the comment and attachment metadata recorded.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### LVL-7 · Refresh the cohort list
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open LevelUp
+   and tap the refresh icon in the header.
+2. On android, open the Browse tab and pull down on the cohort list.
+3. In another session, change the data (e.g. an admin creates or closes a cohort), then refresh as
+   above.
+**Expected:** The refresh icon spins while loading (web) or the pull-to-refresh spinner shows
+(android), cohorts and the wallet balance re-pull from the server, and after step 3 the change
+appears without closing and reopening the app. Refreshing never clears the current screen to the
+full-screen loading state.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Trainer walkthrough

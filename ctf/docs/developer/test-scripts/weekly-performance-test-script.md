@@ -116,6 +116,22 @@ mobile-responsive layout uses its own header.)
 
 ---
 
+### WP-A6 · Refresh the metrics (header button / pull-to-refresh)
+**Role:** admin / operations · **Surfaces:** all
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open Weekly
+   Performance and tap the refresh icon in the header.
+2. On android, open Weekly Performance and pull down on the metrics list.
+3. In another session, generate engagement on the current week (e.g. use another plugin), then
+   refresh as above.
+**Expected:** On web the refresh icon spins while loading; on android the pull-to-refresh spinner
+shows. The selected week's metrics re-pull and the updated numbers appear without closing and
+reopening the app. Refreshing never clears the current screen to the full-screen loading state or
+flashes the metric cards to the empty state.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ## Parity check (web ↔ android)
 
 For WP-A1, WP-A2, and WP-A3, the android admin screen and the mobile-responsive web layout must

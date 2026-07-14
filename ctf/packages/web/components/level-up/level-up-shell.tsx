@@ -16,6 +16,7 @@ import { LevelUpAchievements } from "./lu-achievements";
 import { LevelUpWallet } from "./lu-wallet";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { RefreshButton } from "@/components/shared/refresh-button";
 
 const HEADINGS: Record<NavKey, string> = {
   browse: "Browse Cohorts",
@@ -70,7 +71,7 @@ async function fetchWalletView(signal: AbortSignal): Promise<WalletView | null> 
   return data.wallet ?? null;
 }
 
-function ShellHeader({ nav, isAdmin, t, showAdminButton = false }: { nav: NavKey; isAdmin: boolean; t: LevelUpTokens; showAdminButton?: boolean }) {
+function ShellHeader({ nav, isAdmin, t, showAdminButton = false, onRefresh }: { nav: NavKey; isAdmin: boolean; t: LevelUpTokens; showAdminButton?: boolean; onRefresh?: () => Promise<void> }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
       <div>
@@ -80,6 +81,7 @@ function ShellHeader({ nav, isAdmin, t, showAdminButton = false }: { nav: NavKey
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {onRefresh && <RefreshButton onRefresh={onRefresh} title="Refresh" />}
         {showAdminButton && <PluginAdminButton href="/admin/level-up" isAdmin={isAdmin} accent={t.ACCENT} />}
       </div>
     </div>
@@ -161,8 +163,10 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
   const { theme } = useTheme();
   const t = getLevelUpTokens(theme);
 
-  const load = useCallback(async (signal: AbortSignal) => {
-    setLoading(true);
+  const load = useCallback(async (signal: AbortSignal, background = false) => {
+    // A background reload (the header refresh button) keeps the current screen on
+    // display instead of flashing the loading state.
+    if (!background) setLoading(true);
     setError(null);
     try {
       const [cohortsData, walletData] = await Promise.all([fetchCohorts(track, signal), fetchWallet(signal)]);
@@ -173,7 +177,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
       if (signal.aborted) return;
       setError(e instanceof Error ? e.message : "Failed to load LevelUp.");
     } finally {
-      if (!signal.aborted) setLoading(false);
+      if (!signal.aborted && !background) setLoading(false);
     }
   }, [track]);
 
@@ -181,6 +185,14 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
     const controller = new AbortController();
     void load(controller.signal);
     return () => { controller.abort(); };
+  }, [load]);
+
+  // Header refresh: re-pull cohorts + wallet in the background and mark the lazily loaded
+  // sections (trainers, achievements, wallet view) for a re-fetch on their next render.
+  const handleRefresh = useCallback(async () => {
+    const controller = new AbortController();
+    await load(controller.signal, true);
+    setSectionLoaded({});
   }, [load]);
 
   useEffect(() => {
@@ -256,7 +268,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
 
   const content = (
     <>
-      <ShellHeader nav={nav} isAdmin={isAdmin} t={t} showAdminButton={!isMobile} />
+      <ShellHeader nav={nav} isAdmin={isAdmin} t={t} showAdminButton={!isMobile} onRefresh={isMobile ? undefined : handleRefresh} />
       <ShellContent
         nav={nav}
         loading={loading}
@@ -301,6 +313,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
             </Link>
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>LevelUp</span>
             <PluginAdminButton href="/admin/level-up" isAdmin={isAdmin} accent={t.ACCENT} />
+            <RefreshButton onRefresh={handleRefresh} title="Refresh" />
             <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px", overflowX: "auto" }}>

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import type {
   PeerProgrammingCohort,
@@ -20,6 +20,8 @@ type Props = {
   currentCohortId: string | null;
   myCohortId: string | null;
   onListenIn: (_cohortId: string) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 };
 
 export const PeerProgrammingCohortTab = ({
@@ -30,12 +32,18 @@ export const PeerProgrammingCohortTab = ({
   currentCohortId,
   myCohortId,
   onListenIn,
+  refreshing,
+  onRefresh,
 }: Props) => {
   const { tokens, theme } = useTheme();
   const accent = getAppAccent('peer-programming', theme);
   const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
-  <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+  <ScrollView
+    style={styles.scroll}
+    contentContainerStyle={styles.content}
+    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
+  >
     <View style={styles.infoBox}>
       <Text style={styles.infoTitle}>Deterministic Placement</Text>
       <Text style={styles.infoDesc}>Every survivor gets placed in a cohort. No one left behind.</Text>

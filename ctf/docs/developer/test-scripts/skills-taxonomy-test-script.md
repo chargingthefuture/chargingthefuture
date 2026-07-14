@@ -117,6 +117,20 @@ Managers, "Marketing and market analysis" no longer appears (deactivated by op 3
 marketing skills is matched to Professional & Business Services in Workforce, not Food & Agriculture.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open the taxonomy browser, then in a second session change the taxonomy (e.g. an admin adds a skill
+   under the currently selected occupation).
+2. Web mobile-responsive: tap the refresh icon in the phone header. Web desktop: tap the refresh icon in
+   the left icon rail (the desktop browser has no header bar).
+3. Android: pull down on the job-title accordion list.
+**Expected:** On web the refresh icon spins while the re-pull is in flight; on android the pull-to-refresh
+spinner shows. The hierarchy re-fetches and the change from the other session appears without closing and
+reopening the app. The currently selected sector stays selected, and refreshing never clears the screen
+to the full-screen loading state — the current columns stay visible until the new data lands.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Admin walkthrough

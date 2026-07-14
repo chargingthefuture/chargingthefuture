@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BarChart2, ChevronLeft, Target } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,6 +25,7 @@ import { WorkforceOccupations } from './workforce-occupations';
 import { WorkforceProfilePanel } from './workforce-profile-panel';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { MobileTopActions } from '@/components/shared/mobile-top-actions';
+import { RefreshButton } from '@/components/shared/refresh-button';
 
 type Tab = 'dashboard';
 type SidebarView = 'overview' | 'sector' | 'skill-level' | 'occupations';
@@ -236,85 +237,86 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
 
-  useEffect(() => {
-    const controller = new AbortController();
+  // Shared by the initial-load effect and the header refresh button; a refresh (initial=false)
+  // re-pulls the data without flashing the full-screen loading state.
+  const fetchAll = useCallback(async (initial: boolean, signal?: AbortSignal) => {
+    if (initial) setLoading(true);
+    setError(null);
+    setWarning(null);
+    try {
+      const [dashRes, sectorRes, skillRes, occRes, profileRes] = await Promise.all([
+        fetch('/api/workforce/dashboard', { signal }),
+        fetch('/api/workforce/reports/sector/all', { signal }),
+        fetch('/api/workforce/reports/skill-level/all', { signal }),
+        fetch('/api/workforce/reports/occupations?limit=10', { signal }),
+        fetch('/api/workforce/profile', { signal }),
+      ]);
 
-    async function fetchAll() {
-      setLoading(true);
-      setError(null);
-      setWarning(null);
-      try {
-        const [dashRes, sectorRes, skillRes, occRes, profileRes] = await Promise.all([
-          fetch('/api/workforce/dashboard', { signal: controller.signal }),
-          fetch('/api/workforce/reports/sector/all', { signal: controller.signal }),
-          fetch('/api/workforce/reports/skill-level/all', { signal: controller.signal }),
-          fetch('/api/workforce/reports/occupations?limit=10', { signal: controller.signal }),
-          fetch('/api/workforce/profile', { signal: controller.signal }),
-        ]);
+      if (signal?.aborted) return;
 
-        if (controller.signal.aborted) return;
+      // A 401/403 on ANY endpoint means the session is no longer valid (e.g. it expired after the
+      // page loaded). Surface a re-auth prompt via the error state rather than a soft "couldn't load"
+      // warning, so a user who lost their session is told to sign in again instead of being left on a
+      // half-rendered dashboard.
+      if ([dashRes, sectorRes, skillRes, occRes, profileRes].some((r) => r.status === 401 || r.status === 403)) {
+        throw new Error('Your session has expired. Please sign in again.');
+      }
 
-        // A 401/403 on ANY endpoint means the session is no longer valid (e.g. it expired after the
-        // page loaded). Surface a re-auth prompt via the error state rather than a soft "couldn't load"
-        // warning, so a user who lost their session is told to sign in again instead of being left on a
-        // half-rendered dashboard.
-        if ([dashRes, sectorRes, skillRes, occRes, profileRes].some((r) => r.status === 401 || r.status === 403)) {
-          throw new Error('Your session has expired. Please sign in again.');
-        }
+      // The dashboard is the core of the page; if it fails there is nothing meaningful to show, so
+      // surface the error state rather than silently falling through to the empty state.
+      if (!dashRes.ok) {
+        throw new Error(`Dashboard request failed (${dashRes.status}).`);
+      }
 
-        // The dashboard is the core of the page; if it fails there is nothing meaningful to show, so
-        // surface the error state rather than silently falling through to the empty state.
-        if (!dashRes.ok) {
-          throw new Error(`Dashboard request failed (${dashRes.status}).`);
-        }
+      const dashJson = (await dashRes.json()) as { dashboard?: WorkforceDashboard };
+      const sectorJson = sectorRes.ok
+        ? ((await sectorRes.json()) as { items?: WorkforceGroupedReportItem[] })
+        : null;
+      const skillJson = skillRes.ok
+        ? ((await skillRes.json()) as { items?: WorkforceGroupedReportItem[] })
+        : null;
+      const occJson = occRes.ok
+        ? ((await occRes.json()) as { items?: WorkforceOccupationGapItem[] })
+        : null;
+      // A 404 on the profile is normal (the member has not claimed a Directory profile); any other
+      // non-OK profile status is a real failure worth noting.
+      const profileJson = profileRes.ok
+        ? ((await profileRes.json()) as { profile?: WorkforceProfile })
+        : null;
 
-        const dashJson = (await dashRes.json()) as { dashboard?: WorkforceDashboard };
-        const sectorJson = sectorRes.ok
-          ? ((await sectorRes.json()) as { items?: WorkforceGroupedReportItem[] })
-          : null;
-        const skillJson = skillRes.ok
-          ? ((await skillRes.json()) as { items?: WorkforceGroupedReportItem[] })
-          : null;
-        const occJson = occRes.ok
-          ? ((await occRes.json()) as { items?: WorkforceOccupationGapItem[] })
-          : null;
-        // A 404 on the profile is normal (the member has not claimed a Directory profile); any other
-        // non-OK profile status is a real failure worth noting.
-        const profileJson = profileRes.ok
-          ? ((await profileRes.json()) as { profile?: WorkforceProfile })
-          : null;
+      // Surface a non-blocking notice if a secondary panel failed to load, instead of silently
+      // showing it empty (which reads as "no data").
+      const failed: string[] = [];
+      if (!sectorRes.ok) failed.push('sector gaps');
+      if (!skillRes.ok) failed.push('skill levels');
+      if (!occRes.ok) failed.push('training gaps');
+      if (!profileRes.ok && profileRes.status !== 404) failed.push('your profile');
 
-        // Surface a non-blocking notice if a secondary panel failed to load, instead of silently
-        // showing it empty (which reads as "no data").
-        const failed: string[] = [];
-        if (!sectorRes.ok) failed.push('sector gaps');
-        if (!skillRes.ok) failed.push('skill levels');
-        if (!occRes.ok) failed.push('training gaps');
-        if (!profileRes.ok && profileRes.status !== 404) failed.push('your profile');
-
-        setData({
-          dashboard: dashJson?.dashboard ?? null,
-          sectorItems: sectorJson?.items ?? [],
-          skillItems: skillJson?.items ?? [],
-          occupationItems: occJson?.items ?? [],
-          profile: profileJson?.profile ?? null,
-        });
-        setWarning(failed.length > 0 ? `Some sections could not be loaded: ${failed.join(', ')}.` : null);
-      } catch (e: unknown) {
-        if (controller.signal.aborted) return;
-        setError(e instanceof Error ? e.message : 'Failed to load workforce data.');
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+      setData({
+        dashboard: dashJson?.dashboard ?? null,
+        sectorItems: sectorJson?.items ?? [],
+        skillItems: skillJson?.items ?? [],
+        occupationItems: occJson?.items ?? [],
+        profile: profileJson?.profile ?? null,
+      });
+      setWarning(failed.length > 0 ? `Some sections could not be loaded: ${failed.join(', ')}.` : null);
+    } catch (e: unknown) {
+      if (signal?.aborted) return;
+      setError(e instanceof Error ? e.message : 'Failed to load workforce data.');
+    } finally {
+      if (!signal?.aborted && initial) {
+        setLoading(false);
       }
     }
+  }, []);
 
-    void fetchAll();
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchAll(true, controller.signal);
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [fetchAll]);
 
   const { dashboard, sectorItems, skillItems, occupationItems, profile } = data;
 
@@ -375,6 +377,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
             <BarChart2 size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Workforce</span>
             <PluginAdminButton href="/admin/workforce" isAdmin={isAdmin} accent={t.ACCENT} />
+            <RefreshButton onRefresh={() => fetchAll(false)} title="Refresh" />
             <MobileTopActions />
           </div>
           <div style={{ display: 'flex', gap: 6, padding: '0 12px 8px', overflowX: 'auto' }}>
@@ -435,6 +438,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
                 : 'Live workforce tracker'}
             </div>
           </div>
+          <RefreshButton onRefresh={() => fetchAll(false)} title="Refresh" />
           <PluginAdminButton href="/admin/workforce" isAdmin={isAdmin} accent={t.ACCENT} />
         </header>
 

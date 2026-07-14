@@ -232,6 +232,11 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-07-14: Evaluated for the app-wide refresh-controls rollout and deliberately skipped — no
+  manual refresh control added on either platform. Beacon is a watch-first live surface with no
+  member-facing data list or stats view, and both viewers (web `beacon-viewer.tsx` and Android
+  `Beacon.tsx`) already poll `GET /api/beacon/current` every 15 seconds, so live/idle/replay state
+  re-pulls itself; a manual refresh would add nothing. No code change.
 - 2026-06-21: Plan created. All owner decisions locked (name Beacon; public watch, sign-in to
   chat/react; ephemeral chat; one-way `livestream` broadcast; recording auto-posts to Commons; admin
   moderation + "live and public" indicator; Chyme untouched). Flagship event = the State of the TI
