@@ -272,7 +272,7 @@ export function Foundation() {
             </View>
           ) : null}
           {providers.length === 0 ? (
-            <FoundationEmpty />
+            <FoundationEmpty activeSkill={Boolean(skillFilter)} searchActive={query.trim().length > 0} />
           ) : (
             <FlatList
               data={providers}

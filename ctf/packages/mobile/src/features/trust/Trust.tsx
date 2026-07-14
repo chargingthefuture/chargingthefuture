@@ -187,9 +187,9 @@ function TrustMainView({ trust }: { trust: TrustUserExtension }) {
               </View>
               <View style={styles.evidenceBody}>
                 <Text style={styles.evidenceLabel}>{item.summary}</Text>
-                <Text style={styles.evidenceTime}>
-                  {new Date(item.createdAt).toLocaleDateString()}
-                </Text>
+                {formatEvidenceDate(item.createdAt) ? (
+                  <Text style={styles.evidenceTime}>{formatEvidenceDate(item.createdAt)}</Text>
+                ) : null}
               </View>
             </View>
           </React.Fragment>
@@ -272,6 +272,14 @@ export const Trust: React.FC = () => {
 
 function capitalise(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Format an evidence date only when it is a real, parseable timestamp — otherwise null, so the row
+// never shows the literal "Invalid Date" a bad/missing createdAt would produce.
+function formatEvidenceDate(value?: string): string | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toLocaleDateString();
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
