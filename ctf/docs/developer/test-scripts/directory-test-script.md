@@ -112,6 +112,25 @@ every proposing profile; that approval step is owner-side and outside this scrip
 case is **blocked** — there is no member self-edit screen yet.
 **Result:** web ☐ mobile ☐ android ⛔ — notes:
 
+### DIR-4b · Create my profile (member without one yet)
+**Role:** member with no directory profile · **Surfaces:** web + mobile-responsive (android deferred)
+**Precondition:** signed in as a member who has no claimed directory profile.
+**Steps:**
+1. Open the Directory. In the header, confirm the button reads **"Add my profile"** (not "Edit my
+   profile"). On a phone-width layout it sits under the search/filter row; on desktop it sits in the
+   top header.
+2. If the directory is empty and unfiltered, confirm the empty state also shows an **"Add my profile"**
+   button and reads "The directory has no listed profiles yet…". Confirm there is no lone dashed
+   category tile, and no "trauma-informed" / "background-verified" wording.
+3. Press "Add my profile". Confirm the modal title is **"Create my profile"** and the submit button
+   reads **"Create profile"**.
+4. Fill a first name (required) and save.
+**Expected:** The modal is the same editor as DIR-4, starting blank. The save goes through
+`PUT /api/directory/profile` with the CSRF header. After saving, the header button flips to
+**"Edit my profile"**, and the new profile appears in the list. On android this case is **blocked** —
+there is no member self-edit/create screen yet.
+**Result:** web ☐ mobile ☐ android ⛔ — notes:
+
 ### DIR-5 · Read announcements
 **Role:** member · **Surfaces:** all
 **Steps:**
