@@ -409,6 +409,26 @@ android ☐
 
 ---
 
+### SR-19 — Refresh the feed (header button / pull-to-refresh)
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member, with a second session available to make a change.
+
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open the SocketRelay feed and tap the refresh icon in the header.
+2. On android, open the feed and pull down on the list.
+3. In another session, post or edit a request, then refresh as above.
+
+**Expected:**
+- On web the refresh icon spins while loading; on android the pull-to-refresh spinner shows.
+- The feed re-pulls and the change from the other session appears without closing and reopening the app.
+- Refreshing never clears the current screen to the full-screen loading state.
+
+web ☐ android ☐
+
+---
+
 ## Admin walkthrough
 
 ### SR-A1 — Admin stat cards

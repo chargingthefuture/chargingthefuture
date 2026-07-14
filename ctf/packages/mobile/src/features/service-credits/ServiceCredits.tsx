@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
   SafeAreaView,
 } from 'react-native';
 import { useTheme, getAppAccent } from '../../theme';
@@ -97,9 +98,12 @@ export function ServiceCredits() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authed, setAuthed] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const loadWallet = useCallback(async () => {
-    setLoading(true);
+  const loadWallet = useCallback(async (background = false) => {
+    // A background reload (pull-to-refresh) keeps the current screen on display
+    // instead of flashing the full loading state.
+    if (!background) setLoading(true);
     setError(null);
     try {
       const w = await fetchWallet();
@@ -112,12 +116,22 @@ export function ServiceCredits() {
         setError('Could not load wallet. Check your connection and try again.');
       }
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void loadWallet();
+  }, [loadWallet]);
+
+  // Pull-to-refresh: re-pull the wallet without flashing the full loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadWallet(true);
+    } finally {
+      setRefreshing(false);
+    }
   }, [loadWallet]);
 
   if (loading) return <LoadingScreen />;
@@ -146,7 +160,11 @@ export function ServiceCredits() {
       </View>
 
       {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={accent} />}
+      >
         {activeNav === 'wallet' && wallet !== null && (
           <WalletTab wallet={wallet} onSend={() => setActiveNav('send')} />
         )}

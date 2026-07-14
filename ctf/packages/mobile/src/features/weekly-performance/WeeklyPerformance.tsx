@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
+  RefreshControl,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
@@ -336,6 +337,7 @@ export const WeeklyPerformance: React.FC = () => {
   const [metrics, setMetrics] = useState<WeekMetric[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
   const [metricsLoading, setMetricsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch weeks + current week when authenticated and authorized
@@ -357,18 +359,35 @@ export const WeeklyPerformance: React.FC = () => {
       .finally(() => setDataLoading(false));
   }, [isAuthenticated, hasAccess]);
 
-  // Fetch metrics whenever selected week changes
-  useEffect(() => {
-    if (!selectedWeek) return;
-    setMetricsLoading(true);
+  // Fetch the selected week's metrics. Shared by the week-change effect (shows the spinner)
+  // and pull-to-refresh (background=true, re-pulls without flashing the spinner).
+  const loadMetrics = useCallback((background = false) => {
+    if (!selectedWeek) return Promise.resolve();
+    if (!background) setMetricsLoading(true);
     setError(null);
-    fetchWeekMetrics(selectedWeek.weekStartDate)
+    return fetchWeekMetrics(selectedWeek.weekStartDate)
       .then((res) => setMetrics(res.metrics ?? []))
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : 'Failed to load metrics');
       })
-      .finally(() => setMetricsLoading(false));
+      .finally(() => {
+        if (!background) setMetricsLoading(false);
+      });
   }, [selectedWeek]);
+
+  // Fetch metrics whenever selected week changes
+  useEffect(() => {
+    void loadMetrics();
+  }, [loadMetrics]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadMetrics(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadMetrics]);
 
   if (authLoading) return <WpLoading />;
   if (!isAuthenticated) return <WpPublic />;
@@ -433,7 +452,11 @@ export const WeeklyPerformance: React.FC = () => {
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       {/* Content */}
-      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
+      >
         {tab === 'metrics' && (
           metricsLoading
             ? <ActivityIndicator size="large" color={accent} style={styles.spinner} />

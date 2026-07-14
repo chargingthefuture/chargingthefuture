@@ -112,6 +112,21 @@ button on the banner — it is currently hidden by owner request (the `SHOW_DISM
 off). The server-side snooze endpoint still exists but has no UI entry point for now.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### CON-6 · Refresh the drive
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open the drive
+   and tap the refresh icon (next to the drive heading on desktop; in the title band on the
+   mobile-responsive layout).
+2. On android, open Contributions and pull down on the content.
+3. In another session, change the data (e.g. an admin confirms one of this member's submissions),
+   then refresh as above.
+**Expected:** The refresh icon spins while loading (web) or the pull-to-refresh spinner shows
+(android), the drive progress and history re-pull from the server, and after step 3 the change
+appears without closing and reopening the app. Refreshing never clears the current screen to the
+full-screen loading state.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Admin walkthrough

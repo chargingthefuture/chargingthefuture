@@ -306,6 +306,22 @@ Result: web ☐ android ☐
 
 ---
 
+### RA-16 — Refresh the activity list
+
+**Role:** member
+**Surfaces:** web, android
+
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open the hub and tap the refresh icon next to the "Recurring Activity" heading.
+2. On android, open the hub and pull down on the list.
+3. In another session, change the data (e.g. the counterparty confirms a pending activity), then refresh as above.
+
+**Expected:** The refresh icon spins while loading (web) or the pull-to-refresh spinner shows (android), the activities re-pull from the server, and after step 3 the change appears without closing and reopening the app. Refreshing never clears the current screen to the full-screen loading state.
+
+Result: web ☐ android ☐
+
+---
+
 ## Admin walkthrough
 
 No admin features exist in v1. This section is intentionally omitted.
