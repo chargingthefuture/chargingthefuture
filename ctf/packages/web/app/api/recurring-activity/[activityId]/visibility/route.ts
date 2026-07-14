@@ -5,6 +5,7 @@ import {
   recurringActivityMutationError,
   requireRecurringActivityAccess,
   resolveRequestId,
+  resolveTraceId,
 } from 'lib/recurring-activity/_lib';
 import { RECURRING_ACTIVITY_ERROR_CODE } from 'lib/recurring-activity/constants';
 import { setRecurringActivityVisibility } from 'lib/recurring-activity/repository';
@@ -51,6 +52,7 @@ export async function POST(request: Request, context: unknown) {
   }
 
   const requestId = resolveRequestId(request);
+  const traceId = resolveTraceId(request);
   const userId = gate.auth.userId;
 
   try {
@@ -67,6 +69,7 @@ export async function POST(request: Request, context: unknown) {
         reason: result.code,
         activityId,
         requestId,
+        traceId,
       }).catch((auditError) => reportError(auditError, { area: 'recurring-activity', op: 'visibility_audit' }));
       return recurringActivityMutationError(result.code, result.message);
     }
@@ -77,9 +80,16 @@ export async function POST(request: Request, context: unknown) {
       reason: 'owner_visibility_update',
       activityId,
       requestId,
+      traceId,
       metadata: { visibility },
     });
-    return NextResponse.json({ ok: true, activity: result.activity }, { status: 200 });
+    return NextResponse.json(
+      {
+        ok: true,
+        activity: { ...result.activity, role: result.activity.ownerUserId === userId ? 'owner' : 'counterparty' },
+      },
+      { status: 200 },
+    );
   } catch (error) {
     reportError(error, { area: 'recurring-activity', op: 'visibility' });
     return recurringActivityErrorResponse('Visibility update unavailable.');

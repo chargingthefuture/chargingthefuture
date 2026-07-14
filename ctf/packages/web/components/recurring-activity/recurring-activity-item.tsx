@@ -45,6 +45,9 @@ export function RecurringActivityItem({
   const isCounterpartyPending = activity.status === 'pending' && activity.role === 'counterparty';
   const canEnd = activity.status === 'pending' || activity.status === 'active';
   const isOwner = activity.role === 'owner';
+  // Visibility only applies while the activity is live; once it has ended or was declined there is
+  // nothing to surface, so hide the picker (matches the mobile behaviour and the repository guard).
+  const canSetVisibility = isOwner && activity.status === 'active';
   const busy = busyAction !== null;
 
   return (
@@ -82,7 +85,7 @@ export function RecurringActivityItem({
         </span>
       </div>
 
-      {(isCounterpartyPending || canEnd || isOwner) && (
+      {(isCounterpartyPending || canEnd || canSetVisibility) && (
         <div
           style={{
             display: 'flex',
@@ -109,7 +112,7 @@ export function RecurringActivityItem({
               {busyAction === 'end' ? 'Ending…' : 'End activity'}
             </button>
           )}
-          {isOwner && (
+          {canSetVisibility && (
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
               <span style={{ fontSize: 12, color: t.MUTED }}>Visible to</span>
               <select

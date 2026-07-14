@@ -106,8 +106,10 @@ export async function createRecurringActivity(input: CreateRecurringActivityInpu
     // ServiceCredits is an internal utility token, so a declared value is allowed here (still not an
     // executed transfer). Optional — a member may leave it blank.
     if (input.scValue !== undefined && input.scValue !== null) {
-      if (!Number.isFinite(input.scValue) || input.scValue < 0) {
-        throw new RecurringActivityValidationError('ServiceCredits value must be a non-negative number.');
+      // Reject zero as well as negatives: a declared value of 0 is meaningless and only useful to
+      // probe the firewall. The web form already guards > 0; enforce it server-side for every client.
+      if (!Number.isFinite(input.scValue) || input.scValue <= 0) {
+        throw new RecurringActivityValidationError('ServiceCredits value must be a positive number.');
       }
       scValue = input.scValue;
     }
@@ -232,6 +234,11 @@ export async function setRecurringActivityVisibility(
   if (activity.ownerUserId !== actorUserId) {
     return { ok: false, code: 'forbidden', message: 'Only the member who recorded this activity can change its visibility.' };
   }
+  if (activity.status === 'ended' || activity.status === 'declined') {
+    // Visibility only makes sense while the activity is live (pending or active). Once it has ended or
+    // was declined it is no longer surfaced, so changing where it would show is a no-op at best.
+    return { ok: false, code: 'conflict', message: 'This activity is no longer ongoing, so its visibility cannot change.' };
+  }
   const result = await queryDb<RecurringActivityRow>(
     `UPDATE recurring_activities
         SET visibility = $2, updated_at = NOW()
@@ -239,6 +246,11 @@ export async function setRecurringActivityVisibility(
       RETURNING ${SELECT_COLUMNS}`,
     [activityId, visibility],
   );
+  if (!result.rows.length) {
+    // The row was deleted between the ownership check and this UPDATE. Return a clean not-found rather
+    // than letting mapRow throw on an undefined row (which would surface as a 503).
+    return { ok: false, code: 'not_found', message: 'Activity not found.' };
+  }
   return { ok: true, activity: mapRow(result.rows[0]) };
 }
 

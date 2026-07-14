@@ -79,3 +79,13 @@ export function resolveRequestId(request: Request): string {
     crypto.randomUUID()
   );
 }
+
+// A distributed-trace id for audit rows, distinct from the request id. Prefer the inbound trace
+// header; fall back to a fresh UUID so every audit entry carries a trace id the contract requires.
+export function resolveTraceId(request: Request): string {
+  return (
+    request.headers.get('x-trace-id') ??
+    request.headers.get('x-ctf-trace-id') ??
+    crypto.randomUUID()
+  );
+}

@@ -5339,6 +5339,7 @@ CREATE TABLE IF NOT EXISTS recurring_activity_audit_trail (
   reason TEXT NOT NULL DEFAULT '',
   activity_id UUID,
   request_id TEXT,
+  trace_id TEXT,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -5349,6 +5350,7 @@ ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS po
 ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS activity_id UUID;
 ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS request_id TEXT;
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS trace_id TEXT;
 ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS recurring_activity_audit_trail_activity_idx ON recurring_activity_audit_trail (activity_id, created_at DESC);
