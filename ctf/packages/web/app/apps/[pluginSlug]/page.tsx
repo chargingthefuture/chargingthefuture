@@ -1,6 +1,6 @@
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
-import { canonicalizePluginSlug, getPluginBySlug, isAdminOnlyPlugin } from 'lib/plugins/repository';
+import { canonicalizePluginSlug, getPluginBySlug, isAdminOnlyPlugin, pluginRequiresUsername } from 'lib/plugins/repository';
 import { getPublicVisitorShell } from '@/components/plugins/public-visitor-registry';
 import { BeaconShell } from '@/components/beacon/beacon-shell';
 import { ChymeShell } from '@/components/chyme/chyme-shell';
@@ -142,11 +142,11 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   // 'approved_full'). A not-yet-verified member is denied with `unlock_required` and
   // shown the plugin's public landing page below (not the access-denied view), which
   // nudges them toward the Unlock flow; the Hub general channel is their support
-  // surface. Chyme does not require a username so its anonymous public shell still works.
-  // Chyme and Beacon are watch-first surfaces that do not require a username to view, so anonymous
-  // and not-yet-named members can still watch the public broadcast.
+  // surface. Most plugins also require a username, but the username-optional plugins
+  // (chyme and beacon are watch-first public surfaces; LightHouse requires no per-plugin
+  // profile) must still open for an approved member who has not set a username yet.
   const decision = await evaluatePluginAccess({
-    requireUsername: selectedPlugin.slug !== 'chyme' && selectedPlugin.slug !== 'beacon',
+    requireUsername: pluginRequiresUsername(selectedPlugin.slug),
   });
 
   // Operator-only plugins (e.g. Weekly Performance) are admin-only: a non-admin gets a 404 for the
