@@ -107,7 +107,7 @@ Result: web ☐ android ☐
 6. Enter `25` in the SC value field.
 7. Submit the form.
 
-**Expected:** An SC value input appears only after selecting ServiceCredits. The activity is created with status **pending** and the declared value `25` is visible on its row.
+**Expected:** An SC value input appears only after selecting ServiceCredits. The activity is created with status **pending** and the declared value `25` is visible on its row. A declared value must be **positive**: entering `0` (or a negative) is rejected by the server — the activity is not created. Leaving the field blank is allowed (no declared value).
 
 Result: web ☐ android ☐
 
@@ -211,7 +211,7 @@ Result: web ☐ android ☐
 3. Tap/click **End**.
 4. Confirm the action if a confirmation prompt appears.
 
-**Expected:** The activity status changes to **ended**. Repeat the test with a fresh active activity, this time signing in as the counterparty and ending it — the same result is expected.
+**Expected:** The activity status changes to **ended**. Repeat the test with a fresh active activity, this time signing in as the counterparty and ending it — the same result is expected. A **pending** activity can also be ended by either party (the End action is present on pending rows on both web and android), which transitions it to **ended**.
 
 Result: web ☐ android ☐
 
@@ -238,17 +238,17 @@ Result: web ☐ android ☐
 
 **Role:** member (owner)
 **Surfaces:** web, android
-**Precondition:** Signed in as the owner of an active or pending activity. Default visibility is **private**.
+**Precondition:** Signed in as the owner of an **active** activity. Default visibility is **private**.
 
 **Steps:**
 1. Open the hub.
-2. Find an activity you own.
+2. Find an active activity you own.
 3. Change its visibility to **public**.
 4. Save/confirm.
 5. Change it again to **restricted**.
 6. Save/confirm.
 
-**Expected:** Each save succeeds and the displayed visibility label updates to match: first `public`, then `restricted`. No fiat amount or counterparty identity is shown on any public-facing surface as a result of this change.
+**Expected:** Each save succeeds and the displayed visibility label updates to match: first `public`, then `restricted`. No fiat amount or counterparty identity is shown on any public-facing surface as a result of this change. The visibility control is shown only while the activity is **active** — it is absent on ended and declined activities on both web and android, and a visibility change attempted on an ended/declined activity via the API is rejected.
 
 Result: web ☐ android ☐
 
