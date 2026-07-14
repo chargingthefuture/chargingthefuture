@@ -23,8 +23,6 @@ import { StreamChatView } from '../../components/shared/StreamChatView';
 import { fetchThreadDirectLineCredentials, type DirectLineCredentials, type DirectLineError } from './api';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
-const TEXT_DIM = '#9CA3AF';
 
 type LoadState =
   | { status: 'loading' }
@@ -142,7 +140,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     statusSignal: {
       fontSize: 12,
-      color: TEXT_DIM,
+      color: t.textSecondary,
     },
     navBar: {
       flexDirection: 'row',
@@ -180,7 +178,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     navSubtitle: {
       fontSize: 12,
-      color: TEXT_DIM,
+      color: t.textSecondary,
       textAlign: 'center',
       marginTop: 2,
     },
@@ -199,7 +197,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     centeredText: {
       fontSize: 14,
-      color: TEXT_DIM,
+      color: t.textSecondary,
       textAlign: 'center',
     },
     errorText: {

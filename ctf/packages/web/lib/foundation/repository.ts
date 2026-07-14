@@ -80,6 +80,11 @@ type FoundationProviderRow = {
   display_name: string;
   headline: string | null;
   bio: string | null;
+  // Member location read straight from the claimed directory profile (the shared member profile),
+  // not a Foundation-owned copy.
+  city: string | null;
+  state: string | null;
+  country: string | null;
   score: number;
   offered_skills: { id: string; name: string }[] | null;
   instant_call_enabled: boolean | null;
@@ -98,6 +103,9 @@ function mapProviderRow(row: FoundationProviderRow): FoundationProviderSearchIte
     displayName: row.display_name,
     headline: row.headline,
     bio: row.bio,
+    city: row.city,
+    state: row.state,
+    country: row.country,
     score: Number(row.score),
     offeredSkills: Array.isArray(row.offered_skills) ? row.offered_skills : [],
     instantCallEnabled: Boolean(row.instant_call_enabled),
@@ -151,6 +159,9 @@ export async function searchProviders(input: {
           TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) AS display_name,
           dp.headline,
           dp.bio,
+          dp.city,
+          dp.state,
+          dp.country,
           (
             CASE WHEN TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) ILIKE $1 THEN 6 ELSE 0 END +
             CASE WHEN COALESCE(dp.headline, '') ILIKE $1 THEN 3 ELSE 0 END +
@@ -215,6 +226,9 @@ export async function getProviderById(profileId: string): Promise<FoundationProv
         TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) AS display_name,
         dp.headline,
         dp.bio,
+        dp.city,
+        dp.state,
+        dp.country,
         0 AS score,
         COALESCE((
           SELECT jsonb_agg(jsonb_build_object('id', s.id::text, 'name', s.name) ORDER BY s.name)

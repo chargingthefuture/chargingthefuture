@@ -14,6 +14,56 @@ const REASON_STYLE: Record<WorkforceMatchReason, { label: string; color: string 
   none: { label: 'No match', color: '#EF4444' },
 };
 
+// One matched occupation with its own reason, the specific skills that produced it (skill matches
+// only), and how many positions the occupation still has to fill — so the card shows how this
+// member's skills fill the demand instead of implying every listed skill caused every match.
+function OccupationMatchRow({ occupation }: { occupation: WorkforceMatchedMember['matchingOccupations'][number] }) {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
+  const reason = REASON_STYLE[occupation.reason];
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        flexWrap: 'wrap',
+        padding: '6px 8px',
+        borderRadius: 8,
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}
+    >
+      <span style={{ fontSize: 12, color: t.TEXT }}>{occupation.title} ({occupation.sector})</span>
+      <span
+        style={{
+          fontSize: 10,
+          fontWeight: 600,
+          color: reason.color,
+          background: `${reason.color}1A`,
+          border: `1px solid ${reason.color}40`,
+          borderRadius: 5,
+          padding: '0px 6px',
+        }}
+      >
+        {reason.label}
+      </span>
+      {occupation.viaSkills.length > 0 ? (
+        <span style={{ fontSize: 11, color: t.MUTED }}>
+          via {occupation.viaSkills.join(', ')}
+        </span>
+      ) : null}
+      {occupation.gap > 0 ? (
+        <span style={{ fontSize: 11, fontWeight: 600, color: '#F97316', marginLeft: 'auto' }}>
+          {occupation.gap.toLocaleString()} to fill
+        </span>
+      ) : (
+        <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>filled</span>
+      )}
+    </div>
+  );
+}
+
 function Chip({ text }: { text: string }) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
@@ -85,9 +135,9 @@ export function WorkforceMemberList({ members }: { members: WorkforceMatchedMemb
             </div>
 
             {m.matchingOccupations.length > 0 ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {m.matchingOccupations.map((o) => (
-                  <Chip key={o.id} text={`${o.title} (${o.sector})`} />
+                  <OccupationMatchRow key={o.id} occupation={o} />
                 ))}
               </div>
             ) : null}
@@ -107,7 +157,7 @@ export function WorkforceMemberList({ members }: { members: WorkforceMatchedMemb
               ) : null}
               {m.skills.length > 0 ? (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: t.MUTED, minWidth: 64 }}>Skills</span>
+                  <span style={{ fontSize: 11, color: t.MUTED, minWidth: 64 }}>All skills</span>
                   {m.skills.map((s) => <Chip key={s} text={s} />)}
                 </div>
               ) : null}

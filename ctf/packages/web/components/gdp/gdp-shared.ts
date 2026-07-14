@@ -28,11 +28,13 @@ export interface GdpSector {
   share?: number;
 }
 
+// A real per-country row for the "Top Countries" panel — member distribution read from claimed
+// directory profiles (location tied to people). `members` is the real count; `share` is that count
+// as a percentage of all located members. No invented per-country money figure.
 export interface GdpCountry {
   country: string;
-  flag: string;
-  gdp: string;
   members: number;
+  share: number;
 }
 
 export interface GdpMetrics {
@@ -79,14 +81,8 @@ export const GDP_ESTIMATE_CHIP_LABEL = "Estimate";
 export const GDP_ESTIMATE_FOOTNOTE =
   "* USD total is a normalized estimate across currencies — a morale and transparency metric, not a financial ledger.";
 
-export type GdpTab = "dashboard" | "map";
-
-// Real aggregate metric keys carried in gdp_metric_snapshots and surfaced on the
-// world map. These are community-wide aggregates only — never per-user figures.
-export const GDP_ACTIVE_MEMBERS_METRIC_KEY = "weekly_active_users";
-
-// Total signed-up members, carried as a live metric row alongside the value index. Community-wide
-// count only — never a per-user figure.
+// Total signed-up members, carried as a live metric row alongside the value index and surfaced on the
+// dashboard hero and the world-map overlay. Community-wide count only — never a per-user figure.
 export const GDP_TOTAL_MEMBERS_METRIC_KEY = "total_members";
 
 // The Community Value Index — one composite measure of all recognized economic
@@ -100,7 +96,7 @@ export const COMMUNITY_VALUE_INDEX_METRIC_KEY = "gdp_value_index";
 // figure as a custom, community-specific measure in the spirit of GDP.
 export const COMMUNITY_VALUE_INDEX_LABEL = "Community Value Index";
 export const COMMUNITY_VALUE_INDEX_DISCLAIMER =
-  "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through community-set weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
+  "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through a fixed set of weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
 
 // Format a USD aggregate into the compact $B/$M/$K form the design uses. Returns a
 // dash when the figure is absent so the map never invents a number.
@@ -167,11 +163,9 @@ export interface GdpReportPayload {
 // simply omitted so the surface shows an honest figure, never a fabricated one.
 export function shapeLiveGdpMetrics(rows: GdpMetricRow[], isEstimate: boolean): GdpMetrics {
   const valueIndex = pickGdpMetricValue(rows, COMMUNITY_VALUE_INDEX_METRIC_KEY);
-  const activeMembers = pickGdpMetricValue(rows, GDP_ACTIVE_MEMBERS_METRIC_KEY);
   const totalMembers = pickGdpMetricValue(rows, GDP_TOTAL_MEMBERS_METRIC_KEY);
   const memberStats: { v: string; l: string; c?: string }[] = [];
   if (totalMembers !== null) memberStats.push({ v: formatGdpCount(totalMembers), l: "Members" });
-  if (activeMembers !== null) memberStats.push({ v: formatGdpCount(activeMembers), l: "Active · 7d", c: "#22C55E" });
   return {
     currentValue: valueIndex !== null ? formatCommunityValueIndex(valueIndex) : undefined,
     members: totalMembers !== null ? formatGdpCount(totalMembers) : undefined,

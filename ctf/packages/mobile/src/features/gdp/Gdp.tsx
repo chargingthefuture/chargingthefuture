@@ -21,13 +21,7 @@ const GDP_ESTIMATE_CHIP_LABEL = 'Estimate';
 // gdp-shared.ts so the legal wording cannot drift across platforms.
 const COMMUNITY_VALUE_INDEX_LABEL = 'Community Value Index';
 const COMMUNITY_VALUE_INDEX_DISCLAIMER =
-  "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through community-set weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
-
-// ─── Raw palette left un-tokenized ───────────────────────────────────────────
-// #E8EAF0 (body ink) and #9CA3AF (muted) have no mobile theme token, so they stay
-// raw. Chrome + the gdp accent are read from the active theme inside makeStyles.
-const TEXT_BODY = '#E8EAF0';
-const TEXT_MUTED = '#9CA3AF';
+  "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through a fixed set of weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
 
 // Resolve the memoized StyleSheet + the gdp accent for the active theme.
 function useGdpTheme() {
@@ -39,7 +33,6 @@ function useGdpTheme() {
 
 // ─── Nav tabs (from mockup) ───────────────────────────────────────────────────
 const NAV = [
-  { label: 'Home', key: 'home' },
   { label: 'Overview', key: 'overview' },
   { label: 'Sectors', key: 'sectors' },
   { label: 'Trend', key: 'trend' },
@@ -153,7 +146,7 @@ function GdpMainView({ report }: { report: GdpReport }) {
   // ServiceCredits, barter), shown as a plain number with no currency symbol (a relative measure, not
   // money). Replaces the prior USD revenue figure as the prominent economy number.
   const valueIndex = pickMetric(report.metrics, 'gdp_value_index');
-  const weeklyActiveUsers = pickMetric(report.metrics, 'weekly_active_users');
+  const totalMembers = pickMetric(report.metrics, 'total_members');
   const valueIndexIsEstimate = pickMetricIsEstimate(report.metrics, 'gdp_value_index');
 
   // Format helpers
@@ -202,7 +195,7 @@ function GdpMainView({ report }: { report: GdpReport }) {
           <GdpOverviewTab
             valueIndex={valueIndex}
             valueIndexIsEstimate={valueIndexIsEstimate}
-            weeklyActiveUsers={weeklyActiveUsers}
+            totalMembers={totalMembers}
             fmtIndex={fmtIndex}
             fmtCount={fmtCount}
             publication={report.publication}
@@ -213,9 +206,6 @@ function GdpMainView({ report }: { report: GdpReport }) {
         )}
         {activeNav === 'trend' && (
           <GdpTrendTab valueIndex={valueIndex} fmtIndex={fmtIndex} />
-        )}
-        {activeNav === 'home' && (
-          <GdpHomeTab valueIndex={valueIndex} weeklyActiveUsers={weeklyActiveUsers} fmtIndex={fmtIndex} fmtCount={fmtCount} />
         )}
       </ScrollView>
 
@@ -243,7 +233,6 @@ function GdpMainView({ report }: { report: GdpReport }) {
 }
 
 function navIcon(key: NavKey): string {
-  if (key === 'home') return '🏠';
   if (key === 'overview') return '🌐';
   if (key === 'sectors') return '📊';
   return '📈';
@@ -253,14 +242,14 @@ function navIcon(key: NavKey): string {
 function GdpOverviewTab({
   valueIndex,
   valueIndexIsEstimate,
-  weeklyActiveUsers,
+  totalMembers,
   fmtIndex,
   fmtCount,
   publication,
 }: {
   valueIndex: number | null;
   valueIndexIsEstimate: boolean;
-  weeklyActiveUsers: number | null;
+  totalMembers: number | null;
   fmtIndex: (_n: number | null) => string;
   fmtCount: (_n: number | null) => string;
   publication: GdpReport['publication'];
@@ -286,8 +275,8 @@ function GdpOverviewTab({
       {/* Stat chips */}
       <View style={styles.statRow}>
         <View style={[styles.statChip, { borderColor: '#A78BFA20', backgroundColor: '#A78BFA08' }]}>
-          <Text style={[styles.statChipValue, { color: '#A78BFA' }]}>{fmtCount(weeklyActiveUsers)}</Text>
-          <Text style={styles.statChipLabel}>Active users</Text>
+          <Text style={[styles.statChipValue, { color: '#A78BFA' }]}>{fmtCount(totalMembers)}</Text>
+          <Text style={styles.statChipLabel}>Members</Text>
         </View>
         {/*
           Countries (127) and "This week" (+$1.2B) figures are not backed
@@ -396,65 +385,6 @@ function GdpTrendTab({
   );
 }
 
-// ─── Home tab (world map) ─────────────────────────────────────────────────────
-// Static, View-based world map (no SVG dependency). The GDP module has no
-// per-country data, so regions render in one neutral cyan state and the real
-// community-wide aggregates are shown above the map. Never invents per-country
-// figures.
-const MAP_REGIONS: { key: string; top: DimensionValue; left: DimensionValue; width: DimensionValue; height: DimensionValue }[] = [
-  { key: 'north-america', top: '12%', left: '8%', width: '24%', height: '34%' },
-  { key: 'south-america', top: '54%', left: '20%', width: '14%', height: '34%' },
-  { key: 'europe', top: '14%', left: '44%', width: '14%', height: '18%' },
-  { key: 'africa', top: '36%', left: '44%', width: '18%', height: '38%' },
-  { key: 'asia', top: '12%', left: '62%', width: '30%', height: '34%' },
-  { key: 'oceania', top: '64%', left: '74%', width: '16%', height: '18%' },
-];
-
-function GdpHomeTab({
-  valueIndex,
-  weeklyActiveUsers,
-  fmtIndex,
-  fmtCount,
-}: {
-  valueIndex: number | null;
-  weeklyActiveUsers: number | null;
-  fmtIndex: (_n: number | null) => string;
-  fmtCount: (_n: number | null) => string;
-}) {
-  const { styles } = useGdpTheme();
-  const hasData = valueIndex !== null || weeklyActiveUsers !== null;
-  return (
-    <View>
-      <View style={styles.mapHeaderRow}>
-        <Text style={styles.mapHeadline}>{fmtIndex(valueIndex)}</Text>
-        <Text style={styles.mapHeadlineLabel}>{COMMUNITY_VALUE_INDEX_LABEL}</Text>
-      </View>
-      {weeklyActiveUsers !== null && (
-        <Text style={styles.mapMembers}>{fmtCount(weeklyActiveUsers)} active members</Text>
-      )}
-      <View style={styles.mapCanvas}>
-        {MAP_REGIONS.map((r) => (
-          // key lives on the Fragment, not the View: CI's React types reject `key`
-          // on a host component like <View>.
-          <React.Fragment key={r.key}>
-            <View
-              style={[
-                styles.mapRegion,
-                { top: r.top, left: r.left, width: r.width, height: r.height },
-              ]}
-            />
-          </React.Fragment>
-        ))}
-      </View>
-      <Text style={styles.mapCaption}>
-        {hasData
-          ? 'Regions show where the survivor economy is active. The figure above is the community-wide Community Value Index — per-country breakdowns are not available yet.'
-          : 'No recognized activity yet. The map activates once the community has recognized value.'}
-      </Text>
-    </View>
-  );
-}
-
 // ─── Root screen ──────────────────────────────────────────────────────────────
 export const Gdp = () => {
   const { styles } = useGdpTheme();
@@ -523,6 +453,9 @@ function makeStyles(t: ThemeTokens, accent: string) {
   const BG_DARK = t.surfaceAlt;
   const TEXT_PRIMARY = t.textPrimary;
   const TEXT_DIM = t.textSecondary;
+  // Body ink and muted text now theme through the palette (comic-aware); default is byte-identical.
+  const TEXT_BODY = t.textShell;
+  const TEXT_MUTED = t.textSecondary;
   const BORDER = t.borderFaint;
   return StyleSheet.create({
   root: {
@@ -837,54 +770,6 @@ function makeStyles(t: ThemeTokens, accent: string) {
     color: TEXT_DIM,
     textAlign: 'center',
     lineHeight: 20,
-  },
-  // World map (home tab)
-  mapHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
-    marginBottom: 2,
-  },
-  mapHeadline: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: COLOR,
-  },
-  mapHeadlineLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: TEXT_DIM,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  mapMembers: {
-    fontSize: 12,
-    color: TEXT_MUTED,
-    marginBottom: 12,
-  },
-  mapCanvas: {
-    position: 'relative',
-    width: '100%',
-    aspectRatio: 2,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
-    // World-map backdrop — data-viz surface, no theme token; left raw.
-    backgroundColor: '#0D0F14',
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  mapRegion: {
-    position: 'absolute',
-    borderRadius: t.radiusChip,
-    backgroundColor: `${COLOR}1F`,
-    borderWidth: 1,
-    borderColor: `${COLOR}55`,
-  },
-  mapCaption: {
-    fontSize: 12,
-    color: t.textMuted,
-    lineHeight: 18,
   },
   // Bottom nav
   bottomNav: {

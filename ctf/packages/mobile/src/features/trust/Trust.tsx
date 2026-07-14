@@ -314,7 +314,7 @@ function makeStyles(t: ThemeTokens, brand: string) {
     overflow: 'hidden',
   },
   publicHeadline: { fontSize: 22, fontWeight: '800', color: t.textPrimary, lineHeight: 28, marginBottom: 12 },
-  publicDesc: { fontSize: 14, color: '#9CA3AF', lineHeight: 21, marginBottom: 16 },
+  publicDesc: { fontSize: 14, color: t.textSecondary, lineHeight: 21, marginBottom: 16 },
   publicSignalRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   publicSignalDot: {
     width: 8,

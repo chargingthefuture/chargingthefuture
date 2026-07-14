@@ -135,8 +135,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  clock: { fontSize: 13, fontWeight: '700', color: '#E8EAF0' },
-  signal: { fontSize: 12, color: '#9CA3AF' },
+  clock: { fontSize: 13, fontWeight: '700', color: t.textShell },
+  signal: { fontSize: 12, color: t.textSecondary },
   header: {
     height: 52,
     backgroundColor: '#030d05',
@@ -167,7 +167,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   },
   messageAuthor: { fontSize: 13, fontWeight: '700', color: '#A7F3D0' },
   messageTime: { fontSize: 11, color: '#374151' },
-  messageText: { fontSize: 14, color: '#9CA3AF', lineHeight: 21 },
+  messageText: { fontSize: 14, color: t.textSecondary, lineHeight: 21 },
   empty: { flex: 1, alignItems: 'center', paddingVertical: 24 },
   emptyText: { fontSize: 14, color: t.textMuted, textAlign: 'center' },
   inputRow: {
@@ -186,7 +186,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  input: { flex: 1, fontSize: 14, color: '#E8EAF0' },
+  input: { flex: 1, fontSize: 14, color: t.textShell },
   sendBtn: {
     width: 32,
     height: 32,

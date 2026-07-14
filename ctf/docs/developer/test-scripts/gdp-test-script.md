@@ -11,11 +11,11 @@
 |---|---|
 | **Plugin** | GDP (`gdp`) |
 | **Visibility** | Member-facing |
-| **Roles to test** | member, admin |
+| **Roles to test** | member (admin has no GDP-specific surface — the GDP admin was retired) |
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-11 (GDP admin retired + Community Value Index live-by-default; decorative Map tab removed; All Countries panel shows real member distribution — see GDP-3) |
 
 ## How to run this
 
@@ -33,14 +33,18 @@
 Transparency-reporting plugin — these confirm the community figure shows and never reads as a
 per-wallet money value. Member role unless noted.
 
-1. **Dashboard loads.** Open the GDP report. The headline community figure and active-member count
-   render with numbers, not a spinner or error. → web ☐ mobile ☐ android ☐
+1. **Dashboard loads.** Open the GDP report. The headline community figure and total member count
+   render with numbers, not a spinner or error. There is no "active members" stat. → web ☐ mobile ☐ android ☐
 2. **Sign-in required.** Sign out and try to reach the GDP report. Access is denied — there is no
    unauthenticated public view. → web ☐ mobile ☐ android ☐
 3. **Estimate is labelled.** Where the figure is an estimate, an "Estimate" chip and a short
    footnote show next to it. → web ☐ mobile ☐ android ☐
 4. **Not a price.** Confirm the figure is shown with no currency symbol as a per-wallet value and
    no "N ServiceCredits = $X" line appears anywhere on the surface. → web ☐ mobile ☐ android ☐
+5. **Activity counts live.** The figure is computed live on each load — there is no publish step and
+   no admin weight-setting step. If real non-incentive activity exists (ServiceCredits transfers,
+   Foundation calls, completed favors, etc.), the figure is greater than zero and the "Value by
+   Source" breakdown lists the contributing plugins. → web ☐ mobile ☐ android ☐
 
 ---
 
@@ -50,10 +54,10 @@ per-wallet money value. Member role unless noted.
 **Role:** member · **Surfaces:** all · **Seed:** `seed:demo`
 **Steps:**
 1. Open the GDP report.
-2. Read the headline community figure and the active-member count.
+2. Read the headline community figure and the total member count.
 **Expected:** Both values render from real data with plain-language labels. No tile is blank, a
-spinner, or a raw metric key. If no report is published, an honest empty caption shows instead of an
-invented number.
+spinner, or a raw metric key. The figure is computed live on each load — there is no publish step. If
+there is no recognized activity yet, an honest empty/zero state shows instead of an invented number.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### GDP-1b · Member count matches active Directory profiles
@@ -76,19 +80,27 @@ footnote appear; the copy describes a community-wide figure, never a per-member 
 chip does not appear on values that are not estimates.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### GDP-3 · Map tab
-**Role:** member · **Surfaces:** all
+### GDP-3 · All Countries panel (real member distribution)
+**Role:** member · **Surfaces:** web (android omits this panel)
 **Steps:**
-1. Open the "Map" tab.
-**Expected:** A world map renders with the real community-wide aggregates overlaid. Every region is
-the same neutral "unpopulated" state — there is no invented per-country figure. With no published
-report, an honest empty caption shows.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+1. On the web dashboard, find the "All Countries" panel (subtitle "Members by country"). There is no
+   longer a "Map" tab — the dashboard is a single view.
+2. Cross-check a country's member count against `SELECT country, COUNT(*) FROM directory_profiles WHERE
+   is_active = TRUE AND deleted_at IS NULL AND btrim(country) <> '' GROUP BY country`.
+**Expected:** Each row shows a country, its real member count, and a share bar that is that country's
+percentage of all located members (a real metric — not a width derived from list position). The counts
+include every active member profile that has a country (claimed or not), so they use the same member
+population as the hero's total-member count — not just claimed profiles. Every country with at least one
+located member appears (no small-count suppression). The figures are people-counts read from members'
+directory profiles — there is no per-country money figure. The hero "N countries" line matches the number
+of distinct countries shown. If no member has a country set, the panel is simply empty (never a fabricated
+row).
+**Result:** web ☐ — notes:
 
 ### GDP-4 · No fiat parity anywhere
 **Role:** member · **Surfaces:** all
 **Steps:**
-1. Walk the overview, the sidebar aggregate, and the map.
+1. Walk the overview, the sidebar aggregate, and the All Countries panel.
 **Expected:** The community figure never reads as money for one wallet, a price, an exchange rate, or
 a redemption value for ServiceCredits or any token. Currencies, where named, appear by label (e.g.
 "ServiceCredits", "United States Dollar"), never a bare code used as a value.
@@ -98,45 +110,30 @@ a redemption value for ServiceCredits or any token. Currencies, where named, app
 
 ## Admin walkthrough
 
-### GDP-A1 · Weekly publication (draft / publish)
-**Role:** admin · **Surfaces:** web (admin surface, `/admin/gdp`)
-**Steps:**
-1. As admin, open `/admin/gdp` and read the latest-publication panel.
-2. Fill the weekly-publication form (title + summary) and save a draft.
-3. Publish a report (the legal-approval gate must be satisfied).
-4. Attempt to publish without the legal-approval gate.
-**Expected:** Draft saves; publish succeeds only with the approval gate satisfied and is denied
-without it. Re-saving the same week updates that week's row instead of adding a duplicate.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**The GDP admin was retired (2026-07-11).** There is nothing to configure: the Community Value Index
+runs on fixed, built-in contribution weights (no currency-rate screen) and there is no weekly-publish
+step (a standing "live" heading is synthesized). The one case here confirms the retirement.
 
-### GDP-A2 · Currency rate factors (view + revise)
-**Role:** admin · **Surfaces:** web (`/admin/gdp/rates`), android (Rate Admin, `isAdmin`-gated)
+### GDP-A1 · No GDP admin surface
+**Role:** admin · **Surfaces:** web
 **Steps:**
-1. Open the rate admin. Read each active currency with its current factor (`as_of`, source) and the
-   prior factors as history (newest first).
-2. Revise one currency's factor with a value greater than zero.
-3. Try to revise the United States Dollar baseline.
-**Expected:** The revise adds a dated row and the newest `as_of` becomes active; revising the same
-day updates that day's row and keeps older history. United States Dollar is the fixed baseline and is
-not revisable. A calm disclaimer states these factors only estimate aggregate GDP and are never a
-redemption rate, per-wallet conversion, or the price of ServiceCredits. Currencies show by label.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
-
-### GDP-A3 · Admin access is role-gated
-**Role:** admin then member · **Surfaces:** web
-**Steps:**
-1. As a non-admin member, attempt to reach `/admin/gdp` and the rate revise action directly.
-**Expected:** Admin surfaces and the revise action are denied for non-admins with a readable message.
-The deny is recorded in the audit trail.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+1. As admin, open the `/admin` index and look for "GDP" / "GDP Rates" rows.
+2. Navigate directly to `/admin/gdp` and `/admin/gdp/rates`.
+3. Open the member GDP dashboard as admin and look for an admin button in the header.
+**Expected:** No "GDP" or "GDP Rates" rows on the `/admin` index. `/admin/gdp` and `/admin/gdp/rates`
+do not resolve to an admin screen (they redirect to the app or 404). The GDP dashboard header shows
+no admin button. The community figure still renders live for the admin exactly as it does for a
+member.
+**Result:** web ☐ — notes:
 
 ---
 
 ## Parity check (web ↔ android)
 
-For GDP-1, GDP-2, and GDP-3, the android app and the mobile-responsive web layout must show the same
-figure: both read the same live report payload, so the headline value, the estimate label, and the
-map aggregate must match. Note any drift here rather than filing separate bugs.
+For GDP-1 and GDP-2, the android app and the mobile-responsive web layout must show the same figure:
+both read the same live report payload, so the headline value and the estimate label must match. Note
+any drift here rather than filing separate bugs. (GDP-3, the All Countries panel, is web-only — the
+Android app omits the country breakdown.)
 
 **Result:** matches ☐ — drift notes:
 
@@ -157,8 +154,9 @@ of these, it is already tracked, not a new bug:
 
 Recurring peer activities now feed the Community Value Index. To test:
 
-1. Seed it: `pnpm --dir ctf seed:recurring-activity` and `pnpm --dir ctf seed:currency-usd-rates`,
-   then run the rollup `pnpm --dir ctf gdp:recognize`.
+1. Seed it: `pnpm --dir ctf seed:recurring-activity`, then run the rollup
+   `pnpm --dir ctf gdp:recognize` (contribution weights are built into the rollup — there is no
+   currency-rate seed to run).
 2. A **confirmed** (`active`) fiat recurring activity contributes by COUNT (one hidden `RACT` unit,
    weight 1) — never a fiat amount. A **confirmed ServiceCredits** activity contributes by its
    declared `sc_value`. Confirm the index reflects both.

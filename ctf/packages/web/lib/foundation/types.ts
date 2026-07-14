@@ -76,6 +76,10 @@ export type FoundationProviderSearchItem = {
   displayName: string;
   headline: string | null;
   bio: string | null;
+  // Provider location, read from their claimed directory profile (plain names; any part may be null).
+  city: string | null;
+  state: string | null;
+  country: string | null;
   score: number;
   // The skills this provider has opted in to be contacted about (their Foundation offer).
   offeredSkills: FoundationOfferedSkill[];

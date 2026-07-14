@@ -14,6 +14,9 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [quora, setQuora] = useState("");
+  const [country, setCountry] = useState("");
+  const [stateRegion, setStateRegion] = useState("");
+  const [city, setCity] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [proposedSkills, setProposed] = useState<string[]>([]);
   const [freeText, setFreeText] = useState("");
@@ -55,7 +58,8 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   }
 
   async function handleSubmit() {
-    if (!activeRound || fullName.trim().length < 2 || allSkillCount === 0) return;
+    // Country is required (the server enforces it too); full name and at least one skill as before.
+    if (!activeRound || fullName.trim().length < 2 || allSkillCount === 0 || country.trim().length === 0) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -69,6 +73,9 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
           skills,
           proposedSkills,
           claimedProfessions: [],
+          country: country.trim(),
+          state: stateRegion.trim() ? stateRegion.trim() : null,
+          city: city.trim() ? city.trim() : null,
         }),
       });
       if (!res.ok) {
@@ -85,14 +92,16 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
 
   function resetForm() {
     setFullName(""); setBio(""); setQuora("");
+    setCountry(""); setStateRegion(""); setCity("");
     setSkills([]); setProposed([]); setFreeText("");
     setSubmitted(false); setSubmitError(null);
   }
 
   const form: ScoutFormModel = {
-    fullName, bio, quora, skills, proposedSkills, freeText, openCategory,
+    fullName, bio, quora, country, state: stateRegion, city, skills, proposedSkills, freeText, openCategory,
     submitting, submitError, allSkillCount, canAddMore,
     onFullName: setFullName, onBio: setBio, onQuora: setQuora,
+    onCountry: setCountry, onState: setStateRegion, onCity: setCity,
     onToggleSkill: toggleSkill,
     onAddOccupationSkills: addOccupationSkills,
     onRemoveProposed: (s) => setProposed((prev) => prev.filter((x) => x !== s)),

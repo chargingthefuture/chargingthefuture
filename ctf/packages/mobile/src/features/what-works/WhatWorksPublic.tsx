@@ -164,7 +164,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     verifiedBadge: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20, backgroundColor: 'rgba(132,204,22,0.12)', borderWidth: 1, borderColor: 'rgba(132,204,22,0.3)' },
     verifiedBadgeText: { fontSize: 10.5, fontWeight: '700', color: accent },
     h1: { fontSize: 21, fontWeight: '800', color: t.textPrimary, marginBottom: 6 },
-    lede: { fontSize: 13, color: '#9CA3AF', lineHeight: 20 },
+    lede: { fontSize: 13, color: t.textSecondary, lineHeight: 20 },
     joinBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 12, borderRadius: 10, backgroundColor: accent, marginTop: 14 },
     joinText: { fontSize: 14, fontWeight: '700', color: WW.brandInk },
     trustCard: { marginTop: 16, padding: 16, borderRadius: 14, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border },

@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Shield } from "lucide-react";
+import { MapPin, Shield } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { FONT, getFoundationTokens, initials, type ProviderView } from "./foundation-ui";
 import { ConnectNowButton, InstantCallAvailabilityBadge, canOfferConnectNow, acceptsInstantCalls, isOwnProfile } from "./foundation-connect-now";
@@ -44,6 +44,13 @@ export function ProviderProfile({
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>{provider.displayName}</div>
               {provider.headline && <div style={{ fontSize: 15, color: t.SUBTLE }}>{provider.headline}</div>}
+              {/* Location read from the provider's shared directory profile — only the parts that are set. */}
+              {[provider.city, provider.state, provider.country].some((v) => v && v.trim()) && (
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: t.MUTED, marginTop: 5 }}>
+                  <MapPin size={13} style={{ flexShrink: 0 }} />
+                  <span>{[provider.city, provider.state, provider.country].map((v) => v?.trim()).filter(Boolean).join(", ")}</span>
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {/* You can't request a quote from your own profile — the server rejects a self-connection,

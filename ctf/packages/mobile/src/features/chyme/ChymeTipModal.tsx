@@ -160,7 +160,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     padding: 20,
   },
   title: { fontSize: 16, fontWeight: '800', color: '#F0FDF4', marginBottom: 14 },
-  label: { fontSize: 12, color: '#9CA3AF', marginBottom: 6 },
+  label: { fontSize: 12, color: t.textSecondary, marginBottom: 6 },
   input: {
     width: '100%',
     paddingHorizontal: 12,
@@ -170,7 +170,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 8,
     fontSize: 14,
-    color: '#E8EAF0',
+    color: t.textShell,
     marginBottom: 12,
   },
   error: { fontSize: 12, color: '#F87171', marginBottom: 10 },

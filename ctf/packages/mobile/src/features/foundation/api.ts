@@ -18,6 +18,10 @@ export interface Provider {
   displayName: string;
   headline?: string;
   bio?: string;
+  // Provider location from their claimed directory profile (plain names; any part may be null/absent).
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
   // Skills this provider is willing to be contacted about. Always an array; empty when none.
   offeredSkills?: OfferedSkill[];
   // Read-only mirror of the provider's instant 1:1 call ("Connect now") settings (issue #808).

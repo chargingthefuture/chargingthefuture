@@ -126,7 +126,9 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
             <Stat label="Headcount target (demand)" value={occ.target.toLocaleString()} />
             <Stat label="Annual training target" value={occ.annualTrainingTarget.toLocaleString()} />
-            <Stat label="Members" value={occ.members.toLocaleString()} />
+            {/* No "Members" (declared-occupation) card: members join jobless but skilled, so the
+                declared count is ~always 0 and reads as an error. Recruited (matched) carries the
+                story; occ.members stays in the API for consumers that need the declared count. */}
             <Stat label="Recruited (matched)" value={occ.recruited.toLocaleString()} accent="#22C55E" />
             <Stat
               label="Roles to fill"

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Linking,
 } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
@@ -39,17 +40,29 @@ function toDisplayStatus(r: UnlockReviewStatus | null): DisplayStatus {
 
 type Styles = ReturnType<typeof makeStyles>;
 
-// "early Commons access" experiment (parity with web's UnlockCommonsHelp). Shown only to a
-// treatment-bucket member (status.earlyCommonsAccess) so someone stuck — e.g. unable to find their
-// Quora profile URL — can jump into the Commons (the Hub home) to ask for help instead of being
-// confined to the Unlock screen. A control member never sees it. Renders nothing without a
-// navigation handler, so it can't become a dead link.
-function CommonsHelpLink({ onNavigateToCommons, s }: { onNavigateToCommons?: () => void; s: Styles }) {
-  if (!onNavigateToCommons) return null;
+const UNLOCK_QUORA_HELP_URL = 'https://tiskillsnetwork.quora.com';
+
+// Prominent, universal help for a member who can't find their Quora profile URL. Shown wherever the
+// Unlock flow asks for that URL. Directs them to comment on the network's Quora space, where the team
+// replies with their profile URL. Every member sees it (not tied to the early-Commons experiment).
+function QuoraHelp({ s }: { s: Styles }) {
   return (
-    <TouchableOpacity onPress={onNavigateToCommons} style={s.commonsHelp} accessibilityRole="link">
-      <Text style={s.commonsHelpText}>💬  Trouble finding your Quora URL? Ask in the Commons</Text>
-    </TouchableOpacity>
+    <View style={s.quoraHelp} accessibilityRole="summary">
+      <Text style={s.quoraHelpTitle}>Can&apos;t find your Quora profile URL?</Text>
+      <Text style={s.quoraHelpBody}>
+        Go to{' '}
+        <Text
+          style={s.quoraHelpLink}
+          accessibilityRole="link"
+          onPress={() => {
+            void Linking.openURL(UNLOCK_QUORA_HELP_URL);
+          }}
+        >
+          tiskillsnetwork.quora.com
+        </Text>{' '}
+        and comment on any post asking for help — I&apos;ll reply with your profile URL.
+      </Text>
+    </View>
   );
 }
 
@@ -100,15 +113,11 @@ function PublicView({ s, t, accent }: { s: Styles; t: ThemeTokens; accent: strin
 // Submission form (no previous submission)
 function SubmissionView({
   onSubmitted,
-  earlyCommonsAccess,
-  onNavigateToCommons,
   s,
   t,
   accent,
 }: {
   onSubmitted: () => void;
-  earlyCommonsAccess?: boolean;
-  onNavigateToCommons?: () => void;
   s: Styles;
   t: ThemeTokens;
   accent: string;
@@ -156,7 +165,7 @@ function SubmissionView({
         />
       </View>
       <Text style={s.hint}>Make sure your Quora profile is set to public before submitting.</Text>
-      {earlyCommonsAccess ? <CommonsHelpLink onNavigateToCommons={onNavigateToCommons} s={s} /> : null}
+      <QuoraHelp s={s} />
       {error ? <Text style={s.errorText}>{error}</Text> : null}
       <TouchableOpacity
         onPress={handleSubmit}
@@ -201,14 +210,12 @@ function SubmissionView({
 function StatusView({
   status,
   onResubmitted,
-  onNavigateToCommons,
   s,
   t,
   accent,
 }: {
   status: UnlockStatus;
   onResubmitted: () => void;
-  onNavigateToCommons?: () => void;
   s: Styles;
   t: ThemeTokens;
   accent: string;
@@ -270,14 +277,11 @@ function StatusView({
         )}
       </View>
 
-      {status.earlyCommonsAccess ? (
-        <CommonsHelpLink onNavigateToCommons={onNavigateToCommons} s={s} />
-      ) : null}
-
       {/* Re-submit form on rejection */}
       {display === 'rejected' && (
         <View style={s.resubCard}>
           <Text style={s.cardHeading}>Re-submit with a new URL</Text>
+          <QuoraHelp s={s} />
           <TextInput
             value={resubUrl}
             onChangeText={setResubUrl}
@@ -316,12 +320,9 @@ function StatusView({
 // Root screen — orchestrates state transitions.
 // `onStatusChanged` (optional) fires after each status reload so a host gate
 // (e.g. the app-wide Unlock wall) can re-evaluate access without a restart.
-// `onNavigateToCommons` (optional) lets the "early Commons access" treatment-bucket
-// help link jump to the Commons (Hub home); omit it and the link does not render.
 export const Unlock: React.FC<{
   onStatusChanged?: () => void;
-  onNavigateToCommons?: () => void;
-}> = ({ onStatusChanged, onNavigateToCommons }) => {
+}> = ({ onStatusChanged }) => {
   const { tokens, theme } = useTheme();
   const accent = getAppAccent('unlock', theme);
   const s = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
@@ -351,8 +352,6 @@ export const Unlock: React.FC<{
     return (
       <SubmissionView
         onSubmitted={() => void loadStatus()}
-        earlyCommonsAccess={unlockStatus?.earlyCommonsAccess}
-        onNavigateToCommons={onNavigateToCommons}
         s={s}
         t={tokens}
         accent={accent}
@@ -363,7 +362,6 @@ export const Unlock: React.FC<{
       <StatusView
         status={unlockStatus}
         onResubmitted={() => void loadStatus()}
-        onNavigateToCommons={onNavigateToCommons}
         s={s}
         t={tokens}
         accent={accent}
@@ -390,7 +388,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     stepTitle: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
     stepDesc: { fontSize: 11, color: t.textSecondary },
     formHeading: { fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 8 },
-    fieldLabel: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 8 },
+    fieldLabel: { fontSize: 13, fontWeight: '600', color: t.textSecondary, marginBottom: 8 },
     inputWrap: { flexDirection: 'row', alignItems: 'center', padding: 11, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderRadius: t.radius, marginBottom: 6 },
     input: { flex: 1, fontSize: 14, color: t.textPrimary },
     hint: { fontSize: 11, color: t.textMuted, marginBottom: 8 },
@@ -415,17 +413,18 @@ function makeStyles(t: ThemeTokens, accent: string) {
     rejectedBox: { padding: 12, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.05)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)', width: '100%' },
     rejectedLabel: { fontSize: 12, fontWeight: '600', color: '#EF4444', marginBottom: 4 },
     resubCard: { padding: 16, borderRadius: 14, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, marginBottom: 14 },
-    commonsHelp: {
+    quoraHelp: {
       marginTop: 16,
       marginBottom: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 11,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
       borderRadius: t.radius,
-      backgroundColor: accent + '10',
-      borderWidth: 1,
-      borderColor: accent + '33',
-      alignSelf: 'flex-start',
+      backgroundColor: accent + '14',
+      borderWidth: 1.5,
+      borderColor: accent + '66',
     },
-    commonsHelpText: { fontSize: 13, fontWeight: '600', color: accent },
+    quoraHelpTitle: { fontSize: 14, fontWeight: '800', color: t.textPrimary, marginBottom: 5 },
+    quoraHelpBody: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
+    quoraHelpLink: { color: accent, fontWeight: '700', textDecorationLine: 'underline' },
   });
 }

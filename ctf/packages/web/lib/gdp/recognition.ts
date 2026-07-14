@@ -3,12 +3,13 @@ import { queryDb } from 'lib/db/postgres';
 // Community Value Index recognition (issue #121). This module is the GDP plugin's "value layer": it
 // rolls all recognized economic activity across applicable plugins into ONE composite figure — the
 // Community Value Index — by weighting each value type (fiat, crypto, ServiceCredits, barter, free) with
-// an owner-curated, non-binding contribution weight.
+// a fixed, built-in contribution weight (DEFAULT_CONTRIBUTION_WEIGHTS below). The weights live in code,
+// not in a database or an admin screen, so the index is always live and needs no owner action.
 //
-// IMPORTANT — the index is NOT money. It is a relative, community-built measure for transparency, in the
-// spirit of GDP. The contribution weights (stored in currency_usd_rates, USD used only as the reference
-// base = 1) are NEVER surfaced as a price, an exchange rate, or a per-wallet/per-token fiat equivalence.
-// The index is displayed as a plain number with no currency symbol; nothing is pegged or redeemable.
+// IMPORTANT — the index is NOT money. It is a relative measure for transparency, in the spirit of GDP.
+// The contribution weights (USD used only as the reference base = 1) are NEVER surfaced as a price, an
+// exchange rate, or a per-wallet/per-token fiat equivalence. The index is displayed as a plain number
+// with no currency symbol; nothing is pegged or redeemable.
 
 /** A single value-type volume to fold into the Community Value Index. */
 export interface CurrencyVolume {
@@ -33,23 +34,39 @@ export interface CommunityValueResult {
 }
 
 /**
- * The active contribution weight per value type: the most recent `as_of` row per `currency_code` in
- * `currency_usd_rates`. `1` unit of the type contributes `usd_rate` to the Community Value Index, where
- * USD is the reference base (weight 1). These are owner-curated, non-binding weights — not market quotes
- * and not redemption rates. (The table keeps its historical name; it is the index weight table now.)
+ * Built-in contribution weight per value type: how many index points one unit of that type adds to the
+ * Community Value Index. These are FIXED in code — there is no admin or database step — so the index is
+ * always live and needs no owner action. (The owner-curated currency-rate admin that used to hold these
+ * was retired; the index must never go dark waiting for someone to set a weight.) ServiceCredits is the
+ * community's native unit and counts 1:1, so real ServiceCredits activity is visible immediately; each
+ * completed non-money exchange (FREE favor, BARTER trade) counts one point; foreign-currency settled
+ * value normalizes to a USD reference so it is counted, not dropped.
+ *
+ * IMPORTANT — these are notional index weights, never money. The index is shown with NO currency symbol
+ * and is never a price, an exchange rate, a redemption value, or a per-wallet/per-token fiat equivalence.
+ * A `SC` weight of 1 is NOT a claim that one ServiceCredit equals one US dollar; ServiceCredits remains
+ * non-convertible. A value type absent from this map is surfaced and excluded, never silently zeroed.
  */
-export async function getActiveContributionWeights(): Promise<Map<string, number>> {
-  const result = await queryDb<{ currency_code: string; usd_rate: string }>(
-    `SELECT DISTINCT ON (currency_code) currency_code, usd_rate::text AS usd_rate
-       FROM currency_usd_rates
-       ORDER BY currency_code, as_of DESC`,
-  );
-  const weights = new Map<string, number>();
-  for (const row of result.rows) {
-    weights.set(row.currency_code, Number(row.usd_rate));
-  }
-  return weights;
-}
+export const DEFAULT_CONTRIBUTION_WEIGHTS: Map<string, number> = new Map([
+  // Native unit — counts 1:1 so a single ServiceCredit of recognized activity shows as one index point.
+  ['SC', 1],
+  // Non-money exchanges: one completed act of value counts as one point each.
+  [FREE_CODE, 1],
+  [BARTER_CODE, 1],
+  // Foreign-currency settled value, normalized to a USD reference (USD = 1). Notional index inputs only,
+  // never a price or redemption rate — present so a foreign-priced completed task is counted, not dropped.
+  ['USD', 1],
+  ['EUR', 1.08],
+  ['GBP', 1.27],
+  ['CHF', 1.12],
+  ['CAD', 0.73],
+  ['AUD', 0.66],
+  ['CNY', 0.14],
+  ['INR', 0.012],
+  ['BRL', 0.18],
+  ['JPY', 0.0067],
+  ['BTC', 65000],
+]);
 
 /**
  * Fold a set of value-type volumes into the Community Value Index using the active contribution weights.
@@ -328,7 +345,7 @@ export interface RecognitionBreakdown extends CommunityValueResult {
  * measure.
  */
 export async function recognizeCommunityValueIndex(): Promise<RecognitionBreakdown> {
-  const weights = await getActiveContributionWeights();
+  const weights = DEFAULT_CONTRIBUTION_WEIGHTS;
   let valueIndex = 0;
   const unweighted = new Set<string>();
   const perCurrency = new Map<string, number>();

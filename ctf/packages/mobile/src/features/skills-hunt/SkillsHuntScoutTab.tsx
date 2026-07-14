@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SkillsHuntApi, type Round, type TaxonomyFlattenedItem } from './SkillsHuntApi';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
+import { CountryPicker, StateFieldMobile } from '../../components/LocationPickers';
 
 const BIO_MAX = 280;
 
@@ -151,6 +152,9 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
   const [fullName, setFullName] = useState('');
   const [bio, setBio] = useState('');
   const [quora, setQuora] = useState('');
+  const [country, setCountry] = useState('');
+  const [stateRegion, setStateRegion] = useState('');
+  const [city, setCity] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [proposed, setProposed] = useState<string[]>([]);
   const [freeText, setFreeText] = useState('');
@@ -196,13 +200,16 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
   };
 
   const removeProposed = (s: string) => setProposed(prev => prev.filter(x => x !== s));
-  const canSubmit = fullName.trim().length >= 2 && allSkillCount > 0 && !submitting;
+  const canSubmit = fullName.trim().length >= 2 && allSkillCount > 0 && country.trim().length > 0 && !submitting;
 
   const onReset = () => {
     setSubmitted(false);
     setFullName('');
     setBio('');
     setQuora('');
+    setCountry('');
+    setStateRegion('');
+    setCity('');
     setSkills([]);
     setProposed([]);
     setFreeText('');
@@ -221,6 +228,9 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
         skills: skills.slice(0, 10),
         proposedSkills: proposed,
         claimedProfessions: [],
+        country: country.trim(),
+        state: stateRegion.trim() ? stateRegion.trim() : null,
+        city: city.trim() ? city.trim() : null,
       });
       setSubmitted(true);
     } catch (e) {
@@ -283,6 +293,27 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
         placeholder="quora.com/profile/..."
         placeholderTextColor={tokens.textSecondary}
         style={[styles.input, quora && { borderColor: accent + '50' }]}
+      />
+
+      {/* Location — Country required (matters for non-US members and the GDP country view);
+          State/City optional. Searchable country picker keeps the data clean. */}
+      <Text style={styles.fieldLabel}>
+        Country <Text style={{ color: accent }}>*</Text>
+      </Text>
+      <CountryPicker value={country} onChange={setCountry} />
+      <Text style={styles.fieldLabel}>
+        State / Region <Text style={styles.fieldHint}>(optional)</Text>
+      </Text>
+      <StateFieldMobile country={country} value={stateRegion} onChange={setStateRegion} />
+      <Text style={styles.fieldLabel}>
+        City <Text style={styles.fieldHint}>(optional)</Text>
+      </Text>
+      <TextInput
+        value={city}
+        onChangeText={setCity}
+        placeholder="City"
+        placeholderTextColor={tokens.textSecondary}
+        style={styles.input}
       />
 
       {/* Skills */}
@@ -411,7 +442,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
 
     // Scout form
     scoutTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary, marginBottom: 4 },
-    fieldLabel: { color: '#9CA3AF', fontSize: 11, fontWeight: '600', marginTop: 12, marginBottom: 4 },
+    fieldLabel: { color: t.textSecondary, fontSize: 11, fontWeight: '600', marginTop: 12, marginBottom: 4 },
     fieldHint: { color: t.textMuted, fontWeight: '400' },
     input: {
       backgroundColor: 'rgba(255,255,255,0.04)',
@@ -419,7 +450,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderWidth: 1,
       borderRadius: 10,
       padding: 10,
-      color: '#E8EAF0',
+      color: t.textShell,
       fontSize: 14,
     },
 
@@ -461,7 +492,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderBottomWidth: 1,
       borderBottomColor: 'rgba(255,255,255,0.05)',
     },
-    accordionLabel: { color: '#9CA3AF', fontSize: 12, fontWeight: '600' },
+    accordionLabel: { color: t.textSecondary, fontSize: 12, fontWeight: '600' },
     accordionRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     accordionBadge: {
       backgroundColor: accent + '25',
@@ -485,7 +516,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.08)',
     },
-    skillBtnText: { fontSize: 11, color: '#9CA3AF' },
+    skillBtnText: { fontSize: 11, color: t.textSecondary },
 
     // Free-text
     freeTextBlock: { marginTop: 4 },
@@ -498,7 +529,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: 'rgba(255,255,255,0.07)',
       borderRadius: 8,
       fontSize: 12,
-      color: '#E8EAF0',
+      color: t.textShell,
     },
     addBtn: {
       padding: 8,

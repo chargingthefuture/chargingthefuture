@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ExternalLink, Pencil, Sparkles } from "lucide-react";
+import { ChevronLeft, ExternalLink, MapPin, Pencil, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/useTheme";
@@ -128,6 +128,8 @@ export function DirectoryProfileDetail({
   const profileUrl = p.profileUrl?.trim() ? p.profileUrl.trim() : null;
   const headline = p.headline?.trim() ? p.headline.trim() : null;
   const bio = p.bio?.trim() ? p.bio.trim() : null;
+  // "City, State, Country" from whichever parts are set (non-US members may have only a country).
+  const locationText = [p.city, p.state, p.country].map((v) => v?.trim()).filter(Boolean).join(", ");
   // A profile nominated through SkillsHunt is community-generated; show that and who
   // nominated it instead of a generic headline.
   const isCommunityGenerated = p.source === "community-generated";
@@ -189,6 +191,13 @@ export function DirectoryProfileDetail({
                 {p.sector && <Badge style={{ background: `${t.ACCENT}15`, color: t.ACCENT, border: `1px solid ${t.ACCENT}30`, fontSize: 12 }}>{p.sector}</Badge>}
                 {p.jobTitle && <Badge style={{ background: "transparent", color: t.MUTED, border: `1px solid ${t.BORDER}`, fontSize: 12 }}>{p.jobTitle}</Badge>}
               </div>
+              {/* Location — only the parts that are set, joined "City, State, Country". */}
+              {locationText && (
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: t.SUBTLE, marginTop: 8 }}>
+                  <MapPin size={13} style={{ flexShrink: 0 }} />
+                  <span>{locationText}</span>
+                </div>
+              )}
             </div>
           </div>
 

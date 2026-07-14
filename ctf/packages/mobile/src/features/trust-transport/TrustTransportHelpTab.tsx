@@ -5,9 +5,6 @@ import { listAvailableRequests, createOffer, listProviderTrips, updateTripStatus
 import { ttSettlementLabel, type TrustTransportAvailableRequest, type TrustTransportProviderTrip } from './types';
 import { TrustTransportChatButton } from './TrustTransportChatButton';
 
-// Left raw by design: SUBTLE (#9CA3AF) has no exact-value mobile token equivalent.
-const SUBTLE = '#9CA3AF';
-
 function modeLabel(mode: string): string {
   return mode.charAt(0).toUpperCase() + mode.slice(1);
 }
@@ -410,7 +407,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   return StyleSheet.create({
     section: { padding: 16 },
     sectionTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 6 },
-    sectionDesc: { fontSize: 13, color: SUBTLE, lineHeight: 19, marginBottom: 16 },
+    sectionDesc: { fontSize: 13, color: t.textSecondary, lineHeight: 19, marginBottom: 16 },
     centered: { alignItems: 'center', justifyContent: 'center', padding: 32 },
     emptyText: { fontSize: 13, color: t.textSecondary, textAlign: 'center' },
     card: {
@@ -433,7 +430,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     settleBadgeText: { fontSize: 11, color: t.success, fontWeight: '600' },
     cardAge: { marginLeft: 'auto', fontSize: 11, color: t.textSecondary },
-    cardNote: { fontSize: 11, color: SUBTLE, marginTop: 8, lineHeight: 16 },
+    cardNote: { fontSize: 11, color: t.textSecondary, marginTop: 8, lineHeight: 16 },
     sentText: { fontSize: 13, color: accent, fontWeight: '600', marginTop: 10 },
     offerBtn: {
       marginTop: 10,
@@ -452,7 +449,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: 'rgba(255,255,255,0.10)',
       borderRadius: 8,
       fontSize: 13,
-      color: '#E8EAF0',
+      color: t.textShell,
       padding: 10,
       minHeight: 44,
       textAlignVertical: 'top',
@@ -463,7 +460,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: 'rgba(255,255,255,0.10)',
       borderRadius: 8,
       fontSize: 13,
-      color: '#E8EAF0',
+      color: t.textShell,
       padding: 10,
     },
     errorText: { fontSize: 12, color: t.danger },
@@ -478,7 +475,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     sendBtnDisabled: { opacity: 0.6 },
     sendBtnText: { fontSize: 13, fontWeight: '600', color: accent },
     tripsSection: { marginBottom: 20 },
-    tripsSectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: SUBTLE, marginBottom: 10 },
+    tripsSectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: t.textSecondary, marginBottom: 10 },
     tripCard: {
       padding: 14,
       borderRadius: 14,
@@ -499,7 +496,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       paddingVertical: 2,
     },
     tripStatusBadgeText: { fontSize: 12, color: accent, fontWeight: '600' },
-    tripMeta: { fontSize: 12, color: SUBTLE, marginTop: 6 },
+    tripMeta: { fontSize: 12, color: t.textSecondary, marginTop: 6 },
     advanceBtn: {
       marginTop: 12,
       padding: 10,
@@ -531,7 +528,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: 'rgba(255,255,255,0.12)',
       alignItems: 'center',
     },
-    addProofBtnText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
+    addProofBtnText: { fontSize: 12, fontWeight: '600', color: t.textSecondary },
     proofDoneText: { marginTop: 10, fontSize: 12, color: accent, fontWeight: '600' },
     proofForm: { marginTop: 10, gap: 8 },
     proofTypeRow: { flexDirection: 'row', gap: 6 },
@@ -545,7 +542,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       alignItems: 'center',
     },
     proofTypeBtnActive: { backgroundColor: `${accent}20`, borderColor: `${accent}40` },
-    proofTypeBtnText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
+    proofTypeBtnText: { fontSize: 12, fontWeight: '600', color: t.textSecondary },
     proofTypeBtnTextActive: { color: accent },
     proofInput: {
       backgroundColor: 'rgba(255,255,255,0.03)',
@@ -553,7 +550,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: 'rgba(255,255,255,0.10)',
       borderRadius: 8,
       fontSize: 13,
-      color: '#E8EAF0',
+      color: t.textShell,
       padding: 10,
     },
     proofHint: { fontSize: 11, color: t.textSecondary },

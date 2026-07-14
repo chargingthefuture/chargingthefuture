@@ -4,19 +4,13 @@ import type { ThemeTokens } from '../../theme';
 // Shared chrome for the ServiceCredits screen (header + bottom nav), themed through the flat token
 // palette. Call from a component with `makeStyles(tokens, accent)` where `accent` comes from
 // getAppAccent('service-credits', theme). The money/ledger direction swatches (+credit green,
-// −debit red) and the neutral contrast greys are left raw per the token-pass status-palette rule;
-// the tabs reference LEDGER / RAW for those.
+// −debit red) are left raw per the token-pass status-palette rule; the tabs reference LEDGER for
+// those.
 
 // Money/ledger direction palette — semantic status swatches, left raw (not the danger/success chrome role).
 export const LEDGER = {
   green: '#22C55E',
   red: '#EF4444',
-} as const;
-
-// Contrast inks / no-mobile-token greys used by the money screens — left raw.
-export const RAW = {
-  textMuted: '#E8EAF0', // high-contrast input ink
-  textSubtle: '#9CA3AF', // neutral direction / no mobile token
 } as const;
 
 export function makeStyles(t: ThemeTokens, accent: string) {

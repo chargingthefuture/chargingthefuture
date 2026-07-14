@@ -43,6 +43,10 @@ Every field is built from the shared field component, never hand-rolled, so it a
 
 ## Accessibility baseline (applies app-wide, not just forms)
 
+The product's conformance target is WCAG 2.2 Level AA, with selected AAA enhancements where feasible.
+See `ACCESSIBILITY_STATEMENT.md` for the target, current status, and how it is maintained. The
+checklist below is the working baseline that keeps each screen on track toward AA.
+
 Checklist for every screen as it's touched:
 
 - **Labels on every control**, including icon-only buttons (share, copy, nav rails, close, back) —

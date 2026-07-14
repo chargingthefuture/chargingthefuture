@@ -5,8 +5,6 @@ import { createConnectionThread, requestQuote } from './api';
 import { ConnectNowButton, InstantCallAvailabilityBadge, canOfferConnectNow, acceptsInstantCalls, instantCallRateLabel, isOwnProfile } from './FoundationConnectNow';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
-const TEXT_DIM = '#9CA3AF';
 
 function initials(name: string): string {
   return name
@@ -109,6 +107,12 @@ export function FoundationProviderDetail({ provider, viewerUserId = null, onBack
           {provider.headline ? (
             <Text style={styles.headline}>{provider.headline}</Text>
           ) : null}
+          {/* Location from the provider's shared directory profile — only the parts that are set. */}
+          {[provider.city, provider.state, provider.country].some((v) => v && v.trim()) ? (
+            <Text style={styles.location}>
+              {[provider.city, provider.state, provider.country].map((v) => v?.trim()).filter(Boolean).join(', ')}
+            </Text>
+          ) : null}
           {/* rating/job-count/availability/credits have no backing field — omitted */}
         </View>
 
@@ -210,7 +214,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     statusSignal: {
       fontSize: 12,
-      color: TEXT_DIM,
+      color: t.textSecondary,
     },
     navBar: {
       flexDirection: 'row',
@@ -277,7 +281,13 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     headline: {
       fontSize: 14,
-      color: TEXT_DIM,
+      color: t.textSecondary,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    location: {
+      fontSize: 13,
+      color: t.textSecondary,
       textAlign: 'center',
       marginBottom: 8,
     },
@@ -294,7 +304,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     bioText: {
       fontSize: 14,
-      color: TEXT_DIM,
+      color: t.textSecondary,
       lineHeight: 22,
     },
     skillRow: {
@@ -354,7 +364,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     statusMsg: {
       fontSize: 13,
-      color: TEXT_DIM,
+      color: t.textSecondary,
       textAlign: 'center',
       marginBottom: 16,
     },

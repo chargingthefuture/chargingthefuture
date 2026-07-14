@@ -66,7 +66,6 @@ export function UnlockShell() {
         onSubmit={() => void submit(url)}
         submitting={submitting}
         error={error}
-        earlyCommonsAccess={status?.earlyCommonsAccess ?? false}
       />
     );
   }
@@ -79,7 +78,6 @@ export function UnlockShell() {
       onResubmit={() => void submit(url)}
       submitting={submitting}
       error={error}
-      earlyCommonsAccess={status.earlyCommonsAccess}
     />
   );
 }

@@ -9,7 +9,7 @@ import { UnlockIconRail } from "./unlock-icon-rail";
 import { UnlockSidebar } from "./unlock-sidebar";
 import { UnlockStatusCard } from "./unlock-status-card";
 import { UnlockRightRail } from "./unlock-right-rail";
-import { UnlockCommonsHelp } from "./unlock-commons-help";
+import { UnlockQuoraHelp } from "./unlock-quora-help";
 
 export function UnlockStatusView({
   status,
@@ -18,7 +18,6 @@ export function UnlockStatusView({
   onResubmit,
   submitting,
   error,
-  earlyCommonsAccess = false,
 }: {
   status: DisplayStatus;
   resubmitUrl: string;
@@ -26,7 +25,6 @@ export function UnlockStatusView({
   onResubmit: () => void;
   submitting: boolean;
   error: string | null;
-  earlyCommonsAccess?: boolean;
 }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
@@ -44,11 +42,9 @@ export function UnlockStatusView({
         submitting={submitting}
         error={error}
       />
-      {earlyCommonsAccess && (
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <UnlockCommonsHelp />
-        </div>
-      )}
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <UnlockQuoraHelp />
+      </div>
     </>
   );
 

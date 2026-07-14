@@ -96,3 +96,37 @@ export async function reviewAdminSubmission(
     throw new Error(`submission_review_failed:${res.status}`);
   }
 }
+
+// POST an admin soft-delete ("Remove") of a submission. Carries the CSRF header.
+// Unlike Reject, this voids the row without it counting as a scout rejection; the
+// backend soft-deletes it and rebuilds the leaderboard + mission progress. It is
+// idempotent — removing an already-removed row is a no-op success.
+export async function removeAdminSubmission(submissionId: string): Promise<void> {
+  const res = await authedFetch(`${ADMIN_API_BASE}/submissions/${submissionId}/remove`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-ctf-csrf': '1',
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`submission_remove_failed:${res.status}`);
+  }
+}
+
+// POST an admin manual leaderboard rebuild for a round. Carries the CSRF header.
+// Recomputes the individual + team boards from the current accepted nominations —
+// used after an out-of-band data fix, since the board is otherwise only refreshed
+// as a side effect of reviewing a submission.
+export async function rebuildRoundLeaderboard(roundId: string): Promise<void> {
+  const res = await authedFetch(`${ADMIN_API_BASE}/rounds/${roundId}/leaderboard/rebuild`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-ctf-csrf': '1',
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`leaderboard_rebuild_failed:${res.status}`);
+  }
+}

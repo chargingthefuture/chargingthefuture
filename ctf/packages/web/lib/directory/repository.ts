@@ -6,6 +6,7 @@ import {
   DIRECTORY_MAX_ANNOUNCEMENT_BODY_LENGTH,
   DIRECTORY_MAX_ANNOUNCEMENT_TITLE_LENGTH,
   DIRECTORY_MAX_BIO_LENGTH,
+  DIRECTORY_MAX_LOCATION_LENGTH,
   DIRECTORY_MAX_NAME_LENGTH,
   DIRECTORY_MAX_HEADLINE_LENGTH,
   DIRECTORY_MAX_PAGE_SIZE,
@@ -46,6 +47,9 @@ type DirectoryProfileRow = {
   monero_address?: string | null;
   bitcoin_address?: string | null;
   service_credits_address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -224,6 +228,9 @@ async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Prom
     moneroAddress: row.monero_address ?? null,
     bitcoinAddress: row.bitcoin_address ?? null,
     serviceCreditsAddress: row.service_credits_address ?? null,
+    city: row.city ?? null,
+    state: row.state ?? null,
+    country: row.country ?? null,
   };
 }
 
@@ -259,6 +266,9 @@ export function validateProfileInput(input: DirectoryProfileInput): boolean {
   const headline = normalizeNullableText(input.headline);
   const bio = normalizeNullableText(input.bio);
   const profileUrl = normalizeNullableText(input.profileUrl);
+  const city = normalizeNullableText(input.city);
+  const state = normalizeNullableText(input.state);
+  const country = normalizeNullableText(input.country);
 
   const checks = [
     firstName.length > 0 && firstName.length <= DIRECTORY_MAX_NAME_LENGTH,
@@ -266,6 +276,9 @@ export function validateProfileInput(input: DirectoryProfileInput): boolean {
     !headline || headline.length <= DIRECTORY_MAX_HEADLINE_LENGTH,
     !bio || bio.length <= DIRECTORY_MAX_BIO_LENGTH,
     !profileUrl || profileUrl.length <= DIRECTORY_MAX_URL_LENGTH,
+    !city || city.length <= DIRECTORY_MAX_LOCATION_LENGTH,
+    !state || state.length <= DIRECTORY_MAX_LOCATION_LENGTH,
+    !country || country.length <= DIRECTORY_MAX_LOCATION_LENGTH,
     !input.skillIds || Array.isArray(input.skillIds),
     // proposedSkills, when present, must be an array within the count cap and each label within
     // the per-label length cap (measured after whitespace normalization).
@@ -430,6 +443,9 @@ async function loadProfileByUser(client: PoolClient, userId: string): Promise<Di
         p.monero_address,
         p.bitcoin_address,
         p.service_credits_address,
+        p.city,
+        p.state,
+        p.country,
         p.created_at,
         p.updated_at
       FROM directory_profiles p
@@ -467,6 +483,9 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
     const moneroAddress = normalizeNullableText(input.moneroAddress);
     const bitcoinAddress = normalizeNullableText(input.bitcoinAddress);
     const serviceCreditsAddress = normalizeNullableText(input.serviceCreditsAddress);
+    const city = normalizeNullableText(input.city);
+    const state = normalizeNullableText(input.state);
+    const country = normalizeNullableText(input.country);
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
 
@@ -493,6 +512,9 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
             monero_address = $10,
             bitcoin_address = $11,
             service_credits_address = $12,
+            city = $13,
+            state = $14,
+            country = $15,
             is_active = true,
             updated_at = NOW()
           WHERE id = $1
@@ -510,6 +532,9 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
           moneroAddress,
           bitcoinAddress,
           serviceCreditsAddress,
+          city,
+          state,
+          country,
         ],
       );
     } else {
@@ -517,9 +542,10 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
         `
           INSERT INTO directory_profiles
             (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id,
-             venmo_address, monero_address, bitcoin_address, service_credits_address, is_active, source)
+             venmo_address, monero_address, bitcoin_address, service_credits_address, city, state, country,
+             is_active, source)
           VALUES
-            ($1, $2, $3, $4, $5, $6, $7::uuid, $8::uuid, $9, $10, $11, $12, true, 'self')
+            ($1, $2, $3, $4, $5, $6, $7::uuid, $8::uuid, $9, $10, $11, $12, $13, $14, $15, true, 'self')
           RETURNING id
         `,
         [
@@ -535,6 +561,9 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
           moneroAddress,
           bitcoinAddress,
           serviceCreditsAddress,
+          city,
+          state,
+          country,
         ],
       );
 
@@ -594,6 +623,9 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
           p.monero_address,
           p.bitcoin_address,
           p.service_credits_address,
+          p.city,
+          p.state,
+          p.country,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
@@ -665,6 +697,9 @@ export async function getDirectoryProfileForMember(profileId: string): Promise<D
           p.source,
           p.invited_by_username,
           p.unclaimed_handle,
+          p.city,
+          p.state,
+          p.country,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
@@ -759,6 +794,9 @@ export async function listDirectoryForMember(
           p.source,
           p.invited_by_username,
           p.unclaimed_handle,
+          p.city,
+          p.state,
+          p.country,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
@@ -869,6 +907,13 @@ export async function deleteOwnDirectoryProfile(userId: string): Promise<{ reque
             headline = NULL,
             bio = NULL,
             profile_url = NULL,
+            venmo_address = NULL,
+            monero_address = NULL,
+            bitcoin_address = NULL,
+            service_credits_address = NULL,
+            city = NULL,
+            state = NULL,
+            country = NULL,
             is_active = false,
             updated_at = NOW()
           WHERE id = $1
@@ -987,6 +1032,9 @@ export async function listAdminProfiles(
           p.monero_address,
           p.bitcoin_address,
           p.service_credits_address,
+          p.city,
+          p.state,
+          p.country,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
@@ -1025,18 +1073,21 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
     const sectorId = input.sectorId ?? null;
     const jobTitleId = input.jobTitleId ?? null;
     const skillIds = normalizeSkillIds(input.skillIds);
+    const city = normalizeNullableText(input.city);
+    const state = normalizeNullableText(input.state);
+    const country = normalizeNullableText(input.country);
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
 
     const inserted = await client.query<{ id: string }>(
       `
         INSERT INTO directory_profiles
-          (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id, is_active)
+          (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id, city, state, country, is_active)
         VALUES
-          (NULL, $1, $2, $3, $4, $5, $6::uuid, $7::uuid, true)
+          (NULL, $1, $2, $3, $4, $5, $6::uuid, $7::uuid, $8, $9, $10, true)
         RETURNING id
       `,
-      [firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId],
+      [firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId, city, state, country],
     );
 
     const profileId = inserted.rows[0].id;
@@ -1072,6 +1123,9 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
           p.monero_address,
           p.bitcoin_address,
           p.service_credits_address,
+          p.city,
+          p.state,
+          p.country,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
@@ -1094,10 +1148,27 @@ export async function updateAdminProfile(
   return withDbTransaction(async (client) => {
     // Compare ids as text — directory_profiles.id is varchar in the carried-over v2
     // database, so a ::uuid cast fails to plan / throws on non-uuid ids. See #534.
-    const existing = await client.query<{ id: string }>('SELECT id FROM directory_profiles WHERE id::text = $1', [profileId]);
+    // The existing row is read so a field the caller left out (undefined) is preserved
+    // as-is instead of being nulled — the admin edit form does not send the
+    // member-owned payment addresses, and older clients may not send location yet.
+    const existing = await client.query<{
+      id: string;
+      venmo_address: string | null;
+      monero_address: string | null;
+      bitcoin_address: string | null;
+      service_credits_address: string | null;
+      city: string | null;
+      state: string | null;
+      country: string | null;
+    }>(
+      `SELECT id, venmo_address, monero_address, bitcoin_address, service_credits_address, city, state, country
+       FROM directory_profiles WHERE id::text = $1`,
+      [profileId],
+    );
     if (existing.rows.length === 0) {
       return null;
     }
+    const current = existing.rows[0];
 
     const firstName = normalizeText(input.firstName);
     const lastName = normalizeNullableText(input.lastName);
@@ -1107,10 +1178,14 @@ export async function updateAdminProfile(
     const sectorId = input.sectorId ?? null;
     const jobTitleId = input.jobTitleId ?? null;
     const skillIds = normalizeSkillIds(input.skillIds);
-    const venmoAddress = normalizeNullableText(input.venmoAddress);
-    const moneroAddress = normalizeNullableText(input.moneroAddress);
-    const bitcoinAddress = normalizeNullableText(input.bitcoinAddress);
-    const serviceCreditsAddress = normalizeNullableText(input.serviceCreditsAddress);
+    const venmoAddress = input.venmoAddress === undefined ? current.venmo_address : normalizeNullableText(input.venmoAddress);
+    const moneroAddress = input.moneroAddress === undefined ? current.monero_address : normalizeNullableText(input.moneroAddress);
+    const bitcoinAddress = input.bitcoinAddress === undefined ? current.bitcoin_address : normalizeNullableText(input.bitcoinAddress);
+    const serviceCreditsAddress =
+      input.serviceCreditsAddress === undefined ? current.service_credits_address : normalizeNullableText(input.serviceCreditsAddress);
+    const city = input.city === undefined ? current.city : normalizeNullableText(input.city);
+    const state = input.state === undefined ? current.state : normalizeNullableText(input.state);
+    const country = input.country === undefined ? current.country : normalizeNullableText(input.country);
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
 
@@ -1129,6 +1204,9 @@ export async function updateAdminProfile(
           monero_address = $10,
           bitcoin_address = $11,
           service_credits_address = $12,
+          city = $13,
+          state = $14,
+          country = $15,
           is_active = true,
           updated_at = NOW()
         WHERE id::text = $1
@@ -1146,6 +1224,9 @@ export async function updateAdminProfile(
         moneroAddress,
         bitcoinAddress,
         serviceCreditsAddress,
+        city,
+        state,
+        country,
       ],
     );
 
@@ -1181,6 +1262,9 @@ export async function updateAdminProfile(
           p.monero_address,
           p.bitcoin_address,
           p.service_credits_address,
+          p.city,
+          p.state,
+          p.country,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
@@ -1287,6 +1371,9 @@ export async function assignAdminProfile(
           p.monero_address,
           p.bitcoin_address,
           p.service_credits_address,
+          p.city,
+          p.state,
+          p.country,
           p.created_at,
           p.updated_at
         FROM directory_profiles p

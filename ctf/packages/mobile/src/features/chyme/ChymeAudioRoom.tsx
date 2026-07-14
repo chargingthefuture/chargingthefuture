@@ -409,7 +409,7 @@ function makeTileStyles(t: ThemeTokens, accent: string) {
   micIcon: { fontSize: 10 },
   handBadge: { position: 'absolute', top: -6, right: -6 },
   handIcon: { fontSize: 16 },
-  name: { fontSize: 12, fontWeight: '600', color: '#E8EAF0', textAlign: 'center', marginTop: 8 },
+  name: { fontSize: 12, fontWeight: '600', color: t.textShell, textAlign: 'center', marginTop: 8 },
   statusBadge: {
     marginTop: 4,
     paddingHorizontal: 8,

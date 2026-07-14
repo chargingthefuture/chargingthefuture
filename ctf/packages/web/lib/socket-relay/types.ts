@@ -23,7 +23,11 @@ export type SocketRelayRequest = {
   details: string;
   category: string;
   tags: string[];
+  // Per-request location. Defaults from the member's directory profile in the create form, but is
+  // overridable per request (a request can be for a different place than where the member lives).
   city: string | null;
+  state: string | null;
+  country: string | null;
   isPublic: boolean;
   status: SocketRelayRequestStatus;
   reopenedCount: number;
@@ -48,6 +52,8 @@ export type SocketRelayRequestInput = {
   details: string;
   tags: string[];
   city: string | null;
+  state: string | null;
+  country: string | null;
   isPublic: boolean;
   priceCurrency: string | null;
   priceAmount: number | null;
@@ -100,6 +106,8 @@ export type SocketRelayPublicRequest = {
   category: string;
   tags: string[];
   city: string | null;
+  state: string | null;
+  country: string | null;
   status: SocketRelayRequestStatus;
   priceCurrency: string | null;
   priceAmount: number | null;

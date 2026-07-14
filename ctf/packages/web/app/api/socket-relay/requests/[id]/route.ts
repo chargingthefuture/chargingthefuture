@@ -41,6 +41,8 @@ function parseRequestInput(body: Record<string, unknown>): SocketRelayRequestInp
     details: typeof body.details === 'string' ? body.details : '',
     tags: parseTags(body),
     city: typeof body.city === 'string' ? body.city : null,
+    state: typeof body.state === 'string' ? body.state : null,
+    country: typeof body.country === 'string' ? body.country : null,
     isPublic: typeof body.isPublic === 'boolean' ? body.isPublic : false,
     priceCurrency,
     priceAmount,

@@ -209,7 +209,7 @@ const PeerProgrammingSessionStage: React.FC<{ onLeave: () => void }> = ({ onLeav
 function makeStyles(t: ThemeTokens, accent: string) {
   return StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, paddingHorizontal: 24 },
-  connectingText: { color: '#9CA3AF', fontSize: 14, marginTop: 16 },
+  connectingText: { color: t.textSecondary, fontSize: 14, marginTop: 16 },
   errorText: { color: '#F87171', fontSize: 14, textAlign: 'center', marginBottom: 18, lineHeight: 22 },
   backBtn: {
     paddingHorizontal: 22,

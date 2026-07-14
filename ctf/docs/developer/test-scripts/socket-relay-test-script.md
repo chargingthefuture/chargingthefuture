@@ -10,7 +10,7 @@
 | **Surfaces** | web (`/apps/socket-relay`, `/admin/socket-relay`) · android (`SocketRelay.tsx`, `AdminSocketRelay.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:socket-relay` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socket-relay-feature-inventory.md` |
-| **Generated** | 2026-07-05 (commit 0da9d478) |
+| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) |
 
 ---
 
@@ -88,16 +88,23 @@ web ☐ android ☐
 
 **Steps:**
 1. Open the post/create form (web: "Post a Request" button; Android: equivalent create button).
-2. Fill in a title and details.
-3. Add two tags. Try adding a fourth tag.
-4. Leave the value type as "Free" (no price).
-5. Submit.
+2. On web, note the Country / State / City fields: on a fresh post they are pre-filled from your own
+   directory profile's location (if you set one). Change the country to somewhere else, or clear the
+   fields entirely, to confirm they are editable per request.
+3. Fill in a title and details.
+4. Add two tags. Try adding a fourth tag.
+5. Leave the value type as "Free" (no price).
+6. Submit.
 
 **Expected:**
+- On web, a new post's Country/State/City default from your directory profile but are fully editable
+  and clearable — the location saved on the request is whatever you left in the form, not forced to
+  your profile. (Android posts city-only for now; the country/state picker is deferred.)
 - The form accepts 1–3 tags. After 3 tags are added, adding a fourth is blocked by the form (not rejected later by the server).
 - A tag longer than 64 characters is truncated to 64 before being added to the chip list.
 - Submitting with zero tags shows a field-level validation message (not a raw server error).
-- On success the new request appears in the feed with the correct tags and the poster's `@username`.
+- On success the new request appears in the feed with the correct tags, the poster's `@username`, and
+  its "City, State, Country" location (only the parts that were set).
 - The request shows no price / "Free" — not "$0".
 
 web ☐ android ☐

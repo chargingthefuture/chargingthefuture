@@ -64,7 +64,7 @@ export function DirectoryBrowse({
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 14 }}>
             {members.map((p) => (
-              <div key={p.id} onClick={() => onSelect(p)} style={{ padding: "20px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}20`, cursor: "pointer" }}>
+              <div key={p.id} role="button" tabIndex={0} onClick={() => onSelect(p)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(p); } }} style={{ padding: "20px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}20`, cursor: "pointer" }}>
                 <div style={{ display: "flex", gap: 14, marginBottom: 14, alignItems: "flex-start" }}>
                   <Avatar style={{ width: 48, height: 48, flexShrink: 0 }}>
                     <AvatarFallback style={{ background: `${t.ACCENT}25`, color: t.ACCENT, fontSize: 18, fontWeight: 800 }}>{initials(p.name)}</AvatarFallback>

@@ -70,7 +70,7 @@ export function LighthouseFilterSidebar({
       <div style={{ flex: 1, overflowY: "auto" }}>
         <div style={{ padding: "0 8px 16px" }}>
           {FILTERS.map((f) => (
-            <div key={f.key} onClick={() => onFilter(f.key)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "pointer", background: filter === f.key ? `${t.ACCENT}18` : "transparent", borderLeft: filter === f.key ? `2px solid ${t.ACCENT}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
+            <div key={f.key} role="button" tabIndex={0} onClick={() => onFilter(f.key)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onFilter(f.key); } }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "pointer", background: filter === f.key ? `${t.ACCENT}18` : "transparent", borderLeft: filter === f.key ? `2px solid ${t.ACCENT}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
               <span style={{ fontSize: 13, color: filter === f.key ? t.TEXT : t.SUBTLE, flex: 1 }}>{f.label}</span>
             </div>
           ))}

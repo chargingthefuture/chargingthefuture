@@ -93,7 +93,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     alignSelf: 'flex-start',
   },
   badgeText: { fontSize: 11, fontWeight: '600', color: accent },
-  description: { fontSize: 14, color: '#9CA3AF', lineHeight: 21 },
+  description: { fontSize: 14, color: t.textSecondary, lineHeight: 21 },
   joinBtn: {
     paddingVertical: 14,
     borderRadius: t.radius,

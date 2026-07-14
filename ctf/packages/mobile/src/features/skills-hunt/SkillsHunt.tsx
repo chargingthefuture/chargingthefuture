@@ -688,7 +688,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderColor: t.borderFaint,
   },
   emptyHowEmoji: { fontSize: 22 },
-  emptyHowText: { flex: 1, fontSize: 13, color: '#9CA3AF', lineHeight: 18 },
+  emptyHowText: { flex: 1, fontSize: 13, color: t.textSecondary, lineHeight: 18 },
   primaryBtn: {
     width: '100%',
     padding: 14,
@@ -709,7 +709,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     gap: 12,
   },
   missionHintIcon: { fontSize: 16, color: accent },
-  missionHintTitle: { fontSize: 12, fontWeight: '700', color: '#E8EAF0' },
+  missionHintTitle: { fontSize: 12, fontWeight: '700', color: t.textShell },
 
   // Header
   header: {
@@ -878,6 +878,6 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
-  skillChipText: { fontSize: 11, color: '#9CA3AF' },
+  skillChipText: { fontSize: 11, color: t.textSecondary },
   });
 }

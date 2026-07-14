@@ -4,9 +4,6 @@ import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { listOffersForRequest, acceptOffer } from './api';
 import type { TrustTransportOffer } from './types';
 
-// Left raw by design: SUBTLE (#9CA3AF) has no exact-value mobile token equivalent.
-const SUBTLE = '#9CA3AF';
-
 // Offers on one of the caller's own open requests, with Accept. Accepting opens a trip and (per
 // discovery model B) is the point at which the chosen provider gains the pickup/drop-off via the trip.
 export function TrustTransportOffersSection({ requestId, onAccepted }: { requestId: string; onAccepted: () => void }) {
@@ -97,7 +94,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderColor: 'rgba(255,255,255,0.10)',
     alignItems: 'center',
   },
-  viewBtnText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
+  viewBtnText: { fontSize: 12, fontWeight: '600', color: t.textSecondary },
   section: { marginTop: 10, gap: 8 },
   errorText: { fontSize: 12, color: t.danger },
   emptyText: { fontSize: 12, color: t.textSecondary },
@@ -109,7 +106,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderColor: 'rgba(255,255,255,0.08)',
   },
   offerText: { fontSize: 13, color: t.textPrimary, fontWeight: '600' },
-  offerNote: { fontSize: 12, color: SUBTLE, marginTop: 4, lineHeight: 17 },
+  offerNote: { fontSize: 12, color: t.textSecondary, marginTop: 4, lineHeight: 17 },
   acceptBtn: {
     marginTop: 8,
     padding: 8,

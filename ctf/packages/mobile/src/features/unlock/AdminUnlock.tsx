@@ -6,7 +6,7 @@
 // Admin access is enforced server-side; a 401/403 surfaces an "admins only" notice.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
@@ -29,7 +29,6 @@ const QUEUE_TABS: { key: UnlockAdminQueueFilter; label: string }[] = [
 
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
-const SUBTLE = '#9CA3AF';
 
 export const AdminUnlock = () => {
   const { tokens, theme } = useTheme();
@@ -46,6 +45,21 @@ export const AdminUnlock = () => {
   const [acting, setActing] = useState<number | null>(null);
   const [reconciling, setReconciling] = useState(false);
   const [filter, setFilter] = useState<UnlockAdminQueueFilter>('pending');
+  const [search, setSearch] = useState('');
+
+  // Client-side filter over the loaded page so an admin can find a submission by Quora URL, user id,
+  // or submission number without scrolling the whole list.
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (submission) =>
+        submission.quoraProfileUrl.toLowerCase().includes(q) ||
+        submission.quoraProfileUrlNormalized.toLowerCase().includes(q) ||
+        submission.userId.toLowerCase().includes(q) ||
+        String(submission.id).includes(q),
+    );
+  }, [items, search]);
 
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
@@ -197,13 +211,28 @@ export const AdminUnlock = () => {
         })}
       </View>
 
+      <TextInput
+        style={s.searchInput}
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search by Quora URL, user, or submission #"
+        placeholderTextColor={tokens.textMuted}
+        autoCapitalize="none"
+        autoCorrect={false}
+        clearButtonMode="while-editing"
+        accessibilityLabel="Search submissions"
+      />
+
       <Text style={s.sectionHeading}>
         {filter === 'pending' ? 'Pending submissions' : filter === 'approved' ? 'Approved submissions' : 'All submissions'}
+        {search.trim() ? ` · ${filtered.length} match${filtered.length === 1 ? '' : 'es'}` : ''}
       </Text>
-      {items.length === 0 ? (
-        <Text style={s.emptyText}>No submissions in this view.</Text>
+      {filtered.length === 0 ? (
+        <Text style={s.emptyText}>
+          {search.trim() ? 'No submissions match your search.' : 'No submissions in this view.'}
+        </Text>
       ) : (
-        items.map((submission) => (
+        filtered.map((submission) => (
           <React.Fragment key={submission.id}>
             <View style={s.card}>
               <View style={s.rowBetween}>
@@ -267,8 +296,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     content: { padding: 16, gap: 16 },
     center: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
     title: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
-    subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
-    noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
+    subtitle: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
+    noticeText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' },
     errorBanner: {
       fontSize: 13,
       color: '#FCA5A5',
@@ -299,7 +328,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: `${accent}4D`,
     },
     reconcileBtnText: { fontSize: 13, fontWeight: '700', color: accent },
-    emptyText: { fontSize: 13, color: SUBTLE },
+    emptyText: { fontSize: 13, color: t.textSecondary },
     tabRow: { flexDirection: 'row', gap: 8 },
     tab: {
       flex: 1,
@@ -312,9 +341,19 @@ function makeStyles(t: ThemeTokens, accent: string) {
       backgroundColor: PANEL,
     },
     tabActive: { backgroundColor: `${accent}1F`, borderColor: `${accent}4D` },
-    tabText: { fontSize: 13, fontWeight: '600', color: SUBTLE },
+    tabText: { fontSize: 13, fontWeight: '600', color: t.textSecondary },
     tabTextActive: { color: accent },
     sectionHeading: { fontSize: 16, fontWeight: '700', color: t.textPrimary },
+    searchInput: {
+      borderRadius: t.radius,
+      borderWidth: 1,
+      borderColor: t.border,
+      backgroundColor: t.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+      color: t.textPrimary,
+    },
     card: {
       backgroundColor: PANEL,
       borderWidth: 1,
@@ -332,7 +371,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     rewardPillText: { fontSize: 11, fontWeight: '700' },
     rewardPillTextGranted: { color: '#22C55E' },
     rewardPillTextPending: { color: '#F59E0B' },
-    cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+    cardMeta: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
     cardUrl: { fontSize: 12, color: '#D1D5DB', lineHeight: 18 },
     actionRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
     actionBtn: {

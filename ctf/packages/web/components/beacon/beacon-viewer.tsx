@@ -241,6 +241,7 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
             <div style={{ marginTop: 20, textAlign: 'left' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Last replay</div>
               <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', border: `1px solid ${t.BORDER_SOLID}`, aspectRatio: '16 / 9' }}>
+                {/* eslint-disable-next-line jsx-a11y/media-has-caption -- known gap (WCAG 1.2.2): recorded broadcasts have no captions track yet; a captions pipeline is tracked in issue #1432. */}
                 <video controls playsInline src={replay.recordingUrl} style={{ width: '100%', height: '100%' }} />
               </div>
               <div style={{ fontSize: 14, fontWeight: 600, marginTop: 8 }}>{replay.title}</div>

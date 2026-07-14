@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Lock, ShieldCheck, Clock, FileText, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { AlertTriangle, Lock, ShieldCheck, Clock, FileText, UserPlus, Eye, EyeOff, Pointer, MapPin } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
@@ -16,7 +16,10 @@ function DesktopClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
   const { theme } = useTheme();
   const t = getClickLogTokens(theme);
   return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
+    // ctf-self-responsive opts this flex column out of the global small-screen "un-row" fallback
+    // (.ctf-app-viewport > * → display:block on phones), which would otherwise collapse the column
+    // and stop flex:1 from pushing the bottom nav to the bottom.
+    <div className="ctf-self-responsive" style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
         <PublicShellBackLink />
@@ -107,7 +110,10 @@ function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
   const { theme } = useTheme();
   const t = getClickLogTokens(theme);
   return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
+    // ctf-self-responsive: keep this a real flex column on phones so the middle (flex:1) pushes the
+    // locked bottom nav to the bottom edge. Without it the global mobile un-row rule forces
+    // display:block and the nav floats mid-screen with empty space beneath it.
+    <div className="ctf-self-responsive" style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ padding: '12px 16px', background: `${t.ACCENT}10`, borderBottom: `1px solid ${t.ACCENT}25`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -132,9 +138,8 @@ function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 24px', textAlign: 'center', gap: 22 }}>
         {/* Locked button */}
         <div style={{ position: 'relative' }}>
-          <div style={{ width: 140, height: 140, borderRadius: '50%', background: 'rgba(233,30,140,0.1)', border: '3px solid rgba(233,30,140,0.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, filter: 'blur(2px)', opacity: 0.5 }}>
-            <AlertTriangle size={34} color={t.ACCENT} />
-            <span style={{ fontSize: 13, fontWeight: 800, color: t.ACCENT }}>Log Incident</span>
+          <div style={{ width: 140, height: 140, borderRadius: '50%', background: 'rgba(233,30,140,0.1)', border: '3px solid rgba(233,30,140,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'blur(2px)', opacity: 0.5 }}>
+            <AlertTriangle size={40} color={t.ACCENT} />
           </div>
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(233,30,140,0.12)', border: `2px solid ${t.ACCENT}50`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -158,12 +163,12 @@ function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
 
         <div style={{ display: 'flex', gap: 8, width: '100%' }}>
           {[
-            { icon: '👆', label: 'One tap' },
-            { icon: '🔒', label: 'Private' },
-            { icon: '📍', label: 'Location' },
-          ].map(({ icon, label }) => (
+            { Icon: Pointer, label: 'One tap' },
+            { Icon: ShieldCheck, label: 'Private' },
+            { Icon: MapPin, label: 'Location' },
+          ].map(({ Icon, label }) => (
             <div key={label} style={{ flex: 1, padding: '12px 8px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, textAlign: 'center' }}>
-              <div style={{ fontSize: 18, marginBottom: 5 }}>{icon}</div>
+              <Icon size={18} color={t.ACCENT} style={{ marginBottom: 6, opacity: 0.75 }} />
               <div style={{ fontSize: 11, fontWeight: 600, color: t.MUTED }}>{label}</div>
             </div>
           ))}

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import type { Currency } from './types';
 import { SERVICE_CREDITS_LABEL } from './types';
 import { sortPreferred } from './format';
 import { fetchCurrencies } from './api';
+import { useTheme, type ThemeTokens } from '../../theme';
 
 // Shared payment-currency selector for the mobile app (issue #420) — the React Native counterpart of
 // the web CurrencySelect. One control reused by every value-bearing feature so the options and ordering
@@ -27,6 +28,8 @@ export function CurrencySelect({
   onChange: (_code: string, _currency: Currency | null) => void;
   currencies?: Currency[];
 }) {
+  const { tokens } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const [currencies, setCurrencies] = useState<Currency[]>(provided ?? []);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,34 +77,36 @@ export function CurrencySelect({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  chipSelected: {
-    borderColor: '#22C55E',
-    backgroundColor: 'rgba(34,197,94,0.15)',
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#E8EAF0',
-  },
-  chipTextSelected: {
-    color: '#FFFFFF',
-  },
-  placeholder: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    paddingVertical: 8,
-  },
-});
+function makeStyles(t: ThemeTokens) {
+  return StyleSheet.create({
+    row: {
+      gap: 8,
+      paddingVertical: 4,
+    },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.12)',
+      backgroundColor: 'rgba(255,255,255,0.05)',
+    },
+    chipSelected: {
+      borderColor: '#22C55E',
+      backgroundColor: 'rgba(34,197,94,0.15)',
+    },
+    chipText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: t.textShell,
+    },
+    chipTextSelected: {
+      color: '#FFFFFF',
+    },
+    placeholder: {
+      fontSize: 13,
+      color: t.textSecondary,
+      paddingVertical: 8,
+    },
+  });
+}

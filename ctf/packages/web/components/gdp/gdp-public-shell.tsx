@@ -69,9 +69,9 @@ function DesktopGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyU
             </div>
 
             {[
-              { label: 'Active Members', icon: Globe },
+              { label: 'Members', icon: Globe },
               { label: 'Countries', icon: Globe },
-              { label: 'Monthly Growth', icon: TrendingUp },
+              { label: 'Community Value', icon: TrendingUp },
             ].map(({ label, icon: Icon }) => (
               <div key={label} style={{ borderRadius: 10, border: `1px solid ${t.BORDER_SOLID}`, background: t.SURFACE, padding: '12px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -107,23 +107,23 @@ function DesktopGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyU
           {/* Sector breakdown — locked until sign-in (no fabricated figures) */}
           <div style={{ borderRadius: 16, border: `1px solid ${t.BORDER_SOLID}`, background: t.SURFACE, padding: '20px 24px', marginBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Sector Breakdown</div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Value by Source</div>
               <BarChart2 size={16} color={t.MUTED} />
             </div>
             <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER_SOLID}`, padding: '28px 16px', textAlign: 'center' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>No sector data to show yet</div>
-              <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Sector totals build up as verified members add their skills.</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>No value data to show yet</div>
+              <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Value builds up as members exchange value across the apps.</div>
             </div>
           </div>
 
           {/* Top countries — locked until sign-in (no fabricated figures) */}
           <div style={{ borderRadius: 16, border: `1px solid ${t.BORDER_SOLID}`, background: t.SURFACE, padding: '20px 24px', marginBottom: 20 }}>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <MapPin size={15} color={t.ACCENT} /> Top Countries by Economic Output
+              <MapPin size={15} color={t.ACCENT} /> Members by Country
             </div>
             <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER_SOLID}`, padding: '28px 16px', textAlign: 'center' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>Country rankings are coming soon</div>
-              <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Rankings appear here once enough members have contributed.</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>The country breakdown is coming soon</div>
+              <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Members by country appear here as members add their location.</div>
             </div>
           </div>
 
@@ -132,7 +132,7 @@ function DesktopGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyU
             <Globe size={32} color={`${t.ACCENT}60`} style={{ marginBottom: 12 }} />
             <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Add your skills to the economy</div>
             <div style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.6, maxWidth: 480, margin: '0 auto 20px' }}>
-              Every verified skill you add increases the collective value of the TI Skills Economy. Create a free account to contribute, earn ServiceCredits, and appear on the global map.
+              Every verified skill you add increases the collective value of the TI Skills Economy. Create a free account to contribute, earn ServiceCredits, and add your skills to the survivor economy.
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
               {verifyUrl ? (
@@ -164,7 +164,7 @@ function MobileGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUr
           <span style={{ fontSize: 20, fontWeight: 800 }}>GDP</span>
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Survivor economy dashboard</span>
-        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>The gross domestic product of the survivor economy — economic activity, skill gaps, and contributor rankings.</p>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>The gross domestic product of the survivor economy — the total value the community creates, broken down by source and by country.</p>
 
         {/* Live snapshot — locked until sign-in (no fabricated totals) */}
         <div style={{ borderRadius: 16, border: `1px solid ${t.ACCENT}30`, background: t.ACCENT + '06', padding: '20px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
@@ -180,7 +180,7 @@ function MobileGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUr
       <div style={{ flex: 1, padding: '0 20px 20px' }}>
         <div style={{ height: '100%', minHeight: 200, borderRadius: 12, border: `1px solid ${t.BORDER}`, background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '32px 20px' }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${t.ACCENT}50`, background: t.ACCENT + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={t.ACCENT} /></div>
-          <div style={{ fontSize: 14, fontWeight: 700, textAlign: 'center' }}>Sign in for contributor rankings</div>
+          <div style={{ fontSize: 14, fontWeight: 700, textAlign: 'center' }}>Sign in to see the full breakdown</div>
           <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>

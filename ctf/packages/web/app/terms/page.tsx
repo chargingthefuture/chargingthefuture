@@ -91,6 +91,10 @@ export default function TermsPage() {
           {OPERATOR_NAME} · Contact{' '}
           <a className={styles.link} href={`mailto:${CONTACT_EMAIL}`}>
             {CONTACT_EMAIL}
+          </a>{' '}
+          ·{' '}
+          <a className={styles.link} href="/accessibility">
+            Accessibility
           </a>
         </footer>
       </div>

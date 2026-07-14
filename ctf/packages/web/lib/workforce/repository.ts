@@ -120,7 +120,8 @@ type SectorModelRow = { id: string; name: string; workforce_share: string | null
 type JobTitleModelRow = { id: string; sector_id: string; name: string };
 type MemberModelRow = {
   profile_id: string;
-  sector_id: string | null;
+  job_title_sector_id: string | null;
+  profile_sector_id: string | null;
   job_title_id: string | null;
   job_title_name: string | null;
   claimed: boolean;
@@ -224,7 +225,8 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
     queryDb<MemberModelRow>(
       `SELECT
          dp.id::text AS profile_id,
-         COALESCE(jt.sector_id, dp.sector_id)::text AS sector_id,
+         jt.sector_id::text AS job_title_sector_id,
+         dp.sector_id::text AS profile_sector_id,
          dp.job_title_id::text AS job_title_id,
          jt.name AS job_title_name,
          (dp.claimed_by_user_id IS NOT NULL) AS claimed
@@ -238,17 +240,22 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
   const jobTitles = jobTitlesRes.rows;
   const members = membersRes.rows;
 
-  // Skill arm of the recruited match, loaded separately and defensively. A profile counts toward an
-  // occupation if it carries a skill registered under that job title. These rows are keyed by profile
-  // and only read for the active members loaded above, so there is no need to re-join (and filter)
-  // directory_profiles here. If this optional query fails on a given database, recruited degrades to
-  // the sector and job-title arms rather than failing the whole read-only dashboard with a 503.
+  // Skill arm of the recruited match, loaded separately and defensively. Skills match by NAME, not
+  // by row (owner decision 2026-07-04): a profile counts toward EVERY occupation that lists an
+  // active skill with the same normalized name as one the profile holds. A skill is a capability,
+  // not a pointer to the one occupation whose copy the member happened to pick — row-based matching
+  // funneled every holder of a shared skill into a single sector. The `held` join is the member's
+  // own skill row; `other` is every active same-named row across the taxonomy. If this optional
+  // query fails on a given database, recruited degrades to the sector and job-title arms rather
+  // than failing the whole read-only dashboard with a 503.
   let profileSkillRows: ProfileSkillJobTitleRow[] = [];
   try {
     const profileSkillsRes = await queryDb<ProfileSkillJobTitleRow>(
-      `SELECT DISTINCT dps.profile_id::text AS profile_id, sts.job_title_id::text AS job_title_id
+      `SELECT DISTINCT dps.profile_id::text AS profile_id, other.job_title_id::text AS job_title_id
        FROM directory_profile_skills dps
-       JOIN skills_taxonomy_skills sts ON sts.id = dps.skill_id AND sts.is_active = TRUE`,
+       JOIN skills_taxonomy_skills held ON held.id = dps.skill_id AND held.is_active = TRUE
+       JOIN skills_taxonomy_skills other
+         ON lower(btrim(other.name)) = lower(btrim(held.name)) AND other.is_active = TRUE`,
     );
     profileSkillRows = profileSkillsRes.rows;
   } catch (error) {
@@ -294,6 +301,35 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
     set.add(r.job_title_id);
   }
 
+  // Sector each profile's skills map to through the taxonomy. Every skill is mapped to an
+  // occupation and a sector by spec, so a member's picked skills always resolve to a sector: the
+  // one holding the most of their skills (ties broken by sector name for determinism).
+  const sectorNameForTieBreak = new Map(sectors.map((s) => [s.id, s.name] as const));
+  const skillDerivedSectorByProfile = new Map<string, string>();
+  for (const [profileId, jobTitleIds] of skillJobTitlesByProfile) {
+    const tally = new Map<string, number>();
+    for (const jobTitleId of jobTitleIds) {
+      const sectorId = jobTitleById.get(jobTitleId)?.sector_id;
+      if (!sectorId) continue;
+      tally.set(sectorId, (tally.get(sectorId) ?? 0) + 1);
+    }
+    let best: string | null = null;
+    let bestCount = 0;
+    for (const [sectorId, count] of tally) {
+      if (
+        count > bestCount
+        || (count === bestCount && best !== null
+          && (sectorNameForTieBreak.get(sectorId) ?? '') < (sectorNameForTieBreak.get(best) ?? ''))
+      ) {
+        best = sectorId;
+        bestCount = count;
+      }
+    }
+    if (best) {
+      skillDerivedSectorByProfile.set(profileId, best);
+    }
+  }
+
   const memberCountBySector = new Map<string, number>();
   const memberCountByJobTitle = new Map<string, number>();
   const memberCountBySkillLevel = new Map<WorkforceSkillLevel, number>();
@@ -318,8 +354,15 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
   for (const m of members) {
     totalMembers += 1;
 
-    // Physical placement (where the profile actually sits).
-    const sectorKey = m.sector_id ?? UNASSIGNED_BUCKET;
+    // The member's own sector, by spec precedence: taxonomy-derived signals first — the chosen
+    // occupation maps to a sector, and the chosen skills map to occupations and sectors — then the
+    // raw profile sector field (a label with no taxonomy mapping behind it). Only a member with no
+    // occupation, no skills, and no sector lands in the Unassigned bucket.
+    const resolvedSectorId = m.job_title_sector_id
+      ?? skillDerivedSectorByProfile.get(m.profile_id)
+      ?? m.profile_sector_id
+      ?? null;
+    const sectorKey = resolvedSectorId ?? UNASSIGNED_BUCKET;
     memberCountBySector.set(sectorKey, (memberCountBySector.get(sectorKey) ?? 0) + 1);
     if (m.job_title_id) {
       memberCountByJobTitle.set(m.job_title_id, (memberCountByJobTitle.get(m.job_title_id) ?? 0) + 1);
@@ -340,15 +383,15 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
     // Matched occupations: the matched job titles PLUS every occupation in the profile's own sector
     // (V2's sector arm makes a profile count for all occupations in its sector).
     const matchedOccupations = new Set<string>(matchedJobTitles);
-    if (m.sector_id) {
-      for (const jt of jobTitlesBySector.get(m.sector_id) ?? []) {
+    if (resolvedSectorId) {
+      for (const jt of jobTitlesBySector.get(resolvedSectorId) ?? []) {
         matchedOccupations.add(jt.id);
       }
     }
 
     // Matched sectors: the profile's own sector plus the sectors of every matched job title.
     const matchedSectors = new Set<string>();
-    if (m.sector_id) matchedSectors.add(m.sector_id);
+    if (resolvedSectorId) matchedSectors.add(resolvedSectorId);
     for (const id of matchedJobTitles) {
       const jt = jobTitleById.get(id);
       if (jt) matchedSectors.add(jt.sector_id);

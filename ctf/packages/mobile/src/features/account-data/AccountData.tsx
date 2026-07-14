@@ -59,6 +59,26 @@ async function openTerms(): Promise<void> {
   }
 }
 
+// Public Accessibility Statement page, opened the same way as Terms.
+const ACCESSIBILITY_FALLBACK_URL = 'https://app.chargingthefuture.com/accessibility';
+
+function accessibilityUrl(): string {
+  try {
+    return `${getApiBaseUrl()}/accessibility`;
+  } catch {
+    return ACCESSIBILITY_FALLBACK_URL;
+  }
+}
+
+async function openAccessibility(): Promise<void> {
+  const url = accessibilityUrl();
+  try {
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert('Unable to open', 'We could not open the Accessibility page.');
+  }
+}
+
 const SERVICE_GLYPH: Record<string, string> = {
   chyme: '💬', directory: '📇', 'feed-announcements': '📣', foundation: '🪛', mood: '🌿',
   'gentle-pulse': '🎵', 'peer-programming': '👥', lighthouse: '🏠', 'socket-relay': '🔂',
@@ -303,6 +323,14 @@ export function AccountData() {
             accessibilityLabel="Open the Terms and Privacy Policy"
           >
             <Text style={s.legalLinkText}>Terms &amp; Privacy Policy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={openAccessibility}
+            style={s.legalLink}
+            accessibilityRole="link"
+            accessibilityLabel="Open the Accessibility page"
+          >
+            <Text style={s.legalLinkText}>Accessibility</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

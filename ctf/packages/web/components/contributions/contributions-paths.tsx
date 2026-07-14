@@ -116,14 +116,14 @@ function GiftCardForm({ t, submitting, error, onSubmit, onCancel }: { t: Contrib
         </div>
       </div>
       <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle(t)}>Card value (USD, max $500)</label>
-        <input value={cardValue} onChange={(e) => setCardValue(e.target.value)} inputMode="decimal" placeholder="e.g. 25" style={inputStyle(t)} />
+        <label htmlFor="contrib-path-card-value" style={labelStyle(t)}>Card value (USD, max $500)</label>
+        <input id="contrib-path-card-value" value={cardValue} onChange={(e) => setCardValue(e.target.value)} inputMode="decimal" placeholder="e.g. 25" style={inputStyle(t)} />
       </div>
       <div style={{ marginBottom: 18 }}>
-        <label style={labelStyle(t)}>
+        <label htmlFor="contrib-path-signal" style={labelStyle(t)}>
           Your Signal URL or phone number <span style={{ color: '#EF4444' }}>*</span>
         </label>
-        <input value={signalContact} onChange={(e) => setSignalContact(e.target.value)} placeholder="signal.me/+1… or +1 555-…" style={inputStyle(t)} />
+        <input id="contrib-path-signal" value={signalContact} onChange={(e) => setSignalContact(e.target.value)} placeholder="signal.me/+1… or +1 555-…" style={inputStyle(t)} />
         <div style={{ fontSize: 11, color: t.MUTED, marginTop: 5 }}>So we can match your card to your account.</div>
       </div>
       <ErrorLine error={error} />

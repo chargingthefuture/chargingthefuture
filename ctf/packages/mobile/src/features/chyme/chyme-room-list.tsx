@@ -148,7 +148,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       justifyContent: 'space-between',
       paddingHorizontal: 16,
     },
-    clock: { fontSize: 13, fontWeight: '700', color: t.isComic ? t.border : '#E8EAF0' },
+    clock: { fontSize: 13, fontWeight: '700', color: t.isComic ? t.border : t.textShell },
     signal: { fontSize: 12, color: t.textSecondary },
     header: {
       paddingHorizontal: 16,
@@ -196,7 +196,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       backgroundColor: t.isComic ? `${t.border}10` : `${accent}10`,
       borderColor: t.isComic ? t.border : `${accent}20`,
     },
-    statValue: { fontSize: 16, fontWeight: '800', color: t.isComic ? t.textPrimary : '#E8EAF0' },
+    statValue: { fontSize: 16, fontWeight: '800', color: t.isComic ? t.textPrimary : t.textShell },
     statValuePrimary: { fontSize: 16, fontWeight: '800', color: t.isComic ? t.border : accent },
     statLabel: { fontSize: 11, color: t.textSecondary, marginTop: 2 },
     tabRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },

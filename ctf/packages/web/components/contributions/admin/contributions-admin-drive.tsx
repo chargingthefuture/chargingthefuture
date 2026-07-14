@@ -78,12 +78,12 @@ export function ContributionsAdminDrive({ t, cycle, saving, error, onSave, isMob
           <span style={{ fontSize: 14, fontWeight: 600, color: t.TITLE }}>{cycle ? 'Active drive' : 'Start a drive'}</span>
         </div>
         <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 12, color: t.MUTED, display: 'block', marginBottom: 5 }}>Start date</label>
-          <input type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} style={fieldStyle(t)} />
+          <label htmlFor="contrib-drive-start" style={{ fontSize: 12, color: t.MUTED, display: 'block', marginBottom: 5 }}>Start date</label>
+          <input id="contrib-drive-start" type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} style={fieldStyle(t)} />
         </div>
         <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 12, color: t.MUTED, display: 'block', marginBottom: 5 }}>End date</label>
-          <input type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} style={fieldStyle(t)} />
+          <label htmlFor="contrib-drive-end" style={{ fontSize: 12, color: t.MUTED, display: 'block', marginBottom: 5 }}>End date</label>
+          <input id="contrib-drive-end" type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} style={fieldStyle(t)} />
         </div>
         <div style={{ marginTop: 6, paddingTop: 16, borderTop: `1px solid ${t.BORDER_SOLID}` }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 14 }}>Goals</div>
@@ -91,11 +91,11 @@ export function ContributionsAdminDrive({ t, cycle, saving, error, onSave, isMob
             // On mobile the label + fixed-width input overflowed the card (the 180px label could not
             // shrink), so stack the label over a full-width input on phones; desktop keeps the inline row.
             <div key={label} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 5 : 10, marginBottom: isMobile ? 14 : 10 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: t.MUTED, width: isMobile ? 'auto' : 180, flexShrink: 0 }}>
+              <label htmlFor={`contrib-goal-${label.replace(/\s+/g, '-')}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: t.MUTED, width: isMobile ? 'auto' : 180, flexShrink: 0 }}>
                 <Icon size={13} color={t.MUTED} style={{ flexShrink: 0 }} />
                 {label}
               </label>
-              <input value={value} onChange={(e) => set(e.target.value)} inputMode="numeric" style={fieldStyle(t, isMobile ? '100%' : 100)} />
+              <input id={`contrib-goal-${label.replace(/\s+/g, '-')}`} value={value} onChange={(e) => set(e.target.value)} inputMode="numeric" style={fieldStyle(t, isMobile ? '100%' : 100)} />
             </div>
           ))}
         </div>

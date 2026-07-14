@@ -436,7 +436,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     width: '100%', padding: 12, borderRadius: t.radius,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
-    fontSize: 14, color: '#E8EAF0',
+    fontSize: 14, color: t.textShell,
     marginBottom: 12, minHeight: 72, textAlignVertical: 'top',
   },
   submitBtn: {
@@ -473,7 +473,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1, borderColor: t.borderFaint,
   },
-  chartTitle: { fontSize: 13, fontWeight: '700', color: '#9CA3AF', marginBottom: 12 },
+  chartTitle: { fontSize: 13, fontWeight: '700', color: t.textSecondary, marginBottom: 12 },
   chartRow: { flexDirection: 'row', gap: 6, alignItems: 'flex-end', height: 96 },
   chartCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   chartBarTrack: { width: '100%', height: 60, justifyContent: 'flex-end', alignItems: 'stretch' },

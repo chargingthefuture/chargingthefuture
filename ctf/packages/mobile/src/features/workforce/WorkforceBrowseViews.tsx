@@ -58,13 +58,25 @@ function MemberCard({ m }: { m: WorkforceMatchedMember }) {
           <Text style={[styles.badgeText, { color: r.color }]}>{r.label}</Text>
         </View>
       </View>
-      {m.matchingOccupations.length > 0 ? (
-        <Text style={styles.memberMeta} numberOfLines={2}>
-          {m.matchingOccupations.map((o) => o.title).join(', ')}
-        </Text>
-      ) : null}
+      {m.matchingOccupations.map((o) => {
+        const or_ = REASON[o.reason];
+        return (
+          <View key={o.id} style={styles.memberOccRow}>
+            <Text style={styles.memberMeta} numberOfLines={2}>
+              {o.title} ({o.sector})
+              {o.viaSkills.length > 0 ? ` — via ${o.viaSkills.join(', ')}` : ''}
+            </Text>
+            <View style={styles.memberOccMetaRow}>
+              <View style={[styles.badge, { backgroundColor: or_.color + '1A', borderColor: or_.color + '40' }]}>
+                <Text style={[styles.badgeText, { color: or_.color }]}>{or_.label}</Text>
+              </View>
+              <Text style={styles.memberSub}>{o.gap > 0 ? `${fmt(o.gap)} to fill` : 'filled'}</Text>
+            </View>
+          </View>
+        );
+      })}
       {m.skills.length > 0 ? (
-        <Text style={styles.memberSub} numberOfLines={2}>Skills: {m.skills.join(', ')}</Text>
+        <Text style={styles.memberSub} numberOfLines={2}>All skills: {m.skills.join(', ')}</Text>
       ) : null}
     </View>
   );
@@ -163,8 +175,9 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
     ? [
         { l: 'Headcount target', v: fmt(occ.target) },
         { l: 'Annual training target', v: fmt(occ.annualTrainingTarget) },
-        { l: 'Members', v: fmt(occ.members) },
-        { l: 'Recruited', v: fmt(occ.recruited) },
+        // No declared-occupation "Members" stat: members join jobless but skilled, so the declared
+        // count is ~always 0. Recruited (matched) carries the story; occ.members stays in the API.
+        { l: 'Recruited (matched)', v: fmt(occ.recruited) },
         { l: 'Roles to fill', v: occ.gap > 0 ? fmt(occ.gap) : '—' },
       ]
     : [];
@@ -302,37 +315,46 @@ function makeStyles(t: ThemeTokens, accent: string) {
     errorText: { fontSize: 14, color: t.danger, textAlign: 'center', paddingVertical: 12 },
     input: {
       paddingHorizontal: 12, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.04)',
-      borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 8, color: '#E8EAF0', fontSize: 14, marginBottom: 10,
+      borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 8, color: t.textShell, fontSize: 14, marginBottom: 10,
     },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
     chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     chipActive: { backgroundColor: accent + '20', borderColor: accent + '40' },
-    chipText: { fontSize: 12, color: '#9CA3AF', fontWeight: '600' },
+    chipText: { fontSize: 12, color: t.textSecondary, fontWeight: '600' },
     chipTextActive: { color: accent },
     occRow: {
       flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10,
       borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
     },
     rowSub: { fontSize: 11, color: t.textSecondary },
-    rowMeta: { fontSize: 11, color: '#9CA3AF' },
+    rowMeta: { fontSize: 11, color: t.textSecondary },
     rowGap: { fontSize: 13, fontWeight: '700', textAlign: 'right', minWidth: 90 },
     bucketRow: { borderBottomWidth: 1, borderBottomColor: t.borderFaint },
     bucketHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
     bucketChevron: { fontSize: 14, color: t.textSecondary, width: 14 },
-    bucketName: { flex: 1, fontSize: 14, color: '#E8EAF0', fontWeight: '600' },
+    bucketName: { flex: 1, fontSize: 14, color: t.textShell, fontWeight: '600' },
     bucketBody: { paddingLeft: 24, paddingBottom: 12, gap: 8 },
     memberCard: {
       padding: 12, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.02)',
       borderWidth: 1, borderColor: t.borderFaint, marginBottom: 8,
     },
+    memberOccRow: {
+      marginTop: 4,
+      gap: 2,
+    },
+    memberOccMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
     memberHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-    memberName: { fontSize: 14, fontWeight: '600', color: '#E8EAF0' },
-    memberMeta: { fontSize: 12, color: '#9CA3AF', marginBottom: 2 },
+    memberName: { fontSize: 14, fontWeight: '600', color: t.textShell },
+    memberMeta: { fontSize: 12, color: t.textSecondary, marginBottom: 2 },
     memberSub: { fontSize: 11, color: t.textSecondary },
     badge: { paddingHorizontal: 7, paddingVertical: 1, borderRadius: t.radiusChip, borderWidth: 1 },
     badgeText: { fontSize: 11, fontWeight: '600' },
     backBtn: { paddingVertical: 8, marginBottom: 8 },
-    backText: { fontSize: 13, color: '#9CA3AF' },
+    backText: { fontSize: 13, color: t.textSecondary },
     detailTitle: { fontSize: 20, fontWeight: '700', color: t.textPrimary },
     statWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14, marginBottom: 14 },
     statBox: {
@@ -345,6 +367,6 @@ function makeStyles(t: ThemeTokens, accent: string) {
     pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 },
     pageBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     pageBtnDisabled: { opacity: 0.4 },
-    pageBtnText: { fontSize: 13, color: '#E8EAF0' },
+    pageBtnText: { fontSize: 13, color: t.textShell },
   });
 }

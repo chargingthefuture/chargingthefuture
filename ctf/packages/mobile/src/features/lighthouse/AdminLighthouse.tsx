@@ -12,7 +12,6 @@ import {
 
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
-const SUBTLE = '#9CA3AF';
 
 function statusColor(status: LighthouseMatch['status']): string {
   if (status === 'accepted' || status === 'completed') return '#22C55E';
@@ -190,6 +189,7 @@ export const AdminLighthouse = () => {
 };
 
 function makeStyles(t: ThemeTokens) {
+  const SUBTLE = t.textSecondary;
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.bg },
     content: { padding: 16, gap: 16 },

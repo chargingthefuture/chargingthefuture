@@ -54,7 +54,6 @@ export function UnlockVerifyBanner({
 
   return (
     <section
-      role="region"
       aria-label="Verify your account"
       style={{
         margin: '0 0 14px',
@@ -74,15 +73,14 @@ export function UnlockVerifyBanner({
       {isPending ? (
         <p style={{ fontSize: 13, color: 'var(--ctf-text-secondary)', lineHeight: 1.6, margin: 0 }}>
           Thanks — your Quora profile is submitted and a human is reviewing it. You have Commons access
-          while you wait. Questions? Just send a message below in the Commons and we&apos;ll help.
+          while you wait.
         </p>
       ) : (
         <>
           <p style={{ fontSize: 13, color: 'var(--ctf-text-secondary)', lineHeight: 1.6, margin: '0 0 10px' }}>
             {wasRejected
               ? 'Your last submission could not be verified. Re-submit your Quora profile URL below — a human reviews every one.'
-              : 'Submit your Quora profile URL so we can confirm you are a real person. A human reviews every submission.'}{' '}
-            Having trouble finding your URL? Just send a message below in the Commons and we&apos;ll help.
+              : 'Submit your Quora profile URL so we can confirm you are a real person. A human reviews every submission.'}
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
@@ -142,6 +140,32 @@ export function UnlockVerifyBanner({
             </button>
           </div>
           {error ? <div style={{ fontSize: 12, color: '#F87171', marginTop: 8 }}>{error}</div> : null}
+
+          {/* Prominent, universal help for a member who can't find their Quora profile URL. */}
+          <div
+            role="note"
+            style={{
+              marginTop: 12,
+              padding: '10px 12px',
+              borderRadius: 10,
+              background: 'rgba(192,132,252,0.12)',
+              border: '1.5px solid rgba(192,132,252,0.45)',
+              fontSize: 12.5,
+              color: 'var(--ctf-text-secondary)',
+              lineHeight: 1.55,
+            }}
+          >
+            <strong style={{ color: 'var(--ctf-text)' }}>Can’t find your Quora profile URL?</strong> Go to{' '}
+            <a
+              href="https://tiskillsnetwork.quora.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#C084FC', fontWeight: 700 }}
+            >
+              tiskillsnetwork.quora.com
+            </a>{' '}
+            and comment on any post asking for help — I&apos;ll reply with your profile URL.
+          </div>
         </>
       )}
     </section>

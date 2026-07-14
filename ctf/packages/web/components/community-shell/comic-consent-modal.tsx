@@ -88,6 +88,7 @@ export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentMo
   }
 
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- backdrop click-to-close is a mouse convenience; keyboard users close via Escape (handler above) or the visible close button.
     <div
       className={styles.comicConsentOverlay}
       role="dialog"

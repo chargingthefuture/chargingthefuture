@@ -249,7 +249,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   actionBtnDisabled: { opacity: 0.6 },
   actionBtnText: { fontSize: 12, fontWeight: '600' },
   centeredMsg: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyTitle: { fontSize: 15, fontWeight: '600', color: '#9CA3AF', marginBottom: 8 },
+  emptyTitle: { fontSize: 15, fontWeight: '600', color: t.textSecondary, marginBottom: 8 },
   emptyBody: {
     fontSize: 13,
     color: t.textMuted,

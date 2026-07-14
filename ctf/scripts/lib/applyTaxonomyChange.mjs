@@ -1,27 +1,27 @@
-// Applies the append-only taxonomy change-ops list (taxonomyChangeOps.mjs) to the LIVE database.
+// Applies the append-only taxonomy change list (taxonomyChange.mjs) to the LIVE database.
 // This is the ONLY code path that writes the skills taxonomy from the repo — run by
-// seedSkillsTaxonomy.mjs via the owner-dispatched workflow (.github/workflows/seed-skills-taxonomy.yml).
+// seedSkillsTaxonomy.mjs via the owner-run workflow (.github/workflows/seed-skills-taxonomy.yml).
 //
 // Design (owner decisions 2026-07-03 — see ctf/docs/developer/SKILLS_TAXONOMY_CHANGE_GOVERNANCE_PLAN.md):
-// - Replays the whole list in one transaction, in order. Every op is NATURALLY IDEMPOTENT: an op
-//   whose end state already holds is a no-op, so re-running the full list is always safe and a
-//   reseed can never resurrect a deactivated row (deactivation is itself an op in the list).
+// - Replays the whole list in one transaction, in order. Every change is NATURALLY IDEMPOTENT: an entry
+//   whose end state already holds writes nothing, so re-running the full list is always safe and a
+//   reseed can never resurrect a deactivated row (deactivation is itself an entry in the list).
 // - NO HARD DELETE. Deactivate/reactivate flip is_active; reparent moves a skill row's
 //   job_title_id (member profile links reference the skill row id, so members keep their skills).
 // - Sectors are looked up by name, never created. A missing sector is recorded in the summary and
-//   the ops that need it are skipped; the run then exits non-zero so the skip is visible.
+//   the changes that need it are skipped; the run then exits non-zero so the skip is visible.
 // - Every real mutation writes a skills_taxonomy_change_events audit row (actor
-//   'taxonomy-change-ops', metadata carries the op id). No-ops write nothing.
+//   'taxonomy-change', metadata carries the change id). No-ops write nothing.
 // - Deactivations re-check the live member-reference count; the validation layer already requires
-//   an acknowledgedImpact note on the op, and the live count is recorded in the audit metadata.
+//   an acknowledgedImpact note on the entry, and the live count is recorded in the audit metadata.
 // - addSkill carries the skill-proposal side-effects: matching skills_hunt_proposed_skill_promotions
 //   rows are marked 'promoted', and Directory "skill not listed" proposals of the same label are
 //   auto-attached to the proposing members' profiles.
 
 import { normalizeTaxonomyName } from './taxonomyNames.mjs';
-import { TAXONOMY_CHANGE_OPS, validateTaxonomyChangeOps } from './taxonomyChangeOps.mjs';
+import { TAXONOMY_CHANGES, validateTaxonomyChanges } from './taxonomyChange.mjs';
 
-const ACTOR_ID = 'taxonomy-change-ops';
+const ACTOR_ID = 'taxonomy-change';
 
 async function findSectorIdByName(client, sectorName) {
   const result = await client.query(
@@ -114,32 +114,32 @@ async function applyProposalPromotions(client, jobTitleId, normalizedSkills, sum
   summary.directoryProposalsMarkedPromoted += markedDirectory.rowCount ?? 0;
 }
 
-// Resolve the occupation an op targets. Returns { id } or null (missing sector/occupation is
-// recorded on the summary and the op is skipped — never invented).
+// Resolve the occupation an entry targets. Returns { id } or null (missing sector/occupation is
+// recorded on the summary and the entry is skipped — never invented).
 async function resolveOccupation(client, sectorName, occupationName, summary, opId) {
   const sector = normalizeTaxonomyName(sectorName);
   const occupation = normalizeTaxonomyName(occupationName);
   const sectorId = await findSectorIdByName(client, sector);
   if (!sectorId) {
-    summary.missingSectors.push(`${sector} (op ${opId})`);
+    summary.missingSectors.push(`${sector} (change ${opId})`);
     return null;
   }
   const jobTitle = await findJobTitle(client, sectorId, occupation);
   if (!jobTitle) {
-    summary.missingTargets.push(`occupation "${occupation}" in ${sector} (op ${opId})`);
+    summary.missingTargets.push(`occupation "${occupation}" in ${sector} (change ${opId})`);
     return null;
   }
   return jobTitle;
 }
 
-export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS } = {}) {
+export async function applyTaxonomyChanges({ pool, changes = TAXONOMY_CHANGES } = {}) {
   if (!pool) {
     throw new Error('pool is required.');
   }
 
-  const validation = validateTaxonomyChangeOps(ops);
+  const validation = validateTaxonomyChanges(changes);
   if (!validation.valid) {
-    throw new Error(`taxonomy change-ops list is invalid:\n${validation.errors.join('\n')}`);
+    throw new Error(`taxonomy change list is invalid:\n${validation.errors.join('\n')}`);
   }
 
   const summary = {
@@ -162,12 +162,12 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
   try {
     await client.query('BEGIN');
 
-    // Pre-flight: check every reparentSkill op against the live state and report ALL collisions in
+    // Pre-flight: check every reparentSkill entry against the live state and report ALL collisions in
     // one error, with the blocking row's active state and both rows' member-holder counts. Without
-    // this the run dies on the first collision of possibly several, costing one dispatch per
+    // this the run dies on the first collision of possibly several, costing one run per
     // discovery. Purely read-only; the in-loop check stays as the authoritative sequential guard.
     const collisions = [];
-    for (const op of ops) {
+    for (const op of changes) {
       if (op.op !== 'reparentSkill') continue;
       const toSectorId = await findSectorIdByName(client, normalizeTaxonomyName(op.toSector));
       if (!toSectorId) continue;
@@ -184,10 +184,10 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
       const targetHolders = await countSkillMemberReferences(client, atTarget.id);
       const sourceHolders = await countSkillMemberReferences(client, atSource.id);
       collisions.push(
-        `op ${op.id}: "${op.skill}" already exists under "${op.toOccupation}" `
+        `change ${op.id}: "${op.skill}" already exists under "${op.toOccupation}" `
         + `(target row ${atTarget.is_active ? 'ACTIVE' : 'INACTIVE'}, ${targetHolders} member holder(s); `
         + `source row under "${op.fromOccupation}" has ${sourceHolders} member holder(s)). `
-        + `A reparent cannot merge rows — correct this never-applied op (e.g. deactivate the source `
+        + `A reparent cannot merge rows — correct this never-applied entry (e.g. deactivate the source `
         + `copy and, if the target row is inactive, reactivate it).`,
       );
     }
@@ -195,7 +195,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
       throw new Error(`reparent collision pre-flight found ${collisions.length} conflict(s):\n${collisions.join('\n')}`);
     }
 
-    for (const op of ops) {
+    for (const op of changes) {
       const meta = { opId: op.id, op: op.op };
 
       switch (op.op) {
@@ -204,7 +204,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           const occupation = normalizeTaxonomyName(op.occupation);
           const sectorId = await findSectorIdByName(client, sector);
           if (!sectorId) {
-            summary.missingSectors.push(`${sector} (op ${op.id})`);
+            summary.missingSectors.push(`${sector} (change ${op.id})`);
             break;
           }
           const existing = await findJobTitle(client, sectorId, occupation);
@@ -213,8 +213,8 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             break;
           }
           if (existing) {
-            // Exists but inactive: an addOccupation op does NOT resurrect it — that would let a
-            // reseed undo a deactivation op. Reactivation is its own explicit op.
+            // Exists but inactive: an addOccupation change does NOT resurrect it — that would let a
+            // reseed undo a deactivation. Reactivation is its own explicit change.
             summary.noops += 1;
             break;
           }
@@ -225,7 +225,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           );
           await recordChangeEvent(client, {
             targetType: 'job-title', targetId: inserted.rows[0].id, action: 'create',
-            reason: `change-op ${op.id}: addOccupation`, metadata: meta,
+            reason: `change ${op.id}: addOccupation`, metadata: meta,
           });
           summary.occupationsCreated += 1;
           summary.applied += 1;
@@ -238,7 +238,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           const skillName = normalizeTaxonomyName(op.skill);
           const existing = await findSkill(client, jobTitle.id, skillName);
           if (existing) {
-            // Present (active or deliberately deactivated) — no-op; reactivation is its own op.
+            // Present (active or deliberately deactivated) — nothing to write; reactivation is its own change.
             summary.noops += 1;
             // The promotion side-effects still run: they are themselves idempotent and a
             // previously-applied addSkill may have new pending Directory proposals to resolve.
@@ -252,7 +252,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           );
           await recordChangeEvent(client, {
             targetType: 'skill', targetId: inserted.rows[0].id, action: 'create',
-            reason: `change-op ${op.id}: addSkill`, metadata: meta,
+            reason: `change ${op.id}: addSkill`, metadata: meta,
           });
           summary.skillsCreated += 1;
           summary.applied += 1;
@@ -264,7 +264,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           const sector = normalizeTaxonomyName(op.sector);
           const sectorId = await findSectorIdByName(client, sector);
           if (!sectorId) {
-            summary.missingSectors.push(`${sector} (op ${op.id})`);
+            summary.missingSectors.push(`${sector} (change ${op.id})`);
             break;
           }
           const from = await findJobTitle(client, sectorId, normalizeTaxonomyName(op.from));
@@ -274,11 +274,11 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             break;
           }
           if (!from) {
-            summary.missingTargets.push(`occupation "${op.from}" in ${sector} (op ${op.id})`);
+            summary.missingTargets.push(`occupation "${op.from}" in ${sector} (change ${op.id})`);
             break;
           }
           if (to) {
-            throw new Error(`op ${op.id}: rename target "${op.to}" already exists in ${sector} alongside "${op.from}" — resolve manually.`);
+            throw new Error(`change ${op.id}: rename target "${op.to}" already exists in ${sector} alongside "${op.from}" — resolve manually.`);
           }
           await client.query(
             `UPDATE skills_taxonomy_job_titles SET name = $2, updated_at = NOW() WHERE id = $1`,
@@ -286,7 +286,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           );
           await recordChangeEvent(client, {
             targetType: 'job-title', targetId: from.id, action: 'rename',
-            reason: `change-op ${op.id}: renameOccupation "${op.from}" -> "${op.to}"`, metadata: meta,
+            reason: `change ${op.id}: renameOccupation "${op.from}" -> "${op.to}"`, metadata: meta,
           });
           summary.renames += 1;
           summary.applied += 1;
@@ -303,11 +303,11 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             break;
           }
           if (!from) {
-            summary.missingTargets.push(`skill "${op.from}" under "${op.occupation}" (op ${op.id})`);
+            summary.missingTargets.push(`skill "${op.from}" under "${op.occupation}" (change ${op.id})`);
             break;
           }
           if (to) {
-            throw new Error(`op ${op.id}: rename target skill "${op.to}" already exists under "${op.occupation}" — resolve manually.`);
+            throw new Error(`change ${op.id}: rename target skill "${op.to}" already exists under "${op.occupation}" — resolve manually.`);
           }
           // Keep the old label findable: append it to aliases if absent.
           const aliases = Array.isArray(from.aliases) ? from.aliases : [];
@@ -321,7 +321,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           );
           await recordChangeEvent(client, {
             targetType: 'skill', targetId: from.id, action: 'rename',
-            reason: `change-op ${op.id}: renameSkill "${op.from}" -> "${op.to}"`, metadata: meta,
+            reason: `change ${op.id}: renameSkill "${op.from}" -> "${op.to}"`, metadata: meta,
           });
           summary.renames += 1;
           summary.applied += 1;
@@ -340,11 +340,11 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             break;
           }
           if (!atSource) {
-            summary.missingTargets.push(`skill "${op.skill}" under "${op.fromOccupation}" (op ${op.id})`);
+            summary.missingTargets.push(`skill "${op.skill}" under "${op.fromOccupation}" (change ${op.id})`);
             break;
           }
           if (atTarget) {
-            throw new Error(`op ${op.id}: a skill named "${op.skill}" already exists under "${op.toOccupation}" — a reparent cannot merge rows; resolve manually.`);
+            throw new Error(`change ${op.id}: a skill named "${op.skill}" already exists under "${op.toOccupation}" — a reparent cannot merge rows; resolve manually.`);
           }
           const memberReferences = await countSkillMemberReferences(client, atSource.id);
           await client.query(
@@ -353,7 +353,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           );
           await recordChangeEvent(client, {
             targetType: 'skill', targetId: atSource.id, action: 'reparent',
-            reason: `change-op ${op.id}: reparentSkill "${op.skill}" "${op.fromOccupation}" -> "${op.toOccupation}"`,
+            reason: `change ${op.id}: reparentSkill "${op.skill}" "${op.fromOccupation}" -> "${op.toOccupation}"`,
             metadata: { ...meta, fromJobTitleId: fromTitle?.id ?? null, toJobTitleId: toTitle.id, memberReferences },
           });
           summary.reparents += 1;
@@ -369,7 +369,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           const atTarget = await findSkill(client, toTitle.id, skillName);
           const atSource = fromTitle ? await findSkill(client, fromTitle.id, skillName) : null;
           if (!atSource && !atTarget) {
-            summary.missingTargets.push(`skill "${op.skill}" under "${op.fromOccupation}" or "${op.toOccupation}" (op ${op.id})`);
+            summary.missingTargets.push(`skill "${op.skill}" under "${op.fromOccupation}" or "${op.toOccupation}" (change ${op.id})`);
             break;
           }
           if (!atSource && atTarget) {
@@ -384,7 +384,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             );
             await recordChangeEvent(client, {
               targetType: 'skill', targetId: atTarget.id, action: 'reactivate',
-              reason: `change-op ${op.id}: consolidateSkill "${op.skill}" — surviving row under "${op.toOccupation}" reactivated`,
+              reason: `change ${op.id}: consolidateSkill "${op.skill}" — surviving row under "${op.toOccupation}" reactivated`,
               metadata: meta,
             });
             summary.reactivations += 1;
@@ -400,7 +400,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             );
             await recordChangeEvent(client, {
               targetType: 'skill', targetId: atSource.id, action: 'reparent',
-              reason: `change-op ${op.id}: consolidateSkill "${op.skill}" "${op.fromOccupation}" -> "${op.toOccupation}"`,
+              reason: `change ${op.id}: consolidateSkill "${op.skill}" "${op.fromOccupation}" -> "${op.toOccupation}"`,
               metadata: { ...meta, fromJobTitleId: fromTitle?.id ?? null, toJobTitleId: toTitle.id, memberReferences },
             });
             summary.reparents += 1;
@@ -417,7 +417,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             );
             await recordChangeEvent(client, {
               targetType: 'skill', targetId: atSource.id, action: 'deactivate',
-              reason: `change-op ${op.id}: consolidateSkill "${op.skill}" — source copy under "${op.fromOccupation}" absorbed by the same-named row under "${op.toOccupation}"`,
+              reason: `change ${op.id}: consolidateSkill "${op.skill}" — source copy under "${op.fromOccupation}" absorbed by the same-named row under "${op.toOccupation}"`,
               metadata: { ...meta, survivingSkillId: atTarget.id, memberReferences: sourceHolders },
             });
             summary.deactivations += 1;
@@ -430,7 +430,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             );
             await recordChangeEvent(client, {
               targetType: 'skill', targetId: atTarget.id, action: 'reactivate',
-              reason: `change-op ${op.id}: consolidateSkill "${op.skill}" — surviving row under "${op.toOccupation}" reactivated`,
+              reason: `change ${op.id}: consolidateSkill "${op.skill}" — surviving row under "${op.toOccupation}" reactivated`,
               metadata: meta,
             });
             summary.reactivations += 1;
@@ -449,7 +449,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           if (!jobTitle) break;
           const skill = await findSkill(client, jobTitle.id, normalizeTaxonomyName(op.skill));
           if (!skill) {
-            summary.missingTargets.push(`skill "${op.skill}" under "${op.occupation}" (op ${op.id})`);
+            summary.missingTargets.push(`skill "${op.skill}" under "${op.occupation}" (change ${op.id})`);
             break;
           }
           if (!skill.is_active) {
@@ -463,7 +463,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           );
           await recordChangeEvent(client, {
             targetType: 'skill', targetId: skill.id, action: 'deactivate',
-            reason: `change-op ${op.id}: ${op.acknowledgedImpact}`,
+            reason: `change ${op.id}: ${op.acknowledgedImpact}`,
             metadata: { ...meta, memberReferences },
           });
           summary.deactivations += 1;
@@ -483,7 +483,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
             [jobTitle.id],
           );
           if ((activeSkills.rows[0]?.total ?? 0) > 0) {
-            throw new Error(`op ${op.id}: occupation "${op.occupation}" still has ${activeSkills.rows[0].total} active skill(s); deactivate or reparent them first.`);
+            throw new Error(`change ${op.id}: occupation "${op.occupation}" still has ${activeSkills.rows[0].total} active skill(s); deactivate or reparent them first.`);
           }
           await client.query(
             `UPDATE skills_taxonomy_job_titles SET is_active = false, updated_at = NOW() WHERE id = $1`,
@@ -491,7 +491,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           );
           await recordChangeEvent(client, {
             targetType: 'job-title', targetId: jobTitle.id, action: 'deactivate',
-            reason: `change-op ${op.id}: ${op.acknowledgedImpact}`, metadata: meta,
+            reason: `change ${op.id}: ${op.acknowledgedImpact}`, metadata: meta,
           });
           summary.deactivations += 1;
           summary.applied += 1;
@@ -503,7 +503,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           if (!jobTitle) break;
           const skill = await findSkill(client, jobTitle.id, normalizeTaxonomyName(op.skill));
           if (!skill) {
-            summary.missingTargets.push(`skill "${op.skill}" under "${op.occupation}" (op ${op.id})`);
+            summary.missingTargets.push(`skill "${op.skill}" under "${op.occupation}" (change ${op.id})`);
             break;
           }
           if (skill.is_active) {
@@ -516,7 +516,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           );
           await recordChangeEvent(client, {
             targetType: 'skill', targetId: skill.id, action: 'reactivate',
-            reason: `change-op ${op.id}: reactivateSkill`, metadata: meta,
+            reason: `change ${op.id}: reactivateSkill`, metadata: meta,
           });
           summary.reactivations += 1;
           summary.applied += 1;
@@ -527,12 +527,12 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           const sector = normalizeTaxonomyName(op.sector);
           const sectorId = await findSectorIdByName(client, sector);
           if (!sectorId) {
-            summary.missingSectors.push(`${sector} (op ${op.id})`);
+            summary.missingSectors.push(`${sector} (change ${op.id})`);
             break;
           }
           const jobTitle = await findJobTitle(client, sectorId, normalizeTaxonomyName(op.occupation));
           if (!jobTitle) {
-            summary.missingTargets.push(`occupation "${op.occupation}" in ${sector} (op ${op.id})`);
+            summary.missingTargets.push(`occupation "${op.occupation}" in ${sector} (change ${op.id})`);
             break;
           }
           if (jobTitle.is_active) {
@@ -545,7 +545,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
           );
           await recordChangeEvent(client, {
             targetType: 'job-title', targetId: jobTitle.id, action: 'reactivate',
-            reason: `change-op ${op.id}: reactivateOccupation`, metadata: meta,
+            reason: `change ${op.id}: reactivateOccupation`, metadata: meta,
           });
           summary.reactivations += 1;
           summary.applied += 1;
@@ -553,7 +553,7 @@ export async function applyTaxonomyChangeOps({ pool, ops = TAXONOMY_CHANGE_OPS }
         }
 
         default:
-          throw new Error(`op ${op.id}: unhandled op type "${op.op}".`);
+          throw new Error(`change ${op.id}: unhandled change type "${op.op}".`);
       }
     }
 

@@ -74,12 +74,12 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     rowLabel: {
       fontSize: 13,
-      color: '#9CA3AF',
+      color: t.textSecondary,
     },
     rowValue: {
       fontSize: 13,
       fontWeight: '600',
-      color: '#E8EAF0',
+      color: t.textShell,
     },
   });
 }

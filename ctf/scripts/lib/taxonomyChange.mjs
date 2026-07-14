@@ -1,32 +1,32 @@
-// The append-only, ordered change-ops list for the skills taxonomy, and its static validation.
+// The append-only, ordered change list for the skills taxonomy, and its static validation.
 //
 // GOVERNANCE (owner decision 2026-07-03 — see ctf/docs/developer/SKILLS_TAXONOMY_CHANGE_GOVERNANCE_PLAN.md):
 // the taxonomy (sector -> occupation/job title -> skill) is baseline data for Directory, Workforce,
-// SkillsHunt, Foundation, LevelUp, and GDP. It is never edited one-off. Every change is an op
-// appended to TAXONOMY_CHANGE_OPS below, reviewed in a PR, validated by CI
-// (ctf/scripts/check-taxonomy-change-ops.mjs), and applied to the live database by the owner-run
-// manual-dispatch workflow (.github/workflows/seed-skills-taxonomy.yml -> seedSkillsTaxonomy.mjs ->
-// applyTaxonomyChangeOps.mjs).
+// SkillsHunt, Foundation, LevelUp, and GDP. It is never edited one-off. Every change is an entry
+// appended to TAXONOMY_CHANGES below, reviewed in a PR, validated by CI
+// (ctf/scripts/check-taxonomy-change.mjs), and applied to the live database by the owner-run
+// workflow (started by hand) (.github/workflows/seed-skills-taxonomy.yml -> seedSkillsTaxonomy.mjs ->
+// applyTaxonomyChange.mjs).
 //
 // Rules that keep this safe:
-// - APPEND ONLY. Never edit, delete, reorder, or renumber an op that has APPLIED to the live
-//   database. To undo an applied change, append the reverse op (e.g. reactivateSkill after a
-//   deactivateSkill). An op that has NEVER successfully applied (every run containing it failed and
+// - APPEND ONLY. Never edit, delete, reorder, or renumber an entry that has APPLIED to the live
+//   database. To undo an applied change, append the reverse change (e.g. reactivateSkill after a
+//   deactivateSkill). An entry that has NEVER successfully applied (every run containing it failed and
 //   rolled back) may be corrected in place via a reviewed PR — like an unapplied migration, editing
 //   it cannot desync anything because it never took effect anywhere.
-// - NO HARD DELETE. There is no delete op; deactivate (is_active = false) + reparent cover every
+// - NO HARD DELETE. There is no delete change type; deactivate (is_active = false) + reparent cover every
 //   removal need and stay reversible. Member profile links point at the skill row id, so a
 //   reparented skill keeps every member's profile intact.
-// - SECTORS ARE FIXED. No op creates or deactivates a sector; a sector is always looked up by name
-//   in the live database. A missing sector means the op is mis-named.
+// - SECTORS ARE FIXED. No change creates or deactivates a sector; a sector is always looked up by name
+//   in the live database. A missing sector means the entry is mis-named.
 // - This list is the single repo write path to the taxonomy.
 //
-// Op vocabulary (all names are matched case-insensitively after whitespace normalization):
+// Change vocabulary — the `op` field of each entry names the change type (all names are matched case-insensitively after whitespace normalization):
 //
 //   { id, op: 'addOccupation', sector, occupation }
 //   { id, op: 'addSkill', sector, occupation, skill,
-//     occupationExisting?: true,          // the occupation is a pre-existing live row, not created by an earlier op
-//     proposalNormalizedSkills?: string[] // skills_hunt_proposed_skill_promotions labels this op fulfils
+//     occupationExisting?: true,          // the occupation is a pre-existing live row, not created by an earlier entry
+//     proposalNormalizedSkills?: string[] // skills_hunt_proposed_skill_promotions labels this change fulfils
 //   }
 //   { id, op: 'renameOccupation', sector, from, to }
 //   { id, op: 'renameSkill', sector, occupation, from, to, occupationExisting?: true }
@@ -50,7 +50,7 @@
 
 import { normalizeTaxonomyName } from './taxonomyNames.mjs';
 
-export const TAXONOMY_CHANGE_OP_TYPES = [
+export const TAXONOMY_CHANGE_TYPES = [
   'addOccupation',
   'addSkill',
   'renameOccupation',
@@ -66,8 +66,8 @@ export const TAXONOMY_CHANGE_OP_TYPES = [
 // ---------------------------------------------------------------------------
 // The list. APPEND ONLY — see the header. Ids are 1-based and strictly sequential.
 // ---------------------------------------------------------------------------
-export const TAXONOMY_CHANGE_OPS = [
-  // Ops 1-9: "Marketing Specialist" under "Professional & Business Services"
+export const TAXONOMY_CHANGES = [
+  // Changes 1-9: "Marketing Specialist" under "Professional & Business Services"
   // (fulfils the "Marketing" proposal, issue #681; owner-approved 2026-06-21).
   { id: 1, op: 'addOccupation', sector: 'Professional & Business Services', occupation: 'Marketing Specialist' },
   { id: 2, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialist', skill: 'Marketing', proposalNormalizedSkills: ['marketing'] },
@@ -79,7 +79,7 @@ export const TAXONOMY_CHANGE_OPS = [
   { id: 8, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialist', skill: 'Brand Management' },
   { id: 9, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialist', skill: 'Copywriting' },
 
-  // Ops 10-24: "Game Designers / Developers" under "Creative & Media"
+  // Changes 10-24: "Game Designers / Developers" under "Creative & Media"
   // (owner-approved 2026-06-25; no SkillsHunt proposal backs it).
   { id: 10, op: 'addOccupation', sector: 'Creative & Media', occupation: 'Game Designers / Developers' },
   { id: 11, op: 'addSkill', sector: 'Creative & Media', occupation: 'Game Designers / Developers', skill: 'Game Design' },
@@ -97,16 +97,16 @@ export const TAXONOMY_CHANGE_OPS = [
   { id: 23, op: 'addSkill', sector: 'Creative & Media', occupation: 'Game Designers / Developers', skill: 'Game Prototyping' },
   { id: 24, op: 'addSkill', sector: 'Creative & Media', occupation: 'Game Designers / Developers', skill: 'Playtesting & QA' },
 
-  // Op 25: "Merchandising" joins the pre-existing "Supply Managers" occupation under
+  // Change 25: "Merchandising" joins the pre-existing "Supply Managers" occupation under
   // "Retail & Services" (skill proposal #1180; owner-approved 2026-06-29).
   { id: 25, op: 'addSkill', sector: 'Retail & Services', occupation: 'Supply Managers', skill: 'Merchandising', occupationExisting: true, proposalNormalizedSkills: ['merchandising'] },
 
-  // Ops 26-34 (owner-approved 2026-07-03): merge the duplicate "Marketing Specialist" (singular,
-  // created by op 1 — the exact-name occupation match missed the pre-existing plural row) into the
+  // Changes 26-34 (owner-approved 2026-07-03): merge the duplicate "Marketing Specialist" (singular,
+  // created by change 1 — the exact-name occupation match missed the pre-existing plural row) into the
   // pre-existing "Marketing Specialists" (plural, matching the sector's plural naming convention).
-  // The emptied singular is then deactivated. Ops 26-33 were corrected (2026-07-03, never applied —
+  // The emptied singular is then deactivated. Changes 26-33 were corrected (2026-07-03, never applied —
   // every run containing them rolled back) from reparentSkill to consolidateSkill: the live plural
-  // gained a same-named "Marketing" row after these ops were authored (admin Add Skill), a reparent
+  // gained a same-named "Marketing" row after these entries were authored (admin Add Skill), a reparent
   // refuses to merge rows by design, and consolidateSkill produces the right end state whichever of
   // the eight names the plural now carries — absorb where a name exists at the target, reparent
   // where it does not.
@@ -120,30 +120,39 @@ export const TAXONOMY_CHANGE_OPS = [
   { id: 33, op: 'consolidateSkill', skill: 'Copywriting', fromSector: 'Professional & Business Services', fromOccupation: 'Marketing Specialist', toSector: 'Professional & Business Services', toOccupation: 'Marketing Specialists', toOccupationExisting: true },
   { id: 34, op: 'deactivateOccupation', sector: 'Professional & Business Services', occupation: 'Marketing Specialist', acknowledgedImpact: 'Duplicate of the pre-existing "Marketing Specialists" occupation; all 8 of its skills were reparented there by ops 26-33, so no skill rows remain under it and member profile links are untouched. The apply engine refuses this op if any active skill remains.' },
 
-  // Ops 35-36 (owner-approved 2026-07-03): thin the near-duplicate skill pairs left by the op 26-34
+  // Changes 35-36 (owner-approved 2026-07-03): thin the near-duplicate skill pairs left by the 26-34
   // merge. The owner picked the surviving label of each pair; the other is deactivated (reversible;
   // the audit row records the live member-holder count at apply time).
   { id: 35, op: 'deactivateSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', skill: 'Market Research', acknowledgedImpact: 'Near-duplicate of "Market research and segmentation", the owner-picked survivor of the pair. Members holding this row stop seeing the chip until they re-pick the surviving skill; the audit metadata records how many were holding it.' },
   { id: 36, op: 'deactivateSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', skill: 'SEO/SEM and paid-media management', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Search Engine Optimization (SEO)", the owner-picked survivor of the pair. Members holding this row stop seeing the chip until they re-pick the surviving skill; the audit metadata records how many were holding it.' },
 
-  // Ops 37-38 (owner-approved 2026-07-03): thin the last two near-duplicate pairs left by the
+  // Changes 37-38 (owner-approved 2026-07-03): thin the last two near-duplicate pairs left by the
   // Marketing Specialists merge. The owner picked the survivors: "Content strategy and analytics"
-  // (op 37 deactivates "Content Marketing") and "Brand Management" (op 38 deactivates "Brand
+  // (change 37 deactivates "Content Marketing") and "Brand Management" (change 38 deactivates "Brand
   // strategy and positioning"). Reversible; each audit row records the live member-holder count.
   { id: 37, op: 'deactivateSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', skill: 'Content Marketing', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Content strategy and analytics", the owner-picked survivor of the pair. Members holding this row stop seeing the chip until they re-pick the surviving skill; the audit metadata records how many were holding it.' },
   { id: 38, op: 'deactivateSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', skill: 'Brand strategy and positioning', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Brand Management", the owner-picked survivor of the pair. Members holding this row stop seeing the chip until they re-pick the surviving skill; the audit metadata records how many were holding it.' },
 
-  // Op 39 (owner-approved 2026-07-03): the change that started the whole governance effort. The
+  // Change 39 (owner-approved 2026-07-03): the change that started the whole governance effort. The
   // generic marketing skill under the Food & Agriculture occupation funneled every holder into that
   // sector in the Workforce match (its job_title_id was the skill's only parent). Marketing now
   // lives under Professional & Business Services > Marketing Specialists; the sole known holder
-  // ("00") re-picked their skills there before this op was appended.
+  // ("00") re-picked their skills there before this change was appended.
   { id: 39, op: 'deactivateSkill', sector: 'Food & Agriculture', occupation: 'Agribusiness Managers', skill: 'Marketing and market analysis', occupationExisting: true, skillExisting: true, acknowledgedImpact: 'Generic marketing skill parented under a Food & Agriculture occupation pulled every holder into that sector in the Workforce match. The marketing skillset now lives under Marketing Specialists (Professional & Business Services), and the sole known holder re-picked their skills there before this op was appended; the audit metadata records the live holder count at apply time.' },
+
+  // Changes 40-42 (owner-approved 2026-07-04): give the finance skillset a finance home. The two
+  // financial skills existed only under Agribusiness Managers (Food & Agriculture), which confined
+  // purely finance-skilled members to agriculture. With name-based skill matching in Workforce,
+  // listing the same skill names under a finance occupation matches every holder there too — no
+  // reparent and no member migration needed.
+  { id: 40, op: 'addOccupation', sector: 'Professional & Business Services', occupation: 'Financial Analysts / Accountants' },
+  { id: 41, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Financial Analysts / Accountants', skill: 'Financial planning and budgeting' },
+  { id: 42, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Financial Analysts / Accountants', skill: 'Financial modeling and cashflow management' },
 ];
 
 // ---------------------------------------------------------------------------
 // Static validation. Pure — no database. Replays the list against an in-memory
-// registry and returns { valid, errors }. Every error names the offending op id.
+// registry and returns { valid, errors }. Every error names the offending change id.
 // ---------------------------------------------------------------------------
 
 function key(...parts) {
@@ -154,12 +163,12 @@ function isNonEmptyString(value) {
   return typeof value === 'string' && normalizeTaxonomyName(value).length > 0;
 }
 
-export function validateTaxonomyChangeOps(ops = TAXONOMY_CHANGE_OPS) {
+export function validateTaxonomyChanges(ops = TAXONOMY_CHANGES) {
   const errors = [];
-  const fail = (id, message) => errors.push(`op ${id}: ${message}`);
+  const fail = (id, message) => errors.push(`change ${id}: ${message}`);
 
   if (!Array.isArray(ops)) {
-    return { valid: false, errors: ['TAXONOMY_CHANGE_OPS is not an array.'] };
+    return { valid: false, errors: ['TAXONOMY_CHANGES is not an array.'] };
   }
 
   // Occupations: key(sector, occupation) -> { active }
@@ -174,13 +183,13 @@ export function validateTaxonomyChangeOps(ops = TAXONOMY_CHANGE_OPS) {
       if (existingFlag === true) {
         occupations.set(occKey, { active: true });
       } else {
-        fail(id, `${label} occupation "${occupation}" (${sector}) is not created by an earlier op; add an addOccupation op first or set the existing flag if it is a pre-existing live row.`);
+        fail(id, `${label} occupation "${occupation}" (${sector}) is not created by an earlier change; add an addOccupation change first or set the existing flag if it is a pre-existing live row.`);
         return null;
       }
     }
     const occ = occupations.get(occKey);
     if (!occ.active) {
-      fail(id, `${label} occupation "${occupation}" (${sector}) was deactivated by an earlier op.`);
+      fail(id, `${label} occupation "${occupation}" (${sector}) was deactivated by an earlier change.`);
       return null;
     }
     return occKey;
@@ -193,8 +202,8 @@ export function validateTaxonomyChangeOps(ops = TAXONOMY_CHANGE_OPS) {
     }
     const id = entry.id ?? `#${index}`;
 
-    if (!TAXONOMY_CHANGE_OP_TYPES.includes(entry.op)) {
-      fail(id, `unknown op type "${entry.op}".`);
+    if (!TAXONOMY_CHANGE_TYPES.includes(entry.op)) {
+      fail(id, `unknown change type "${entry.op}".`);
       return;
     }
 
@@ -206,7 +215,7 @@ export function validateTaxonomyChangeOps(ops = TAXONOMY_CHANGE_OPS) {
         }
         const occKey = key(entry.sector, entry.occupation);
         if (occupations.has(occKey)) {
-          fail(id, `occupation "${entry.occupation}" (${entry.sector}) is already created by an earlier op.`);
+          fail(id, `occupation "${entry.occupation}" (${entry.sector}) is already created by an earlier change.`);
           return;
         }
         occupations.set(occKey, { active: true });
@@ -333,12 +342,12 @@ export function validateTaxonomyChangeOps(ops = TAXONOMY_CHANGE_OPS) {
         if (!occKey) return;
         const skillKey = key(entry.sector, entry.occupation, entry.skill);
         if (!skills.has(skillKey) && entry.skillExisting !== true) {
-          fail(id, `skill "${entry.skill}" is not created by an earlier op; set skillExisting: true if it is a pre-existing live row.`);
+          fail(id, `skill "${entry.skill}" is not created by an earlier change; set skillExisting: true if it is a pre-existing live row.`);
           return;
         }
         const state = skills.get(skillKey) ?? { active: true };
         if (!state.active) {
-          fail(id, `skill "${entry.skill}" is already deactivated by an earlier op.`);
+          fail(id, `skill "${entry.skill}" is already deactivated by an earlier change.`);
           return;
         }
         state.active = false;
@@ -357,12 +366,12 @@ export function validateTaxonomyChangeOps(ops = TAXONOMY_CHANGE_OPS) {
         }
         const occKey = key(entry.sector, entry.occupation);
         if (!occupations.has(occKey) && entry.occupationExisting !== true) {
-          fail(id, `occupation "${entry.occupation}" (${entry.sector}) is not created by an earlier op; set occupationExisting: true if it is a pre-existing live row.`);
+          fail(id, `occupation "${entry.occupation}" (${entry.sector}) is not created by an earlier change; set occupationExisting: true if it is a pre-existing live row.`);
           return;
         }
         const state = occupations.get(occKey) ?? { active: true };
         if (!state.active) {
-          fail(id, `occupation "${entry.occupation}" (${entry.sector}) is already deactivated by an earlier op.`);
+          fail(id, `occupation "${entry.occupation}" (${entry.sector}) is already deactivated by an earlier change.`);
           return;
         }
         state.active = false;
@@ -379,7 +388,7 @@ export function validateTaxonomyChangeOps(ops = TAXONOMY_CHANGE_OPS) {
         if (!occKey) return;
         const skillKey = key(entry.sector, entry.occupation, entry.skill);
         if (!skills.has(skillKey) && entry.skillExisting !== true) {
-          fail(id, `skill "${entry.skill}" is not known to earlier ops; set skillExisting: true if it is a pre-existing live row.`);
+          fail(id, `skill "${entry.skill}" is not known to earlier changes; set skillExisting: true if it is a pre-existing live row.`);
           return;
         }
         const state = skills.get(skillKey) ?? { active: false };
@@ -395,7 +404,7 @@ export function validateTaxonomyChangeOps(ops = TAXONOMY_CHANGE_OPS) {
         }
         const occKey = key(entry.sector, entry.occupation);
         if (!occupations.has(occKey) && entry.occupationExisting !== true) {
-          fail(id, `occupation "${entry.occupation}" (${entry.sector}) is not known to earlier ops; set occupationExisting: true if it is a pre-existing live row.`);
+          fail(id, `occupation "${entry.occupation}" (${entry.sector}) is not known to earlier changes; set occupationExisting: true if it is a pre-existing live row.`);
           return;
         }
         const state = occupations.get(occKey) ?? { active: false };
@@ -405,7 +414,7 @@ export function validateTaxonomyChangeOps(ops = TAXONOMY_CHANGE_OPS) {
       }
 
       default:
-        fail(id, `unhandled op type "${entry.op}".`);
+        fail(id, `unhandled change type "${entry.op}".`);
     }
   });
 

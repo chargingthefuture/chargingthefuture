@@ -141,13 +141,15 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   // Every plugin route requires full Unlock access (the default minUnlockTier
   // 'approved_full'). A not-yet-verified member is denied with `unlock_required` and
   // shown the plugin's public landing page below (not the access-denied view), which
-  // nudges them toward the Unlock flow; the Hub general channel is their support
-  // surface. Chyme does not require a username so its anonymous public shell still works.
-  // Chyme and Beacon are watch-first surfaces that do not require a username to view, so anonymous
-  // and not-yet-named members can still watch the public broadcast.
-  const decision = await evaluatePluginAccess({
-    requireUsername: selectedPlugin.slug !== 'chyme' && selectedPlugin.slug !== 'beacon',
-  });
+  // nudges them toward the Unlock flow; the Hub general channel is their support surface.
+  //
+  // No plugin route requires a username. Every plugin API already gates with
+  // `requireUsername: false`, and members can be approved on a temporary handle before they
+  // choose a username in Clerk. Requiring one here blocked those members from opening apps
+  // (a leftover: it produced a 403 `missing_username` page), so the page gate matches the
+  // APIs and does not require a username. Shells that show the handle fall back gracefully
+  // when it is null.
+  const decision = await evaluatePluginAccess({ requireUsername: false });
 
   // Operator-only plugins (e.g. Weekly Performance) are admin-only: a non-admin gets a 404 for the
   // route, not the public landing, since there is no approved user-facing version. Admins fall
@@ -268,7 +270,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'gdp') {
-    return <GdpShell isAdmin={decision.isAdmin} />;
+    return <GdpShell />;
   }
 
   if (selectedPlugin.slug === 'service-credits') {

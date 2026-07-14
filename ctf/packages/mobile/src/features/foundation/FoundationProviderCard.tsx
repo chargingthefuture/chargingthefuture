@@ -3,8 +3,6 @@ import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-nativ
 import type { Provider } from './api';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
-const SUBTLE = '#9CA3AF';
 
 function initials(name: string): string {
   return name
@@ -127,7 +125,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     headline: {
       fontSize: 12,
-      color: SUBTLE,
+      color: t.textSecondary,
     },
     skillRow: {
       flexDirection: 'row',

@@ -235,7 +235,7 @@ export function TrustTransportAdminShell({
                 <div style={{ fontSize: 14, fontWeight: 600 }}>Max concurrent trips</div>
                 <div style={{ fontSize: 12, color: t.MUTED }}>Per driver, at once.</div>
               </div>
-              <input type="number" min={0} value={config.maxConcurrentTrips} onChange={(e) => setConfig((c) => ({ ...c, maxConcurrentTrips: Math.max(0, Math.floor(Number(e.target.value) || 0)) }))} style={fieldStyle(t)} />
+              <input type="number" min={0} aria-label="Max concurrent trips" value={config.maxConcurrentTrips} onChange={(e) => setConfig((c) => ({ ...c, maxConcurrentTrips: Math.max(0, Math.floor(Number(e.target.value) || 0)) }))} style={fieldStyle(t)} />
             </label>
             <ToggleRow label="Require proof on delivery" hint="Drivers must confirm delivery with proof." value={config.requireProofOnDelivery} onChange={(v) => setConfig((c) => ({ ...c, requireProofOnDelivery: v }))} />
             <ToggleRow label="Emergency freeze" hint="Pauses new trips network-wide when on." value={config.emergencyFreezeEnabled} onChange={(v) => setConfig((c) => ({ ...c, emergencyFreezeEnabled: v }))} />

@@ -311,7 +311,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     tabText: {
       fontSize: 13,
-      color: '#9CA3AF',
+      color: t.textSecondary,
       fontWeight: '600',
     },
     tabTextActive: {
@@ -355,7 +355,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     rowLabel: {
       flex: 1,
       fontSize: 13,
-      color: '#E8EAF0',
+      color: t.textShell,
       fontWeight: '600',
     },
     rowSub: {
@@ -364,7 +364,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     rowMeta: {
       fontSize: 11,
-      color: '#9CA3AF',
+      color: t.textSecondary,
     },
     rowGap: {
       fontSize: 13,

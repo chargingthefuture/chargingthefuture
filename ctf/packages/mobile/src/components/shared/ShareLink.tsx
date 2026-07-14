@@ -84,9 +84,9 @@ function makeStyles(t: ThemeTokens) {
     trigger: { fontSize: 12, fontWeight: '600' },
     backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
     sheet: { backgroundColor: t.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, gap: 12 },
-    title: { fontSize: 13, fontWeight: '700', color: '#9CA3AF' },
-    url: { fontSize: 13, color: '#E8EAF0', padding: 10, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 8 },
+    title: { fontSize: 13, fontWeight: '700', color: t.textSecondary },
+    url: { fontSize: 13, color: t.textShell, padding: 10, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 8 },
     item: { paddingVertical: 12 },
-    itemText: { fontSize: 15, fontWeight: '600', color: '#E8EAF0' },
+    itemText: { fontSize: 15, fontWeight: '600', color: t.textShell },
   });
 }

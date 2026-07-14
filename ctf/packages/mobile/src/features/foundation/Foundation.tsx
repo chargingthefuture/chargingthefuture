@@ -25,8 +25,6 @@ import { FoundationDirectLine } from './FoundationDirectLine';
 import { FoundationCallAlerts } from './FoundationCallAlerts';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
-// No mobile token maps to this mid-grey (mobile textSecondary is #6B7280) — kept raw.
-const TEXT_DIM = '#9CA3AF';
 
 type Tab = 'browse' | 'quotes' | 'offer';
 
@@ -445,7 +443,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   },
   statusSignal: {
     fontSize: 12,
-    color: TEXT_DIM,
+    color: t.textSecondary,
   },
   appHeader: {
     paddingHorizontal: 20,
@@ -579,7 +577,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   },
   offerIntro: {
     fontSize: 13,
-    color: TEXT_DIM,
+    color: t.textSecondary,
     lineHeight: 20,
     marginBottom: 14,
   },
@@ -651,7 +649,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   emptyQuotesTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: TEXT_DIM,
+    color: t.textSecondary,
     marginBottom: 8,
   },
   emptyQuotesDesc: {
@@ -694,7 +692,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   },
   quoteDate: {
     fontSize: 12,
-    color: TEXT_DIM,
+    color: t.textSecondary,
   },
   quoteOpenHint: {
     fontSize: 12,

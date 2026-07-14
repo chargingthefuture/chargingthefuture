@@ -400,6 +400,13 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   bio TEXT NOT NULL,
   quora_profile_url TEXT NOT NULL,
   quora_profile_url_normalized TEXT NOT NULL,
+  -- Nominee location. `country` is required at submit time (enforced in validateSubmissionInput);
+  -- `state`/`city` are optional. Columns are nullable so legacy rows and the guarded ALTER are safe;
+  -- on accept these carry into the generated directory_profiles row (the shared member profile).
+  -- Plain names per the shared location standard (packages/web/lib/geo/locations.ts).
+  country TEXT NULL,
+  state TEXT NULL,
+  city TEXT NULL,
   skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -1947,6 +1954,22 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS announcements ALTER COLUMN id SET DEFAULT gen_random_uuid();
 UPDATE announcements SET id = gen_random_uuid() WHERE id IS NULL;
 ALTER TABLE IF EXISTS announcements ALTER COLUMN id SET NOT NULL;
+-- Convert a legacy text/varchar id column to uuid. schema.sql declares announcements.id UUID, but
+-- some legacy databases stored it as text. Publish, archive and edit-draft all run
+-- `WHERE id = $1::uuid`, which errors on a text column ("operator does not exist: character varying
+-- = uuid") and surfaced as "Unable to publish announcement.". Every stored id is a uuid string
+-- (gen_random_uuid default), so the in-place cast is lossless. Guarded so it only runs when the
+-- column is not already uuid; a no-op on a fresh DB (id is uuid from CREATE TABLE).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'announcements' AND column_name = 'id' AND data_type <> 'uuid'
+  ) THEN
+    ALTER TABLE announcements ALTER COLUMN id TYPE uuid USING id::uuid;
+    ALTER TABLE announcements ALTER COLUMN id SET DEFAULT gen_random_uuid();
+  END IF;
+END $$;
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT '';
@@ -1961,6 +1984,22 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_by_user_id 
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS linked_plugin_slug TEXT;
+-- Drop the pre-v3 `content` column. Legacy databases carried a NOT NULL `content` column that the
+-- v3 app (which authors into `body`) never fills, so every "Create draft" failed with
+-- "null value in column content violates not-null constraint". schema.sql has no `content` column,
+-- so bring legacy tables in line: preserve any old text into `body` where `body` is empty, then drop
+-- the defunct column. Guarded + idempotent — a no-op on a fresh database where `content` never
+-- existed, and safe to run repeatedly.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'announcements' AND column_name = 'content'
+  ) THEN
+    UPDATE announcements SET body = content WHERE (body IS NULL OR body = '') AND content IS NOT NULL;
+    ALTER TABLE announcements DROP COLUMN content;
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_announcements_status ON announcements(status);
 
 -- === FEED TIMELINE PROJECTION ===
@@ -2048,6 +2087,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('service-credits',    'ServiceCredits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
   ('level-up',           'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
   ('click-log',          'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
+  ('trust',              'Trust',                'Community reputation and verification. Trust signals built through real participation — your credibility, visible and portable.','implemented_shell', 190, TRUE),
   ('what-works',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
   ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'implemented_shell', 210, TRUE),
   ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE),
@@ -2190,7 +2230,7 @@ ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS act
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- The action vocabulary: the app's delete path writes 'delete'; the taxonomy change-ops apply engine
+-- The action vocabulary: the app's delete path writes 'delete'; the taxonomy change apply engine
 -- writes 'create', 'rename', 'reparent', 'deactivate', and 'reactivate' ('update' is kept for any
 -- pre-existing rows). Both checks are added NOT VALID: the audit log is append-only and historical
 -- rows are never rewritten to fit a newer vocabulary (ledger discipline), so the checks constrain
@@ -2244,6 +2284,18 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
   monero_address TEXT,
   bitcoin_address TEXT,
   service_credits_address TEXT,
+  -- Member location (city / state or region / country). Standard fields so non-US members are
+  -- represented accurately — Directory feeds nearly every other plugin. These are the SAME column
+  -- names v2 used (directory_profiles.city / state / country, varchar(100) in the prod snapshot
+  -- ctf/schema-prod4.6.2026.sql), so on the cloned production database the ADD COLUMN IF NOT EXISTS
+  -- below is a no-op and the carried-over v2 values are preserved in place — no data-copy migration
+  -- is needed (unlike skills/bio/profile_url, whose v3 targets differ from v2 and are backfilled in
+  -- post/0005–0007). v3 simply never declared or read these columns before, which is why the data
+  -- looked missing. Values are plain names ("United States", "California") per the shared location
+  -- standard (packages/web/lib/geo/locations.ts).
+  city TEXT,
+  state TEXT,
+  country TEXT,
   deleted_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -2282,6 +2334,9 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS venmo_address 
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS monero_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bitcoin_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS service_credits_address TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS state TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS country TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- SkillsHunt + Clerk username co-change (2026-05-11). See
@@ -3236,7 +3291,13 @@ CREATE TABLE IF NOT EXISTS socket_relay_requests (
   details TEXT NOT NULL,
   category TEXT NOT NULL,
   tags TEXT[] NOT NULL DEFAULT '{}',
+  -- Per-request location (a request can be for a different place than where the member lives — a
+  -- second property, a cross-city errand, a package delivery abroad). city/state/country default from
+  -- the member's directory profile in the create form, but are freely overridable per request. City
+  -- stays "city or neighborhood only, never an exact address" for privacy.
   city TEXT,
+  state TEXT,
+  country TEXT,
   is_public BOOLEAN NOT NULL DEFAULT FALSE,
   status TEXT NOT NULL DEFAULT 'open',
   reopened_count INTEGER NOT NULL DEFAULT 0,
@@ -3257,6 +3318,8 @@ ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS details TEX
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS state TEXT;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS country TEXT;
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS reopened_count INTEGER NOT NULL DEFAULT 0;
@@ -4092,6 +4155,9 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_pro
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS skills JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS signature_hash TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS country TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS state TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS city TEXT NULL;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS review_action TEXT;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id TEXT;

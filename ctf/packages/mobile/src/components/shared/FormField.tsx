@@ -53,7 +53,7 @@ export function FormField({ label, optional, hint, error, children, style }: For
 
 function makeStyles(t: ThemeTokens) {
   return StyleSheet.create({
-    label: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 6 },
+    label: { fontSize: 13, fontWeight: '600', color: t.textSecondary, marginBottom: 6 },
     optional: { color: t.textSecondary, fontWeight: '400' },
     hint: { fontSize: 12, color: t.textSecondary, marginBottom: 6, lineHeight: 18 },
     error: { fontSize: 12, color: t.danger, marginTop: 6 },

@@ -51,33 +51,84 @@ function WayRow({
   );
 }
 
-function SignInButton({ signInUrl, verifyUrl, t, full }: { signInUrl: string; verifyUrl?: string; t: ContributionsTokens; full?: boolean }) {
-  const href = verifyUrl ?? signInUrl;
-  const label = verifyUrl ? 'Finish verifying' : 'Sign in';
+// Call-to-action buttons for the sign-in card. In verify mode (a signed-in but unverified member)
+// the single "Finish verifying" button is the only action. Otherwise both paths are shown so it is
+// clear there is a way in for new and returning members alike: "Join free" (primary sign-up) and
+// "Sign in" (secondary). Both point at the same hosted auth URL, which handles sign-up vs sign-in.
+function AuthCtas({ signInUrl, verifyUrl, t, full }: { signInUrl: string; verifyUrl?: string; t: ContributionsTokens; full?: boolean }) {
+  if (verifyUrl) {
+    return (
+      <a
+        href={verifyUrl}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 5,
+          padding: full ? '11px' : '9px 18px',
+          width: full ? '100%' : undefined,
+          borderRadius: full ? 9 : 8,
+          background: t.ACCENT,
+          border: 'none',
+          color: '#fff',
+          fontSize: full ? 14 : 13,
+          fontWeight: 600,
+          cursor: 'pointer',
+          textDecoration: 'none',
+          flexShrink: 0,
+          boxSizing: 'border-box',
+        }}
+      >
+        Finish verifying <ChevronRight size={full ? 15 : 14} />
+      </a>
+    );
+  }
   return (
-    <a
-      href={href}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 5,
-        padding: full ? '11px' : '9px 18px',
-        width: full ? '100%' : undefined,
-        borderRadius: full ? 9 : 8,
-        background: t.ACCENT,
-        border: 'none',
-        color: '#fff',
-        fontSize: full ? 14 : 13,
-        fontWeight: 600,
-        cursor: 'pointer',
-        textDecoration: 'none',
-        flexShrink: 0,
-        boxSizing: 'border-box',
-      }}
-    >
-      {label} <ChevronRight size={full ? 15 : 14} />
-    </a>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: full ? '100%' : undefined, flexShrink: 0 }}>
+      <a
+        href={signInUrl}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 5,
+          padding: full ? '11px' : '9px 18px',
+          flex: full ? 1 : undefined,
+          borderRadius: full ? 9 : 8,
+          background: t.ACCENT,
+          border: 'none',
+          color: '#fff',
+          fontSize: full ? 14 : 13,
+          fontWeight: 600,
+          cursor: 'pointer',
+          textDecoration: 'none',
+          boxSizing: 'border-box',
+        }}
+      >
+        Join free <ChevronRight size={full ? 15 : 14} />
+      </a>
+      <a
+        href={signInUrl}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: full ? '11px' : '9px 18px',
+          flex: full ? 1 : undefined,
+          borderRadius: full ? 9 : 8,
+          background: 'transparent',
+          border: `1px solid ${t.BORDER_SOLID}`,
+          color: t.TITLE,
+          fontSize: full ? 14 : 13,
+          fontWeight: 600,
+          cursor: 'pointer',
+          textDecoration: 'none',
+          boxSizing: 'border-box',
+        }}
+      >
+        Sign in
+      </a>
+    </div>
   );
 }
 
@@ -111,11 +162,11 @@ function DesktopPublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyU
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>
-              {verifyUrl ? 'Finish verifying to contribute' : 'Sign in to contribute'}
+              {verifyUrl ? 'Finish verifying to contribute' : 'Join or sign in to contribute'}
             </div>
             <div style={{ fontSize: 13, color: t.MUTED }}>Contributions are available to signed-in members.</div>
           </div>
-          <SignInButton signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} />
+          <AuthCtas signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} />
         </div>
       </div>
     </div>
@@ -153,12 +204,12 @@ function MobilePublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUr
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE }}>
-                {verifyUrl ? 'Finish verifying to contribute' : 'Sign in to contribute'}
+                {verifyUrl ? 'Finish verifying to contribute' : 'Join or sign in to contribute'}
               </div>
               <div style={{ fontSize: 12, color: t.MUTED, marginTop: 2 }}>Available to signed-in members</div>
             </div>
           </div>
-          <SignInButton signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} full />
+          <AuthCtas signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} full />
         </div>
       </div>
     </div>

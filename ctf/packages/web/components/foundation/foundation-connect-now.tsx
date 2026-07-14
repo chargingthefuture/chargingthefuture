@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PhoneCall, X } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getFoundationTokens, type ProviderView } from "./foundation-ui";
@@ -190,12 +190,20 @@ function ConnectNowDialog({
     }
   };
 
+  // Close on Escape so keyboard users have the same "dismiss" the backdrop click gives mouse users.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- backdrop click-to-close is a mouse convenience; keyboard users close via Escape (handler above) or the visible close button.
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Connect now confirmation"
-      onClick={onClose}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
         position: "fixed", inset: 0, zIndex: 60,
         background: "rgba(8,9,13,0.72)",
@@ -204,7 +212,6 @@ function ConnectNowDialog({
       }}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%", maxWidth: 440,
           background: "#11131A",

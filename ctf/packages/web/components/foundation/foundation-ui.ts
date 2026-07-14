@@ -28,6 +28,10 @@ export interface ProviderView {
   displayName: string;
   headline: string | null;
   bio: string | null;
+  // Provider location from their claimed directory profile (plain names; any part may be null).
+  city: string | null;
+  state: string | null;
+  country: string | null;
   score: number;
   offeredSkills: OfferedSkillView[];
   // Read-only mirror of the provider's instant 1:1 call availability (Foundation "Connect now",

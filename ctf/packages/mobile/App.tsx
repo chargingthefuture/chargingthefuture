@@ -27,7 +27,7 @@ import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-progr
 import { Mood } from './src/features/mood';
 import { GentlePulse } from './src/features/gentle-pulse';
 import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly-performance';
-import { Gdp, GdpRateAdmin } from './src/features/gdp';
+import { Gdp } from './src/features/gdp';
 import { ServiceCredits, AdminServiceCredits } from './src/features/service-credits';
 import { LevelUp, AdminLevelUp } from './src/features/level-up';
 import { Unlock, AdminUnlock } from './src/features/unlock';
@@ -63,7 +63,6 @@ type FeatureKey =
   | 'weekly-performance'
   | 'weekly-performance-admin'
   | 'gdp'
-  | 'gdp-rate-admin'
   | 'service-credits'
   | 'service-credits-admin'
   | 'level-up'
@@ -101,7 +100,6 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'weekly-performance', label: 'Weekly Performance' },
   { key: 'weekly-performance-admin', label: 'Weekly Performance Admin' },
   { key: 'gdp', label: 'GDP' },
-  { key: 'gdp-rate-admin', label: 'GDP Rate Admin' },
   { key: 'service-credits', label: 'ServiceCredits' },
   { key: 'service-credits-admin', label: 'ServiceCredits Admin' },
   { key: 'level-up', label: 'LevelUp' },
@@ -172,11 +170,10 @@ function buildFeatureViews(
     'weekly-performance': () => <WeeklyPerformance />,
     'weekly-performance-admin': () => <AdminWeeklyPerformance />,
     gdp: () => <Gdp />,
-    'gdp-rate-admin': () => <GdpRateAdmin />,
     'service-credits': () => <ServiceCredits />,
     'service-credits-admin': () => <AdminServiceCredits />,
     'level-up': () => <LevelUp />,
-    unlock: () => <Unlock onNavigateToCommons={() => setSelected('home')} />,
+    unlock: () => <Unlock />,
     'unlock-admin': () => <AdminUnlock />,
     'account-data': () => <AccountData />,
     'blocked-members': () => <BlockedMembers />,

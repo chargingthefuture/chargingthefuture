@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { getDirectoryTokens } from "./shared";
 import { DirectorySkillsPicker } from "./directory-skills-picker";
+import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { useTheme } from "@/hooks/useTheme";
 import { DIRECTORY_MAX_PROPOSED_SKILL_LENGTH, DIRECTORY_MAX_PROPOSED_SKILLS } from "@/lib/directory/constants";
 
@@ -29,6 +30,9 @@ type OwnProfile = {
   moneroAddress?: string | null;
   bitcoinAddress?: string | null;
   serviceCreditsAddress?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
 };
 
 type TaxonomyOption = { id: string; name: string };
@@ -51,6 +55,9 @@ type FormState = {
   moneroAddress: string;
   bitcoinAddress: string;
   serviceCreditsAddress: string;
+  city: string;
+  state: string;
+  country: string;
 };
 
 type LoadState =
@@ -73,6 +80,9 @@ function emptyForm(): FormState {
     moneroAddress: "",
     bitcoinAddress: "",
     serviceCreditsAddress: "",
+    city: "",
+    state: "",
+    country: "",
   };
 }
 
@@ -154,6 +164,9 @@ export function DirectoryProfileEdit({
           moneroAddress: p?.moneroAddress ?? "",
           bitcoinAddress: p?.bitcoinAddress ?? "",
           serviceCreditsAddress: p?.serviceCreditsAddress ?? "",
+          city: p?.city ?? "",
+          state: p?.state ?? "",
+          country: p?.country ?? "",
         });
         setLoadState({ kind: "ready" });
       } catch {
@@ -232,6 +245,9 @@ export function DirectoryProfileEdit({
       moneroAddress: nullableTrim(form.moneroAddress),
       bitcoinAddress: nullableTrim(form.bitcoinAddress),
       serviceCreditsAddress: nullableTrim(form.serviceCreditsAddress),
+      city: nullableTrim(form.city),
+      state: nullableTrim(form.state),
+      country: nullableTrim(form.country),
     };
 
     try {
@@ -262,16 +278,23 @@ export function DirectoryProfileEdit({
   // currently selected sector.
   const sectorJobTitles = jobTitles.filter((j) => j.sectorId === form.sectorId);
 
+  // Close on Escape so keyboard users have the same "dismiss" the backdrop click gives mouse users.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- backdrop click-to-close is a mouse convenience; keyboard users close via Escape (handler above) or the visible close button.
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Edit your directory profile"
-      onClick={onClose}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "32px 16px", fontFamily: "'Inter', system-ui, sans-serif" }}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{ width: "100%", maxWidth: 560, background: t.HEADER, border: `1px solid ${t.BORDER_HI}`, borderRadius: 16, color: t.TEXT, boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}
       >
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${t.BORDER}` }}>
@@ -323,6 +346,35 @@ export function DirectoryProfileEdit({
               <div style={fieldGap}>
                 <label style={labelStyle} htmlFor="dpe-url">Quora profile URL</label>
                 <input id="dpe-url" value={form.profileUrl} onChange={(e) => setForm((p) => ({ ...p, profileUrl: e.target.value }))} style={inputStyle} placeholder="https://www.quora.com/profile/…" />
+              </div>
+
+              {/* Location — shared Country/State controls (lib/geo/locations.ts) so the data stays
+                  clean: Country is a dropdown, State is a US-state dropdown for the United States
+                  and a free-text region box for every other country. */}
+              <div style={fieldGap}>
+                <label style={labelStyle} htmlFor="dpe-country">Country</label>
+                <CountrySelect
+                  id="dpe-country"
+                  value={form.country}
+                  onChange={(country) => setForm((p) => ({ ...p, country }))}
+                  style={{ ...inputStyle, cursor: "pointer" }}
+                />
+              </div>
+
+              <div style={fieldGap}>
+                <label style={labelStyle} htmlFor="dpe-state">State / Region</label>
+                <StateField
+                  id="dpe-state"
+                  country={form.country}
+                  value={form.state}
+                  onChange={(state) => setForm((p) => ({ ...p, state }))}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={fieldGap}>
+                <label style={labelStyle} htmlFor="dpe-city">City</label>
+                <input id="dpe-city" value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} style={inputStyle} placeholder="City" />
               </div>
 
               <div style={fieldGap}>

@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-07-03 (hand-updated for the unified skills picker — see DIR-4 and DIR-A1; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-11 (hand-updated for the unified skills picker and the ported v2 location fields — see DIR-2, DIR-4, DIR-A1; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -63,9 +63,11 @@ sector. Search filters by name/headline/bio.
 1. Open a claimed profile, then an unclaimed one.
 2. Read every section.
 **Expected:** Name renders as "First Last" (`first_name` required, `last_name` optional). You see job
-title, sector, specializations/skills, and the bio. A community-generated profile shows its
+title, sector, location ("City, State, Country" — only the parts that are set; a non-US member may show
+just a country), specializations/skills, and the bio. A community-generated profile shows its
 "Community generated" badge and `@community-…` handle. No endorsements, reviews, booking, or chat
-sections appear (those were removed as out-of-scope mockup elements).
+sections appear (those were removed as out-of-scope mockup elements). Confirm a carried-over v2 profile
+shows its city/state/country (the data was cloned from v2 and is now read directly).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### DIR-3 · Pending (nominated/self-added) skills show
@@ -89,6 +91,8 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
    that profession's skills are added at once as chips.
 5. Add a free-text skill the taxonomy does not have through the "Don't see what you need? Add it"
    box, then save.
+6. Set Country to a non-US country (State becomes a free-text region box); set Country to United States
+   (State becomes a US-state dropdown); enter a City; save and reopen to confirm the location persisted.
 **Expected:** The form prefills every editable field and re-sends the complete set, so an untouched
 field is never blanked. The save goes through `PUT /api/directory/profile` with the CSRF header. The
 skills picker matches the SkillsHunt picker: removable selected chips, a one-open-at-a-time sector
@@ -96,7 +100,8 @@ accordion with per-sector "N selected" badges, and a profession prefill that bul
 skills. There is no hard cap on taxonomy skills. The free-text label persists (capped at 10 labels of
 at most 40 characters) and round-trips back as a yellow "pending review" chip. (The pending chip later
 becomes a real taxonomy chip only after the owner approves the label — an `addSkill` entry in the
-taxonomy change list applied by the owner-run workflow, which auto-attaches the official skill to
+taxonomy change list (`ctf/scripts/lib/taxonomyChange.mjs`) applied by the owner-run workflow, which
+auto-attaches the official skill to
 every proposing profile; that approval step is owner-side and outside this script.) On android this
 case is **blocked** — there is no member self-edit screen yet.
 **Result:** web ☐ mobile ☐ android ⛔ — notes:
@@ -137,6 +142,8 @@ android, if `APP_URL` is unset the share control is simply absent (no crash).
 3. Create a profile, then edit one.
 4. In the edit drawer's skills picker (web), expand a sector in the accordion and add/remove a skill,
    or bulk-add via the profession dropdown; then save and reopen to confirm the change persisted.
+5. In the edit drawer's location controls (web), set Country / State / City and save; reopen to confirm
+   they persisted. Confirm an admin edit that leaves location untouched does not wipe it.
 **Expected:** Server-side authorization gates the page and the admin routes (presentation hiding is
 not authorization). The list, create, and edit flows work. On web the edit drawer's skills section is
 the same structured picker as the member self-edit form (selected chips, profession prefill, sector

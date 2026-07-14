@@ -1,0 +1,118 @@
+/* Public Accessibility Statement page.
+   Uses the shared theme tokens from globals.css so the page follows both the
+   default and comic themes without hardcoding colors. This is a static
+   document, so the page scrolls naturally (it must not depend on the desktop
+   body being overflow:hidden). Mirrors the /terms page styling. */
+
+.page {
+  min-height: 100dvh;
+  background: var(--ctf-root-bg);
+  color: var(--ctf-root-text);
+  padding: 48px 20px 96px;
+  display: flex;
+  justify-content: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 760px;
+}
+
+.header {
+  margin-bottom: 40px;
+}
+
+.brand {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ctf-text-secondary);
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.title {
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--ctf-text);
+  margin: 0 0 10px;
+}
+
+.updated {
+  font-size: 14px;
+  color: var(--ctf-text-subtle);
+  margin: 0;
+}
+
+.lead {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ctf-text-secondary);
+  margin: 20px 0 0;
+}
+
+.section {
+  margin-top: 40px;
+  scroll-margin-top: 24px;
+}
+
+.sectionHeading {
+  font-size: 20px;
+  font-weight: 650;
+  color: var(--ctf-text);
+  margin: 0 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ctf-border);
+}
+
+.paragraph {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ctf-text-secondary);
+  margin: 0 0 14px;
+}
+
+.list {
+  margin: 0 0 14px;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.listItem {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ctf-text-secondary);
+}
+
+.link {
+  color: var(--ctf-gold);
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.footer {
+  margin-top: 64px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ctf-border);
+  font-size: 14px;
+  color: var(--ctf-text-subtle);
+}
+
+@media (max-width: 767px) {
+  .page {
+    padding: 32px 16px 72px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+
+  .sectionHeading {
+    font-size: 18px;
+  }
+}

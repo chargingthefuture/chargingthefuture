@@ -80,11 +80,15 @@ export function ShellAppsPanel({ plugins, activeApp, onAppSelect, sortMode, onSo
             <div
               key={plugin.slug}
               className={styles.appCard}
+              role="button"
+              tabIndex={0}
+              aria-pressed={isActive}
               style={{
                 background: isActive ? `${bg}ee` : `${bg}88`,
                 borderColor: isActive ? `${color}60` : `${color}20`,
               }}
               onClick={() => onAppSelect(isActive ? null : plugin.slug)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAppSelect(isActive ? null : plugin.slug); } }}
             >
               <div className={styles.appCardTop}>
                 <div

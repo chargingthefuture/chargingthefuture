@@ -161,10 +161,11 @@ ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT 
 ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 100;
 ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Widen the kind check to allow 'free' (one-way, no-charge mutual aid) on legacy DBs whose constraint
--- predates it. Drop + re-add is idempotent and keeps fresh and legacy schemas identical.
+-- Widen the kind check to allow 'free' (one-way, no-charge mutual aid) and 'activity' (the internal
+-- Recurring Activity counting unit — see the RACT row below) on legacy DBs whose constraint predates
+-- them. Drop + re-add is idempotent and keeps fresh and legacy schemas identical.
 ALTER TABLE IF EXISTS currencies DROP CONSTRAINT IF EXISTS currencies_kind_check;
-ALTER TABLE IF EXISTS currencies ADD CONSTRAINT currencies_kind_check CHECK (kind IN ('token','fiat','crypto','barter','free'));
+ALTER TABLE IF EXISTS currencies ADD CONSTRAINT currencies_kind_check CHECK (kind IN ('token','fiat','crypto','barter','free','activity'));
 CREATE INDEX IF NOT EXISTS idx_currencies_active_sort ON currencies(is_active, sort_order);
 
 -- Seed the owner-curated launch set (inline + idempotent, like ctf_plugin_registry). Owner updates
@@ -199,6 +200,26 @@ ON CONFLICT (code) DO UPDATE SET
   requires_amount    = EXCLUDED.requires_amount,
   sort_order         = EXCLUDED.sort_order,
   updated_at         = NOW();
+
+-- RACT ("recurring activity" count unit) is NOT a member-selectable currency. It is the internal
+-- counting unit for the Recurring Activity plugin's GDP contribution: each confirmed, active,
+-- fiat-denominated recurring activity contributes ONE RACT to the Community Value Index (owner-tunable
+-- weight in currency_usd_rates, default 1) — a COUNT, never a fiat amount. This is the liability
+-- firewall: the platform never stores or sums a recurring-fiat-payment total (a fiat recurring activity
+-- carries no amount at all), so it never becomes a record that could look like money transmission. SC
+-- recurring activities are counted by their declared value under 'SC' instead, since ServiceCredits is
+-- an internal utility token with no third-party reporting duty. is_active = FALSE keeps RACT out of
+-- every payment/currency dropdown (listActiveCurrencies filters is_active = TRUE); it exists only as an
+-- FK-valid anchor for its contribution weight and is never stored on a recurring_activities row.
+INSERT INTO currencies (code, label, kind, is_service_credits, symbol, decimal_places, requires_amount, is_active, sort_order)
+VALUES ('RACT', 'Recurring activity', 'activity', FALSE, NULL, 0, FALSE, FALSE, 900)
+ON CONFLICT (code) DO UPDATE SET
+  label           = EXCLUDED.label,
+  kind            = EXCLUDED.kind,
+  requires_amount = EXCLUDED.requires_amount,
+  is_active       = EXCLUDED.is_active,
+  sort_order      = EXCLUDED.sort_order,
+  updated_at      = NOW();
 
 -- === weekly_performance_weeks ===
 CREATE TABLE IF NOT EXISTS weekly_performance_weeks (
@@ -377,6 +398,13 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   bio TEXT NOT NULL,
   quora_profile_url TEXT NOT NULL,
   quora_profile_url_normalized TEXT NOT NULL,
+  -- Nominee location. `country` is required at submit time (enforced in validateSubmissionInput);
+  -- `state`/`city` are optional. Columns are nullable so legacy rows and the guarded ALTER are safe;
+  -- on accept these carry into the generated directory_profiles row (the shared member profile).
+  -- Plain names per the shared location standard (packages/web/lib/geo/locations.ts).
+  country TEXT NULL,
+  state TEXT NULL,
+  city TEXT NULL,
   skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -622,7 +650,7 @@ DO $account_deletion_events_scope_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'account_deletion_events_scope_check'
+    WHERE constraint_name = 'account_deletion_events_scope_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE account_deletion_events
       ADD CONSTRAINT account_deletion_events_scope_check CHECK (scope IN ('service', 'account'));
@@ -633,7 +661,7 @@ DO $account_deletion_events_status_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'account_deletion_events_status_check'
+    WHERE constraint_name = 'account_deletion_events_status_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE account_deletion_events
       ADD CONSTRAINT account_deletion_events_status_check
@@ -828,7 +856,26 @@ CREATE TABLE IF NOT EXISTS announcement_revisions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Backfill every column on legacy databases (per the mandatory CREATE + ALTER-IF-NOT-EXISTS rule).
+-- A database whose announcement_revisions predates these columns keeps the old table on
+-- CREATE TABLE IF NOT EXISTS, so without these ALTERs the app's revision insert (which lists
+-- targeting/status/priority/mandatory/schedule_at/expires_at) fails and the whole "create draft"
+-- transaction rolls back with a 503. Defaults are supplied so the NOT NULL adds succeed on a table
+-- that already has rows.
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS announcement_id UUID;
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS revision_number INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS mandatory BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS schedule_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS targeting JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE UNIQUE INDEX IF NOT EXISTS idx_announcement_revisions_announcement_revision ON announcement_revisions(announcement_id, revision_number);
 CREATE TABLE IF NOT EXISTS announcement_delivery_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1195,7 +1242,7 @@ ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS updated_at T
 -- Add unique constraint if not exists (Postgres 15+)
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE tablename = 'level_up_enrollments' AND indexname = 'level_up_enrollments_cohort_id_user_id_key'
+    SELECT 1 FROM pg_indexes WHERE tablename = 'level_up_enrollments' AND indexname = 'level_up_enrollments_cohort_id_user_id_key' AND schemaname = current_schema()
   ) THEN
     EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS level_up_enrollments_cohort_id_user_id_key ON level_up_enrollments(cohort_id, user_id)';
   END IF;
@@ -1254,7 +1301,7 @@ DO $trust_transport_requests_price_consistency$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'trust_transport_requests_price_consistency_check'
+    WHERE constraint_name = 'trust_transport_requests_price_consistency_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE trust_transport_requests
       ADD CONSTRAINT trust_transport_requests_price_consistency_check
@@ -1645,7 +1692,7 @@ DO $service_credits_credit_limits_non_negative$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'service_credits_credit_limits_credit_limit_check'
+    WHERE constraint_name = 'service_credits_credit_limits_credit_limit_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE service_credits_credit_limits
       ADD CONSTRAINT service_credits_credit_limits_credit_limit_check
@@ -1891,7 +1938,10 @@ CREATE TABLE IF NOT EXISTS announcements (
   created_by_user_id TEXT NOT NULL,
   updated_by_user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Optional plugin this announcement points at. When set, the published feed item gets an
+  -- "Open <Plugin>" link to /apps/<slug> so a reader can jump straight to the referenced app.
+  linked_plugin_slug TEXT
 );
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS id UUID;
 -- Repair legacy tables where `id` was added (above) before it had a default. Without a default, an
@@ -1902,6 +1952,22 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS announcements ALTER COLUMN id SET DEFAULT gen_random_uuid();
 UPDATE announcements SET id = gen_random_uuid() WHERE id IS NULL;
 ALTER TABLE IF EXISTS announcements ALTER COLUMN id SET NOT NULL;
+-- Convert a legacy text/varchar id column to uuid. schema.sql declares announcements.id UUID, but
+-- some legacy databases stored it as text. Publish, archive and edit-draft all run
+-- `WHERE id = $1::uuid`, which errors on a text column ("operator does not exist: character varying
+-- = uuid") and surfaced as "Unable to publish announcement.". Every stored id is a uuid string
+-- (gen_random_uuid default), so the in-place cast is lossless. Guarded so it only runs when the
+-- column is not already uuid; a no-op on a fresh DB (id is uuid from CREATE TABLE).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'demo' AND table_name = 'announcements' AND column_name = 'id' AND data_type <> 'uuid'
+  ) THEN
+    ALTER TABLE announcements ALTER COLUMN id TYPE uuid USING id::uuid;
+    ALTER TABLE announcements ALTER COLUMN id SET DEFAULT gen_random_uuid();
+  END IF;
+END $$;
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT '';
@@ -1915,6 +1981,23 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS created_by_user_id 
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS linked_plugin_slug TEXT;
+-- Drop the pre-v3 `content` column. Legacy databases carried a NOT NULL `content` column that the
+-- v3 app (which authors into `body`) never fills, so every "Create draft" failed with
+-- "null value in column content violates not-null constraint". schema.sql has no `content` column,
+-- so bring legacy tables in line: preserve any old text into `body` where `body` is empty, then drop
+-- the defunct column. Guarded + idempotent — a no-op on a fresh database where `content` never
+-- existed, and safe to run repeatedly.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'demo' AND table_name = 'announcements' AND column_name = 'content'
+  ) THEN
+    UPDATE announcements SET body = content WHERE (body IS NULL OR body = '') AND content IS NOT NULL;
+    ALTER TABLE announcements DROP COLUMN content;
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_announcements_status ON announcements(status);
 
 -- === FEED TIMELINE PROJECTION ===
@@ -2002,9 +2085,11 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('service-credits',    'ServiceCredits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
   ('level-up',           'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
   ('click-log',          'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
+  ('trust',              'Trust',                'Community reputation and verification. Trust signals built through real participation — your credibility, visible and portable.','implemented_shell', 190, TRUE),
   ('what-works',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
   ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'implemented_shell', 210, TRUE),
-  ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE)
+  ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE),
+  ('recurring-activity', 'Recurring Activity',   'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.','implemented_shell', 240, TRUE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,
@@ -2143,7 +2228,7 @@ ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS act
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- The action vocabulary: the app's delete path writes 'delete'; the taxonomy change-ops apply engine
+-- The action vocabulary: the app's delete path writes 'delete'; the taxonomy change apply engine
 -- writes 'create', 'rename', 'reparent', 'deactivate', and 'reactivate' ('update' is kept for any
 -- pre-existing rows). Both checks are added NOT VALID: the audit log is append-only and historical
 -- rows are never rewritten to fit a newer vocabulary (ledger discipline), so the checks constrain
@@ -2197,6 +2282,18 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
   monero_address TEXT,
   bitcoin_address TEXT,
   service_credits_address TEXT,
+  -- Member location (city / state or region / country). Standard fields so non-US members are
+  -- represented accurately — Directory feeds nearly every other plugin. These are the SAME column
+  -- names v2 used (directory_profiles.city / state / country, varchar(100) in the prod snapshot
+  -- ctf/schema-prod4.6.2026.sql), so on the cloned production database the ADD COLUMN IF NOT EXISTS
+  -- below is a no-op and the carried-over v2 values are preserved in place — no data-copy migration
+  -- is needed (unlike skills/bio/profile_url, whose v3 targets differ from v2 and are backfilled in
+  -- post/0005–0007). v3 simply never declared or read these columns before, which is why the data
+  -- looked missing. Values are plain names ("United States", "California") per the shared location
+  -- standard (packages/web/lib/geo/locations.ts).
+  city TEXT,
+  state TEXT,
+  country TEXT,
   deleted_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -2235,6 +2332,9 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS venmo_address 
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS monero_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bitcoin_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS service_credits_address TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS state TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS country TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- SkillsHunt + Clerk username co-change (2026-05-11). See
@@ -2244,7 +2344,7 @@ DO $directory_profiles_source_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'directory_profiles_source_check'
+    WHERE constraint_name = 'directory_profiles_source_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE directory_profiles
@@ -2268,7 +2368,7 @@ BEGIN
   -- with the case-insensitive variant below.
   IF EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE indexname = 'directory_profiles_unclaimed_handle_key'
+    WHERE indexname = 'directory_profiles_unclaimed_handle_key' AND schemaname = current_schema()
       AND indexdef NOT ILIKE '%lower(unclaimed_handle)%'
   ) THEN
     -- A legacy DB may have created this name as a UNIQUE *constraint*
@@ -2281,7 +2381,7 @@ BEGIN
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE indexname = 'directory_profiles_unclaimed_handle_key'
+    WHERE indexname = 'directory_profiles_unclaimed_handle_key' AND schemaname = current_schema()
   ) THEN
     BEGIN
       CREATE UNIQUE INDEX directory_profiles_unclaimed_handle_key
@@ -2842,7 +2942,7 @@ ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS create
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE tablename = 'level_up_user_achievements' AND indexname = 'level_up_user_achievements_user_id_achievement_id_key'
+    SELECT 1 FROM pg_indexes WHERE tablename = 'level_up_user_achievements' AND indexname = 'level_up_user_achievements_user_id_achievement_id_key' AND schemaname = current_schema()
   ) THEN
     EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS level_up_user_achievements_user_id_achievement_id_key ON level_up_user_achievements(user_id, achievement_id)';
   END IF;
@@ -3005,7 +3105,7 @@ DO $foundation_provider_skills_skill_fk$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'foundation_provider_skills_skill_id_fkey'
+    WHERE constraint_name = 'foundation_provider_skills_skill_id_fkey' AND constraint_schema = current_schema()
       AND table_name = 'foundation_provider_skills'
       AND constraint_type = 'FOREIGN KEY'
   ) THEN
@@ -3189,7 +3289,13 @@ CREATE TABLE IF NOT EXISTS socket_relay_requests (
   details TEXT NOT NULL,
   category TEXT NOT NULL,
   tags TEXT[] NOT NULL DEFAULT '{}',
+  -- Per-request location (a request can be for a different place than where the member lives — a
+  -- second property, a cross-city errand, a package delivery abroad). city/state/country default from
+  -- the member's directory profile in the create form, but are freely overridable per request. City
+  -- stays "city or neighborhood only, never an exact address" for privacy.
   city TEXT,
+  state TEXT,
+  country TEXT,
   is_public BOOLEAN NOT NULL DEFAULT FALSE,
   status TEXT NOT NULL DEFAULT 'open',
   reopened_count INTEGER NOT NULL DEFAULT 0,
@@ -3210,6 +3316,8 @@ ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS details TEX
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS state TEXT;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS country TEXT;
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS reopened_count INTEGER NOT NULL DEFAULT 0;
@@ -3236,7 +3344,7 @@ DO $socket_relay_requests_price_consistency$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'socket_relay_requests_price_consistency_check'
+    WHERE constraint_name = 'socket_relay_requests_price_consistency_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE socket_relay_requests
       ADD CONSTRAINT socket_relay_requests_price_consistency_check
@@ -3462,7 +3570,24 @@ UPDATE mood_submissions SET user_id = '' WHERE pseudonym IS NOT NULL AND user_id
 -- ADD CONSTRAINT IF NOT EXISTS).
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'mood_submissions_pseudonym_fkey') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'mood_submissions_pseudonym_fkey' AND connamespace = current_schema()::regnamespace) THEN
+    -- Self-heal orphaned check-ins before enforcing the FK. The backfill above
+    -- severs the direct user_id link and repoints rows onto a mapping pseudonym,
+    -- so a submission whose pseudonym has no mapping row (an orphan left by
+    -- earlier data churn, or by a schema that never enforced this FK) would make
+    -- the ADD CONSTRAINT below fail on existing data. Give each orphan its own
+    -- server-controlled mapping — user_id is set to the pseudonym text, which is
+    -- always unique and can never be a real Clerk id — so no check-in is lost and
+    -- ON DELETE CASCADE still deletes it through the mapping. This runs only when
+    -- the FK is absent, so on a schema that already enforces it (steady-state
+    -- production) the whole block is skipped and no mapping rows are invented.
+    INSERT INTO mood_client_identities (pseudonym, user_id)
+    SELECT DISTINCT s.pseudonym, s.pseudonym::text
+    FROM mood_submissions s
+    LEFT JOIN mood_client_identities m ON m.pseudonym = s.pseudonym
+    WHERE s.pseudonym IS NOT NULL AND m.pseudonym IS NULL
+    ON CONFLICT DO NOTHING;
+
     ALTER TABLE mood_submissions
       ADD CONSTRAINT mood_submissions_pseudonym_fkey
       FOREIGN KEY (pseudonym) REFERENCES mood_client_identities(pseudonym) ON DELETE CASCADE;
@@ -4028,6 +4153,9 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_pro
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS skills JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS signature_hash TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS country TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS state TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS city TEXT NULL;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS review_action TEXT;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id TEXT;
@@ -4101,7 +4229,7 @@ DO $skills_hunt_submissions_url_validation_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'skills_hunt_submissions_url_validation_check'
+    WHERE constraint_name = 'skills_hunt_submissions_url_validation_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE skills_hunt_submissions
@@ -4124,7 +4252,7 @@ DO $skills_hunt_achievements_round_fk$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'skills_hunt_achievements_round_id_fkey'
+    WHERE constraint_name = 'skills_hunt_achievements_round_id_fkey' AND constraint_schema = current_schema()
       AND table_name = 'skills_hunt_achievements'
   ) THEN
     BEGIN
@@ -4430,7 +4558,7 @@ DO $comic_conversations_channel_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_conversations_channel_check'
+    WHERE constraint_name = 'comic_conversations_channel_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_conversations
@@ -4447,7 +4575,7 @@ DO $comic_conversations_status_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_conversations_status_check'
+    WHERE constraint_name = 'comic_conversations_status_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_conversations
@@ -4464,7 +4592,7 @@ DO $comic_turns_role_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_turns_role_check'
+    WHERE constraint_name = 'comic_turns_role_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_turns
@@ -4481,7 +4609,7 @@ DO $comic_turns_engine_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_turns_engine_check'
+    WHERE constraint_name = 'comic_turns_engine_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_turns
@@ -4498,7 +4626,7 @@ DO $comic_turns_nlu_confidence_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_turns_nlu_confidence_check'
+    WHERE constraint_name = 'comic_turns_nlu_confidence_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_turns
@@ -4515,7 +4643,7 @@ DO $comic_review_queue_status_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_review_queue_status_check'
+    WHERE constraint_name = 'comic_review_queue_status_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_review_queue
@@ -4532,7 +4660,7 @@ DO $comic_training_examples_status_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_training_examples_status_check'
+    WHERE constraint_name = 'comic_training_examples_status_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_training_examples
@@ -4549,7 +4677,7 @@ DO $comic_answer_ratings_rating_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'comic_answer_ratings_rating_check'
+    WHERE constraint_name = 'comic_answer_ratings_rating_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE comic_answer_ratings
@@ -4652,7 +4780,7 @@ DO $contributions_cycles_window_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_cycles_window_check'
+    WHERE constraint_name = 'contributions_cycles_window_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE contributions_cycles
       ADD CONSTRAINT contributions_cycles_window_check CHECK (ends_at > starts_at);
@@ -4663,7 +4791,7 @@ DO $contributions_cycles_goals_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_cycles_goals_check'
+    WHERE constraint_name = 'contributions_cycles_goals_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE contributions_cycles
       ADD CONSTRAINT contributions_cycles_goals_check
@@ -4719,7 +4847,7 @@ DO $contributions_submissions_amounts_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_submissions_amounts_check'
+    WHERE constraint_name = 'contributions_submissions_amounts_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE contributions_submissions
       ADD CONSTRAINT contributions_submissions_amounts_check
@@ -4737,7 +4865,7 @@ DO $contributions_submissions_gift_card_signal_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_submissions_gift_card_signal_check'
+    WHERE constraint_name = 'contributions_submissions_gift_card_signal_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE contributions_submissions
       ADD CONSTRAINT contributions_submissions_gift_card_signal_check
@@ -4751,7 +4879,7 @@ DO $contributions_submissions_cycle_fk$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'contributions_submissions_cycle_id_fkey'
+    WHERE constraint_name = 'contributions_submissions_cycle_id_fkey' AND constraint_schema = current_schema()
       AND constraint_type = 'FOREIGN KEY'
   ) THEN
     ALTER TABLE contributions_submissions
@@ -4788,7 +4916,7 @@ DO $contributions_runtime_config_positive_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_runtime_config_positive_check'
+    WHERE constraint_name = 'contributions_runtime_config_positive_check' AND constraint_schema = current_schema()
   ) THEN
     ALTER TABLE contributions_runtime_config
       ADD CONSTRAINT contributions_runtime_config_positive_check
@@ -5029,7 +5157,7 @@ DO $member_blocks_unique_constraint$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'member_blocks_blocker_blocked_unique'
+    WHERE constraint_name = 'member_blocks_blocker_blocked_unique' AND constraint_schema = current_schema()
       AND table_name = 'member_blocks'
   ) THEN
     BEGIN
@@ -5046,7 +5174,7 @@ DO $member_blocks_no_self_block$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'member_blocks_no_self_block'
+    WHERE constraint_name = 'member_blocks_no_self_block' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE member_blocks
@@ -5109,7 +5237,7 @@ DO $member_safety_reports_status_check$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'member_safety_reports_status_check'
+    WHERE constraint_name = 'member_safety_reports_status_check' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE member_safety_reports
@@ -5125,7 +5253,7 @@ DO $member_safety_reports_no_self_report$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'member_safety_reports_no_self_report'
+    WHERE constraint_name = 'member_safety_reports_no_self_report' AND constraint_schema = current_schema()
   ) THEN
     BEGIN
       ALTER TABLE member_safety_reports
@@ -5144,6 +5272,84 @@ CREATE INDEX IF NOT EXISTS member_safety_reports_status_idx
   ON member_safety_reports (status, created_at DESC);
 CREATE INDEX IF NOT EXISTS member_safety_reports_reported_user_idx
   ON member_safety_reports (reported_user_id);
+
+-- === recurring_activities (Recurring Activity plugin; issue #885) =================================
+-- A member's self-declared, counterparty-confirmed ONGOING activity with one other member — the way
+-- the platform captures recurring peer relationships (rent, an ongoing service, a standing favor)
+-- WITHOUT becoming a payment processor or a recurring-payment record. Design constraints, all load-
+-- bearing (see the Recurring Activity feature inventory and issue #885):
+--   * NOT a ledger. No value ever moves here; this only records that an ongoing activity exists.
+--   * NO free-text anywhere. `sector` is a fixed dropdown (the "brief description"); there is no note
+--     column, by owner decision — a vulnerable population must not be able to over-disclose an
+--     auditable detail in free text.
+--   * Fiat carries NO amount. A fiat-denominated line stores only the currency label + cadence, never
+--     a number, so the platform never holds a summable recurring-fiat-payment total (the liability
+--     firewall). Only ServiceCredits — an internal utility token with no outside reporting duty —
+--     carries a declared value (`sc_value`), and even that is a declared figure, never an executed
+--     transfer, so it never touches real ServiceCredits balances or the SC ledger.
+--   * Two-sided. Created `pending`; it only counts toward Trust or GDP once the counterparty confirms
+--     it (`active`). Either party can end it (`ended`); the counterparty may decline it (`declined`).
+--   * Private by default. `visibility` defaults to 'private'; only coarse aggregate counts ever reach
+--     public surfaces (Trust distinct-counterparty signal, GDP count/value contribution).
+CREATE TABLE IF NOT EXISTS recurring_activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_user_id TEXT NOT NULL,
+  counterparty_user_id TEXT NOT NULL,
+  sector TEXT NOT NULL DEFAULT 'general' CHECK (sector IN ('housing','service','favor','general')),
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  cadence TEXT NOT NULL DEFAULT 'monthly' CHECK (cadence IN ('weekly','biweekly','monthly','quarterly')),
+  sc_value NUMERIC(14,2),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','ended','declined')),
+  visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private','restricted','public')),
+  confirmed_at TIMESTAMPTZ,
+  ended_at TIMESTAMPTZ,
+  ended_by_user_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT recurring_activities_no_self CHECK (owner_user_id <> counterparty_user_id)
+);
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS owner_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS counterparty_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS sector TEXT NOT NULL DEFAULT 'general';
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS currency_code TEXT;
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS cadence TEXT NOT NULL DEFAULT 'monthly';
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS sc_value NUMERIC(14,2);
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'private';
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS ended_by_user_id TEXT;
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS recurring_activities_owner_idx ON recurring_activities (owner_user_id, status);
+CREATE INDEX IF NOT EXISTS recurring_activities_counterparty_idx ON recurring_activities (counterparty_user_id, status);
+CREATE INDEX IF NOT EXISTS recurring_activities_status_currency_idx ON recurring_activities (status, currency_code);
+
+-- Append-only audit trail for every Recurring Activity mutation (create/confirm/decline/end) and for
+-- denied attempts. Mirrors trust_admin_audit_trail. No sensitive raw payload is stored — only coarse
+-- metadata (sector, currency code, cadence, status transition).
+CREATE TABLE IF NOT EXISTS recurring_activity_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_user_id TEXT,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL DEFAULT 'allow',
+  reason TEXT NOT NULL DEFAULT '',
+  activity_id UUID,
+  request_id TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS actor_user_id TEXT;
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT 'allow';
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS activity_id UUID;
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS request_id TEXT;
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS recurring_activity_audit_trail_activity_idx ON recurring_activity_audit_trail (activity_id, created_at DESC);
 COMMIT;
 
 -- ── post migration: 0001_directory_display_name_to_first_last.sql ──

@@ -20,8 +20,10 @@ type ProfileRow = {
   profile_id: string;
   first_name: string | null;
   last_name: string | null;
-  sector_id: string | null;
-  sector_name: string | null;
+  job_title_sector_id: string | null;
+  job_title_sector_name: string | null;
+  profile_sector_id: string | null;
+  profile_sector_name: string | null;
   job_title_id: string | null;
   job_title_name: string | null;
 };
@@ -48,8 +50,10 @@ async function loadProfilesForMatch(): Promise<LoadedProfiles> {
          dp.id::text AS profile_id,
          dp.first_name AS first_name,
          dp.last_name AS last_name,
-         COALESCE(jt.sector_id, dp.sector_id)::text AS sector_id,
-         COALESCE(jt_sec.name, dp_sec.name) AS sector_name,
+         jt.sector_id::text AS job_title_sector_id,
+         jt_sec.name AS job_title_sector_name,
+         dp.sector_id::text AS profile_sector_id,
+         dp_sec.name AS profile_sector_name,
          dp.job_title_id::text AS job_title_id,
          jt.name AS job_title_name
        FROM directory_profiles dp
@@ -60,15 +64,20 @@ async function loadProfilesForMatch(): Promise<LoadedProfiles> {
     ),
     // Rows are keyed by profile and only read for the active profiles loaded above, so there is no
     // need to re-join directory_profiles here (that join can fail on databases where the id column
-    // types differ). The job-title join keeps only skills under an active job title.
+    // types differ). Skills match by NAME, not by row (owner decision 2026-07-04, mirrors
+    // computeWorkforceModel): `held` is the member's own skill row, `other` is every active
+    // same-named row, so one (profile, skill name, job title) row exists per occupation the name is
+    // listed under. The job-title join keeps only occupations that are active.
     queryDb<ProfileSkillRow>(
-      `SELECT
+      `SELECT DISTINCT
          dps.profile_id::text AS profile_id,
-         sts.name AS skill_name,
-         sts.job_title_id::text AS job_title_id
+         held.name AS skill_name,
+         other.job_title_id::text AS job_title_id
        FROM directory_profile_skills dps
-       JOIN skills_taxonomy_skills sts ON sts.id = dps.skill_id AND sts.is_active = TRUE
-       JOIN skills_taxonomy_job_titles jt ON jt.id = sts.job_title_id AND jt.is_active = TRUE`,
+       JOIN skills_taxonomy_skills held ON held.id = dps.skill_id AND held.is_active = TRUE
+       JOIN skills_taxonomy_skills other
+         ON lower(btrim(other.name)) = lower(btrim(held.name)) AND other.is_active = TRUE
+       JOIN skills_taxonomy_job_titles jt ON jt.id = other.job_title_id AND jt.is_active = TRUE`,
     ),
     queryDb<JobTitleRow>(
       `SELECT jt.id::text AS id, jt.name AS name, jt.sector_id::text AS sector_id, sec.name AS sector_name
@@ -90,6 +99,41 @@ async function loadProfilesForMatch(): Promise<LoadedProfiles> {
   return { profiles: profilesRes.rows, skillsByProfile, jobTitles: jobTitlesRes.rows, jobTitleById };
 }
 
+// The member's own sector, by spec precedence (mirrors computeWorkforceModel): the chosen
+// occupation's sector, else the sector the member's skills map to through the taxonomy (plurality,
+// ties broken by sector name), else the raw profile sector field.
+function resolveOwnSector(
+  p: ProfileRow,
+  loaded: LoadedProfiles,
+): { id: string | null; name: string | null } {
+  if (p.job_title_sector_id) {
+    return { id: p.job_title_sector_id, name: p.job_title_sector_name };
+  }
+  const tally = new Map<string, number>();
+  for (const skill of loaded.skillsByProfile.get(p.profile_id) ?? []) {
+    const jt = loaded.jobTitleById.get(skill.job_title_id);
+    if (!jt) continue;
+    tally.set(jt.sector_id, (tally.get(jt.sector_id) ?? 0) + 1);
+  }
+  let bestId: string | null = null;
+  let bestName: string | null = null;
+  let bestCount = 0;
+  for (const [sectorId, count] of tally) {
+    const name = loaded.jobTitles.find((jt) => jt.sector_id === sectorId)?.sector_name ?? '';
+    const wins = count > bestCount
+      || (count === bestCount && bestId !== null && name < (bestName ?? ''));
+    if (wins) {
+      bestId = sectorId;
+      bestName = name;
+      bestCount = count;
+    }
+  }
+  if (bestId) {
+    return { id: bestId, name: bestName };
+  }
+  return { id: p.profile_sector_id, name: p.profile_sector_name };
+}
+
 function displayName(p: ProfileRow): string {
   const name = [p.first_name, p.last_name].filter((s) => s && s.trim()).join(' ').trim();
   return name || 'Member';
@@ -109,11 +153,12 @@ function buildMatch(
   loaded: LoadedProfiles,
   candidates: JobTitleRow[],
   sectorArmAppliesTo: (jt: JobTitleRow) => boolean,
+  gapByJobTitleId: Map<string, number>,
 ): WorkforceMatchedMember | null {
   const profileSkills = loaded.skillsByProfile.get(p.profile_id) ?? [];
   const skillJobTitleIds = new Set(profileSkills.map((s) => s.job_title_id));
 
-  const matchingOccupations: Array<{ id: string; title: string; sector: string }> = [];
+  const matchingOccupations: WorkforceMatchedMember['matchingOccupations'] = [];
   let reason: WorkforceMatchReason = 'none';
 
   for (const jt of candidates) {
@@ -126,7 +171,19 @@ function buildMatch(
       occReason = 'sector';
     }
     if (occReason !== 'none') {
-      matchingOccupations.push({ id: jt.id, title: jt.name, sector: jt.sector_name });
+      // The member's skills registered under THIS occupation — the evidence for a skill match, so
+      // the display never implies the member's unrelated skills caused it.
+      const viaSkills = occReason === 'skill'
+        ? Array.from(new Set(profileSkills.filter((s) => s.job_title_id === jt.id).map((s) => s.skill_name)))
+        : [];
+      matchingOccupations.push({
+        id: jt.id,
+        title: jt.name,
+        sector: jt.sector_name,
+        reason: occReason,
+        viaSkills,
+        gap: gapByJobTitleId.get(jt.id) ?? 0,
+      });
       reason = strongerReason(reason, occReason);
     }
   }
@@ -136,12 +193,13 @@ function buildMatch(
   }
 
   const skillNames = Array.from(new Set(profileSkills.map((s) => s.skill_name).filter(Boolean)));
+  const ownSector = resolveOwnSector(p, loaded);
 
   return {
     profileId: p.profile_id,
     displayName: displayName(p),
     skills: skillNames,
-    sectors: p.sector_name ? [p.sector_name] : [],
+    sectors: ownSector.name ? [ownSector.name] : [],
     jobTitles: p.job_title_name ? [p.job_title_name] : [],
     matchingOccupations,
     matchReason: reason,
@@ -164,6 +222,7 @@ export async function fetchSectorDetail(sector: string): Promise<WorkforceBucket
   }
 
   const loaded = await loadProfilesForMatch();
+  const gapByJobTitleId = new Map(model.occupations.map((o) => [o.jobTitleId, o.gap] as const));
   // The occupations of this sector (matched by the sector's display name, since that is what the
   // model bucket and the route carry). The sector arm applies to every occupation in this sector.
   const sectorJobTitles = loaded.jobTitles.filter((jt) => jt.sector_name.toLowerCase() === target);
@@ -171,8 +230,9 @@ export async function fetchSectorDetail(sector: string): Promise<WorkforceBucket
 
   const matchedMembers: WorkforceMatchedMember[] = [];
   for (const p of loaded.profiles) {
-    const ownSectorInBucket = p.sector_id != null && sectorIds.has(p.sector_id);
-    const match = buildMatch(p, loaded, sectorJobTitles, () => ownSectorInBucket);
+    const ownSectorId = resolveOwnSector(p, loaded).id;
+    const ownSectorInBucket = ownSectorId != null && sectorIds.has(ownSectorId);
+    const match = buildMatch(p, loaded, sectorJobTitles, () => ownSectorInBucket, gapByJobTitleId);
     if (match) {
       matchedMembers.push(match);
     }
@@ -191,13 +251,15 @@ export async function fetchSkillLevelDetail(skillLevel: string): Promise<Workfor
 
   const level = bucket.bucket as WorkforceSkillLevel;
   const loaded = await loadProfilesForMatch();
+  const gapByJobTitleId = new Map(model.occupations.map((o) => [o.jobTitleId, o.gap] as const));
   // The occupations at this skill level (across all sectors). The sector arm applies to an occupation
   // only when it sits in the profile's own sector.
   const levelJobTitles = loaded.jobTitles.filter((jt) => deriveWorkforceSkillLevel(jt.name) === level);
 
   const matchedMembers: WorkforceMatchedMember[] = [];
   for (const p of loaded.profiles) {
-    const match = buildMatch(p, loaded, levelJobTitles, (jt) => p.sector_id != null && p.sector_id === jt.sector_id);
+    const ownSectorId = resolveOwnSector(p, loaded).id;
+    const match = buildMatch(p, loaded, levelJobTitles, (jt) => ownSectorId != null && ownSectorId === jt.sector_id, gapByJobTitleId);
     if (match) {
       matchedMembers.push(match);
     }

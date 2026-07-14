@@ -47,20 +47,23 @@ Access-gating plugin — these are the can't-ship-broken checks. Admin / reviewe
 
 ## Member walkthrough
 
-### UNLOCK-M1 · Early Commons access help link (A/B treatment)
-**Role:** member (not yet verified) · **Surfaces:** web (member Unlock screen), android
-**Precondition:** the `feature-unlock-early-commons-access` Unleash flag is enabled and the test
-member falls in the treatment bucket (so `GET /api/unlock/status` returns `earlyCommonsAccess: true`).
+### UNLOCK-M1 · "Can't find your Quora URL?" help message (universal)
+**Role:** member (not yet verified) · **Surfaces:** web + mobile-responsive (member Unlock screen), android
+**Precondition:** none — this help shows for **every** member, not just the A/B treatment bucket, and
+regardless of the `feature-unlock-early-commons-access` flag.
 **Steps:**
-1. As an unverified treatment member, open the Unlock screen (both the submission form and, if a
-   submission exists, the status view).
-2. Confirm the "Trouble finding your Quora URL? Ask in the Commons" link shows.
-3. Tap it.
-4. Repeat as a control member (flag off, or control bucket).
-**Expected:** A treatment member sees the link on both the submission and status screens and tapping
-it reaches the Commons (the Hub home) where they can ask for help. A control member sees **no** link
-(and could not post there anyway). On android the link behaves the same and lands on the Hub home.
-With the flag off everywhere, no member sees the link (default state).
+1. Open the Unlock submission form (a member with no submission).
+2. Confirm a standout callout reads: "Can't find your Quora profile URL? Go to tiskillsnetwork.quora.com
+   and comment on any post asking for help — I'll reply with your profile URL." (First person "I" — it
+   must never read as more than one person maintaining the app.)
+3. Tap the `tiskillsnetwork.quora.com` link and confirm it opens that Quora space (new tab on web;
+   the system browser on android).
+4. On a **rejected** submission, open the status / re-submit view and confirm the same callout appears
+   by the re-submit field.
+**Expected:** The Quora help callout is visible and prominent wherever the Quora URL is requested (the
+submission form, and the re-submit field on a rejected status), for every member regardless of A/B
+bucket or flag state. The link opens the network's Quora space. There is no longer an "Ask in the
+Commons" link on the Unlock screen — help points to Quora.
 **Result:** web ☐ android ☐ — notes:
 
 ### UNLOCK-M2 · Verify prompt on the Commons (A/B treatment)
@@ -72,8 +75,9 @@ submission.
 **Steps (web):**
 1. As an unverified treatment member with **no** submission, open the home page (the Commons).
 2. Confirm a "Verify your account to unlock full access" banner shows at the top of the content area,
-   with a Quora URL input, a "Submit for verification" button, and a note to ask for help in the
-   Commons chat below.
+   with a Quora URL input, a "Submit for verification" button, and the standout Quora-URL help callout
+   ("Can't find your Quora profile URL? Go to tiskillsnetwork.quora.com and comment on any post asking
+   for help — I'll reply with your profile URL.").
 3. Paste a valid Quora profile URL and submit.
 4. Confirm the banner switches to an "under review" note without a full reload.
 5. Reload; confirm the banner still shows the "under review" note (pending submission).
@@ -159,15 +163,31 @@ support-only, and stamps `reward_revoked_at` so reconcile never re-grants it. Bo
 admin-gated, CSRF-guarded (`x-ctf-csrf: '1'`), and audited.
 **Result:** web ☐ — notes:
 
+### UNLOCK-A6 · Search the submissions list
+**Role:** admin / reviewer · **Surfaces:** web (admin surface), android (Unlock Admin)
+**Precondition:** the All view has several submissions (the demo seed / a real queue with 30+ rows).
+**Steps:**
+1. Open the admin submissions list (web `/admin/unlock`; android Unlock Admin) and switch to the All
+   view.
+2. Type part of a known submitter's Quora URL into the search box above the list.
+3. Clear it and type part of a user id, then a submission number.
+4. Type a string that matches nothing.
+**Expected:** The list filters live as you type, matching on Quora URL, user id, or submission number
+(case-insensitive), so you can find a row without scrolling. Search combines with the active tab
+(Pending / All, plus Approved on android). A no-match query shows "No submissions match your search."
+Clearing the box restores the full list. Search filters the already-loaded page.
+**Result:** web ☐ android ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)
 
 The internal verification **queue** is admin-only, so there is no web ↔ android parity row for it.
-But the member-facing Unlock screen does have a parity row: **UNLOCK-M1** (the early-Commons help
-link) must behave the same on web and android — same link for treatment members, none for control,
-both landing on the Commons (Hub home). (An android admin screen exists for the review queue; the
-grant/revoke determination actions are an android follow-up per the inventory's Gaps section.)
+But the member-facing Unlock screen does have parity rows: **UNLOCK-M1** (the universal "Can't find
+your Quora URL?" help pointing to tiskillsnetwork.quora.com) and **UNLOCK-M2** (the verify prompt on
+the Commons) must behave the same on web and android. (An android admin screen exists for the review
+queue; the grant/revoke determination actions are an android follow-up per the inventory's Gaps
+section.)
 
 ---
 
