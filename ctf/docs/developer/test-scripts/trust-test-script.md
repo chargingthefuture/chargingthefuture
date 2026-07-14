@@ -10,7 +10,7 @@
 | **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md` |
-| **Generated** | 2026-07-01 (hand-updated for the trust code-review fixes: throttled self-read recompute, legacy visibility-key rejection) |
+| **Generated** | 2026-07-14 (hand-updated: demo trust evidence shape fix — human summaries, no raw type slug, no "Invalid Date") |
 
 ---
 
@@ -30,7 +30,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 1. **API reachable — self read.** As admin, call `GET /api/trust/user/self`. Expect HTTP 200 and a JSON body containing `trustStatus`, `trustEvidence` (array), and `trustVisibility`. No numeric score field should appear anywhere in the response.
    web ☐
 
-2. **Widget renders on the right rail.** Sign in as admin, open a page that embeds the Trust right-rail card (e.g. account hub or community shell). `TrustWidgetCard` should render — ShieldCheck header visible, no crash, no blank white box.
+2. **Widget renders on the right rail.** Sign in as admin, open a page that embeds the Trust right-rail card (e.g. account hub or community shell). `TrustWidgetCard` should render — ShieldCheck header visible, no crash, no blank white box. Each evidence row must read as a human sentence (the `summary`, e.g. "Accepted 1 SkillsHunt submission"), **never** a raw type slug like `demo_second_owner` or `Engagement-...`. Any date shown must be a real date — **never** the literal "Invalid Date". (Regression guard: the demo seed previously wrote evidence with no `summary`/`createdAt`, which produced both symptoms.)
    web ☐
 
 3. **Android Trust screen loads.** Open the app as admin. Navigate to the Trust screen. It should reach one of the four states (loading → then populated, empty, or public) without a crash.

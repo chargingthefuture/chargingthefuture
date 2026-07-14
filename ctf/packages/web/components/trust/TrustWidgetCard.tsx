@@ -29,6 +29,21 @@ function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+// Turn an internal evidence `type` slug (e.g. "engagement-login-frequency") into readable text. Only
+// used as a fallback when an item has no `summary` — a well-formed derived item always has one.
+function humanizeType(type: string): string {
+  const words = (type || "").replace(/[-_]+/g, " ").trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : "Trust signal";
+}
+
+// Render the evidence date only when `createdAt` is a real, parseable timestamp — otherwise nothing,
+// never the literal "Invalid Date" a bad/missing value would produce.
+function formatEvidenceDate(value?: string): string | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toLocaleDateString();
+}
+
 // Header is just the Trust label. There is no verified/unverified status chip: the platform does
 // not verify members, so showing a "Verified"/"Unverified" badge would promise something it cannot
 // support. Trust is signal-only.
@@ -88,12 +103,15 @@ function EvidenceItem({ item }: { item: TrustEvidenceItem }) {
   const t = getTrustTokens(theme);
   return (
     <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "8px 10px", border: `1px solid ${HAIRLINE}` }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <CheckCircle2 size={12} style={{ color: "#38BDF8", flexShrink: 0 }} />
-        <span style={{ fontSize: 11, fontWeight: 600, color: "#E2E8F0" }}>{titleCase(item.type)}</span>
-        <span style={{ fontSize: 10, color: t.FAINT, marginLeft: "auto" }}>{new Date(item.createdAt).toLocaleDateString()}</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "#E2E8F0", flex: 1, minWidth: 0 }}>
+          {item.summary && item.summary.trim() ? item.summary : humanizeType(item.type)}
+        </span>
+        {formatEvidenceDate(item.createdAt) && (
+          <span style={{ fontSize: 10, color: t.FAINT, flexShrink: 0 }}>{formatEvidenceDate(item.createdAt)}</span>
+        )}
       </div>
-      <div style={{ fontSize: 11, color: "#CBD5E1", lineHeight: 1.5 }}>{item.summary}</div>
       {item.details && <div style={{ fontSize: 10, color: t.MUTED, marginTop: 3, lineHeight: 1.5 }}>{item.details}</div>}
     </div>
   );
