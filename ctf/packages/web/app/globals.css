@@ -153,6 +153,20 @@ option {
     min-height: 100%;
     overflow-x: hidden;
   }
+
+  /*
+   * Stop iOS/WebKit from auto-zooming the whole page when a text field is focused. Mobile Safari
+   * (and the installed web app) zooms in whenever the focused input's font-size is below 16px, and
+   * the zoom sticks — leaving the page magnified and clipped. Pinning form controls to at least 16px
+   * on phones prevents that jump while keeping pinch-to-zoom intact (so it stays WCAG-friendly,
+   * unlike a viewport maximum-scale lock). `!important` is required because many fields set a
+   * smaller font-size inline.
+   */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 a {
