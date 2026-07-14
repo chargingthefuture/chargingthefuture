@@ -9,6 +9,20 @@ export interface TrustEvidencePanelProps {
   compact?: boolean;
 }
 
+// Turn an internal evidence `type` slug (e.g. "engagement-login-frequency") into readable text.
+function humanizeType(type: string): string {
+  const words = (type || '').replace(/[-_]+/g, ' ').trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : 'Trust signal';
+}
+
+// Format an evidence date only when it is a real, parseable timestamp — otherwise null, so the row
+// never shows the literal "Invalid Date" a bad/missing createdAt would produce.
+function formatEvidenceDate(value?: string): string | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toLocaleDateString();
+}
+
 export const TrustEvidencePanel: React.FC<TrustEvidencePanelProps> = ({ trust, compact }: TrustEvidencePanelProps) => {
   const empty = !trust.trustEvidence || trust.trustEvidence.length === 0;
   return (
@@ -29,10 +43,13 @@ export const TrustEvidencePanel: React.FC<TrustEvidencePanelProps> = ({ trust, c
       ) : (
         trust.trustEvidence.map((item: TrustEvidenceItem, index: number) => (
           <View key={`${item.type}-${index}`} style={styles.evidenceItem}>
-            <Text style={styles.evidenceType}>{item.type}</Text>
-            <Text style={styles.evidenceSummary}>{item.summary}</Text>
+            <Text style={styles.evidenceSummary}>
+              {item.summary && item.summary.trim() ? item.summary : humanizeType(item.type)}
+            </Text>
             {item.details ? <Text style={styles.evidenceDetails}>{item.details}</Text> : null}
-            <Text style={styles.evidenceDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+            {formatEvidenceDate(item.createdAt) ? (
+              <Text style={styles.evidenceDate}>{formatEvidenceDate(item.createdAt)}</Text>
+            ) : null}
           </View>
         ))
       )}
