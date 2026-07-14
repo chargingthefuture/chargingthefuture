@@ -76,6 +76,7 @@ export function UnlockAdminShell({
   const { theme } = useTheme();
   const t = getUnlockTokens(theme);
   const [tab, setTab] = useState<Tab>('pending');
+  const [search, setSearch] = useState('');
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +93,18 @@ export function UnlockAdminShell({
   const [confirmRevokeId, setConfirmRevokeId] = useState<number | null>(null);
 
   const visible = tab === 'pending' ? submissions.filter((s) => s.reviewStatus === 'pending') : submissions;
+  // Client-side search over the loaded page so an admin can find a submission by Quora URL, user id,
+  // or submission number without scrolling the whole list.
+  const searchQuery = search.trim().toLowerCase();
+  const filteredVisible = searchQuery
+    ? visible.filter(
+        (s) =>
+          s.quoraProfileUrl.toLowerCase().includes(searchQuery) ||
+          s.quoraProfileUrlNormalized.toLowerCase().includes(searchQuery) ||
+          s.userId.toLowerCase().includes(searchQuery) ||
+          String(s.id).includes(searchQuery),
+      )
+    : visible;
   // Approved submissions whose 100-credit reward never landed (incentive_granted_at still null). These
   // are exactly the rows the "Retry pending rewards" drain will mint. Counted from the loaded page.
   const pendingRewardCount = submissions.filter((s) => s.reviewStatus === 'approved' && !s.incentiveGrantedAt).length;
@@ -371,6 +384,23 @@ export function UnlockAdminShell({
           ))}
         </div>
 
+        {/* Search over the loaded submissions so an admin need not scroll the whole list. */}
+        <div style={{ marginBottom: 16 }}>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by Quora URL, user, or submission #"
+            aria-label="Search submissions"
+            style={{ width: '100%', boxSizing: 'border-box', padding: '9px 14px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13 }}
+          />
+          {searchQuery ? (
+            <div style={{ marginTop: 6, fontSize: 12, color: t.MUTED }}>
+              {filteredVisible.length} match{filteredVisible.length === 1 ? '' : 'es'}
+            </div>
+          ) : null}
+        </div>
+
         {error ? (
           <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>{error}</div>
         ) : null}
@@ -379,12 +409,16 @@ export function UnlockAdminShell({
           <div role="status" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13 }}>{notice}</div>
         ) : null}
 
-        {visible.length === 0 ? (
+        {filteredVisible.length === 0 ? (
           <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-            {tab === 'pending' ? 'No submissions waiting for review.' : 'No submissions yet.'}
+            {searchQuery
+              ? 'No submissions match your search.'
+              : tab === 'pending'
+                ? 'No submissions waiting for review.'
+                : 'No submissions yet.'}
           </div>
         ) : (
-          visible.map((s) => {
+          filteredVisible.map((s) => {
             const busy = busyId === s.id;
             const rewardHeld = Boolean(s.rewardWithheldAt) && !s.incentiveGrantedAt && !s.rewardRevokedAt;
             const canRevoke = s.reviewStatus === 'approved' && !s.rewardRevokedAt;
