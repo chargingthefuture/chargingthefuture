@@ -202,7 +202,7 @@ Result: web ☐
 4. Confirm it appears as a yellow/differently-styled chip.
 5. Submit the full form.
 
-**Expected:** Submission succeeds. The proposed skill is stored and visible in My Finds as a chip. The total skills + proposed skills count does not exceed 10.
+**Expected:** Submission succeeds. The proposed skill is stored and visible in My Finds as a chip. The total skills + proposed skills count does not exceed 10. A proposed skill becomes a real taxonomy skill only after the owner approves it — an `addSkill` entry appended to the taxonomy change list (`ctf/scripts/lib/taxonomyChange.mjs`) and applied by the owner-run apply workflow.
 
 Result: web ☐ android ☐
 

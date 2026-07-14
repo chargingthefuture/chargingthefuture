@@ -1952,14 +1952,17 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS announcements ALTER COLUMN id SET DEFAULT gen_random_uuid();
 UPDATE announcements SET id = gen_random_uuid() WHERE id IS NULL;
 ALTER TABLE IF EXISTS announcements ALTER COLUMN id SET NOT NULL;
--- Convert a legacy text/varchar id column to uuid (see schema.sql for the full rationale): publish,
--- archive and edit-draft run `WHERE id = $1::uuid`, which errors on a text column. Lossless cast;
--- guarded so it only runs when the column is not already uuid; a no-op on a fresh DB.
+-- Convert a legacy text/varchar id column to uuid. schema.sql declares announcements.id UUID, but
+-- some legacy databases stored it as text. Publish, archive and edit-draft all run
+-- `WHERE id = $1::uuid`, which errors on a text column ("operator does not exist: character varying
+-- = uuid") and surfaced as "Unable to publish announcement.". Every stored id is a uuid string
+-- (gen_random_uuid default), so the in-place cast is lossless. Guarded so it only runs when the
+-- column is not already uuid; a no-op on a fresh DB (id is uuid from CREATE TABLE).
 DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'announcements' AND column_name = 'id' AND data_type <> 'uuid'
+    WHERE table_schema = 'demo' AND table_name = 'announcements' AND column_name = 'id' AND data_type <> 'uuid'
   ) THEN
     ALTER TABLE announcements ALTER COLUMN id TYPE uuid USING id::uuid;
     ALTER TABLE announcements ALTER COLUMN id SET DEFAULT gen_random_uuid();
@@ -1981,14 +1984,15 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAM
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS linked_plugin_slug TEXT;
 -- Drop the pre-v3 `content` column. Legacy databases carried a NOT NULL `content` column that the
 -- v3 app (which authors into `body`) never fills, so every "Create draft" failed with
--- "null value in column content violates not-null constraint". schema has no `content` column, so
--- preserve any old text into `body` where `body` is empty, then drop the defunct column. Guarded +
--- idempotent — a no-op on a fresh database where `content` never existed.
+-- "null value in column content violates not-null constraint". schema.sql has no `content` column,
+-- so bring legacy tables in line: preserve any old text into `body` where `body` is empty, then drop
+-- the defunct column. Guarded + idempotent — a no-op on a fresh database where `content` never
+-- existed, and safe to run repeatedly.
 DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'announcements' AND column_name = 'content'
+    WHERE table_schema = 'demo' AND table_name = 'announcements' AND column_name = 'content'
   ) THEN
     UPDATE announcements SET body = content WHERE (body IS NULL OR body = '') AND content IS NOT NULL;
     ALTER TABLE announcements DROP COLUMN content;
@@ -2224,7 +2228,7 @@ ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS act
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- The action vocabulary: the app's delete path writes 'delete'; the taxonomy change-ops apply engine
+-- The action vocabulary: the app's delete path writes 'delete'; the taxonomy change apply engine
 -- writes 'create', 'rename', 'reparent', 'deactivate', and 'reactivate' ('update' is kept for any
 -- pre-existing rows). Both checks are added NOT VALID: the audit log is append-only and historical
 -- rows are never rewritten to fit a newer vocabulary (ledger discipline), so the checks constrain

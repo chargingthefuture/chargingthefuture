@@ -2230,7 +2230,7 @@ ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS act
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- The action vocabulary: the app's delete path writes 'delete'; the taxonomy change-ops apply engine
+-- The action vocabulary: the app's delete path writes 'delete'; the taxonomy change apply engine
 -- writes 'create', 'rename', 'reparent', 'deactivate', and 'reactivate' ('update' is kept for any
 -- pre-existing rows). Both checks are added NOT VALID: the audit log is append-only and historical
 -- rows are never rewritten to fit a newer vocabulary (ledger discipline), so the checks constrain
