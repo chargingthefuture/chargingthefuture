@@ -6,6 +6,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -249,11 +250,15 @@ function ClickLogMain({
   totalCount,
   onLog,
   onDelete,
+  refreshing,
+  onRefresh,
 }: {
   incidents: ClickLogIncident[];
   totalCount: number;
   onLog: (_notes: string, _includeLocation: boolean) => Promise<void>;
   onDelete: (_id: string) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const { styles, accent, subtle } = useClickLogTheme();
   const [tab, setTab] = useState<TabKey>('log');
@@ -329,6 +334,7 @@ function ClickLogMain({
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
       >
         {tab === 'log' && (
           <View style={styles.logTab}>
@@ -470,6 +476,7 @@ export function ClickLogScreen() {
   const [screenState, setScreenState] = useState<ScreenState>('loading');
   const [incidents, setIncidents] = useState<ClickLogIncident[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async (isRefresh = false) => {
     // On a background refresh (after a mutation) keep the current screen rather than
@@ -495,6 +502,16 @@ export function ClickLogScreen() {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // Pull-to-refresh: re-pull incidents without flashing the full loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
   }, [load]);
 
   const handleLog = useCallback(async (notes: string, includeLocation: boolean) => {
@@ -553,6 +570,8 @@ export function ClickLogScreen() {
       totalCount={totalCount}
       onLog={handleLog}
       onDelete={handleDelete}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
     />
   );
 }

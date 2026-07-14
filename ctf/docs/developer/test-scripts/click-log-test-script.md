@@ -84,6 +84,21 @@ string. Trailing whitespace on a note is trimmed before the length check.
 
 ---
 
+### CL-5 · Refresh the incident list
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open ClickLog
+   and tap the refresh icon in the header.
+2. On android, open ClickLog and pull down on the incident list.
+3. In another session, log or delete an incident, then refresh as above.
+**Expected:** The refresh icon spins while loading and the list re-pulls from the server; on android
+the pull-to-refresh spinner shows and then the list updates. After step 3 the change (new or removed
+incident, updated total) appears without closing and reopening the app. Refreshing never clears the
+current screen to the full-screen loading state.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 ### CL-A1 · Admin can delete any incident
