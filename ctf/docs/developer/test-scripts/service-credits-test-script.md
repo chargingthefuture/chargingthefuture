@@ -83,8 +83,9 @@ Result: web ☐ android ☐
 3. Check that entries appear, each with a plain-language label (e.g. "Transfer in", "Transfer out", "Escrow release"), a date, and a signed credit amount (positive in green or equivalent, negative in red or equivalent).
 4. Confirm no fiat figure appears on any row.
 5. Check the newest entry appears at the top.
+6. If the seed includes an escrow **refund**, confirm it reads as **"Escrow refunded"** (money back in), distinct from **"Escrow released"** — the two are recorded as different ledger entry types, not the same label.
 
-**Expected:** At least one transaction row is visible. Each row has a label, date, and signed amount in credits only, newest first. If there are truly no transactions the screen shows "No transactions yet" rather than an error.
+**Expected:** At least one transaction row is visible. Each row has a label, date, and signed amount in credits only, newest first. A refund and a release are labeled distinctly. If there are truly no transactions the screen shows "No transactions yet" rather than an error.
 
 Result: web ☐ android ☐
 

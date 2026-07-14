@@ -77,6 +77,7 @@ contracts:
       limit:
         type: number
         required: false
+        description: Page size. Defaults to 50; clamped to the range 1–200 (caller values above 200 are capped).
     outputSchema:
       entries:
         type: array
