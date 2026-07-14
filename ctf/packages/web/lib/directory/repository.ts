@@ -766,6 +766,29 @@ export async function listDirectoryForMember(
             OR (lower(COALESCE(p.first_name, '')) LIKE $4::text OR lower(COALESCE(p.last_name, '')) LIKE $4::text)
             OR lower(COALESCE(p.headline, '')) LIKE $4::text
             OR lower(COALESCE(p.bio, '')) LIKE $4::text
+            -- The free-text box also searches a profile's skills, so typing a skill name like
+            -- "First Aid" finds the people who have it. Match the taxonomy skill name, any of its
+            -- searchable aliases, and free-text "proposed" skills still pending taxonomy review.
+            OR EXISTS (
+              SELECT 1
+              FROM directory_profile_skills dps_q
+              JOIN skills_taxonomy_skills sk_q ON sk_q.id = dps_q.skill_id
+              WHERE dps_q.profile_id::text = p.id::text
+                AND (
+                  lower(sk_q.name) LIKE $4::text
+                  OR EXISTS (
+                    SELECT 1
+                    FROM jsonb_array_elements_text(sk_q.aliases) alias_q
+                    WHERE lower(alias_q) LIKE $4::text
+                  )
+                )
+            )
+            OR EXISTS (
+              SELECT 1
+              FROM directory_profile_proposed_skills dpps_q
+              WHERE dpps_q.profile_id::text = p.id::text
+                AND lower(COALESCE(dpps_q.skill_label, '')) LIKE $4::text
+            )
           )
       `,
       [
@@ -832,6 +855,29 @@ export async function listDirectoryForMember(
             OR (lower(COALESCE(p.first_name, '')) LIKE $4::text OR lower(COALESCE(p.last_name, '')) LIKE $4::text)
             OR lower(COALESCE(p.headline, '')) LIKE $4::text
             OR lower(COALESCE(p.bio, '')) LIKE $4::text
+            -- The free-text box also searches a profile's skills, so typing a skill name like
+            -- "First Aid" finds the people who have it. Match the taxonomy skill name, any of its
+            -- searchable aliases, and free-text "proposed" skills still pending taxonomy review.
+            OR EXISTS (
+              SELECT 1
+              FROM directory_profile_skills dps_q
+              JOIN skills_taxonomy_skills sk_q ON sk_q.id = dps_q.skill_id
+              WHERE dps_q.profile_id::text = p.id::text
+                AND (
+                  lower(sk_q.name) LIKE $4::text
+                  OR EXISTS (
+                    SELECT 1
+                    FROM jsonb_array_elements_text(sk_q.aliases) alias_q
+                    WHERE lower(alias_q) LIKE $4::text
+                  )
+                )
+            )
+            OR EXISTS (
+              SELECT 1
+              FROM directory_profile_proposed_skills dpps_q
+              WHERE dpps_q.profile_id::text = p.id::text
+                AND lower(COALESCE(dpps_q.skill_label, '')) LIKE $4::text
+            )
           )
         ORDER BY p.updated_at DESC
         OFFSET $5 LIMIT $6

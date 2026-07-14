@@ -51,10 +51,14 @@ can't-ship-broken checks. Member role unless noted.
 1. Open Directory.
 2. Pick a sector filter chip.
 3. Type a term in the search box.
+4. Type a skill name that a seeded profile holds but that does not appear in anyone's name or bio
+   (e.g. `First Aid`).
 **Expected:** Every active, non-deleted profile is visible to any signed-in member, including
 carried-over unclaimed ones, with no "you must have a profile first" gate. A sector chip returns
 people in that sector — including a profile whose sector comes only from its skills, not a stored
-sector. Search filters by name/headline/bio.
+sector. Search filters by name, headline, bio, **and skills** — the skill-name search (step 4)
+returns the people who hold that skill, matching the taxonomy skill name, its aliases, and free-text
+"pending review" skills.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### DIR-2 · Read a profile (real fields only)
