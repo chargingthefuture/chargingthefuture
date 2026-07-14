@@ -834,7 +834,7 @@ export async function refundEscrow(input: {
 
     await client.query(
       `INSERT INTO service_credits_ledger_entries (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope)
-       VALUES ($1, $2, 'escrow_release', $4, 'escrow', $3, 'service_credits_non_gdp')`,
+       VALUES ($1, $2, 'escrow_refund', $4, 'escrow', $3, 'service_credits_non_gdp')`,
       [randomUUID(), sourceUserId, input.escrowId, amount],
     );
 
