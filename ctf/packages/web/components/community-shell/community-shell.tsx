@@ -297,9 +297,11 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
             (which used to carry this link) is hidden on phones, so this replaces the
             extra tap through the drawer. Admins only; hidden for everyone else. */}
         {isAdmin ? (
-          <Link href="/admin" className={styles.mobileBarAdminBtn}>
+          <Link href="/admin" className={styles.mobileBarAdminBtn} aria-label="Admin" title="Admin — manage plugins and review queues">
             <SlidersHorizontal size={15} aria-hidden="true" />
-            <span>Admin</span>
+            {/* Label hidden at phone widths so the full bar (tabs + admin + help + settings +
+                avatar) fits without pushing the avatar off the right edge. */}
+            <span className={styles.mobileBarAdminLabel}>Admin</span>
           </Link>
         ) : null}
         <div className={styles.mobileBarAuth}>

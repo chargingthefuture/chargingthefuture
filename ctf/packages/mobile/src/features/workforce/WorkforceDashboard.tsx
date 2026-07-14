@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import { WorkforceLoading } from './WorkforceLoading';
@@ -112,7 +112,7 @@ function TrainingGaps({ items }: { items: WorkforceOccupationGapItem[] }) {
 type WorkforceTab = 'overview' | WorkforceBrowseTab;
 
 export function WorkforceDashboard() {
-  const { styles } = useWorkforceStyles();
+  const { styles, accent } = useWorkforceStyles();
   const { auth, loading: authLoading } = usePluginAuth('clerk');
   const isAuthenticated = auth?.isAuthenticated ?? false;
 
@@ -123,6 +123,30 @@ export function WorkforceDashboard() {
   const [occupations, setOccupations] = useState<WorkforceOccupationGapItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Shared by the initial-load effect and pull-to-refresh; a refresh (isRefresh=true) re-pulls the
+  // data without flashing the full loading state.
+  const load = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    setError(null);
+    try {
+      const [dash, prof, sect, occ] = await Promise.all([
+        fetchWorkforceDashboard(),
+        fetchWorkforceProfile(),
+        fetchWorkforceSectorReport(),
+        fetchWorkforceOccupationGaps(10),
+      ]);
+      setDashboard(dash);
+      setProfile(prof);
+      setSectors(sect);
+      setOccupations(occ);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load workforce data');
+    } finally {
+      if (!isRefresh) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     // Don't hit the member-scoped endpoints until auth resolves and the user is signed in — an
@@ -132,34 +156,18 @@ export function WorkforceDashboard() {
       setLoading(false);
       return;
     }
+    void load();
+  }, [authLoading, isAuthenticated, load]);
 
-    let active = true;
-    setLoading(true);
-    setError(null);
-
-    Promise.all([
-      fetchWorkforceDashboard(),
-      fetchWorkforceProfile(),
-      fetchWorkforceSectorReport(),
-      fetchWorkforceOccupationGaps(10),
-    ])
-      .then(([dash, prof, sect, occ]) => {
-        if (!active) return;
-        setDashboard(dash);
-        setProfile(prof);
-        setSectors(sect);
-        setOccupations(occ);
-      })
-      .catch((err: unknown) => {
-        if (!active) return;
-        setError(err instanceof Error ? err.message : 'Failed to load workforce data');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => { active = false; };
-  }, [authLoading, isAuthenticated]);
+  // Pull-to-refresh: re-pull the dashboard data without flashing the full loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   if (authLoading || (isAuthenticated && loading)) {
     return <WorkforceLoading />;
@@ -214,6 +222,7 @@ export function WorkforceDashboard() {
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={accent} />}
         >
           {tab === 'overview' ? (
             <>

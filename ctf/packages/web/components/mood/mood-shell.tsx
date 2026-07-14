@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Smile } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { RefreshButton } from "@/components/shared/refresh-button";
 import { getMoodClientId, getMoodTokens, type MoodEligibility, type Tab } from "./mood-shared";
 import { MoodLoading } from "./mood-loading";
 import { MoodIconRail } from "./mood-icon-rail";
@@ -29,26 +30,30 @@ export default function MoodShell() {
   const { theme } = useTheme();
   const t = getMoodTokens(theme);
 
+  // Fetch eligibility for this pseudonymous client. Shared by the initial mount effect
+  // (initial = true, shows the full-screen loading state) and the header refresh button
+  // (initial = false, re-pulls in the background).
+  const loadEligibility = useCallback(async (id: string, initial = false, signal?: AbortSignal) => {
+    if (initial) setLoading(true);
+    try {
+      const res = await fetch(`/api/mood/eligibility?clientId=${encodeURIComponent(id)}`, { signal, cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to check eligibility.");
+      const data = (await res.json()) as MoodEligibility;
+      if (!signal?.aborted) setEligibility(data);
+    } catch (e) {
+      if (!signal?.aborted) setError(e instanceof Error ? e.message : "Failed to load mood data.");
+    } finally {
+      if (initial && !signal?.aborted) setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const id = getMoodClientId();
     setClientId(id);
     const controller = new AbortController();
-    async function loadEligibility() {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/mood/eligibility?clientId=${encodeURIComponent(id)}`, { signal: controller.signal, cache: "no-store" });
-        if (!res.ok) throw new Error("Failed to check eligibility.");
-        const data = (await res.json()) as MoodEligibility;
-        if (!controller.signal.aborted) setEligibility(data);
-      } catch (e) {
-        if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Failed to load mood data.");
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    }
-    void loadEligibility();
+    void loadEligibility(id, true, controller.signal);
     return () => { controller.abort(); };
-  }, []);
+  }, [loadEligibility]);
 
   async function handleSubmit() {
     if (!selected || submitting || !clientId) return;
@@ -106,6 +111,7 @@ export default function MoodShell() {
             <Smile size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Mood</span>
             <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>🔒 Pseudonymous</Badge>
+            <RefreshButton onRefresh={() => loadEligibility(clientId)} title="Refresh" />
             <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
@@ -133,6 +139,7 @@ export default function MoodShell() {
             <div style={{ fontSize: 12, color: t.MUTED }}>Private check-ins · Community wellness</div>
           </div>
           <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>🔒 Pseudonymous</Badge>
+          <RefreshButton onRefresh={() => loadEligibility(clientId)} title="Refresh" />
         </header>
 
         {content}

@@ -9,8 +9,8 @@
 //   - end an active activity (either party),
 //   - and start a new one (counterparty + sector + currency + cadence; a ServiceCredits value only
 //     when the currency is ServiceCredits).
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import {
   confirmActivity,
   createActivity,
@@ -401,9 +401,12 @@ export const RecurringActivity: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  async function load() {
-    setLoading(true);
+  const load = useCallback(async (background = false) => {
+    // A background reload (pull-to-refresh) keeps the current screen on display
+    // instead of flashing the full loading state.
+    if (!background) setLoading(true);
     setError(null);
     try {
       const list = await fetchActivities();
@@ -411,13 +414,23 @@ export const RecurringActivity: React.FC = () => {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'We could not load your activities.');
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
+
+  // Pull-to-refresh: re-pull the activities without flashing the full loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   const pendingForMe = useMemo(
     () => activities.filter((a) => a.status === 'pending' && a.role === 'counterparty'),
@@ -476,7 +489,11 @@ export const RecurringActivity: React.FC = () => {
         <Text style={st.headerSub}>Ongoing ties you choose to acknowledge</Text>
       </View>
 
-      <ScrollView style={{ flex: 1, backgroundColor: tokens.bg }} contentContainerStyle={{ padding: 14 }}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: tokens.bg }}
+        contentContainerStyle={{ padding: 14 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={accent} />}
+      >
         {error && activities.length > 0 ? <Text style={st.errorText}>{error}</Text> : null}
 
         {!showForm ? (

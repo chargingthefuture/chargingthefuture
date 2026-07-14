@@ -1,19 +1,23 @@
 "use client";
 
-// STATE: Empty — no providers match the active filter. Ported from the
-// emptyMode block in design/.../survivor-hub/Directory.tsx.
-import { Briefcase, Globe, Users } from "lucide-react";
+// STATE: Empty — either no profile matches the active filter, or the directory
+// has no profiles at all. The copy and the offered action change between those
+// two cases so a genuinely empty directory reads differently from an over-narrow
+// filter.
+import { Globe, UserPlus, Users } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getDirectoryTokens } from "./shared";
 
 export function DirectoryEmptyState({
-  categories,
   filtered,
+  hasOwnProfile,
   onClearFilters,
+  onCreateProfile,
 }: {
-  categories: string[];
   filtered: boolean;
+  hasOwnProfile: boolean;
   onClearFilters: () => void;
+  onCreateProfile: () => void;
 }) {
   const { theme } = useTheme();
   const t = getDirectoryTokens(theme);
@@ -23,33 +27,31 @@ export function DirectoryEmptyState({
         <Users size={32} style={{ color: t.ACCENT, opacity: 0.5 }} />
       </div>
       <div style={{ textAlign: "center", maxWidth: 400 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: t.TITLE, marginBottom: 8 }}>No providers found</div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: t.TITLE, marginBottom: 8 }}>
+          {filtered ? "No matches" : "No profiles yet"}
+        </div>
         <div style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.7, marginBottom: 24 }}>
-          No trauma-informed providers match your current filter. Try broadening your search, or check back as new providers join the network. All providers are background-verified before listing.
+          {filtered
+            ? "No one matches your current filter. Try broadening your search or clearing the filter."
+            : hasOwnProfile
+              ? "The directory has no listed profiles yet. Check back as more members add theirs."
+              : "The directory has no listed profiles yet. Add yours so other members can find you."}
         </div>
       </div>
-      {categories.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, width: "100%", maxWidth: 540 }}>
-          {categories.slice(0, 6).map((cat) => (
-            <div key={cat} style={{ padding: "12px", borderRadius: 10, background: "rgba(59,130,246,0.04)", border: "1px dashed rgba(59,130,246,0.2)", textAlign: "center" }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(59,130,246,0.08)", margin: "0 auto 6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Briefcase size={14} style={{ color: t.ACCENT, opacity: 0.4 }} />
-              </div>
-              <div style={{ fontSize: 12, color: t.FAINT }}>{cat}</div>
-            </div>
-          ))}
-        </div>
-      )}
-      {/* Only offer a "clear the filter" action when a filter/search is actually
-          active. A genuinely empty directory (zero profiles) has nothing to browse,
-          so no button is shown. */}
-      {filtered && (
-        <div style={{ display: "flex", gap: 12 }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+        {/* Only offer "clear the filter" when a filter/search is actually active. */}
+        {filtered && (
           <button onClick={onClearFilters} style={{ padding: "12px 24px", borderRadius: 12, background: t.ACCENT, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-            <Globe size={16} /> Browse All Providers
+            <Globe size={16} /> Browse all profiles
           </button>
-        </div>
-      )}
+        )}
+        {/* A member without a profile can create one straight from the empty state. */}
+        {!filtered && !hasOwnProfile && (
+          <button onClick={onCreateProfile} style={{ padding: "12px 24px", borderRadius: 12, background: t.ACCENT, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+            <UserPlus size={16} /> Add my profile
+          </button>
+        )}
+      </div>
     </div>
   );
 }

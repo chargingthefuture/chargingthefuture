@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -302,10 +303,13 @@ export function Mood() {
   const [eligible, setEligible] = useState<boolean | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState<string | null>(null);
   const [loadingEligibility, setLoadingEligibility] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    setLoadingEligibility(true);
-    fetchMoodEligibility(clientId)
+  // Fetch eligibility. Shared by the mount effect (shows the spinner) and pull-to-refresh
+  // (background=true, re-pulls without flashing the spinner).
+  const loadEligibility = useCallback((background = false) => {
+    if (!background) setLoadingEligibility(true);
+    return fetchMoodEligibility(clientId)
       .then((data) => {
         setEligible(data.eligible);
         setCooldownUntil(data.cooldownUntilIso);
@@ -314,8 +318,23 @@ export function Mood() {
         // On error treat as eligible so check-in is not permanently blocked.
         setEligible(true);
       })
-      .finally(() => setLoadingEligibility(false));
+      .finally(() => {
+        if (!background) setLoadingEligibility(false);
+      });
   }, [clientId]);
+
+  useEffect(() => {
+    void loadEligibility();
+  }, [loadEligibility]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadEligibility(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadEligibility]);
 
   const handleReset = useCallback(() => {
     setSubmitted(false);
@@ -359,7 +378,11 @@ export function Mood() {
       </View>
 
       {/* Content */}
-      <ScrollView style={s.scrollArea} contentContainerStyle={s.scrollContent}>
+      <ScrollView
+        style={s.scrollArea}
+        contentContainerStyle={s.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
+      >
         {activeNav === 'checkin' && renderCheckin()}
         {activeNav === 'trends' && <TrendsView />}
         {activeNav === 'home' && <HomeView onNavigate={setActiveNav} />}

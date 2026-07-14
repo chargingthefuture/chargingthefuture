@@ -51,10 +51,16 @@ can't-ship-broken checks. Member role unless noted.
 1. Open Directory.
 2. Pick a sector filter chip.
 3. Type a term in the search box.
+4. Type a skill name that a seeded profile holds but that does not appear in anyone's name or bio
+   (e.g. `First Aid`).
+5. Repeat the skill search with different punctuation/spacing (e.g. `first-aid`, `first aid`).
 **Expected:** Every active, non-deleted profile is visible to any signed-in member, including
 carried-over unclaimed ones, with no "you must have a profile first" gate. A sector chip returns
 people in that sector — including a profile whose sector comes only from its skills, not a stored
-sector. Search filters by name/headline/bio.
+sector. Search filters by name, headline, bio, **and skills** — the skill-name search (step 4)
+returns the people who hold that skill, matching the taxonomy skill name, its aliases, and free-text
+"pending review" skills. Search is punctuation-insensitive (step 5): `first-aid`, `first aid`, and
+`First Aid` all return the same people.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### DIR-2 · Read a profile (real fields only)
@@ -106,6 +112,25 @@ every proposing profile; that approval step is owner-side and outside this scrip
 case is **blocked** — there is no member self-edit screen yet.
 **Result:** web ☐ mobile ☐ android ⛔ — notes:
 
+### DIR-4b · Create my profile (member without one yet)
+**Role:** member with no directory profile · **Surfaces:** web + mobile-responsive (android deferred)
+**Precondition:** signed in as a member who has no claimed directory profile.
+**Steps:**
+1. Open the Directory. In the header, confirm the button reads **"Add my profile"** (not "Edit my
+   profile"). On a phone-width layout it sits under the search/filter row; on desktop it sits in the
+   top header.
+2. If the directory is empty and unfiltered, confirm the empty state also shows an **"Add my profile"**
+   button and reads "The directory has no listed profiles yet…". Confirm there is no lone dashed
+   category tile, and no "trauma-informed" / "background-verified" wording.
+3. Press "Add my profile". Confirm the modal title is **"Create my profile"** and the submit button
+   reads **"Create profile"**.
+4. Fill a first name (required) and save.
+**Expected:** The modal is the same editor as DIR-4, starting blank. The save goes through
+`PUT /api/directory/profile` with the CSRF header. After saving, the header button flips to
+**"Edit my profile"**, and the new profile appears in the list. On android this case is **blocked** —
+there is no member self-edit/create screen yet.
+**Result:** web ☐ mobile ☐ android ⛔ — notes:
+
 ### DIR-5 · Read announcements
 **Role:** member · **Surfaces:** all
 **Steps:**
@@ -128,6 +153,20 @@ detail already open (it loads by id even if the profile is not on the current fi
 page). While signed out, the link redirects to the directory landing `/apps/directory` — no profile data
 is shown. A bad/inactive id shows the browse view, not the detail (the fetch 404s and is ignored). On
 android, if `APP_URL` is unset the share control is simply absent (no crash).
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### DIR-7 · Refresh re-pulls the member list without reopening the app
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open the Directory browse view, then in a second session (another browser/device) change data that
+   affects the list (e.g. edit a profile's headline or create a profile as admin).
+2. Web / mobile-responsive: tap the refresh icon in the header (desktop header right side; phone header
+   next to the top actions).
+3. Android: pull down on the browse list.
+**Expected:** On web the refresh icon spins while the re-pull is in flight; on android the pull-to-refresh
+spinner shows. The list re-fetches and the change from the other session appears without closing and
+reopening the app. Refreshing never clears the screen to the full-screen loading skeleton — the current
+list stays visible until the new data lands.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
