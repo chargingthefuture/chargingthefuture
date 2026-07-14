@@ -148,6 +148,20 @@ a profile that is no longer an active provider, shows the search view, not a pro
 and is ignored).
 **Result:** web ☐ mobile ☐ android ⛔ — notes:
 
+### FND-9 · Refresh re-pulls providers and quotes without reopening the app
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open Foundation, then in a second session change data that affects it (e.g. another member turns on
+   an offered skill so a new provider card appears, or a quote's status changes).
+2. Web / mobile-responsive: tap the refresh icon in the header (desktop header right side; phone header
+   next to the top actions).
+3. Android: pull down on the Browse list or the Quotes list.
+**Expected:** On web the refresh icon spins while the re-pull is in flight; on android the pull-to-refresh
+spinner shows. The provider list and quote history re-fetch and the change from the other session appears
+without closing and reopening the app. Refreshing never clears the screen to the full-screen loading
+state — the current list stays visible until the new data lands.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Admin walkthrough

@@ -155,6 +155,20 @@ is shown. A bad/inactive id shows the browse view, not the detail (the fetch 404
 android, if `APP_URL` is unset the share control is simply absent (no crash).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### DIR-7 · Refresh re-pulls the member list without reopening the app
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open the Directory browse view, then in a second session (another browser/device) change data that
+   affects the list (e.g. edit a profile's headline or create a profile as admin).
+2. Web / mobile-responsive: tap the refresh icon in the header (desktop header right side; phone header
+   next to the top actions).
+3. Android: pull down on the browse list.
+**Expected:** On web the refresh icon spins while the re-pull is in flight; on android the pull-to-refresh
+spinner shows. The list re-fetches and the change from the other session appears without closing and
+reopening the app. Refreshing never clears the screen to the full-screen loading skeleton — the current
+list stays visible until the new data lands.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Admin walkthrough

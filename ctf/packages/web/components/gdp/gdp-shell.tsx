@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +23,9 @@ import { GdpIconRail } from "./gdp-icon-rail";
 import { GdpSidebar } from "./gdp-sidebar";
 import { GdpDashboard } from "./gdp-dashboard";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { RefreshButton } from "@/components/shared/refresh-button";
 
-function ShellHeader({ t, metrics }: { t: GdpTokens; metrics: GdpMetrics }) {
+function ShellHeader({ t, metrics, onRefresh }: { t: GdpTokens; metrics: GdpMetrics; onRefresh: () => Promise<void> }) {
   return (
     <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
       <Globe size={18} style={{ color: t.ACCENT }} />
@@ -35,6 +36,7 @@ function ShellHeader({ t, metrics }: { t: GdpTokens; metrics: GdpMetrics }) {
         </div>
       </div>
       <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>↑ Live</Badge>
+      <RefreshButton onRefresh={onRefresh} title="Refresh" />
     </header>
   );
 }
@@ -96,50 +98,59 @@ export default function GdpShell() {
   const { theme } = useTheme();
   const t = getGdpTokens(theme);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    async function fetchReport() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/gdp/report/current", { signal: controller.signal });
-        if (!res.ok) throw new Error("Failed to load GDP report");
-        const data = (await res.json()) as { report?: GdpReportPayload | null };
-        if (!controller.signal.aborted) {
-          setReport(data.report ?? null);
-          setIsEstimate(deriveIsEstimate(data.report?.metrics));
-          setMetricRows(Array.isArray(data.report?.metrics) ? data.report.metrics : []);
-        }
-      } catch (e: unknown) {
-        if (controller.signal.aborted) return;
-        setError(e instanceof Error ? e.message : "Failed to load GDP data.");
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
+  // Re-pull the current report. Only the initial load shows the full-screen loading state;
+  // the header refresh button calls this with initial=false so the dashboard stays on screen.
+  const fetchReport = useCallback(async (initial: boolean, signal?: AbortSignal) => {
+    if (initial) setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/gdp/report/current", { signal });
+      if (!res.ok) throw new Error("Failed to load GDP report");
+      const data = (await res.json()) as { report?: GdpReportPayload | null };
+      if (signal?.aborted) return;
+      setReport(data.report ?? null);
+      setIsEstimate(deriveIsEstimate(data.report?.metrics));
+      setMetricRows(Array.isArray(data.report?.metrics) ? data.report.metrics : []);
+    } catch (e: unknown) {
+      if (signal?.aborted) return;
+      setError(e instanceof Error ? e.message : "Failed to load GDP data.");
+    } finally {
+      if (initial && !signal?.aborted) setLoading(false);
     }
-    void fetchReport();
-    return () => { controller.abort(); };
   }, []);
 
   // Load the real per-country member distribution for the "All Countries" panel. Independent of the
   // main report (a failure here just leaves the panel empty; it never blocks the dashboard).
+  const fetchCountries = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const res = await fetch("/api/gdp/countries", { signal });
+      if (!res.ok || signal?.aborted) return;
+      const data = (await res.json()) as { countries?: Array<{ country: string; members: number }>; totalMembers?: number };
+      const rows = data.countries ?? [];
+      const total = data.totalMembers ?? rows.reduce((sum, r) => sum + r.members, 0);
+      if (signal?.aborted) return;
+      setCountries(rows.map((r) => ({ country: r.country, members: r.members, share: total > 0 ? (r.members / total) * 100 : 0 })));
+    } catch {
+      // Leave the panel empty.
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
-    void (async () => {
-      try {
-        const res = await fetch("/api/gdp/countries", { signal: controller.signal });
-        if (!res.ok || controller.signal.aborted) return;
-        const data = (await res.json()) as { countries?: Array<{ country: string; members: number }>; totalMembers?: number };
-        const rows = data.countries ?? [];
-        const total = data.totalMembers ?? rows.reduce((sum, r) => sum + r.members, 0);
-        if (controller.signal.aborted) return;
-        setCountries(rows.map((r) => ({ country: r.country, members: r.members, share: total > 0 ? (r.members / total) * 100 : 0 })));
-      } catch {
-        // Leave the panel empty.
-      }
-    })();
+    void fetchReport(true, controller.signal);
     return () => { controller.abort(); };
-  }, []);
+  }, [fetchReport]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchCountries(controller.signal);
+    return () => { controller.abort(); };
+  }, [fetchCountries]);
+
+  // Header refresh: re-pull the report and the country panel without the full-screen loading state.
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([fetchReport(false), fetchCountries()]);
+  }, [fetchReport, fetchCountries]);
 
   if (loading) return <GdpLoading />;
 
@@ -161,6 +172,7 @@ export default function GdpShell() {
             <Globe size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>GDP</span>
             <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>↑ Live</Badge>
+            <RefreshButton onRefresh={handleRefresh} title="Refresh" />
             <MobileTopActions />
           </div>
         </div>
@@ -174,7 +186,7 @@ export default function GdpShell() {
       <GdpIconRail />
       <GdpSidebar metrics={metrics} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader t={t} metrics={metrics} />
+        <ShellHeader t={t} metrics={metrics} onRefresh={handleRefresh} />
         <GdpContent t={t} error={error} report={report} sectors={sectors} countries={countries} metrics={metrics} />
       </div>
     </div>

@@ -105,6 +105,21 @@ language render. The route points to app-level support.
 
 ---
 
+### GP-7 · Refresh the library (header button / pull-to-refresh)
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open GentlePulse
+   and tap the refresh icon in the header.
+2. On android, open GentlePulse and pull down on the session list (pull-to-refresh shipped earlier on
+   this screen).
+3. In another session, change library data (e.g. play a session to bump its count), then refresh as above.
+**Expected:** On web the refresh icon spins while loading; on android the pull-to-refresh spinner
+shows. The library re-pulls and the change from the other session appears without closing and
+reopening the app. Refreshing never clears the current screen to the full-screen loading state.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ## Parity check (web ↔ android)
 
 For GP-1, GP-3, GP-4, and GP-5, the android app and the mobile-responsive web layout must behave the

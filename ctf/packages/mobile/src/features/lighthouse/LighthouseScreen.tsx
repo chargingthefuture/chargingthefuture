@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
+import { View, FlatList, RefreshControl, StyleSheet } from 'react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { fetchProperties } from './api';
 import type { LighthouseProperty } from './types';
@@ -19,34 +19,43 @@ export const LighthouseScreen: React.FC = () => {
   const [currencies, setCurrencies] = useState<CurrencyMap>({});
   const [total, setTotal] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    setLoading(true);
+  // Shared by the initial-load effect and pull-to-refresh; a refresh (isRefresh=true) re-pulls
+  // the listings without flashing the full loading state.
+  const load = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
     // Best-effort currency catalog so rent renders in its own currency; the list still shows
     // without it (formatRentParts falls back to a plain "$" prefix).
     fetchCurrencies()
       .then((rows) => {
-        if (mounted) setCurrencies(buildCurrencyMap(rows));
+        setCurrencies(buildCurrencyMap(rows));
       })
       .catch(() => undefined);
-    fetchProperties(1, 20)
-      .then((res) => {
-        if (!mounted) return;
-        setProperties(res.items);
-        setTotal(res.total);
-      })
-      .catch(() => {
-        if (!mounted) return;
-        setProperties([]);
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
+    try {
+      const res = await fetchProperties(1, 20);
+      setProperties(res.items);
+      setTotal(res.total);
+    } catch {
+      if (!isRefresh) setProperties([]);
+    } finally {
+      if (!isRefresh) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Pull-to-refresh: re-pull the listings without flashing the full loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   const handleSelect = useCallback((id: string) => {
     setSelectedId(id);
@@ -82,6 +91,7 @@ export const LighthouseScreen: React.FC = () => {
         )}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />}
       />
     </View>
   );

@@ -7,6 +7,7 @@ import { WeeklyPerformanceMetricCards } from "./wp-metric-cards";
 import { WeeklyPerformanceComparisonChart } from "./wp-comparison-chart";
 import { WeeklyPerformanceEmptyMain } from "./wp-empty-main";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { RefreshButton } from "@/components/shared/refresh-button";
 
 export function WeeklyPerformanceDashboardMain({
   week,
@@ -14,6 +15,7 @@ export function WeeklyPerformanceDashboardMain({
   comparison,
   isAdmin,
   onExport,
+  onRefresh,
   isMobile = false,
   isCurrent = false,
 }: {
@@ -22,6 +24,7 @@ export function WeeklyPerformanceDashboardMain({
   comparison: WpComparison | null;
   isAdmin: boolean;
   onExport: () => void;
+  onRefresh: () => Promise<void>;
   isMobile?: boolean;
   isCurrent?: boolean;
 }) {
@@ -52,6 +55,7 @@ export function WeeklyPerformanceDashboardMain({
             </button>
           )}
           <PluginAdminButton href="/admin/weekly-performance" isAdmin={isAdmin} accent={t.ACCENT} />
+          <RefreshButton onRefresh={onRefresh} title="Refresh" />
         </header>
       )}
 

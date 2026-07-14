@@ -4,8 +4,8 @@
 // has already been credited for a star), and the post-submit confirmation that shows the owner's
 // Signal URL inline (falling back to the editable instructions text when it is null).
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Linking } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Linking, RefreshControl } from 'react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 import {
   createSubmission,
@@ -246,9 +246,12 @@ export const Contributions: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  async function load() {
-    setLoading(true);
+  const load = useCallback(async (background = false) => {
+    // A background reload (pull-to-refresh) keeps the current screen on display
+    // instead of flashing the full loading state.
+    if (!background) setLoading(true);
     setError(null);
     try {
       const [f, subs] = await Promise.all([fetchFundraiser(), fetchOwnSubmissions()]);
@@ -257,13 +260,23 @@ export const Contributions: React.FC = () => {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'We could not load the contribution drive.');
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
+
+  // Pull-to-refresh: re-pull the drive + history without flashing the full loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   async function submit(input: Parameters<typeof createSubmission>[0], confirmation: boolean) {
     setSubmitting(true);
@@ -341,7 +354,11 @@ export const Contributions: React.FC = () => {
         ))}
       </View>
 
-      <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: 14 }}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: t.bg }}
+        contentContainerStyle={{ padding: 14 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={COLOR} />}
+      >
         {tab === 'drive' && (
           <>
             <Text style={[st.bodyText, { marginBottom: 16 }]}>If everyone who's able gave a little, the platform's costs would be covered — and it stays free for everyone.</Text>
