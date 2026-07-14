@@ -1,3 +1,5 @@
+import type { FeedEnabledChannel, FeedItemType } from './types';
+
 export const FEED_PLUGIN_ID = 'feed';
 export const ANNOUNCEMENTS_PLUGIN_ID = 'announcements';
 
@@ -27,6 +29,16 @@ export const FEED_MAX_COMMUNITY_POST_LENGTH = 1200;
 export const FEED_MAX_COMMUNITY_REPLY_LENGTH = 800;
 
 export const FEED_ALLOWED_CHANNELS = ['announcements', 'questions', 'community'] as const;
+
+// Enabled-channel names are plural ('announcements'); the stored feed_items.item_type is singular
+// ('announcement'). The feed timeline filters rows by item_type, so a channel name must be mapped to
+// its item_type before it is used in that filter — without this, an 'announcements' channel never
+// matches the 'announcement' rows and announcements (and questions) silently vanish from the Commons.
+export const FEED_CHANNEL_TO_ITEM_TYPE: Record<FeedEnabledChannel, FeedItemType> = {
+  announcements: 'announcement',
+  questions: 'question',
+  community: 'community',
+};
 export const FEED_QUESTION_CATEGORIES = ['housing', 'services', 'general', 'safety', 'benefits'] as const;
 export const FEED_COMMUNITY_CATEGORIES = ['general', 'peer_support', 'resource_share', 'event'] as const;
 export const FEED_ANSWER_RATINGS = ['helpful', 'not_helpful', 'flagged'] as const;

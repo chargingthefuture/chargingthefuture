@@ -4,6 +4,11 @@ export type FeedChannel = 'all' | 'announcements' | 'questions' | 'community';
 
 export type FeedEnabledChannel = Exclude<FeedChannel, 'all'>;
 
+// A feed item's stored `item_type`. These are singular ('announcement') while the enabled-channel
+// names are plural ('announcements'); FEED_CHANNEL_TO_ITEM_TYPE bridges the two so a channel filter
+// matches the rows it is meant to.
+export type FeedItemType = 'announcement' | 'question' | 'community';
+
 export type FeedQuestionCategory = 'housing' | 'services' | 'general' | 'safety' | 'benefits';
 
 export type FeedCommunityCategory = 'general' | 'peer_support' | 'resource_share' | 'event';
@@ -106,7 +111,7 @@ export type FeedPagination = {
 
 export type FeedTimelineItem = {
   id: string;
-  itemType: 'announcement' | 'question' | 'community';
+  itemType: FeedItemType;
   sourceAnnouncementId: string | null;
   sourceQuestionId: string | null;
   sourceCommunityPostId: string | null;
