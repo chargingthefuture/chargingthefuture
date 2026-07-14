@@ -31,20 +31,33 @@ export const PeerProgramming = () => {
   const accent = getAppAccent('peer-programming', theme);
   const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
 
-  const load = useCallback(() => {
-    if (!auth?.isAuthenticated || !auth.userId) return;
-    setLoading(true);
+  // background=true (pull-to-refresh) re-pulls without flashing the full loading state.
+  const load = useCallback((background = false) => {
+    if (!auth?.isAuthenticated || !auth.userId) return Promise.resolve();
+    if (!background) setLoading(true);
     setError(null);
-    fetchRoom(viewingCohortId)
+    return fetchRoom(viewingCohortId)
       .then((data) => {
         setRoom(data);
-        setLoading(false);
       })
       .catch(() => {
         setError('Unable to load your cohort room. Please try again.');
-        setLoading(false);
+      })
+      .finally(() => {
+        if (!background) setLoading(false);
       });
   }, [auth, viewingCohortId]);
+
+  // Pull-to-refresh on the cohort tab's scroll list.
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   const listenIn = useCallback((cohortId: string) => {
     setViewingCohortId(cohortId);
@@ -124,6 +137,8 @@ export const PeerProgramming = () => {
             currentCohortId={room.cohort?.id ?? null}
             myCohortId={room.myCohortId}
             onListenIn={listenIn}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
           />
         )}
         {activeNav === 'session' && room?.cohort != null && room !== null && (

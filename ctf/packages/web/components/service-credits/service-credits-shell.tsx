@@ -16,6 +16,7 @@ import { ServiceCreditsCirculationTab } from "./sc-circulation-tab";
 import { ServiceCreditsSendPanel } from "./sc-send-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { RefreshButton } from "@/components/shared/refresh-button";
 
 function CenteredNote({ color, children }: { color: string; children: React.ReactNode }) {
   return (
@@ -25,7 +26,7 @@ function CenteredNote({ color, children }: { color: string; children: React.Reac
   );
 }
 
-function ShellHeader({ balance, t, isAdmin }: { balance: number; t: ServiceCreditsTokens; isAdmin?: boolean }) {
+function ShellHeader({ balance, t, isAdmin, onRefresh }: { balance: number; t: ServiceCreditsTokens; isAdmin?: boolean; onRefresh: () => Promise<void> }) {
   return (
     <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
       <Coins size={18} style={{ color: t.ACCENT }} />
@@ -36,6 +37,7 @@ function ShellHeader({ balance, t, isAdmin }: { balance: number; t: ServiceCredi
       <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
         {fmtCredits(balance)} credits
       </Badge>
+      <RefreshButton onRefresh={onRefresh} title="Refresh" />
       <PluginAdminButton href="/admin/service-credits" isAdmin={isAdmin} accent={t.ACCENT} />
     </header>
   );
@@ -69,6 +71,12 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       .finally(() => setLoading(false));
   }, []);
 
+  // Header refresh: re-pull the wallet without the full-screen loading state. A failed
+  // refresh keeps the last known balance on screen rather than swapping to the error view.
+  async function handleRefresh(): Promise<void> {
+    await refreshWallet().catch(() => {});
+  }
+
   if (loading) return <AppLoading />;
   if (error) return <CenteredNote color="#EF4444">{error}</CenteredNote>;
 
@@ -100,6 +108,7 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>ServiceCredits</span>
             <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>{fmtCredits(balance)}</Badge>
             <PluginAdminButton href="/admin/service-credits" isAdmin={isAdmin} accent={t.ACCENT} />
+            <RefreshButton onRefresh={handleRefresh} title="Refresh" />
             <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
@@ -119,7 +128,7 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       <ServiceCreditsIconRail tab={tab} onTab={setTab} />
       <ServiceCreditsSidebar tab={tab} onTab={setTab} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader balance={balance} t={t} isAdmin={isAdmin} />
+        <ShellHeader balance={balance} t={t} isAdmin={isAdmin} onRefresh={handleRefresh} />
         {content}
       </div>
       <ServiceCreditsSendPanel wallet={wallet} onSent={refreshWallet} />

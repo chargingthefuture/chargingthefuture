@@ -361,6 +361,24 @@ Result: web ☐
 
 ---
 
+### SH-16 — Refresh re-pulls the data without reopening the app
+
+**Role:** member · **Surfaces:** web, android
+
+**Steps:**
+1. Open SkillsHunt, then in a second session change data that affects it (e.g. an admin accepts a pending submission so the leaderboard and My Finds change).
+2. Web / mobile-responsive: tap the refresh icon (desktop header right side; phone header next to the top actions).
+3. Android: open the Leaders, Missions, or My Finds tab and pull down on the list.
+
+**Expected:**
+- On web the refresh icon spins while the re-pull is in flight; on android the pull-to-refresh spinner shows.
+- The rounds, leaderboard, missions, and My Finds data re-fetches and the change from the other session appears without closing and reopening the app.
+- Refreshing never clears the screen to the full-screen loading state — the current content stays visible until the new data lands.
+
+Result: web ☐ android ☐
+
+---
+
 ## Admin walkthrough
 
 ### SH-A1 — Create a round (web only)

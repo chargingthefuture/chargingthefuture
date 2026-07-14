@@ -6,6 +6,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { AppLoading } from '@/components/shared/app-loading';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { RefreshButton } from '@/components/shared/refresh-button';
 import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
 import {
   COMMUNITY_LINE,
@@ -39,8 +40,10 @@ export function RecurringActivityShell() {
   const [justCreated, setJustCreated] = useState(false);
   const [busy, setBusy] = useState<{ id: string; action: ActionKind } | null>(null);
 
-  const loadData = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
+  const loadData = useCallback(async (signal?: AbortSignal, background = false) => {
+    // A background reload (the header refresh button) keeps the current screen on
+    // display instead of flashing the full-screen loading state.
+    if (!background) setLoading(true);
     setError(null);
     try {
       const [activitiesRes, currenciesRes] = await Promise.all([
@@ -65,7 +68,7 @@ export function RecurringActivityShell() {
       }
       setError(e instanceof Error ? e.message : 'We could not load your ongoing activities.');
     } finally {
-      if (!signal?.aborted) {
+      if (!signal?.aborted && !background) {
         setLoading(false);
       }
     }
@@ -145,7 +148,10 @@ export function RecurringActivityShell() {
   const content = (
     <div style={{ maxWidth: 640, margin: '0 auto', width: '100%' }}>
       <header style={{ marginBottom: 20 }}>
-        <h1 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: t.TITLE }}>Recurring Activity</h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 6 }}>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: t.TITLE }}>Recurring Activity</h1>
+          <RefreshButton onRefresh={() => loadData(undefined, true)} title="Refresh" />
+        </div>
         <p style={{ margin: 0, fontSize: 13, color: t.MUTED, lineHeight: 1.7 }}>
           Acknowledge the ongoing ties you share with another member. This is recognition, never a bill —
           and it is yours to keep private.

@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -136,9 +137,12 @@ export function LevelUp() {
   const [error, setError] = useState<string | null>(null);
   const [activeTrack, setActiveTrack] = useState('All');
   const [tab, setTab] = useState<LevelUpTab>('browse');
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (background = false) => {
+    // A background reload (pull-to-refresh) keeps the current screen on display
+    // instead of flashing the full loading state.
+    if (!background) setLoading(true);
     setError(null);
     try {
       const [cohortsData, walletData] = await Promise.allSettled([
@@ -151,11 +155,21 @@ export function LevelUp() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load LevelUp data.');
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Pull-to-refresh: re-pull cohorts + wallet without flashing the full loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   const filtered = activeTrack === 'All'
     ? cohorts
@@ -185,6 +199,7 @@ export function LevelUp() {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => <CohortCard cohort={item} s={s} accent={accent} />}
             contentContainerStyle={s.list}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={accent} />}
             ListHeaderComponent={
               <Text style={s.sectionLabel}>Available Cohorts</Text>
             }

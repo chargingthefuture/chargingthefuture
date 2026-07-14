@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -18,6 +18,7 @@ import { LighthousePropertyDetail } from "./lighthouse-property-detail";
 import { LighthouseLoadingSkeleton } from "./lighthouse-loading-skeleton";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { RefreshButton } from "@/components/shared/refresh-button";
 
 export function LighthouseShell({ userId, username, isAdmin }: { userId: string; username: string | null; isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
@@ -39,35 +40,38 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
   const { theme } = useTheme();
   const t = getLighthouseTokens(theme);
 
-  useEffect(() => {
-    async function fetchAll() {
-      setLoading(true);
-      setError(null);
-      try {
-        // Browse shows all active public listings to seekers, so it reads the public listings
-        // endpoint — not the current user's own listings. The Host tab loads the user's own
-        // listings itself (LighthouseHost fetches /api/lighthouse/my-properties).
-        const browseRes = await fetch("/api/lighthouse/properties");
-        setProperties(browseRes.ok ? (await browseRes.json()).items ?? [] : []);
+  // Shared by the initial-load effect and the header refresh button; a refresh (initial=false)
+  // re-pulls the data without flashing the full-screen loading skeleton.
+  const fetchAll = useCallback(async (initial = false) => {
+    if (initial) setLoading(true);
+    setError(null);
+    try {
+      // Browse shows all active public listings to seekers, so it reads the public listings
+      // endpoint — not the current user's own listings. The Host tab loads the user's own
+      // listings itself (LighthouseHost fetches /api/lighthouse/my-properties).
+      const browseRes = await fetch("/api/lighthouse/properties");
+      setProperties(browseRes.ok ? (await browseRes.json()).items ?? [] : []);
 
-        const matchRes = await fetch("/api/lighthouse/matches");
-        setMatches(matchRes.ok ? (await matchRes.json()).items ?? [] : []);
+      const matchRes = await fetch("/api/lighthouse/matches");
+      setMatches(matchRes.ok ? (await matchRes.json()).items ?? [] : []);
 
-        // Currency catalog, fetched once, so the card/detail can format rent in its own currency
-        // (a fiat symbol, or the ServiceCredits label — never a "$" for ServiceCredits).
-        const currencyRes = await fetch("/api/currencies", { cache: "no-store" });
-        if (currencyRes.ok) {
-          const data = await currencyRes.json() as { currencies?: Currency[] };
-          setCurrencies(Array.isArray(data.currencies) ? data.currencies : []);
-        }
-      } catch {
-        setError("Failed to load LightHouse data.");
-      } finally {
-        setLoading(false);
+      // Currency catalog, fetched once, so the card/detail can format rent in its own currency
+      // (a fiat symbol, or the ServiceCredits label — never a "$" for ServiceCredits).
+      const currencyRes = await fetch("/api/currencies", { cache: "no-store" });
+      if (currencyRes.ok) {
+        const data = await currencyRes.json() as { currencies?: Currency[] };
+        setCurrencies(Array.isArray(data.currencies) ? data.currencies : []);
       }
+    } catch {
+      setError("Failed to load LightHouse data.");
+    } finally {
+      if (initial) setLoading(false);
     }
-    void fetchAll();
   }, []);
+
+  useEffect(() => {
+    void fetchAll(true);
+  }, [fetchAll]);
 
   useEffect(() => {
     if (tab === "chat" && selectedMatch) {
@@ -183,6 +187,7 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
             </Link>
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>🏠 LightHouse</span>
             <PluginAdminButton href="/admin/lighthouse" isAdmin={isAdmin} accent={t.ACCENT} />
+            <RefreshButton onRefresh={() => fetchAll()} title="Refresh" />
             <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
@@ -220,6 +225,7 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>🏠 LightHouse — Safe Housing</div>
             <div style={{ fontSize: 12, color: t.MUTED }}>Verified listings · Privacy-first</div>
           </div>
+          <RefreshButton onRefresh={() => fetchAll()} title="Refresh" />
           <PluginAdminButton href="/admin/lighthouse" isAdmin={isAdmin} accent={t.ACCENT} />
         </header>
 

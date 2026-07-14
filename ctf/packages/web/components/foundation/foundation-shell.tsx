@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Hammer, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -15,6 +15,7 @@ import { DirectLineFromQuote, DirectLineFromThread, type DirectLineCredentials }
 import { FoundationInstantCallController } from "./foundation-instant-call";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { RefreshButton } from "@/components/shared/refresh-button";
 
 const CSRF_HEADERS = { "Content-Type": "application/json", "x-ctf-csrf": "1" };
 
@@ -81,6 +82,10 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
+  // Bumped by the header refresh button; the load effect re-runs without the full-screen loading
+  // state (search/filter changes still show it, as before).
+  const [refreshKey, setRefreshKey] = useState(0);
+  const lastRefreshKey = useRef(0);
 
   // Trade filter has no client-side field to match on; it scopes the server search query.
   const searchTerm = [trade === "All Trades" ? "" : trade, query].filter(Boolean).join(" ").trim();
@@ -95,8 +100,10 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
 
   useEffect(() => {
     let active = true;
+    const isRefresh = refreshKey !== lastRefreshKey.current;
+    lastRefreshKey.current = refreshKey;
     async function load() {
-      setLoading(true);
+      if (!isRefresh) setLoading(true);
       setError(null);
       try {
         const params = new URLSearchParams();
@@ -115,14 +122,14 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
       } catch (e: unknown) {
         if (active) setError(e instanceof Error ? e.message : "Failed to load Foundation.");
       } finally {
-        if (active) setLoading(false);
+        if (active && !isRefresh) setLoading(false);
       }
     }
     void load();
     return () => {
       active = false;
     };
-  }, [searchTerm, skillId, loadQuotes]);
+  }, [searchTerm, skillId, loadQuotes, refreshKey]);
 
   // Deep-link open: when the page was reached via /apps/foundation/provider/[id] (a shared link),
   // fetch that one provider and open its profile. The id may not be on the current search page, so
@@ -272,7 +279,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
 
   const content = (
     <>
-      {tab === "browse" && <BrowsePanel providers={providers} viewerUserId={viewerUserId} onSelect={setSelected} activeSkillId={skillId} activeSkillName={skillName} onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }} />}
+      {tab === "browse" && <BrowsePanel providers={providers} viewerUserId={viewerUserId} onSelect={setSelected} activeSkillId={skillId} activeSkillName={skillName} searchActive={searchTerm.length > 0} onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }} />}
       {tab === "offer" && <OfferSkillsPanel />}
       {tab === "quotes" && (
         <QuotesPanel
@@ -300,6 +307,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
             <Hammer size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Foundation</span>
             <PluginAdminButton href="/admin/foundation" isAdmin={isAdmin} accent={t.ACCENT} />
+            <RefreshButton onRefresh={() => setRefreshKey((k) => k + 1)} title="Refresh" />
             <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
@@ -332,6 +340,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>Foundation — Trade Services</div>
             <div style={{ fontSize: 12, color: t.MUTED }}>Community trade providers · Trauma-informed</div>
           </div>
+          <RefreshButton onRefresh={() => setRefreshKey((k) => k + 1)} title="Refresh" />
           <PluginAdminButton href="/admin/foundation" isAdmin={isAdmin} accent={t.ACCENT} />
         </header>
         {content}
