@@ -94,7 +94,9 @@ sends never collide and replay the wrong transfer.)
 2. Confirm A's held balance rises and available drops.
 3. Resolve it once by **release** and once (fresh hold) by **refund**.
 **Expected:** Hold moves funds available→held; release pays the counterpart; refund returns funds to
-A's available. Balances reconcile after each resolution.
+A's available. Balances reconcile after each resolution. In A's transaction list the **refund** reads
+as **"Escrow refunded"** (money back in), distinct from **"Escrow released"** — the two are recorded
+as different ledger entry types, not the same one.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### SC-5 · Dispute-linked adjustment is visible

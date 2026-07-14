@@ -77,6 +77,8 @@ export function describeLedgerEntry(
       return { label: 'Held in escrow', direction: 'out' };
     case 'escrow_release':
       return { label: 'Escrow released', direction: 'neutral' };
+    case 'escrow_refund':
+      return { label: 'Escrow refunded', direction: 'in' };
     case 'initial_allocation':
       return { label: 'Welcome allocation', direction: 'in' };
     case 'skills_hunt_award':
