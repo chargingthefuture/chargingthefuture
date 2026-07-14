@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireSafetyAdminAccess, ensureMutationCsrf } from '../../../_lib';
 import { SAFETY_ERROR_CODE } from 'lib/safety/constants';
-import { setSafetyReportStatus } from 'lib/safety/repository';
+import { insertSafetyAdminAudit, setSafetyReportStatus } from 'lib/safety/repository';
 import { reportError } from 'lib/observability/report';
 
 type ReviewBody = { action?: unknown };
@@ -57,6 +57,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ rep
         { ok: false, code: SAFETY_ERROR_CODE.forbidden, message: 'This report is no longer open.' },
         { status: 409 },
       );
+    }
+
+    // Record the moderation decision in the append-only audit trail. Best-effort: a report was
+    // already moved above, so an audit-write failure must not turn a successful action into an error.
+    try {
+      await insertSafetyAdminAudit({
+        actorId: gate.auth.userId,
+        command: 'safety.report.review',
+        reason: body.action,
+        targetType: 'safety_report',
+        targetId: reportId,
+        metadata: { action: body.action },
+      });
+    } catch (auditError) {
+      reportError(auditError, { area: 'safety', op: 'admin_report_review_audit' });
     }
 
     return NextResponse.json({ ok: true, reportId, status: body.action }, { status: 200 });

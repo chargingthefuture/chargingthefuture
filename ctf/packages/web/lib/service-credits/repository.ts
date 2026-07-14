@@ -1408,49 +1408,13 @@ export async function executeDeletionReclaim(input: {
     const availableBalance = Number(wallet.rows[0]?.available_balance ?? '0');
     const escrowBalance = Number(wallet.rows[0]?.escrow_balance ?? '0');
     const amountTransferred = Math.max(0, availableBalance);
+    // A negative balance at deletion is a mutual-credit default: the treasury (the community) absorbs
+    // the shortfall. Bounded by small per-account credit limits so a single default stays minor.
+    const mutualCreditDefault = availableBalance < 0 ? -availableBalance : 0;
 
-    let externalLedgerTransactionId: string | null = null;
-    if (amountTransferred > 0) {
-      try {
-        const externalLedger = await postDeletionReclaimToFormance({
-          accountId: input.accountId,
-          treasuryUserId: input.treasuryUserId,
-          amount: amountTransferred,
-          deletionRequestId: input.deletionRequestId,
-          idempotencyKey: input.idempotencyKey,
-        });
-        externalLedgerTransactionId = externalLedger.transactionId;
-        await writeAdapterOutbox(client, {
-          commandName: 'account.deletion.reclaim.execute',
-          idempotencyKey: input.idempotencyKey,
-          status: 'delivered',
-          payload: {
-            accountId: input.accountId,
-            treasuryUserId: input.treasuryUserId,
-            amountTransferred,
-            deletionRequestId: input.deletionRequestId,
-            requestId: input.requestId,
-            traceId: input.traceId,
-          },
-          providerTransactionId: externalLedgerTransactionId,
-        });
-      } catch (error) {
-        await writeAdapterOutbox(client, {
-          commandName: 'account.deletion.reclaim.execute',
-          idempotencyKey: input.idempotencyKey,
-          status: 'queued',
-          payload: {
-            accountId: input.accountId,
-            treasuryUserId: input.treasuryUserId,
-            amountTransferred,
-            deletionRequestId: input.deletionRequestId,
-          },
-          lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
-        });
-        // Formance unavailable — keep the authoritative local ledger write and leave a durable
-        // 'queued' outbox row for the reconciliation worker. Do not roll back.
-      }
-    }
+    // --- Authoritative local writes first. No external call has been made yet, so if any of these
+    // mutations throws, the whole transaction rolls back with no orphaned external-ledger posting.
+    // The Formance call and outbox write are deferred until after every local mutation, below. ---
 
     if (amountTransferred > 0) {
       await client.query(
@@ -1468,9 +1432,6 @@ export async function executeDeletionReclaim(input: {
       );
     }
 
-    // A negative balance at deletion is a mutual-credit default: the treasury (the community) absorbs
-    // the shortfall. Bounded by small per-account credit limits so a single default stays minor.
-    const mutualCreditDefault = availableBalance < 0 ? -availableBalance : 0;
     if (mutualCreditDefault > 0) {
       await client.query(
         `UPDATE service_credits_wallets
@@ -1519,6 +1480,69 @@ export async function executeDeletionReclaim(input: {
        WHERE user_id = $1`,
       [input.accountId],
     );
+
+    // --- External ledger + durable outbox, AFTER every local mutation. ---
+    let externalLedgerTransactionId: string | null = null;
+    if (amountTransferred > 0) {
+      try {
+        const externalLedger = await postDeletionReclaimToFormance({
+          accountId: input.accountId,
+          treasuryUserId: input.treasuryUserId,
+          amount: amountTransferred,
+          deletionRequestId: input.deletionRequestId,
+          idempotencyKey: input.idempotencyKey,
+        });
+        externalLedgerTransactionId = externalLedger.transactionId;
+        await writeAdapterOutbox(client, {
+          commandName: 'account.deletion.reclaim.execute',
+          idempotencyKey: input.idempotencyKey,
+          status: 'delivered',
+          payload: {
+            accountId: input.accountId,
+            treasuryUserId: input.treasuryUserId,
+            amountTransferred,
+            deletionRequestId: input.deletionRequestId,
+            requestId: input.requestId,
+            traceId: input.traceId,
+          },
+          providerTransactionId: externalLedgerTransactionId,
+        });
+      } catch (error) {
+        await writeAdapterOutbox(client, {
+          commandName: 'account.deletion.reclaim.execute',
+          idempotencyKey: input.idempotencyKey,
+          status: 'queued',
+          payload: {
+            accountId: input.accountId,
+            treasuryUserId: input.treasuryUserId,
+            amountTransferred,
+            deletionRequestId: input.deletionRequestId,
+          },
+          lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
+        });
+        // Formance unavailable — keep the authoritative local ledger write and leave a durable
+        // 'queued' outbox row for the reconciliation worker. Do not roll back.
+      }
+    } else if (mutualCreditDefault > 0) {
+      // A mutual-credit default posts no local transfer, so the happy-path outbox write above is
+      // skipped — but the reconciliation worker still needs a record so it can emit the
+      // mutual_credit_default event to the external ledger. Without this row the external ledger
+      // diverges silently for every mutual-credit-default account. Leave a durable 'queued' row.
+      await writeAdapterOutbox(client, {
+        commandName: 'account.deletion.reclaim.execute',
+        idempotencyKey: input.idempotencyKey,
+        status: 'queued',
+        payload: {
+          accountId: input.accountId,
+          treasuryUserId: input.treasuryUserId,
+          amountTransferred,
+          mutualCreditDefault,
+          deletionRequestId: input.deletionRequestId,
+          requestId: input.requestId,
+          traceId: input.traceId,
+        },
+      });
+    }
 
     await client.query(
       `INSERT INTO service_credits_account_deletion_reclaims
