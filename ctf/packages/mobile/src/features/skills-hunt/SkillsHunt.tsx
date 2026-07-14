@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
   StyleSheet,
 } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
@@ -153,10 +154,12 @@ function LeaderboardTab({ round, currentUserId }: { round: Round | null; current
   const [currentEntry, setCurrentEntry] = useState<LeaderboardItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isRefresh = false) => {
     if (!round) return;
-    setLoading(true);
+    // Pull-to-refresh keeps the list on screen instead of flashing the tab spinner.
+    if (!isRefresh) setLoading(true);
     setLoadError(null);
     try {
       const data = await SkillsHuntApi.listLeaderboard(round.id);
@@ -165,11 +168,20 @@ function LeaderboardTab({ round, currentUserId }: { round: Round | null; current
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load leaderboard.');
     } finally {
-      setLoading(false);
+      if (!isRefresh) setLoading(false);
     }
   }, [round]);
 
   useEffect(() => { void load(); }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   if (!round) return <View style={styles.center}><Text style={styles.muted}>No active round.</Text></View>;
   if (loading) return <View style={styles.center}><ActivityIndicator color={accent} /></View>;
@@ -190,6 +202,7 @@ function LeaderboardTab({ round, currentUserId }: { round: Round | null; current
       data={items}
       keyExtractor={(item) => `${item.rank}-${item.userId ?? item.teamKey ?? ''}`}
       contentContainerStyle={{ padding: 14 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={accent} />}
       ListHeaderComponent={
         <>
           <Text style={styles.sectionTitle}>Scout Leaderboard</Text>
@@ -260,24 +273,34 @@ function MissionsTab({ round, onScout }: { round: Round | null; onScout: () => v
   const [items, setItems] = useState<MissionWithProgress[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  // Shared by the initial-load effect and pull-to-refresh; a refresh keeps the list on
+  // screen instead of flashing the tab spinner.
+  const load = useCallback(async (isRefresh = false) => {
     if (!round) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setLoadError(null);
-      try {
-        const data = await SkillsHuntApi.listMissions(round.id);
-        if (!cancelled) setItems(data.items);
-      } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load missions.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    if (!isRefresh) setLoading(true);
+    setLoadError(null);
+    try {
+      const data = await SkillsHuntApi.listMissions(round.id);
+      setItems(data.items);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'Failed to load missions.');
+    } finally {
+      if (!isRefresh) setLoading(false);
+    }
   }, [round]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   if (!round) return <View style={styles.center}><Text style={styles.muted}>No active round.</Text></View>;
   if (loading) return <View style={styles.center}><ActivityIndicator color={accent} /></View>;
@@ -289,6 +312,7 @@ function MissionsTab({ round, onScout }: { round: Round | null; onScout: () => v
       data={items}
       keyExtractor={(m) => m.id}
       contentContainerStyle={{ padding: 14 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={accent} />}
       ListHeaderComponent={
         <>
           <Text style={styles.sectionTitle}>Active Missions</Text>
@@ -331,24 +355,34 @@ function MyFindsTab({ round, achievements }: { round: Round | null; achievements
   const [items, setItems] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  // Shared by the initial-load effect and pull-to-refresh; a refresh keeps the list on
+  // screen instead of flashing the tab spinner.
+  const load = useCallback(async (isRefresh = false) => {
     if (!round) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setLoadError(null);
-      try {
-        const data = await SkillsHuntApi.listMyFinds(round.id);
-        if (!cancelled) setItems(data.items);
-      } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load finds.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    if (!isRefresh) setLoading(true);
+    setLoadError(null);
+    try {
+      const data = await SkillsHuntApi.listMyFinds(round.id);
+      setItems(data.items);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'Failed to load finds.');
+    } finally {
+      if (!isRefresh) setLoading(false);
+    }
   }, [round]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   if (!round) return <View style={styles.center}><Text style={styles.muted}>No active round.</Text></View>;
   if (loading) return <View style={styles.center}><ActivityIndicator color={accent} /></View>;
@@ -361,6 +395,7 @@ function MyFindsTab({ round, achievements }: { round: Round | null; achievements
       data={items}
       keyExtractor={(s) => s.id}
       contentContainerStyle={{ padding: 14 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={accent} />}
       ListHeaderComponent={
         <>
           <Text style={styles.sectionTitle}>My Finds</Text>

@@ -339,6 +339,23 @@ Result: web ☐ android ☐
 
 ---
 
+### TT-19 — Refresh the request list (header button / pull-to-refresh)
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member, with a second session available to make a change.
+
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open TrustTransport and tap the refresh icon in the header.
+2. On android, open TrustTransport and pull down on the screen.
+3. In another session, book or cancel a request, then refresh as above.
+
+**Expected:** On web the refresh icon spins while loading; on android the pull-to-refresh spinner shows. The request list re-pulls and the change from the other session appears without closing and reopening the app. Refreshing never clears the current screen to the full-screen loading state.
+
+Result: web ☐ android ☐
+
+---
+
 ## Admin walkthrough
 
 ### TT-A1 — Incident queue loads and an incident can be resolved

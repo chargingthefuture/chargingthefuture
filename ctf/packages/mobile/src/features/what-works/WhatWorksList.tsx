@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet, Linking, Alert,
+  View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, StyleSheet, Linking, Alert,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { fetchList, toggleEndorsement, type WhatWorksProblem, type WhatWorksProduct, type WhatWorksStats } from './api';
@@ -67,6 +67,7 @@ export function WhatWorksList({ navigation }: { navigation?: NavLike }) {
   const [problems, setProblems] = useState<WhatWorksProblem[]>([]);
   const [stats, setStats] = useState<WhatWorksStats>(EMPTY_STATS);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -83,6 +84,17 @@ export function WhatWorksList({ navigation }: { navigation?: NavLike }) {
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  // Pull-to-refresh: re-pull the list without flashing the full loading state
+  // (`load` only toggles `loading` on the initial mount).
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
   }, [load]);
 
   const onToggle = async (product: WhatWorksProduct) => {
@@ -115,7 +127,10 @@ export function WhatWorksList({ navigation }: { navigation?: NavLike }) {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 16 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={accent} />}
+      >
         <Text style={s.h1}>What actually works.</Text>
         <Text style={s.lede}>Pick a problem. Underneath are specific tools a survivor here used and said helped — with a direct link to get it.</Text>
         <View style={s.chipRow}>

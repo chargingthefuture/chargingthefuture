@@ -96,6 +96,19 @@ sidebar scrolls the list to that problem.
 require signing in; no survivor identity is rendered.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### WW-6 · Refresh the list
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open What Works
+   and tap the refresh icon in the header.
+2. On android, open the List tab and pull down on the list.
+3. In another session, change the data (e.g. an admin approves a new tool), then refresh as above.
+**Expected:** The refresh icon spins while loading (web) or the pull-to-refresh spinner shows
+(android), the list and stats re-pull from the server, and after step 3 the change appears without
+closing and reopening the app. Refreshing never clears the current screen to the full-screen loading
+state.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Admin walkthrough

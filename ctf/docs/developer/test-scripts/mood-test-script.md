@@ -110,6 +110,20 @@ The Android Mood screen has no resources rail, so this case is web-only.
 
 ---
 
+### MD-7 · Refresh eligibility (header button / pull-to-refresh)
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open Mood and
+   tap the refresh icon in the header.
+2. On android, open Mood and pull down on the check-in screen.
+3. In another session, submit a check-in for the same client, then refresh as above.
+**Expected:** On web the refresh icon spins while loading; on android the pull-to-refresh spinner
+shows. Eligibility re-pulls and the cooldown state from the other session appears without closing and
+reopening the app. Refreshing never clears the current screen to the full-screen loading state.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ## Parity check (web ↔ android)
 
 For MD-1, MD-2, MD-4, and MD-5, the android app and the mobile-responsive web layout must behave the

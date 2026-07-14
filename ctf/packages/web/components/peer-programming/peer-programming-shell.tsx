@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Users } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -15,6 +15,7 @@ import { PeerProgrammingChatTab } from "./pp-chat-tab";
 import { PeerProgrammingRightPanel } from "./pp-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { RefreshButton } from "@/components/shared/refresh-button";
 
 // Shape returned by GET /api/peer-programming/room. The shell's view models (Room,
 // Message) differ from the API, so map explicitly here rather than casting.
@@ -98,7 +99,7 @@ function initialCohortIdFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get("cohortId");
 }
 
-function ShellHeader({ active, t, isAdmin }: { active: boolean; t: PeerProgrammingTokens; isAdmin?: boolean }) {
+function ShellHeader({ active, t, isAdmin, onRefresh }: { active: boolean; t: PeerProgrammingTokens; isAdmin?: boolean; onRefresh: () => Promise<void> }) {
   return (
     <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
       <Users size={18} style={{ color: t.ACCENT }} />
@@ -112,6 +113,7 @@ function ShellHeader({ active, t, isAdmin }: { active: boolean; t: PeerProgrammi
         </span>
       )}
       <PluginAdminButton href="/admin/peer-programming" isAdmin={isAdmin} accent={t.ACCENT} />
+      <RefreshButton onRefresh={onRefresh} title="Refresh" />
     </header>
   );
 }
@@ -167,6 +169,22 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     void fetchData();
     return () => controller.abort();
   }, []);
+
+  // Re-pull the currently open room in the background (refresh button) without
+  // showing the full-screen loading state.
+  const reloadRoom = useCallback(async () => {
+    try {
+      const data = await fetchRoomData(new AbortController().signal, activeCohortId);
+      setRoom(data.room);
+      setMessages(data.messages);
+      setCohorts(data.cohorts);
+      setMembers(data.members);
+      setMyCohortId(data.myCohortId);
+      setAccess(data.access);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to refresh PeerProgramming data.");
+    }
+  }, [activeCohortId]);
 
   // Open another running cohort to listen in (read-only unless you are a member of it). Passing
   // null returns to your own cohort. Refetches the room for that cohort and jumps to the chat.
@@ -310,6 +328,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             <Users size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>PeerProgramming</span>
             <PluginAdminButton href="/admin/peer-programming" isAdmin={isAdmin} accent={t.ACCENT} />
+            <RefreshButton onRefresh={reloadRoom} title="Refresh" />
             <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
@@ -328,7 +347,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       <PeerProgrammingIconRail tab={tab} onTab={setTab} />
       <PeerProgrammingSidebar />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader active={Boolean(room?.cohortId)} t={t} isAdmin={isAdmin} />
+        <ShellHeader active={Boolean(room?.cohortId)} t={t} isAdmin={isAdmin} onRefresh={reloadRoom} />
         {content}
       </div>
       <PeerProgrammingRightPanel room={room} participants={participants} onJoinSession={() => setTab("session")} />

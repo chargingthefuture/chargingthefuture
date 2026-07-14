@@ -12,25 +12,34 @@ export function DirectoryBrowse({
   rewardCard,
   loadingMembers,
   members,
-  categories,
   filtered,
+  hasOwnProfile,
   isMobile = false,
   onSelect,
   onClearFilters,
+  onCreateProfile,
 }: {
   rewardCard: SkillsHuntRewardCard | null;
   loadingMembers: boolean;
   members: Member[];
-  categories: string[];
   filtered: boolean;
+  hasOwnProfile: boolean;
   isMobile?: boolean;
   onSelect: (member: Member) => void;
   onClearFilters: () => void;
+  onCreateProfile: () => void;
 }) {
   const { theme } = useTheme();
   const t = getDirectoryTokens(theme);
   if (!loadingMembers && members.length === 0) {
-    return <DirectoryEmptyState categories={categories} filtered={filtered} onClearFilters={onClearFilters} />;
+    return (
+      <DirectoryEmptyState
+        filtered={filtered}
+        hasOwnProfile={hasOwnProfile}
+        onClearFilters={onClearFilters}
+        onCreateProfile={onCreateProfile}
+      />
+    );
   }
 
   return (

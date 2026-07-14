@@ -16,6 +16,7 @@ import {
 } from './contributions-shared';
 import { AppLoading } from '@/components/shared/app-loading';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { RefreshButton } from '@/components/shared/refresh-button';
 import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
 import { goalsFromFundraiser, GoalCard, GoalRow } from './contributions-drive-progress';
 import { ContributionPaths, type SubmitGiftCardInput } from './contributions-paths';
@@ -191,7 +192,7 @@ export function ContributionsShell() {
 
   if (isMobile) {
     return (
-      <MobileFrame t={t} tab={mobileTab} onTab={setMobileTab}>
+      <MobileFrame t={t} tab={mobileTab} onTab={setMobileTab} onRefresh={() => loadData()}>
         {mobileTab === 'drive' && (
           <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
             <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.7, margin: '0 0 16px' }}>
@@ -225,7 +226,10 @@ export function ContributionsShell() {
       <ContributionsSidebar t={t} active={activeSection} onNavigate={scrollToSection} />
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
         <div ref={driveRef} style={{ marginBottom: 28, scrollMarginTop: 24 }}>
-          <h1 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: t.TITLE }}>{driveTitle}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 6 }}>
+            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: t.TITLE }}>{driveTitle}</h1>
+            <RefreshButton onRefresh={() => loadData()} title="Refresh" />
+          </div>
           <p style={{ margin: '0 0 18px', fontSize: 13, color: t.MUTED, lineHeight: 1.7, maxWidth: 620 }}>
             If every member who can give a little does, the platform&apos;s costs are covered — and it stays free for everyone.
           </p>
@@ -364,7 +368,7 @@ function ContributionsSidebar({
   );
 }
 
-function MobileFrame({ t, children, tab, onTab }: { t: ContributionsTokens; children: React.ReactNode; tab?: MobileTab; onTab?: (tab: MobileTab) => void }) {
+function MobileFrame({ t, children, tab, onTab, onRefresh }: { t: ContributionsTokens; children: React.ReactNode; tab?: MobileTab; onTab?: (tab: MobileTab) => void; onRefresh?: () => Promise<void> }) {
   const tabs: { key: MobileTab; label: string }[] = [
     { key: 'drive', label: 'Drive' },
     { key: 'contribute', label: 'Contribute' },
@@ -378,7 +382,8 @@ function MobileFrame({ t, children, tab, onTab }: { t: ContributionsTokens; chil
           <div style={{ width: 26, height: 26, borderRadius: 7, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Gift size={13} color="#fff" />
           </div>
-          <span style={{ fontSize: 17, fontWeight: 700, color: t.TITLE }}>Contributions</span>
+          <span style={{ fontSize: 17, fontWeight: 700, color: t.TITLE, flex: 1 }}>Contributions</span>
+          {onRefresh ? <RefreshButton onRefresh={onRefresh} title="Refresh" /> : null}
         </div>
         <div style={{ fontSize: 12, color: t.MUTED }}>Community support drive</div>
       </div>

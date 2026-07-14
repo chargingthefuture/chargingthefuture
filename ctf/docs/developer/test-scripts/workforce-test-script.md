@@ -139,6 +139,20 @@ deliberately not exposed). No per-member or identifying data is shown. If the pu
 unavailable the rows fall back to neutral dashes rather than fabricated figures.
 **Result:** web ☐ mobile ☐ — notes:
 
+### WF-9 · Refresh re-pulls the dashboard without reopening the app
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open the Workforce dashboard, then in a second session change data that affects it (e.g. claim a
+   Directory profile or adjust a member's skills so recruited counts move).
+2. Web / mobile-responsive: tap the refresh icon in the header (desktop header right side; phone header
+   next to the top actions).
+3. Android: pull down on the Overview scroll area.
+**Expected:** On web the refresh icon spins while the re-pull is in flight; on android the pull-to-refresh
+spinner shows. The dashboard, sector, skill-level, and training-gap numbers re-fetch and the change from
+the other session appears without closing and reopening the app. Refreshing never clears the screen to
+the full-screen loading state — the current dashboard stays visible until the new data lands.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Admin walkthrough

@@ -8,6 +8,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { AppLoading } from "@/components/shared/app-loading";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { RefreshButton } from "@/components/shared/refresh-button";
 import {
   getSkillsHuntTokens, TABS, type SkillsHuntTokens, type Tab,
   type SkillsHuntRound, type SkillsHuntLeaderboardItem, type SkillsHuntAchievement,
@@ -31,7 +32,7 @@ function CenteredNote({ t, color, children }: { t: SkillsHuntTokens; color: stri
   );
 }
 
-function ShellHeader({ t, activeRound }: { t: SkillsHuntTokens; activeRound: SkillsHuntRound | null }) {
+function ShellHeader({ t, activeRound, onRefresh }: { t: SkillsHuntTokens; activeRound: SkillsHuntRound | null; onRefresh: () => void }) {
   return (
     <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
       <Search size={18} style={{ color: t.ACCENT }} />
@@ -44,6 +45,7 @@ function ShellHeader({ t, activeRound }: { t: SkillsHuntTokens; activeRound: Ski
       {activeRound && (
         <span style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>Round active</span>
       )}
+      <RefreshButton onRefresh={onRefresh} title="Refresh" />
     </header>
   );
 }
@@ -113,6 +115,9 @@ export function SkillsHuntShell({
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [loadingFinds, setLoadingFinds] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  // Bumped by the header refresh button; the data effects below re-run without the full-screen
+  // loading state (only the initial load, refreshKey 0, shows AppLoading).
+  const [refreshKey, setRefreshKey] = useState(0);
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
@@ -132,7 +137,7 @@ export function SkillsHuntShell({
   useEffect(() => {
     const controller = new AbortController();
     async function load() {
-      setLoadingRounds(true);
+      if (refreshKey === 0) setLoadingRounds(true);
       setGlobalError(null);
       try {
         const [roundsRes, achRes] = await Promise.all([
@@ -157,7 +162,7 @@ export function SkillsHuntShell({
     }
     void load();
     return () => controller.abort();
-  }, []);
+  }, [refreshKey]);
 
   useEffect(() => {
     if (!activeRound) return;
@@ -176,7 +181,7 @@ export function SkillsHuntShell({
     }
     void load();
     return () => controller.abort();
-  }, [activeRound]);
+  }, [activeRound, refreshKey]);
 
   useEffect(() => {
     if (tab !== "my-finds" || !activeRound) return;
@@ -194,7 +199,7 @@ export function SkillsHuntShell({
     }
     void load();
     return () => controller.abort();
-  }, [tab, activeRound]);
+  }, [tab, activeRound, refreshKey]);
 
   useEffect(() => {
     if (tab !== "missions" || !activeRound) return;
@@ -212,7 +217,7 @@ export function SkillsHuntShell({
     }
     void load();
     return () => controller.abort();
-  }, [tab, activeRound]);
+  }, [tab, activeRound, refreshKey]);
 
   // Notifications: poll every 30s for unread (GetStream is out of scope; continuity §2.11).
   useEffect(() => {
@@ -266,6 +271,7 @@ export function SkillsHuntShell({
             <button type="button" onClick={() => setNotifOpen((o) => !o)} aria-label="Status" style={{ position: "relative", width: 38, height: 38, borderRadius: 10, background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, color: t.SUBTLE, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
               <Bell size={18} />
             </button>
+            <RefreshButton onRefresh={() => setRefreshKey((k) => k + 1)} title="Refresh" />
             <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px", overflowX: "auto" }}>
@@ -290,7 +296,7 @@ export function SkillsHuntShell({
       )}
       <SkillsHuntSidebar tab={tab} onTab={setTab} achievements={achievements} currentUserEntry={currentUserEntry} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader t={t} activeRound={activeRound} />
+        <ShellHeader t={t} activeRound={activeRound} onRefresh={() => setRefreshKey((k) => k + 1)} />
         <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "24px" }}>
           {content}
         </div>
