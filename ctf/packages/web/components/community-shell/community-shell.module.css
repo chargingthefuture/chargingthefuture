@@ -1330,7 +1330,7 @@
 .mobileBar {
   display: none;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   height: 52px;
   padding: 0 12px;
   background: var(--ctf-icon-rail);
@@ -1421,6 +1421,23 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
+}
+
+/* The phone top bar carries tabs + (admin) + help + settings + avatar in one non-wrapping row.
+   Every item is flex-shrink: 0, so on admin accounts the row used to exceed the viewport and the
+   last item — the Clerk avatar — was clipped by the root overflow guard. Two space reclaims keep
+   the full row on-screen: the 44px rail-sized help/settings buttons compact to 38px here (matching
+   the avatar's scale), and the Admin button drops to icon-only at phone widths (label below). */
+.mobileBarAuth .iconRailBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+@media (max-width: 600px) {
+  .mobileBarAdminLabel {
+    display: none;
+  }
 }
 
 .mobileBarAvatar {
