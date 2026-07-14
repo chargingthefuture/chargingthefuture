@@ -23,13 +23,16 @@ const EMPTY_STEPS = [
 const SKILL_PREVIEW_CAP = 6;
 
 export function BrowsePanel({
-  providers, viewerUserId = null, onSelect, activeSkillId = null, activeSkillName = null, onSkillFilter,
+  providers, viewerUserId = null, onSelect, activeSkillId = null, activeSkillName = null, searchActive = false, onSkillFilter,
 }: {
   providers: ProviderView[];
   viewerUserId?: string | null;
   onSelect: (p: ProviderView) => void;
   activeSkillId?: string | null;
   activeSkillName?: string | null;
+  // Whether a trade/search-text filter is narrowing the list. Drives the empty state: with no filter
+  // at all, "no providers offering this / clear the filter" is nonsense — there is simply nobody yet.
+  searchActive?: boolean;
   onSkillFilter?: (skillId: string | null, skillName?: string | null) => void;
 }) {
   const { theme } = useTheme();
@@ -55,13 +58,28 @@ export function BrowsePanel({
           </div>
         ) : null}
         {providers.length === 0 ? (
-          <div style={{ padding: "48px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", border: "2px dashed rgba(239,68,68,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Hammer size={20} style={{ color: "rgba(239,68,68,0.4)" }} />
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>No providers offering this yet</div>
-            <div style={{ fontSize: 13, color: t.FAINT }}>Try clearing the skill filter or searching differently.</div>
-          </div>
+          (() => {
+            // The empty state depends on why the list is empty. A skill filter or a search narrows the
+            // list, so pointing the member at clearing it is right. But with no filter at all there is
+            // nothing to clear — the list is empty because nobody has offered a skill here yet, and
+            // telling the member to "clear the skill filter" makes no sense.
+            const filtered = Boolean(activeSkillId) || searchActive;
+            const title = filtered ? "No providers match" : "No providers offering skills yet";
+            const hint = activeSkillId
+              ? "Try a different skill, or clear the filter to see everyone."
+              : searchActive
+                ? "Try a different search."
+                : "Everyone here opts in before they show up. Check back soon as members offer skills.";
+            return (
+              <div style={{ padding: "48px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", border: "2px dashed rgba(239,68,68,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Hammer size={20} style={{ color: "rgba(239,68,68,0.4)" }} />
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>{title}</div>
+                <div style={{ fontSize: 13, color: t.FAINT }}>{hint}</div>
+              </div>
+            );
+          })()
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {providers.map((p) => {

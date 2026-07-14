@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
-| **Generated** | 2026-07-11 (hand-updated for provider location read from the shared directory profile; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-14 (hand-updated for the context-aware provider-browse empty state; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -56,6 +56,9 @@ checks. Member role unless noted.
 1. Open Foundation and browse providers; filter by an offered skill chip.
 2. On desktop, set a filter (pick a trade in the sidebar, type a search term, or tap a skill chip),
    then press "Browse All Providers" in the right rail.
+3. Reach an empty list three ways and read the empty-state copy each time: (a) a skill filter that
+   matches nobody, (b) a search term that matches nobody, and (c) no filter at all with zero providers
+   (a fresh/unseeded environment, or after clearing every filter when none exist).
 **Expected:** Only providers who opted in to offer at least one skill appear. Each card shows name,
 headline, bio, and offered-skill chips; tapping a chip filters the list by that skill with a
 clear-filter banner. Opening a provider whose directory profile has a location shows a "City, State,
@@ -63,7 +66,10 @@ Country" line under the headline (only the parts that are set — a non-US provi
 country), read from the shared directory profile, not a Foundation-owned field. The viewer's own card
 does not offer "Connect now". Pressing "Browse All Providers" always returns to the full, unfiltered
 list — it clears the trade, search text, and skill filters and opens the Browse tab (never a no-op,
-even when Browse is already the open tab).
+even when Browse is already the open tab). The empty state matches the reason: a skill filter or a
+search says "No providers match" and points at trying a different skill/search or clearing the filter;
+with no filter at all it says "No providers offering skills yet" and explains members show up once
+they opt in — it never tells you to clear a filter that isn't set, and never mentions cash.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### FND-2 · Offer skills (provider opt-in)
