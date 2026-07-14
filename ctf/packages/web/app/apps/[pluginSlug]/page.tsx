@@ -1,6 +1,6 @@
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
-import { canonicalizePluginSlug, getPluginBySlug, isAdminOnlyPlugin, pluginRequiresUsername } from 'lib/plugins/repository';
+import { canonicalizePluginSlug, getPluginBySlug, isAdminOnlyPlugin } from 'lib/plugins/repository';
 import { getPublicVisitorShell } from '@/components/plugins/public-visitor-registry';
 import { BeaconShell } from '@/components/beacon/beacon-shell';
 import { ChymeShell } from '@/components/chyme/chyme-shell';
@@ -141,13 +141,15 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   // Every plugin route requires full Unlock access (the default minUnlockTier
   // 'approved_full'). A not-yet-verified member is denied with `unlock_required` and
   // shown the plugin's public landing page below (not the access-denied view), which
-  // nudges them toward the Unlock flow; the Hub general channel is their support
-  // surface. Most plugins also require a username, but the username-optional plugins
-  // (chyme and beacon are watch-first public surfaces; LightHouse requires no per-plugin
-  // profile) must still open for an approved member who has not set a username yet.
-  const decision = await evaluatePluginAccess({
-    requireUsername: pluginRequiresUsername(selectedPlugin.slug),
-  });
+  // nudges them toward the Unlock flow; the Hub general channel is their support surface.
+  //
+  // No plugin route requires a username. Every plugin API already gates with
+  // `requireUsername: false`, and members can be approved on a temporary handle before they
+  // choose a username in Clerk. Requiring one here blocked those members from opening apps
+  // (a leftover: it produced a 403 `missing_username` page), so the page gate matches the
+  // APIs and does not require a username. Shells that show the handle fall back gracefully
+  // when it is null.
+  const decision = await evaluatePluginAccess({ requireUsername: false });
 
   // Operator-only plugins (e.g. Weekly Performance) are admin-only: a non-admin gets a 404 for the
   // route, not the public landing, since there is no approved user-facing version. Admins fall
