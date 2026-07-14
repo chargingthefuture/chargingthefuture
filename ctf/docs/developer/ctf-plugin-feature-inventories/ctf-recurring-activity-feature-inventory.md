@@ -87,8 +87,10 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
   `(status, currency_code)`. There is deliberately NO free-text column.
 - `recurring_activity_audit_trail` — append-only audit of every mutation (create/confirm/decline/end/
   visibility) and denied attempts. Columns: `id` UUID PK, `actor_user_id`, `command`, `policy_status`,
-  `reason`, `activity_id`, `request_id`, `metadata` JSONB, `created_at`. Only coarse metadata (sector,
-  currency code, cadence, status transition) — no sensitive raw payload.
+  `reason`, `activity_id`, `request_id`, `trace_id`, `metadata` JSONB, `created_at`. `trace_id` is the
+  distributed-trace correlation id required by the audit contract, distinct from `request_id`. Only
+  coarse metadata (sector, currency code, cadence, status transition) — no sensitive raw payload. Every
+  allow-or-deny decision writes a row, including bad-payload 400s rejected at the route layer.
 - `currencies.RACT` — a hidden (`is_active = FALSE`, `kind = 'activity'`, `requires_amount = FALSE`)
   catalog row: the internal counting unit each confirmed fiat recurring activity contributes to the GDP
   index. Never member-selectable (selectors filter `is_active = TRUE`) and never stored on a
@@ -173,8 +175,16 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
   renders it for an unauthenticated visitor (or a not-yet-verified member, with a "Finish verifying"
   CTA) instead of redirecting to sign-in, so the URL is shareable and consistent with the other
   plugins' public views. Marketing copy only — no per-user data (rule 126).
-
-## Build Checklist
+- 2026-07-14: Code-review fixes (issues #1493–#1500). Added the `trace_id` column to
+  `recurring_activity_audit_trail` and a `traceId` parameter to the audit writer so every audit row
+  carries the contract-required trace id. The create route now writes a deny audit row for each
+  bad-payload 400 rejected at the route layer (previously only repository-level validation failures were
+  audited). Repository: `createRecurringActivity` now rejects `scValue <= 0` (zero was accepted before);
+  `setRecurringActivityVisibility` now rejects visibility changes on ended/declined activities and
+  returns a clean not-found if the row disappears between the ownership check and the UPDATE. Mutation
+  responses now include the reader-scoped `role`. UI parity: the mobile card now offers "End" for
+  pending activities (not just active), the web item hides the visibility picker unless the activity is
+  active, and the web counterparty picker waits for two typed characters before querying the directory.
 
 - [x] Schema tables + hidden RACT counting unit (`schema.sql`).
 - [x] Contract files (command / access-policy / audit / deletion).

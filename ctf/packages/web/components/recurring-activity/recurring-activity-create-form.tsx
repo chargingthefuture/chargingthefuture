@@ -183,6 +183,14 @@ function CounterpartyPicker({
     if (selected) {
       return;
     }
+    // Require a couple of characters before hitting the directory, mirroring the mobile picker. An
+    // empty query would otherwise return the first page of every member as soon as the form mounts.
+    const term = query.trim();
+    if (term.length < 2) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
@@ -191,9 +199,7 @@ function CounterpartyPicker({
       setLoading(true);
       try {
         const params = new URLSearchParams();
-        if (query.trim()) {
-          params.set('q', query.trim());
-        }
+        params.set('q', term);
         const res = await fetch(`/api/directory/list?${params.toString()}`, { signal: controller.signal });
         if (res.ok) {
           const data = (await res.json()) as Parameters<typeof mapDirectoryToMembers>[0];

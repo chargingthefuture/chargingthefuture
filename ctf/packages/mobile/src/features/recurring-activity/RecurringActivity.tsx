@@ -333,7 +333,8 @@ function ActivityCard({
   const withName = activity.counterpartyName ?? 'a member';
   const isOwner = activity.role === 'owner';
   const canConfirm = activity.status === 'pending' && activity.role === 'counterparty';
-  const canEnd = activity.status === 'active';
+  // Either party can end a pending or active activity — matches the web component and the contract.
+  const canEnd = activity.status === 'pending' || activity.status === 'active';
   const showValue = activity.scValue != null;
 
   return (

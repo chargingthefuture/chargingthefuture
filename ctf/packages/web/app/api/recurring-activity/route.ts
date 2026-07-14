@@ -4,6 +4,7 @@ import {
   recurringActivityErrorResponse,
   requireRecurringActivityAccess,
   resolveRequestId,
+  resolveTraceId,
 } from 'lib/recurring-activity/_lib';
 import { RECURRING_ACTIVITY_ERROR_CODE } from 'lib/recurring-activity/constants';
 import {
@@ -70,11 +71,30 @@ export async function POST(request: Request) {
     return gate.response;
   }
 
+  const requestId = resolveRequestId(request);
+  const traceId = resolveTraceId(request);
+  const userId = gate.auth.userId;
+
+  // The audit contract requires an allow-or-deny row for every decision, so a bad-payload 400 is
+  // recorded too — not just the repository-level validation failures further down.
+  const denyBadRequest = async (reason: string, message: string) => {
+    await logRecurringActivityAuditEvent({
+      actorUserId: userId,
+      command: 'recurring-activity.create',
+      policyStatus: 'deny',
+      reason,
+      requestId,
+      traceId,
+      metadata: { message },
+    }).catch((auditError) => reportError(auditError, { area: 'recurring-activity', op: 'create_audit' }));
+    return badRequest(message);
+  };
+
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
   } catch {
-    return badRequest('Invalid JSON body.');
+    return denyBadRequest('invalid_json', 'Invalid JSON body.');
   }
 
   const counterpartyUserId = typeof body.counterpartyUserId === 'string' ? body.counterpartyUserId.trim() : '';
@@ -84,35 +104,32 @@ export async function POST(request: Request) {
   const visibility = body.visibility;
 
   if (!counterpartyUserId) {
-    return badRequest('counterpartyUserId is required.');
+    return denyBadRequest('missing_counterparty', 'counterpartyUserId is required.');
   }
   if (!RECURRING_ACTIVITY_SECTORS.includes(sector as RecurringActivitySector)) {
-    return badRequest(`sector must be one of: ${RECURRING_ACTIVITY_SECTORS.join(', ')}.`);
+    return denyBadRequest('invalid_sector', `sector must be one of: ${RECURRING_ACTIVITY_SECTORS.join(', ')}.`);
   }
   if (!currencyCode) {
-    return badRequest('currencyCode is required.');
+    return denyBadRequest('missing_currency', 'currencyCode is required.');
   }
   if (!RECURRING_ACTIVITY_CADENCES.includes(cadence as RecurringActivityCadence)) {
-    return badRequest(`cadence must be one of: ${RECURRING_ACTIVITY_CADENCES.join(', ')}.`);
+    return denyBadRequest('invalid_cadence', `cadence must be one of: ${RECURRING_ACTIVITY_CADENCES.join(', ')}.`);
   }
   if (
     visibility !== undefined &&
     !RECURRING_ACTIVITY_VISIBILITY_VALUES.includes(visibility as RecurringActivityVisibility)
   ) {
-    return badRequest(`visibility must be one of: ${RECURRING_ACTIVITY_VISIBILITY_VALUES.join(', ')}.`);
+    return denyBadRequest('invalid_visibility', `visibility must be one of: ${RECURRING_ACTIVITY_VISIBILITY_VALUES.join(', ')}.`);
   }
 
   let scValue: number | null | undefined;
   if (body.scValue !== undefined && body.scValue !== null && body.scValue !== '') {
     const parsed = typeof body.scValue === 'number' ? body.scValue : Number(body.scValue);
     if (!Number.isFinite(parsed)) {
-      return badRequest('scValue must be a number.');
+      return denyBadRequest('invalid_sc_value', 'scValue must be a number.');
     }
     scValue = parsed;
   }
-
-  const requestId = resolveRequestId(request);
-  const userId = gate.auth.userId;
 
   try {
     const activity = await createRecurringActivity({
@@ -131,6 +148,7 @@ export async function POST(request: Request) {
       reason: 'self_declare',
       activityId: activity.id,
       requestId,
+      traceId,
       metadata: {
         sector: activity.sector,
         currencyCode: activity.currencyCode,
@@ -138,7 +156,9 @@ export async function POST(request: Request) {
         hasScValue: activity.scValue !== null,
       },
     });
-    return NextResponse.json({ ok: true, activity }, { status: 201 });
+    // The creator is always the owner; attach the reader-scoped role so the response matches the
+    // client's required `role` field (same shape the list and mutation endpoints return).
+    return NextResponse.json({ ok: true, activity: { ...activity, role: 'owner' as const } }, { status: 201 });
   } catch (error) {
     if (error instanceof RecurringActivityValidationError) {
       await logRecurringActivityAuditEvent({
@@ -147,6 +167,7 @@ export async function POST(request: Request) {
         policyStatus: 'deny',
         reason: 'validation_failed',
         requestId,
+        traceId,
         metadata: { message: error.message },
       }).catch((auditError) => reportError(auditError, { area: 'recurring-activity', op: 'create_audit' }));
       return badRequest(error.message);
