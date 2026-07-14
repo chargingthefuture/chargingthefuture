@@ -109,6 +109,9 @@ export function DirectoryProfileEdit({
   const [skills, setSkills] = useState<SkillOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Whether the caller already had a profile when the form loaded. Drives create-vs-edit wording; the
+  // PUT upsert behaves the same either way.
+  const [hadProfile, setHadProfile] = useState(false);
   // Draft text for the "skill not listed" box, before it is committed to form.proposedSkills.
   const [proposedInput, setProposedInput] = useState("");
 
@@ -148,6 +151,7 @@ export function DirectoryProfileEdit({
         setSkills(skillsData.items ?? []);
 
         const p = profileData.profile ?? null;
+        setHadProfile(Boolean(p));
         const sectorId = p?.sectorId ?? "";
 
         setForm({
@@ -298,7 +302,7 @@ export function DirectoryProfileEdit({
         style={{ width: "100%", maxWidth: 560, background: t.HEADER, border: `1px solid ${t.BORDER_HI}`, borderRadius: 16, color: t.TEXT, boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}
       >
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${t.BORDER}` }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: t.TITLE }}>Edit my profile</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: t.TITLE }}>{hadProfile ? "Edit my profile" : "Create my profile"}</div>
           <button
             type="button"
             onClick={onClose}
@@ -454,7 +458,7 @@ export function DirectoryProfileEdit({
                   disabled={!canSave}
                   style={{ padding: "10px 22px", borderRadius: 9, background: t.ACCENT, border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: canSave ? "pointer" : "not-allowed", opacity: canSave ? 1 : 0.5 }}
                 >
-                  {saving ? "Saving…" : "Save changes"}
+                  {saving ? "Saving…" : hadProfile ? "Save changes" : "Create profile"}
                 </button>
               </div>
             </>
