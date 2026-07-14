@@ -163,6 +163,21 @@ support-only, and stamps `reward_revoked_at` so reconcile never re-grants it. Bo
 admin-gated, CSRF-guarded (`x-ctf-csrf: '1'`), and audited.
 **Result:** web ☐ — notes:
 
+### UNLOCK-A6 · Search the submissions list
+**Role:** admin / reviewer · **Surfaces:** web (admin surface), android (Unlock Admin)
+**Precondition:** the All view has several submissions (the demo seed / a real queue with 30+ rows).
+**Steps:**
+1. Open the admin submissions list (web `/admin/unlock`; android Unlock Admin) and switch to the All
+   view.
+2. Type part of a known submitter's Quora URL into the search box above the list.
+3. Clear it and type part of a user id, then a submission number.
+4. Type a string that matches nothing.
+**Expected:** The list filters live as you type, matching on Quora URL, user id, or submission number
+(case-insensitive), so you can find a row without scrolling. Search combines with the active tab
+(Pending / All, plus Approved on android). A no-match query shows "No submissions match your search."
+Clearing the box restores the full list. Search filters the already-loaded page.
+**Result:** web ☐ android ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)
