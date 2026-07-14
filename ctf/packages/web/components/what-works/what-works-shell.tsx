@@ -21,6 +21,7 @@ import { WhatWorksRightRail } from './ww-right-rail';
 import { WhatWorksProblemSection } from './ww-problem-section';
 import { WhatWorksSuggestPanel } from './ww-suggest-panel';
 import { MobileTopActions } from '@/components/shared/mobile-top-actions';
+import { RefreshButton } from '@/components/shared/refresh-button';
 
 const EMPTY_STATS: WhatWorksStats = { problems: 0, verifiedTools: 0, survivorsHelped: 0 };
 
@@ -93,6 +94,12 @@ export function WhatWorksShell() {
     void loadList();
     void loadProblemOptions();
   }, []);
+
+  // Header refresh: re-pull the list and the suggest-dropdown options without the
+  // full-screen loading state (loadList only toggles `loading` on the initial mount).
+  async function refreshAll(): Promise<void> {
+    await Promise.all([loadList(), loadProblemOptions()]);
+  }
 
   function applyEndorsement(productId: string, next: { verifiedCount: number; viewerHasEndorsed: boolean }): void {
     setProblems((prev) => prev.map((problem) => ({
@@ -219,6 +226,7 @@ export function WhatWorksShell() {
                 <ShieldCheck size={13} /> Admin
               </Link>
             ) : null}
+            <RefreshButton onRefresh={refreshAll} title="Refresh" />
             <MobileTopActions />
           </div>
           <div style={{ padding: '0 12px 10px' }}>
@@ -284,6 +292,7 @@ export function WhatWorksShell() {
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 12.5, color: t.TITLE, fontFamily: 'inherit' }}
             />
           </div>
+          <RefreshButton onRefresh={refreshAll} title="Refresh" />
         </header>
 
         <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '28px 40px 48px' }}>

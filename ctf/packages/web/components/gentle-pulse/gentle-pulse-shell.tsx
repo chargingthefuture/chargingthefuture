@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Heart } from "lucide-react";
@@ -14,6 +14,7 @@ import { GentlePulseSessions } from "./gp-sessions";
 import { GentlePulsePlayer } from "./gp-player";
 import { GentlePulseRightPanel } from "./gp-right-panel";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { RefreshButton } from "@/components/shared/refresh-button";
 
 export function GentlePulseShell() {
   const [loading, setLoading] = useState(true);
@@ -31,37 +32,37 @@ export function GentlePulseShell() {
   const { theme } = useTheme();
   const t = getGentlePulseTokens(theme);
 
+  // Fetch the session library. Shared by the initial mount effect (initial = true, shows the
+  // full-screen loading state) and the header refresh button (initial = false, background re-pull).
+  const fetchLibrary = useCallback(async (initial = false, signal?: AbortSignal) => {
+    if (initial) setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/gentle-pulse/library", { signal });
+      if (!res.ok) throw new Error("Failed to load wellness content");
+      const data = await res.json() as { items?: Session[] };
+      if (!signal?.aborted) {
+        const items = data.items ?? [];
+        setSessions(items);
+        const derivedCategories = Array.from(
+          new Set(items.map((s) => s.category).filter((c): c is string => Boolean(c))),
+        );
+        setCategories(["All", ...derivedCategories]);
+      }
+    } catch (e: unknown) {
+      if (!signal?.aborted && (e as Error).name !== "AbortError") {
+        setError(e instanceof Error ? e.message : "Failed to load wellness content.");
+      }
+    } finally {
+      if (initial && !signal?.aborted) setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
-    let didAbort = false;
-    async function fetchLibrary() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/gentle-pulse/library", { signal: controller.signal });
-        if (!res.ok) throw new Error("Failed to load wellness content");
-        const data = await res.json() as { items?: Session[] };
-        if (!didAbort) {
-          const items = data.items ?? [];
-          setSessions(items);
-          const derivedCategories = Array.from(
-            new Set(items.map((s) => s.category).filter((c): c is string => Boolean(c))),
-          );
-          setCategories(["All", ...derivedCategories]);
-        }
-      } catch (e: unknown) {
-        if ((e as Error).name === "AbortError") {
-          didAbort = true;
-        } else if (!didAbort) {
-          setError(e instanceof Error ? e.message : "Failed to load wellness content.");
-        }
-      } finally {
-        if (!didAbort) setLoading(false);
-      }
-    }
-    void fetchLibrary();
-    return () => { didAbort = true; controller.abort(); };
-  }, []);
+    void fetchLibrary(true, controller.signal);
+    return () => { controller.abort(); };
+  }, [fetchLibrary]);
 
   async function handlePlay(sessionId: string) {
     setPlaying(sessionId);
@@ -137,6 +138,7 @@ export function GentlePulseShell() {
             </Link>
             <Heart size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>GentlePulse</span>
+            <RefreshButton onRefresh={() => fetchLibrary()} title="Refresh" />
             <MobileTopActions />
           </div>
           {tab === "sessions" && (
@@ -173,6 +175,7 @@ export function GentlePulseShell() {
           <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
             ✓ Trauma-Informed
           </Badge>
+          <RefreshButton onRefresh={() => fetchLibrary()} title="Refresh" />
         </header>
 
         {content}

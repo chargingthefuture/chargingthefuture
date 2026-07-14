@@ -23,6 +23,7 @@ import { WeeklyPerformanceDashboardMain } from "./wp-dashboard-main";
 import { WeeklyPerformanceRightRail } from "./wp-right-rail";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { RefreshButton } from "@/components/shared/refresh-button";
 
 type WeeklyPerformanceShellProps = {
   isAdmin: boolean;
@@ -135,6 +136,13 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
     };
   }, [selectedWeekStart, selectedIsCurrent, weeks, loadWeekData]);
 
+  // Manual refresh (header button): silent re-pull of the selected week's numbers,
+  // keeping the cards on screen instead of flashing the empty state.
+  const refreshSelectedWeek = useCallback(async () => {
+    if (!selectedWeekStart) return;
+    await loadWeekData(selectedWeekStart, priorWeekStart(weeks, selectedWeekStart), true);
+  }, [selectedWeekStart, weeks, loadWeekData]);
+
   if (loading) return <WeeklyPerformanceLoading />;
 
   const selectedWeek = weeks.find((w) => w.weekStartDate === selectedWeekStart) ?? null;
@@ -154,6 +162,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
       comparison={comparison}
       isAdmin={isAdmin}
       onExport={exportSelected}
+      onRefresh={refreshSelectedWeek}
       isMobile={isMobile}
       isCurrent={selectedIsCurrent}
     />
@@ -169,6 +178,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
             </Link>
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Weekly Performance</span>
             <PluginAdminButton href="/admin/weekly-performance" isAdmin={isAdmin} accent={t.ACCENT} />
+            <RefreshButton onRefresh={refreshSelectedWeek} title="Refresh" />
             <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 8, padding: "0 12px 10px" }}>

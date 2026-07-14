@@ -133,6 +133,20 @@ refused with a readable message.
 
 ---
 
+### PP-8 · Refresh the room (header button / pull-to-refresh)
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open
+   PeerProgramming and tap the refresh icon in the header.
+2. On android, open the Cohorts tab and pull down on the list.
+3. In another session, post a message in the cohort room, then refresh as above.
+**Expected:** On web the refresh icon spins while loading; on android the pull-to-refresh spinner
+shows. The room re-pulls (messages, cohorts, roster) and the new message appears without closing and
+reopening the app. Refreshing never clears the current screen to the full-screen loading state.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 ### PP-A1 · Set and publish the weekly topic

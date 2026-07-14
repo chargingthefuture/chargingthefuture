@@ -292,6 +292,7 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+- 2026-07-14: **Added refresh controls (app-wide refresh rollout).** Web: shared `RefreshButton` in the desktop and mobile-responsive shell headers (`trust-transport-shell.tsx`), wired to `fetchRequests()` so the request list re-pulls without flashing the full-screen loading state. Android: native pull-to-refresh via `RefreshControl` on the screen's top-level `ScrollView` in `TrustTransport.tsx`, wired to a new background variant of `loadRequests` that skips the track tab's loading spinner. UI-only; no schema, route, or contract change.
 - 2026-07-08: Removed the fiat/crypto payout flow; Earnings became a read-only record (owner decision).
   The platform has no payment processing, so a non-ServiceCredits payment is arranged peer-to-peer
   off-platform between the two people — there is nothing for the platform to pay out. Previously a

@@ -4,17 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, ChevronLeft, Search } from "lucide-react";
+import { BookOpen, ChevronLeft, Pencil, Search, UserPlus } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { BG, getDirectoryTokens, type Member, type Sector, type SkillsHuntRewardCard } from "./shared";
 import { DirectoryProfileDetail } from "./directory-profile-detail";
+import { DirectoryProfileEdit } from "./directory-profile-edit";
 import { DirectoryLoadingSkeleton } from "./directory-loading-skeleton";
 import { DirectoryBrowse } from "./directory-browse";
 import { DirectoryRightPanel } from "./directory-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
+import { RefreshButton } from "@/components/shared/refresh-button";
 
 const DEFAULT_REWARD_CARD: SkillsHuntRewardCard = {
   title: "Help grow the Directory",
@@ -57,6 +59,11 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selected, setSelected] = useState<Member | null>(null);
   const [rewardCard, setRewardCard] = useState<SkillsHuntRewardCard | null>(null);
+  // Whether the signed-in member already has their own directory profile. null while we are still
+  // checking; drives the create-vs-edit label on the header button and the empty-state CTA.
+  const [hasOwnProfile, setHasOwnProfile] = useState<boolean | null>(null);
+  // Open state for the create/edit-my-profile overlay (the shared DirectoryProfileEdit modal).
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
   // Bumped after the owner saves their own profile, so the member list re-fetches and the
   // browse + detail views reflect the saved values.
   const [refreshKey, setRefreshKey] = useState(0);
@@ -114,6 +121,24 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
     debounceRef.current = setTimeout(() => setDebouncedQuery(query), 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
+
+  // Does the signed-in member already have their own profile? GET /api/directory/profile returns
+  // { profile: null } when they do not. Re-run on refreshKey so the header button flips from
+  // "Add my profile" to "Edit my profile" right after they create one.
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch("/api/directory/profile", { signal: controller.signal });
+        if (!res.ok || controller.signal.aborted) return;
+        const data = (await res.json()) as { profile?: unknown };
+        setHasOwnProfile(Boolean(data.profile));
+      } catch {
+        // Aborted or unavailable: leave the flag as-is; the button still opens the editor.
+      }
+    })();
+    return () => controller.abort();
+  }, [refreshKey]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -258,13 +283,30 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
       rewardCard={rewardCard}
       loadingMembers={loadingMembers}
       members={members}
-      categories={sectors.map((s) => s.name)}
       filtered={isFiltered}
+      hasOwnProfile={hasOwnProfile === true}
       isMobile={isMobile}
       onSelect={setSelected}
       onClearFilters={clearFilters}
+      onCreateProfile={() => setShowProfileEditor(true)}
     />
   );
+
+  // The create/edit-my-profile overlay, rendered above whichever browse layout is active. The shared
+  // editor loads the caller's own profile (blank when they have none), so the same modal both creates
+  // and edits. On save we refresh the list and re-check ownership so the header button label updates.
+  const profileEditor = showProfileEditor ? (
+    <DirectoryProfileEdit
+      onClose={() => setShowProfileEditor(false)}
+      onSaved={() => {
+        setShowProfileEditor(false);
+        setRefreshKey((k) => k + 1);
+      }}
+    />
+  ) : null;
+
+  // Shared button that opens the editor; label depends on whether the member already has a profile.
+  const profileButtonLabel = hasOwnProfile ? "Edit my profile" : "Add my profile";
 
   if (isMobile) {
     return (
@@ -277,6 +319,7 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
             <BookOpen size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Directory</span>
             <PluginAdminButton href="/admin/directory" isAdmin={isAdmin} accent={t.ACCENT} />
+            <RefreshButton onRefresh={() => setRefreshKey((k) => k + 1)} title="Refresh" />
             <MobileTopActions />
           </div>
           <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
@@ -289,9 +332,13 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
                 <button key={f} onClick={() => setActiveFilter(f)} style={{ whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 14, background: activeFilter === f ? `${t.ACCENT}14` : "transparent", border: `1px solid ${activeFilter === f ? t.ACCENT + "50" : t.BORDER_HI}`, color: activeFilter === f ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{f}</button>
               ))}
             </div>
+            <button onClick={() => setShowProfileEditor(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 12px", borderRadius: 8, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              {hasOwnProfile ? <Pencil size={14} /> : <UserPlus size={14} />} {profileButtonLabel}
+            </button>
           </div>
         </div>
         {content}
+        {profileEditor}
       </div>
     );
   }
@@ -357,6 +404,10 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
           <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
             ✓ Verified Network
           </Badge>
+          <button onClick={() => setShowProfileEditor(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 9, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+            {hasOwnProfile ? <Pencil size={14} /> : <UserPlus size={14} />} {profileButtonLabel}
+          </button>
+          <RefreshButton onRefresh={() => setRefreshKey((k) => k + 1)} title="Refresh" />
           <PluginAdminButton href="/admin/directory" isAdmin={isAdmin} accent={t.ACCENT} />
         </header>
 
@@ -372,6 +423,8 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
         onSelect={setSelected}
         onFilter={setActiveFilter}
       />
+
+      {profileEditor}
     </div>
   );
 }

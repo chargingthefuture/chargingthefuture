@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
   type DimensionValue,
 } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
@@ -137,8 +138,16 @@ function GdpEmptyState({ onAddSkills }: { onAddSkills?: () => void }) {
 }
 
 // ─── Main authenticated view ──────────────────────────────────────────────────
-function GdpMainView({ report }: { report: GdpReport }) {
-  const { styles } = useGdpTheme();
+function GdpMainView({
+  report,
+  refreshing,
+  onRefresh,
+}: {
+  report: GdpReport;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
+  const { styles, accent } = useGdpTheme();
   const [activeNav, setActiveNav] = useState<NavKey>('overview');
 
   // Real metric bindings — keys observed in web repository.ts getGdpShellStats()
@@ -190,7 +199,11 @@ function GdpMainView({ report }: { report: GdpReport }) {
       </View>
 
       {/* Scrollable content */}
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentPad}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentPad}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
+      >
         {activeNav === 'overview' && (
           <GdpOverviewTab
             valueIndex={valueIndex}
@@ -392,29 +405,37 @@ export const Gdp = () => {
   const [dataLoading, setDataLoading] = useState(false);
   const [report, setReport] = useState<GdpReport | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async (background = false) => {
+    // A background reload (pull-to-refresh) keeps the current screen on display
+    // instead of flashing the full loading state.
+    if (!background) setDataLoading(true);
+    setFetchError(null);
+    try {
+      const r = await fetchGdpCurrentReport();
+      setReport(r);
+    } catch {
+      setFetchError('Unable to load GDP data. Please try again.');
+    } finally {
+      if (!background) setDataLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    let cancelled = false;
-    setDataLoading(true);
-    setFetchError(null);
-    fetchGdpCurrentReport()
-      .then((r) => {
-        if (!cancelled) {
-          setReport(r);
-          setDataLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setFetchError('Unable to load GDP data. Please try again.');
-          setDataLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated]);
+    void load();
+  }, [isAuthenticated, load]);
+
+  // Pull-to-refresh: re-pull the report without flashing the full loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   if (authLoading) {
     return <GdpLoadingState />;
@@ -442,7 +463,7 @@ export const Gdp = () => {
     return <GdpEmptyState />;
   }
 
-  return <GdpMainView report={report} />;
+  return <GdpMainView report={report} refreshing={refreshing} onRefresh={() => void onRefresh()} />;
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────

@@ -18,8 +18,9 @@ import { TrustTransportChatTab } from "./tt-chat-tab";
 import { TrustTransportRightPanel } from "./tt-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { RefreshButton } from "@/components/shared/refresh-button";
 
-function ShellHeader({ t, isAdmin }: { t: TrustTransportTokens; isAdmin?: boolean }) {
+function ShellHeader({ t, isAdmin, onRefresh }: { t: TrustTransportTokens; isAdmin?: boolean; onRefresh: () => Promise<void> }) {
   return (
     <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
       <Car size={18} style={{ color: t.ACCENT }} />
@@ -31,6 +32,7 @@ function ShellHeader({ t, isAdmin }: { t: TrustTransportTokens; isAdmin?: boolea
         Community
       </Badge>
       <PluginAdminButton href="/admin/trust-transport" isAdmin={isAdmin} accent={t.ACCENT} />
+      <RefreshButton onRefresh={onRefresh} title="Refresh" />
     </header>
   );
 }
@@ -251,6 +253,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             <Car size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>TrustTransport</span>
             <PluginAdminButton href="/admin/trust-transport" isAdmin={isAdmin} accent={t.ACCENT} />
+            <RefreshButton onRefresh={() => fetchRequests()} title="Refresh" />
             <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
@@ -269,7 +272,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       <TrustTransportIconRail tab={tab} onTab={setTab} />
       <TrustTransportSidebar rideTypes={rideTypes} rideType={rideType} onRideType={setRideType} requests={requests} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader t={t} isAdmin={isAdmin} />
+        <ShellHeader t={t} isAdmin={isAdmin} onRefresh={() => fetchRequests()} />
         {content}
       </div>
       <TrustTransportRightPanel requestCount={requests.length} modeCount={modes.length || rideTypes.length} onBook={() => setTab("book")} />

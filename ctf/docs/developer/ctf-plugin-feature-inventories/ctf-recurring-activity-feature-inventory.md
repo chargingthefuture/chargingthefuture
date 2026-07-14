@@ -159,6 +159,12 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
 
 ## Change Log
 
+- 2026-07-14: Added refresh controls (app-wide refresh rollout). Web: the shared `RefreshButton` now
+  sits next to the "Recurring Activity" heading (the shell renders one header for both the desktop
+  and mobile-responsive layouts), wired to a new background mode of `loadData` so the activities and
+  currencies re-pull without the full-screen loading state. Android: native pull-to-refresh via
+  `RefreshControl` on the `RecurringActivity` screen's `ScrollView`, wired to a new background
+  variant of `load`. UI-only; no schema, route, or contract change.
 - 2026-07-04: Plugin created (issue #885). Added `recurring_activities` + `recurring_activity_audit_trail`
   to `schema.sql`, the hidden `RACT` counting unit (+ widened `currencies_kind_check` to allow
   `activity`) and its seeded weight; the `lib/recurring-activity/*` repository/API library; the six API

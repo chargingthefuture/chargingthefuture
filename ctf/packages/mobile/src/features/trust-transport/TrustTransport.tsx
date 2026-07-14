@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -478,17 +479,19 @@ export const TrustTransport = () => {
   const [tab, setTab] = useState<Tab>('ride');
   const [requests, setRequests] = useState<TrustTransportRequest[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const loadRequests = useCallback(async () => {
+  // background=true (pull-to-refresh) re-pulls without flashing the track tab's loading spinner.
+  const loadRequests = useCallback(async (background = false) => {
     if (!isAuthenticated) return;
-    setRequestsLoading(true);
+    if (!background) setRequestsLoading(true);
     try {
       const res: ListRequestsResponse = await listRequests(1);
       setRequests(res.items);
     } catch {
       // non-fatal; show empty list
     } finally {
-      setRequestsLoading(false);
+      if (!background) setRequestsLoading(false);
     }
   }, [isAuthenticated]);
 
@@ -496,6 +499,15 @@ export const TrustTransport = () => {
     if (!isAuthenticated) return;
     void loadRequests();
   }, [isAuthenticated, loadRequests]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadRequests(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadRequests]);
 
   if (isLoading) return <TrustTransportLoadingState />;
 
@@ -512,7 +524,10 @@ export const TrustTransport = () => {
   return (
     <View style={styles.root}>
       <Header isLive />
-      <ScrollView style={styles.scroll}>
+      <ScrollView
+        style={styles.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
+      >
         {tab === 'track' ? (
           <TrackTab requests={requests} loading={requestsLoading} onRefresh={() => { void loadRequests(); }} />
         ) : tab === 'help' ? (
