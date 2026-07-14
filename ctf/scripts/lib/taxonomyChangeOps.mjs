@@ -139,6 +139,15 @@ export const TAXONOMY_CHANGE_OPS = [
   // lives under Professional & Business Services > Marketing Specialists; the sole known holder
   // ("00") re-picked their skills there before this op was appended.
   { id: 39, op: 'deactivateSkill', sector: 'Food & Agriculture', occupation: 'Agribusiness Managers', skill: 'Marketing and market analysis', occupationExisting: true, skillExisting: true, acknowledgedImpact: 'Generic marketing skill parented under a Food & Agriculture occupation pulled every holder into that sector in the Workforce match. The marketing skillset now lives under Marketing Specialists (Professional & Business Services), and the sole known holder re-picked their skills there before this op was appended; the audit metadata records the live holder count at apply time.' },
+
+  // Ops 40-42 (owner-approved 2026-07-04): give the finance skillset a finance home. The two
+  // financial skills existed only under Agribusiness Managers (Food & Agriculture), which confined
+  // purely finance-skilled members to agriculture. With name-based skill matching in Workforce,
+  // listing the same skill names under a finance occupation matches every holder there too — no
+  // reparent and no member migration needed.
+  { id: 40, op: 'addOccupation', sector: 'Professional & Business Services', occupation: 'Financial Analysts / Accountants' },
+  { id: 41, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Financial Analysts / Accountants', skill: 'Financial planning and budgeting' },
+  { id: 42, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Financial Analysts / Accountants', skill: 'Financial modeling and cashflow management' },
 ];
 
 // ---------------------------------------------------------------------------

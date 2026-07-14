@@ -64,15 +64,20 @@ async function loadProfilesForMatch(): Promise<LoadedProfiles> {
     ),
     // Rows are keyed by profile and only read for the active profiles loaded above, so there is no
     // need to re-join directory_profiles here (that join can fail on databases where the id column
-    // types differ). The job-title join keeps only skills under an active job title.
+    // types differ). Skills match by NAME, not by row (owner decision 2026-07-04, mirrors
+    // computeWorkforceModel): `held` is the member's own skill row, `other` is every active
+    // same-named row, so one (profile, skill name, job title) row exists per occupation the name is
+    // listed under. The job-title join keeps only occupations that are active.
     queryDb<ProfileSkillRow>(
-      `SELECT
+      `SELECT DISTINCT
          dps.profile_id::text AS profile_id,
-         sts.name AS skill_name,
-         sts.job_title_id::text AS job_title_id
+         held.name AS skill_name,
+         other.job_title_id::text AS job_title_id
        FROM directory_profile_skills dps
-       JOIN skills_taxonomy_skills sts ON sts.id = dps.skill_id AND sts.is_active = TRUE
-       JOIN skills_taxonomy_job_titles jt ON jt.id = sts.job_title_id AND jt.is_active = TRUE`,
+       JOIN skills_taxonomy_skills held ON held.id = dps.skill_id AND held.is_active = TRUE
+       JOIN skills_taxonomy_skills other
+         ON lower(btrim(other.name)) = lower(btrim(held.name)) AND other.is_active = TRUE
+       JOIN skills_taxonomy_job_titles jt ON jt.id = other.job_title_id AND jt.is_active = TRUE`,
     ),
     queryDb<JobTitleRow>(
       `SELECT jt.id::text AS id, jt.name AS name, jt.sector_id::text AS sector_id, sec.name AS sector_name
