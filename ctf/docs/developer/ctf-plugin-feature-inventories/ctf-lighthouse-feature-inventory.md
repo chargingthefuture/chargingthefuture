@@ -37,6 +37,15 @@ longer a precondition for browsing, hosting, or matching.
    country.
 3. Optional host preference fields: `hasProperty` indicator.
 4. Verification rendering and first-name display behavior are retained where a profile exists.
+5. **Seeker self-service screen (2026-07-14).** A "Your details" tab
+   (`lighthouse-seeker-profile.tsx`, reached from the icon rail on desktop and the mobile tab bar)
+   lets a member fill and save the seeker preference fields above via `POST /api/lighthouse/profile`
+   (`x-ctf-csrf: '1'`). It is still **not** a gate for browsing or hosting, but an **active seeker
+   profile is required to request a stay** (the match endpoint denies otherwise), so the "Request to
+   stay" action points members here when they have none. A member who has listed a place is a host;
+   the profile type is locked server-side (a host cannot also be a seeker), so for a host this screen
+   explains that hosting and seeking are separate accounts rather than showing a form the endpoint
+   would deny with `policy_denied`.
 
 ### 1.3 Property Browse and Detail
 
@@ -44,7 +53,10 @@ longer a precondition for browsing, hosting, or matching.
 2. Property detail route parity target (`/apps/lighthouse/property/:id`).
 3. Authenticated property list/detail behavior parity is required.
 4. Detail view includes host reference metadata and listing details.
-5. Seeker match-request action from detail is preserved.
+5. Seeker "Request to stay" action from the detail view is **implemented on web** (2026-07-14): it
+   posts `POST /api/lighthouse/matches` with an optional message and preferred move-in date. A member
+   with no active seeker profile is routed to the "Your details" screen first; duplicate and blocked
+   cases are shown inline.
 6. Duplicate active/pending match-request prevention remains required.
 
 ### 1.4 Host Property Management
@@ -87,7 +99,11 @@ longer a precondition for browsing, hosting, or matching.
 ### 1.5 Matches Workflow
 
 1. Matches route parity target (`/apps/lighthouse/matches`).
-2. Seeker match request parity target with message and proposed move-in date.
+2. Seeker match request is **implemented on web (2026-07-14)** — the "Request to stay" action on a
+   listing (`lighthouse-property-detail.tsx`) posts `POST /api/lighthouse/matches` with an optional
+   message and preferred move-in date, opening the private match chat channel on host acceptance. The
+   no-seeker-profile (`policy_denied`), duplicate (`duplicate_match`), and blocked-pair
+   (`blocked_pair`) cases are surfaced inline. Android RN is a tracked follow-up.
 3. Role-specific match list views for seekers and hosts are preserved.
 4. Host accept/reject actions with host response are preserved.
 5. Seeker cancellation permissions remain policy-controlled.
@@ -224,6 +240,8 @@ Contract expectations:
 
 `web+android complete` (feature parity). Core user journeys, admin moderation operations, and safety/privacy/compliance controls behave consistently across web (`/apps/lighthouse`) and Android (`packages/mobile/src/features/lighthouse`). UI conventions differ by platform; functional outcomes match.
 
+Member seeker flow wired (2026-07-14, web + mobile-responsive): the seeker preference profile and the seeker match request — whose endpoints (`/api/lighthouse/profile`, `POST /api/lighthouse/matches`) existed and worked but had no member UI — are now reachable. A "Your details" tab (`lighthouse-seeker-profile.tsx`) sets the seeker profile, and a "Request to stay" action on the listing detail (`lighthouse-property-detail.tsx`) creates the match request, routing a member with no active seeker profile to "Your details" first. No schema, route, or contract change (existing endpoints only). The **Android (React Native)** seeker profile screen and request-to-stay action are a tracked parity follow-up — the mobile feature currently browses listings and shows matches but has no seeker profile form or request action.
+
 Web pixel pass: `LighthouseShell` is aligned to `design/.../survivor-hub/LightHouse.tsx` and its Loading mockup. Emoji glyphs were replaced with the mockup's lucide-react icons; the missing filter sidebar (data-backed filters: All / Available Now / Accepts Credits, with real stats) and the right panel (Pricing Guide + Privacy by Design + an informational Emergency Housing note) were added; the property detail moved from a modal to the mockup's full-page view; and a skeleton loading state was added. Filters/stats and counts derive from real data only (no fabricated counts; the mockup's "Verified Only / Female-only / Emergency" filters and "5 slots" count are not backed by the current data model and were omitted rather than faked). The shell was decomposed into modular sub-components (`lighthouse-icon-rail`, `lighthouse-filter-sidebar`, `lighthouse-right-panel`, `lighthouse-browse`, `lighthouse-matches`, `lighthouse-chat`, `lighthouse-property-detail`, `lighthouse-loading-skeleton`, `shared`) so each unit stays within the rule-116 limits. API wiring is unchanged.
 
 Android pixel pass (2026-05-31): The React Native `packages/mobile/src/features/lighthouse` feature is pixel-aligned to `design/.../survivor-hub/MobileLightHouse.tsx` and its Loading/Empty/Public state mockups. The old single-screen `LighthouseScreen.tsx` and flat `LighthouseTabs.tsx` were rewritten and decomposed into eight focused units: `LighthouseLoadingState`, `LighthouseEmptyState`, `LighthousePublicState`, `LighthouseListHeader`, `LighthousePropertyCard`, `LighthousePropertyDetail`, `LighthouseScreen` (browse orchestrator), and `LighthouseMatches`. Colors (#0F1117 background, #EAB308 accent, #090B0F dark surface, rgba borders), type scale, spacing, and iconography (Ionicons) match the design mockup. The bottom nav (Browse / Matches / Chat) matches the mockup's nav pattern. All data binds to real API fields from `/api/lighthouse/properties` and `/api/lighthouse/matches`; mockup elements with no backing schema field (ratings, "Credits ✓" badge, emoji thumbnails, emergency slot count) are omitted rather than faked. Matches tab shows real match status, move-in date, message, and host response. `LighthouseMatches.tsx` was updated to use `fetchMatches()` from the shared `api.ts` (removing the duplicated inline fetch). `index.ts` re-exports `LighthouseTabs as Lighthouse` unchanged so `App.tsx` import requires no changes.
@@ -242,6 +260,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-07-14: **Wired the member seeker flow — seeker profile screen + "Request to stay" (web + mobile-responsive).** No schema, route, or contract change; existing endpoints only. Two member-facing endpoints had no UI and were unreachable: `GET/POST/PUT/DELETE /api/lighthouse/profile` (the seeker/host preference profile) and `POST /api/lighthouse/matches` (the match request). As a result a member could browse and host but never request a stay — the match endpoint requires an active `seeker` `lighthouse_profiles` row, and nothing let a member create one. Added: (1) a "Your details" tab (`lighthouse-seeker-profile.tsx`, wired into `lighthouse-icon-rail.tsx` and the mobile tab bar; `Tab` in `shared.ts` gains `"profile"`) that GETs the profile to prefill and POSTs the seeker fields with `x-ctf-csrf: '1'` — a member who already hosts sees a "hosting and seeking are separate" notice instead of a form the type-lock would deny; (2) a "Request to stay" action replacing the inert "Apply Now"/"Message Host" placeholders on the listing detail (`lighthouse-property-detail.tsx`), posting `POST /api/lighthouse/matches` with an optional message and preferred move-in date, and routing a member with no active seeker profile to "Your details" (the endpoint returns `policy_denied` in that case). The shell refreshes the Matches tab after a successful request. Android RN seeker profile + request action are a tracked parity follow-up.
 - 2026-07-06: **Country/State are dropdowns on the web host form (data cleanliness).** No schema, route, or contract change. The create/edit listing form now uses a shared `CountrySelect` and `StateField` (`components/shared/location-select.tsx`, backed by `lib/geo/locations.ts`) instead of free-text Country and State/region boxes: Country is a full country dropdown; State is the US state list when Country is the United States, otherwise a free-text region box. Stored values stay the plain names, so existing free-text rows still display (a legacy value not in the list is added as an extra option). The native (Android) host form still uses free-text Country/State — tracked separately as a parity follow-up.
 - 2026-07-05: **Native (Android) listing currency display parity (closes #1376).** No schema, route, or contract change. The native `LighthouseProperty` read model gained `rentCurrency` and `acceptedCurrencies` (the API already returned them); a mobile LightHouse currency helper (`currency.ts`) mirrors the web `formatRentParts`/`acceptedCurrencyLabels`. The native listing card, listing detail, and the host "Your listings" rows now render rent in its own currency (a ServiceCredits price shows "N ServiceCredits", never a "$"), and the detail lists the full accepted-currency set. The catalog comes from `GET /api/currencies` (reused mobile `fetchCurrencies`). This closes the parity item deferred on 2026-07-05.
 - 2026-07-05: **Listing price/currency/type display polish (web + mobile-responsive).** No schema, route, or contract change:

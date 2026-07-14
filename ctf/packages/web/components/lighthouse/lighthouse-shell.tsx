@@ -14,6 +14,7 @@ import { LighthouseBrowse } from "./lighthouse-browse";
 import { LighthouseMatches } from "./lighthouse-matches";
 import { LighthouseChat } from "./lighthouse-chat";
 import { LighthouseHost } from "./lighthouse-host";
+import { LighthouseSeekerProfile } from "./lighthouse-seeker-profile";
 import { LighthousePropertyDetail } from "./lighthouse-property-detail";
 import { LighthouseLoadingSkeleton } from "./lighthouse-loading-skeleton";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
@@ -99,6 +100,15 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
   const currencyMap: CurrencyMap = {};
   for (const currency of currencies) currencyMap[currency.code] = currency;
 
+  async function reloadMatches() {
+    try {
+      const matchRes = await fetch("/api/lighthouse/matches");
+      setMatches(matchRes.ok ? (await matchRes.json()).items ?? [] : []);
+    } catch {
+      // Best-effort refresh; the Matches tab still reloads on next open.
+    }
+  }
+
   if (selectedProperty) {
     return (
       <LighthousePropertyDetail
@@ -110,6 +120,14 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
           setSelectedProperty(null);
           setEditPropertyId(p.id);
           setTab("host");
+        }}
+        // After a request is sent, refresh Matches in the background; the detail view keeps its own
+        // inline confirmation, so we do not navigate away here.
+        onRequested={() => void reloadMatches()}
+        // No active seeker profile yet — send them to set one up.
+        onNeedsProfile={() => {
+          setSelectedProperty(null);
+          setTab("profile");
         }}
       />
     );
@@ -152,6 +170,7 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
           chatCredentials={chatCredentials}
         />
       )}
+      {tab === "profile" && <LighthouseSeekerProfile />}
       {tab === "host" && (
         <LighthouseHost
           username={username}
@@ -167,6 +186,7 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       { key: "browse", label: "Browse" },
       { key: "matches", label: "Matches" },
       { key: "chat", label: "Direct Line" },
+      { key: "profile", label: "You" },
       { key: "host", label: "List" },
     ];
     const filters: { key: ListingFilter; label: string }[] = [

@@ -1,8 +1,9 @@
 "use client";
 
-import { Bath, Bed, Calendar, Home, MapPin, MessageSquare, Pencil } from "lucide-react";
+import { useState } from "react";
+import { Bath, Bed, Calendar, CheckCircle2, Home, MapPin, Pencil, UserRoundPlus } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { acceptedCurrencyLabels, formatRentParts, getLighthouseTokens, listingAcceptsCredits, type CurrencyMap, type Property } from "./shared";
+import { acceptedCurrencyLabels, formatRentParts, getLighthouseTokens, listingAcceptsCredits, type CurrencyMap, type LighthouseTokens, type Property } from "./shared";
 
 export function LighthousePropertyDetail({
   property,
@@ -10,12 +11,20 @@ export function LighthousePropertyDetail({
   onBack,
   currentUserId,
   onEdit,
+  onRequested,
+  onNeedsProfile,
 }: {
   property: Property;
   currencies: CurrencyMap;
   onBack: () => void;
   currentUserId: string;
   onEdit: (p: Property) => void;
+  // Called after a match request is created (or found to already exist), so the shell can refresh
+  // the Matches tab. Optional so the detail view still renders in contexts that do not wire it.
+  onRequested?: () => void;
+  // Called when the member has no active seeker profile yet, so the shell can send them to the
+  // "Your details" tab to set one up before requesting.
+  onNeedsProfile?: () => void;
 }) {
   const l = property;
   const isOwn = !!currentUserId && property.hostUserId === currentUserId;
@@ -98,16 +107,159 @@ export function LighthousePropertyDetail({
                   <button onClick={() => onEdit(property)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#0F1117", fontWeight: 800, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Pencil size={14} /> Edit listing</button>
                 </>
               ) : (
-                <>
-                  <button style={{ width: "100%", padding: "12px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#0F1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 10 }}>Apply Now</button>
-                  <button style={{ width: "100%", padding: "12px", borderRadius: 10, background: t.INPUT_BG, border: `1px solid ${t.ACCENT}35`, color: t.ACCENT, fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><MessageSquare size={14} /> Message Host</button>
-                  <div style={{ marginTop: 12, fontSize: 12, color: t.FAINT, textAlign: "center", lineHeight: 1.6 }}>Secure booking · No deposit until confirmed</div>
-                </>
+                <RequestToStay
+                  property={property}
+                  t={t}
+                  onRequested={onRequested}
+                  onNeedsProfile={onNeedsProfile}
+                />
               )}
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// The seeker-facing action on a listing: request to stay. Creates a match request via
+// POST /api/lighthouse/matches, which opens a private chat channel between the seeker and host when
+// the host accepts. A member with no active seeker profile is sent to set one up first (the endpoint
+// denies the request until they do), tying this action to the "Your details" screen.
+function RequestToStay({
+  property,
+  t,
+  onRequested,
+  onNeedsProfile,
+}: {
+  property: Property;
+  t: LighthouseTokens;
+  onRequested?: () => void;
+  onNeedsProfile?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [moveInDate, setMoveInDate] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [needsProfile, setNeedsProfile] = useState(false);
+  const [outcome, setOutcome] = useState<"sent" | "duplicate" | null>(null);
+
+  async function submit() {
+    setSubmitting(true);
+    setError(null);
+    setNeedsProfile(false);
+    try {
+      const res = await fetch("/api/lighthouse/matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({
+          propertyId: property.id,
+          message: message.trim() || null,
+          desiredMoveInDateIso: moveInDate.trim() || null,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; code?: string; message?: string };
+      if (res.ok && data.ok) {
+        setOutcome("sent");
+        setOpen(false);
+        onRequested?.();
+        return;
+      }
+      // No active seeker profile yet — the endpoint denies until they set one up.
+      if (data.code === "policy_denied" || data.code === "profile_not_found") {
+        setNeedsProfile(true);
+        return;
+      }
+      if (data.code === "duplicate_match") {
+        setOutcome("duplicate");
+        setOpen(false);
+        onRequested?.();
+        return;
+      }
+      setError(data.message ?? "Could not send your request. Please try again.");
+    } catch {
+      setError("Could not send your request. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const inputStyle: React.CSSProperties = { width: "100%", padding: "9px 10px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", boxSizing: "border-box" };
+  const labelStyle: React.CSSProperties = { fontSize: 12, color: t.MUTED, fontWeight: 600, marginBottom: 4, display: "block" };
+
+  if (outcome === "sent" || outcome === "duplicate") {
+    return (
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#22C55E", fontSize: 13, marginBottom: 10, lineHeight: 1.5 }}>
+          <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
+          {outcome === "sent"
+            ? "Request sent. The host will see it in their matches."
+            : "You already have an active request for this listing."}
+        </div>
+        <div style={{ fontSize: 12, color: t.FAINT, textAlign: "center", lineHeight: 1.6 }}>Track it in the Matches tab.</div>
+      </div>
+    );
+  }
+
+  if (needsProfile) {
+    return (
+      <div>
+        <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 12, lineHeight: 1.6 }}>
+          Set up your housing details before you request a stay — a host needs to know what you’re
+          looking for.
+        </div>
+        <button
+          onClick={() => onNeedsProfile?.()}
+          style={{ width: "100%", padding: "12px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#0F1117", fontWeight: 800, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+        >
+          <UserRoundPlus size={15} /> Set up your details
+        </button>
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <div>
+        <button
+          onClick={() => setOpen(true)}
+          style={{ width: "100%", padding: "12px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#0F1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 10 }}
+        >
+          Request to stay
+        </button>
+        <div style={{ fontSize: 12, color: t.FAINT, textAlign: "center", lineHeight: 1.6 }}>The host sees your details only after you request. Nothing is charged.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label style={labelStyle}>Message to the host (optional)</label>
+      <textarea
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        rows={3}
+        placeholder="Introduce yourself and why this place fits."
+        style={{ ...inputStyle, resize: "vertical", marginBottom: 10 }}
+      />
+      <label style={labelStyle}>Preferred move-in date (optional)</label>
+      <input type="date" value={moveInDate} onChange={(e) => setMoveInDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+      {error ? <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 10 }}>{error}</div> : null}
+      <button
+        onClick={() => void submit()}
+        disabled={submitting}
+        style={{ width: "100%", padding: "12px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#0F1117", fontWeight: 800, fontSize: 15, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1, marginBottom: 8 }}
+      >
+        {submitting ? "Sending…" : "Send request"}
+      </button>
+      <button
+        onClick={() => { setOpen(false); setError(null); }}
+        disabled={submitting}
+        style={{ width: "100%", padding: "10px", borderRadius: 10, background: "transparent", border: `1px solid ${t.BORDER_STRONG}`, color: t.SUBTLE, fontWeight: 600, fontSize: 14, cursor: submitting ? "default" : "pointer" }}
+      >
+        Cancel
+      </button>
     </div>
   );
 }
