@@ -193,7 +193,7 @@ export function ClickLogShell() {
               <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Incident Log</div>
               <div style={{ fontSize: 11, color: t.MUTED }}>{displayTotal} incidents total</div>
             </div>
-            <RefreshButton onRefresh={() => fetchIncidents()} title="Refresh incidents" color={t.MUTED} style={{ width: 38, height: 38 }} />
+            <RefreshButton onRefresh={() => fetchIncidents()} title="Refresh incidents" />
             <MobileTopActions />
           </div>
         </div>
@@ -214,7 +214,7 @@ export function ClickLogShell() {
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE }}>Incident Log</div>
             <div style={{ fontSize: 12, color: t.MUTED }}>Personal safety tracking — {displayTotal} incidents total</div>
           </div>
-          <RefreshButton onRefresh={() => fetchIncidents()} title="Refresh incidents" color={t.MUTED} />
+          <RefreshButton onRefresh={() => fetchIncidents()} title="Refresh incidents" />
         </header>
 
         <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "32px 48px" }}>

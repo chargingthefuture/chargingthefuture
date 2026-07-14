@@ -18,8 +18,8 @@ import { useCallback, useState, type CSSProperties } from 'react';
 export function RefreshButton({
   onRefresh,
   title = 'Refresh',
-  size = 16,
-  color = 'currentColor',
+  size = 18,
+  color = 'var(--ctf-text, #E5E7EB)',
   style,
 }: {
   onRefresh?: () => void | Promise<void>;
@@ -54,12 +54,14 @@ export function RefreshButton({
       disabled={refreshing}
       title={title}
       aria-label={title}
+      // Match the MobileTopActions system-chrome tokens (same bright text, surface, and border as
+      // the bug/gear buttons it sits beside) so an idle refresh button never reads as disabled.
       style={{
-        width: 36,
-        height: 36,
+        width: 38,
+        height: 38,
         borderRadius: 10,
-        background: 'rgba(255,255,255,0.05)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--ctf-surface, rgba(255, 255, 255, 0.06))',
+        border: '1px solid var(--ctf-border, rgba(255, 255, 255, 0.12))',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
