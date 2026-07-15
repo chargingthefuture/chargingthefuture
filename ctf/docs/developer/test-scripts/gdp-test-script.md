@@ -60,15 +60,16 @@ spinner, or a raw metric key. The figure is computed live on each load — there
 there is no recognized activity yet, an honest empty/zero state shows instead of an invented number.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### GDP-1b · Member count matches active Directory profiles
+### GDP-1b · Member count matches Workforce and Directory (active Directory roster)
 **Role:** anonymous (signed out) + admin · **Surfaces:** web + mobile-responsive
 **Steps:**
-1. On the signed-out home/launcher, read the "Members" stat.
-2. Compare it to the number of active Directory profiles (the Workforce dashboard's member/recruited
-   count, or `SELECT COUNT(*) FROM directory_profiles WHERE is_active = TRUE AND deleted_at IS NULL`).
-**Expected:** The two match. The count is the number of active Directory profiles — not the (lower)
-count of members who have logged in since activity tracking began. If the Directory read fails the
-stat may fall back to the login-activity count rather than blanking.
+1. On the signed-out home/launcher, read the GDP "Members" stat.
+2. Compare it to (a) the Workforce dashboard's Recruited/Members count, (b) the Directory roster, and
+   (c) `SELECT COUNT(*) FROM directory_profiles WHERE is_active = TRUE AND deleted_at IS NULL`.
+**Expected:** All of them are the SAME number — GDP, Workforce, and the Directory all count the active
+Directory roster (active, non-deleted profiles, claimed or not). It is NOT the (lower) count of Clerk
+accounts / members who have logged in. If the Directory read fails, GDP falls back to the signup count
+rather than blanking.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### GDP-2 · Estimate treatment

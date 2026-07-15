@@ -1,15 +1,29 @@
 import { queryDb } from 'lib/db/postgres';
+import { countActiveDirectoryProfiles } from 'lib/directory/repository';
 import { countTotalMembers } from 'lib/engagement/login-activity';
 import { recognizeCommunityValueIndex } from 'lib/gdp/recognition';
 
+// Canonical community member count (owner decision 2026-07-15): the active Directory roster —
+// countActiveDirectoryProfiles (is_active AND NOT deleted, claimed or not) — the SAME definition the
+// Workforce dashboard and the Directory use, so GDP shows the identical number as those two surfaces.
+// Falls back to the Clerk `users` / login_events signup count only if the Directory read fails, so the
+// figure never blanks. (`users` is a different population — accounts, not directory profiles — which is
+// why GDP used to read a lower number than the Directory roster.)
+async function resolveMemberCount(): Promise<number | null> {
+  const roster = await countActiveDirectoryProfiles().catch(() => null);
+  if (roster !== null) {
+    return roster;
+  }
+  return countTotalMembers().catch(() => null);
+}
+
 export async function getGdpShellStats(): Promise<{ memberCount: number | null; gdpValueUsd: number | null }> {
-  // Member count is the total number of people signed up (every account), read directly from the identity
-  // table. There is deliberately NO USD-denominated GDP figure to surface on the community home shell: the
-  // live Community Value Index is a relative, unitless measure (shown only inside the GDP app, never with a
-  // currency symbol), so gdpValueUsd stays null and the home shell shows its untapped-opportunity framing
-  // against a fixed target instead of rendering the index as a dollar amount. (Before the GDP admin was
-  // retired this read the latest published report's USD revenue metric, which no member ever published.)
-  const memberCount = await countTotalMembers().catch(() => null);
+  // Member count is the active Directory roster (see resolveMemberCount) so GDP matches Workforce and the
+  // Directory exactly. There is deliberately NO USD-denominated GDP figure to surface on the community home
+  // shell: the live Community Value Index is a relative, unitless measure (shown only inside the GDP app,
+  // never with a currency symbol), so gdpValueUsd stays null and the home shell shows its untapped-
+  // opportunity framing against a fixed target instead of rendering the index as a dollar amount.
+  const memberCount = await resolveMemberCount();
   return { memberCount, gdpValueUsd: null };
 }
 
@@ -55,7 +69,7 @@ function currentWeekStartIso(now = new Date()): string {
 export async function buildLiveGdpReport(): Promise<GdpLiveReport> {
   const [breakdown, totalMembers] = await Promise.all([
     recognizeCommunityValueIndex(),
-    countTotalMembers().catch(() => null),
+    resolveMemberCount(),
   ]);
 
   // Community Value Index is the headline: a normalized, weighted estimate (no currency symbol), so it
