@@ -266,3 +266,11 @@ Deferred follow-ups (not yet done):
   transient read failure), and switched the Directory detail to read the refreshing `self` routes for
   both presence and trust when the viewer owns the profile. Another member's profile still reads the
   read-only by-id routes. No schema change.
+- 2026-07-15: Code-review fixes (findings #1510–#1512), behavior-preserving hardening. In
+  `lib/presence/derive.refreshOwnPresence`, the per-row `upsertMemberPresence` and
+  `deactivateMemberPresence` calls now run concurrently via `Promise.allSettled` with per-row error
+  isolation: one failed row no longer aborts the rest, and each failure is reported through
+  `reportError` (area `presence`, ops `derive_upsert` / `derive_deactivate`) instead of being thrown
+  or dropped. In `GET /api/presence/user/[userId]`, the route context is now typed the repo-standard
+  way (`{ params: Promise<{ userId: string }> }`, awaited) instead of a double cast, and a
+  missing/empty `userId` returns 400. No schema, contract, or surface change.

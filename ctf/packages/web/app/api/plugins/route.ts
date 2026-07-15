@@ -10,7 +10,12 @@ export async function GET() {
     // user app launcher never lists them. Admins get the full registry.
     const decision = await evaluatePluginAccess({ requireUsername: false }).catch(() => null);
     const isAdmin = !!(decision && decision.allowed && decision.isAdmin);
-    const visiblePlugins = filterPluginsForViewer(plugins, isAdmin);
+    // Double gate for non-admin viewers: listPluginRegistryWithSummary already excludes hidden
+    // plugins (DB WHERE clause or fallback filter), but this route must never depend on that
+    // alone — an explicit isVisible check here keeps hidden plugins out even if the upstream
+    // query or fallback changes. Admins keep the full list they were given.
+    const adminFiltered = filterPluginsForViewer(plugins, isAdmin);
+    const visiblePlugins = isAdmin ? adminFiltered : adminFiltered.filter((plugin) => plugin.isVisible);
     return NextResponse.json({ plugins: visiblePlugins, summary }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'plugins', op: 'index' });

@@ -71,8 +71,9 @@ export function GenericPublicShell({ pluginName, signInUrl, verifyUrl }: PublicV
           </h1>
         </div>
         <p style={{ fontSize: 14, color: SUBTLE, margin: '0 0 24px', lineHeight: 1.6 }}>
-          Sign in to join the survivor community and use {pluginName}. Listening and browsing are open
-          where a public view exists; taking part requires a free account.
+          {verifyUrl
+            ? `You're signed in — finish verifying your account to use ${pluginName}.`
+            : `Sign in to join the survivor community and use ${pluginName}. Listening and browsing are open where a public view exists; taking part requires a free account.`}
         </p>
         <a
           href={verifyUrl ?? signInUrl}

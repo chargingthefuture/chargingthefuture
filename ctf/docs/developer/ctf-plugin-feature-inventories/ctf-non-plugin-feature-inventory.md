@@ -210,6 +210,20 @@ Backend-only endpoints with no UI, each guarded by a dedicated bearer secret and
 
 ## 5) Change Log
 
+- 2026-07-15: **Plugin registry/catalog code-review fixes (findings #1533, #1534, #1536, #1537).**
+  `GET /api/plugins` now double-gates the non-admin list: on top of the admin-only-slug filter
+  (`filterPluginsForViewer`), non-admin responses explicitly drop rows with `isVisible === false`
+  instead of relying only on the upstream DB/fallback exclusion (no behavior change today; defense in
+  depth). `buildSummary` in `lib/plugins/repository.ts` gained a comment documenting that `alpha`/
+  `beta` availability states deliberately fold into the `planned` bucket until a real alpha/beta
+  plugin exists (no API shape change). The generic public visitor shell
+  (`components/plugins/generic-public-shell.tsx`) now branches its paragraph copy on `verifyUrl`, so a
+  signed-in-but-unverified member sees "finish verifying" copy that matches the "Finish verifying"
+  button instead of a sign-in invitation. `lib/plugins/plugin-catalog.ts` was re-synced with the
+  registry: added `recurring-activity` and removed `feed-announcements` (retired as a navigable app;
+  the catalog is imported by no code and feeds no validation allowlist — the money-transfer
+  originPlugin allowlist reads the fallback registry in `repository.ts` — so nothing can reference
+  the removed id). No schema, route-surface, or contract change.
 - 2026-07-14: **Android pull-to-refresh on Account & Data and Blocked members.** The React Native `AccountData.tsx` and `BlockedMembers.tsx` screens now support pull-to-refresh: dragging down re-pulls the service list / block list in the background (the load functions gained a background flag so the full-screen spinner does not flash). Mobile-client only — no backend, schema, route, or contract change.
 - 2026-07-01: **Public Terms and Privacy Policy page added** (`/terms`). New static, public server component `ctf/packages/web/app/terms/page.tsx` with copy in `policy-content.ts` and styling in `terms.module.css`, rendering both the Terms and Conditions and the Privacy Policy for `app.chargingthefuture.com/terms`. No API route, no schema, no contract change; no middleware change needed (routes are not gated in middleware). Documented in §1.12. Copy is source-accurate (third-party processors — Clerk, GetStream, Formance, Sentry, hosting/push; ServiceCredits non-cash nature, transaction-bound messaging, deletion keep/remove behavior, invite-only + verification access, 18+ eligibility, data-request rights) and must be kept in sync if that behavior changes.
 - 2026-06-26: **Android member-blocking surface delivered** (issue #809 Android parity; mobile-client only, no backend/schema/contract change). Added `packages/mobile/src/features/blocks/`: an API client (`api.ts`) binding the existing `GET`/`POST /api/account/blocks` and `DELETE /api/account/blocks/[blockedUserId]` routes through the shared authenticated fetch (Clerk bearer token + `x-ctf-csrf: 1` on mutations, with a request timeout and server-message error mapping); a "Blocked members" manage screen (`BlockedMembers.tsx`) with loading / empty ("You haven't blocked anyone") / error / populated states and a per-row Unblock; and a reusable `BlockMemberButton.tsx` confirm-dialog action that mirrors the web's optional safety escalation. Mounted the manage screen in the mobile navigator (`App.tsx`, feature key `blocked-members`). Updated §1.6 with the web+Android delivery status. Mobile gap recorded in §1.6: the reusable block action is exported for reuse but not yet attached to a per-member profile menu on Android (none ships yet), matching the web.

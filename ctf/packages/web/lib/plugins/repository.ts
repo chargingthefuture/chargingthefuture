@@ -273,6 +273,10 @@ function mapPluginRegistryRow(row: PluginRegistryRow): PluginRegistryItem {
   };
 }
 
+// Two-bucket summary by deliberate choice: 'alpha' and 'beta' fold into the `planned` count until
+// a real alpha/beta plugin exists (none does today). This keeps `implementedShells + planned ===
+// total` without adding speculative API fields. If a plugin ever ships as alpha/beta, revisit
+// whether the summary needs separate buckets.
 function buildSummary(items: PluginRegistryItem[]): PluginRegistrySummary {
   let implementedShells = 0;
   let planned = 0;

@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { reportError } from 'lib/observability/report';
 import {
   deactivateMemberPresence,
   getMemberPresence,
@@ -170,34 +171,62 @@ export async function refreshOwnPresence(userId: string): Promise<MemberPresence
       `SELECT plugin_slug, ref_type, ref_id FROM member_plugin_presence WHERE user_id = $1 AND is_active = TRUE`,
       [trimmed],
     );
-    for (const row of current.rows) {
-      if (!reconciledSlugs.has(row.plugin_slug)) {
-        continue;
-      }
-      if (!desiredKeys.has(presenceKey(row.plugin_slug, row.ref_type, row.ref_id))) {
-        await deactivateMemberPresence({
+    const rowsToDeactivate = current.rows.filter(
+      (row) =>
+        reconciledSlugs.has(row.plugin_slug) &&
+        !desiredKeys.has(presenceKey(row.plugin_slug, row.ref_type, row.ref_id)),
+    );
+    // Run deactivations concurrently with per-row error isolation: one failed row must not abort
+    // the rest, and every failure is reported rather than silently dropped.
+    const deactivationResults = await Promise.allSettled(
+      rowsToDeactivate.map((row) =>
+        deactivateMemberPresence({
           userId: trimmed,
           pluginSlug: row.plugin_slug,
           refType: row.ref_type,
           refId: row.ref_id,
+        }),
+      ),
+    );
+    deactivationResults.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        const row = rowsToDeactivate[index];
+        reportError(result.reason, {
+          area: 'presence',
+          op: 'derive_deactivate',
+          extra: { pluginSlug: row.plugin_slug, refType: row.ref_type, refId: row.ref_id },
         });
       }
-    }
+    });
   } catch {
-    // If the index itself is unavailable, fall through: the upserts below will surface the error and
-    // the caller's read handles an empty result. Nothing was deactivated.
+    // If the index itself is unavailable, fall through: any upsert failure below is reported the
+    // same way and the caller's read handles an empty result. Nothing was deactivated.
   }
 
-  for (const row of desired) {
-    await upsertMemberPresence({
-      userId: trimmed,
-      pluginSlug: row.pluginSlug,
-      refType: row.refType,
-      refId: row.refId,
-      label: row.label,
-      deepLink: row.deepLink,
-    });
-  }
+  // Run upserts concurrently with per-row error isolation: one failed row must not abort the rest,
+  // and every failure is reported rather than silently dropped.
+  const upsertResults = await Promise.allSettled(
+    desired.map((row) =>
+      upsertMemberPresence({
+        userId: trimmed,
+        pluginSlug: row.pluginSlug,
+        refType: row.refType,
+        refId: row.refId,
+        label: row.label,
+        deepLink: row.deepLink,
+      }),
+    ),
+  );
+  upsertResults.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      const row = desired[index];
+      reportError(result.reason, {
+        area: 'presence',
+        op: 'derive_upsert',
+        extra: { pluginSlug: row.pluginSlug, refType: row.refType, refId: row.refId },
+      });
+    }
+  });
 
   return getMemberPresence(trimmed);
 }
