@@ -2,6 +2,7 @@ import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import {
   FEED_ALLOWED_CHANNELS,
+  FEED_CHANNEL_TO_ITEM_TYPE,
   FEED_ANSWER_RATINGS,
   FEED_COMMUNITY_CATEGORIES,
   FEED_DEFAULT_PAGE,
@@ -744,9 +745,12 @@ export async function listFeedTimeline(
     const pluginFilter = normalizeNullableText(filters.pluginId);
     const enabledChannels = resolvedConfig?.enabledChannels ?? [...FEED_ALLOWED_CHANNELS];
     const requestedChannel = filters.channel ?? 'all';
-    const allowedItemTypes = requestedChannel === 'all'
+    const allowedChannels = requestedChannel === 'all'
       ? enabledChannels
       : enabledChannels.filter((channel: string) => channel === requestedChannel);
+    // Channel names are plural; feed_items.item_type is singular. Map channel -> item_type so the
+    // filter below matches the rows (an 'announcements' channel matching the 'announcement' rows).
+    const allowedItemTypes = allowedChannels.map((channel) => FEED_CHANNEL_TO_ITEM_TYPE[channel]);
 
     if (allowedItemTypes.length === 0) {
       return {

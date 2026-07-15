@@ -279,7 +279,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
 
   const content = (
     <>
-      {tab === "browse" && <BrowsePanel providers={providers} viewerUserId={viewerUserId} onSelect={setSelected} activeSkillId={skillId} activeSkillName={skillName} onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }} />}
+      {tab === "browse" && <BrowsePanel providers={providers} viewerUserId={viewerUserId} onSelect={setSelected} activeSkillId={skillId} activeSkillName={skillName} searchActive={searchTerm.length > 0} onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }} />}
       {tab === "offer" && <OfferSkillsPanel />}
       {tab === "quotes" && (
         <QuotesPanel

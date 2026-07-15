@@ -611,11 +611,18 @@ async function seedFeedAnnouncements(c) {
 }
 
 async function seedTrust(c) {
+  // Trust evidence must match the canonical TrustEvidenceItem shape ({ type, summary, createdAt,
+  // createdBy? }) that buildTrustEvidence emits and every renderer reads — a `summary` string is the
+  // human-readable line and `createdAt` is an ISO timestamp. Writing the old { type, date, source }
+  // shape left `summary`/`createdAt` undefined, which rendered a raw type slug plus "Invalid Date".
+  // trust_status must be one of the real statuses (unverified | verified | flagged) — 'peer_verified'
+  // is not a valid status. These rows are a placeholder for a first raw read; the snapshot route and
+  // the self read recompute them from real seeded activity.
   await c.query(
     `INSERT INTO trust_user_extension
      (user_id, trust_status, trust_evidence, trust_visibility, updated_at)
-     VALUES ($1, 'peer_verified',
-       '[{"type":"skills_hunt_acceptance","date":"2026-05-19","source":"demo-wave-1"}]'::jsonb,
+     VALUES ($1, 'verified',
+       '[{"type":"engagement-skillshunt-submissions","summary":"Accepted 1 SkillsHunt submission","createdAt":"2026-05-19T00:00:00.000Z","createdBy":"trust-signal"}]'::jsonb,
        'public', NOW())
      ON CONFLICT (user_id) DO UPDATE SET
        trust_status = EXCLUDED.trust_status,
@@ -628,8 +635,8 @@ async function seedTrust(c) {
     await c.query(
       `INSERT INTO trust_user_extension
        (user_id, trust_status, trust_evidence, trust_visibility, updated_at)
-       VALUES ($1, 'peer_verified',
-         '[{"type":"demo_second_owner","date":"2026-05-19","source":"demo-two-sided"}]'::jsonb,
+       VALUES ($1, 'verified',
+         '[{"type":"engagement-lighthouse-matches","summary":"Accepted 1 LightHouse match","createdAt":"2026-05-19T00:00:00.000Z","createdBy":"trust-signal"}]'::jsonb,
          'public', NOW())
        ON CONFLICT (user_id) DO UPDATE SET
          trust_status = EXCLUDED.trust_status,
