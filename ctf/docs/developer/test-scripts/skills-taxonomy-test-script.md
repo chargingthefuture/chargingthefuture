@@ -119,6 +119,9 @@ Management — and none of the deactivated labels (Market Research; SEO/SEM and 
 Content Marketing; Brand strategy and positioning). Under Food & Agriculture › Agribusiness
 Managers, "Marketing and market analysis" no longer appears (deactivated by op 39) — a member with
 marketing skills is matched to Professional & Business Services in Workforce, not Food & Agriculture.
+After changes 43–48 apply, **Creative & Media › Advocates / Awareness Raisers** lists Advocacy, Writing,
+Awareness raising, Storytelling, and Peer support — Advocacy is the baseline skill stamped on invited /
+temporary profiles, so a freshly invited member shows Advocacy until they claim and re-pick their skills.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
