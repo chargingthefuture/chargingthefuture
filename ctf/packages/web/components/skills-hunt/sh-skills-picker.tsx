@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { X, ChevronDown, Search } from "lucide-react";
 import { groupSkillsByOccupation, groupTaxonomyBySector, type TaxonomyFlattenedRow } from "./sh-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getSkillsHuntTokens } from './sh-shared';
@@ -91,6 +91,24 @@ function SelectedChips({ skills, proposedSkills, onToggleSkill, onRemoveProposed
   );
 }
 
+// One selectable taxonomy skill chip — shared by the sector accordion and the
+// keyword-search results so both look and behave identically.
+function SkillChip({ skill, selected, canAddMore, onToggleSkill }: {
+  skill: string;
+  selected: boolean;
+  canAddMore: boolean;
+  onToggleSkill: (s: string) => void;
+}) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
+  return (
+    <button type="button" onClick={() => { if (canAddMore || selected) onToggleSkill(skill); }}
+      style={{ padding: "4px 12px", borderRadius: 20, background: selected ? `${t.ACCENT}25` : t.INPUT_BG, border: `1px solid ${selected ? t.ACCENT + "60" : t.BORDER_STRONG}`, color: selected ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: selected ? 700 : 400, cursor: canAddMore || selected ? "pointer" : "default", opacity: !canAddMore && !selected ? 0.4 : 1 }}>
+      {selected ? "✓ " : ""}{skill}
+    </button>
+  );
+}
+
 function CategoryRow({ category, categorySkills, skills, isOpen, canAddMore, onOpenCategory, onToggleSkill }: {
   category: string;
   categorySkills: string[];
@@ -117,15 +135,9 @@ function CategoryRow({ category, categorySkills, skills, isOpen, canAddMore, onO
       </button>
       {isOpen && (
         <div style={{ padding: "10px 14px", display: "flex", flexWrap: "wrap", gap: 7, background: "rgba(255,255,255,0.01)" }}>
-          {categorySkills.map((s) => {
-            const selected = skills.includes(s);
-            return (
-              <button key={s} type="button" onClick={() => { if (canAddMore || selected) onToggleSkill(s); }}
-                style={{ padding: "4px 12px", borderRadius: 20, background: selected ? `${t.ACCENT}25` : t.INPUT_BG, border: `1px solid ${selected ? t.ACCENT + "60" : t.BORDER_STRONG}`, color: selected ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: selected ? 700 : 400, cursor: canAddMore || selected ? "pointer" : "default", opacity: !canAddMore && !selected ? 0.4 : 1 }}>
-                {selected ? "✓ " : ""}{s}
-              </button>
-            );
-          })}
+          {categorySkills.map((s) => (
+            <SkillChip key={s} skill={s} selected={skills.includes(s)} canAddMore={canAddMore} onToggleSkill={onToggleSkill} />
+          ))}
         </div>
       )}
     </div>
@@ -141,6 +153,18 @@ export function SkillsPicker(props: SkillsPickerProps) {
   const occupations = taxonomy.status === "ready" ? taxonomy.occupations : {};
   const hasCategories = Object.keys(categories).length > 0;
   const occupationNames = Object.keys(occupations);
+
+  // Keyword search across every sector — a flat, de-duplicated skill list filtered
+  // by substring. Local UI state only; it does not touch the form model.
+  const [search, setSearch] = useState("");
+  const query = search.trim().toLowerCase();
+  const allSkills = useMemo(() => {
+    const set = new Set<string>();
+    for (const list of Object.values(categories)) for (const s of list) set.add(s);
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [categories]);
+  const matches = query ? allSkills.filter((s) => s.toLowerCase().includes(query)) : [];
+
   return (
     <div>
       <div style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
@@ -179,6 +203,40 @@ export function SkillsPicker(props: SkillsPickerProps) {
       )}
 
       {taxonomy.status === "ready" && hasCategories && (
+        <div style={{ position: "relative", marginBottom: 10 }}>
+          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: t.FAINT, pointerEvents: "none" }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search skills by keyword"
+            placeholder="Search skills by keyword…"
+            style={{ width: "100%", padding: "8px 32px 8px 34px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", boxSizing: "border-box" }}
+          />
+          {search && (
+            <button type="button" aria-label="Clear skill search" onClick={() => setSearch("")}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: t.FAINT, cursor: "pointer", padding: 4, lineHeight: 1 }}>
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* When searching, a flat cross-sector result list replaces the accordion. */}
+      {taxonomy.status === "ready" && hasCategories && query && (
+        <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", marginBottom: 10 }}>
+          {matches.length === 0 ? (
+            <div style={{ fontSize: 12, color: t.MUTED }}>No skills match “{search.trim()}”. Add it as a free-text skill below.</div>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+              {matches.map((s) => (
+                <SkillChip key={s} skill={s} selected={skills.includes(s)} canAddMore={canAddMore} onToggleSkill={onToggleSkill} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {taxonomy.status === "ready" && hasCategories && !query && (
         <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden", marginBottom: 10 }}>
           {Object.entries(categories).map(([category, categorySkills]) => (
             <CategoryRow key={category} category={category} categorySkills={categorySkills} skills={skills} isOpen={openCategory === category} canAddMore={canAddMore} onOpenCategory={onOpenCategory} onToggleSkill={onToggleSkill} />
