@@ -4,10 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
 import { LighthouseScreen } from './LighthouseScreen';
 import { LighthouseHost } from './LighthouseHost';
+import { LighthouseSeekerProfile } from './LighthouseSeekerProfile';
 import { LighthouseMatches } from './LighthouseMatches';
 import { LighthouseStreamTab } from './LighthouseStreamTab';
 
-type TabKey = 'browse' | 'host' | 'matches' | 'chat';
+type TabKey = 'browse' | 'host' | 'matches' | 'profile' | 'chat';
 
 interface NavItem {
   key: TabKey;
@@ -20,6 +21,7 @@ const NAV: NavItem[] = [
   { key: 'browse', label: 'Browse', icon: 'search-outline', activeIcon: 'search' },
   { key: 'host', label: 'List your place', icon: 'home-outline', activeIcon: 'home' },
   { key: 'matches', label: 'Matches', icon: 'mail-outline', activeIcon: 'mail' },
+  { key: 'profile', label: 'Your details', icon: 'person-outline', activeIcon: 'person' },
   { key: 'chat', label: 'Direct Line', icon: 'chatbubble-outline', activeIcon: 'chatbubble' },
 ];
 
@@ -32,9 +34,10 @@ export const LighthouseTabs: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        {tab === 'browse' && <LighthouseScreen />}
+        {tab === 'browse' && <LighthouseScreen onNavigateToProfile={() => setTab('profile')} />}
         {tab === 'host' && <LighthouseHost />}
         {tab === 'matches' && <LighthouseMatches />}
+        {tab === 'profile' && <LighthouseSeekerProfile />}
         {tab === 'chat' && <LighthouseStreamTab />}
       </View>
       <View style={styles.navBar}>

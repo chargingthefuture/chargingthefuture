@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:lighthouse` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-lighthouse-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display) |
+| **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display; hand-updated 2026-07-14 for the seeker "Your details" screen and "Request to stay" flow) |
 
 ## How to run this
 
@@ -41,7 +41,10 @@ Member role unless noted.
    for ServiceCredits, never a credits↔fiat equivalence. On a narrow (mobile) width the ServiceCredits
    price stays inside its card — the amount is large, "ServiceCredits" is small, and "/mo" is not
    clipped or broken mid-word. → web ☐ mobile ☐ android ☐
-4. **Match request is single.** Send a match request on a property, then try again on the same one.
+4. **Request to stay needs seeker details.** With no seeker profile yet, open a listing you don't
+   own and use **Request to stay**. You are routed to the **Your details** screen (not a silent
+   failure). Save your details, come back, and the request goes through. → web ☐ mobile ☐ android ☐
+5. **Match request is single.** Send a match request on a property, then try again on the same one.
    The second attempt is refused as a duplicate, not silently doubled. → web ☐ mobile ☐ android ☐
 
 ---
@@ -55,9 +58,9 @@ Member role unless noted.
 1. Open the browse screen and read the list.
 2. Open one property's detail view.
 **Expected:** The list shows active public listings (not only your own). Detail shows listing fields
-and host reference info on a full page, with the seeker match-request action available. When the
-listing has a property type (House, Room in a house, Apartment, Camper) it shows as a chip on the
-detail (and native detail).
+and host reference info on a full page, with the seeker **Request to stay** action available (hidden
+on your own listing). When the listing has a property type (House, Room in a house, Apartment,
+Camper) it shows as a chip on the detail (and native detail).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### LH-2 · Rent currency vs accepted currencies
@@ -75,17 +78,36 @@ detail, and the host "Your listings" rows show the currency price (never a hardc
 ServiceCredits listing) and the native detail lists the accepted currencies.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### LH-3 · Send a match request
+### LH-3 · Set up your seeker details
+**Role:** member (seeker) · **Surfaces:** all
+**Precondition:** a member who has **not** listed a place (so they are not a host).
+**Steps:**
+1. Open the **Your details** tab (icon rail on desktop, tab bar on phone/android).
+2. Fill housing needs, country, ideal move-in date, budget range (least/most per month), an optional
+   short bio and contact, and leave "I'm actively looking" on. Save.
+3. Reopen the tab.
+**Expected:** The form saves via the seeker profile endpoint and, on reopen, prefills with what you
+entered. A budget where "most" is less than "least" is refused with a readable message. Saving is
+**not** required to browse or view listings — only to request a stay (LH-4).
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### LH-4 · Request to stay (and the no-details routing)
 **Role:** member (seeker) · **Surfaces:** all
 **Precondition:** a property you do not own.
 **Steps:**
-1. From a property detail, send a match request with a message and a proposed move-in date.
-2. Open the matches screen and find the new request.
-**Expected:** The request is created with status `pending` and shows on the matches screen. A second
-request on the same property is refused as a duplicate active/pending request.
+1. **Before** setting up details (or with an inactive profile), open a listing you don't own and use
+   **Request to stay**.
+2. Then set up your details (LH-3), return to the listing, and use **Request to stay** with a message
+   and a preferred move-in date.
+3. Open the matches screen and find the new request. Try **Request to stay** again on the same listing.
+**Expected:** With no active seeker profile, the action routes you to **Your details** with a clear
+prompt (never a silent failure or a raw error). After details are saved, the request is created with
+status `pending` and shows on the matches screen. A second request on the same property is refused as
+a duplicate, shown inline. If you and the host have blocked each other, the request is refused. The
+action never appears on your own listing.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### LH-4 · List your own place (self-service hosting)
+### LH-5 · List your own place (self-service hosting)
 **Role:** member · **Surfaces:** web, mobile (android host tab where present)
 **Steps:**
 1. Open the "List your place" tab and fill the create-listing form: title, description, type
@@ -99,9 +121,9 @@ shows your username, your Quora link, and the Trust widget — none re-entered. 
 in "Your listings".
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### LH-5 · Edit your own listing
+### LH-6 · Edit your own listing
 **Role:** member · **Surfaces:** web, mobile
-**Precondition:** you own at least one listing (LH-4).
+**Precondition:** you own at least one listing (LH-5).
 **Steps:**
 1. Open your own listing's detail view.
 2. Use Edit listing, change a field (e.g. rent), and save.
@@ -109,7 +131,17 @@ in "Your listings".
 "Apply Now"/"Message Host". The edit form prefills the full record and the change persists.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### LH-6 · Block a user (safety)
+### LH-7 · A host can't also be a seeker
+**Role:** member who has listed a place (host) · **Surfaces:** all
+**Precondition:** you have published at least one listing (LH-5).
+**Steps:**
+1. Open the **Your details** tab.
+**Expected:** Instead of an editable seeker form, you see a notice that this account hosts and so
+can't also request stays (hosting and seeking are separate accounts). There is no way to silently
+save a seeker profile that the server would reject.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### LH-8 · Block a user (safety)
 **Role:** member · **Surfaces:** all
 **Steps:**
 1. Block another seeded user.
@@ -119,7 +151,7 @@ in "Your listings".
 Where applicable, a blocked pair cannot send a match request to each other.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### LH-7 · Refresh re-pulls listings without reopening the app
+### LH-9 · Refresh re-pulls listings without reopening the app
 **Role:** member · **Surfaces:** all
 **Steps:**
 1. Open the LightHouse browse view, then in a second session change data that affects it (e.g. another
@@ -167,7 +199,7 @@ write is CSRF-guarded and the change is reflected in the list.
 ### LH-A4 · Audit trail
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
-1. After doing a block create/remove (LH-6) and a match update (LH-A2), open the admin audit-events
+1. After doing a block create/remove (LH-8) and a match update (LH-A2), open the admin audit-events
    list.
 **Expected:** The audit list shows rows for those actions with actor, command, and a policy status of
 allow or deny. A denied action (e.g. a self-block) records a `deny` entry, not only successes.
@@ -177,9 +209,9 @@ allow or deny. A denied action (e.g. a self-block) records a `deny` entry, not o
 
 ## Parity check (web ↔ android)
 
-For LH-1, LH-3, and LH-A1, the android app and the mobile-responsive web layout must behave the same:
-same listings, same match-request result and duplicate guard, same admin counts. Note any drift here
-rather than filing three separate bugs.
+For LH-1, LH-4, and LH-A1, the android app and the mobile-responsive web layout must behave the same:
+same listings, same seeker "Request to stay" result and duplicate guard, same admin counts. Note any
+drift here rather than filing three separate bugs.
 
 **Result:** matches ☐ — drift notes:
 

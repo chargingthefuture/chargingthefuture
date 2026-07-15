@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Home, KeyRound, MessageCircle, Search } from "lucide-react";
+import { Heart, Home, KeyRound, MessageCircle, Search, UserRound } from "lucide-react";
 import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { useTheme } from "@/hooks/useTheme";
 import { getLighthouseTokens, type Tab } from "./shared";
@@ -9,6 +9,7 @@ const NAV: { icon: React.ElementType; key: Tab; label: string }[] = [
   { icon: Search, key: "browse", label: "Browse" },
   { icon: Heart, key: "matches", label: "Matches" },
   { icon: MessageCircle, key: "chat", label: "Direct Line" },
+  { icon: UserRound, key: "profile", label: "Your details" },
   { icon: KeyRound, key: "host", label: "List your place" },
 ];
 

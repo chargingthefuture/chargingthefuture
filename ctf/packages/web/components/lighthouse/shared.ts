@@ -25,7 +25,7 @@ export function getLighthouseTokens(theme: ThemeName): LighthouseTokens {
   return getPluginShellTokens(accent, theme);
 }
 
-export type Tab = "browse" | "matches" | "chat" | "host";
+export type Tab = "browse" | "matches" | "chat" | "host" | "profile";
 
 export interface Profile {
   id: string;

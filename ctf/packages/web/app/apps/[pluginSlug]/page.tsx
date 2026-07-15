@@ -234,7 +234,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'skills-taxonomy') {
-    return <SkillsTaxonomyShell isAdmin={decision.isAdmin} />;
+    return <SkillsTaxonomyShell />;
   }
 
   if (selectedPlugin.slug === 'foundation') {

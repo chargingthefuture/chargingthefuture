@@ -159,7 +159,7 @@ export function DirectoryProfileDetail({
         <button onClick={onBack} aria-label="Back to directory" title="Back to directory" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, cursor: "pointer", flexShrink: 0 }}>
           <ChevronLeft size={20} />
         </button>
-        <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Provider profile</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Directory profile</div>
         {/* Share this profile — the one app-wide control (rule 130). The link opens the auth-gated
             deep-link page; a signed-in member lands on this profile, an unauthenticated visitor is
             redirected to the directory landing. */}

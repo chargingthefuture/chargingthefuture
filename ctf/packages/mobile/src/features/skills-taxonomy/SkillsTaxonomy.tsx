@@ -374,12 +374,6 @@ function PopulatedScreen({
           </View>
           <Text style={styles.navLabelInactive}>Search</Text>
         </View>
-        <View style={styles.navItem}>
-          <View style={styles.navIconInactive}>
-            <Text style={styles.navIconGlyph}>＋</Text>
-          </View>
-          <Text style={styles.navLabelInactive}>Add</Text>
-        </View>
       </View>
     </View>
   );

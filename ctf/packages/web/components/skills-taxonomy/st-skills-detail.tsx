@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Hash, Plus, Search } from "lucide-react";
+import { ChevronRight, Hash, Search } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getSkillsTaxonomyTokens, type StJobTitle, type StSector, type StSkill } from "./st-shared";
 
@@ -10,14 +10,12 @@ export function SkillsTaxonomySkillsDetail({
   skills,
   search,
   onSearch,
-  isAdmin,
 }: {
   sector: StSector | null;
   jobTitle: StJobTitle | null;
   skills: StSkill[];
   search: string;
   onSearch: (value: string) => void;
-  isAdmin: boolean;
 }) {
   const { theme } = useTheme();
   const t = getSkillsTaxonomyTokens(theme);
@@ -31,11 +29,6 @@ export function SkillsTaxonomySkillsDetail({
           placeholder="Search skills in this role…"
           style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: t.TITLE }}
         />
-        {isAdmin && (
-          <a href="/admin/skills-taxonomy" style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "none" }}>
-            <Plus size={14} /> Add Skill
-          </a>
-        )}
       </header>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
