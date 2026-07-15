@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -125,9 +126,11 @@ export const Community = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // `background` skips the full-screen spinner so pull-to-refresh keeps the current list visible.
+  const load = useCallback(async (background = false) => {
+    if (!background) setLoading(true);
     setError(null);
     try {
       const data = await fetchCommunityPosts();
@@ -135,12 +138,22 @@ export const Community = () => {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to load community posts.');
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // Pull-to-refresh: re-pull community posts without flashing the loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
   }, [load]);
 
   const handleRead = useCallback(
@@ -176,7 +189,7 @@ export const Community = () => {
       ) : error ? (
         <View style={s.center}>
           <Text style={s.errorText}>{error}</Text>
-          <Pressable style={s.retryBtn} onPress={load}>
+          <Pressable style={s.retryBtn} onPress={() => load()}>
             <Text style={s.retryText}>Retry</Text>
           </Pressable>
         </View>
@@ -191,6 +204,7 @@ export const Community = () => {
           )}
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLOR} />}
         />
       )}
     </View>
