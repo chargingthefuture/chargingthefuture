@@ -7,10 +7,10 @@ import type { LighthouseProfile } from './types';
 
 // Seeker self-service setup (mobile). Mirrors the web
 // ctf/packages/web/components/lighthouse/lighthouse-seeker-profile.tsx: a member fills in their
-// housing needs here so they can request a stay on a listing. Saving upserts the shared
-// lighthouse_profiles row as a 'seeker'. A member who has listed a place is a host — the profile
-// type is locked server-side, so this screen explains that instead of showing a form the endpoint
-// would deny.
+// housing needs here so they can request a stay on a listing. A member can be both a host and a
+// seeker (owner decision) — a member who has listed a place can also fill in these details and
+// request stays. Saving keeps their host flag intact and does not relabel their account, so this
+// screen always shows the editable form.
 
 const SURFACE = 'rgba(255,255,255,0.02)';
 
@@ -153,11 +153,6 @@ export const LighthouseSeekerProfile: React.FC = () => {
       setSaved(true);
       return;
     }
-    if (result.code === 'policy_denied') {
-      setExistingType('host');
-      setError(null);
-      return;
-    }
     setError(result.message ?? 'Could not save your details. Please try again.');
   };
 
@@ -166,24 +161,6 @@ export const LighthouseSeekerProfile: React.FC = () => {
       <View style={styles.center}>
         <ActivityIndicator size="large" color={accent} />
       </View>
-    );
-  }
-
-  if (existingType === 'host') {
-    return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.noticeCard}>
-          <View style={styles.noticeHead}>
-            <Ionicons name="alert-circle-outline" size={18} color={accent} />
-            <Text style={styles.noticeTitle}>This account hosts, so it can’t also request stays</Text>
-          </View>
-          <Text style={styles.noticeBody}>
-            You listed a place, so LightHouse set you up as a host. Hosting and requesting stays are
-            kept on separate accounts. If you need to request a stay instead of hosting, ask an admin
-            in the Hub to switch your role.
-          </Text>
-        </View>
-      </ScrollView>
     );
   }
 
@@ -359,30 +336,6 @@ function makeStyles(t: ThemeTokens, accent: string) {
       fontSize: 14,
       fontWeight: '700',
       color: '#0B0B0F',
-    },
-    noticeCard: {
-      backgroundColor: SURFACE,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: `${accent}20`,
-      padding: 16,
-    },
-    noticeHead: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 8,
-    },
-    noticeTitle: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: t.textPrimary,
-      flexShrink: 1,
-    },
-    noticeBody: {
-      fontSize: 13,
-      color: MUTED,
-      lineHeight: 19,
     },
   });
 }

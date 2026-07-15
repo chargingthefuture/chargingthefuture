@@ -1,19 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, ShieldAlert } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { CountrySelect } from "@/components/shared/location-select";
 import { getLighthouseTokens, type Profile } from "./shared";
 
 // Seeker self-service setup. A member fills in their housing needs here so they can request a stay
-// on a listing. Saving upserts the shared lighthouse_profiles row as a 'seeker' via
-// POST /api/lighthouse/profile. The two flows are tied together: the "Request to stay" action on a
-// listing needs a seeker profile, and it points members here when they do not have one yet.
+// on a listing. Saving upserts the shared lighthouse_profiles row via POST /api/lighthouse/profile.
+// The "Request to stay" action on a listing points members here when they have not saved details yet.
 //
-// A member who has already listed a place is a 'host' (their profile row was provisioned when they
-// published a listing). The profile type is locked server-side — a host cannot also be a seeker —
-// so for a host this screen explains that instead of showing an editable form that would be denied.
+// A member can be both a host and a seeker (owner decision): a member who has listed a place can also
+// fill in these details and request stays. Saving keeps their host flag intact and does not relabel
+// their account, so this screen always shows the editable form.
 
 type SeekerForm = {
   housingNeeds: string;
@@ -131,15 +130,9 @@ export function LighthouseSeekerProfile() {
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; code?: string; message?: string };
       if (!res.ok || !data.ok) {
-        if (data.code === "policy_denied") {
-          setExistingType("host");
-          setError(null);
-          return;
-        }
         setError(data.message ?? "Could not save your details. Please try again.");
         return;
       }
-      setExistingType("seeker");
       setSaved(true);
     } catch {
       setError("Could not save your details. Please try again.");
@@ -168,24 +161,6 @@ export function LighthouseSeekerProfile() {
     return (
       <div style={{ padding: "18px 16px 40px", maxWidth: 860, margin: "0 auto", width: "100%", boxSizing: "border-box", color: t.MUTED, fontSize: 14 }}>
         Loading your details…
-      </div>
-    );
-  }
-
-  if (existingType === "host") {
-    return (
-      <div style={{ padding: "18px 16px 40px", maxWidth: 860, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
-        <div style={{ background: t.HEADER, border: `1px solid ${t.BORDER}`, borderRadius: 14, padding: 18 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <ShieldAlert size={18} style={{ color: t.ACCENT }} />
-            <span style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>This account hosts, so it can’t also request stays</span>
-          </div>
-          <div style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6 }}>
-            You listed a place, so LightHouse set you up as a host. Hosting and requesting stays are
-            kept on separate accounts. If you need to request a stay instead of hosting, ask an admin
-            in the Hub to switch your role.
-          </div>
-        </div>
       </div>
     );
   }

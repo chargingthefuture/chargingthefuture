@@ -405,9 +405,14 @@ export async function upsertProfile(actorUserId: string, input: LighthouseProfil
       [actorUserId],
     );
 
-    if (!isAdmin && existing.rows[0] && existing.rows[0].profile_type !== input.profileType) {
-      throw new Error('policy_denied');
-    }
+    // A member can be both a host and a seeker (owner decision). The profile row is no longer locked
+    // to a single type: for a non-admin with an existing row we KEEP their current profile_type
+    // rather than flipping it (so saving seeker details on a host account does not relabel or
+    // un-host them), while a brand-new profile takes the incoming type. Admins may still set the
+    // type explicitly. `has_property` is sticky-true (below) so filling the seeker form never clears
+    // a member's host flag.
+    const effectiveType =
+      !isAdmin && existing.rows[0] ? existing.rows[0].profile_type : input.profileType;
 
     const upserted = await client.query(
       `
@@ -422,7 +427,7 @@ export async function upsertProfile(actorUserId: string, input: LighthouseProfil
           phone_number = EXCLUDED.phone_number,
           signal_url = EXCLUDED.signal_url,
           is_active = EXCLUDED.is_active,
-          has_property = EXCLUDED.has_property,
+          has_property = lighthouse_profiles.has_property OR EXCLUDED.has_property,
           housing_needs = EXCLUDED.housing_needs,
           desired_move_in_date = EXCLUDED.desired_move_in_date,
           budget_min = EXCLUDED.budget_min,
@@ -448,7 +453,7 @@ export async function upsertProfile(actorUserId: string, input: LighthouseProfil
       `,
       [
         actorUserId,
-        input.profileType,
+        effectiveType,
         normalizeNullableText(input.bio),
         normalizeNullableText(input.phoneNumber),
         normalizeNullableText(input.signalUrl),
@@ -935,19 +940,22 @@ export async function createMatchRequest(input: {
   return withDbTransaction(async (client: PoolClient) => {
     void input.idempotencyKey;
 
-    const seeker = await client.query(
+    // A member can be both a host and a seeker (owner decision). Requesting a stay only needs an
+    // active LightHouse profile — it is NOT gated on profile_type = 'seeker', so a member who has
+    // listed a place (a host) can still request stays. Filling the seeker "Your details" form (which
+    // creates/keeps an active profile) is what points members here.
+    const requester = await client.query(
       `
         SELECT id
         FROM lighthouse_profiles
         WHERE user_id = $1
-          AND profile_type = 'seeker'
           AND is_active = TRUE
         LIMIT 1
       `,
       [input.actorUserId],
     );
 
-    if (seeker.rows.length === 0) {
+    if (requester.rows.length === 0) {
       throw new Error('policy_denied');
     }
 
@@ -967,6 +975,12 @@ export async function createMatchRequest(input: {
     }
 
     const hostUserId = property.rows[0].host_user_id;
+
+    // A member cannot request a stay on their own listing (the UI hides the button on an owned
+    // listing; this is the server-side backstop now that hosts can also request).
+    if (hostUserId === input.actorUserId) {
+      throw new Error('policy_denied');
+    }
 
     const blocked = await client.query(
       `
