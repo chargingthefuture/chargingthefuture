@@ -307,11 +307,12 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
     return (
       <div style={{ minHeight: "100dvh", background: t.BG, fontFamily: "Inter, system-ui, sans-serif", color: t.TEXT_BODY }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
             <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: t.ACCENT_TINT_BG, border: `1px solid ${t.ACCENT_TINT_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>LevelUp</span>
+            {/* Title shrinks and truncates so the trailing controls stay on screen */}
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>LevelUp</span>
             <PluginAdminButton href="/admin/level-up" isAdmin={isAdmin} accent={t.ACCENT} />
             <RefreshButton onRefresh={handleRefresh} title="Refresh" />
             <MobileTopActions />
