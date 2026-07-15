@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:skills-taxonomy` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed) |
 
 ## How to run this
 
@@ -37,8 +37,9 @@ are the can't-ship-broken checks.
    (sector → job title → skill) renders with real data, not a spinner or an error. → web ☐ mobile ☐ android ☐
 2. **Counts on the signed-out splash.** Signed out, the splash teaser shows live sector / job-title /
    skill counts (not zeros). → web ☐ mobile ☐ android ☐
-3. **Admin write is gated.** A non-admin cannot reach the admin create/edit/delete controls; the
-   server denies a non-admin write. → web ☐ mobile ☐ android ☐
+3. **Browser is read-only; server-side write gating holds.** The member-facing taxonomy browser shows
+   no create/edit/delete controls for anyone (the old `/admin/skills-taxonomy` "add" buttons were
+   removed); a non-admin call to a taxonomy write API is denied server-side. → web ☐ mobile ☐ android ☐
 4. **Delete asks before it acts.** An admin delete first shows the dependency-impact preview, not an
    immediate destructive delete. → web ☐ mobile ☐ android ☐
 
@@ -46,7 +47,10 @@ are the can't-ship-broken checks.
 
 ## Member walkthrough
 
-The member-facing surface is read-only browsing. There is no member CRUD in this build.
+The member-facing surface is read-only browsing. There is no member CRUD in this build, and the browser
+shows no inline admin add/edit controls — the earlier `/admin/skills-taxonomy` "add" buttons were removed
+(they linked to a page that does not exist). Taxonomy changes go through the append-only change list, not
+the UI.
 
 ### TAX-1 · Browse the hierarchy
 **Role:** member · **Surfaces:** all · **Precondition:** seeded taxonomy.
