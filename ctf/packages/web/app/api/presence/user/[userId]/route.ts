@@ -12,12 +12,16 @@ const MEMBER_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 // deep link into that plugin. Auth-gated to any signed-in member: this is a deliberate decision —
 // nothing is public in this app, so any listing a member has counts as presence and there is no
 // per-entry visibility gate, so any signed-in member may look up any member. Read-only.
-export async function GET(_req: Request, context: unknown) {
-  const { userId: targetUserId } = (context as { params: { userId: string } }).params;
+export async function GET(_req: Request, context: { params: Promise<{ userId: string }> }) {
+  const { userId: targetUserId } = await context.params;
 
   const gate = await requireTrustMemberAccess();
   if (!gate.allowed) {
     return gate.response;
+  }
+
+  if (!targetUserId || targetUserId.trim().length === 0) {
+    return NextResponse.json({ error: 'Missing userId param' }, { status: 400 });
   }
 
   // Reject an id that cannot be a real member id before touching the database. Return the same empty

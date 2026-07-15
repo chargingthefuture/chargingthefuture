@@ -18,7 +18,6 @@ import { SkillsTaxonomyPublicShell } from '@/components/skills-taxonomy/skills-t
 import { SocketRelayPublicShell } from '@/components/socket-relay/socket-relay-public-shell';
 import { TrustPublicShell } from '@/components/trust/trust-public-shell';
 import { TrustTransportPublicShell } from '@/components/trust-transport/trust-transport-public-shell';
-import { WeeklyPerformancePublicShell } from '@/components/weekly-performance/weekly-performance-public-shell';
 import { WhatWorksPublicShell } from '@/components/what-works/what-works-public-shell';
 import { WorkforcePublicShell } from '@/components/workforce/workforce-public-shell';
 import { GenericPublicShell } from '@/components/plugins/generic-public-shell';
@@ -76,7 +75,9 @@ const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   'socket-relay': SocketRelayPublicShell,
   trust: TrustPublicShell,
   'trust-transport': TrustTransportPublicShell,
-  'weekly-performance': WeeklyPerformancePublicShell,
+  // weekly-performance has no entry on purpose: it is admin-only, and the /apps/[pluginSlug] route
+  // 404s non-admins before the public-shell branch is ever reached, so a public shell for it would
+  // be unreachable dead code (its shell was deleted for that reason, like the Unlock one before it).
   'what-works': WhatWorksPublicShell,
   workforce: WorkforcePublicShell,
 };

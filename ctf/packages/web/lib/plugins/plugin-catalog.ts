@@ -44,12 +44,11 @@ export const pluginCatalog: PluginCatalogItem[] = [
     kind: 'plugin',
     summary: 'Browse skills across the survivor community.',
   },
-  {
-    id: 'feed-announcements',
-    name: 'Feed + Announcements',
-    kind: 'plugin',
-    summary: 'Timeline and announcement lifecycle in a coupled admin surface.',
-  },
+  // feed-announcements was removed: it is retired as a navigable app (its registry row in
+  // lib/plugins/repository.ts was deliberately deleted — see the feed inventory consolidation
+  // note), and this catalog feeds no validation allowlist (nothing imports it; the money-transfer
+  // originPlugin allowlist reads the fallback registry in repository.ts), so no historical
+  // reference can arrive through it.
   {
     id: 'workforce',
     name: 'Workforce',
@@ -145,6 +144,12 @@ export const pluginCatalog: PluginCatalogItem[] = [
     name: 'Trust',
     kind: 'plugin',
     summary: 'Community reputation and verification. Trust signals built through real participation — your credibility, visible and portable.',
+  },
+  {
+    id: 'recurring-activity',
+    name: 'Recurring Activity',
+    kind: 'plugin',
+    summary: 'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.',
   },
 ];
 

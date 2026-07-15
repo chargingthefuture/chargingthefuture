@@ -36,7 +36,9 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
 
 1. **Non-admin cannot reach it.** As a plain member, the plugin is not in navigation, and the admin
    page `/admin/weekly-performance` redirects to `/apps/weekly-performance`; the admin-or-operations
-   routes deny with a stable reason. → web ☐ mobile ☐ android ☐
+   routes deny with a stable reason. A non-admin or signed-out visitor opening
+   `/apps/weekly-performance` gets a plain 404 — never a public landing/marketing page (the plugin
+   has no public visitor shell; the unreachable one was deleted 2026-07-15). → web ☐ mobile ☐ android ☐
 2. **Numbers are always live — no "closed" week.** Open the dashboard. Every week shows live numbers
    computed from that week's activity (active members, questions, answers, community posts,
    enrollments) — there is no "metrics appear when the week closes" placeholder and no week status to
