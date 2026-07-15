@@ -22,7 +22,8 @@ export interface AdminSafetyReport {
   createdAtIso: string;
   reviewedAtIso: string | null;
   reviewedByUserId: string | null;
-  // Count of OPEN reports about reportedUserId (this row included when its own status is open).
+  // Count of OTHER OPEN reports about reportedUserId (this row itself is excluded), so a value > 0
+  // means the same member has been reported more than once and is still open elsewhere.
   openReportsAboutReported: number;
 }
 
@@ -44,9 +45,11 @@ export async function insertSafetyReportTx(
 
 // List safety reports for the admin queue: open reports first, then newest first. Both the reporter
 // and the reported member are resolved to a human label the same way the block manage-list resolves
-// them — a LEFT JOIN to directory_profiles on claimed_by_user_id (active profiles only), with a
-// neutral "Member" fallback so a missing profile never blanks a row. A correlated subquery attaches
-// the count of OPEN reports about each reported member so a repeat offender is obvious at a glance.
+// them — a LEFT JOIN LATERAL to directory_profiles on claimed_by_user_id (active profiles only,
+// LIMIT 1 so a member with more than one active profile row never fans a report out into duplicate
+// result rows), with a neutral "Member" fallback so a missing profile never blanks a row. A
+// correlated subquery attaches the count of OTHER OPEN reports about each reported member (the row
+// itself is excluded) so a repeat offender is obvious at a glance.
 export async function listSafetyReportsForAdmin(): Promise<AdminSafetyReport[]> {
   const result = await queryDb<{
     id: string;
@@ -77,14 +80,23 @@ export async function listSafetyReportsForAdmin(): Promise<AdminSafetyReport[]> 
          FROM member_safety_reports o
          WHERE o.reported_user_id = r.reported_user_id
            AND o.status = 'open'
+           AND o.id <> r.id
        ) AS open_reports_about_reported
      FROM member_safety_reports r
-     LEFT JOIN directory_profiles rp
-       ON rp.claimed_by_user_id = r.reporter_user_id
-      AND rp.deleted_at IS NULL
-     LEFT JOIN directory_profiles tp
-       ON tp.claimed_by_user_id = r.reported_user_id
-      AND tp.deleted_at IS NULL
+     LEFT JOIN LATERAL (
+       SELECT dp.first_name, dp.last_name
+       FROM directory_profiles dp
+       WHERE dp.claimed_by_user_id = r.reporter_user_id
+         AND dp.deleted_at IS NULL
+       LIMIT 1
+     ) rp ON TRUE
+     LEFT JOIN LATERAL (
+       SELECT dp.first_name, dp.last_name
+       FROM directory_profiles dp
+       WHERE dp.claimed_by_user_id = r.reported_user_id
+         AND dp.deleted_at IS NULL
+       LIMIT 1
+     ) tp ON TRUE
      ORDER BY (r.status = 'open') DESC, r.created_at DESC`,
   );
 
@@ -123,4 +135,32 @@ export async function setSafetyReportStatus(
   );
 
   return (result.rowCount ?? 0) > 0;
+}
+
+// Append an admin moderation decision to the safety audit trail. Marking a report reviewed or
+// dismissed is an irreversible action, so it is recorded here in addition to the reviewed_at /
+// reviewed_by_user_id stamp on the report row — mirroring the per-plugin *_admin_audit_trail tables.
+// Best-effort and never throws to the caller: an audit-write failure must not fail an admin action
+// that already succeeded, so the error is swallowed after being reported.
+export async function insertSafetyAdminAudit(input: {
+  actorId: string;
+  command: string;
+  reason: string;
+  targetType: string;
+  targetId: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  await queryDb(
+    `INSERT INTO safety_admin_audit_trail
+       (actor_id, command, policy_status, reason, target_type, target_id, metadata)
+     VALUES ($1, $2, 'allow', $3, $4, $5, $6::jsonb)`,
+    [
+      input.actorId,
+      input.command,
+      input.reason,
+      input.targetType,
+      input.targetId,
+      JSON.stringify(input.metadata ?? {}),
+    ],
+  );
 }

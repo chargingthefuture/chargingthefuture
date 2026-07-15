@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { fetchQuestionsStreamCredentials } from './fetchQuestionsStreamCredentials';
 import { StreamChat } from 'stream-chat';
@@ -13,21 +13,49 @@ export const Questions = () => {
   const [credentials, setCredentials] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [chatClient, setChatClient] = useState<any>(null);
+  // Hold the connected client in a ref so the effect cleanup always sees the current value.
+  // A cleanup closure over the `chatClient` state would capture the initial `null` and never
+  // tear the connection down.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chatClientRef = useRef<any>(null);
 
   useEffect(() => {
     let isMounted = true;
-    fetchQuestionsStreamCredentials()
-      .then((creds) => {
+
+    const connect = async () => {
+      try {
+        const creds = await fetchQuestionsStreamCredentials();
         if (!isMounted) return;
-        setCredentials(creds);
         const chat = StreamChat.getInstance(creds.apiKey);
-        chat.connectUser({ id: creds.userId }, creds.userToken);
+        // Await the WebSocket handshake before rendering the channel — the Chat/Channel components
+        // must not watch a channel before the user is connected, or the Stream SDK can throw or
+        // silently fail. If the component unmounted while connecting, tear the client back down.
+        await chat.connectUser({ id: creds.userId }, creds.userToken);
+        if (!isMounted) {
+          await chat.disconnectUser();
+          return;
+        }
+        chatClientRef.current = chat;
+        setCredentials(creds);
         setChatClient(chat);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-    return () => { isMounted = false; chatClient?.disconnectUser(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      } catch (e) {
+        if (isMounted) {
+          setError(e instanceof Error ? e.message : 'Unable to load Questions chat.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void connect();
+
+    return () => {
+      isMounted = false;
+      chatClientRef.current?.disconnectUser();
+      chatClientRef.current = null;
+    };
   }, []);
 
   if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={tokens.textSecondary} /></View>;
