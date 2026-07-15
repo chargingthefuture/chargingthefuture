@@ -106,6 +106,20 @@ a redemption value for ServiceCredits or any token. Currencies, where named, app
 "ServiceCredits", "United States Dollar"), never a bare code used as a value.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### GDP-5 · Refresh the dashboard
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open the GDP
+   dashboard and tap the refresh icon in the header.
+2. On android, open GDP and pull down on the dashboard content.
+3. In another session, change the underlying data (e.g. a settled ServiceCredits transfer that moves
+   the Community Value Index), then refresh as above.
+**Expected:** The refresh icon spins while loading and the report + All Countries panel re-pull from
+the server; on android the pull-to-refresh spinner shows and then the dashboard updates. After step 3
+the change appears without closing and reopening the app. Refreshing never clears the current screen
+to the full-screen loading state.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Admin walkthrough

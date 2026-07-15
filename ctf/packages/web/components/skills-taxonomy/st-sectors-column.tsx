@@ -1,6 +1,5 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { countLabel, getSkillsTaxonomyTokens, sectorColor, type StSector } from "./st-shared";
@@ -9,12 +8,10 @@ export function SkillsTaxonomySectorsColumn({
   sectors,
   selectedSectorId,
   onSelect,
-  isAdmin,
 }: {
   sectors: StSector[];
   selectedSectorId: string | null;
   onSelect: (sectorId: string) => void;
-  isAdmin: boolean;
 }) {
   const isMobile = useIsMobile();
   const { theme } = useTheme();
@@ -28,7 +25,6 @@ export function SkillsTaxonomySectorsColumn({
       <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 12px" }}>
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#374151", textTransform: "uppercase", padding: "4px 10px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>Sectors ({sectors.length})</span>
-          {isAdmin && <a href="/admin/skills-taxonomy" title="Manage taxonomy" style={{ color: t.MUTED, display: "flex" }}><Plus size={12} /></a>}
         </div>
         {sectors.map((s, i) => {
           const color = sectorColor(i);

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { RefreshButton } from "@/components/shared/refresh-button";
 import { getSkillsTaxonomyTokens, type StSector } from "./st-shared";
 import { SkillsTaxonomyIconRail } from "./st-icon-rail";
 import { SkillsTaxonomySectorsColumn } from "./st-sectors-column";
@@ -14,7 +15,7 @@ import { SkillsTaxonomySkillsDetail } from "./st-skills-detail";
 import { SkillsTaxonomyEmptyState } from "./st-empty-state";
 import { SkillsTaxonomyLoading } from "./st-loading";
 
-export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
+export function SkillsTaxonomyBrowser() {
   const [sectors, setSectors] = useState<StSector[]>([]);
   const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
   const [selectedJobTitleId, setSelectedJobTitleId] = useState<string | null>(null);
@@ -26,20 +27,27 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
   const t = getSkillsTaxonomyTokens(theme);
   const [mobileView, setMobileView] = useState<"sectors" | "titles" | "skills">("sectors");
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/skills-taxonomy/hierarchy", { cache: "no-store" })
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Failed to load taxonomy.");
-        const data = (await res.json()) as { items: StSector[] };
-        if (cancelled) return;
-        setSectors(data.items ?? []);
-        setSelectedSectorId(data.items?.[0]?.id ?? null);
-      })
-      .catch(() => { if (!cancelled) setError("Failed to load taxonomy."); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+  // Shared by the initial-load effect and the refresh button; a refresh (initial=false) re-pulls
+  // the hierarchy without flashing the full-screen loading state and keeps the current selection.
+  const load = useCallback(async (initial = false) => {
+    if (initial) setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/skills-taxonomy/hierarchy", { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load taxonomy.");
+      const data = (await res.json()) as { items: StSector[] };
+      setSectors(data.items ?? []);
+      setSelectedSectorId((prev) => prev ?? (data.items?.[0]?.id ?? null));
+    } catch {
+      setError("Failed to load taxonomy.");
+    } finally {
+      if (initial) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load(true);
+  }, [load]);
 
   const selectedSector = sectors.find((s) => s.id === selectedSectorId) ?? null;
   const selectedJobTitle = selectedSector?.jobTitles.find((t) => t.id === selectedJobTitleId) ?? null;
@@ -50,7 +58,7 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
   }, [selectedJobTitle, search]);
 
   if (loading) return <SkillsTaxonomyLoading />;
-  if (!error && sectors.length === 0) return <SkillsTaxonomyEmptyState isAdmin={isAdmin} />;
+  if (!error && sectors.length === 0) return <SkillsTaxonomyEmptyState />;
 
   // Phones can't fit three columns side by side, so the hierarchy becomes a
   // drill-down: sectors → job titles → skills, one level at a time with a
@@ -66,6 +74,7 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
               <ChevronLeft size={20} />
             </Link>
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Skills Taxonomy</span>
+            <RefreshButton onRefresh={() => load()} title="Refresh" />
             <MobileTopActions />
           </div>
           {mobileView !== "sectors" && (
@@ -83,14 +92,12 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
             sectors={sectors}
             selectedSectorId={selectedSectorId}
             onSelect={(id) => { setSelectedSectorId(id); setSelectedJobTitleId(null); setSearch(""); setMobileView("titles"); }}
-            isAdmin={isAdmin}
           />
         ) : mobileView === "titles" ? (
           <SkillsTaxonomyTitlesColumn
             sector={selectedSector}
             selectedJobTitleId={selectedJobTitleId}
             onSelect={(id) => { setSelectedJobTitleId(id); setSearch(""); setMobileView("skills"); }}
-            isAdmin={isAdmin}
           />
         ) : (
           <SkillsTaxonomySkillsDetail
@@ -99,7 +106,6 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
             skills={visibleSkills}
             search={search}
             onSearch={setSearch}
-            isAdmin={isAdmin}
           />
         )}
       </div>
@@ -108,18 +114,16 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div style={{ display: "flex", height: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
-      <SkillsTaxonomyIconRail />
+      <SkillsTaxonomyIconRail onRefresh={() => load()} />
       <SkillsTaxonomySectorsColumn
         sectors={sectors}
         selectedSectorId={selectedSectorId}
         onSelect={(id) => { setSelectedSectorId(id); setSelectedJobTitleId(null); setSearch(""); }}
-        isAdmin={isAdmin}
       />
       <SkillsTaxonomyTitlesColumn
         sector={selectedSector}
         selectedJobTitleId={selectedJobTitleId}
         onSelect={(id) => { setSelectedJobTitleId(id); setSearch(""); }}
-        isAdmin={isAdmin}
       />
       {error ? (
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#F87171", fontSize: 14 }}>{error}</div>
@@ -130,7 +134,6 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
           skills={visibleSkills}
           search={search}
           onSearch={setSearch}
-          isAdmin={isAdmin}
         />
       )}
     </div>

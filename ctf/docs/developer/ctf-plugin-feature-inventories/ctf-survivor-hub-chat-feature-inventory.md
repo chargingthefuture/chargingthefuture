@@ -207,6 +207,7 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 
 ## Change Log
 
+- 2026-07-14: **Android pull-to-refresh on the Commons (`HubHome.tsx`).** Dragging the message list down re-pulls the Hub messages in the background (the existing `load` never re-enters the full-screen spinner after first mount, so the chat stays visible while it re-pulls). Complements the poll and the live Stream layer as a manual refresh gesture. Mobile-client only — no backend, schema, route, or contract change.
 - 2026-06-23: **Android parity — Commons live Stream layer + typing indicator (#730).** The React
   Native Hub home (`ctf/packages/mobile/src/features/hub/HubHome.tsx` + a new `live-stream.ts`) now
   matches the web Commons live layer. On entry it calls `POST /api/hub/join` through `authedFetch`

@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:skills-taxonomy` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed) |
 
 ## How to run this
 
@@ -37,8 +37,9 @@ are the can't-ship-broken checks.
    (sector → job title → skill) renders with real data, not a spinner or an error. → web ☐ mobile ☐ android ☐
 2. **Counts on the signed-out splash.** Signed out, the splash teaser shows live sector / job-title /
    skill counts (not zeros). → web ☐ mobile ☐ android ☐
-3. **Admin write is gated.** A non-admin cannot reach the admin create/edit/delete controls; the
-   server denies a non-admin write. → web ☐ mobile ☐ android ☐
+3. **Browser is read-only; server-side write gating holds.** The member-facing taxonomy browser shows
+   no create/edit/delete controls for anyone (the old `/admin/skills-taxonomy` "add" buttons were
+   removed); a non-admin call to a taxonomy write API is denied server-side. → web ☐ mobile ☐ android ☐
 4. **Delete asks before it acts.** An admin delete first shows the dependency-impact preview, not an
    immediate destructive delete. → web ☐ mobile ☐ android ☐
 
@@ -46,7 +47,10 @@ are the can't-ship-broken checks.
 
 ## Member walkthrough
 
-The member-facing surface is read-only browsing. There is no member CRUD in this build.
+The member-facing surface is read-only browsing. There is no member CRUD in this build, and the browser
+shows no inline admin add/edit controls — the earlier `/admin/skills-taxonomy` "add" buttons were removed
+(they linked to a page that does not exist). Taxonomy changes go through the append-only change list, not
+the UI.
 
 ### TAX-1 · Browse the hierarchy
 **Role:** member · **Surfaces:** all · **Precondition:** seeded taxonomy.
@@ -115,6 +119,23 @@ Management — and none of the deactivated labels (Market Research; SEO/SEM and 
 Content Marketing; Brand strategy and positioning). Under Food & Agriculture › Agribusiness
 Managers, "Marketing and market analysis" no longer appears (deactivated by op 39) — a member with
 marketing skills is matched to Professional & Business Services in Workforce, not Food & Agriculture.
+After changes 43–48 apply, **Creative & Media › Advocates / Awareness Raisers** lists Advocacy, Writing,
+Awareness raising, Storytelling, and Peer support — Advocacy is the baseline skill stamped on invited /
+temporary profiles, so a freshly invited member shows Advocacy until they claim and re-pick their skills.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open the taxonomy browser, then in a second session change the taxonomy (e.g. an admin adds a skill
+   under the currently selected occupation).
+2. Web mobile-responsive: tap the refresh icon in the phone header. Web desktop: tap the refresh icon in
+   the left icon rail (the desktop browser has no header bar).
+3. Android: pull down on the job-title accordion list.
+**Expected:** On web the refresh icon spins while the re-pull is in flight; on android the pull-to-refresh
+spinner shows. The hierarchy re-fetches and the change from the other session appears without closing and
+reopening the app. The currently selected sector stays selected, and refreshing never clears the screen
+to the full-screen loading state — the current columns stay visible until the new data lands.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

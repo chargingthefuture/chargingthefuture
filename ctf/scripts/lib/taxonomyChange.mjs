@@ -148,6 +148,19 @@ export const TAXONOMY_CHANGES = [
   { id: 40, op: 'addOccupation', sector: 'Professional & Business Services', occupation: 'Financial Analysts / Accountants' },
   { id: 41, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Financial Analysts / Accountants', skill: 'Financial planning and budgeting' },
   { id: 42, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Financial Analysts / Accountants', skill: 'Financial modeling and cashflow management' },
+
+  // Changes 43-48 (owner-approved 2026-07-15): a taxonomy home for what invited members are already
+  // doing on Quora — arguing for humanity and justice, and helping others survive. New occupation
+  // "Advocates / Awareness Raisers" under Creative & Media, holding Advocacy (the baseline skill stamped
+  // on temporary invite/bare profiles — Directory and Skills Hunt each require at least one skill),
+  // Writing, Awareness raising, Storytelling, and Peer support. Additive; members swap the baseline once
+  // they claim. Applies on the next owner run of the seed-skills-taxonomy apply workflow.
+  { id: 43, op: 'addOccupation', sector: 'Creative & Media', occupation: 'Advocates / Awareness Raisers' },
+  { id: 44, op: 'addSkill', sector: 'Creative & Media', occupation: 'Advocates / Awareness Raisers', skill: 'Advocacy' },
+  { id: 45, op: 'addSkill', sector: 'Creative & Media', occupation: 'Advocates / Awareness Raisers', skill: 'Writing' },
+  { id: 46, op: 'addSkill', sector: 'Creative & Media', occupation: 'Advocates / Awareness Raisers', skill: 'Awareness raising' },
+  { id: 47, op: 'addSkill', sector: 'Creative & Media', occupation: 'Advocates / Awareness Raisers', skill: 'Storytelling' },
+  { id: 48, op: 'addSkill', sector: 'Creative & Media', occupation: 'Advocates / Awareness Raisers', skill: 'Peer support' },
 ];
 
 // ---------------------------------------------------------------------------

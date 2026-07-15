@@ -19,6 +19,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -115,21 +116,35 @@ export function AccountData() {
   const [rowError, setRowError] = useState<{ slug: string; message: string } | null>(null);
   const [tab, setTab] = useState<Tab>('data');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(() => {
-    setLoading(true);
+  // `background` skips the full-screen spinner so pull-to-refresh keeps the current content visible.
+  const load = useCallback((background = false) => {
+    if (!background) setLoading(true);
     setLoadError(false);
-    fetchAccountServices()
+    return fetchAccountServices()
       .then((data) => {
         setDeletable(data.deletable ?? []);
         setRetained(data.retained ?? []);
       })
       .catch(() => setLoadError(true))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!background) setLoading(false);
+      });
   }, []);
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // Pull-to-refresh: re-pull the service list without flashing the loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
   }, [load]);
 
   const remaining = useMemo(
@@ -177,7 +192,7 @@ export function AccountData() {
       <View style={[s.root, s.center]}>
         <Text style={s.errTitle}>We couldn&apos;t load your data</Text>
         <Text style={s.errSub}>Please try again.</Text>
-        <TouchableOpacity style={s.retryBtn} onPress={load} accessibilityRole="button">
+        <TouchableOpacity style={s.retryBtn} onPress={() => load()} accessibilityRole="button">
           <Text style={s.retryText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -242,7 +257,11 @@ export function AccountData() {
         </View>
       </View>
 
-      <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={brand} />}
+      >
         {tab === 'data' ? (
           isEmpty ? (
             <EmptyState s={s} hasRetained={retained.length > 0} />

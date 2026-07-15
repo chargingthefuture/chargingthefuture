@@ -10,6 +10,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Linking,
@@ -116,11 +117,15 @@ function SubmissionView({
   s,
   t,
   accent,
+  refreshing,
+  onRefresh,
 }: {
   onSubmitted: () => void;
   s: Styles;
   t: ThemeTokens;
   accent: string;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const [url, setUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -142,7 +147,11 @@ function SubmissionView({
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: 20 }}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: t.bg }}
+      contentContainerStyle={{ padding: 20 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
+    >
       <View style={s.header}>
         <Text style={s.headerTitle}>Unlock Full Access</Text>
         <Text style={s.headerSub}>Verify your Quora profile to get started</Text>
@@ -213,12 +222,16 @@ function StatusView({
   s,
   t,
   accent,
+  refreshing,
+  onRefresh,
 }: {
   status: UnlockStatus;
   onResubmitted: () => void;
   s: Styles;
   t: ThemeTokens;
   accent: string;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const display = toDisplayStatus(status.reviewStatus);
   const cfg = STATUS_CFG[display];
@@ -242,7 +255,11 @@ function StatusView({
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: 16 }}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: t.bg }}
+      contentContainerStyle={{ padding: 16 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
+    >
       <View style={[s.header, { marginBottom: 16 }]}>
         <Text style={s.headerTitle}>Verification Status</Text>
         <View style={[s.statusBadge, { backgroundColor: cfg.bg, borderColor: cfg.color + '50' }]}>
@@ -346,6 +363,18 @@ export const Unlock: React.FC<{
 
   useEffect(() => { void loadStatus(); }, [loadStatus]);
 
+  // Pull-to-refresh: re-pull the verification status. loadStatus never re-enters the
+  // full-screen loading view after the first load, so the current content stays visible.
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadStatus();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadStatus]);
+
   if (phase === 'loading') return <LoadingView s={s} t={tokens} />;
   if (phase === 'public') return <PublicView s={s} t={tokens} accent={accent} />;
   if (phase === 'submit')
@@ -355,6 +384,8 @@ export const Unlock: React.FC<{
         s={s}
         t={tokens}
         accent={accent}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
     );
   if (phase === 'status' && unlockStatus) {
@@ -365,6 +396,8 @@ export const Unlock: React.FC<{
         s={s}
         t={tokens}
         accent={accent}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
     );
   }

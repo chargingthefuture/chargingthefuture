@@ -56,9 +56,11 @@ export const ChymeRoom: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
   const [sending, setSending] = useState(false);
   const [tab, setTab] = useState<'live' | 'upcoming'>('live');
+  const [refreshing, setRefreshing] = useState(false);
 
-  const loadRoom = useCallback(async () => {
-    setViewState('loading');
+  // `background` skips the branded splash so pull-to-refresh keeps the room list visible.
+  const loadRoom = useCallback(async (background = false) => {
+    if (!background) setViewState('loading');
     try {
       const [roomPayload, msgPayload] = await Promise.all([getChymeRoom(), getChymeMessages()]);
       setRoom(roomPayload);
@@ -73,6 +75,16 @@ export const ChymeRoom: React.FC = () => {
 
   useEffect(() => {
     void loadRoom();
+  }, [loadRoom]);
+
+  // Pull-to-refresh on the room list: re-pull room data without flashing the splash.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadRoom(true);
+    } finally {
+      setRefreshing(false);
+    }
   }, [loadRoom]);
 
   const handleJoinRoom = useCallback(async () => {
@@ -126,7 +138,7 @@ export const ChymeRoom: React.FC = () => {
       <View style={styles.errorContainer}>
         <Text style={styles.errorTitle}>Unable to load Chyme</Text>
         <Text style={styles.errorMsg}>{errorMsg ?? 'An unexpected error occurred.'}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={loadRoom}>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => void loadRoom()}>
           <Text style={styles.retryBtnText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -188,6 +200,8 @@ export const ChymeRoom: React.FC = () => {
         onStartRoom={handleJoinRoom}
         tokens={tokens}
         accent={accent}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
     </View>
   );

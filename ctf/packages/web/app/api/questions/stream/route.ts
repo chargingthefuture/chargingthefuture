@@ -22,7 +22,19 @@ export async function POST() {
     if (!credentials) {
       return NextResponse.json({ ok: false, message: 'Stream service is not configured.' }, { status: 503 });
     }
-    return NextResponse.json({ ok: true, ...credentials }, { status: 200 });
+    // Return the exact field names the mobile client reads, rather than spreading `credentials`,
+    // so the response shape is guaranteed at this boundary and cannot silently drift to `undefined`
+    // if `getFeedStreamCredentials` ever changes its internal key names.
+    return NextResponse.json(
+      {
+        ok: true,
+        streamApiKey: credentials.streamApiKey,
+        streamUserId: credentials.streamUserId,
+        streamToken: credentials.streamToken,
+        streamChannelId: credentials.streamChannelId,
+      },
+      { status: 200 },
+    );
   } catch (error) {
     reportError(error, { area: 'feed', op: 'questions_stream' });
     return NextResponse.json({ ok: false, message: 'Unable to fetch Stream credentials.' }, { status: 500 });

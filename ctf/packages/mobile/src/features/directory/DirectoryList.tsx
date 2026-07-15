@@ -10,6 +10,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -388,9 +389,11 @@ export const DirectoryList = ({
   const [query, setQuery] = useState('');
   const [activeSectorId, setActiveSectorId] = useState<string | null>(null);
   const [selected, setSelected] = useState<DirectoryListItem | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (isRefresh = false) => {
+    // Pull-to-refresh keeps the current list on screen instead of flashing the loading state.
+    if (!isRefresh) setLoading(true);
     setError(null);
     try {
       const [listData, sectorData] = await Promise.all([
@@ -413,6 +416,16 @@ export const DirectoryList = ({
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  // Pull-to-refresh: re-pull profiles and sectors without flashing the loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
   }, [load]);
 
   if (selected) {
@@ -505,6 +518,7 @@ export const DirectoryList = ({
           keyExtractor={(item) => item.id}
           style={styles.list}
           contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={accent} />}
           renderItem={({ item }) => (
             <ProfileCard profile={item} onPress={() => setSelected(item)} />
           )}

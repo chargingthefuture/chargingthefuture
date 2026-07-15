@@ -6,7 +6,7 @@
 // Admin access is enforced server-side; a 401/403 surfaces an "admins only" notice.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
@@ -46,6 +46,7 @@ export const AdminUnlock = () => {
   const [reconciling, setReconciling] = useState(false);
   const [filter, setFilter] = useState<UnlockAdminQueueFilter>('pending');
   const [search, setSearch] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   // Client-side filter over the loaded page so an admin can find a submission by Quora URL, user id,
   // or submission number without scrolling the whole list.
@@ -61,10 +62,11 @@ export const AdminUnlock = () => {
     );
   }, [items, search]);
 
-  const load = useCallback(async () => {
+  // `background` skips the full-screen spinner so pull-to-refresh keeps the current queue visible.
+  const load = useCallback(async (background = false) => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setError(null);
-    setLoading(true);
+    if (!background) setLoading(true);
     const result = await fetchSubmissions(filter);
     if (result.forbidden) {
       setForbidden(true);
@@ -80,6 +82,16 @@ export const AdminUnlock = () => {
   useEffect(() => {
     if (!authLoading) void load();
   }, [authLoading, load]);
+
+  // Pull-to-refresh: re-pull the queue without flashing the loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   const runReview = useCallback(
     async (submissionId: number, reviewStatus: UnlockReviewDecision) => {
@@ -172,7 +184,11 @@ export const AdminUnlock = () => {
   }
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content}>
+    <ScrollView
+      style={s.screen}
+      contentContainerStyle={s.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
+    >
       <Text style={s.title}>Unlock Admin</Text>
       <Text style={s.subtitle}>
         Verification queue. Approve or reject pending Quora profile submissions. Rewards are issued

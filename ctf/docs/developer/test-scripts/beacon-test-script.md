@@ -162,6 +162,9 @@ viewer drift here rather than filing separate bugs.
 Carried from the inventory's "Gaps and Known Technical Debt" section at authoring time. If you hit
 one of these, it is already tracked, not a new bug:
 
+- Beacon has no manual refresh control (the app-wide refresh rollout deliberately skipped it): the
+  viewer already polls the current-event state every 15 seconds on web and android, so live/idle/replay
+  transitions appear on their own. Do not file a missing refresh button or pull-to-refresh as a bug.
 - The exact Stream `livestream` role/permission config for host vs viewer (Stream dashboard call-type
   setup) is documented alongside the build, not enforced by this script.
 - Whether anonymous viewers see the live chat read-only or just a "sign in to chat" panel — leaning

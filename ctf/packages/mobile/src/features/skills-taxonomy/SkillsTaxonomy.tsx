@@ -12,6 +12,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -232,9 +233,13 @@ function JobRow({
 function PopulatedScreen({
   sectors,
   totalSkills,
+  refreshing,
+  onRefresh,
 }: {
   sectors: TaxonomyHierarchySector[];
   totalSkills: number;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const { tokens, theme } = useTheme();
   const accent = getAppAccent('skills-taxonomy', theme);
@@ -325,7 +330,11 @@ function PopulatedScreen({
       />
 
       {/* Job title accordion */}
-      <ScrollView style={styles.accordionScroll} contentContainerStyle={styles.accordionContent}>
+      <ScrollView
+        style={styles.accordionScroll}
+        contentContainerStyle={styles.accordionContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
+      >
         {selectedSector && (
           <Text style={styles.sectorHeading}>
             {selectedSector.name} — {filteredJobTitles.length} job title
@@ -365,12 +374,6 @@ function PopulatedScreen({
           </View>
           <Text style={styles.navLabelInactive}>Search</Text>
         </View>
-        <View style={styles.navItem}>
-          <View style={styles.navIconInactive}>
-            <Text style={styles.navIconGlyph}>＋</Text>
-          </View>
-          <Text style={styles.navLabelInactive}>Add</Text>
-        </View>
       </View>
     </View>
   );
@@ -391,37 +394,48 @@ export function SkillsTaxonomy() {
   const [summary, setSummary] = useState<TaxonomySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Shared by the initial-load effect and pull-to-refresh; a refresh (isRefresh=true) re-pulls the
+  // taxonomy without flashing the full loading state.
+  const load = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    setError(null);
+    try {
+      if (isAuthenticated) {
+        // The hierarchy endpoint requires an authenticated caller.
+        const data = await SkillsTaxonomyApi.getHierarchy();
+        setSectors(data.items);
+      } else {
+        // Signed out: the hierarchy read is auth-gated, but the PUBLIC /summary endpoint
+        // returns live aggregate counts (sectors / job titles / skills) for the splash
+        // teaser without a token. Best-effort — on failure `summary` stays null and the
+        // splash shows neutral copy rather than zeros.
+        const s = await SkillsTaxonomyApi.getSummary();
+        setSummary(s);
+      }
+    } catch (e) {
+      if (isAuthenticated) {
+        setError(e instanceof Error ? e.message : 'Failed to load taxonomy.');
+      }
+    } finally {
+      if (!isRefresh) setLoading(false);
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        if (isAuthenticated) {
-          // The hierarchy endpoint requires an authenticated caller.
-          const data = await SkillsTaxonomyApi.getHierarchy();
-          if (!cancelled) setSectors(data.items);
-        } else {
-          // Signed out: the hierarchy read is auth-gated, but the PUBLIC /summary endpoint
-          // returns live aggregate counts (sectors / job titles / skills) for the splash
-          // teaser without a token. Best-effort — on failure `summary` stays null and the
-          // splash shows neutral copy rather than zeros.
-          const s = await SkillsTaxonomyApi.getSummary();
-          if (!cancelled) setSummary(s);
-        }
-      } catch (e) {
-        if (!cancelled && isAuthenticated) {
-          setError(e instanceof Error ? e.message : 'Failed to load taxonomy.');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated]);
+    void load();
+  }, [load]);
+
+  // Pull-to-refresh: re-pull the hierarchy without flashing the full loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   if (loading) {
     return <LoadingScreen />;
@@ -450,7 +464,14 @@ export function SkillsTaxonomy() {
     0,
   );
 
-  return <PopulatedScreen sectors={sectors} totalSkills={totalSkills} />;
+  return (
+    <PopulatedScreen
+      sectors={sectors}
+      totalSkills={totalSkills}
+      refreshing={refreshing}
+      onRefresh={() => void onRefresh()}
+    />
+  );
 }
 
 export default SkillsTaxonomy;

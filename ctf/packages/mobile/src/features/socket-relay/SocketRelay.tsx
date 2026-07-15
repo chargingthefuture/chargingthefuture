@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
+  RefreshControl,
   ScrollView,
   TouchableOpacity,
   TextInput,
@@ -67,6 +68,7 @@ export function SocketRelay() {
   const [reposting, setReposting] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState('All');
+  const [refreshing, setRefreshing] = useState(false);
 
   // Post form state (doubles as the edit form when editingId is set)
   const [postTitle, setPostTitle] = useState('');
@@ -83,10 +85,11 @@ export function SocketRelay() {
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
 
-  const loadFeed = useCallback(() => {
-    setLoading(true);
+  // background=true (pull-to-refresh) re-pulls without flashing the full loading state.
+  const loadFeed = useCallback((background = false) => {
+    if (!background) setLoading(true);
     setError(null);
-    Promise.all([
+    return Promise.all([
       listRequests(),
       // Ownership is derived from the my-requests list; ignore its failure so
       // the public feed still renders.
@@ -101,7 +104,9 @@ export function SocketRelay() {
         setMyRequestsFailed(mine === null);
       })
       .catch(() => setError('Failed to load requests.'))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!background) setLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -109,6 +114,16 @@ export function SocketRelay() {
       loadFeed();
     }
   }, [activeNav, loadFeed]);
+
+  // Pull-to-refresh: re-pull the feed without flashing the full loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadFeed(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadFeed]);
 
   const handleFulfill = async (requestId: string) => {
     if (helped.includes(requestId) || fulfilling === requestId) return;
@@ -220,7 +235,7 @@ export function SocketRelay() {
       return (
         <View style={styles.centeredMsg}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={loadFeed}>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => loadFeed()}>
             <Text style={styles.retryBtnText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -251,7 +266,11 @@ export function SocketRelay() {
       return `${r.title} ${r.details} ${r.city ?? ''}`.toLowerCase().includes(q);
     });
     return (
-      <ScrollView style={styles.feedScroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.feedScroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
+      >
         <View style={styles.feedPad}>
           <TextInput
             style={styles.searchInput}

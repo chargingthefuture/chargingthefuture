@@ -119,6 +119,20 @@ in "Your listings".
 Where applicable, a blocked pair cannot send a match request to each other.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### LH-7 · Refresh re-pulls listings without reopening the app
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open the LightHouse browse view, then in a second session change data that affects it (e.g. another
+   member lists a new place, or a match request lands).
+2. Web / mobile-responsive: tap the refresh icon in the header (desktop header right side; phone header
+   next to the top actions).
+3. Android: pull down on the listings list.
+**Expected:** On web the refresh icon spins while the re-pull is in flight; on android the pull-to-refresh
+spinner shows. The listings (and on web also matches and the currency catalog) re-fetch and the change
+from the other session appears without closing and reopening the app. Refreshing never clears the screen
+to the full-screen loading skeleton — the current list stays visible until the new data lands.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Admin walkthrough

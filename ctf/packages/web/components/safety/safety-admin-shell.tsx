@@ -48,7 +48,12 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const message =
       payload && typeof payload === 'object' && 'message' in payload ? payload.message : 'Request failed.';
-    throw new Error(typeof message === 'string' ? message : 'Request failed.');
+    // Defence in depth: this admin route returns controlled messages, but never render a raw server
+    // string unbounded — cap the length so an unexpected message (e.g. a leaked internal detail)
+    // cannot flood the UI verbatim.
+    const safeMessage =
+      typeof message === 'string' && message.trim() ? message.trim().slice(0, 300) : 'Request failed.';
+    throw new Error(safeMessage);
   }
   return payload as T;
 }
@@ -203,8 +208,9 @@ export function SafetyAdminShell() {
         {reports.map((report) => {
           const busy = busyId === report.id;
           const canAct = report.status === 'open';
-          // A repeat offender: more than one open report about the same reported member.
-          const isRepeat = report.openReportsAboutReported > 1;
+          // A repeat offender: at least one OTHER open report about the same reported member
+          // (openReportsAboutReported excludes this row, so > 0 means more than one open report).
+          const isRepeat = report.openReportsAboutReported > 0;
           return (
             <div key={report.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${isRepeat ? 'rgba(245,158,11,0.4)' : t.BORDER_SOLID}` }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -212,7 +218,7 @@ export function SafetyAdminShell() {
                 <span style={{ fontSize: 12, color: t.MUTED }}>{formatWhen(report.createdAtIso)}</span>
                 {isRepeat ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}>
-                    <AlertTriangle size={12} /> {report.openReportsAboutReported} open reports about this member
+                    <AlertTriangle size={12} /> {report.openReportsAboutReported} other open report{report.openReportsAboutReported === 1 ? '' : 's'} about this member
                   </span>
                 ) : null}
               </div>

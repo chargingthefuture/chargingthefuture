@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
 } from 'react-native';
@@ -76,32 +77,40 @@ export function Foundation() {
   const [offerError, setOfferError] = useState<string | null>(null);
   const [offerSavedMsg, setOfferSavedMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [searchResult, historyResult] = await Promise.all([
-          fetchProviders(query, page, skillFilter?.id ?? null),
-          fetchQuoteHistory(),
-        ]);
-        if (!cancelled) {
-          setProviders(searchResult.items);
-          setViewerUserId(searchResult.viewerUserId ?? null);
-          setQuotes(historyResult.items);
-        }
-      } catch (e: unknown) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Failed to load Foundation.');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  // Shared by the initial-load effect and pull-to-refresh; a refresh (isRefresh=true) re-pulls the
+  // providers and quotes without flashing the full loading state.
+  const load = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    setError(null);
+    try {
+      const [searchResult, historyResult] = await Promise.all([
+        fetchProviders(query, page, skillFilter?.id ?? null),
+        fetchQuoteHistory(),
+      ]);
+      setProviders(searchResult.items);
+      setViewerUserId(searchResult.viewerUserId ?? null);
+      setQuotes(historyResult.items);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load Foundation.');
+    } finally {
+      if (!isRefresh) setLoading(false);
     }
+  }, [query, page, skillFilter]);
+
+  useEffect(() => {
     void load();
-    return () => { cancelled = true; };
-  }, [query, page, skillFilter, reloadKey]);
+  }, [load, reloadKey]);
+
+  // Pull-to-refresh: re-pull providers and quotes without flashing the full loading state.
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   // Load the member's own Directory skills (with their offered flag) when the Offer-skills tab opens.
   useEffect(() => {
@@ -263,12 +272,13 @@ export function Foundation() {
             </View>
           ) : null}
           {providers.length === 0 ? (
-            <FoundationEmpty />
+            <FoundationEmpty activeSkill={Boolean(skillFilter)} searchActive={query.trim().length > 0} />
           ) : (
             <FlatList
               data={providers}
               keyExtractor={(item) => item.profileId}
               contentContainerStyle={styles.list}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={accent} />}
               renderItem={({ item }) => (
                 <FoundationProviderCard provider={item} onPress={setSelected} onFilterSkill={onFilterSkill} />
               )}
@@ -332,6 +342,7 @@ export function Foundation() {
           data={quotes}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={accent} />}
           ListEmptyComponent={
             <View style={styles.emptyQuotes}>
               <Text style={styles.emptyQuotesTitle}>No quotes yet</Text>

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -221,6 +222,7 @@ export const ComicReviewDashboard = () => {
   // selection for the item being resolved (reset when the selected item changes).
   const [plugins, setPlugins] = useState<ComicPluginOption[]>([]);
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -244,6 +246,17 @@ export const ComicReviewDashboard = () => {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // Pull-to-refresh: re-pull the queue in the background (load only shows the full-screen
+  // spinner on the initial mount, so the current queue stays visible while it re-pulls).
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
   }, [load]);
 
   const selected = useMemo(
@@ -392,7 +405,11 @@ export const ComicReviewDashboard = () => {
         })}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={s.detail} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={s.detail}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT} />}
+      >
         <View style={s.detailMeta}>
           <Text style={s.detailAsker}>{selected.askedByUsername ? `@${selected.askedByUsername}` : shortAsker(selected.askedByUserId)}</Text>
           <Text style={s.detailTime}>{formatTime(selected.createdAtIso)}</Text>

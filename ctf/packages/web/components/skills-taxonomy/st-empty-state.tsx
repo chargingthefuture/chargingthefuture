@@ -12,7 +12,7 @@ const LEVELS = [
   { icon: Layers, label: "Skills", desc: "Competencies per role" },
 ];
 
-export function SkillsTaxonomyEmptyState({ isAdmin }: { isAdmin: boolean }) {
+export function SkillsTaxonomyEmptyState() {
   const { theme } = useTheme();
   const t = getSkillsTaxonomyTokens(theme);
   return (
@@ -33,9 +33,7 @@ export function SkillsTaxonomyEmptyState({ isAdmin }: { isAdmin: boolean }) {
           <div>
             <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE, marginBottom: 10 }}>No taxonomy data yet</div>
             <div style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.7 }}>
-              The skills taxonomy hasn&apos;t been populated. {isAdmin
-                ? "Add the first sector to begin building the 3-level hierarchy."
-                : "An admin needs to add the first sector to begin building the 3-level hierarchy."}
+              The skills taxonomy hasn&apos;t been populated yet.
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: 360 }}>
@@ -49,11 +47,6 @@ export function SkillsTaxonomyEmptyState({ isAdmin }: { isAdmin: boolean }) {
               </div>
             ))}
           </div>
-          {isAdmin && (
-            <a href="/admin/skills-taxonomy" style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: 12, background: t.ACCENT, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", textDecoration: "none" }}>
-              Manage taxonomy
-            </a>
-          )}
         </div>
       </div>
     </div>
