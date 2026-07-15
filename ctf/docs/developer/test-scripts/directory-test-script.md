@@ -121,7 +121,9 @@ case is **blocked** — there is no member self-edit screen yet.
    top header.
 2. If the directory is empty and unfiltered, confirm the empty state also shows an **"Add my profile"**
    button and reads "The directory has no listed profiles yet…". Confirm there is no lone dashed
-   category tile, and no "trauma-informed" / "background-verified" wording.
+   category tile, and no "trauma-informed" / "background-verified" wording. Confirm the sector filter
+   chips (e.g. "Technology") are **hidden** while the directory is empty and unfiltered — they reappear
+   once a provider is listed or a filter/search is active.
 3. Press "Add my profile". Confirm the modal title is **"Create my profile"** and the submit button
    reads **"Create profile"**.
 4. Fill a first name (required) and save.

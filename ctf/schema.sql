@@ -5275,6 +5275,34 @@ CREATE INDEX IF NOT EXISTS member_safety_reports_status_idx
 CREATE INDEX IF NOT EXISTS member_safety_reports_reported_user_idx
   ON member_safety_reports (reported_user_id);
 
+-- safety_admin_audit_trail: an append-only record of admin moderation decisions on safety reports.
+-- Marking a report reviewed or dismissed is an irreversible moderation action, so each one writes an
+-- audit row here in addition to stamping reviewed_at / reviewed_by_user_id on the report itself. This
+-- mirrors the per-plugin *_admin_audit_trail tables (e.g. service_credits_admin_audit_trail) so the
+-- safety queue has the same durable, admin-visible trail. Rows are never updated or deleted.
+CREATE TABLE IF NOT EXISTS safety_admin_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS safety_admin_audit_trail ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS safety_admin_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS safety_admin_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS safety_admin_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS safety_admin_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS safety_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS safety_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS safety_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS safety_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS safety_admin_audit_trail_target_idx
+  ON safety_admin_audit_trail (target_type, target_id, created_at DESC);
+
 -- === recurring_activities (Recurring Activity plugin; issue #885) =================================
 -- A member's self-declared, counterparty-confirmed ONGOING activity with one other member — the way
 -- the platform captures recurring peer relationships (rent, an ongoing service, a standing favor)
