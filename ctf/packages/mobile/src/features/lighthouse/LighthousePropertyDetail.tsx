@@ -10,11 +10,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
 import type { LighthouseProperty } from './types';
 import { acceptedCurrencyLabels, formatRentParts, type CurrencyMap } from './currency';
+import { LighthouseRequestToStay } from './LighthouseRequestToStay';
 
 interface Props {
   property: LighthouseProperty;
   currencies: CurrencyMap;
   onBack: () => void;
+  // The signed-in member's user id, so the seeker "Request to stay" action is hidden on the
+  // member's own listing. Optional so the detail still renders where it is not supplied.
+  currentUserId?: string | null;
+  // Called when the member has no active seeker profile yet, so the parent can switch to the
+  // "Your details" tab.
+  onNeedsProfile?: () => void;
 }
 
 function formatBeds(bedrooms: number | null): string {
@@ -49,10 +56,11 @@ const HouseRuleRow: React.FC<{ rule: string }> = ({ rule }) => {
   return <Text style={styles.ruleText}>• {rule}</Text>;
 };
 
-export const LighthousePropertyDetail: React.FC<Props> = ({ property, currencies, onBack }) => {
+export const LighthousePropertyDetail: React.FC<Props> = ({ property, currencies, onBack, currentUserId, onNeedsProfile }) => {
   const { theme, tokens } = useTheme();
   const accent = getAppAccent('lighthouse', theme);
   const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  const isOwn = !!currentUserId && property.hostUserId === currentUserId;
   const location = [property.city, property.state, property.country]
     .filter(Boolean)
     .join(', ');
@@ -129,6 +137,9 @@ export const LighthousePropertyDetail: React.FC<Props> = ({ property, currencies
                 </View>
               ) : null}
             </View>
+          ) : null}
+          {!isOwn ? (
+            <LighthouseRequestToStay propertyId={property.id} onNeedsProfile={onNeedsProfile} />
           ) : null}
           {property.amenities.length > 0 ? (
             <View style={styles.section}>
