@@ -15,7 +15,7 @@ import { SkillsTaxonomySkillsDetail } from "./st-skills-detail";
 import { SkillsTaxonomyEmptyState } from "./st-empty-state";
 import { SkillsTaxonomyLoading } from "./st-loading";
 
-export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
+export function SkillsTaxonomyBrowser() {
   const [sectors, setSectors] = useState<StSector[]>([]);
   const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
   const [selectedJobTitleId, setSelectedJobTitleId] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
   }, [selectedJobTitle, search]);
 
   if (loading) return <SkillsTaxonomyLoading />;
-  if (!error && sectors.length === 0) return <SkillsTaxonomyEmptyState isAdmin={isAdmin} />;
+  if (!error && sectors.length === 0) return <SkillsTaxonomyEmptyState />;
 
   // Phones can't fit three columns side by side, so the hierarchy becomes a
   // drill-down: sectors → job titles → skills, one level at a time with a
@@ -92,14 +92,12 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
             sectors={sectors}
             selectedSectorId={selectedSectorId}
             onSelect={(id) => { setSelectedSectorId(id); setSelectedJobTitleId(null); setSearch(""); setMobileView("titles"); }}
-            isAdmin={isAdmin}
           />
         ) : mobileView === "titles" ? (
           <SkillsTaxonomyTitlesColumn
             sector={selectedSector}
             selectedJobTitleId={selectedJobTitleId}
             onSelect={(id) => { setSelectedJobTitleId(id); setSearch(""); setMobileView("skills"); }}
-            isAdmin={isAdmin}
           />
         ) : (
           <SkillsTaxonomySkillsDetail
@@ -108,7 +106,6 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
             skills={visibleSkills}
             search={search}
             onSearch={setSearch}
-            isAdmin={isAdmin}
           />
         )}
       </div>
@@ -122,13 +119,11 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
         sectors={sectors}
         selectedSectorId={selectedSectorId}
         onSelect={(id) => { setSelectedSectorId(id); setSelectedJobTitleId(null); setSearch(""); }}
-        isAdmin={isAdmin}
       />
       <SkillsTaxonomyTitlesColumn
         sector={selectedSector}
         selectedJobTitleId={selectedJobTitleId}
         onSelect={(id) => { setSelectedJobTitleId(id); setSearch(""); }}
-        isAdmin={isAdmin}
       />
       {error ? (
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#F87171", fontSize: 14 }}>{error}</div>
@@ -139,7 +134,6 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
           skills={visibleSkills}
           search={search}
           onSearch={setSearch}
-          isAdmin={isAdmin}
         />
       )}
     </div>

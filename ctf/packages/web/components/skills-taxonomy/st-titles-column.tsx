@@ -1,6 +1,6 @@
 "use client";
 
-import { Briefcase, Plus } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { countLabel, getSkillsTaxonomyTokens, type StJobTitle, type StSector } from "./st-shared";
@@ -9,12 +9,10 @@ export function SkillsTaxonomyTitlesColumn({
   sector,
   selectedJobTitleId,
   onSelect,
-  isAdmin,
 }: {
   sector: StSector | null;
   selectedJobTitleId: string | null;
   onSelect: (jobTitleId: string) => void;
-  isAdmin: boolean;
 }) {
   const jobTitles: StJobTitle[] = sector?.jobTitles ?? [];
   const isMobile = useIsMobile();
@@ -22,14 +20,9 @@ export function SkillsTaxonomyTitlesColumn({
   const t = getSkillsTaxonomyTokens(theme);
   return (
     <aside style={{ width: isMobile ? "100%" : 260, background: t.HEADER, borderRight: isMobile ? "none" : `1px solid ${t.BORDER_SOLID}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
-      <div style={{ padding: "20px 16px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>Job Titles</div>
-          <div style={{ fontSize: 11, color: t.MUTED }}>{sector ? `${sector.name} sector` : "Select a sector"}</div>
-        </div>
-        {isAdmin && sector && (
-          <a href="/admin/skills-taxonomy" title="Manage taxonomy" style={{ width: 28, height: 28, borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none" }}><Plus size={14} /></a>
-        )}
+      <div style={{ padding: "20px 16px 12px" }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>Job Titles</div>
+        <div style={{ fontSize: 11, color: t.MUTED }}>{sector ? `${sector.name} sector` : "Select a sector"}</div>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 12px" }}>
         {!sector ? (
