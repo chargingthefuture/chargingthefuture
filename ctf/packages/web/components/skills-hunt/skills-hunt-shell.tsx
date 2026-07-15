@@ -261,12 +261,13 @@ export function SkillsHuntShell({
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
             <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}1A`, border: `1px solid ${t.ACCENT}40`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
             <Search size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>SkillsHunt</span>
+            {/* Title shrinks and truncates so the trailing controls stay on screen */}
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>SkillsHunt</span>
             <PluginAdminButton href="/admin/skills-hunt" isAdmin={showModeratorTools} accent={t.ACCENT} />
             <button type="button" onClick={() => setNotifOpen((o) => !o)} aria-label="Status" style={{ position: "relative", width: 38, height: 38, borderRadius: 10, background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, color: t.SUBTLE, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
               <Bell size={18} />

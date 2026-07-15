@@ -370,12 +370,13 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     return (
       <div className="ctf-self-responsive" style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ background: t.HEADER, borderBottom: `1px solid ${t.BORDER}`, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px' }}>
             <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.ACCENT, textDecoration: 'none', flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
             <BarChart2 size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Workforce</span>
+            {/* Title shrinks and truncates so the trailing controls stay on screen */}
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Workforce</span>
             <PluginAdminButton href="/admin/workforce" isAdmin={isAdmin} accent={t.ACCENT} />
             <RefreshButton onRefresh={() => fetchAll(false)} title="Refresh" />
             <MobileTopActions />

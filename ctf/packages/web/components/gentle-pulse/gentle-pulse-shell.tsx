@@ -137,7 +137,8 @@ export function GentlePulseShell() {
               <ChevronLeft size={20} />
             </Link>
             <Heart size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>GentlePulse</span>
+            {/* Title shrinks and truncates so the trailing controls stay on screen */}
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>GentlePulse</span>
             <RefreshButton onRefresh={() => fetchLibrary()} title="Refresh" />
             <MobileTopActions />
           </div>
