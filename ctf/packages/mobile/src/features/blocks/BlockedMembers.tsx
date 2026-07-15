@@ -9,6 +9,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -35,10 +36,12 @@ export function BlockedMembers() {
   const [blocks, setBlocks] = useState<BlockedMember[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(() => {
-    setLoadState('loading');
-    fetchBlockedMembers()
+  // `background` skips the full-screen spinner so pull-to-refresh keeps the current list visible.
+  const load = useCallback((background = false) => {
+    if (!background) setLoadState('loading');
+    return fetchBlockedMembers()
       .then((rows) => {
         setBlocks(rows);
         setLoadState('ready');
@@ -48,6 +51,16 @@ export function BlockedMembers() {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // Pull-to-refresh: re-pull the block list without flashing the loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
   }, [load]);
 
   const handleUnblock = useCallback(async (member: BlockedMember) => {
@@ -81,7 +94,7 @@ export function BlockedMembers() {
       <View style={[s.root, s.center]}>
         <Text style={s.errTitle}>We couldn&apos;t load your blocked members</Text>
         <Text style={s.errSub}>Please try again.</Text>
-        <TouchableOpacity style={s.retryBtn} onPress={load} accessibilityRole="button">
+        <TouchableOpacity style={s.retryBtn} onPress={() => load()} accessibilityRole="button">
           <Text style={s.retryText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -102,7 +115,11 @@ export function BlockedMembers() {
         </View>
       </View>
 
-      <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={brand} />}
+      >
         <Text style={s.intro}>
           People you&apos;ve blocked can&apos;t see or contact you, and they&apos;re never told.
           Unblock someone here to let them see and reach you again.

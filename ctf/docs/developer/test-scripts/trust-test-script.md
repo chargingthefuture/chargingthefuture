@@ -375,6 +375,27 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 ---
 
+### TR-A18 — Android pull-to-refresh on the Trust screen
+
+**Role:** Admin  
+**Surfaces:** Android  
+**Precondition:** Seed complete. Admin signed in on the device; Trust screen showing the empty or populated state.
+
+**Steps:**
+1. Open the Trust screen and wait for the empty or populated state to render.
+2. Drag the content down and release.
+3. While the refresh runs, watch the screen content.
+
+**Expected:**
+- A refresh spinner appears at the top and `GET /api/trust/user/self` is re-pulled.
+- The branded loading screen does **not** flash — the current content stays visible until the fresh data lands.
+- The spinner stops when the pull completes, including on a failed request.
+- Newly seeded evidence (e.g. after re-running TR-A8) appears after the pull without leaving the screen.
+
+**Result:** android ☐
+
+---
+
 ## Parity check (web ↔ android)
 
 The following cases must produce consistent data across surfaces since both read from the same API:

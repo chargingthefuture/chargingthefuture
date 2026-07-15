@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -160,6 +161,7 @@ export const FeedStream = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadComic = useCallback(async () => {
     try {
@@ -171,9 +173,10 @@ export const FeedStream = () => {
     }
   }, []);
 
+  // `background` skips the full-screen loading state so pull-to-refresh keeps the current feed visible.
   const load = useCallback(
-    async (ch: FeedChannel) => {
-      setLoading(true);
+    async (ch: FeedChannel, background = false) => {
+      if (!background) setLoading(true);
       setError(null);
       try {
         const data = await fetchFeedTimeline(ch);
@@ -181,7 +184,7 @@ export const FeedStream = () => {
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Unable to load feed.');
       } finally {
-        setLoading(false);
+        if (!background) setLoading(false);
       }
       await loadComic();
     },
@@ -191,6 +194,16 @@ export const FeedStream = () => {
   useEffect(() => {
     load(channel);
   }, [channel, load]);
+
+  // Pull-to-refresh: re-pull the current channel without flashing the loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(channel, true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load, channel]);
 
   const handleRead = useCallback(
     async (id: string) => {
@@ -309,6 +322,7 @@ export const FeedStream = () => {
           }}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLOR} />}
         />
       )}
 

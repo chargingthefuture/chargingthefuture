@@ -14,6 +14,7 @@
  */
 import React, { useMemo } from 'react';
 import {
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -38,6 +39,8 @@ type Props = {
   onStartRoom: () => void;
   tokens: ThemeTokens;
   accent: string;
+  refreshing: boolean;
+  onRefresh: () => void;
 };
 
 export const ChymeRoomList: React.FC<Props> = ({
@@ -48,6 +51,8 @@ export const ChymeRoomList: React.FC<Props> = ({
   onStartRoom,
   tokens,
   accent,
+  refreshing,
+  onRefresh,
 }) => {
   const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
@@ -106,7 +111,11 @@ export const ChymeRoomList: React.FC<Props> = ({
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+      <ScrollView
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
+      >
         {tab === 'live' ? (
           <TouchableOpacity style={styles.roomCard} onPress={onJoinRoom}>
             <View style={styles.roomCardHeader}>

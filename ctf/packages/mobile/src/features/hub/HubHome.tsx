@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -278,6 +279,18 @@ export const HubHome = () => {
     }
   }, [mergeMessages]);
 
+  // Pull-to-refresh: re-pull messages in the background (load only shows the full-screen
+  // spinner on the initial mount, so the current chat stays visible while it re-pulls).
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
+
   // A live Stream `message.new` event must always call the freshest `load` without resubscribing
   // each time the callback identity changes, so keep the latest reference in a ref.
   const loadRef = useRef(load);
@@ -486,6 +499,7 @@ export const HubHome = () => {
           )}
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={hubAccent} />}
         />
       )}
 
