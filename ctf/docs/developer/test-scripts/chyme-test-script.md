@@ -142,6 +142,21 @@ audio room connect normally.
 
 ---
 
+### CH-9 · Pull-to-refresh on the room list (android)
+**Role:** member · **Surfaces:** android
+**Precondition:** signed in on the device; the room list is showing (at least one participant in the room).
+**Steps:**
+1. Open the Chyme screen and wait for the room list to render.
+2. Drag the room card list down and release.
+3. While the refresh runs, watch the screen content.
+**Expected:** A refresh spinner appears at the top of the list and the room data (participant count,
+live state) re-pulls from `GET /api/chyme/room`. The branded loading splash does **not** flash — the
+current room list stays visible until the fresh data lands. The spinner stops when the pull completes,
+including on a failed request.
+**Result:** android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 Chyme has no plugin-specific admin UI in this build. Room/chat/join access is gated by the shared

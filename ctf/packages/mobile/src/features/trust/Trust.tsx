@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -73,12 +74,24 @@ function TrustPublicView() {
 // ── Empty state ───────────────────────────────────────────────────────────────
 // Authenticated user with no evidence yet.
 
-function TrustEmptyView({ visibility }: { visibility: string }) {
+function TrustEmptyView({
+  visibility,
+  refreshing,
+  onRefresh,
+}: {
+  visibility: string;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
   const { tokens, theme } = useTheme();
   const brand = getAppAccent('trust', theme);
   const styles = useMemo(() => makeStyles(tokens, brand), [tokens, brand]);
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.scrollContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={brand} />}
+    >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -142,14 +155,26 @@ function TrustEmptyView({ visibility }: { visibility: string }) {
 
 // ── Main (populated) state ────────────────────────────────────────────────────
 
-function TrustMainView({ trust }: { trust: TrustUserExtension }) {
+function TrustMainView({
+  trust,
+  refreshing,
+  onRefresh,
+}: {
+  trust: TrustUserExtension;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
   const { tokens, theme } = useTheme();
   const brand = getAppAccent('trust', theme);
   const styles = useMemo(() => makeStyles(tokens, brand), [tokens, brand]);
   const visibility = trust.trustVisibility;
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.scrollContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={brand} />}
+    >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -209,34 +234,42 @@ export const Trust: React.FC = () => {
   const [trust, setTrust] = useState<TrustUserExtension | null>(null);
   const [unauthenticated, setUnauthenticated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // `background` skips the branded loading screen so pull-to-refresh keeps the content visible.
+  const load = useCallback(async (background = false) => {
+    if (!background) setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchTrustSelf();
+      setTrust(data);
+      setUnauthenticated(false);
+    } catch (err) {
+      // Treat auth errors as unauthenticated/public view
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('401') || msg.includes('403') || msg.includes('Unauthorized')) {
+        setUnauthenticated(true);
+      } else {
+        setError(msg);
+      }
+    } finally {
+      if (!background) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    fetchTrustSelf()
-      .then((data) => {
-        if (!cancelled) {
-          setTrust(data);
-          setLoading(false);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          // Treat auth errors as unauthenticated/public view
-          const msg = err instanceof Error ? err.message : String(err);
-          if (msg.includes('401') || msg.includes('403') || msg.includes('Unauthorized')) {
-            setUnauthenticated(true);
-          } else {
-            setError(msg);
-          }
-          setLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    load();
+  }, [load]);
+
+  // Pull-to-refresh: re-pull trust data without flashing the loading state.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   if (loading) return <TrustLoadingView />;
   if (unauthenticated) return <TrustPublicView />;
@@ -247,14 +280,7 @@ export const Trust: React.FC = () => {
         <TouchableOpacity
           style={styles.retryBtn}
           onPress={() => {
-            setError(null);
-            setLoading(true);
-            fetchTrustSelf()
-              .then((data) => { setTrust(data); setLoading(false); })
-              .catch((e: unknown) => {
-                setError(e instanceof Error ? e.message : String(e));
-                setLoading(false);
-              });
+            void load();
           }}
         >
           <Text style={styles.retryText}>Retry</Text>
@@ -263,9 +289,15 @@ export const Trust: React.FC = () => {
     );
   }
   if (!trust || trust.trustEvidence.length === 0) {
-    return <TrustEmptyView visibility={trust?.trustVisibility ?? 'public'} />;
+    return (
+      <TrustEmptyView
+        visibility={trust?.trustVisibility ?? 'public'}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+      />
+    );
   }
-  return <TrustMainView trust={trust} />;
+  return <TrustMainView trust={trust} refreshing={refreshing} onRefresh={onRefresh} />;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -180,6 +180,23 @@ Clearing the box restores the full list. Search filters the already-loaded page.
 
 ---
 
+### UNLOCK-A7 · Android pull-to-refresh (member screen + admin queue)
+**Role:** member, then admin / reviewer · **Surfaces:** android (Unlock + Unlock Admin)
+**Precondition:** signed in on the device; the member has a submission (any status), and the admin
+queue has at least one row.
+**Steps:**
+1. As a member, open the Unlock screen (submission form or status view) and drag the content down.
+2. Have the reviewer change the submission's status on web, then pull down again on the device.
+3. As an admin, open Unlock Admin, drag the queue down, and watch the list while it refreshes.
+**Expected:** On both screens a refresh spinner appears at the top and the data re-pulls
+(`GET /api/unlock/status` for the member screen; `GET /api/unlock/admin/submissions` for the queue).
+The full-screen loading state does **not** flash — the current content stays visible until the fresh
+data lands, then the member screen reflects the new review status. The spinner stops when the pull
+completes, including on a failed request.
+**Result:** android ☐ — notes:
+
+---
+
 ## Parity check (web ↔ android)
 
 The internal verification **queue** is admin-only, so there is no web ↔ android parity row for it.
