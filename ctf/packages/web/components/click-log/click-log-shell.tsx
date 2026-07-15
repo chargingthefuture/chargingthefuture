@@ -190,8 +190,9 @@ export function ClickLogShell() {
             </Link>
             <AlertTriangle size={18} color={t.ACCENT} style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Incident Log</div>
-              <div style={{ fontSize: 11, color: t.MUTED }}>{displayTotal} incidents total</div>
+              {/* Title and subtitle truncate so the trailing controls stay on screen */}
+              <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Incident Log</div>
+              <div style={{ fontSize: 11, color: t.MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayTotal} incidents total</div>
             </div>
             <RefreshButton onRefresh={() => fetchIncidents()} title="Refresh incidents" />
             <MobileTopActions />

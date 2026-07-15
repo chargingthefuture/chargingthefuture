@@ -382,10 +382,11 @@ function MobileFrame({ t, children, tab, onTab, onRefresh }: { t: ContributionsT
           <div style={{ width: 26, height: 26, borderRadius: 7, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Gift size={13} color="#fff" />
           </div>
-          <span style={{ fontSize: 17, fontWeight: 700, color: t.TITLE, flex: 1 }}>Contributions</span>
+          {/* Title shrinks and truncates so the refresh control stays on screen */}
+          <span style={{ fontSize: 17, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Contributions</span>
           {onRefresh ? <RefreshButton onRefresh={onRefresh} title="Refresh" /> : null}
         </div>
-        <div style={{ fontSize: 12, color: t.MUTED }}>Community support drive</div>
+        <div style={{ fontSize: 12, color: t.MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Community support drive</div>
       </div>
       {tab && onTab && (
         <div style={{ display: 'flex', borderBottom: `1px solid ${t.BORDER_SOLID}`, flexShrink: 0 }}>

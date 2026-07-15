@@ -73,7 +73,8 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
             <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Skills Taxonomy</span>
+            {/* Title shrinks and truncates so the trailing controls stay on screen */}
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Skills Taxonomy</span>
             <RefreshButton onRefresh={() => load()} title="Refresh" />
             <MobileTopActions />
           </div>
