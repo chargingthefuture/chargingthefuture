@@ -228,6 +228,11 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
 
   const sectorFilters = ["All", ...sectors.map((s) => s.name)];
   const isFiltered = activeFilter !== "All" || query.trim().length > 0;
+  // Sector chips come from the whole skills taxonomy, not from who is actually listed, so a genuinely
+  // empty, unfiltered directory would show a lone "Technology" chip with nothing behind it. Only show
+  // the sector filters when there is something to filter — a filter is active, results are still
+  // loading, or at least one provider is listed.
+  const showSectorFilters = isFiltered || loadingMembers || members.length > 0;
 
   function clearFilters() {
     setActiveFilter("All");
@@ -327,11 +332,13 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
               <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: t.FAINT }} />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search providers…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }} />
             </div>
-            <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
-              {sectorFilters.map((f) => (
-                <button key={f} onClick={() => setActiveFilter(f)} style={{ whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 14, background: activeFilter === f ? `${t.ACCENT}14` : "transparent", border: `1px solid ${activeFilter === f ? t.ACCENT + "50" : t.BORDER_HI}`, color: activeFilter === f ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{f}</button>
-              ))}
-            </div>
+            {showSectorFilters && (
+              <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
+                {sectorFilters.map((f) => (
+                  <button key={f} onClick={() => setActiveFilter(f)} style={{ whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 14, background: activeFilter === f ? `${t.ACCENT}14` : "transparent", border: `1px solid ${activeFilter === f ? t.ACCENT + "50" : t.BORDER_HI}`, color: activeFilter === f ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{f}</button>
+                ))}
+              </div>
+            )}
             <button onClick={() => setShowProfileEditor(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 12px", borderRadius: 8, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
               {hasOwnProfile ? <Pencil size={14} /> : <UserPlus size={14} />} {profileButtonLabel}
             </button>
@@ -372,7 +379,7 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
         </div>
         <ScrollArea style={{ flex: 1 }}>
           <div style={{ padding: "0 8px 16px" }}>
-            {sectorFilters.map((f) => (
+            {showSectorFilters && sectorFilters.map((f) => (
               <div key={f} role="button" tabIndex={0} onClick={() => setActiveFilter(f)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveFilter(f); } }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "pointer", background: activeFilter === f ? `${t.ACCENT}18` : "transparent", borderLeft: activeFilter === f ? `2px solid ${t.ACCENT}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
                 <span style={{ fontSize: 13, color: activeFilter === f ? t.TEXT : t.SUBTLE, flex: 1 }}>{f}</span>
               </div>
