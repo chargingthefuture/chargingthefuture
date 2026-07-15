@@ -235,16 +235,17 @@ function RequestToStay({
 
   return (
     <div>
-      <label style={labelStyle}>Message to the host (optional)</label>
+      <label htmlFor="lighthouse-request-message" style={labelStyle}>Message to the host (optional)</label>
       <textarea
+        id="lighthouse-request-message"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         rows={3}
         placeholder="Introduce yourself and why this place fits."
         style={{ ...inputStyle, resize: "vertical", marginBottom: 10 }}
       />
-      <label style={labelStyle}>Preferred move-in date (optional)</label>
-      <input type="date" value={moveInDate} onChange={(e) => setMoveInDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+      <label htmlFor="lighthouse-request-movein" style={labelStyle}>Preferred move-in date (optional)</label>
+      <input id="lighthouse-request-movein" type="date" value={moveInDate} onChange={(e) => setMoveInDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
       {error ? <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 10 }}>{error}</div> : null}
       <button
         onClick={() => void submit()}
