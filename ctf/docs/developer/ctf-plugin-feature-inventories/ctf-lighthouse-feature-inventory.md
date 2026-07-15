@@ -40,12 +40,15 @@ longer a precondition for browsing, hosting, or matching.
 5. **Seeker self-service screen (2026-07-14).** A "Your details" tab
    (`lighthouse-seeker-profile.tsx`, reached from the icon rail on desktop and the mobile tab bar)
    lets a member fill and save the seeker preference fields above via `POST /api/lighthouse/profile`
-   (`x-ctf-csrf: '1'`). It is still **not** a gate for browsing or hosting, but an **active seeker
-   profile is required to request a stay** (the match endpoint denies otherwise), so the "Request to
-   stay" action points members here when they have none. A member who has listed a place is a host;
-   the profile type is locked server-side (a host cannot also be a seeker), so for a host this screen
-   explains that hosting and seeking are separate accounts rather than showing a form the endpoint
-   would deny with `policy_denied`.
+   (`x-ctf-csrf: '1'`). It is **not** a gate for browsing or hosting, but requesting a stay needs an
+   **active** profile, so the "Request to stay" action points a member with none here.
+6. **A member can be both a host and a seeker (owner decision, 2026-07-14).** Hosting and requesting
+   stays are NOT mutually exclusive and are not separate accounts. A member who has listed a place can
+   also fill in the "Your details" form and request stays. The profile row is no longer type-locked:
+   saving seeker details on a host account keeps the member's host flag (`has_property` is sticky) and
+   does not relabel their `profile_type`, and the match endpoint only requires an **active** profile
+   (not `profile_type = 'seeker'`). A member still cannot request a stay on their own listing (UI hides
+   the action; the endpoint is the backstop).
 
 ### 1.3 Property Browse and Detail
 
@@ -55,7 +58,7 @@ longer a precondition for browsing, hosting, or matching.
 4. Detail view includes host reference metadata and listing details.
 5. Seeker "Request to stay" action from the detail view is **implemented on web and Android**
    (2026-07-14): it posts `POST /api/lighthouse/matches` with an optional message and preferred
-   move-in date. A member with no active seeker profile is routed to the "Your details" screen first;
+   move-in date. A member with no active profile is routed to the "Your details" screen first;
    duplicate and blocked cases are shown inline. The action is hidden on the member's own listing.
 6. Duplicate active/pending match-request prevention remains required.
 
@@ -263,6 +266,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-07-14: **A member can be both a host and a seeker (owner decision — reverses the same-day host/seeker exclusivity).** No schema, route, or contract change. The 2026-07-14 seeker flow shipped a rule that a host account could not also request stays ("hosting and seeking are separate accounts; ask an admin to switch your role"); the owner did not approve that for v3. Removed it end to end: `upsertProfile` no longer throws `policy_denied` on a profile-type change — for a non-admin it now **keeps** the existing `profile_type` (so saving seeker details on a host account does not relabel it) and makes `has_property` sticky (`has_property = existing OR incoming`) so it is never cleared; `createMatchRequest` now requires only an **active** profile, not `profile_type = 'seeker'`, so a host can request stays; and the "Your details" screen (web `lighthouse-seeker-profile.tsx` + mobile `LighthouseSeekerProfile.tsx`) always shows the editable form instead of the "this account hosts, so it can't also request stays" notice. Added a server-side self-match backstop (a member cannot request a stay on their own listing).
 - 2026-07-14: **Android (React Native) parity for the seeker flow.** No schema, route, or contract change; existing endpoints only. Mirrors the web seeker flow shipped the same day onto `packages/mobile/src/features/lighthouse`: a "Your details" tab (`LighthouseSeekerProfile.tsx`, added to `LighthouseTabs.tsx`) sets the seeker profile, and a "Request to stay" action (`LighthouseRequestToStay.tsx`, rendered by `LighthousePropertyDetail.tsx` for non-owners) creates the match request. `LighthouseScreen.tsx` passes the signed-in `currentUserId` (so the action is hidden on the member's own listing) and switches to the "Your details" tab when the endpoint reports no seeker profile (`policy_denied`). New API client methods `fetchProfile`, `upsertSeekerProfile`, and `createMatchRequest` (`api.ts`) bind `GET/POST /api/lighthouse/profile` and `POST /api/lighthouse/matches` with `x-ctf-csrf: '1'`; a host who tries to save a seeker profile sees the same "hosting and seeking are separate" notice as web. This closes the parity follow-up noted in the web entry below.
 - 2026-07-14: **Wired the member seeker flow — seeker profile screen + "Request to stay" (web + mobile-responsive).** No schema, route, or contract change; existing endpoints only. Two member-facing endpoints had no UI and were unreachable: `GET/POST/PUT/DELETE /api/lighthouse/profile` (the seeker/host preference profile) and `POST /api/lighthouse/matches` (the match request). As a result a member could browse and host but never request a stay — the match endpoint requires an active `seeker` `lighthouse_profiles` row, and nothing let a member create one. Added: (1) a "Your details" tab (`lighthouse-seeker-profile.tsx`, wired into `lighthouse-icon-rail.tsx` and the mobile tab bar; `Tab` in `shared.ts` gains `"profile"`) that GETs the profile to prefill and POSTs the seeker fields with `x-ctf-csrf: '1'` — a member who already hosts sees a "hosting and seeking are separate" notice instead of a form the type-lock would deny; (2) a "Request to stay" action replacing the inert "Apply Now"/"Message Host" placeholders on the listing detail (`lighthouse-property-detail.tsx`), posting `POST /api/lighthouse/matches` with an optional message and preferred move-in date, and routing a member with no active seeker profile to "Your details" (the endpoint returns `policy_denied` in that case). The shell refreshes the Matches tab after a successful request. (Android RN parity landed the same day — see the entry above.)
 - 2026-07-14: **Added refresh controls (app-wide refresh rollout).** Web: shared `RefreshButton` in the desktop and mobile-responsive shell headers (`lighthouse-shell.tsx`); the mount fetch was extracted into a `fetchAll` callback shared by the initial load and the button, so a refresh re-pulls listings, matches, and the currency catalog without the full-screen loading skeleton. Android: native pull-to-refresh via `RefreshControl` on the listings FlatList (`LighthouseScreen.tsx`); the load was extracted into a shared callback with a background-refresh variant. UI-only; no schema, route, or contract change.

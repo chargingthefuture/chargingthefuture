@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:lighthouse` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-lighthouse-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display; hand-updated 2026-07-14 for the seeker "Your details" screen and "Request to stay" flow) |
+| **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display; hand-updated 2026-07-14 for the seeker "Your details" screen and "Request to stay" flow, and again 2026-07-14 for the "a member can be both host and seeker" reversal) |
 
 ## How to run this
 
@@ -80,7 +80,7 @@ ServiceCredits listing) and the native detail lists the accepted currencies.
 
 ### LH-3 · Set up your seeker details
 **Role:** member (seeker) · **Surfaces:** all
-**Precondition:** a member who has **not** listed a place (so they are not a host).
+**Precondition:** any member — including one who has already listed a place (a host can be a seeker too).
 **Steps:**
 1. Open the **Your details** tab (icon rail on desktop, tab bar on phone/android).
 2. Fill housing needs, country, ideal move-in date, budget range (least/most per month), an optional
@@ -88,7 +88,19 @@ ServiceCredits listing) and the native detail lists the accepted currencies.
 3. Reopen the tab.
 **Expected:** The form saves via the seeker profile endpoint and, on reopen, prefills with what you
 entered. A budget where "most" is less than "least" is refused with a readable message. Saving is
-**not** required to browse or view listings — only to request a stay (LH-4).
+**not** required to browse or view listings — only to request a stay (LH-4). A member who already
+hosts sees the **same editable form** (never a "this account hosts, so it can't also request stays"
+notice) and saving it does not remove their listings or change their host status.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### LH-3b · A host can also request stays (both roles)
+**Role:** member who has listed a place (a host) · **Surfaces:** all
+**Steps:**
+1. As a member who already has a listing, open the **Your details** tab, fill and save your details.
+2. Open a listing you do **not** own and use **Request to stay**.
+3. Open **Your listings** (the host tab) and confirm your own listing is still there.
+**Expected:** The host is not blocked from the seeker flow: the request is created (status `pending`)
+and their existing listing is unaffected — the same account both hosts and requests stays.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### LH-4 · Request to stay (and the no-details routing)
