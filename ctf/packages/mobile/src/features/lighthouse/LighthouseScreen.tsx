@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
+import { useAuth } from '../../auth/auth-context';
 import { fetchProperties } from './api';
 import type { LighthouseProperty } from './types';
 import { fetchCurrencies } from '../currency/api';
@@ -11,8 +12,9 @@ import { LighthousePropertyCard } from './LighthousePropertyCard';
 import { LighthousePropertyDetail } from './LighthousePropertyDetail';
 import { LighthouseListHeader } from './LighthouseListHeader';
 
-export const LighthouseScreen: React.FC = () => {
+export const LighthouseScreen: React.FC<{ onNavigateToProfile?: () => void }> = ({ onNavigateToProfile }) => {
   const { tokens } = useTheme();
+  const { user } = useAuth();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<LighthouseProperty[]>([]);
@@ -63,7 +65,15 @@ export const LighthouseScreen: React.FC = () => {
   if (selectedId) {
     const property = properties.find((p) => p.id === selectedId);
     if (property) {
-      return <LighthousePropertyDetail property={property} currencies={currencies} onBack={handleBack} />;
+      return (
+        <LighthousePropertyDetail
+          property={property}
+          currencies={currencies}
+          onBack={handleBack}
+          currentUserId={user?.id ?? null}
+          onNeedsProfile={onNavigateToProfile}
+        />
+      );
     }
   }
 

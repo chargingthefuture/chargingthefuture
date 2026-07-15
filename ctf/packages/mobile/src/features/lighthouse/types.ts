@@ -25,6 +25,50 @@ export type LighthouseProperty = {
   updatedAtIso: string;
 };
 
+export type LighthouseProfileType = 'seeker' | 'host';
+
+// The member's LightHouse preference profile (seeker or host). Mirrors LighthouseProfile in
+// ctf/packages/web/lib/lighthouse/types.ts.
+export type LighthouseProfile = {
+  id: string;
+  userId: string;
+  profileType: LighthouseProfileType;
+  bio: string | null;
+  phoneNumber: string | null;
+  signalUrl: string | null;
+  isActive: boolean;
+  hasProperty: boolean;
+  housingNeeds: string | null;
+  desiredMoveInDateIso: string | null;
+  budgetMin: number | null;
+  budgetMax: number | null;
+  desiredCountry: string | null;
+  updatedAtIso: string;
+};
+
+// Body for POST /api/lighthouse/profile — only the seeker fields this screen sets. The route fills
+// the rest (profileType defaults to seeker; hasProperty defaults false).
+export type SeekerProfileInput = {
+  profileType: 'seeker';
+  bio: string | null;
+  phoneNumber: string | null;
+  signalUrl: string | null;
+  isActive: boolean;
+  housingNeeds: string | null;
+  desiredMoveInDateIso: string | null;
+  budgetMin: number | null;
+  budgetMax: number | null;
+  desiredCountry: string | null;
+};
+
+// Body for POST /api/lighthouse/matches (the "Request to stay" action). Mirrors
+// LighthouseMatchCreateInput in ctf/packages/web/lib/lighthouse/types.ts.
+export type MatchCreateInput = {
+  propertyId: string;
+  message: string | null;
+  desiredMoveInDateIso: string | null;
+};
+
 export type LighthouseMatch = {
   id: string;
   propertyId: string;
