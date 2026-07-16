@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
-| **Generated** | 2026-07-16 (hand-updated for the phone-width provider profile header fix; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-16 (hand-updated for the phone-width "Good to know" bottom placement; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -73,7 +73,8 @@ they opt in — it never tells you to clear a filter that isn't set, and never m
 provider profile at phone width (~390px, or the mobile-responsive web layout): the whole header fits
 with no sideways scrolling — the Request Quote button, the self-profile note, and the "Accepts live
 1:1 calls" badge all sit fully on-screen (the action block wraps below the name) and are never clipped
-at the right edge.
+at the right edge. The "Good to know" note is full-width at the very bottom (below the skills and
+About), not a cramped right-hand column; on desktop it stays the right-hand sidebar.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### FND-2 · Offer skills (provider opt-in)
