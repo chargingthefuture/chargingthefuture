@@ -39,13 +39,11 @@ export type HubMessage = {
   displayName: string;
   avatarUrl: string | null;
   // Which feed channel this message came from: `announcement` (official post), `question` (AI Q&A),
-  // or `community` (peer post). Drives the announcement title/Urgent treatment on the card.
+  // or `community` (peer post). Drives the official announcement title treatment on the card.
   kind: 'announcement' | 'question' | 'community';
   // The announcement's heading, rendered above the body. Null for peer posts and AI answers, whose
   // `text` is the whole message. (The web API splits the title out of the body server-side.)
   title: string | null;
-  // True only for a mandatory announcement; drives the "Urgent" badge. False otherwise.
-  mandatory: boolean;
   text: string;
   sentAtIso: string;
   // The underlying community post id when this message is a peer post (the id the reactions and

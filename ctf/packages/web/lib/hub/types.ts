@@ -33,9 +33,6 @@ export type HubMessage = {
   // The announcement's own title, rendered as a heading above the body on the official card.
   // Null for peer posts and AI answers (their `text` is the whole message).
   title: string | null;
-  // True only for a mandatory announcement; drives the "Urgent" badge on the official card.
-  // Always false for peer posts and AI answers.
-  mandatory: boolean;
   text: string;
   sentAtIso: string;
   // The underlying community post id (when this message is a peer post). This is the id a

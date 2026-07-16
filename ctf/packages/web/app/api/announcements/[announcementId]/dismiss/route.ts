@@ -25,17 +25,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { announcementId } = await params;
 
   try {
-    const outcome = await dismissAnnouncement(gate.auth.userId, announcementId);
-    if (outcome === 'mandatory') {
-      return NextResponse.json(
-        {
-          ok: false,
-          code: FEED_ERROR_CODE.dismissNotAllowed,
-          message: 'Mandatory announcements cannot be dismissed.',
-        },
-        { status: 409 },
-      );
-    }
+    await dismissAnnouncement(gate.auth.userId, announcementId);
 
     logFeedAudit({
       actorId: gate.auth.userId,

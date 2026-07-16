@@ -58,7 +58,6 @@ policies:
     attributePolicies:
       tenancy: same_workspace
       actorMustOwnDismissState: true
-      mandatoryDismissGuard: required
     consentRequirements:
       scopes:
         - feed_consumption
@@ -73,7 +72,6 @@ policies:
     denyConditions:
       - actor_not_authenticated
       - actor_not_profile_owner
-      - target_item_mandatory
 
   # ─── Announcements ─────────────────────────────────────────────────────
   - pluginId: feed
@@ -207,7 +205,6 @@ policies:
     attributePolicies:
       tenancy: same_workspace
       actorMustOwnDismissState: true
-      mandatoryDismissGuard: required
     consentRequirements:
       scopes:
         - feed_consumption
@@ -222,7 +219,6 @@ policies:
     denyConditions:
       - actor_not_authenticated
       - actor_not_profile_owner
-      - target_item_mandatory
 
   - pluginId: feed
     command: feed.announcement.render-mode.update

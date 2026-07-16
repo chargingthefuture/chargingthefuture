@@ -147,11 +147,6 @@ function MessageCard({
                 <Text style={s.officialBadgeText}>Official</Text>
               </View>
             )}
-            {message.kind === 'announcement' && message.mandatory && (
-              <View style={s.urgentBadge}>
-                <Text style={s.urgentBadgeText}>Urgent</Text>
-              </View>
-            )}
           </View>
           <Text style={s.cardTime}>{formatTime(message.sentAtIso)}</Text>
         </View>
@@ -628,8 +623,6 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
     cardName: { fontSize: 13, fontWeight: '700', color: t.textPrimary, letterSpacing: t.isComic ? 0.4 : 0 },
     officialBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: t.radiusChip, backgroundColor: t.isComic ? 'transparent' : 'rgba(124,58,237,0.2)', borderWidth: t.isComic ? 1 : 0, borderColor: `${t.border}40` },
     officialBadgeText: { fontSize: 10, fontWeight: t.isComic ? '700' : '600', color: t.isComic ? t.border : '#A78BFA', letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
-    urgentBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: t.radiusChip, backgroundColor: t.isComic ? 'transparent' : 'rgba(245,158,11,0.16)', borderWidth: 1, borderColor: t.isComic ? `${t.border}40` : 'rgba(245,158,11,0.4)' },
-    urgentBadgeText: { fontSize: 10, fontWeight: '700', color: t.isComic ? t.border : '#FBBF24', letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
     cardTime: { fontSize: 11, color: t.textSecondary, marginTop: 1 },
     cardTitle: { fontSize: 14, fontWeight: '700', color: t.textPrimary, lineHeight: 20, marginBottom: 3 },
     cardBody: { fontSize: 13, color: t.isComic ? t.textPrimary : '#D1D5DB', lineHeight: 21 },

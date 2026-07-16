@@ -114,7 +114,6 @@ function mapStoredMessage(message: HubMessage, currentUserId: string): ChatMessa
     sentAtIso: message.sentAtIso,
     kind: message.kind,
     announcementTitle: message.title,
-    mandatory: message.mandatory,
     communityPostId: message.communityPostId,
     quotedMessage: message.quotedMessage,
     reactions: message.reactions ?? [],

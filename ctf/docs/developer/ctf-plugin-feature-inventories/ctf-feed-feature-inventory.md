@@ -63,7 +63,7 @@ Architecture decisions in effect:
 ### 1.2 Channel: Announcements
 
 1. Announcement items render in-feed using shared card contract.
-2. Priority and expiry windows influence rank/visibility.
+2. Expiry windows influence visibility (the Commons is a single time-ordered stream — no manual priority ranking).
 3. Optional toast rendering mode is configurable under Feed display controls.
 
 ### 1.3 Channel: Questions (LLM-Assisted Q&A)
@@ -90,7 +90,7 @@ Architecture decisions in effect:
 ### 1.6 Interaction and Read-State
 
 1. Mark-read / unread tracking per user and item.
-2. Dismiss/hide actions for non-mandatory announcements.
+2. Dismiss/hide actions for announcements (every announcement is dismissable — there is no mandatory/non-dismissable flag).
 3. Link-out behavior with safe redirect and telemetry.
 
 ---
@@ -107,7 +107,7 @@ Architecture decisions in effect:
 
 1. Global rendering-mode configuration (card-only, card+toast where allowed).
 2. Channel enable/disable controls.
-3. Priority and targeting rules management.
+3. Targeting rules management.
 4. Preview/simulation mode before publish.
 
 ### 2.3 Governance and Operational Visibility
@@ -223,7 +223,7 @@ Domain tables:
 
 **Reserved (schema-only, no runtime reader/writer yet):**
 
-21. `feed_timeline_projection` — a denormalized timeline read-model table defined in `schema.sql` (`id` UUID PK, `item_type` TEXT, `source_announcement_id` UUID nullable, `title` TEXT, `body` TEXT, `priority` INTEGER default 0, `mandatory` BOOLEAN default false, `published_at` TIMESTAMPTZ, `expires_at` TIMESTAMPTZ nullable, `created_at`/`updated_at` TIMESTAMPTZ). Named in the feed audit contract's `dataClassesAccessed` (`ctf/docs/contracts/FEED_PLUGIN_AUDIT_CONTRACTS.yaml`). No runtime code reads or writes it — the live timeline read path queries `feed_items` directly (see §4.3). It is a reserved projection for a future denormalized fan-out, not an active table; documented here so the gate and the next agent account for it without mistaking it for live storage.
+21. `feed_timeline_projection` — a denormalized timeline read-model table defined in `schema.sql` (`id` UUID PK, `item_type` TEXT, `source_announcement_id` UUID nullable, `title` TEXT, `body` TEXT, `published_at` TIMESTAMPTZ, `expires_at` TIMESTAMPTZ nullable, `created_at`/`updated_at` TIMESTAMPTZ). Named in the feed audit contract's `dataClassesAccessed` (`ctf/docs/contracts/FEED_PLUGIN_AUDIT_CONTRACTS.yaml`). No runtime code reads or writes it — the live timeline read path queries `feed_items` directly (see §4.3). It is a reserved projection for a future denormalized fan-out, not an active table; documented here so the gate and the next agent account for it without mistaking it for live storage.
 
 ### 4.3 Source-of-Truth and Fan-Out
 
@@ -289,6 +289,7 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-07-16: **Retired announcement `priority` and `mandatory` (owner decision).** With the Commons as one time-ordered stream where every announcement flows through the same feed, there is no manual ranking and no non-dismissable flag, so both fields are removed end to end. Dropped `priority`/`mandatory` from `feed_items`, `announcements`, `announcement_revisions`, and `feed_timeline_projection` in `schema.sql` + `schema.demo.sql` (guarded `DROP COLUMN IF EXISTS`; the `feed_items` timeline index was rebuilt without `priority`). `listFeedTimeline` now orders purely by `published_at DESC, id DESC`. Removed the fields from `Announcement` / `AnnouncementDraftInput` / `FeedTimelineItem`, the create/update-draft SQL and validation, the admin form (the "Mandatory" checkbox, the "Priority" number input, and the "mandatory" list badge), and the admin/create + update API parsing. `dismissFeedItem` / `dismissAnnouncement` no longer guard on `mandatory` (every item is dismissable), and the dismiss routes drop the 409 "cannot dismiss mandatory" branch. Contract YAMLs drop the `mandatoryDismissGuard` / `target_*_mandatory` / `mandatoryDismissGuardCheck` clauses and reword the dismiss command descriptions. Seeds (`seedFeedAnnouncements.mjs`, `seedDemo.mjs`) no longer write either column. Owner-review lane (schema + contract change). Verified: typecheck (web + mobile + shared), lint, production build.
 - 2026-07-14: **Android pull-to-refresh on the feed surfaces.** The React Native `FeedStream.tsx`, `Announcements.tsx`, and `Community.tsx` screens now support pull-to-refresh: dragging the list down re-pulls the current data (feed timeline + @comic cards, announcements, community posts) in the background without flashing the full-screen loading state. Mobile-client only — no backend, schema, route, or contract change.
 - 2026-07-14: **Hardened the mobile Questions Stream-chat lifecycle (GitHub #1502–#1506).** In `ctf/packages/mobile/src/features/questions/Questions.tsx` the connect effect now (1) `await`s `chat.connectUser(...)` before rendering the channel, so the `Chat`/`Channel` components never watch a channel before the WebSocket handshake completes (#1503); (2) catches an error from `connectUser` (not just the credentials fetch) and surfaces it via `setError`, and no longer renders a broken, unconnected client (#1505); (3) holds the connected client in a `useRef` so the effect cleanup always disconnects the real client instead of the stale `null` captured at first render — closing the leaked authenticated WebSocket (#1502); and (4) guards `setError`/`setLoading(false)` behind the `isMounted` flag so an unmounted component is never updated, tearing the client down if it unmounted mid-connect (#1506). Separately, `POST /api/questions/stream` (`ctf/packages/web/app/api/questions/stream/route.ts`) now returns the four `stream*` fields explicitly rather than spreading `credentials`, so the response shape the mobile client reads is guaranteed at the boundary and cannot silently become `undefined` if `getFeedStreamCredentials` changes its keys (#1504). No route, contract, or schema change — the field names are unchanged; behavior-only hardening.
 - 2026-07-14: **Fixed published announcements (and questions) never appearing in the Commons.** `listFeedTimeline` filtered feed rows with `f.item_type = ANY($enabledChannels)`, but the enabled-channel names are plural (`announcements`, `questions`, `community`) while `feed_items.item_type` is singular (`announcement`, `question`, `community`). Only `community` matched both spellings, so the plural `announcements`/`questions` channels never matched their singular rows and those two item types were silently excluded from the Hub home channel (`GET /api/hub/messages`) and `GET /api/feed/items` — a published announcement showed in the admin list but never in the Commons. Added `FEED_CHANNEL_TO_ITEM_TYPE` (`lib/feed/constants.ts`) mapping each channel name to its item type, plus a `FeedItemType` type (`lib/feed/types.ts`); `listFeedTimeline` now maps the resolved channels through it before the item_type filter. Behavior-only fix — no schema, route, or contract change. Guarded by `lib/feed/channel-item-type.test.ts`.
@@ -377,7 +378,7 @@ All three feed channels (announcements, questions, community) are shipped on web
     - Feed items, read/unread, dismiss states are fully operable.
 - [x] Implement Announcements-in-Feed rendering.
   - Acceptance criteria:
-    - Announcement cards render with priority/expiry handling.
+    - Announcement cards render with expiry handling.
 - [x] Implement optional toast mode under Feed controls.
   - Acceptance criteria:
     - Toast mode is configurable and can be disabled without disabling card rendering.
