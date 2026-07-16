@@ -597,9 +597,9 @@ async function seedFeedAnnouncements(c) {
   for (const [id, type, title, body] of feedItems) {
     await c.query(
       `INSERT INTO feed_items
-       (id, item_type, title, body, priority, mandatory, published_at, is_active,
+       (id, item_type, title, body, published_at, is_active,
         created_by_user_id, updated_by_user_id)
-       VALUES ($1::uuid, $2, $3, $4, 10, false, NOW() - INTERVAL '1 day', true, $5, $5)
+       VALUES ($1::uuid, $2, $3, $4, NOW() - INTERVAL '1 day', true, $5, $5)
        ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, body = EXCLUDED.body`,
       [id, type, title, body, ADMIN],
     );
@@ -607,12 +607,12 @@ async function seedFeedAnnouncements(c) {
 
   await c.query(
     `INSERT INTO announcements
-     (id, title, body, status, priority, mandatory, published_at,
+     (id, title, body, status, published_at,
       targeting, created_by_user_id, updated_by_user_id)
      VALUES ($1::uuid,
        'Welcome to the CTF Platform Demo',
        'You are viewing the demo environment. All data here is synthetic — explore freely without affecting production.',
-       'published', 100, true, NOW() - INTERVAL '1 day',
+       'published', NOW() - INTERVAL '1 day',
        '{"channels":["all"]}'::jsonb, $2, $2)
      ON CONFLICT (id) DO UPDATE SET body = EXCLUDED.body`,
     [ID.announcement, ADMIN],

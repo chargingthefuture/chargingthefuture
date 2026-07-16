@@ -31,7 +31,7 @@ Approved suggestions incorporated:
 ### 1.1 Announcement Delivery and Rendering
 
 1. In-feed announcement cards with clear state and metadata.
-2. Priority, schedule, and expiry-aware visibility handling.
+2. Schedule and expiry-aware visibility handling.
 3. Optional toast presentation through Feed rendering controls.
 
 ### 1.2 Audience Targeting Outcomes
@@ -43,7 +43,7 @@ Approved suggestions incorporated:
 ### 1.3 Interaction and Acknowledgement
 
 1. Read/acknowledged status tracking where required.
-2. Dismiss behavior for non-mandatory notices.
+2. Dismiss behavior for notices (all notices are dismissable — no mandatory flag).
 3. Link actions and safe external navigation policies.
 
 ---
@@ -54,7 +54,7 @@ Approved suggestions incorporated:
 
 1. Draft, schedule, publish, archive lifecycle management.
 2. Targeting controls (segment, role, plugin membership, region).
-3. Priority and expiry configuration.
+3. Expiry configuration.
 
 ### 2.2 Governance and Review
 
@@ -276,7 +276,7 @@ references them, so they are removed here to match the real data model.
     - Draft/schedule/publish/archive and targeting controls are operable.
 - [x] Implement announcement rendering in Feed.
   - Acceptance criteria:
-    - Priority/expiry behavior and visibility targeting are correct.
+    - Expiry behavior and visibility targeting are correct.
 - [x] Integrate optional toast mode under Feed controls.
   - Acceptance criteria:
     - Toast mode is optional and managed via Feed configuration.

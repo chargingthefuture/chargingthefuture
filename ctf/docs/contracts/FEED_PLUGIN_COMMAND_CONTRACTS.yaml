@@ -212,7 +212,7 @@ contracts:
   - pluginId: feed
     command: feed.announcement.dismiss
     version: 1.0.0
-    description: Dismiss a non-mandatory announcement for the current user.
+    description: Dismiss an announcement for the current user.
     inputSchema:
       announcementId:
         type: string

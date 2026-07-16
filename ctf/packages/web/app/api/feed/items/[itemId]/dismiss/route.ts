@@ -25,17 +25,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { itemId } = await params;
 
   try {
-    const outcome = await dismissFeedItem(gate.auth.userId, itemId);
-    if (outcome === 'mandatory') {
-      return NextResponse.json(
-        {
-          ok: false,
-          code: FEED_ERROR_CODE.dismissNotAllowed,
-          message: 'Mandatory feed items cannot be dismissed.',
-        },
-        { status: 409 },
-      );
-    }
+    await dismissFeedItem(gate.auth.userId, itemId);
 
     logFeedAudit({
       actorId: gate.auth.userId,

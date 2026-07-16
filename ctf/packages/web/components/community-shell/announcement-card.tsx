@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import styles from './community-shell.module.css';
 
 type AnnouncementCardProps = {
@@ -13,15 +13,13 @@ type AnnouncementCardProps = {
   body: string;
   // Display-only formatted time label (same one the chat bubbles use).
   time: string;
-  // A mandatory announcement gets the amber "Urgent" badge so it reads as must-see at a glance.
-  mandatory: boolean;
 };
 
 // Official Survivor Hub announcement, rendered as a distinct card (emerald treatment, shield
-// "Official" badge, optional "Urgent" badge) so it stands out from peer chat bubbles and AI answers
-// instead of blending into the purple stream. Announcements have no reply/reaction affordances —
-// they are one-way, so the card carries only the header, an optional title, the body, and the time.
-export function AnnouncementCard({ senderName, title, body, time, mandatory }: AnnouncementCardProps) {
+// "Official" badge) so it stands out from peer chat bubbles and AI answers instead of blending into
+// the purple stream. Announcements have no reply/reaction affordances — they are one-way, so the
+// card carries only the header, an optional title, the body, and the time.
+export function AnnouncementCard({ senderName, title, body, time }: AnnouncementCardProps) {
   return (
     <article className={styles.announcementCard} aria-label="Official announcement">
       <div className={styles.announcementHead}>
@@ -32,11 +30,6 @@ export function AnnouncementCard({ senderName, title, body, time, mandatory }: A
             <span className={styles.announcementOfficialBadge}>
               <ShieldCheck size={12} color="currentColor" /> Official
             </span>
-            {mandatory ? (
-              <span className={styles.announcementUrgentBadge}>
-                <AlertTriangle size={12} color="currentColor" /> Urgent
-              </span>
-            ) : null}
           </div>
           <span className={styles.announcementTime}>{time}</span>
         </div>
