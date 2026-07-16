@@ -26,6 +26,40 @@ seed makes that user the real counterparty to `DEMO_OWNER_ID`:
 
 Leave `DEMO_SECOND_OWNER_ID` unset for the original single-owner behaviour.
 
+## Plugin coverage
+
+Every member-visible plugin now has seeded demo content, keyed to the first owner and the
+synthetic peers:
+
+- Already covered: ServiceCredits, GDP, Weekly Performance, LevelUp, SkillsHunt, Directory,
+  Workforce, LightHouse, Feed + Announcements, Trust, Mood, GentlePulse, Chyme,
+  TrustTransport, PeerProgramming, Skills Taxonomy, SocketRelay, ClickLog, WhatWorks.
+- Foundation Browse: the two synthetic peers are opted-in providers (a
+  `foundation_provider_skills` row each, backed by their Directory profiles and the seeded
+  taxonomy skills), so Browse is no longer empty. The owner has Directory skills for the
+  "skills I could offer" picker, a two-party thread with peer 1, and one open quote request
+  in the `requested` state.
+- Contributions: one always-current fundraiser drive (its window is refreshed relative to
+  the run time on every re-run) plus two owner claims — a confirmed Quora comment with its
+  credit grant, and a pending GitHub star.
+- Recurring Activity: one active activity (owner ↔ peer 1, free of charge, no amount) and
+  one pending activity declared by peer 2 with the owner as counterparty, so the owner can
+  test the confirm/decline action.
+- Skipped on purpose — Beacon: its member surface shows a live broadcast or a replay
+  recording, both of which need a real Stream video call; a seeded row would point the
+  player at a call that does not exist.
+
+## Testing empty states (the second owner's personal views)
+
+All of the seeded per-member activity above is attached to the FIRST owner (or to synthetic
+peers). The second owner (`DEMO_SECOND_OWNER_ID`) gets a member profile and the two-sided
+marketplace records listed earlier, but none of the newer per-member data: their Foundation
+quote history, Contributions claims, and Recurring Activity list are empty. To see an empty
+state on purpose, sign in as the second owner and open that plugin's personal view.
+Cross-member browse surfaces (Foundation Browse, WhatWorks, the feed, and so on) show the
+same shared rows to both owners. Re-running `seed:demo` restores the populated state for
+the first owner without duplicating rows.
+
 ### Still required in Unleash for the second user
 
 The seed grants the *access tier*, but it cannot route a user into the demo world. The
@@ -126,6 +160,9 @@ The seed changes only insert into tables and columns that already exist in
 `lighthouse_properties` / `lighthouse_matches`, `level_up_enrollments`,
 `peer_programming_cohort_members`, `chyme_room_members`, `directory_profiles` /
 `directory_user_extension`, `workforce_profiles`, `trust_user_extension`,
-`what_works_problems` / `what_works_products` / `what_works_endorsements`). No table,
-column, constraint, index, or contract is added or changed, so no `schema.sql` migration is
-required (recorded here per `.claude/rules/122-schema-drift-predeployment-rules.mdc`).
+`what_works_problems` / `what_works_products` / `what_works_endorsements`,
+`directory_profile_skills`, `foundation_user_extension` / `foundation_provider_skills` /
+`foundation_quote_requests`, `contributions_cycles` / `contributions_submissions`,
+`recurring_activities`). No table, column, constraint, index, or contract is added or
+changed, so no `schema.sql` migration is required (recorded here per
+`.claude/rules/122-schema-drift-predeployment-rules.mdc`).
