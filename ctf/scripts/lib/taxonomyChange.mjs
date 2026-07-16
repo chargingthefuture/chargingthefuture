@@ -161,6 +161,13 @@ export const TAXONOMY_CHANGES = [
   { id: 46, op: 'addSkill', sector: 'Creative & Media', occupation: 'Advocates / Awareness Raisers', skill: 'Awareness raising' },
   { id: 47, op: 'addSkill', sector: 'Creative & Media', occupation: 'Advocates / Awareness Raisers', skill: 'Storytelling' },
   { id: 48, op: 'addSkill', sector: 'Creative & Media', occupation: 'Advocates / Awareness Raisers', skill: 'Peer support' },
+
+  // Change 49 (owner-approved 2026-07-16): promote skill proposal #1550 — the free-text skill "Chef"
+  // from a SkillsHunt scout (submission 5ead88c9-54dc-4914-a98e-a1bba27a2a3b). Added under the
+  // pre-existing "Chefs / Cooks" occupation in Tourism & Hospitality (the issue's AI-suggested placement,
+  // confirmed). proposalNormalizedSkills marks the proposal row 'promoted' and attaches the skill to the
+  // proposing member on apply.
+  { id: 49, op: 'addSkill', sector: 'Tourism & Hospitality', occupation: 'Chefs / Cooks', skill: 'Chef', occupationExisting: true, proposalNormalizedSkills: ['chef'] },
 ];
 
 // ---------------------------------------------------------------------------

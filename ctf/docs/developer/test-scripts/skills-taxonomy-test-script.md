@@ -122,6 +122,8 @@ marketing skills is matched to Professional & Business Services in Workforce, no
 After changes 43–48 apply, **Creative & Media › Advocates / Awareness Raisers** lists Advocacy, Writing,
 Awareness raising, Storytelling, and Peer support — Advocacy is the baseline skill stamped on invited /
 temporary profiles, so a freshly invited member shows Advocacy until they claim and re-pick their skills.
+After change 49 applies, **Tourism & Hospitality › Chefs / Cooks** also lists **Chef** (promoted from skill
+proposal #1550), alongside the occupation's other cooking skills.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
