@@ -111,6 +111,21 @@ the `x-ctf-csrf: 1` header and a same-origin check. A non-resolvable state retur
 id or unknown action returns 400. Returns `{ ok, id, status }`.
 **Result:** web ☐ — notes:
 
+### BUG-A3 · Reporter identity shows on each report card
+**Role:** admin · **Surfaces:** web (internal surface)
+**Precondition:** one report filed by a member with a username set, and one filed by a member
+without a username.
+**Steps:**
+1. Open `/admin/bug-reports`.
+2. Read the "From:" line next to each report's timestamp, at desktop width and at phone width
+   (~390px).
+3. Release a report and open the resulting triage-repo issue.
+**Expected:** Every card shows a muted "From: <handle>" line next to the timestamp — `@username`
+when the member has one, otherwise the stable `user-<first 8 of id>` pseudonym (never blank). The
+line renders on both the desktop and phone-width layouts. The triage-repo issue contains **no**
+reporter identity — it stays admin-surface only (rule 129).
+**Result:** web ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)

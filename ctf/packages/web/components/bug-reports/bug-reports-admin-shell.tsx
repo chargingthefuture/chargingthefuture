@@ -17,6 +17,8 @@ import type { BugReportRiskFlag } from 'lib/bug-reports/sanitize';
 type AdminBugReport = {
   id: string;
   status: BugReportStatus;
+  reporterUsername: string | null;
+  reporterHandle: string;
   redactedMessage: string | null;
   redactedContext: string | null;
   riskFlags: BugReportRiskFlag[];
@@ -221,6 +223,7 @@ export function BugReportsAdminShell() {
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <StatusPill status={report.status} />
                 <span style={{ fontSize: 12, color: t.MUTED }}>{formatWhen(report.createdAt)}</span>
+                <span style={{ fontSize: 12, color: t.MUTED }}>· From: {report.reporterHandle}</span>
                 {report.pluginSlug ? <span style={{ fontSize: 12, color: t.MUTED }}>· {report.pluginSlug}</span> : null}
               </div>
 
