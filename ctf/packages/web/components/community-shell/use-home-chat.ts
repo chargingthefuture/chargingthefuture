@@ -272,13 +272,28 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   // Held in a ref so the composer's typing emitters and unmount cleanup can reach it without
   // re-rendering or re-subscribing.
   const liveConnectionRef = useRef<HubLiveConnection | null>(null);
+  // "@ Mentions" filter: when on, history reads add `mentions=me` so the server returns only
+  // peer messages whose body @-mentions the viewer (server-derived handles, searched beyond the
+  // loaded page). Mirrored in a ref so refreshHistory (and the poll/live handlers that hold an
+  // older callback identity) always read the current mode without re-bootstrapping the chat.
+  const [mentionsOnly, setMentionsOnly] = useState(false);
+  const mentionsOnlyRef = useRef(false);
+  // True while the stream is being re-fetched right after a mentions-mode flip, so the panel can
+  // show a loading line instead of a premature "No mentions yet" empty state.
+  const [isFilterRefreshing, setIsFilterRefreshing] = useState(false);
 
   // Whether the composer currently contains an @comic mention — used to show the mention chip
   // affordance live as the asker types.
   const composerMentionsComic = useMemo(() => mentionsComic(input), [input]);
 
   const refreshHistory = useCallback(async () => {
-    const payload = await requestJson<HubMessagesResponse>('/api/hub/messages?limit=50');
+    const mentionsParam = mentionsOnlyRef.current ? '&mentions=me' : '';
+    const payload = await requestJson<HubMessagesResponse>(`/api/hub/messages?limit=50${mentionsParam}`);
+    // Ignore a response that raced a mode flip (e.g. a slow unfiltered poll landing after the
+    // member turned mentions on) so the filtered view never gets polluted with the full stream.
+    if (mentionsOnlyRef.current !== mentionsParam.includes('mentions=me')) {
+      return;
+    }
     const nextMessages = payload.messages.map((message) => mapStoredMessage(message, currentUser.userId));
     setMessages((previous) => mergeMessages(previous, nextMessages));
   }, [currentUser.userId]);
@@ -328,6 +343,21 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
       }
     })();
   }, []);
+
+  // Flip the "@ Mentions" filter. The message list is cleared and re-fetched in the new mode so
+  // the two modes never blend (merge is additive, so a shared list would keep old rows around).
+  const toggleMentionsOnly = useCallback(() => {
+    const next = !mentionsOnlyRef.current;
+    mentionsOnlyRef.current = next;
+    setMentionsOnly(next);
+    setMessages([]);
+    setIsFilterRefreshing(true);
+    void refreshHistory()
+      .catch(() => {
+        // Best-effort: the poll retries shortly; the empty state covers the gap.
+      })
+      .finally(() => setIsFilterRefreshing(false));
+  }, [refreshHistory]);
 
   // Emit a typing event as the member writes in the composer. No-op when there is no live
   // connection (polling-only mode), so the composer can call it unconditionally on every keystroke.
@@ -739,6 +769,9 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     beginReply,
     cancelReply,
     toggleReaction,
+    mentionsOnly,
+    toggleMentionsOnly,
+    isFilterRefreshing,
     lastSeenAtIso,
     markSeen,
     isSending,

@@ -17,14 +17,14 @@ import {
   FEED_REACTION_EMOJIS,
   isAllowedFeedReactionEmoji,
 } from './constants';
-import { feedAuthorHandle } from './author-handle';
+import { feedAuthorHandle, feedMentionTokens } from './author-handle';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
 import { emitFeedMembershipEventToStream } from './stream';
 import { getPluginBySlug, getPluginRoute, isAdminOnlyPlugin } from 'lib/plugins/repository';
 
-// Re-exported so existing server callers can keep importing it from the feed
-// repository; the implementation lives in the client-safe ./author-handle module.
-export { feedAuthorHandle };
+// Re-exported so existing server callers can keep importing them from the feed
+// repository; the implementations live in the client-safe ./author-handle module.
+export { feedAuthorHandle, feedMentionTokens };
 import type {
   Announcement,
   AnnouncementDraftInput,
@@ -710,11 +710,24 @@ export async function updateFeedConfig(actorId: string, input: FeedConfigInput):
   return mapFeedConfig(result.rows[0]);
 }
 
+// Escape the characters LIKE/ILIKE treats specially (backslash, percent, underscore)
+// so a member handle is always matched literally inside the parameterized pattern.
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
+}
+
 export async function listFeedTimeline(
   userId: string,
   role: string | null,
   pagination: { page: number; pageSize: number },
-  filters: { pluginId?: string | null; channel?: FeedChannel },
+  filters: {
+    pluginId?: string | null;
+    channel?: FeedChannel;
+    // Literal @-handle tokens (e.g. '@farah', '@user-3gysu61f') the item body must
+    // contain (case-insensitive, any one of them). Derived server-side from the
+    // authenticated user — never from client input. Null/empty means no filter.
+    mentionHandles?: string[] | null;
+  },
 ): Promise<{ items: FeedTimelineItem[]; pagination: FeedPagination }> {
   return withDbTransaction(async (client) => {
     const config = await client.query<FeedConfigRow>(
@@ -739,6 +752,12 @@ export async function listFeedTimeline(
     // Channel names are plural; feed_items.item_type is singular. Map channel -> item_type so the
     // filter below matches the rows (an 'announcements' channel matching the 'announcement' rows).
     const allowedItemTypes = allowedChannels.map((channel) => FEED_CHANNEL_TO_ITEM_TYPE[channel]);
+    // Mentions filter: parameterized, LIKE-escaped `%@handle%` patterns matched with
+    // ILIKE ANY (case-insensitive). Null disables the filter entirely.
+    const mentionHandles = (filters.mentionHandles ?? []).filter((handle) => handle.length > 0);
+    const mentionPatterns = mentionHandles.length > 0
+      ? mentionHandles.map((handle) => `%${escapeLikePattern(handle)}%`)
+      : null;
 
     if (allowedItemTypes.length === 0) {
       return {
@@ -759,6 +778,7 @@ export async function listFeedTimeline(
           AND f.published_at <= NOW()
           AND (f.expires_at IS NULL OR f.expires_at > NOW())
           AND f.item_type = ANY($3::text[])
+          AND ($4::text[] IS NULL OR f.body ILIKE ANY($4::text[]))
           AND EXISTS (
             SELECT 1
             FROM feed_item_targets t
@@ -767,7 +787,7 @@ export async function listFeedTimeline(
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
           )
       `,
-      [actorRole, pluginFilter, allowedItemTypes],
+      [actorRole, pluginFilter, allowedItemTypes, mentionPatterns],
     );
 
     const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
@@ -795,6 +815,7 @@ export async function listFeedTimeline(
           AND f.published_at <= NOW()
           AND (f.expires_at IS NULL OR f.expires_at > NOW())
           AND f.item_type = ANY($3::text[])
+          AND ($7::text[] IS NULL OR f.body ILIKE ANY($7::text[]))
           AND EXISTS (
             SELECT 1
             FROM feed_item_targets t
@@ -805,7 +826,7 @@ export async function listFeedTimeline(
         ORDER BY f.published_at DESC, f.id DESC
         OFFSET $5 LIMIT $6
       `,
-      [actorRole, pluginFilter, allowedItemTypes, userId, offset, pagination.pageSize],
+      [actorRole, pluginFilter, allowedItemTypes, userId, offset, pagination.pageSize, mentionPatterns],
     );
 
     const questionIds = result.rows.flatMap((row) => (row.source_question_id ? [row.source_question_id] : []));
