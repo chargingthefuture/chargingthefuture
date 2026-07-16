@@ -2358,6 +2358,19 @@ BEGIN
   END IF;
 END
 $directory_profiles_source_check$;
+-- NOTE (2026-07-16): a DB CHECK requiring a country on every ACTIVE directory profile is intended but
+-- deliberately NOT added here yet. Country is now required at the app layer (the member/admin edit forms
+-- gate Save on a country and validateProfileInput rejects a blank one; SkillsHunt already requires it at
+-- submit time), so no new blank-country profile can be created through the product. The DB constraint is
+-- sequenced AFTER backfilling the existing blank rows (owner request): adding it now — even NOT VALID —
+-- would make claiming the one legacy blank-country profile, or accepting any pre-requirement SkillsHunt
+-- submission whose country is null, fail as a raw constraint violation. Once those legacy rows are
+-- backfilled (and any null-country accepted submissions cleared), add it as a clean, fully-validated
+-- constraint, scoped to active rows so the account-deletion anonymization path (which sets
+-- is_active = false and nulls city/state/country) keeps working:
+--   ALTER TABLE directory_profiles
+--     ADD CONSTRAINT directory_profiles_active_country_present
+--     CHECK (is_active = false OR (country IS NOT NULL AND btrim(country) <> ''));
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS invited_by_username TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS unclaimed_handle TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;

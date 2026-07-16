@@ -26,6 +26,10 @@ const seedUsers = [
     lastName: 'Johnson',
     headline: 'Community support navigator',
     bio: 'Deterministic seed profile for directory phase-0 validation.',
+    // Country is required on every active directory profile (see the
+    // directory_profiles_active_country_present constraint in schema.sql); two countries so the seed
+    // exercises the GDP "All Countries" member-by-country breakdown, not a single-row panel.
+    country: 'United States',
   },
   {
     profileId: 'd1100000-0000-4000-8000-000000000002',
@@ -34,6 +38,7 @@ const seedUsers = [
     lastName: 'Rivera',
     headline: 'Legal advocacy coordinator',
     bio: 'Second deterministic profile for pagination and claimed-state checks.',
+    country: 'Mexico',
   },
 ];
 
@@ -98,6 +103,7 @@ async function main() {
               source = 'admin',
               sector_id = $6::uuid,
               job_title_id = $7::uuid,
+              country = $8::text,
               is_active = true,
               deleted_at = NULL,
               updated_at = NOW()
@@ -112,15 +118,16 @@ async function main() {
             user.bio,
             selectors.sectorId,
             selectors.jobTitleId,
+            user.country,
           ],
         );
       } else {
         profileResult = await client.query(
           `
             INSERT INTO directory_profiles
-              (id, claimed_by_user_id, first_name, last_name, headline, bio, profile_url, source, sector_id, job_title_id, is_active)
+              (id, claimed_by_user_id, first_name, last_name, headline, bio, profile_url, source, sector_id, job_title_id, country, is_active)
             VALUES
-              ($1::uuid, NULL, $2::text, $3::text, $4::text, $5::text, NULL, 'admin', $6::uuid, $7::uuid, true)
+              ($1::uuid, NULL, $2::text, $3::text, $4::text, $5::text, NULL, 'admin', $6::uuid, $7::uuid, $8::text, true)
             RETURNING id
           `,
           [
@@ -131,6 +138,7 @@ async function main() {
             user.bio,
             selectors.sectorId,
             selectors.jobTitleId,
+            user.country,
           ],
         );
       }

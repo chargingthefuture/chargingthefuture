@@ -482,25 +482,29 @@ async function seedLighthouse(c) {
 async function seedDirectory(c) {
   // directory_profiles stores first_name/last_name (the display_name column was
   // retired by db/migrations/post/0001).
+  // Country is required on every active directory profile (see the
+  // directory_profiles_active_country_present constraint in schema.sql). A mix of countries so the demo
+  // exercises the GDP "All Countries" member-by-country breakdown rather than a single-country panel.
   const profiles = [
-    [ID.dirProfileOwner, OWNER, 'Demo', 'Participant', 'Platform Engineer', 'Building the future of work, one deploy at a time.'],
-    [ID.dirProfilePeer1, PEER_1, 'Alex', 'Rivera', 'Community Navigator', 'Connecting people with the resources they need.'],
-    [ID.dirProfilePeer2, PEER_2, 'Jordan', 'Kim', 'Legal Advocacy Coordinator', 'Rights-first approach to community support.'],
+    [ID.dirProfileOwner, OWNER, 'Demo', 'Participant', 'Platform Engineer', 'Building the future of work, one deploy at a time.', 'United States'],
+    [ID.dirProfilePeer1, PEER_1, 'Alex', 'Rivera', 'Community Navigator', 'Connecting people with the resources they need.', 'United States'],
+    [ID.dirProfilePeer2, PEER_2, 'Jordan', 'Kim', 'Legal Advocacy Coordinator', 'Rights-first approach to community support.', 'Canada'],
   ];
 
-  for (const [id, userId, firstName, lastName, headline, bio] of profiles) {
+  for (const [id, userId, firstName, lastName, headline, bio, country] of profiles) {
     await c.query(
       `INSERT INTO directory_profiles
-       (id, claimed_by_user_id, first_name, last_name, headline, bio, is_active, source)
-       VALUES ($1::uuid, $2, $3, $4, $5, $6, true, 'self')
+       (id, claimed_by_user_id, first_name, last_name, headline, bio, country, is_active, source)
+       VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, true, 'self')
        ON CONFLICT (id) DO UPDATE SET
          claimed_by_user_id = EXCLUDED.claimed_by_user_id,
          first_name = EXCLUDED.first_name,
          last_name = EXCLUDED.last_name,
          headline = EXCLUDED.headline,
          bio = EXCLUDED.bio,
+         country = EXCLUDED.country,
          updated_at = NOW()`,
-      [id, userId, firstName, lastName, headline, bio],
+      [id, userId, firstName, lastName, headline, bio, country],
     );
 
     await c.query(
@@ -516,15 +520,16 @@ async function seedDirectory(c) {
     // own profile row instead of overwriting / stealing another owner's.
     await c.query(
       `INSERT INTO directory_profiles
-       (id, claimed_by_user_id, first_name, last_name, headline, bio, is_active, source)
+       (id, claimed_by_user_id, first_name, last_name, headline, bio, country, is_active, source)
        VALUES ($1::uuid, $2, 'Demo', 'Counterpart', 'Community Member',
-         'Second demo participant — the other side of the marketplace.', true, 'self')
+         'Second demo participant — the other side of the marketplace.', 'United Kingdom', true, 'self')
        ON CONFLICT (id) DO UPDATE SET
          claimed_by_user_id = EXCLUDED.claimed_by_user_id,
          first_name = EXCLUDED.first_name,
          last_name = EXCLUDED.last_name,
          headline = EXCLUDED.headline,
          bio = EXCLUDED.bio,
+         country = EXCLUDED.country,
          updated_at = NOW()`,
       [sha256id('dir-profile', OWNER2), OWNER2],
     );
