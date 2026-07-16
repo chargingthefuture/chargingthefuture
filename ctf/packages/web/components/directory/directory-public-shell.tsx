@@ -39,10 +39,10 @@ function DesktopDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
       {/* Hero */}
       <div style={{ padding: '48px 64px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ padding: '4px 14px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 12, color: t.ACCENT, fontWeight: 600 }}>Verified profiles</span>
+          <span style={{ padding: '4px 14px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 12, color: t.ACCENT, fontWeight: 600 }}>Community members</span>
         </div>
         <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, lineHeight: 1.1 }}>
-          Connect with verified<br />
+          Connect with<br />
           <span style={{ color: t.ACCENT }}>providers &amp; advocates</span>
         </h1>
         <p style={{ margin: 0, fontSize: 15, color: t.SUBTLE, maxWidth: 500 }}>
@@ -114,7 +114,7 @@ function MobileDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
           <BookOpen size={20} color={t.ACCENT} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>Directory</span>
         </div>
-        <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Verified profiles</span>
+        <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Community members</span>
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Therapists, housing navigators, legal advocates, and more — searchable by location and specialty.</p>
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
