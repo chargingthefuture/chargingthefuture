@@ -52,9 +52,12 @@ Member-reporting + private-triage plugin — these are the can't-ship-broken che
 **Precondition:** signed in (a not-yet-verified member may also submit — `any_authenticated` tier).
 **Steps:**
 1. Open the global Help control and choose "Report a problem".
-2. Fill "what went wrong" (required); leave "what you were trying to do" empty.
-3. Submit.
-**Expected:** The form posts to `POST /api/bug-reports` with the `x-ctf-csrf: 1` header and
+2. Read the intro line under the "Report a problem" title before typing anything.
+3. Fill "what went wrong" (required); leave "what you were trying to do" empty.
+4. Submit.
+**Expected:** The intro line states all three of: the form is for something in the app that
+isn't working; reports are one-way and you won't get a reply here; questions go to the Commons
+on the home screen, where members can answer. The form posts to `POST /api/bug-reports` with the `x-ctf-csrf: 1` header and
 same-origin cookies. Page URL and (on `/apps/<slug>`) the plugin slug are attached automatically;
 no technical detail is asked of the user. A 201 shows the calm success state; the report row is
 stored privately as `new` (or `held_for_review` if flagged). On phone width the modal renders as a
