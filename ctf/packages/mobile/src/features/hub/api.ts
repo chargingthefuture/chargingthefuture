@@ -62,8 +62,12 @@ export type HubMessagesResponse = {
 };
 
 // The server returns the blended stream oldest-first (ready for a chat view).
-export async function fetchHubMessages(): Promise<HubMessagesResponse> {
-  const res = await authedFetch(`${HUB_API_BASE}/messages`);
+// `mentionsOnly` adds `?mentions=me`: the server then returns only peer messages whose body
+// @-mentions the caller (handles derived server-side from the authenticated user), searched
+// beyond the loaded page — the same filter behind the web Commons "@ Mentions" toggle.
+export async function fetchHubMessages(mentionsOnly = false): Promise<HubMessagesResponse> {
+  const query = mentionsOnly ? '?mentions=me' : '';
+  const res = await authedFetch(`${HUB_API_BASE}/messages${query}`);
   if (!res.ok) {
     throw new Error(`Hub messages request failed: ${res.status}`);
   }

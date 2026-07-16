@@ -74,6 +74,20 @@ function dedupKey(message: HubMessage): string {
   return `${message.userId}|${message.displayName}|${message.text}|${message.sentAtIso}`;
 }
 
+// The @-form other members type to mention this member: `@<username>` when set, otherwise the
+// stable `@user-<id token>` pseudonym. Mirrors the web `lib/feed/author-handle.ts`
+// (feedAuthorHandle / feedMentionTokens) — the server derives the same forms for the filter;
+// this copy only labels the mentions empty state.
+function mentionLabelFor(username: string | null | undefined, userId: string | null | undefined): string {
+  if (username) return `@${username}`;
+  if (userId) {
+    const base = userId.startsWith('user_') ? userId.slice(5) : userId;
+    const token = (base.slice(0, 8) || userId.slice(0, 8)).toLowerCase();
+    if (token) return `@user-${token}`;
+  }
+  return '@you';
+}
+
 type Styles = ReturnType<typeof makeStyles>;
 
 // Recompute a message's reactions after the member toggles `emoji`, mirroring the server's toggle:
@@ -217,15 +231,17 @@ function MessageCard({
   );
 }
 
-function EmptyState({ s }: { s: Styles }) {
+function EmptyState({ s, mentionsOnly, mentionLabel }: { s: Styles; mentionsOnly: boolean; mentionLabel: string }) {
   return (
     <View style={s.emptyWrap}>
       <View style={s.emptyIcon}>
-        <Text style={{ fontSize: 28 }}>💬</Text>
+        <Text style={{ fontSize: 28 }}>{mentionsOnly ? '@' : '💬'}</Text>
       </View>
-      <Text style={s.emptyTitle}>Nothing posted yet</Text>
+      <Text style={s.emptyTitle}>{mentionsOnly ? 'No mentions yet' : 'Nothing posted yet'}</Text>
       <Text style={s.emptyBody}>
-        Announcements, answers, and community posts will appear here. Be the first to share an update.
+        {mentionsOnly
+          ? `When someone writes ${mentionLabel}, it shows here.`
+          : 'Announcements, answers, and community posts will appear here. Be the first to share an update.'}
       </Text>
     </View>
   );
@@ -244,6 +260,11 @@ export const HubHome = () => {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<HubMessage | null>(null);
+  // "@ Mentions" filter: on, the stream shows only messages whose body @-mentions the signed-in
+  // member (server-side filter, so old mentions beyond the loaded page are found). Mirrored in a
+  // ref so the poll's stable `load` always reads the current mode.
+  const [mentionsOnly, setMentionsOnly] = useState(false);
+  const mentionsOnlyRef = useRef(false);
   // The id of the first message newer than the member's last-seen marker; a single "New messages"
   // divider is drawn before it. Computed once on entry so it does not jump as new posts arrive.
   const [dividerBeforeId, setDividerBeforeId] = useState<string | null>(null);
@@ -272,8 +293,12 @@ export const HubHome = () => {
 
   const load = useCallback(async () => {
     setError(null);
+    // Capture the mode this read was made in; a slow response that lands after the member flips
+    // the toggle is dropped so the filtered view is never polluted with the other mode's rows.
+    const requestedMentionsOnly = mentionsOnlyRef.current;
     try {
-      const data = await fetchHubMessages();
+      const data = await fetchHubMessages(requestedMentionsOnly);
+      if (mentionsOnlyRef.current !== requestedMentionsOnly) return;
       mergeMessages(data.messages);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to load the Hub.');
@@ -372,6 +397,19 @@ export const HubHome = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Flip the "@ Mentions" filter: clear the list and re-pull in the new mode behind the spinner,
+  // so the two modes never blend (the merge replaces wholesale, but a blank list avoids showing
+  // the old mode's rows while the new read is in flight).
+  const toggleMentionsOnly = useCallback(() => {
+    const next = !mentionsOnlyRef.current;
+    mentionsOnlyRef.current = next;
+    setMentionsOnly(next);
+    setMessages([]);
+    seenKeys.current = new Set();
+    setLoading(true);
+    void load();
+  }, [load]);
+
   // Emit a typing event as the member writes in the composer. No-op when there is no live connection
   // (polling-only mode), so the composer can call it unconditionally on every keystroke.
   const notifyTyping = useCallback(() => {
@@ -451,10 +489,23 @@ export const HubHome = () => {
         <View style={s.headerAvatar}>
           <Text style={s.headerAvatarText}>SH</Text>
         </View>
-        <View>
+        <View style={s.headerMeta}>
           <Text style={s.headerTitle}>Survivor Hub</Text>
           <Text style={s.headerSub}>Community · Live</Text>
         </View>
+        {/* "@ Mentions" filter — signed-in only (the handles are derived from the member). Small
+            pill matching the reaction-pill family; filled while the filter is on. */}
+        {isAuthenticated && (
+          <Pressable
+            style={[s.mentionsToggle, mentionsOnly ? s.mentionsToggleActive : null]}
+            onPress={toggleMentionsOnly}
+            accessibilityRole="button"
+            accessibilityState={{ selected: mentionsOnly }}
+            accessibilityLabel={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
+          >
+            <Text style={[s.mentionsToggleText, mentionsOnly ? s.mentionsToggleTextActive : null]}>@ Mentions</Text>
+          </Pressable>
+        )}
       </View>
 
       {/* Early-Commons treatment members land here without passing the Unlock screen, so prompt them to
@@ -473,7 +524,7 @@ export const HubHome = () => {
           </Pressable>
         </View>
       ) : messages.length === 0 ? (
-        <EmptyState s={s} />
+        <EmptyState s={s} mentionsOnly={mentionsOnly} mentionLabel={mentionLabelFor(user?.username, currentUserId)} />
       ) : (
         <FlatList
           data={messages}
@@ -607,8 +658,24 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
       justifyContent: 'center',
     },
     headerAvatarText: { fontSize: 13, fontWeight: '800', color: t.isComic ? t.border : '#fff' },
+    headerMeta: { flex: 1 },
     headerTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary, letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
     headerSub: { fontSize: 11, color: t.success },
+    // "@ Mentions" filter pill in the header — same chip family as the reaction pills.
+    mentionsToggle: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: t.radiusChip,
+      backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.05)',
+      borderWidth: 1,
+      borderColor: t.isComic ? `${t.border}40` : 'rgba(255,255,255,0.1)',
+    },
+    mentionsToggleActive: {
+      backgroundColor: `${t.success}1F`,
+      borderColor: `${t.success}66`,
+    },
+    mentionsToggleText: { fontSize: 11, fontWeight: '700', color: t.textSecondary },
+    mentionsToggleTextActive: { color: t.success },
     list: { padding: 16, gap: 10 },
     card: { borderRadius: r, borderWidth: t.isComic ? 1.5 : 1, padding: 14, marginBottom: 10 },
     cardOfficial: { backgroundColor: t.isComic ? `${official}10` : 'rgba(124,58,237,0.07)', borderColor: t.isComic ? `${official}50` : 'rgba(124,58,237,0.22)' },

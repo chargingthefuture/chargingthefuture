@@ -6,6 +6,7 @@ import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import {
   createFeedCommunityPost,
   feedAuthorHandle,
+  feedMentionTokens,
   listFeedTimeline,
   parsePaginationParams,
   validateFeedCommunityPostInput,
@@ -69,11 +70,20 @@ export async function GET(request: Request) {
 
   try {
     const pagination = parsePaginationParams(request.url);
+    // Optional mentions filter (`?mentions=me`): show only messages whose body @-mentions
+    // the CALLER. The handle forms are derived server-side from the authenticated user
+    // (`@<username>` and the `@user-<id token>` pseudonym) — a client-supplied handle is
+    // never trusted. Mentions mode is peer-chat only, so it reads just the community
+    // channel (announcements and AI Q&A cards are not part of the mentions view).
+    const mentionsMe = new URL(request.url).searchParams.get('mentions') === 'me';
+    const mentionHandles = mentionsMe
+      ? feedMentionTokens(gate.identity.username, gate.auth.userId)
+      : null;
     const timeline = await listFeedTimeline(
       gate.auth.userId,
       gate.auth.role,
       pagination,
-      { channel: 'all' },
+      mentionsMe ? { channel: 'community', mentionHandles } : { channel: 'all' },
     );
 
     // Feed timeline is newest-first; present oldest-first for the chat stream.
