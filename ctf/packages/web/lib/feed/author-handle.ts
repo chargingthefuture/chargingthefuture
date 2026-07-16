@@ -27,3 +27,21 @@ export function feedAuthorHandle(username: string | null, userId: string | null)
   }
   return 'Community member';
 }
+
+// The @-mention forms other members type to address this member in the Commons:
+// `@<username>` (when a username is set) and `@user-<id token>` (the stable
+// pseudonym above, always derivable from the id). Used by the "@ Mentions"
+// filter — the server derives these from the AUTHENTICATED user, never from a
+// client-supplied handle, and matches them case-insensitively against message
+// bodies. Pure and dependency-free, like feedAuthorHandle.
+export function feedMentionTokens(username: string | null, userId: string | null): string[] {
+  const tokens: string[] = [];
+  if (username) {
+    tokens.push(`@${username}`);
+  }
+  const pseudonym = feedAuthorHandle(null, userId);
+  if (pseudonym !== 'Community member') {
+    tokens.push(`@${pseudonym}`);
+  }
+  return tokens;
+}

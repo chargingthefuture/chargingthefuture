@@ -1892,6 +1892,39 @@
   border-color: rgba(14, 165, 233, 0.55);
 }
 
+/* ─── "@ Mentions" stream filter ─────────────────────────────────────────── */
+/* A single small toggle above the stream. Sized and shaped like the @comic
+   mention chip so it reads as one family of small chat controls; the active
+   state fills in to show the stream is filtered to the viewer's mentions. */
+.mentionsFilterRow {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 4px 6px;
+}
+
+.mentionsFilterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  color: #38BDF8;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mentionsFilterBtn:hover {
+  background: rgba(14, 165, 233, 0.12);
+}
+
+.mentionsFilterBtnActive {
+  background: rgba(14, 165, 233, 0.22);
+  border-color: rgba(14, 165, 233, 0.55);
+}
+
 .comicComposerHelperText {
   font-size: 12px;
   color: var(--ctf-text-subtle);
@@ -2328,6 +2361,18 @@
 }
 
 :global([data-theme='comic']) .comicMentionChipActive {
+  background: #7a6a5022;
+  border-color: var(--ctf-border-dim);
+}
+
+/* "@ Mentions" stream filter → the same inkDim chip treatment as the mention chip. */
+:global([data-theme='comic']) .mentionsFilterBtn {
+  background: var(--ctf-bg);
+  border: 1px solid var(--ctf-border-dim);
+  color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .mentionsFilterBtnActive {
   background: #7a6a5022;
   border-color: var(--ctf-border-dim);
 }

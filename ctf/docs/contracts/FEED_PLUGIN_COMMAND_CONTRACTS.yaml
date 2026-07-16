@@ -2,7 +2,7 @@ contracts:
   # ─── Channel: Timeline (unified) ───────────────────────────────────────
   - pluginId: feed
     command: feed.timeline.fetch
-    version: 2.0.0
+    version: 2.1.0
     description: Fetch feed timeline items across all channels (announcements, questions, community) with deterministic ordering and offset pagination.
     inputSchema:
       page:
@@ -15,6 +15,11 @@ contracts:
         type: string
         enum: [all, announcements, questions, community]
         required: false
+      mentions:
+        type: string
+        enum: [me]
+        required: false
+        note: When `me`, only items whose body @-mentions the caller are returned (case-insensitive match on `@<username>` and the `@user-<id token>` pseudonym, both derived server-side from the authenticated user — a client-supplied handle is never accepted). Matching uses parameterized, LIKE-escaped ILIKE patterns. Used by the Hub Commons "@ Mentions" toggle, which pairs it with channel=community.
       filters:
         type: object
         required: false

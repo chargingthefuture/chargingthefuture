@@ -319,6 +319,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
     beginReply,
     cancelReply,
     toggleReaction,
+    mentionsOnly,
+    toggleMentionsOnly,
+    isFilterRefreshing,
     lastSeenAtIso,
     markSeen,
     isSending,
@@ -326,6 +329,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
     isLive,
     error,
   } = useHomeChat(currentUser);
+  // The @-form other members type to mention this member — shown in the mentions empty state.
+  // feedAuthorHandle already prefixes a set username with '@'; the id pseudonym needs it added.
+  const ownMentionLabel = ownHandle.startsWith('@') ? ownHandle : `@${ownHandle}`;
   const supportStatus = isLive ? 'live support connected' : isLoading ? 'connecting live support…' : 'community support syncing';
   // "X is typing…" line shown above the composer when the live connection is up and someone else is
   // typing. One name reads "X is typing…", two read "X and Y are typing…", more collapse to a count.
@@ -350,6 +356,8 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
       return Number.isNaN(epoch) ? fallback : epoch;
     };
 
+    // Mentions mode shows only the matching peer chat messages (the server already filters the
+    // history read); the AI (@comic) cards are local to this member and are hidden with it.
     const entries: StreamEntry[] = [
       ...messages.map((message, index): StreamEntry => ({
         kind: 'message',
@@ -357,7 +365,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         epoch: toEpoch(message.sentAtIso, index),
         order: index,
       })),
-      ...comicItems.map((item, index): StreamEntry => ({
+      ...(mentionsOnly ? [] : comicItems).map((item, index): StreamEntry => ({
         kind: 'comic',
         item,
         epoch: toEpoch(item.askedAtIso, index),
@@ -367,7 +375,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
 
     entries.sort((a, b) => (a.epoch - b.epoch) || (a.order - b.order));
     return entries;
-  }, [messages, comicItems]);
+  }, [messages, comicItems, mentionsOnly]);
 
   const hasContent = streamEntries.length > 0;
 
@@ -442,15 +450,33 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         </section>
       ) : null}
 
+      {/* "@ Mentions" filter: on, the stream shows only messages that @-mention the viewer
+          (filtered server-side so old mentions beyond the loaded page are found too). */}
+      <div className={styles.mentionsFilterRow}>
+        <button
+          type="button"
+          className={mentionsOnly ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterBtnActive}` : styles.mentionsFilterBtn}
+          onClick={toggleMentionsOnly}
+          aria-pressed={mentionsOnly}
+          aria-label={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
+        >
+          <AtSign size={12} /> Mentions
+        </button>
+      </div>
+
       <div className={styles.chatMessages}>
-        {isLoading && !hasContent ? (
-          <p className={styles.chatFootnote}>Loading live messages…</p>
+        {(isLoading || isFilterRefreshing) && !hasContent ? (
+          <p className={styles.chatFootnote}>{mentionsOnly ? 'Looking for your mentions…' : 'Loading live messages…'}</p>
         ) : null}
 
-        {!isLoading && !hasContent ? (
+        {!isLoading && !isFilterRefreshing && !hasContent ? (
           <div className={styles.chatBubbleGroup}>
             <div className={`${styles.chatBubble} ${styles.chatBubbleHub}`}>
-              Survivor Hub is live. Share with the community, or type <strong>@comic</strong> to ask the AI Assistant.
+              {mentionsOnly ? (
+                <>No mentions yet. When someone writes <strong>{ownMentionLabel}</strong>, it shows here.</>
+              ) : (
+                <>Survivor Hub is live. Share with the community, or type <strong>@comic</strong> to ask the AI Assistant.</>
+              )}
             </div>
           </div>
         ) : null}
