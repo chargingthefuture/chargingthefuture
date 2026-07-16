@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning |
 
 ## How to run this
 
@@ -151,6 +151,26 @@ unavailable the rows fall back to neutral dashes rather than fabricated figures.
 spinner shows. The dashboard, sector, skill-level, and training-gap numbers re-fetch and the change from
 the other session appears without closing and reopening the app. Refreshing never clears the screen to
 the full-screen loading state — the current dashboard stays visible until the new data lands.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### WF-10 · Community Planning team rosters
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open the **Community Planning** view (web desktop: sidebar "Community Planning"; web mobile /
+   android: the "Community" tab).
+2. Read the ten teams (Legal & Governance, Finance, Land & Site, Build & Infrastructure, Food &
+   Agriculture, Health & Wellbeing, Safety & Security, Technology, Communications & Documentation,
+   Operations & Maintenance).
+3. Expand at least one team to see its roster; note the member count and the "{n} to fill" gap.
+4. Cross-check one team against the underlying sector drilldown (WF-6): the team's roster is the
+   de-duplicated union of its mapped sectors' matched members.
+**Expected:** Each team lists the sectors it draws from and, when expanded, the matched members by
+name (same match reasons as the sector drilldown — job title, skill, or sector). A member matched
+through two of a team's sectors appears once. The gap reads "{n} to fill" (or "filled") in the brand
+orange, never a red negative. A team whose mapped sector is not in the taxonomy shows that sector
+flagged "not mapped" rather than silently empty. The view is read-only and shows the same live numbers
+as the rest of Workforce (reopening reflects current Directory data). Member names appear only for a
+signed-in member — the view is behind the member read gate, never public.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
