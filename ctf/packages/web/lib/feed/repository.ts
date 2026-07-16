@@ -1583,6 +1583,43 @@ export async function createFeedCommunityPost(
   });
 }
 
+// Delete a member's own community (peer) post from the Commons. Author-only: the caller must own
+// the post, so this cannot delete anyone else's. A hard delete is intentional — the product allows
+// "delete + repost" instead of editing, so a corrected post is a brand-new row with fresh
+// moderation and no inherited reactions/replies (closes the bait-and-switch edit vector). Deleting
+// the post cascades its replies and reactions (ON DELETE CASCADE); the projected `feed_items` row
+// has no foreign key back to the post, so it is removed explicitly, which in turn cascades its
+// targets, read state, and dismissals. Any other post that quoted this one keeps its reply
+// (`reply_to_post_id` is ON DELETE SET NULL), so the quote block just resolves to nothing.
+export async function deleteCommunityPost(actorId: string, postId: string): Promise<'ok'> {
+  const normalizedPostId = normalizeUuid(postId);
+  if (normalizedPostId === null) {
+    throw new Error('post_not_found');
+  }
+
+  return withDbTransaction(async (client) => {
+    const post = await client.query<{ author_user_id: string }>(
+      'SELECT author_user_id FROM feed_community_posts WHERE id = $1::uuid LIMIT 1',
+      [normalizedPostId],
+    );
+
+    if (post.rows.length === 0) {
+      throw new Error('post_not_found');
+    }
+    if (post.rows[0].author_user_id !== actorId) {
+      throw new Error('not_post_owner');
+    }
+
+    // Remove the projected timeline row first (no FK from feed_items to the post), then the post
+    // itself (cascades replies + reactions). Both inside one transaction so the Commons never shows
+    // a post whose source row is gone, or vice versa.
+    await client.query('DELETE FROM feed_items WHERE source_community_post_id = $1::uuid', [normalizedPostId]);
+    await client.query('DELETE FROM feed_community_posts WHERE id = $1::uuid', [normalizedPostId]);
+
+    return 'ok' as const;
+  });
+}
+
 export async function replyToFeedCommunityPost(
   actorId: string,
   postId: string,

@@ -436,6 +436,36 @@ contracts:
     retentionClass: transactional_long_lived
     idempotency: false
 
+  - pluginId: feed
+    command: feed.community.post.delete
+    version: 1.0.0
+    description: >-
+      Delete the requesting member's own community (peer) post. Author-only — the server rejects a
+      delete of any post the caller does not own. There is no edit: to change a post a member deletes
+      it and posts again, so a corrected message is a fresh row with its own moderation and no
+      inherited reactions/replies. The delete cascades the post's replies and reactions and removes
+      the projected timeline row (with its targets, read state, and dismissals).
+    inputSchema:
+      postId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      postId:
+        type: string
+    dataAccess:
+      - feed_community_posts
+      - feed_community_replies
+      - feed_community_post_reactions
+      - feed_items
+      - feed_item_targets
+      - feed_user_read_state
+      - feed_user_dismissals
+    purpose: community_engagement
+    retentionClass: transactional_long_lived
+    idempotency: true
+
   # ─── Admin / Governance ─────────────────────────────────────────────────
   - pluginId: feed
     command: feed.admin.config.update

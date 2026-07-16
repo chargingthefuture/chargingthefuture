@@ -9,6 +9,7 @@ export const FEED_ERROR_CODE = {
   conflict: 'FEED_CONFLICT',
   persistenceUnavailable: 'FEED_PERSISTENCE_UNAVAILABLE',
   csrfDenied: 'FEED_CSRF_DENIED',
+  forbidden: 'FEED_FORBIDDEN',
   dismissNotAllowed: 'FEED_DISMISS_NOT_ALLOWED',
   rateLimitExceeded: 'FEED_RATE_LIMIT_EXCEEDED',
   consentRequired: 'FEED_LLM_CONSENT_REQUIRED',
