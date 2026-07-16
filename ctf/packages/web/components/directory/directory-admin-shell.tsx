@@ -34,6 +34,9 @@ import {
   Save,
   UserCheck,
   ChevronLeft,
+  Ban,
+  ShieldOff,
+  RotateCcw,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
@@ -354,6 +357,41 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
     }
   }
 
+  // Take down a community-generated profile at the person's request. Unlike delete (for
+  // duplicates/accidents), this also blocks the profile's Quora URL from being listed again until an
+  // admin lifts the block. A reason is required and recorded in the audit trail.
+  async function handleTakedown(p: AdminDirectoryProfile) {
+    if (p.claimedByUserId != null || p.source !== "community-generated") return;
+    const name = fullName(p) || "this profile";
+    const reason = window.prompt(
+      `Remove ${name} at the person's request?\n\nThis deletes the profile AND blocks its Quora URL from being listed in the directory again until an admin lifts the block. This is different from a regular delete (duplicate/accidental), which does not block re-adding.\n\nEnter a reason (recorded in the audit trail):`,
+    );
+    if (reason === null) return;
+    if (reason.trim().length === 0) {
+      window.alert("A reason is required to take down a profile.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/directory/admin/profiles/${p.id}/takedown`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      if (res.ok) {
+        setProfiles((prev) => prev.filter((x) => x.id !== p.id));
+        if (editId === p.id) closeDrawer();
+        return;
+      }
+      const body = (await res.json().catch(() => ({}))) as { message?: string };
+      window.alert(body.message ?? "Could not take down this profile.");
+    } catch {
+      window.alert("Could not take down this profile.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   // ── Shared edit drawer body ───────────────────────────────────────────────
   const fields: { label: string; key: Exclude<keyof EditForm, "skillIds">; placeholder: string }[] = [
     { label: "First name", key: "firstName", placeholder: "First name" },
@@ -574,6 +612,11 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
                       <button onClick={() => startEdit(p)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: 8, borderRadius: 9, background: `${COLOR}12`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                         <Edit2 size={12} /> Edit profile
                       </button>
+                      {p.claimedByUserId == null && p.source === "community-generated" && (
+                        <button onClick={() => void handleTakedown(p)} disabled={saving} aria-label="Remove at person's request" title="Remove at the person's request (blocks the Quora URL from being re-added)" style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", color: "#F59E0B", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Ban size={13} />
+                        </button>
+                      )}
                       {p.claimedByUserId == null && (
                         <button onClick={() => void handleDelete(p)} disabled={saving} aria-label="Delete profile" style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "#EF4444", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <Trash2 size={13} />
@@ -585,6 +628,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
               })}
             </div>
           )}
+          <SuppressionPanel />
         </div>
       </div>
     );
@@ -681,6 +725,11 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
                     <button onClick={() => (isEditing ? closeDrawer() : startEdit(p))} style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 7, background: isEditing ? `${COLOR}20` : "rgba(255,255,255,0.04)", border: `1px solid ${isEditing ? COLOR + "50" : BORDER}`, color: isEditing ? COLOR : SUBTLE, fontSize: 12, cursor: "pointer" }}>
                       {isEditing ? <><X size={11} /> Close</> : <><Edit2 size={11} /> Edit</>}
                     </button>
+                    {p.claimedByUserId == null && p.source === "community-generated" && (
+                      <button onClick={() => void handleTakedown(p)} disabled={saving} aria-label="Remove at person's request" title="Remove at the person's request (blocks the Quora URL from being re-added)" style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", color: "#F59E0B", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Ban size={12} />
+                      </button>
+                    )}
                     {p.claimedByUserId == null && (
                       <button onClick={() => void handleDelete(p)} disabled={saving} aria-label="Delete profile" style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "#EF4444", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <Trash2 size={12} />
@@ -691,6 +740,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
               );
             })
           )}
+          <SuppressionPanel />
         </div>
       </div>
 
@@ -719,6 +769,144 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
             </button>
           </div>
         </aside>
+      )}
+    </div>
+  );
+}
+
+// One row of the Quora-URL suppression list (GET /api/directory/admin/suppressed-urls).
+interface SuppressedUrlItem {
+  id: string;
+  normalizedUrl: string;
+  originalUrl: string;
+  reason: string;
+  removedProfileId: string | null;
+  createdByUserId: string;
+  createdAtIso: string;
+  isOverridden: boolean;
+  overriddenByUserId: string | null;
+  overriddenAtIso: string | null;
+  overrideReason: string | null;
+}
+
+// Collapsible admin panel listing Quora URLs taken down at the person's request. Active blocks show
+// an "Allow again" (override) action that lifts the block with a reason; lifted entries stay visible
+// (muted) as a record. Loads its list lazily on first expand.
+function SuppressionPanel() {
+  const [expanded, setExpanded] = useState(false);
+  const [items, setItems] = useState<SuppressedUrlItem[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const loadList = useCallback(async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/directory/admin/suppressed-urls");
+      if (!res.ok) {
+        setErr("Could not load the takedown list.");
+        return;
+      }
+      const data = (await res.json()) as { items?: SuppressedUrlItem[] };
+      setItems(data.items ?? []);
+    } catch {
+      setErr("Could not load the takedown list.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  function toggle() {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && items === null) void loadList();
+  }
+
+  async function override(item: SuppressedUrlItem) {
+    const reason = window.prompt(
+      `Allow "${item.originalUrl}" to be listed in the directory again?\n\nThis lifts the block set when the profile was taken down. Enter a reason (recorded in the audit trail):`,
+    );
+    if (reason === null) return;
+    if (reason.trim().length === 0) {
+      window.alert("A reason is required to lift a suppression.");
+      return;
+    }
+    setBusyId(item.id);
+    try {
+      const res = await fetch(`/api/directory/admin/suppressed-urls/${item.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      if (res.ok) {
+        void loadList();
+        return;
+      }
+      const body = (await res.json().catch(() => ({}))) as { message?: string };
+      window.alert(body.message ?? "Could not lift the suppression.");
+    } catch {
+      window.alert("Could not lift the suppression.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const activeCount = items?.filter((i) => !i.isOverridden).length ?? 0;
+
+  return (
+    <div style={{ margin: "16px", borderRadius: 12, border: `1px solid ${BORDER}`, background: "#0D0F14" }}>
+      <button
+        onClick={toggle}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", background: "transparent", border: "none", color: TEXT, cursor: "pointer", textAlign: "left" }}
+      >
+        <ShieldOff size={15} color="#F59E0B" />
+        <span style={{ fontSize: 13, fontWeight: 700 }}>Taken-down Quora URLs</span>
+        {items !== null && activeCount > 0 && (
+          <span style={{ fontSize: 10, fontWeight: 700, background: "rgba(245,158,11,0.15)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 4, padding: "1px 6px" }}>{activeCount} blocked</span>
+        )}
+        <span style={{ marginLeft: "auto", fontSize: 12, color: SUBTLE }}>{expanded ? "Hide" : "Show"}</span>
+      </button>
+
+      {expanded && (
+        <div style={{ padding: "0 14px 14px" }}>
+          <div style={{ fontSize: 11, color: SUBTLE, lineHeight: 1.5, marginBottom: 10 }}>
+            A URL here was removed at the person&rsquo;s request and cannot be listed in the directory again
+            (auto-generated from a SkillsHunt accept, or added by an admin) until you lift the block.
+          </div>
+          {loading ? (
+            <div style={{ padding: 16, textAlign: "center", color: SUBTLE, fontSize: 12 }}>Loading…</div>
+          ) : err ? (
+            <div style={{ padding: 16, textAlign: "center", color: "#EF4444", fontSize: 12 }}>{err}</div>
+          ) : (items?.length ?? 0) === 0 ? (
+            <div style={{ padding: 16, textAlign: "center", color: SUBTLE, fontSize: 12 }}>No taken-down URLs.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {(items ?? []).map((item) => (
+                <div key={item.id} style={{ padding: 10, borderRadius: 9, background: "rgba(255,255,255,0.02)", border: `1px solid ${BORDER}`, opacity: item.isOverridden ? 0.6 : 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, fontFamily: "monospace", color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{item.originalUrl}</span>
+                    {item.isOverridden ? (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#22C55E", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 4, padding: "1px 6px" }}>Lifted</span>
+                    ) : (
+                      <button
+                        onClick={() => void override(item)}
+                        disabled={busyId === item.id}
+                        style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 7, background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, color: COLOR, fontSize: 11, fontWeight: 600, cursor: busyId === item.id ? "not-allowed" : "pointer", flexShrink: 0 }}
+                      >
+                        <RotateCcw size={11} /> Allow again
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: SUBTLE }}>Reason: {item.reason || "—"}</div>
+                  {item.isOverridden && item.overrideReason && (
+                    <div style={{ fontSize: 11, color: SUBTLE, marginTop: 2 }}>Lifted: {item.overrideReason}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

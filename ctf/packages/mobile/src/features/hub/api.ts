@@ -113,6 +113,27 @@ export async function sendHubMessage(
   return (await res.json()) as HubSendResult;
 }
 
+// Delete the member's own peer post. The product has no edit — to change a post you delete and
+// repost — so this removes it outright. Author-only is enforced server-side (403 for anyone else).
+export async function deleteHubMessage(postId: string): Promise<void> {
+  const res = await authedFetch(`${HUB_API_BASE}/messages/${encodeURIComponent(postId)}`, {
+    method: 'DELETE',
+    headers: {
+      'x-ctf-csrf': '1',
+    },
+  });
+
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error('You can only delete your own posts.');
+    }
+    if (res.status === 404) {
+      throw new Error('That post is no longer available.');
+    }
+    throw new Error(`Unable to delete post: ${res.status}`);
+  }
+}
+
 // Toggle the signed-in member's emoji reaction on a Hub peer post. A second tap of the same emoji
 // removes it. Mirrors POST /api/hub/messages/[postId]/reactions; returns whether the reaction is now
 // on (`reacted: true`) or off. The emoji must be in HUB_REACTION_EMOJIS or the server rejects (400).

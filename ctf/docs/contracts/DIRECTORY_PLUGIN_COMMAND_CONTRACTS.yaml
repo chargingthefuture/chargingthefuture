@@ -173,6 +173,60 @@ contracts:
     idempotency: true
 
   - pluginId: directory
+    command: directory.admin.profile.takedown
+    version: 1.0.0
+    description: >-
+      Remove a community-generated (unclaimed) profile at the person's request and add its Quora URL
+      to the suppression list, so it cannot be listed in the directory again (auto-generated from a
+      SkillsHunt accept, or added by an admin/member) until an admin lifts the block. Distinct from
+      directory.admin.profile.delete, which is for duplicates/accidents and does NOT block re-adding.
+      A reason is required and recorded in the audit trail. Claimed, non-community, or URL-less
+      profiles are denied by policy.
+    inputSchema:
+      profileId:
+        type: string
+        required: true
+      reason:
+        type: string
+        required: true
+    outputSchema:
+      status:
+        type: string
+    dataAccess:
+      - directory_profiles
+      - directory_profile_skills
+      - directory_profile_proposed_skills
+      - directory_suppressed_quora_urls
+      - directory_profile_change_events
+    purpose: admin_profile_moderation
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: directory
+    command: directory.admin.takedown.override
+    version: 1.0.0
+    description: >-
+      Lift an active Quora-URL suppression (override) so the URL can be listed in the directory again.
+      A reason is required and recorded in the audit trail. Applying to an already-lifted or missing
+      entry is denied by policy.
+    inputSchema:
+      suppressionId:
+        type: string
+        required: true
+      reason:
+        type: string
+        required: true
+    outputSchema:
+      status:
+        type: string
+    dataAccess:
+      - directory_suppressed_quora_urls
+      - directory_profile_change_events
+    purpose: admin_profile_moderation
+    retentionClass: audit_long_lived
+    idempotency: false
+
+  - pluginId: directory
     command: directory.profile.delete.service
     version: 1.0.0
     description: Perform plugin-scoped profile deletion/anonymization for the authenticated user.

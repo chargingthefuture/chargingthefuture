@@ -121,6 +121,12 @@ If user returns after service-scoped deletion:
 
 ## 9) API and UX Surface
 
+- Member self-delete of their own Commons post (distinct from account/plugin deletion):
+  - `DELETE /api/hub/messages/:postId` — author-only, CSRF-guarded. Hard-deletes the caller's own
+    community (peer) post; cascades its replies and reactions and removes the projected `feed_items`
+    row (with its targets, read state, and dismissals). The product has no edit — a member corrects a
+    post by deleting and reposting, so no edit/version endpoint exists. A delete of a post the caller
+    does not own is rejected (403).
 - Service delete endpoint:
   - `DELETE /api/account/feed-profile` (planned)
 - Full account delete endpoint (or orchestrator):

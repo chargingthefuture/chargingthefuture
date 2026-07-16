@@ -229,6 +229,29 @@ deny event) — an admin cannot silently overwrite another member's claim.
 audit line; a CSRF-missing delete is rejected.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### DIR-A3b · Takedown at the person's request + Quora-URL suppression
+**Role:** admin · **Surfaces:** web + mobile-responsive (android deferred)
+**Precondition:** a community-generated (unclaimed) profile exists, created from an accepted SkillsHunt
+nomination, so it carries a Quora URL. Note its Quora URL.
+**Steps:**
+1. On `/admin/directory`, find that community-generated profile. Confirm it shows an amber
+   **"Remove at person's request"** button (ban icon) that is separate from the red delete.
+2. Click it. Confirm you are prompted for a reason; try to confirm with a blank reason (rejected).
+   Enter a reason and confirm.
+3. Open the **"Taken-down Quora URLs"** panel; confirm the URL appears with its reason and a
+   count badge.
+4. Try to re-list that Quora URL: (a) accept a fresh SkillsHunt nomination of the same Quora URL —
+   confirm **no** community-generated directory profile is created; (b) as an admin, create a profile
+   with that Quora URL — confirm it is rejected (409 `DIRECTORY_QUORA_URL_SUPPRESSED`).
+5. In the panel, click **"Allow again"** on that entry; confirm a reason is required. Enter one and
+   confirm. Now repeat step 4(b) — the profile can be created again.
+**Expected:** The takedown deletes the profile and blocks its Quora URL from being listed (auto-gen
+from a SkillsHunt accept, or admin/member add) until an admin lifts it. The block is enforced
+regardless of SkillsHunt state. A regular delete (DIR-A3) does **not** block re-adding. Takedown and
+override each require a reason and record an audit line. On android this case is **blocked** — the RN
+admin screen has delete only.
+**Result:** web ☐ mobile ☐ android ⛔ — notes:
+
 ### DIR-A4 · Announcement create / update / deactivate
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
