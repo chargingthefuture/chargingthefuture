@@ -94,6 +94,12 @@ const ID = {
   taxJobTitle: 'ddd00000-0000-4000-8000-000000000031',
   taxSkill1: 'ddd00000-0000-4000-8000-000000000032',
   taxSkill2: 'ddd00000-0000-4000-8000-000000000033',
+  quoteRequest: 'ddd00000-0000-4000-8000-000000000034',
+  contribCycle: 'ddd00000-0000-4000-8000-000000000035',
+  contribSubmission1: 'ddd00000-0000-4000-8000-000000000036',
+  contribSubmission2: 'ddd00000-0000-4000-8000-000000000037',
+  raActive: 'ddd00000-0000-4000-8000-000000000038',
+  raPending: 'ddd00000-0000-4000-8000-000000000039',
 };
 
 function sha256id(...parts) {
@@ -731,20 +737,84 @@ async function seedFoundation(c) {
     [ADMIN],
   );
 
+  // Browse content: a Foundation provider is a claimed, active directory profile
+  // with at least one row in foundation_provider_skills (the "willing to offer
+  // this skill" opt-in). The two synthetic peers become browsable providers here;
+  // the owner also lists Directory skills so the "skills I could offer" picker
+  // is populated. Depends on seedDirectory + seedSkillsTaxonomy having run
+  // (foundation_provider_skills has an FK to skills_taxonomy_skills).
+  const dirSkills = [
+    [ID.dirProfileOwner, ID.taxSkill1],
+    [ID.dirProfileOwner, ID.taxSkill2],
+    [ID.dirProfilePeer1, ID.taxSkill1],
+    [ID.dirProfilePeer2, ID.taxSkill2],
+  ];
+  for (const [profileId, skillId] of dirSkills) {
+    await c.query(
+      `INSERT INTO directory_profile_skills (profile_id, skill_id, display_order)
+       VALUES ($1::uuid, $2::uuid, 0)
+       ON CONFLICT (profile_id, skill_id) DO NOTHING`,
+      [profileId, skillId],
+    );
+  }
+
+  const providers = [
+    [PEER_1, ID.taxSkill1],
+    [PEER_2, ID.taxSkill2],
+  ];
+  for (const [uid, skillId] of providers) {
+    await c.query(
+      `INSERT INTO foundation_user_extension (user_id, profile_visibility, updated_at)
+       VALUES ($1, 'workspace', NOW())
+       ON CONFLICT (user_id) DO UPDATE SET service_deleted_at = NULL, updated_at = NOW()`,
+      [uid],
+    );
+    await c.query(
+      `INSERT INTO foundation_provider_skills (user_id, skill_id)
+       VALUES ($1, $2::uuid)
+       ON CONFLICT (user_id, skill_id) DO NOTHING`,
+      [uid, skillId],
+    );
+  }
+
   // Connection thread between owner and peer.
   // The id is a fixed demo UUID, but thread_key is derived from the owner. When
   // the seed is re-run with a different DEMO_OWNER_ID, the thread_key changes
   // while the id stays the same — so we key the upsert on the primary key (id)
   // and refresh thread_key, otherwise the fixed id collides on re-seed.
+  // survivor/provider ids make the thread a coherent two-party record: the owner
+  // is the survivor side, peer 1 (a browsable provider above) the provider side.
   const threadKey = [OWNER, PEER_1].sort().join(':');
   await c.query(
-    `INSERT INTO foundation_connection_threads (id, thread_key, created_by_user_id)
-     VALUES ($1::uuid, $2, $3)
+    `INSERT INTO foundation_connection_threads
+       (id, thread_key, created_by_user_id, survivor_user_id, provider_user_id)
+     VALUES ($1::uuid, $2, $3, $3, $4)
      ON CONFLICT (id) DO UPDATE SET
        thread_key = EXCLUDED.thread_key,
        created_by_user_id = EXCLUDED.created_by_user_id,
+       survivor_user_id = EXCLUDED.survivor_user_id,
+       provider_user_id = EXCLUDED.provider_user_id,
        updated_at = NOW()`,
-    [ID.thread, threadKey, OWNER],
+    [ID.thread, threadKey, OWNER, PEER_1],
+  );
+
+  // One open quote request from the owner (survivor) to peer 1 (provider) on that
+  // thread, so the owner's quote history has a row in the 'requested' state. Only
+  // owner-attributed: a second demo owner's quote history stays empty on purpose.
+  await c.query(
+    `INSERT INTO foundation_quote_requests
+       (id, user_id, request_text, status, thread_id, survivor_user_id,
+        provider_user_id, service_type, lifecycle_state, last_transitioned_at)
+     VALUES ($1::uuid, $2,
+       'Looking for help setting up automated tests for a small TypeScript project.',
+       'pending', $3::uuid, $2, $4, 'skills-support', 'requested', NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       thread_id = EXCLUDED.thread_id,
+       survivor_user_id = EXCLUDED.survivor_user_id,
+       provider_user_id = EXCLUDED.provider_user_id,
+       lifecycle_state = EXCLUDED.lifecycle_state,
+       updated_at = NOW()`,
+    [ID.quoteRequest, OWNER, ID.thread, PEER_1],
   );
 
   if (OWNER2) {
@@ -1108,6 +1178,99 @@ async function seedWhatWorks(c) {
   console.log('  ✓ what-works');
 }
 
+async function seedContributions(c) {
+  // One fundraiser drive that is always current: the window is refreshed relative
+  // to NOW() on every re-run, so the member page always finds an active cycle.
+  // Goals are drive targets, not recorded money.
+  await c.query(
+    `INSERT INTO contributions_cycles
+     (id, starts_at, ends_at, fiat_goal_usd, quora_comment_goal, github_star_goal, created_by_user_id)
+     VALUES ($1::uuid, NOW() - INTERVAL '7 days', NOW() + INTERVAL '21 days', 500, 20, 50, $2)
+     ON CONFLICT (id) DO UPDATE SET
+       starts_at = EXCLUDED.starts_at,
+       ends_at = EXCLUDED.ends_at,
+       fiat_goal_usd = EXCLUDED.fiat_goal_usd,
+       quora_comment_goal = EXCLUDED.quora_comment_goal,
+       github_star_goal = EXCLUDED.github_star_goal,
+       updated_at = NOW()`,
+    [ID.contribCycle, ADMIN],
+  );
+
+  // Owner-attributed claims: one confirmed Quora comment (with its thank-you
+  // credit grant) and one pending GitHub star awaiting review. No gift-card claim
+  // — that kind requires a personal Signal contact. Only owner-attributed, so a
+  // second demo owner's "my contributions" list stays empty on purpose.
+  await c.query(
+    `INSERT INTO contributions_submissions
+     (id, user_id, kind, quora_post_url, status, confirmed_amount_usd, credits_granted,
+      cycle_id, reviewed_by_user_id, reviewed_at, review_note)
+     VALUES ($1::uuid, $2, 'quora_comment',
+       'https://quora.com/demo-answer-link', 'confirmed', 1, 10,
+       $3::uuid, $4, NOW() - INTERVAL '2 days', 'Comment verified on the linked answer.')
+     ON CONFLICT (id) DO UPDATE SET
+       status = EXCLUDED.status,
+       credits_granted = EXCLUDED.credits_granted,
+       cycle_id = EXCLUDED.cycle_id,
+       updated_at = NOW()`,
+    [ID.contribSubmission1, OWNER, ID.contribCycle, ADMIN],
+  );
+
+  await c.query(
+    `INSERT INTO contributions_submissions
+     (id, user_id, kind, github_profile_url, status, cycle_id)
+     VALUES ($1::uuid, $2, 'github_star',
+       'https://github.com/demo-participant', 'pending', $3::uuid)
+     ON CONFLICT (id) DO UPDATE SET
+       status = EXCLUDED.status,
+       cycle_id = EXCLUDED.cycle_id,
+       updated_at = NOW()`,
+    [ID.contribSubmission2, OWNER, ID.contribCycle],
+  );
+
+  console.log('  ✓ contributions');
+}
+
+async function seedRecurringActivity(c) {
+  // One active activity the owner declared (peer 1 confirmed it) and one pending
+  // activity a peer declared with the owner as counterparty, so the owner can test
+  // the confirm/decline action. A fiat/free line never carries an amount (the
+  // value firewall); only the ServiceCredits line declares an sc_value. Only
+  // owner-attributed, so a second demo owner's activity list stays empty on purpose.
+  await c.query(
+    `INSERT INTO recurring_activities
+     (id, owner_user_id, counterparty_user_id, sector, currency_code, cadence,
+      sc_value, status, visibility, confirmed_at)
+     VALUES ($1::uuid, $2, $3, 'favor', 'FREE', 'weekly', NULL, 'active', 'private', NOW() - INTERVAL '3 days')
+     ON CONFLICT (id) DO UPDATE SET
+       owner_user_id = EXCLUDED.owner_user_id,
+       counterparty_user_id = EXCLUDED.counterparty_user_id,
+       status = EXCLUDED.status,
+       confirmed_at = EXCLUDED.confirmed_at,
+       ended_at = NULL,
+       ended_by_user_id = NULL,
+       updated_at = NOW()`,
+    [ID.raActive, OWNER, PEER_1],
+  );
+
+  await c.query(
+    `INSERT INTO recurring_activities
+     (id, owner_user_id, counterparty_user_id, sector, currency_code, cadence,
+      sc_value, status, visibility)
+     VALUES ($1::uuid, $2, $3, 'service', 'SC', 'monthly', 25, 'pending', 'private')
+     ON CONFLICT (id) DO UPDATE SET
+       owner_user_id = EXCLUDED.owner_user_id,
+       counterparty_user_id = EXCLUDED.counterparty_user_id,
+       status = EXCLUDED.status,
+       confirmed_at = NULL,
+       ended_at = NULL,
+       ended_by_user_id = NULL,
+       updated_at = NOW()`,
+    [ID.raPending, PEER_2, OWNER],
+  );
+
+  console.log('  ✓ recurring-activity');
+}
+
 async function main() {
   const connStr =
     process.env.DATABASE_URL_DIRECT ||
@@ -1142,14 +1305,18 @@ async function main() {
     await seedTrust(client);
     await seedMood(client);
     await seedGentlePulse(client);
+    // Taxonomy before Foundation: foundation_provider_skills FK-references
+    // skills_taxonomy_skills, so the skills must exist first.
+    await seedSkillsTaxonomy(client);
     await seedFoundation(client);
     await seedChyme(client);
     await seedTrustTransport(client);
     await seedPeerProgramming(client);
-    await seedSkillsTaxonomy(client);
     await seedSocketRelay(client);
     await seedClickLog(client);
     await seedWhatWorks(client);
+    await seedContributions(client);
+    await seedRecurringActivity(client);
 
     await client.query('COMMIT');
     console.log(`\nDemo schema seeded successfully for ${OWNER}.`);
