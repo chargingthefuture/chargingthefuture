@@ -114,14 +114,15 @@ function GdpCountries({ countries }: { countries: GdpCountry[] }) {
       {countries.map((c) => (
         <div key={c.country} style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontSize: 13, color: t.TEXT, fontWeight: 600 }}>{c.country}</span>
-            <span style={{ fontSize: 13, color: t.ACCENT, fontWeight: 700 }}>{c.members.toLocaleString()} {c.members === 1 ? "member" : "members"}</span>
+            <span style={{ fontSize: 13, color: c.unspecified ? t.MUTED : t.TEXT, fontWeight: 600, fontStyle: c.unspecified ? "italic" : "normal" }}>{c.country}</span>
+            <span style={{ fontSize: 13, color: c.unspecified ? t.MUTED : t.ACCENT, fontWeight: 700 }}>{c.members.toLocaleString()} {c.members === 1 ? "member" : "members"}</span>
           </div>
-          {/* The bar width IS a real metric: this country's share of all located members. */}
+          {/* The bar width IS a real metric: this row's share of the whole member roster (countries plus
+              the "Location not set" bucket sum to the roster). */}
           <div style={{ height: 6, borderRadius: 999, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${Math.max(2, Math.min(100, c.share))}%`, background: t.ACCENT, borderRadius: 999 }} />
+            <div style={{ height: "100%", width: `${Math.max(2, Math.min(100, c.share))}%`, background: c.unspecified ? t.MUTED : t.ACCENT, borderRadius: 999 }} />
           </div>
-          <div style={{ fontSize: 11, color: t.FAINT, marginTop: 2 }}>{c.share.toFixed(0)}% of located members</div>
+          <div style={{ fontSize: 11, color: t.FAINT, marginTop: 2 }}>{c.share.toFixed(0)}% of members{c.unspecified ? " · no country recorded" : ""}</div>
         </div>
       ))}
     </div>

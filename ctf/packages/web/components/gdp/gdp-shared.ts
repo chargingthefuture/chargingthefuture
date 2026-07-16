@@ -35,6 +35,9 @@ export interface GdpCountry {
   country: string;
   members: number;
   share: number;
+  // True only for the synthetic "Location not set" bucket (active members with no country recorded), so
+  // the panel can style it apart from a real country and exclude it from the distinct-country count.
+  unspecified?: boolean;
 }
 
 export interface GdpMetrics {
