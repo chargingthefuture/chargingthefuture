@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md` |
-| **Generated** | 2026-07-11 (GDP admin retired + Community Value Index live-by-default; decorative Map tab removed; All Countries panel shows real member distribution — see GDP-3) |
+| **Generated** | 2026-07-16 (GDP admin retired + Community Value Index live-by-default; decorative Map tab removed; All Countries panel shows real member distribution and reconciles to the member roster via a "Location not set" bucket — see GDP-3) |
 
 ## How to run this
 
@@ -81,21 +81,28 @@ footnote appear; the copy describes a community-wide figure, never a per-member 
 chip does not appear on values that are not estimates.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### GDP-3 · All Countries panel (real member distribution)
+### GDP-3 · All Countries panel (real member distribution, reconciles to the roster)
 **Role:** member · **Surfaces:** web (android omits this panel)
 **Steps:**
 1. On the web dashboard, find the "All Countries" panel (subtitle "Members by country"). There is no
    longer a "Map" tab — the dashboard is a single view.
 2. Cross-check a country's member count against `SELECT country, COUNT(*) FROM directory_profiles WHERE
    is_active = TRUE AND deleted_at IS NULL AND btrim(country) <> '' GROUP BY country`.
-**Expected:** Each row shows a country, its real member count, and a share bar that is that country's
-percentage of all located members (a real metric — not a width derived from list position). The counts
-include every active member profile that has a country (claimed or not), so they use the same member
-population as the hero's total-member count — not just claimed profiles. Every country with at least one
-located member appears (no small-count suppression). The figures are people-counts read from members'
-directory profiles — there is no per-country money figure. The hero "N countries" line matches the number
-of distinct countries shown. If no member has a country set, the panel is simply empty (never a fabricated
-row).
+3. Add up every row's member count (all countries **plus** the "Location not set" row) and compare the
+   total to the hero's total-member count. Cross-check the "Location not set" count against
+   `SELECT COUNT(*) FROM directory_profiles WHERE is_active = TRUE AND deleted_at IS NULL AND (country IS
+   NULL OR btrim(country) = '')`.
+**Expected:** Each country row shows a country, its real member count, and a share bar that is that
+country's percentage of the **whole member roster** (a real metric — not a width derived from list
+position). The counts include every active member profile that has a country (claimed or not), so they
+use the same member population as the hero's total-member count — not just claimed profiles. Every country
+with at least one located member appears (no small-count suppression). Active members with **no** country
+recorded are shown as a single muted, italic **"Location not set"** row (caption "no country recorded"),
+so the rows sum exactly to the hero's total-member count. That bucket is **not** counted as a country: the
+hero "N countries" line matches the number of real country rows, excluding "Location not set". The figures
+are people-counts read from members' directory profiles — there is no per-country money figure. If every
+active member has a country, the "Location not set" row does not appear; if none do, the panel is that
+single bucket row at 100% (never a fabricated country).
 **Result:** web ☐ — notes:
 
 ### GDP-4 · No fiat parity anywhere

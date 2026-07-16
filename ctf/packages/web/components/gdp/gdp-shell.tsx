@@ -125,11 +125,19 @@ export default function GdpShell() {
     try {
       const res = await fetch("/api/gdp/countries", { signal });
       if (!res.ok || signal?.aborted) return;
-      const data = (await res.json()) as { countries?: Array<{ country: string; members: number }>; totalMembers?: number };
+      const data = (await res.json()) as { countries?: Array<{ country: string; members: number }>; unspecified?: number; totalMembers?: number };
       const rows = data.countries ?? [];
-      const total = data.totalMembers ?? rows.reduce((sum, r) => sum + r.members, 0);
+      const located = rows.reduce((sum, r) => sum + r.members, 0);
+      // total is the full member roster; shares are a % of it, so the located countries plus the
+      // "Location not set" bucket reconcile to the same member count the hero shows.
+      const total = data.totalMembers ?? located;
+      const unspecified = data.unspecified ?? Math.max(0, total - located);
       if (signal?.aborted) return;
-      setCountries(rows.map((r) => ({ country: r.country, members: r.members, share: total > 0 ? (r.members / total) * 100 : 0 })));
+      const mapped: GdpCountry[] = rows.map((r) => ({ country: r.country, members: r.members, share: total > 0 ? (r.members / total) * 100 : 0 }));
+      if (unspecified > 0) {
+        mapped.push({ country: "Location not set", members: unspecified, share: total > 0 ? (unspecified / total) * 100 : 0, unspecified: true });
+      }
+      setCountries(mapped);
     } catch {
       // Leave the panel empty.
     }
@@ -156,9 +164,11 @@ export default function GdpShell() {
 
   const sectors = shapeSourceSectors(report?.sources);
   const metrics: GdpMetrics = shapeLiveGdpMetrics(metricRows, isEstimate);
-  // Surface the real number of countries with located members in the hero/sidebar line.
-  if (countries.length > 0) {
-    metrics.countries = String(countries.length);
+  // Surface the real number of distinct countries in the hero/sidebar line. The synthetic
+  // "Location not set" bucket is not a country, so it is excluded from the count.
+  const distinctCountryCount = countries.filter((c) => !c.unspecified).length;
+  if (distinctCountryCount > 0) {
+    metrics.countries = String(distinctCountryCount);
   }
 
   if (isMobile) {
