@@ -76,6 +76,9 @@ export function InstantCallAvailabilityBadge({
         background: `${t.ACCENT}12`, color: t.ACCENT,
         fontSize: compact ? 12 : 13.5, fontWeight: 600,
         border: `1px solid ${t.ACCENT}30`, flexShrink: 0,
+        // Wrap and cap at the container width so the badge never forces horizontal overflow on a
+        // narrow screen (the label + rate can be wider than a phone-width column).
+        flexWrap: "wrap", maxWidth: "100%",
       }}
     >
       <PhoneCall size={compact ? 14 : 16} />
@@ -114,12 +117,15 @@ export function ConnectNowButton({
         onKeyDown={(e) => { e.stopPropagation(); }}
         aria-label={`Connect now — ${rateLabel}`}
         style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
+          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
           padding: compact ? "7px 14px" : "10px 18px",
           borderRadius: compact ? 8 : 10,
           background: t.ACCENT, color: "#1a1205",
           fontSize: compact ? 12 : 14, fontWeight: 700,
           border: "none", cursor: "pointer", flexShrink: 0,
+          // Wrap and cap at the container width so the button never forces horizontal overflow on a
+          // narrow screen (the label + rate can be wider than a phone-width column).
+          flexWrap: "wrap", maxWidth: "100%",
         }}
       >
         <PhoneCall size={compact ? 14 : 16} />
