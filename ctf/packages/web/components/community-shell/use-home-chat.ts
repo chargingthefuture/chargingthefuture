@@ -641,6 +641,36 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     [],
   );
 
+  // Delete one of the member's own peer posts. The product has no edit — to change a post you
+  // delete and repost — so this removes the post outright. Optimistically drops it from the stream,
+  // then DELETEs; on failure the post is restored and an error is shown. Server enforces author-only.
+  const deleteMessage = useCallback(
+    async (postId: string) => {
+      let removed: ChatMessage[] = [];
+      setMessages((previous) => {
+        removed = previous.filter((message) => message.communityPostId === postId);
+        return previous.filter((message) => message.communityPostId !== postId);
+      });
+
+      try {
+        await requestJson<{ ok: true; postId: string }>(
+          `/api/hub/messages/${encodeURIComponent(postId)}`,
+          {
+            method: 'DELETE',
+            headers: { 'x-ctf-csrf': '1' },
+          },
+        );
+      } catch (deleteError) {
+        // Restore the optimistically removed post(s) and surface the error.
+        if (removed.length > 0) {
+          setMessages((previous) => mergeMessages(previous, removed));
+        }
+        setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete your post right now.');
+      }
+    },
+    [],
+  );
+
   // Consent modal "Confirm": persist consent and send the held @comic question.
   const confirmConsent = useCallback(async () => {
     if (typeof window !== 'undefined') {
@@ -769,6 +799,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     beginReply,
     cancelReply,
     toggleReaction,
+    deleteMessage,
     mentionsOnly,
     toggleMentionsOnly,
     isFilterRefreshing,
