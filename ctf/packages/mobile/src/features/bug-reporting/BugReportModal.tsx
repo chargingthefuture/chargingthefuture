@@ -203,7 +203,11 @@ function FormBody({
           <Text style={s.closeText}>✕</Text>
         </TouchableOpacity>
       </View>
-      <Text style={s.subtitle}>We read every report.</Text>
+      <Text style={s.subtitle}>
+        Use this when something in the app isn&apos;t working. Reports are one-way — you
+        won&apos;t get a reply here. Have a question? Ask in the Commons on the home screen,
+        where members can answer.
+      </Text>
 
       <View style={s.field}>
         <View style={s.labelRow}>
