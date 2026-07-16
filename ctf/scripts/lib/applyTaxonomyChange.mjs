@@ -15,8 +15,9 @@
 // - Deactivations re-check the live member-reference count; the validation layer already requires
 //   an acknowledgedImpact note on the entry, and the live count is recorded in the audit metadata.
 // - addSkill carries the skill-proposal side-effects: matching skills_hunt_proposed_skill_promotions
-//   rows are marked 'promoted', and Directory "skill not listed" proposals of the same label are
-//   auto-attached to the proposing members' profiles.
+//   rows are marked 'promoted', and the now-official skill is auto-attached to every profile that was
+//   waiting on it — self-edit Directory "skill not listed" proposals AND nominated / community-generated
+//   profiles whose SkillsHunt nomination proposed the skill.
 
 import { normalizeTaxonomyName } from './taxonomyNames.mjs';
 import { TAXONOMY_CHANGES, validateTaxonomyChanges } from './taxonomyChange.mjs';
@@ -65,9 +66,10 @@ async function recordChangeEvent(client, { targetType, targetId, action, reason,
   );
 }
 
-// Skill-proposal side-effects of addSkill: mark the cross-app proposal tracker rows 'promoted'
-// and resolve Directory "skill not listed" proposals (attach the now-official skill to each
-// proposing member, then mark the proposal promoted). Idempotent.
+// Skill-proposal side-effects of addSkill: mark the cross-app proposal tracker rows 'promoted' and
+// attach the now-official skill to every profile that was waiting on it — both self-edit Directory
+// "skill not listed" proposals AND nominated / community-generated profiles whose SkillsHunt nomination
+// proposed the skill — then mark the Directory proposals promoted. Idempotent.
 async function applyProposalPromotions(client, jobTitleId, normalizedSkills, summary) {
   if (!Array.isArray(normalizedSkills) || normalizedSkills.length === 0) {
     return;
@@ -103,6 +105,37 @@ async function applyProposalPromotions(client, jobTitleId, normalizedSkills, sum
     [jobTitleId, labels],
   );
   summary.directorySkillsAutoAttached += attached.rowCount ?? 0;
+
+  // Nominated / community-generated profiles surface a proposed skill through
+  // skills_hunt_directory_profiles -> the cross-app tracker (loadProfilePendingSkills), NOT through
+  // directory_profile_proposed_skills. Attach the now-official skill to those profiles too, or the
+  // "pending review" chip would just vanish when the tracker flips to 'promoted' above. This does not
+  // depend on the tracker status (it may already be 'promoted'), so re-applying repairs any nominated
+  // profile that lost the skill before this branch existed. directory_profile_id is TEXT (v2
+  // varchar/uuid), so only cast rows that are UUID-shaped — a malformed id can never abort the run.
+  const attachedNominated = await client.query(
+    `INSERT INTO directory_profile_skills (profile_id, skill_id, display_order)
+     SELECT
+       shdp.directory_profile_id::uuid,
+       sk.id,
+       COALESCE(
+         (SELECT MAX(x.display_order) FROM directory_profile_skills x
+           WHERE x.profile_id = shdp.directory_profile_id::uuid),
+         0
+       ) + 1
+     FROM skills_hunt_directory_profiles shdp
+     JOIN skills_hunt_proposed_skill_promotions prom
+       ON prom.source_submission_id = shdp.submission_id
+     JOIN skills_taxonomy_skills sk
+       ON sk.job_title_id = $1
+      AND lower(btrim(sk.name)) = lower(btrim(prom.skill_label))
+      AND sk.is_active = true
+     WHERE lower(btrim(prom.normalized_skill)) = ANY($2::text[])
+       AND shdp.directory_profile_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+     ON CONFLICT (profile_id, skill_id) DO NOTHING`,
+    [jobTitleId, labels],
+  );
+  summary.directorySkillsAutoAttached += attachedNominated.rowCount ?? 0;
 
   const markedDirectory = await client.query(
     `UPDATE directory_profile_proposed_skills
