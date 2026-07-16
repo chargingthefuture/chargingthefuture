@@ -5,7 +5,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 // The single app-wide loading screen ("Exit Their Economy / Exit The Psyop").
 // Every surface's loading state renders this — there is intentionally no other
 // loading variant anywhere in the app. Canonical design: the design/ submodule
-// HubLoading.tsx (mirrors app/loading.tsx / loading.module.css).
+// HubLoading.tsx. The route-level app/loading.tsx delegates to this component.
 //
 // It deliberately holds back its own appearance: for the first `delayMs` it
 // renders nothing, so a load that finishes quickly (the common case) never
