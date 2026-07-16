@@ -65,7 +65,7 @@ export function DirectoryBrowse({
         )}
         <div style={{ marginBottom: 20, padding: "20px 24px", borderRadius: 16, background: `linear-gradient(135deg,${t.ACCENT}20 0%,rgba(14,165,233,0.1) 100%)`, border: `1px solid ${t.ACCENT}25` }}>
           <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>Find Your Support Network</div>
-          <div style={{ fontSize: 14, color: t.SUBTLE }}>Verified trauma-informed providers · Trusted · Privacy-first</div>
+          <div style={{ fontSize: 14, color: t.SUBTLE }}>Fellow community members sharing their skills · Trauma-informed · Privacy-first</div>
         </div>
 
         {loadingMembers ? (

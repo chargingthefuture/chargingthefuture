@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { BookOpen, ChevronLeft, Pencil, Search, UserPlus } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
@@ -407,11 +406,8 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
           <BookOpen size={18} style={{ color: t.ACCENT }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>📇 Directory</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Verified providers · Trauma-informed · Safe</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Fellow community members · Trauma-informed · Safe</div>
           </div>
-          <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
-            ✓ Verified Network
-          </Badge>
           <button onClick={() => setShowProfileEditor(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 9, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
             {hasOwnProfile ? <Pencil size={14} /> : <UserPlus size={14} />} {profileButtonLabel}
           </button>
