@@ -8,7 +8,14 @@ export const DIRECTORY_ERROR_CODE = {
   csrfDenied: 'DIRECTORY_CSRF_DENIED',
   claimedProfileGuard: 'DIRECTORY_CLAIMED_PROFILE_GUARD',
   ownProfileRequired: 'DIRECTORY_OWN_PROFILE_REQUIRED',
+  // The profile's Quora URL was taken down at the person's request and is on the suppression list;
+  // it cannot be listed again until an admin lifts the block (override).
+  quoraUrlSuppressed: 'DIRECTORY_QUORA_URL_SUPPRESSED',
 } as const;
+
+// Reason required when an admin takes down a profile at the person's request, or when lifting a
+// suppression (override). Kept short but non-empty so the audit trail always records a why.
+export const DIRECTORY_MAX_TAKEDOWN_REASON_LENGTH = 500;
 
 export const DIRECTORY_MAX_NAME_LENGTH = 120;
 export const DIRECTORY_MAX_HEADLINE_LENGTH = 160;
