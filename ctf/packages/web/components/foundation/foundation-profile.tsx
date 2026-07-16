@@ -3,6 +3,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MapPin, Shield } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { FONT, getFoundationTokens, initials, type ProviderView } from "./foundation-ui";
 import { ConnectNowButton, InstantCallAvailabilityBadge, canOfferConnectNow, acceptsInstantCalls, isOwnProfile } from "./foundation-connect-now";
 import { ShareLink } from "@/components/shared/share-link";
@@ -20,6 +21,7 @@ export function ProviderProfile({
 }) {
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
+  const isMobile = useIsMobile();
   const ownProfile = isOwnProfile(provider, viewerUserId);
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: t.BG, fontFamily: FONT, color: t.TEXT, display: "flex", flexDirection: "column" }}>
@@ -35,24 +37,29 @@ export function ProviderProfile({
           <ShareLink url={`/apps/foundation/provider/${provider.profileId}`} title="Share this provider" />
         </div>
       </div>
-      <div style={{ flex: 1, padding: "32px 40px", overflowY: "auto", display: "flex", gap: 32, flexWrap: "wrap" }}>
-        <div style={{ flex: 2, minWidth: 320 }}>
-          <div style={{ display: "flex", gap: 24, marginBottom: 28 }}>
-            <Avatar style={{ width: 80, height: 80 }}>
-              <AvatarFallback style={{ background: `${t.ACCENT}25`, color: t.ACCENT, fontSize: 28, fontWeight: 800 }}>{initials(provider.displayName)}</AvatarFallback>
-            </Avatar>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>{provider.displayName}</div>
-              {provider.headline && <div style={{ fontSize: 15, color: t.SUBTLE }}>{provider.headline}</div>}
-              {/* Location read from the provider's shared directory profile — only the parts that are set. */}
-              {[provider.city, provider.state, provider.country].some((v) => v && v.trim()) && (
-                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: t.MUTED, marginTop: 5 }}>
-                  <MapPin size={13} style={{ flexShrink: 0 }} />
-                  <span>{[provider.city, provider.state, provider.country].map((v) => v?.trim()).filter(Boolean).join(", ")}</span>
-                </div>
-              )}
+      <div style={{ flex: 1, padding: isMobile ? "24px 16px" : "32px 40px", overflowY: "auto", display: "flex", gap: isMobile ? 20 : 32, flexWrap: "wrap" }}>
+        <div style={{ flex: 2, minWidth: isMobile ? 0 : 320 }}>
+          {/* Header: on desktop a single row (avatar + identity fill the left, actions sit at the right).
+              On phone width the actions drop to their own full-width block below the identity so nothing
+              runs off-screen. */}
+          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "flex-start", gap: isMobile ? 20 : 24, marginBottom: 28 }}>
+            <div style={{ display: "flex", gap: isMobile ? 16 : 24, alignItems: isMobile ? "center" : "flex-start", flex: 1, minWidth: 0 }}>
+              <Avatar style={{ width: 80, height: 80, flexShrink: 0 }}>
+                <AvatarFallback style={{ background: `${t.ACCENT}25`, color: t.ACCENT, fontSize: 28, fontWeight: 800 }}>{initials(provider.displayName)}</AvatarFallback>
+              </Avatar>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>{provider.displayName}</div>
+                {provider.headline && <div style={{ fontSize: 15, color: t.SUBTLE }}>{provider.headline}</div>}
+                {/* Location read from the provider's shared directory profile — only the parts that are set. */}
+                {[provider.city, provider.state, provider.country].some((v) => v && v.trim()) && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: t.MUTED, marginTop: 5 }}>
+                    <MapPin size={13} style={{ flexShrink: 0 }} />
+                    <span>{[provider.city, provider.state, provider.country].map((v) => v?.trim()).filter(Boolean).join(", ")}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0, flexShrink: 0 }}>
               {/* You can't request a quote from your own profile — the server rejects a self-connection,
                   so disable the button here rather than let the request fail with a generic error. */}
               <button
@@ -65,7 +72,7 @@ export function ProviderProfile({
                 {submitting ? "Requesting…" : "Request Quote"}
               </button>
               {ownProfile && (
-                <div style={{ fontSize: 12, color: t.MUTED, maxWidth: 180, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 12, color: t.MUTED, maxWidth: isMobile ? "100%" : 180, lineHeight: 1.5 }}>
                   This is your own profile — you can&apos;t request a quote from yourself.
                 </div>
               )}
@@ -95,7 +102,7 @@ export function ProviderProfile({
             </div>
           )}
         </div>
-        <div style={{ flex: 1, minWidth: 240 }}>
+        <div style={{ flex: 1, minWidth: isMobile ? 0 : 240 }}>
           <div style={{ padding: "16px", borderRadius: 12, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
               <Shield size={14} style={{ color: t.ACCENT }} />

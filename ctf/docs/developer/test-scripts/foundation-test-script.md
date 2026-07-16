@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
-| **Generated** | 2026-07-16 (hand-updated for Stream-down resilience on Request Quote; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-16 (hand-updated for the phone-width provider profile header fix; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -69,7 +69,11 @@ list — it clears the trade, search text, and skill filters and opens the Brows
 even when Browse is already the open tab). The empty state matches the reason: a skill filter or a
 search says "No providers match" and points at trying a different skill/search or clearing the filter;
 with no filter at all it says "No providers offering skills yet" and explains members show up once
-they opt in — it never tells you to clear a filter that isn't set, and never mentions cash.
+they opt in — it never tells you to clear a filter that isn't set, and never mentions cash. Open a
+provider profile at phone width (~390px, or the mobile-responsive web layout): the whole header fits
+with no sideways scrolling — the Request Quote button, the self-profile note, and the "Accepts live
+1:1 calls" badge all sit fully on-screen (the action block wraps below the name) and are never clipped
+at the right edge.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### FND-2 · Offer skills (provider opt-in)
