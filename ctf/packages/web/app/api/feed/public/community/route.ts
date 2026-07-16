@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import type { PublicCommunityPost } from 'lib/feed/types';
 import { listPublicCommunityPosts } from 'lib/feed/repository';
+import { enforcePublicReadRateLimit } from 'lib/security/rate-limit';
 
 // Public, unauthenticated read of the Commons (peer community posts), so signed-out visitors can
 // read what members have posted — public the way Quora posts are. This route has no auth gate on
@@ -15,7 +16,13 @@ type PublicCommunityResponse = {
   posts: PublicCommunityPost[];
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Per-IP brake against bulk scraping of the anonymous read (see lib/security/rate-limit.ts).
+  const limited = enforcePublicReadRateLimit(request, 'feed-public-community');
+  if (limited) {
+    return limited;
+  }
+
   try {
     const { isPublic, posts } = await listPublicCommunityPosts();
 
