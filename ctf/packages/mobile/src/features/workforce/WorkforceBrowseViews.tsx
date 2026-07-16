@@ -8,8 +8,10 @@ import {
   fetchWorkforceSkillLevelReport,
   fetchWorkforceSectorDetail,
   fetchWorkforceSkillLevelDetail,
+  fetchWorkforceCommunityPlanning,
 } from './api';
 import type {
+  CommunityPlanningTeamRoster,
   WorkforceBucketDetail,
   WorkforceGroupedReportItem,
   WorkforceMatchedMember,
@@ -24,7 +26,7 @@ import type {
 const SKILL_LEVELS = ['Foundational', 'Intermediate', 'Advanced'];
 const PAGE_SIZE = 20;
 
-export type WorkforceBrowseTab = 'occupations' | 'sector' | 'skill-level';
+export type WorkforceBrowseTab = 'occupations' | 'sector' | 'skill-level' | 'community';
 
 // Match-reason badge palette — a mixed categorical status set with no sanctioned tokens; stays raw.
 const REASON: Record<WorkforceMatchReason, { label: string; color: string }> = {
@@ -303,9 +305,84 @@ function OccupationsBrowse() {
   );
 }
 
+// One planning team from issue #1465: a named union of Workforce sectors, expandable to its
+// de-duplicated matched-member roster. Mirrors the web TeamCard.
+function TeamRow({ team }: { team: CommunityPlanningTeamRoster }) {
+  const { tokens, accent, styles } = useWorkforceStyles();
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={styles.bucketRow}>
+      <TouchableOpacity onPress={() => setOpen((v) => !v)} style={styles.teamHead} accessibilityState={{ expanded: open }}>
+        <Text style={styles.bucketChevron}>{open ? '▾' : '▸'}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.bucketName} numberOfLines={1}>{team.name}</Text>
+          <Text style={styles.rowSub} numberOfLines={2}>{team.responsibleFor}</Text>
+          <Text style={styles.teamSectors} numberOfLines={2}>
+            {team.sectors.map((s) => (team.missingSectors.includes(s) ? `${s} · not mapped` : s)).join(' · ')}
+          </Text>
+        </View>
+        <View style={styles.teamMeta}>
+          <Text style={[styles.rowGap, { color: accent }]}>{fmt(team.memberCount)} members</Text>
+          <Text style={[styles.rowGap, { color: team.gap > 0 ? accent : tokens.success }]}>
+            {team.gap > 0 ? `${fmt(team.gap)} to fill` : 'filled'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+      {open ? (
+        <View style={styles.bucketBody}>
+          {team.memberCount === 0 ? (
+            <Text style={styles.muted}>No members match this team&apos;s sectors yet.</Text>
+          ) : (
+            team.members.map((m) => <MemberCard key={m.profileId} m={m} />)
+          )}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function CommunityPlanning() {
+  const { accent, styles } = useWorkforceStyles();
+  const [report, setReport] = useState<CommunityPlanningTeamRoster[] | null>(null);
+  const [sourceIssue, setSourceIssue] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    fetchWorkforceCommunityPlanning()
+      .then((r) => { if (active) { setReport(r?.teams ?? []); setSourceIssue(r?.sourceIssue ?? null); } })
+      .catch(() => { if (active) setError('Failed to load.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  if (loading) return <ActivityIndicator color={accent} style={{ marginTop: 24 }} />;
+  if (error) return <Text style={styles.errorText}>{error}</Text>;
+  const teams = report ?? [];
+  return (
+    <View>
+      <Text style={styles.communityIntro}>
+        Proposed rosters for the survivor-built gated community planning document. Each team draws from
+        the Workforce sectors it maps to; the roster is every member who already matches those sectors,
+        and the gap is how many positions those sectors still have to fill. Recomputes live from the
+        Directory.
+      </Text>
+      {sourceIssue ? <Text style={styles.rowSub}>Planning document: issue #1465</Text> : null}
+      {teams.length === 0 ? (
+        <Text style={styles.muted}>No teams to show yet.</Text>
+      ) : (
+        <View style={{ marginTop: 8 }}>{teams.map((team) => <TeamRow key={team.key} team={team} />)}</View>
+      )}
+    </View>
+  );
+}
+
 export function WorkforceBrowseViews({ tab }: { tab: WorkforceBrowseTab }) {
   if (tab === 'occupations') return <OccupationsBrowse />;
   if (tab === 'sector') return <BucketDrilldown kind="sector" fetcher={fetchWorkforceSectorReport} />;
+  if (tab === 'community') return <CommunityPlanning />;
   return <BucketDrilldown kind="skill-level" fetcher={fetchWorkforceSkillLevelReport} />;
 }
 
@@ -331,6 +408,10 @@ function makeStyles(t: ThemeTokens, accent: string) {
     rowGap: { fontSize: 13, fontWeight: '700', textAlign: 'right', minWidth: 90 },
     bucketRow: { borderBottomWidth: 1, borderBottomColor: t.borderFaint },
     bucketHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
+    teamHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 12 },
+    teamSectors: { fontSize: 11, color: t.textSecondary, marginTop: 4 },
+    teamMeta: { alignItems: 'flex-end', gap: 4 },
+    communityIntro: { fontSize: 13, color: t.textSecondary, lineHeight: 20, marginBottom: 6 },
     bucketChevron: { fontSize: 14, color: t.textSecondary, width: 14 },
     bucketName: { flex: 1, fontSize: 14, color: t.textShell, fontWeight: '600' },
     bucketBody: { paddingLeft: 24, paddingBottom: 12, gap: 8 },

@@ -6,7 +6,7 @@ import type { WorkforceDashboard, WorkforceGroupedReportItem } from '../../lib/w
 import { useTheme } from '@/hooks/useTheme';
 import { getWorkforceTokens } from './workforce-shared';
 
-type SidebarView = 'overview' | 'sector' | 'skill-level' | 'occupations';
+type SidebarView = 'overview' | 'sector' | 'skill-level' | 'occupations' | 'community-planning';
 
 interface WorkforceSidebarProps {
   activeView: SidebarView;
@@ -20,6 +20,7 @@ const SIDEBAR_ITEMS: { label: string; key: SidebarView }[] = [
   { label: 'Skill Gaps', key: 'sector' },
   { label: 'By Skill Level', key: 'skill-level' },
   { label: 'Occupations', key: 'occupations' },
+  { label: 'Community Planning', key: 'community-planning' },
 ];
 
 export function WorkforceSidebar({

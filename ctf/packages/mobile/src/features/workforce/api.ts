@@ -183,3 +183,35 @@ export async function fetchWorkforceSkillLevelDetail(skillLevel: string): Promis
   const json = await res.json() as { detail?: WorkforceBucketDetail | null };
   return json.detail ?? null;
 }
+
+// One planning team from the community-planning roster overlay (issue #1465). Mirrors the web
+// CommunityPlanningTeamRoster: a named union of Workforce sectors, its de-duplicated matched-member
+// roster, and the sectors' summed demand gap.
+export interface CommunityPlanningTeamRoster {
+  key: string;
+  name: string;
+  responsibleFor: string;
+  sectors: string[];
+  matchedSectors: string[];
+  missingSectors: string[];
+  target: number;
+  recruited: number;
+  gap: number;
+  memberCount: number;
+  members: WorkforceMatchedMember[];
+}
+
+export interface CommunityPlanningReport {
+  generatedAtIso: string;
+  sourceIssue: string;
+  teams: CommunityPlanningTeamRoster[];
+}
+
+// GET /api/workforce/reports/community-planning — the team rosters for the gated-community planning
+// document. Read-only; recomputes live from the Directory on every call.
+export async function fetchWorkforceCommunityPlanning(): Promise<CommunityPlanningReport | null> {
+  const res = await authedFetch(`${WORKFORCE_BASE}/reports/community-planning`);
+  if (!res.ok) throw new Error('Failed to fetch community planning roster');
+  const json = await res.json() as { report?: CommunityPlanningReport | null };
+  return json.report ?? null;
+}
