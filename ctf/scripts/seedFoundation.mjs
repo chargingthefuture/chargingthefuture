@@ -27,9 +27,9 @@ async function main() {
     await client.query(
       `
         INSERT INTO directory_profiles
-          (id, claimed_by_user_id, first_name, last_name, headline, bio, profile_url, is_active)
+          (id, claimed_by_user_id, first_name, last_name, headline, bio, profile_url, country, is_active)
         VALUES
-          ($1::uuid, 'seed-provider-01', 'Seed', 'Provider', 'Trauma-informed support specialist', 'Seed provider profile for Foundation flow validation.', 'https://example.com/provider/seed', TRUE)
+          ($1::uuid, 'seed-provider-01', 'Seed', 'Provider', 'Trauma-informed support specialist', 'Seed provider profile for Foundation flow validation.', 'https://example.com/provider/seed', 'United States', TRUE)
         ON CONFLICT (id)
         DO UPDATE SET
           claimed_by_user_id = EXCLUDED.claimed_by_user_id,
@@ -38,6 +38,7 @@ async function main() {
           headline = EXCLUDED.headline,
           bio = EXCLUDED.bio,
           profile_url = EXCLUDED.profile_url,
+          country = EXCLUDED.country,
           is_active = EXCLUDED.is_active,
           updated_at = NOW()
       `,

@@ -276,7 +276,9 @@ export function DirectoryProfileEdit({
   const labelStyle = { fontSize: 12, fontWeight: 700, color: t.MUTED, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 6, display: "block" };
   const inputStyle = { width: "100%", padding: "9px 12px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", boxSizing: "border-box" as const };
   const fieldGap = { marginBottom: 18 };
-  const canSave = form.firstName.trim().length > 0 && !saving;
+  // First name and country are both required (city/state stay optional). Country gates Save so a
+  // member cannot save a profile with no country — the same rule the server now enforces.
+  const canSave = form.firstName.trim().length > 0 && form.country.trim().length > 0 && !saving;
 
   // Job titles are loaded for every sector at once; the dropdown shows only those under the
   // currently selected sector.
@@ -356,7 +358,7 @@ export function DirectoryProfileEdit({
                   clean: Country is a dropdown, State is a US-state dropdown for the United States
                   and a free-text region box for every other country. */}
               <div style={fieldGap}>
-                <label style={labelStyle} htmlFor="dpe-country">Country</label>
+                <label style={labelStyle} htmlFor="dpe-country">Country <span style={{ color: t.ACCENT }}>(required)</span></label>
                 <CountrySelect
                   id="dpe-country"
                   value={form.country}
