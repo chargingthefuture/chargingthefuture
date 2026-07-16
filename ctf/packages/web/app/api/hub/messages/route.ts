@@ -29,10 +29,11 @@ function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
     ? feedAuthorHandle(authorUsername, authorUserId)
     : 'Survivor Hub';
 
-  // Announcements lead with their title; questions/community posts are body-only.
-  const text = item.itemType === 'announcement' && item.title
-    ? `${item.title}\n\n${item.body}`
-    : item.body;
+  // Announcements carry their title separately so the client can render it as a heading on the
+  // official card; the message text is then the body alone. Questions/community posts are body-only.
+  const isAnnouncement = item.itemType === 'announcement';
+  const title = isAnnouncement ? item.title || null : null;
+  const text = item.body;
 
   // A peer post may quote another peer post (Signal-style reply). The quoted author handle
   // and short snippet are resolved server-side in the feed repository and carried here.
@@ -50,6 +51,9 @@ function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
     username: authorUsername,
     displayName,
     avatarUrl: null,
+    kind: item.itemType,
+    title,
+    mandatory: isAnnouncement ? item.mandatory : false,
     text,
     sentAtIso: item.publishedAtIso,
     communityPostId: isCommunity ? item.sourceCommunityPostId : null,
@@ -176,6 +180,10 @@ export async function POST(request: Request) {
       username: authorUsername,
       displayName: feedAuthorHandle(authorUsername, gate.identity.userId),
       avatarUrl: null,
+      // A message posted from the composer is always a peer community post.
+      kind: 'community',
+      title: null,
+      mandatory: false,
       text,
       sentAtIso: result.createdAtIso,
       communityPostId: result.postId,
