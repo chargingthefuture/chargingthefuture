@@ -7,10 +7,17 @@ import {
 import { whatWorksError } from '../_lib';
 import { logWhatWorksAudit } from 'lib/what-works/audit';
 import { reportError } from 'lib/observability/report';
+import { enforcePublicReadRateLimit } from 'lib/security/rate-limit';
 
 // Public, sign-in-free projection: the list is readable by anyone, but only a teaser
 // slice is returned and submitter identity is never exposed. Full browse is sign-in gated.
-export async function GET() {
+export async function GET(request: Request) {
+  // Per-IP brake against bulk scraping of the anonymous read (see lib/security/rate-limit.ts).
+  const limited = enforcePublicReadRateLimit(request, 'what-works-public');
+  if (limited) {
+    return limited;
+  }
+
   try {
     const list = await getReaderList(null);
     const problems = list.problems.slice(0, PUBLIC_PREVIEW_PROBLEM_LIMIT).map((problem) => ({

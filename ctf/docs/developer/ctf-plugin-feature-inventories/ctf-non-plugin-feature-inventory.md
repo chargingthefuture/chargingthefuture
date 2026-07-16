@@ -210,6 +210,20 @@ Backend-only endpoints with no UI, each guarded by a dedicated bearer secret and
 
 ## 5) Change Log
 
+- 2026-07-16: **Crawler policy and public-endpoint rate limiting (owner approved).** New
+  `ctf/packages/web/app/robots.ts` serves `/robots.txt`: allow `/` (the public marketing shells are
+  meant to be crawled), disallow `/api/`, `/admin/`, `/account`, `/plugin/`; no sitemap reference (the
+  app has no sitemap route). New shared limiter `ctf/packages/web/lib/security/rate-limit.ts` — an
+  in-memory fixed-window per-process brake (`checkRateLimit`, plus `enforcePublicReadRateLimit` which
+  keys per IP from the first `x-forwarded-for` value, falling back to `unknown`) — applied at
+  30 requests/minute per IP to the unauthenticated public read endpoints only:
+  `GET /api/feed/public/community`, `GET /api/chyme/public/room`, `GET /api/what-works/public`,
+  `GET /api/socket-relay/public`, `GET /api/socket-relay/public/[id]`,
+  `GET /api/workforce/public-snapshot`, `GET /api/skills-taxonomy/summary`, `GET /api/beacon/current`.
+  Over-limit callers get `429` with a `Retry-After` header and a plain JSON `{ error }`.
+  `GET /api/health` is deliberately not limited (uptime probes). Limits are per server process
+  (reset on deploy, per-instance) — a first bulk-abuse brake, not a distributed quota; authenticated
+  plugin routes are untouched. No schema or contract change.
 - 2026-07-15: **Plugin registry/catalog code-review fixes (findings #1533, #1534, #1536, #1537).**
   `GET /api/plugins` now double-gates the non-admin list: on top of the admin-only-slug filter
   (`filterPluginsForViewer`), non-admin responses explicitly drop rows with `isVisible === false`

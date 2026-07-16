@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getWorkforcePublicSnapshot } from 'lib/workforce/repository';
 import { reportError } from 'lib/observability/report';
+import { enforcePublicReadRateLimit } from 'lib/security/rate-limit';
 
 // Public, unauthenticated snapshot for the signed-out Workforce landing page. It returns two coarse
 // aggregate counts (Recruited / Sector Gaps) from the same projection model the signed-in dashboard
@@ -9,7 +10,13 @@ import { reportError } from 'lib/observability/report';
 // force-dynamic keeps it from being statically cached so the landing snapshot reflects current data.
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Per-IP brake against bulk scraping of the anonymous read (see lib/security/rate-limit.ts).
+  const limited = enforcePublicReadRateLimit(request, 'workforce-public-snapshot');
+  if (limited) {
+    return limited;
+  }
+
   try {
     const snapshot = await getWorkforcePublicSnapshot();
     return NextResponse.json(snapshot, { status: 200 });
