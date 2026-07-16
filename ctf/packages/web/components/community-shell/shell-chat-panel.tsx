@@ -450,19 +450,23 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         </section>
       ) : null}
 
-      {/* "@ Mentions" filter: on, the stream shows only messages that @-mention the viewer
-          (filtered server-side so old mentions beyond the loaded page are found too). */}
-      <div className={styles.mentionsFilterRow}>
-        <button
-          type="button"
-          className={mentionsOnly ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterBtnActive}` : styles.mentionsFilterBtn}
-          onClick={toggleMentionsOnly}
-          aria-pressed={mentionsOnly}
-          aria-label={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
-        >
-          <AtSign size={12} /> Mentions
-        </button>
-      </div>
+      {/* "@ Mentions" filter (desktop): on, the stream shows only messages that @-mention the viewer
+          (filtered server-side so old mentions beyond the loaded page are found too). On desktop the
+          chip sits above the stream; at phone width it renders inline as the leading chip of the
+          concierge row below (owner directive, 2026-07-16). */}
+      {!isMobile ? (
+        <div className={styles.mentionsFilterRow}>
+          <button
+            type="button"
+            className={mentionsOnly ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterBtnActive}` : styles.mentionsFilterBtn}
+            onClick={toggleMentionsOnly}
+            aria-pressed={mentionsOnly}
+            aria-label={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
+          >
+            <AtSign size={12} /> Mentions
+          </button>
+        </div>
+      ) : null}
 
       <div className={styles.chatMessages}>
         {(isLoading || isFilterRefreshing) && !hasContent ? (
@@ -597,9 +601,22 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           messages), so a member can always tap one. Unlike the old hidden chips (#471) that merely
           filled the composer with no answer, tapping here runs the local concierge (sendConciergeAsk):
           it posts the question and an instant reply pointing at the best-matching feature, so there is
-          always an immediate response. */}
-      {starterPrompts.length > 0 ? (
+          always an immediate response. At phone width the "@ Mentions" filter chip leads this row
+          (owner directive, 2026-07-16) — same pill size as the question chips, sky-blue so it stays
+          visually distinct; it scrolls with the row. */}
+      {starterPrompts.length > 0 || isMobile ? (
         <div className={styles.conciergeChipRail} role="group" aria-label="Ask what you need">
+          {isMobile ? (
+            <button
+              type="button"
+              className={mentionsOnly ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterChip} ${styles.mentionsFilterBtnActive}` : `${styles.mentionsFilterBtn} ${styles.mentionsFilterChip}`}
+              onClick={toggleMentionsOnly}
+              aria-pressed={mentionsOnly}
+              aria-label={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
+            >
+              <AtSign size={12} /> Mentions
+            </button>
+          ) : null}
           {starterPrompts.map((prompt) => (
             <button
               key={prompt}
