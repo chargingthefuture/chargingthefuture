@@ -79,7 +79,7 @@ export function FeedAnnouncementsAdminShell({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [draft, setDraft] = useState({ title: '', body: '', priority: 0, mandatory: false, linkedPluginSlug: '' });
+  const [draft, setDraft] = useState({ title: '', body: '', linkedPluginSlug: '' });
   // Plugin registry options for the "Link a plugin" picker. Best-effort: a failed load just leaves the
   // picker empty and never blocks authoring. The server re-validates the chosen slug on submit.
   const [pluginOptions, setPluginOptions] = useState<PluginOption[]>([]);
@@ -128,13 +128,13 @@ export function FeedAnnouncementsAdminShell({
       return;
     }
     const res = await act(
-      () => adminMutate('/api/feed/admin/announcements', 'POST', { title: draft.title.trim(), body: draft.body.trim(), priority: draft.priority, mandatory: draft.mandatory, scheduleAtIso: null, expiresAtIso: null, linkedPluginSlug: draft.linkedPluginSlug || null }),
+      () => adminMutate('/api/feed/admin/announcements', 'POST', { title: draft.title.trim(), body: draft.body.trim(), scheduleAtIso: null, expiresAtIso: null, linkedPluginSlug: draft.linkedPluginSlug || null }),
       'Draft created.',
     );
     // Only clear the form on success — a failed submit must keep the typed title and message so the
     // author does not lose their work and can just retry.
     if (res.ok) {
-      setDraft({ title: '', body: '', priority: 0, mandatory: false, linkedPluginSlug: '' });
+      setDraft({ title: '', body: '', linkedPluginSlug: '' });
     }
   }
 
@@ -187,15 +187,6 @@ export function FeedAnnouncementsAdminShell({
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>New announcement</div>
           <input value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} placeholder="Title" style={{ ...fieldStyle(t), marginBottom: 10 }} />
           <textarea value={draft.body} onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))} placeholder="Message" rows={3} style={{ ...fieldStyle(t), resize: 'none', marginBottom: 10 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: t.MUTED }}>
-              <input type="checkbox" checked={draft.mandatory} onChange={(e) => setDraft((d) => ({ ...d, mandatory: e.target.checked }))} /> Mandatory
-            </label>
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: t.MUTED }}>
-              Priority
-              <input type="number" min={0} value={draft.priority} onChange={(e) => setDraft((d) => ({ ...d, priority: Math.max(0, Math.floor(Number(e.target.value) || 0)) }))} style={{ ...fieldStyle(t), width: 80 }} />
-            </label>
-          </div>
           {/* Optional: link a plugin. When set, the published announcement gets an "Open <Plugin>"
               link so a reader can jump straight to that app. */}
           <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
@@ -229,7 +220,6 @@ export function FeedAnnouncementsAdminShell({
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 14, fontWeight: 600, flex: 1 }}>{a.title}</span>
                 <Pill label={a.status} color={STATUS_COLOR[a.status] ?? t.MUTED} />
-                {a.mandatory ? <Pill label="mandatory" color={t.ACCENT} /> : null}
               </div>
               <div style={{ fontSize: 12, color: t.MUTED, marginBottom: a.linkedPluginSlug ? 6 : (a.status === 'archived' ? 0 : 8) }}>{a.body}</div>
               {a.linkedPluginSlug ? (

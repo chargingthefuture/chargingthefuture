@@ -39,9 +39,9 @@ async function upsertAnnouncement(client, data) {
   const result = await client.query(
     `
       INSERT INTO announcements
-        (title, body, status, priority, mandatory, schedule_at, published_at, expires_at, targeting, created_by_user_id, updated_by_user_id)
+        (title, body, status, schedule_at, published_at, expires_at, targeting, created_by_user_id, updated_by_user_id)
       VALUES
-        ($1, $2, $3, $4, $5, NULL, $6::timestamptz, $7::timestamptz, $8::jsonb, $9, $9)
+        ($1, $2, $3, NULL, $4::timestamptz, $5::timestamptz, $6::jsonb, $7, $7)
       ON CONFLICT DO NOTHING
       RETURNING id
     `,
@@ -49,8 +49,6 @@ async function upsertAnnouncement(client, data) {
       data.title,
       data.body,
       data.status,
-      data.priority,
-      data.mandatory,
       data.publishedAt,
       data.expiresAt,
       JSON.stringify(data.targeting),
@@ -79,15 +77,13 @@ async function ensureFeedItemForAnnouncement(client, announcementId, data) {
   const feedItem = await client.query(
     `
       INSERT INTO feed_items
-        (item_type, source_announcement_id, title, body, priority, mandatory, published_at, expires_at, is_active, created_by_user_id, updated_by_user_id)
+        (item_type, source_announcement_id, title, body, published_at, expires_at, is_active, created_by_user_id, updated_by_user_id)
       VALUES
-        ('announcement', $1::uuid, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz, TRUE, $8, $8)
+        ('announcement', $1::uuid, $2, $3, $4::timestamptz, $5::timestamptz, TRUE, $6, $6)
       ON CONFLICT (source_announcement_id)
       DO UPDATE SET
         title = EXCLUDED.title,
         body = EXCLUDED.body,
-        priority = EXCLUDED.priority,
-        mandatory = EXCLUDED.mandatory,
         published_at = EXCLUDED.published_at,
         expires_at = EXCLUDED.expires_at,
         is_active = EXCLUDED.is_active,
@@ -95,7 +91,7 @@ async function ensureFeedItemForAnnouncement(client, announcementId, data) {
         updated_at = NOW()
       RETURNING id
     `,
-    [announcementId, data.title, data.body, data.priority, data.mandatory, data.publishedAt, data.expiresAt, seedAdminId],
+    [announcementId, data.title, data.body, data.publishedAt, data.expiresAt, seedAdminId],
   );
 
   const feedItemId = feedItem.rows[0].id;
@@ -123,7 +119,7 @@ async function ensureFeedItemForAnnouncement(client, announcementId, data) {
     [seedUserId, feedItemId],
   );
 
-  if (!data.mandatory) {
+  if (data.seedDismiss) {
     await client.query(
       `
         INSERT INTO feed_user_dismissals (user_id, item_id, dismissed_at)
@@ -151,8 +147,8 @@ async function main() {
         title: 'Feed phase-0 seed announcement',
         body: 'Deterministic feed + announcements seed fixture for phase-0 validation.',
         status: 'published',
-        priority: 90,
-        mandatory: true,
+        // Seed-only: whether to pre-dismiss this item for the seed user (fixture for dismiss behavior).
+        seedDismiss: false,
         publishedAt,
         expiresAt,
         targeting: { roles: ['member'] },
@@ -161,8 +157,7 @@ async function main() {
         title: 'Optional admin update',
         body: 'Optional announcement to validate dismiss behavior.',
         status: 'published',
-        priority: 50,
-        mandatory: false,
+        seedDismiss: true,
         publishedAt,
         expiresAt,
         targeting: { roles: ['member', 'admin'] },
@@ -201,7 +196,7 @@ async function main() {
         [seedUserId, announcementId],
       );
 
-      if (!item.mandatory) {
+      if (item.seedDismiss) {
         await client.query(
           `
             UPDATE announcement_user_state

@@ -117,8 +117,6 @@ export type FeedTimelineItem = {
   sourceCommunityPostId: string | null;
   title: string;
   body: string;
-  priority: number;
-  mandatory: boolean;
   publishedAtIso: string;
   expiresAtIso: string | null;
   isRead: boolean;
@@ -155,8 +153,6 @@ export type Announcement = {
   title: string;
   body: string;
   status: AnnouncementStatus;
-  priority: number;
-  mandatory: boolean;
   scheduleAtIso: string | null;
   publishedAtIso: string | null;
   expiresAtIso: string | null;
@@ -173,8 +169,6 @@ export type Announcement = {
 export type AnnouncementDraftInput = {
   title: string;
   body: string;
-  priority?: number;
-  mandatory?: boolean;
   scheduleAtIso?: string | null;
   expiresAtIso?: string | null;
   targeting?: AnnouncementTargeting;

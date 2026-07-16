@@ -68,8 +68,6 @@ type FeedTimelineRow = {
   source_community_post_id: string | null;
   title: string;
   body: string;
-  priority: number;
-  mandatory: boolean;
   published_at: Date;
   expires_at: Date | null;
   is_read: boolean;
@@ -81,8 +79,6 @@ type AnnouncementRow = {
   title: string;
   body: string;
   status: 'draft' | 'published' | 'archived';
-  priority: number;
-  mandatory: boolean;
   schedule_at: Date | null;
   published_at: Date | null;
   expires_at: Date | null;
@@ -290,8 +286,6 @@ function mapAnnouncement(row: AnnouncementRow): Announcement {
     title: row.title,
     body: row.body,
     status: row.status,
-    priority: row.priority,
-    mandatory: row.mandatory,
     scheduleAtIso: row.schedule_at ? toIso(row.schedule_at) : null,
     publishedAtIso: row.published_at ? toIso(row.published_at) : null,
     expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
@@ -431,16 +425,14 @@ async function syncFeedItemForAnnouncement(
   const feedItemResult = await client.query<{ id: string }>(
     `
       INSERT INTO feed_items
-        (item_type, source_announcement_id, title, body, priority, mandatory, published_at, expires_at, is_active, created_by_user_id, updated_by_user_id)
+        (item_type, source_announcement_id, title, body, published_at, expires_at, is_active, created_by_user_id, updated_by_user_id)
       VALUES
-        ('announcement', $1::uuid, $2, $3, $4, $5, COALESCE($6::timestamptz, NOW()), $7::timestamptz, TRUE, $8, $8)
+        ('announcement', $1::uuid, $2, $3, COALESCE($4::timestamptz, NOW()), $5::timestamptz, TRUE, $6, $6)
       ON CONFLICT (source_announcement_id)
       DO UPDATE SET
         item_type = EXCLUDED.item_type,
         title = EXCLUDED.title,
         body = EXCLUDED.body,
-        priority = EXCLUDED.priority,
-        mandatory = EXCLUDED.mandatory,
         published_at = EXCLUDED.published_at,
         expires_at = EXCLUDED.expires_at,
         is_active = TRUE,
@@ -452,8 +444,6 @@ async function syncFeedItemForAnnouncement(
       announcement.id,
       announcement.title,
       feedBody,
-      announcement.priority,
-      announcement.mandatory,
       announcement.publishedAtIso,
       announcement.expiresAtIso,
       actorId,
@@ -474,9 +464,9 @@ async function syncFeedItemForQuestion(
   const feedItemResult = await client.query<{ id: string }>(
     `
       INSERT INTO feed_items
-        (item_type, source_question_id, title, body, priority, mandatory, published_at, is_active, created_by_user_id, updated_by_user_id)
+        (item_type, source_question_id, title, body, published_at, is_active, created_by_user_id, updated_by_user_id)
       VALUES
-        ('question', $1::uuid, $2, $3, 40, FALSE, NOW(), TRUE, $4, $4)
+        ('question', $1::uuid, $2, $3, NOW(), TRUE, $4, $4)
       ON CONFLICT (source_question_id)
       DO UPDATE SET
         item_type = EXCLUDED.item_type,
@@ -503,9 +493,9 @@ async function syncFeedItemForCommunityPost(
   const feedItemResult = await client.query<{ id: string }>(
     `
       INSERT INTO feed_items
-        (item_type, source_community_post_id, title, body, priority, mandatory, published_at, is_active, created_by_user_id, updated_by_user_id)
+        (item_type, source_community_post_id, title, body, published_at, is_active, created_by_user_id, updated_by_user_id)
       VALUES
-        ('community', $1::uuid, $2, $3, 20, FALSE, NOW(), TRUE, $4, $4)
+        ('community', $1::uuid, $2, $3, NOW(), TRUE, $4, $4)
       ON CONFLICT (source_community_post_id)
       DO UPDATE SET
         item_type = EXCLUDED.item_type,
@@ -588,8 +578,6 @@ export function validateAnnouncementDraftInput(input: AnnouncementDraftInput): b
   const checks = [
     title.length > 0 && title.length <= FEED_MAX_TITLE_LENGTH,
     body.length > 0 && body.length <= FEED_MAX_BODY_LENGTH,
-    input.priority === undefined || Number.isInteger(input.priority),
-    input.mandatory === undefined || typeof input.mandatory === 'boolean',
     !scheduleAt || isValidIsoDatetime(scheduleAt),
     !expiresAt || isValidIsoDatetime(expiresAt),
   ];
@@ -794,8 +782,6 @@ export async function listFeedTimeline(
           f.source_community_post_id,
           f.title,
           f.body,
-          f.priority,
-          f.mandatory,
           f.published_at,
           f.expires_at,
           fr.user_id IS NOT NULL AS is_read,
@@ -816,7 +802,7 @@ export async function listFeedTimeline(
               AND t.target_role IN ($1, 'member', 'admin', 'all')
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
           )
-        ORDER BY f.priority DESC, f.published_at DESC, f.id DESC
+        ORDER BY f.published_at DESC, f.id DESC
         OFFSET $5 LIMIT $6
       `,
       [actorRole, pluginFilter, allowedItemTypes, userId, offset, pagination.pageSize],
@@ -1002,8 +988,6 @@ export async function listFeedTimeline(
         sourceCommunityPostId: row.source_community_post_id,
         title: row.title,
         body: row.body,
-        priority: row.priority,
-        mandatory: row.mandatory,
         publishedAtIso: toIso(row.published_at),
         expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
         isRead: row.is_read,
@@ -1032,18 +1016,14 @@ export async function markFeedItemRead(userId: string, itemId: string): Promise<
   );
 }
 
-export async function dismissFeedItem(userId: string, itemId: string): Promise<'ok' | 'mandatory'> {
-  const result = await queryDb<{ mandatory: boolean }>(
-    'SELECT mandatory FROM feed_items WHERE id = $1::uuid LIMIT 1',
+export async function dismissFeedItem(userId: string, itemId: string): Promise<'ok'> {
+  const result = await queryDb<{ id: string }>(
+    'SELECT id FROM feed_items WHERE id = $1::uuid LIMIT 1',
     [itemId],
   );
 
   if (result.rows.length === 0) {
     throw new Error('feed_item_not_found');
-  }
-
-  if (result.rows[0].mandatory) {
-    return 'mandatory';
   }
 
   await queryDb(
@@ -1067,8 +1047,6 @@ export async function listAnnouncements(includeArchived: boolean): Promise<Annou
         title,
         body,
         status,
-        priority,
-        mandatory,
         schedule_at,
         published_at,
         expires_at,
@@ -1120,8 +1098,6 @@ export async function createAnnouncementDraft(actorId: string, input: Announceme
   return withDbTransaction(async (client) => {
     const title = normalizeText(input.title);
     const body = normalizeText(input.body);
-    const priority = Number.isInteger(input.priority) ? Number(input.priority) : 0;
-    const mandatory = Boolean(input.mandatory);
     const scheduleAtIso = normalizeNullableText(input.scheduleAtIso);
     const expiresAtIso = normalizeNullableText(input.expiresAtIso);
     const targeting = normalizeTargeting(input.targeting);
@@ -1131,23 +1107,23 @@ export async function createAnnouncementDraft(actorId: string, input: Announceme
     const insert = await client.query<AnnouncementRow>(
       `
         INSERT INTO announcements
-          (title, body, status, priority, mandatory, schedule_at, expires_at, targeting, linked_plugin_slug, created_by_user_id, updated_by_user_id)
+          (title, body, status, schedule_at, expires_at, targeting, linked_plugin_slug, created_by_user_id, updated_by_user_id)
         VALUES
-          ($1, $2, 'draft', $3, $4, $5::timestamptz, $6::timestamptz, $7::jsonb, $9, $8, $8)
+          ($1, $2, 'draft', $3::timestamptz, $4::timestamptz, $5::jsonb, $7, $6, $6)
         RETURNING
-          id, title, body, status, priority, mandatory, schedule_at, published_at, expires_at, targeting,
+          id, title, body, status, schedule_at, published_at, expires_at, targeting,
           linked_plugin_slug, created_by_user_id, updated_by_user_id, created_at, updated_at
       `,
-      [title, body, priority, mandatory, scheduleAtIso, expiresAtIso, JSON.stringify(targeting), actorId, linkedPluginSlug],
+      [title, body, scheduleAtIso, expiresAtIso, JSON.stringify(targeting), actorId, linkedPluginSlug],
     );
 
     const announcement = mapAnnouncement(insert.rows[0]);
     await client.query(
       `
         INSERT INTO announcement_revisions
-          (announcement_id, revision_number, title, body, targeting, created_by_user_id, updated_by_user_id, status, priority, mandatory, schedule_at, expires_at)
+          (announcement_id, revision_number, title, body, targeting, created_by_user_id, updated_by_user_id, status, schedule_at, expires_at)
         VALUES
-          ($1::uuid, 1, $2, $3, $4::jsonb, $5, $5, 'draft', $6, $7, $8::timestamptz, $9::timestamptz)
+          ($1::uuid, 1, $2, $3, $4::jsonb, $5, $5, 'draft', $6::timestamptz, $7::timestamptz)
       `,
       [
         announcement.id,
@@ -1155,8 +1131,6 @@ export async function createAnnouncementDraft(actorId: string, input: Announceme
         announcement.body,
         JSON.stringify(announcement.targeting),
         actorId,
-        announcement.priority,
-        announcement.mandatory,
         announcement.scheduleAtIso,
         announcement.expiresAtIso,
       ],
@@ -1175,8 +1149,6 @@ export async function updateAnnouncementDraft(actorId: string, announcementId: s
           title,
           body,
           status,
-          priority,
-          mandatory,
           schedule_at,
           published_at,
           expires_at,
@@ -1203,8 +1175,6 @@ export async function updateAnnouncementDraft(actorId: string, announcementId: s
 
     const title = normalizeText(input.title);
     const body = normalizeText(input.body);
-    const priority = Number.isInteger(input.priority) ? Number(input.priority) : existing.rows[0].priority;
-    const mandatory = typeof input.mandatory === 'boolean' ? input.mandatory : existing.rows[0].mandatory;
     const scheduleAtIso = normalizeNullableText(input.scheduleAtIso);
     const expiresAtIso = normalizeNullableText(input.expiresAtIso);
     const targeting = normalizeTargeting(input.targeting);
@@ -1221,20 +1191,18 @@ export async function updateAnnouncementDraft(actorId: string, announcementId: s
         SET
           title = $2,
           body = $3,
-          priority = $4,
-          mandatory = $5,
-          schedule_at = $6::timestamptz,
-          expires_at = $7::timestamptz,
-          targeting = $8::jsonb,
-          linked_plugin_slug = $10,
-          updated_by_user_id = $9,
+          schedule_at = $4::timestamptz,
+          expires_at = $5::timestamptz,
+          targeting = $6::jsonb,
+          linked_plugin_slug = $8,
+          updated_by_user_id = $7,
           updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING
-          id, title, body, status, priority, mandatory, schedule_at, published_at, expires_at, targeting,
+          id, title, body, status, schedule_at, published_at, expires_at, targeting,
           linked_plugin_slug, created_by_user_id, updated_by_user_id, created_at, updated_at
       `,
-      [announcementId, title, body, priority, mandatory, scheduleAtIso, expiresAtIso, JSON.stringify(targeting), actorId, linkedPluginSlug],
+      [announcementId, title, body, scheduleAtIso, expiresAtIso, JSON.stringify(targeting), actorId, linkedPluginSlug],
     );
 
     const revision = await nextAnnouncementRevision(client, announcementId);
@@ -1242,9 +1210,9 @@ export async function updateAnnouncementDraft(actorId: string, announcementId: s
     await client.query(
       `
         INSERT INTO announcement_revisions
-          (announcement_id, revision_number, title, body, targeting, created_by_user_id, updated_by_user_id, status, priority, mandatory, schedule_at, expires_at)
+          (announcement_id, revision_number, title, body, targeting, created_by_user_id, updated_by_user_id, status, schedule_at, expires_at)
         VALUES
-          ($1::uuid, $2, $3, $4, $5::jsonb, $6, $6, 'draft', $7, $8, $9::timestamptz, $10::timestamptz)
+          ($1::uuid, $2, $3, $4, $5::jsonb, $6, $6, 'draft', $7::timestamptz, $8::timestamptz)
       `,
       [
         announcement.id,
@@ -1253,8 +1221,6 @@ export async function updateAnnouncementDraft(actorId: string, announcementId: s
         announcement.body,
         JSON.stringify(announcement.targeting),
         actorId,
-        announcement.priority,
-        announcement.mandatory,
         announcement.scheduleAtIso,
         announcement.expiresAtIso,
       ],
@@ -1276,7 +1242,7 @@ export async function publishAnnouncement(actorId: string, announcementId: strin
           updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING
-          id, title, body, status, priority, mandatory, schedule_at, published_at, expires_at, targeting,
+          id, title, body, status, schedule_at, published_at, expires_at, targeting,
           linked_plugin_slug, created_by_user_id, updated_by_user_id, created_at, updated_at
       `,
       [announcementId, actorId],
@@ -1311,7 +1277,7 @@ export async function archiveAnnouncement(actorId: string, announcementId: strin
           updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING
-          id, title, body, status, priority, mandatory, schedule_at, published_at, expires_at, targeting,
+          id, title, body, status, schedule_at, published_at, expires_at, targeting,
           linked_plugin_slug, created_by_user_id, updated_by_user_id, created_at, updated_at
       `,
       [announcementId, actorId],
@@ -1347,18 +1313,14 @@ export async function markAnnouncementRead(userId: string, announcementId: strin
   );
 }
 
-export async function dismissAnnouncement(userId: string, announcementId: string): Promise<'ok' | 'mandatory'> {
-  const result = await queryDb<{ mandatory: boolean }>(
-    'SELECT mandatory FROM announcements WHERE id = $1::uuid LIMIT 1',
+export async function dismissAnnouncement(userId: string, announcementId: string): Promise<'ok'> {
+  const result = await queryDb<{ id: string }>(
+    'SELECT id FROM announcements WHERE id = $1::uuid LIMIT 1',
     [announcementId],
   );
 
   if (result.rows.length === 0) {
     throw new Error('announcement_not_found');
-  }
-
-  if (result.rows[0].mandatory) {
-    return 'mandatory';
   }
 
   await queryDb(

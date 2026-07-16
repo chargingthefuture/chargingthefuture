@@ -53,7 +53,6 @@ function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
     avatarUrl: null,
     kind: item.itemType,
     title,
-    mandatory: isAnnouncement ? item.mandatory : false,
     text,
     sentAtIso: item.publishedAtIso,
     communityPostId: isCommunity ? item.sourceCommunityPostId : null,
@@ -183,7 +182,6 @@ export async function POST(request: Request) {
       // A message posted from the composer is always a peer community post.
       kind: 'community',
       title: null,
-      mandatory: false,
       text,
       sentAtIso: result.createdAtIso,
       communityPostId: result.postId,

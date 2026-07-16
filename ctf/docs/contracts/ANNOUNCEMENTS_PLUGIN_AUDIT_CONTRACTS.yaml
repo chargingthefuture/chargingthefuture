@@ -144,7 +144,6 @@ auditEvents:
       reason: policy_reason_code
       evidence:
         actorOwnershipCheck: pass_or_fail
-        mandatoryDismissGuardCheck: pass_or_fail
     dataClassesAccessed:
       - announcement_read_state_metadata
     targetContext:

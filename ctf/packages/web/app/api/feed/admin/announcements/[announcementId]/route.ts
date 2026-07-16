@@ -16,8 +16,6 @@ function parseBody(body: AnnouncementBody): AnnouncementDraftInput {
   return {
     title: typeof body.title === 'string' ? body.title : '',
     body: typeof body.body === 'string' ? body.body : '',
-    priority: typeof body.priority === 'number' ? body.priority : 0,
-    mandatory: typeof body.mandatory === 'boolean' ? body.mandatory : false,
     scheduleAtIso: typeof body.scheduleAtIso === 'string' ? body.scheduleAtIso : null,
     expiresAtIso: typeof body.expiresAtIso === 'string' ? body.expiresAtIso : null,
     targeting: body.targeting,

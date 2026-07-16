@@ -507,7 +507,6 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
                   title={msg.announcementTitle ?? null}
                   body={msg.text}
                   time={msg.time}
-                  mandatory={msg.mandatory ?? false}
                 />
               </Fragment>
             );

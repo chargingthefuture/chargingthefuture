@@ -131,7 +131,6 @@ policies:
     attributePolicies:
       tenancy: same_workspace
       actorMustOwnReadState: true
-      mandatoryDismissGuard: required
     consentRequirements:
       scopes:
         - announcements_consumption
@@ -145,7 +144,6 @@ policies:
       requiresAdditionalAudit: false
     denyConditions:
       - actor_not_authenticated
-      - target_announcement_mandatory
 
   - pluginId: announcements
     command: announcements.targeting.validate

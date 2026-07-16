@@ -721,8 +721,6 @@ CREATE TABLE IF NOT EXISTS feed_items (
   source_community_post_id UUID,
   title TEXT NOT NULL,
   body TEXT NOT NULL,
-  priority INTEGER NOT NULL DEFAULT 0,
-  mandatory BOOLEAN NOT NULL DEFAULT FALSE,
   published_at TIMESTAMPTZ,
   expires_at TIMESTAMPTZ,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -733,10 +731,15 @@ CREATE TABLE IF NOT EXISTS feed_items (
 );
 ALTER TABLE IF EXISTS feed_items ADD COLUMN IF NOT EXISTS source_question_id UUID;
 ALTER TABLE IF EXISTS feed_items ADD COLUMN IF NOT EXISTS source_community_post_id UUID;
+-- Retire the announcement priority/mandatory ranking (owner decision 2026-07-16): the Commons is a
+-- single time-ordered stream, so there is no manual ranking and no non-dismissable flag. Dropping
+-- priority cascade-drops idx_feed_items_timeline_lookup, so recreate it without the priority column.
+ALTER TABLE IF EXISTS feed_items DROP COLUMN IF EXISTS priority;
+ALTER TABLE IF EXISTS feed_items DROP COLUMN IF EXISTS mandatory;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_feed_items_source_announcement_unique ON feed_items(source_announcement_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_feed_items_source_question_unique ON feed_items(source_question_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_feed_items_source_community_post_unique ON feed_items(source_community_post_id);
-CREATE INDEX IF NOT EXISTS idx_feed_items_timeline_lookup ON feed_items(item_type, is_active, published_at DESC, priority DESC);
+CREATE INDEX IF NOT EXISTS idx_feed_items_timeline_lookup ON feed_items(item_type, is_active, published_at DESC);
 -- === foundation_quote_requests ===
 CREATE TABLE IF NOT EXISTS foundation_quote_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -848,8 +851,6 @@ CREATE TABLE IF NOT EXISTS announcement_revisions (
   title TEXT NOT NULL,
   body TEXT NOT NULL,
   status TEXT NOT NULL,
-  priority INTEGER NOT NULL,
-  mandatory BOOLEAN NOT NULL,
   schedule_at TIMESTAMPTZ,
   expires_at TIMESTAMPTZ,
   targeting JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -861,16 +862,17 @@ CREATE TABLE IF NOT EXISTS announcement_revisions (
 -- Backfill every column on legacy databases (per the mandatory CREATE + ALTER-IF-NOT-EXISTS rule).
 -- A database whose announcement_revisions predates these columns keeps the old table on
 -- CREATE TABLE IF NOT EXISTS, so without these ALTERs the app's revision insert (which lists
--- targeting/status/priority/mandatory/schedule_at/expires_at) fails and the whole "create draft"
--- transaction rolls back with a 503. Defaults are supplied so the NOT NULL adds succeed on a table
--- that already has rows.
+-- targeting/status/schedule_at/expires_at) fails and the whole "create draft" transaction rolls
+-- back with a 503. Defaults are supplied so the NOT NULL adds succeed on a table that already has rows.
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS announcement_id UUID;
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS revision_number INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft';
-ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS mandatory BOOLEAN NOT NULL DEFAULT FALSE;
+-- Retire announcement priority/mandatory (owner decision 2026-07-16): drop them from the revision
+-- history too so a re-created draft no longer records either field.
+ALTER TABLE IF EXISTS announcement_revisions DROP COLUMN IF EXISTS priority;
+ALTER TABLE IF EXISTS announcement_revisions DROP COLUMN IF EXISTS mandatory;
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS schedule_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS targeting JSONB NOT NULL DEFAULT '{}'::jsonb;
@@ -1931,8 +1933,6 @@ CREATE TABLE IF NOT EXISTS announcements (
   title TEXT NOT NULL,
   body TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('draft', 'published', 'archived')),
-  priority INTEGER NOT NULL DEFAULT 0,
-  mandatory BOOLEAN NOT NULL DEFAULT FALSE,
   schedule_at TIMESTAMPTZ,
   published_at TIMESTAMPTZ,
   expires_at TIMESTAMPTZ,
@@ -1973,8 +1973,6 @@ END $$;
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS mandatory BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS schedule_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
@@ -1984,6 +1982,11 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_by_user_id 
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS linked_plugin_slug TEXT;
+-- Retire announcement priority/mandatory (owner decision 2026-07-16). The Commons is one
+-- time-ordered stream, so there is no manual priority ranking, and every announcement flows through
+-- the Commons with no non-dismissable "mandatory" flag. Guarded drops; no-op on a fresh database.
+ALTER TABLE IF EXISTS announcements DROP COLUMN IF EXISTS priority;
+ALTER TABLE IF EXISTS announcements DROP COLUMN IF EXISTS mandatory;
 -- Drop the pre-v3 `content` column. Legacy databases carried a NOT NULL `content` column that the
 -- v3 app (which authors into `body`) never fills, so every "Create draft" failed with
 -- "null value in column content violates not-null constraint". schema.sql has no `content` column,
@@ -2009,8 +2012,6 @@ CREATE TABLE IF NOT EXISTS feed_timeline_projection (
   source_announcement_id UUID,
   title TEXT NOT NULL,
   body TEXT NOT NULL,
-  priority INTEGER NOT NULL DEFAULT 0,
-  mandatory BOOLEAN NOT NULL DEFAULT FALSE,
   published_at TIMESTAMPTZ NOT NULL,
   expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -2021,8 +2022,9 @@ ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS item_typ
 ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS source_announcement_id UUID;
 ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS mandatory BOOLEAN NOT NULL DEFAULT FALSE;
+-- Retire priority/mandatory from the reserved projection read model too (owner decision 2026-07-16).
+ALTER TABLE IF EXISTS feed_timeline_projection DROP COLUMN IF EXISTS priority;
+ALTER TABLE IF EXISTS feed_timeline_projection DROP COLUMN IF EXISTS mandatory;
 ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();

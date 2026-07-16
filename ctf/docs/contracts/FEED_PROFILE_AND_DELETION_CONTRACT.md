@@ -38,7 +38,7 @@ Rule 114 baseline: Feed relies on canonical identity and does not duplicate acco
   `is_public` flag for the publicly-viewable Hub channel).
 - Per-user state tables (all keyed by `user_id`):
   - `feed_user_read_state` — `(user_id, item_id, read_at)`; which feed items the user has read.
-  - `feed_user_dismissals` — `(user_id, item_id, dismissed_at)`; dismissed non-mandatory items.
+  - `feed_user_dismissals` — `(user_id, item_id, dismissed_at)`; dismissed items.
   - `feed_answer_ratings` — `(user_id, answer_id, rating)`; the user's answer ratings.
   - `feed_community_post_reactions` — `(post_id, user_id, emoji)`; the user's emoji reactions on community posts.
   - `announcement_user_state` — `(user_id, announcement_id, read_at, acknowledged_at, dismissed_at)`.

@@ -64,7 +64,6 @@ auditEvents:
       reason: policy_reason_code
       evidence:
         actorOwnershipCheck: pass_or_fail
-        mandatoryDismissGuardCheck: pass_or_fail
     dataClassesAccessed:
       - feed_dismiss_state_metadata
       - feed_item_metadata

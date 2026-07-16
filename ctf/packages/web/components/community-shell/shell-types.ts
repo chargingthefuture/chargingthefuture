@@ -45,8 +45,6 @@ export type ChatMessage = {
   kind?: ChatMessageKind;
   // The announcement's heading, shown above the body on the official card. Absent otherwise.
   announcementTitle?: string | null;
-  // True only for a mandatory announcement; drives the "Urgent" badge. Absent/false otherwise.
-  mandatory?: boolean;
   // Original ISO timestamp (when known) used to time-sort the unified stream; `time` is the
   // display-only formatted label. Optional because optimistic/synthetic messages may lack one.
   sentAtIso?: string;
