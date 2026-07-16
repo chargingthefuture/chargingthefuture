@@ -250,6 +250,16 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
 
   async function handleSave() {
     if (!editing) return;
+    // First name and country are required (city/state stay optional); the server rejects a blank
+    // country too, so guard here for a clear message instead of a generic "invalid payload".
+    if (form.firstName.trim().length === 0) {
+      setDrawerError("First name is required.");
+      return;
+    }
+    if (form.country.trim().length === 0) {
+      setDrawerError("Country is required.");
+      return;
+    }
     setSaving(true);
     setDrawerError(null);
     setDrawerNotice(null);
@@ -379,7 +389,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
         {/* Location — shared Country/State controls (lib/geo/locations.ts), same standard as the
             member self-edit form: Country dropdown; US-state dropdown or free-text region. */}
         <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: SUBTLE, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Country</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: SUBTLE, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Country <span style={{ color: COLOR }}>(required)</span></div>
           <CountrySelect
             value={form.country}
             onChange={(country) => setForm((f) => ({ ...f, country }))}

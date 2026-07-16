@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-07-11 (hand-updated for the unified skills picker and the ported v2 location fields — see DIR-2, DIR-4, DIR-A1; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -99,8 +99,11 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
    box, then save.
 6. Set Country to a non-US country (State becomes a free-text region box); set Country to United States
    (State becomes a US-state dropdown); enter a City; save and reopen to confirm the location persisted.
+7. Clear the Country (pick the blank/placeholder option) and confirm you cannot save: the Country label
+   reads "(required)" and the Save button is disabled until a country is chosen again.
 **Expected:** The form prefills every editable field and re-sends the complete set, so an untouched
-field is never blanked. The save goes through `PUT /api/directory/profile` with the CSRF header. The
+field is never blanked. **Country is required** — Save stays disabled while it is blank (city and state
+stay optional), matching the server, which rejects a blank country on `PUT /api/directory/profile`. The
 skills picker matches the SkillsHunt picker: removable selected chips, a one-open-at-a-time sector
 accordion with per-sector "N selected" badges, and a profession prefill that bulk-adds a profession's
 skills. There is no hard cap on taxonomy skills. The free-text label persists (capped at 10 labels of
@@ -126,11 +129,12 @@ case is **blocked** — there is no member self-edit screen yet.
    once a provider is listed or a filter/search is active.
 3. Press "Add my profile". Confirm the modal title is **"Create my profile"** and the submit button
    reads **"Create profile"**.
-4. Fill a first name (required) and save.
-**Expected:** The modal is the same editor as DIR-4, starting blank. The save goes through
-`PUT /api/directory/profile` with the CSRF header. After saving, the header button flips to
-**"Edit my profile"**, and the new profile appears in the list. On android this case is **blocked** —
-there is no member self-edit/create screen yet.
+4. Fill a first name only and confirm Save is still disabled (Country reads "(required)"); pick a
+   Country and confirm Save enables; save.
+**Expected:** The modal is the same editor as DIR-4, starting blank. **Both first name and country are
+required** to save (city/state optional); the save goes through `PUT /api/directory/profile` with the
+CSRF header. After saving, the header button flips to **"Edit my profile"**, and the new profile appears
+in the list. On android this case is **blocked** — there is no member self-edit/create screen yet.
 **Result:** web ☐ mobile ☐ android ⛔ — notes:
 
 ### DIR-5 · Read announcements
@@ -184,9 +188,12 @@ list stays visible until the new data lands.
 4. In the edit drawer's skills picker (web), expand a sector in the accordion and add/remove a skill,
    or bulk-add via the profession dropdown; then save and reopen to confirm the change persisted.
 5. In the edit drawer's location controls (web), set Country / State / City and save; reopen to confirm
-   they persisted. Confirm an admin edit that leaves location untouched does not wipe it.
+   they persisted. Confirm an admin edit that leaves location untouched does not wipe it. Then clear the
+   Country and press Save: it is refused with a "Country is required." message (the Country label reads
+   "(required)"), and the server rejects a blank country on `POST`/`PUT /api/directory/admin/profiles`.
 **Expected:** Server-side authorization gates the page and the admin routes (presentation hiding is
-not authorization). The list, create, and edit flows work. On web the edit drawer's skills section is
+not authorization). The list, create, and edit flows work. **Country is required** on create and edit
+(city/state optional). On web the edit drawer's skills section is
 the same structured picker as the member self-edit form (selected chips, profession prefill, sector
 accordion) minus the free-text "pending review" box (proposed skills are member-owned); saving sends
 the edited `skillIds` and preserves the sector/job-title classification. On android skills are still

@@ -268,7 +268,11 @@ export function validateProfileInput(input: DirectoryProfileInput): boolean {
   const profileUrl = normalizeNullableText(input.profileUrl);
   const city = normalizeNullableText(input.city);
   const state = normalizeNullableText(input.state);
-  const country = normalizeNullableText(input.country);
+  // Country is REQUIRED (unlike city/state, which stay optional): every directory profile must record
+  // a country. Directory feeds nearly every other plugin (and the GDP member-by-country breakdown), so
+  // a blank country leaves a member unplaceable. Normalized like firstName (non-nullable) so the
+  // length check below is a real "must be present" gate, not an "if provided" one.
+  const country = normalizeText(input.country ?? '');
 
   const checks = [
     firstName.length > 0 && firstName.length <= DIRECTORY_MAX_NAME_LENGTH,
@@ -278,7 +282,7 @@ export function validateProfileInput(input: DirectoryProfileInput): boolean {
     !profileUrl || profileUrl.length <= DIRECTORY_MAX_URL_LENGTH,
     !city || city.length <= DIRECTORY_MAX_LOCATION_LENGTH,
     !state || state.length <= DIRECTORY_MAX_LOCATION_LENGTH,
-    !country || country.length <= DIRECTORY_MAX_LOCATION_LENGTH,
+    country.length > 0 && country.length <= DIRECTORY_MAX_LOCATION_LENGTH,
     !input.skillIds || Array.isArray(input.skillIds),
     // proposedSkills, when present, must be an array within the count cap and each label within
     // the per-label length cap (measured after whitespace normalization).
