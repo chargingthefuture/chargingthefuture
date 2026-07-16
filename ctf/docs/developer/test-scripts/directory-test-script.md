@@ -40,6 +40,11 @@ can't-ship-broken checks. Member role unless noted.
    availability control anywhere on the Directory surface — those belong to Foundation. → web ☐ mobile ☐ android ☐
 4. **Not public.** Signed out, the Directory plugin route does not expose member profile data; there
    is no anonymous projection route. → web ☐ mobile ☐ android ☐
+5. **No verification over-claim.** Nowhere on the Directory (browse hero, header, or the signed-out
+   landing) does copy claim members are "verified" or a "Verified Network" — members are framed as
+   fellow community members sharing their skills, consistent with Foundation's "not a formally vetted
+   service" note. (The account "Finish verifying" sign-in CTA is a separate thing and is fine.)
+   → web ☐ mobile ☐ android ☐
 
 ---
 
