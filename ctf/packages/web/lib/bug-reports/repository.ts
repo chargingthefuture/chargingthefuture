@@ -118,6 +118,8 @@ export async function listReportsReadyForIssue(limit: number): Promise<BugReport
 export type BugReportAdminRow = {
   id: string;
   status: BugReportStatus;
+  user_id: string;
+  reporter_username: string | null;
   redacted_message: string | null;
   redacted_context: string | null;
   risk_flags: BugReportRiskFlag[];
@@ -134,15 +136,35 @@ export type BugReportAdminRow = {
 
 // Admin list of reports for the /admin/bug-reports review page. Held reports surface
 // first (they are the ones waiting on a human), then the rest, newest within each group.
-// Redacted fields only — never the raw text.
+// Redacted fields only — never the raw text. The reporter's identity (user_id + username)
+// is included so an admin can follow up with the member — ADMIN surface only; it is never
+// added to the triage-repo issue (rule 129). The username comes from the legacy
+// `public.users` table (a v2-prod clone); a fresh database may not have that table, so
+// probe first (same pattern as lib/engagement/login-activity.ts) and fall back to a null
+// username — the display handle still resolves to a stable per-user pseudonym.
 export async function listReportsForAdmin(limit = 200): Promise<BugReportAdminRow[]> {
+  const usersTable = await queryDb<{ reg: string | null }>(
+    `SELECT to_regclass('public.users')::text AS reg`,
+  );
+  const hasUsersTable = usersTable.rows[0]?.reg != null;
+
   const result = await queryDb<BugReportAdminRow>(
-    `SELECT id, status, redacted_message, redacted_context, risk_flags, risk_level,
-            page_url, plugin_slug, app_version, triage_repo, issue_number, issue_url,
-            created_at, updated_at
-       FROM bug_reports
-      ORDER BY (status = 'held_for_review') DESC, created_at DESC
-      LIMIT $1`,
+    hasUsersTable
+      ? `SELECT b.id, b.status, b.user_id, u.username AS reporter_username,
+                b.redacted_message, b.redacted_context, b.risk_flags, b.risk_level,
+                b.page_url, b.plugin_slug, b.app_version, b.triage_repo, b.issue_number,
+                b.issue_url, b.created_at, b.updated_at
+           FROM bug_reports b
+           LEFT JOIN users u ON u.id::text = b.user_id
+          ORDER BY (b.status = 'held_for_review') DESC, b.created_at DESC
+          LIMIT $1`
+      : `SELECT id, status, user_id, NULL::text AS reporter_username,
+                redacted_message, redacted_context, risk_flags, risk_level,
+                page_url, plugin_slug, app_version, triage_repo, issue_number,
+                issue_url, created_at, updated_at
+           FROM bug_reports
+          ORDER BY (status = 'held_for_review') DESC, created_at DESC
+          LIMIT $1`,
     [limit],
   );
 
