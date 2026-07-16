@@ -123,7 +123,10 @@ After changes 43–48 apply, **Creative & Media › Advocates / Awareness Raiser
 Awareness raising, Storytelling, and Peer support — Advocacy is the baseline skill stamped on invited /
 temporary profiles, so a freshly invited member shows Advocacy until they claim and re-pick their skills.
 After change 49 applies, **Tourism & Hospitality › Chefs / Cooks** also lists **Chef** (promoted from skill
-proposal #1550), alongside the occupation's other cooking skills.
+proposal #1550), alongside the occupation's other cooking skills. A nominated / community-generated
+profile whose SkillsHunt nomination proposed a since-promoted skill (e.g. "Chef" on an unclaimed profile)
+shows that skill as a real chip after the apply run — not a vanished "pending review" chip — because the
+apply also attaches promoted skills to nominated profiles (via `skills_hunt_directory_profiles`).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
