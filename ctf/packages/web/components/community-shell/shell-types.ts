@@ -30,11 +30,23 @@ export type ChatReactionSummary = {
   reactedByMe: boolean;
 };
 
+// What the message is, when it comes from the Hub. `announcement` renders the distinct official
+// card; everything else renders as an ordinary chat bubble. Absent on synthetic/optimistic
+// messages (empty-state prompt, concierge replies), which are treated as ordinary bubbles.
+export type ChatMessageKind = 'announcement' | 'question' | 'community';
+
 export type ChatMessage = {
   id: string;
   from: 'hub' | 'user';
   text: string;
   time: string;
+  // Which feed channel this message came from (Hub messages only). Drives the official
+  // announcement card; absent/`community` renders as a normal bubble.
+  kind?: ChatMessageKind;
+  // The announcement's heading, shown above the body on the official card. Absent otherwise.
+  announcementTitle?: string | null;
+  // True only for a mandatory announcement; drives the "Urgent" badge. Absent/false otherwise.
+  mandatory?: boolean;
   // Original ISO timestamp (when known) used to time-sort the unified stream; `time` is the
   // display-only formatted label. Optional because optimistic/synthetic messages may lack one.
   sentAtIso?: string;

@@ -493,6 +493,117 @@
   background: rgba(14, 165, 233, 0.18);
 }
 
+/* Official Survivor Hub announcement card. Emerald treatment + a left accent + a shield "Official"
+   badge so an official post reads as a distinct, must-see message instead of blending into the
+   purple peer bubbles or the cyan AI card. Mirrors the comic card's header structure. */
+.announcementCard {
+  margin: 4px 0;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(52, 211, 153, 0.05);
+  border: 1px solid rgba(52, 211, 153, 0.22);
+  border-left: 3px solid #34D399;
+}
+
+.announcementHead {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.announcementAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10B981 0%, #0EA5E9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.announcementHeadText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.announcementTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.announcementName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ctf-text);
+}
+
+/* "Official" pill — emerald, shield icon. The pill shape (full radius) sets it apart from the
+   square-cornered AI Q&A badge so the two authorities never read as the same tag. */
+.announcementOfficialBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(52, 211, 153, 0.12);
+  color: #34D399;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* "Urgent" pill — amber, shown only for a mandatory announcement so it reads as must-see. */
+.announcementUrgentBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.announcementTime {
+  font-size: 11px;
+  color: var(--ctf-text-muted);
+}
+
+.announcementTitle {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ctf-text);
+}
+
+.announcementBody {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ctf-text-shell);
+  /* Announcement bodies can carry a trailing "Open <Plugin>: <url>" line composed server-side;
+     keep its line break and wrap long URLs so the card never overflows. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* Concierge "ask what you need" chips. Emerald — deliberately NOT the sky-blue
    (#38BDF8) the @comic AI Assistant uses, so a member can tell "route me to a
    feature" apart from "ask the AI". The rail scrolls horizontally instead of

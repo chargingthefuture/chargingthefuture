@@ -11,6 +11,7 @@ import { feedAuthorHandle } from '../../lib/feed/author-handle';
 import type { ChatMessage, ComicStreamItem, ShellCurrentUser, ShellStats } from './shell-types';
 import { useHomeChat } from './use-home-chat';
 import { ComicAnswerCard, ComicPendingCard } from './comic-cards';
+import { AnnouncementCard } from './announcement-card';
 import { ComicConsentModal } from './comic-consent-modal';
 import styles from './community-shell.module.css';
 
@@ -494,6 +495,24 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           // were rendering with no name on the sender's own side.
           const ownLabel = ownHandle;
           const senderName = msg.from === 'user' ? ownLabel : (msg.senderLabel ?? 'Survivor Hub');
+
+          // An official announcement renders as its own distinct card (badge + optional title),
+          // not a chat bubble, so it stands apart from peer posts and AI answers.
+          if (msg.kind === 'announcement') {
+            return (
+              <Fragment key={msg.id}>
+                {divider}
+                <AnnouncementCard
+                  senderName={senderName}
+                  title={msg.announcementTitle ?? null}
+                  body={msg.text}
+                  time={msg.time}
+                  mandatory={msg.mandatory ?? false}
+                />
+              </Fragment>
+            );
+          }
+
           // A peer post (it carries a community post id) can be replied to Signal-style.
           const canReply = Boolean(msg.communityPostId);
           return (

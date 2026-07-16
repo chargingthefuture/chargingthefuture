@@ -15,6 +15,11 @@ export type HubReactionSummary = {
   reactedByMe: boolean;
 };
 
+// What kind of feed item a Hub message came from. Drives how the client renders it: an
+// `announcement` shows the distinct official card (badge + optional title), while `community`
+// (peer posts) and `question` (AI Q&A) render as ordinary chat bubbles.
+export type HubMessageKind = 'announcement' | 'question' | 'community';
+
 // Hub-owned message types
 export type HubMessage = {
   id: string;
@@ -22,6 +27,15 @@ export type HubMessage = {
   username: string | null;
   displayName: string;
   avatarUrl: string | null;
+  // Which feed channel this message came from. `community` for peer posts (the common case),
+  // `announcement` for official Survivor Hub posts, `question` for AI Q&A items.
+  kind: HubMessageKind;
+  // The announcement's own title, rendered as a heading above the body on the official card.
+  // Null for peer posts and AI answers (their `text` is the whole message).
+  title: string | null;
+  // True only for a mandatory announcement; drives the "Urgent" badge on the official card.
+  // Always false for peer posts and AI answers.
+  mandatory: boolean;
   text: string;
   sentAtIso: string;
   // The underlying community post id (when this message is a peer post). This is the id a
