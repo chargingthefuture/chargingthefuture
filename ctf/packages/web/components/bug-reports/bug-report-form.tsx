@@ -33,7 +33,11 @@ export function BugReportForm({
       <div className={styles.header}>
         <div>
           <h2 className={styles.title}>Report a problem</h2>
-          <p className={styles.subtitle}>We read every report.</p>
+          <p className={styles.subtitle}>
+            Use this when something in the app isn&apos;t working. Reports are one-way — you
+            won&apos;t get a reply here. Have a question? Ask in the Commons on the home screen,
+            where members can answer.
+          </p>
         </div>
         <button
           type="button"
