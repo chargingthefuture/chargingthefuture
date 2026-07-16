@@ -37,8 +37,8 @@ export function ProviderProfile({
           <ShareLink url={`/apps/foundation/provider/${provider.profileId}`} title="Share this provider" />
         </div>
       </div>
-      <div style={{ flex: 1, padding: isMobile ? "24px 16px" : "32px 40px", overflowY: "auto", display: "flex", gap: isMobile ? 20 : 32, flexWrap: "wrap" }}>
-        <div style={{ flex: 2, minWidth: isMobile ? 0 : 320 }}>
+      <div style={{ flex: 1, padding: isMobile ? "24px 16px" : "32px 40px", overflowY: "auto", display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 20 : 32, flexWrap: "wrap" }}>
+        <div style={{ flex: isMobile ? "0 0 auto" : 2, width: isMobile ? "100%" : undefined, minWidth: isMobile ? 0 : 320 }}>
           {/* Header: on desktop a single row (avatar + identity fill the left, actions sit at the right).
               On phone width the actions drop to their own full-width block below the identity so nothing
               runs off-screen. */}
@@ -102,7 +102,10 @@ export function ProviderProfile({
             </div>
           )}
         </div>
-        <div style={{ flex: 1, minWidth: isMobile ? 0 : 240 }}>
+        {/* On phone width the two columns stack (flex-direction: column), so this "Good to know" panel
+            renders full-width at the very bottom, beneath the skills and About. On desktop it stays the
+            right-hand sidebar column. */}
+        <div style={{ flex: isMobile ? "0 0 auto" : 1, width: isMobile ? "100%" : undefined, minWidth: isMobile ? 0 : 240 }}>
           <div style={{ padding: "16px", borderRadius: 12, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
               <Shield size={14} style={{ color: t.ACCENT }} />
