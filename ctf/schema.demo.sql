@@ -2525,6 +2525,43 @@ ALTER TABLE IF EXISTS directory_profile_change_events ADD COLUMN IF NOT EXISTS t
 ALTER TABLE IF EXISTS directory_profile_change_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS directory_profile_change_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Suppression list for the "remove at the person's request" takedown (distinct from the ordinary
+-- unclaimed-profile delete, which is for duplicates/accidents and does NOT block re-adding). When an
+-- admin takes down a community-generated profile because the (accountless) person asked to be removed,
+-- the profile row is deleted and its normalized Quora URL is recorded here. A row with is_overridden =
+-- false is an ACTIVE block: that Quora URL cannot be listed in the directory again (auto-generated from
+-- a SkillsHunt accept, or added by an admin) until an admin lifts the block with a reason (override).
+CREATE TABLE IF NOT EXISTS directory_suppressed_quora_urls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  normalized_url TEXT NOT NULL,
+  original_url TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  removed_profile_id TEXT,
+  created_by_user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  is_overridden BOOLEAN NOT NULL DEFAULT FALSE,
+  overridden_by_user_id TEXT,
+  overridden_at TIMESTAMPTZ,
+  override_reason TEXT
+);
+ALTER TABLE IF EXISTS directory_suppressed_quora_urls ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS directory_suppressed_quora_urls ADD COLUMN IF NOT EXISTS normalized_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_suppressed_quora_urls ADD COLUMN IF NOT EXISTS original_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_suppressed_quora_urls ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_suppressed_quora_urls ADD COLUMN IF NOT EXISTS removed_profile_id TEXT;
+ALTER TABLE IF EXISTS directory_suppressed_quora_urls ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_suppressed_quora_urls ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS directory_suppressed_quora_urls ADD COLUMN IF NOT EXISTS is_overridden BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS directory_suppressed_quora_urls ADD COLUMN IF NOT EXISTS overridden_by_user_id TEXT;
+ALTER TABLE IF EXISTS directory_suppressed_quora_urls ADD COLUMN IF NOT EXISTS overridden_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS directory_suppressed_quora_urls ADD COLUMN IF NOT EXISTS override_reason TEXT;
+-- At most one ACTIVE (non-overridden) suppression per normalized URL; a URL may be re-suppressed after
+-- an override, so the uniqueness is partial rather than on the column outright.
+CREATE UNIQUE INDEX IF NOT EXISTS directory_suppressed_quora_urls_active_unique
+  ON directory_suppressed_quora_urls (normalized_url) WHERE is_overridden = FALSE;
+CREATE INDEX IF NOT EXISTS directory_suppressed_quora_urls_normalized_idx
+  ON directory_suppressed_quora_urls (normalized_url);
+
 CREATE TABLE IF NOT EXISTS directory_announcements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,

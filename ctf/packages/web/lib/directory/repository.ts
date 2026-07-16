@@ -12,14 +12,17 @@ import {
   DIRECTORY_MAX_PAGE_SIZE,
   DIRECTORY_MAX_PROPOSED_SKILL_LENGTH,
   DIRECTORY_MAX_PROPOSED_SKILLS,
+  DIRECTORY_MAX_TAKEDOWN_REASON_LENGTH,
   DIRECTORY_MAX_URL_LENGTH,
 } from './constants';
+import { normalizeQuoraProfileUrl } from './quora-url';
 import type {
   DirectoryAnnouncement,
   DirectoryAnnouncementInput,
   DirectoryPagination,
   DirectoryProfile,
   DirectoryProfileInput,
+  DirectorySuppressedUrl,
 } from './types';
 
 type DirectoryProfileRow = {
@@ -492,6 +495,9 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
     const country = normalizeNullableText(input.country);
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
+    // A Quora URL taken down at the person's request stays blocked until an admin lifts it — this
+    // holds even for a member editing their own profile, so a suppressed URL cannot slip back in.
+    await assertQuoraUrlNotSuppressed(client, profileUrl);
 
     const existing = await client.query<{ id: string }>(
       'SELECT id FROM directory_profiles WHERE claimed_by_user_id = $1 LIMIT 1',
@@ -1144,6 +1150,9 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
     const country = normalizeNullableText(input.country);
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
+    // A Quora URL taken down at the person's request cannot be re-added by an admin until the block
+    // is lifted (override). Throws 'directory_quora_url_suppressed', which the route maps to a 409.
+    await assertQuoraUrlNotSuppressed(client, profileUrl);
 
     const inserted = await client.query<{ id: string }>(
       `
@@ -1494,6 +1503,181 @@ export async function deleteAdminProfile(actorId: string, profileId: string): Pr
     );
 
     return 'deleted';
+  });
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Quora-URL takedown / suppression
+//
+// The "remove at the person's request" takedown is distinct from the ordinary unclaimed-profile
+// delete (deleteAdminProfile, for duplicates/accidents). A takedown deletes the community-generated
+// profile AND records its normalized Quora URL on directory_suppressed_quora_urls, so the URL cannot
+// be listed again — auto-generated from a SkillsHunt accept, or added by an admin/member — until an
+// admin lifts the block (override) with a reason. Everything here is audited via
+// directory_profile_change_events (the same table the delete/create paths write).
+// ---------------------------------------------------------------------------------------------------
+
+// Throw if the given (raw) profile URL normalizes to a Quora URL that is currently, actively
+// suppressed. Used inside a transaction by the create/upsert write paths. A URL that isn't a Quora
+// URL (normalizes to null) is never suppressed, so those profiles are unaffected.
+async function assertQuoraUrlNotSuppressed(client: PoolClient, profileUrl: string | null): Promise<void> {
+  const normalized = normalizeQuoraProfileUrl(profileUrl);
+  if (!normalized) {
+    return;
+  }
+  const blocked = await client.query<{ id: string }>(
+    'SELECT id FROM directory_suppressed_quora_urls WHERE normalized_url = $1 AND is_overridden = false LIMIT 1',
+    [normalized],
+  );
+  if (blocked.rows.length > 0) {
+    throw new Error('directory_quora_url_suppressed');
+  }
+}
+
+// Take down a community-generated (unclaimed) profile at the person's request: delete the row and
+// add its Quora URL to the suppression list with a reason. Returns a status the route maps to HTTP.
+// Guards: the profile must exist, be unclaimed, and be community-generated (a takedown is only for a
+// nominated profile of an accountless person; claimed or admin/self profiles use the normal delete).
+export async function takedownAdminProfile(
+  actorId: string,
+  profileId: string,
+  reason: string,
+): Promise<'taken_down' | 'not_found' | 'claimed_guard' | 'not_community_generated' | 'missing_quora_url'> {
+  const trimmedReason = reason.trim().slice(0, DIRECTORY_MAX_TAKEDOWN_REASON_LENGTH);
+  return withDbTransaction(async (client) => {
+    const existing = await client.query<{ claimed_by_user_id: string | null; source: string | null; profile_url: string | null }>(
+      'SELECT claimed_by_user_id, source, profile_url FROM directory_profiles WHERE id::text = $1',
+      [profileId],
+    );
+
+    if (existing.rows.length === 0) {
+      return 'not_found';
+    }
+
+    const row = existing.rows[0];
+    if (row.claimed_by_user_id) {
+      return 'claimed_guard';
+    }
+    if (row.source !== 'community-generated') {
+      return 'not_community_generated';
+    }
+
+    const normalized = normalizeQuoraProfileUrl(row.profile_url);
+    if (!normalized) {
+      return 'missing_quora_url';
+    }
+
+    // Delete the profile and its dependent rows (mirrors the ordinary delete's cascade set).
+    await client.query('DELETE FROM directory_profile_skills WHERE profile_id = $1', [profileId]);
+    await client.query('DELETE FROM directory_profile_proposed_skills WHERE profile_id::text = $1', [profileId]);
+    await client.query('DELETE FROM directory_profiles WHERE id::text = $1', [profileId]);
+
+    // Record the suppression. If this URL already has an ACTIVE block (partial unique index), keep the
+    // existing one rather than erroring — the takedown still succeeded in removing the profile.
+    await client.query(
+      `
+        INSERT INTO directory_suppressed_quora_urls
+          (normalized_url, original_url, reason, removed_profile_id, created_by_user_id)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (normalized_url) WHERE (is_overridden = false) DO NOTHING
+      `,
+      [normalized, row.profile_url, trimmedReason, profileId, actorId],
+    );
+
+    await client.query(
+      `
+        INSERT INTO directory_profile_change_events
+          (actor_id, command, policy_status, reason, target_type, target_id, metadata)
+        VALUES ($1, 'directory.admin.profile.takedown', 'allow', $2, 'profile', $3, $4::jsonb)
+      `,
+      [actorId, trimmedReason || 'takedown_request', profileId, JSON.stringify({ normalizedUrl: normalized })],
+    );
+
+    return 'taken_down';
+  });
+}
+
+type SuppressedUrlRow = {
+  id: string;
+  normalized_url: string;
+  original_url: string;
+  reason: string;
+  removed_profile_id: string | null;
+  created_by_user_id: string;
+  created_at: Date | string;
+  is_overridden: boolean;
+  overridden_by_user_id: string | null;
+  overridden_at: Date | string | null;
+  override_reason: string | null;
+};
+
+function mapSuppressedUrlRow(row: SuppressedUrlRow): DirectorySuppressedUrl {
+  return {
+    id: row.id,
+    normalizedUrl: row.normalized_url,
+    originalUrl: row.original_url,
+    reason: row.reason,
+    removedProfileId: row.removed_profile_id,
+    createdByUserId: row.created_by_user_id,
+    createdAtIso: new Date(row.created_at).toISOString(),
+    isOverridden: row.is_overridden,
+    overriddenByUserId: row.overridden_by_user_id,
+    overriddenAtIso: row.overridden_at ? new Date(row.overridden_at).toISOString() : null,
+    overrideReason: row.override_reason,
+  };
+}
+
+// List the suppression entries for the admin screen, active blocks first, newest first.
+export async function listSuppressedQuoraUrls(): Promise<DirectorySuppressedUrl[]> {
+  const result = await queryDb<SuppressedUrlRow>(
+    `
+      SELECT id, normalized_url, original_url, reason, removed_profile_id, created_by_user_id,
+             created_at, is_overridden, overridden_by_user_id, overridden_at, override_reason
+      FROM directory_suppressed_quora_urls
+      ORDER BY is_overridden ASC, created_at DESC
+    `,
+  );
+  return result.rows.map(mapSuppressedUrlRow);
+}
+
+// Lift an active suppression (override) with a reason, so the URL can be listed again. Audited.
+export async function overrideSuppressedQuoraUrl(
+  actorId: string,
+  suppressionId: string,
+  reason: string,
+): Promise<'overridden' | 'not_found' | 'already_overridden'> {
+  const trimmedReason = reason.trim().slice(0, DIRECTORY_MAX_TAKEDOWN_REASON_LENGTH);
+  return withDbTransaction(async (client) => {
+    const existing = await client.query<{ is_overridden: boolean; normalized_url: string }>(
+      'SELECT is_overridden, normalized_url FROM directory_suppressed_quora_urls WHERE id = $1::uuid',
+      [suppressionId],
+    );
+    if (existing.rows.length === 0) {
+      return 'not_found';
+    }
+    if (existing.rows[0].is_overridden) {
+      return 'already_overridden';
+    }
+
+    await client.query(
+      `
+        UPDATE directory_suppressed_quora_urls
+        SET is_overridden = true, overridden_by_user_id = $1, overridden_at = NOW(), override_reason = $2
+        WHERE id = $3::uuid
+      `,
+      [actorId, trimmedReason, suppressionId],
+    );
+
+    await client.query(
+      `
+        INSERT INTO directory_profile_change_events
+          (actor_id, command, policy_status, reason, target_type, target_id, metadata)
+        VALUES ($1, 'directory.admin.takedown.override', 'allow', $2, 'suppressed_url', $3::uuid, $4::jsonb)
+      `,
+      [actorId, trimmedReason || 'override', suppressionId, JSON.stringify({ normalizedUrl: existing.rows[0].normalized_url })],
+    );
+
+    return 'overridden';
   });
 }
 
