@@ -1,5 +1,6 @@
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
+import { reportError } from 'lib/observability/report';
 
 export type FoundationStreamParticipantCredentials = {
   streamApiKey: string;
@@ -59,8 +60,16 @@ export async function ensureFoundationStreamChannel(input: {
         streamToken: streamClient.createToken(survivorStreamUserId),
       },
     };
+  } catch (error) {
+    // Credentials are present but the Stream app rejected the call (bad/expired keys, an unreachable
+    // app, a transient outage). Degrade exactly like the no-credentials path above (return null) so a
+    // Stream failure does not hard-fail Request Quote — the caller still creates the thread with a
+    // synthetic channel id. This matters most in demo mode, which routes to a separate staging Stream
+    // app: if that app is misconfigured, quoting must still work. Logged so the real cause is visible.
+    reportError(error, { area: 'foundation', op: 'ensure_stream_channel' });
+    return null;
   } finally {
-    await streamClient.disconnectUser();
+    await streamClient.disconnectUser().catch(() => {});
   }
 }
 
@@ -78,8 +87,15 @@ export async function createFoundationParticipantToken(userId: string, displayNa
       streamUserId,
       streamToken: streamClient.createToken(streamUserId),
     };
+  } catch (error) {
+    // Same graceful degrade as ensureFoundationStreamChannel: present-but-bad credentials return null
+    // instead of throwing, so the thread-create path lands the member in Quotes rather than failing. The
+    // Direct Line token route treats null as 'stream_unavailable', which is the honest place for the
+    // "chat is unavailable" message to surface — not on quote creation.
+    reportError(error, { area: 'foundation', op: 'participant_token' });
+    return null;
   } finally {
-    await streamClient.disconnectUser();
+    await streamClient.disconnectUser().catch(() => {});
   }
 }
 

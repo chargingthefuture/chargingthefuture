@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
-| **Generated** | 2026-07-14 (hand-updated for the context-aware provider-browse empty state; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-16 (hand-updated for Stream-down resilience on Request Quote; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -87,10 +87,16 @@ persists and the member then appears in provider search for those skills.
 **Steps:**
 1. From a provider, Request Quote (this opens a connection thread, then creates the quote on it).
 2. Land in the Direct Line and send a message; re-open the chat from a Quotes row.
+3. Stream-down resilience: with the Stream chat app unreachable (e.g. a demo account whose staging
+   Stream keys are absent/invalid), Request Quote again.
 **Expected:** Request Quote runs the two-step flow with the CSRF header and lands the member in the
 Direct Line (1:1 Stream-backed chat scoped to that connection). Messages send with delivery/read
 state. Each Quotes row re-opens its Direct Line with fresh credentials. A non-participant gets 404 on
-the thread token.
+the thread token. When Stream is unreachable, Request Quote still succeeds — the quote is created and
+the member lands in Quotes (no "Connections are temporarily unavailable" on quote creation); only
+opening the Direct Line then reports chat is unavailable, and the server logs the underlying Stream
+error. (Note: making chat itself work in demo requires valid demo Stream staging credentials — a
+config matter, not a code fix.)
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### FND-4 · Quote lifecycle and history
