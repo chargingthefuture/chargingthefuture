@@ -1,5 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
-import { computeWorkforceModel } from './repository';
+import { computeWorkforceModel, type WorkforceModel } from './repository';
 import { deriveWorkforceSkillLevel, type WorkforceSkillLevel } from './skill-level';
 import type {
   WorkforceBucketDetail,
@@ -140,7 +140,7 @@ function displayName(p: ProfileRow): string {
 }
 
 // jobTitle > skill > sector. Returns the stronger of two reasons.
-function strongerReason(a: WorkforceMatchReason, b: WorkforceMatchReason): WorkforceMatchReason {
+export function strongerReason(a: WorkforceMatchReason, b: WorkforceMatchReason): WorkforceMatchReason {
   const rank: Record<WorkforceMatchReason, number> = { none: 0, sector: 1, skill: 2, jobTitle: 3 };
   return rank[b] > rank[a] ? b : a;
 }
@@ -206,23 +206,28 @@ function buildMatch(
   };
 }
 
-function sortMembers(members: WorkforceMatchedMember[]): WorkforceMatchedMember[] {
+export function sortMembers(members: WorkforceMatchedMember[]): WorkforceMatchedMember[] {
   const rank: Record<WorkforceMatchReason, number> = { jobTitle: 0, skill: 1, sector: 2, none: 3 };
   return members.sort(
     (a, b) => rank[a.matchReason] - rank[b.matchReason] || a.displayName.localeCompare(b.displayName),
   );
 }
 
-export async function fetchSectorDetail(sector: string): Promise<WorkforceBucketDetail | null> {
-  const model = await computeWorkforceModel();
-  const target = sector.toLowerCase();
+// Build the drilldown for a single sector against already-loaded model + profile data. Kept separate
+// from fetchSectorDetail so a caller that needs several sectors at once (the community-planning team
+// rosters) can load the model and the profile set ONCE and reuse them across every sector, instead of
+// re-running loadProfilesForMatch per sector.
+function computeSectorMatchedMembers(
+  sectorName: string,
+  model: WorkforceModel,
+  loaded: LoadedProfiles,
+  gapByJobTitleId: Map<string, number>,
+): WorkforceBucketDetail | null {
+  const target = sectorName.toLowerCase();
   const bucket = model.sectors.find((s) => s.bucket.toLowerCase() === target);
   if (!bucket) {
     return null;
   }
-
-  const loaded = await loadProfilesForMatch();
-  const gapByJobTitleId = new Map(model.occupations.map((o) => [o.jobTitleId, o.gap] as const));
   // The occupations of this sector (matched by the sector's display name, since that is what the
   // model bucket and the route carry). The sector arm applies to every occupation in this sector.
   const sectorJobTitles = loaded.jobTitles.filter((jt) => jt.sector_name.toLowerCase() === target);
@@ -239,6 +244,38 @@ export async function fetchSectorDetail(sector: string): Promise<WorkforceBucket
   }
 
   return { ...bucket, matchedMembers: sortMembers(matchedMembers) };
+}
+
+export async function fetchSectorDetail(sector: string): Promise<WorkforceBucketDetail | null> {
+  const model = await computeWorkforceModel();
+  const loaded = await loadProfilesForMatch();
+  const gapByJobTitleId = new Map(model.occupations.map((o) => [o.jobTitleId, o.gap] as const));
+  return computeSectorMatchedMembers(sector, model, loaded, gapByJobTitleId);
+}
+
+// Drilldowns for several sectors in one pass. Loads the workforce model and the Directory profile set
+// once, then computes each requested sector against that shared data. Sector names are matched
+// case-insensitively and de-duplicated; a requested sector with no taxonomy bucket is simply absent
+// from the returned map (the caller reports it as a coverage gap). Key = sector name lowercased.
+export async function fetchSectorDetailsForSectors(
+  sectors: string[],
+): Promise<Map<string, WorkforceBucketDetail>> {
+  const model = await computeWorkforceModel();
+  const loaded = await loadProfilesForMatch();
+  const gapByJobTitleId = new Map(model.occupations.map((o) => [o.jobTitleId, o.gap] as const));
+
+  const out = new Map<string, WorkforceBucketDetail>();
+  for (const sector of sectors) {
+    const key = sector.toLowerCase();
+    if (out.has(key)) {
+      continue;
+    }
+    const detail = computeSectorMatchedMembers(sector, model, loaded, gapByJobTitleId);
+    if (detail) {
+      out.set(key, detail);
+    }
+  }
+  return out;
 }
 
 export async function fetchSkillLevelDetail(skillLevel: string): Promise<WorkforceBucketDetail | null> {

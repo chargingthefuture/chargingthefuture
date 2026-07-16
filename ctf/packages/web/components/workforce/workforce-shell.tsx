@@ -22,13 +22,14 @@ import { WorkforceSectorGaps } from './workforce-sector-gaps';
 import { WorkforceTrainingGaps } from './workforce-training-gaps';
 import { WorkforceBucketDrilldown } from './workforce-bucket-drilldown';
 import { WorkforceOccupations } from './workforce-occupations';
+import { WorkforceCommunityPlanning } from './workforce-community-planning';
 import { WorkforceProfilePanel } from './workforce-profile-panel';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { MobileTopActions } from '@/components/shared/mobile-top-actions';
 import { RefreshButton } from '@/components/shared/refresh-button';
 
 type Tab = 'dashboard';
-type SidebarView = 'overview' | 'sector' | 'skill-level' | 'occupations';
+type SidebarView = 'overview' | 'sector' | 'skill-level' | 'occupations' | 'community-planning';
 
 interface WorkforceData {
   dashboard: WorkforceDashboard | null;
@@ -346,6 +347,8 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
 
   const content = view === 'occupations' ? (
     <WorkforceOccupations />
+  ) : view === 'community-planning' ? (
+    <WorkforceCommunityPlanning />
   ) : (
     <WorkforceDashboardContent
       t={t}
@@ -364,6 +367,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
       { key: 'sector', label: 'Sectors' },
       { key: 'skill-level', label: 'Skill Level' },
       { key: 'occupations', label: 'Occupations' },
+      { key: 'community-planning', label: 'Community' },
     ];
     // ctf-self-responsive opts out of the global mobile de-flex so this flex
     // column keeps a real height — the dashboard's ScrollArea needs it to scroll.
