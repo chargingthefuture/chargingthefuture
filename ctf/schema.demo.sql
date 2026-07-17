@@ -2073,7 +2073,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('skills-taxonomy',    'Skills Taxonomy',      'Hierarchy and CRUD for sectors, job titles, and skills with impact preview.',                     'implemented_shell', 20,  TRUE),
   ('directory',          'Directory',            'Browse skills across the survivor community.',                      'implemented_shell', 30,  TRUE),
   ('workforce',          'Workforce',            'Real-time work and skills distribution amongst 5 million survivors globally.',                           'implemented_shell', 50,  TRUE),
-  ('skills-hunt',        'SkillsHunt',          'Discover skills across the network.',                     'implemented_shell', 60,  TRUE),
+  ('skills-hunt',        'SkillsHunt',          'Nominate survivors to build the Directory and grow the economy.', 'implemented_shell', 60,  TRUE),
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
   ('foundation',         'Foundation',           'Find talent, tools, repairs, and infrastructure support in real time.',                      'implemented_shell', 70,  TRUE),
   ('lighthouse',         'LightHouse',           'Verified survivor housing listings.',                             'implemented_shell', 80,  TRUE),

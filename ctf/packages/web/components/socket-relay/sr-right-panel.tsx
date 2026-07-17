@@ -38,9 +38,9 @@ export function SocketRelayRightPanel({
       <div style={{ marginTop: 8, padding: "14px 16px", borderRadius: 12, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
           <Shield size={12} style={{ color: t.ACCENT }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: t.ACCENT }}>You choose what's public</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: t.ACCENT }}>Good to know</span>
         </div>
-        <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6 }}>A request is shared publicly only if you mark it public. A public request shows your @handle, title, and tags — never the details you write.</div>
+        <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6 }}>SocketRelay is a peer-to-peer community board — members connect and arrange help directly. Take the usual precautions before transacting with anyone you don't know: meet in public, and don't send money or share personal details until you're comfortable.</div>
       </div>
       <button onClick={onPost} style={{ width: "100%", marginTop: 12, padding: "12px", borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
         + Post a Request

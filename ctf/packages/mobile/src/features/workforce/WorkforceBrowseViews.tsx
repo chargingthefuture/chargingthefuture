@@ -308,7 +308,7 @@ function OccupationsBrowse() {
 // One planning team from issue #1465: a named union of Workforce sectors, expandable to its
 // de-duplicated matched-member roster. Mirrors the web TeamCard.
 function TeamRow({ team }: { team: CommunityPlanningTeamRoster }) {
-  const { tokens, accent, styles } = useWorkforceStyles();
+  const { accent, styles } = useWorkforceStyles();
   const [open, setOpen] = useState(false);
   return (
     <View style={styles.bucketRow}>
@@ -322,9 +322,8 @@ function TeamRow({ team }: { team: CommunityPlanningTeamRoster }) {
           </Text>
         </View>
         <View style={styles.teamMeta}>
-          <Text style={[styles.rowGap, { color: accent }]}>{fmt(team.memberCount)} members</Text>
-          <Text style={[styles.rowGap, { color: team.gap > 0 ? accent : tokens.success }]}>
-            {team.gap > 0 ? `${fmt(team.gap)} to fill` : 'filled'}
+          <Text style={[styles.rowGap, { color: accent }]}>
+            {fmt(team.memberCount)} {team.memberCount === 1 ? 'member' : 'members'}
           </Text>
         </View>
       </TouchableOpacity>
@@ -365,9 +364,8 @@ function CommunityPlanning() {
     <View>
       <Text style={styles.communityIntro}>
         Proposed rosters for the survivor-built gated community planning document. Each team draws from
-        the Workforce sectors it maps to; the roster is every member who already matches those sectors,
-        and the gap is how many positions those sectors still have to fill. Recomputes live from the
-        Directory.
+        the Workforce sectors it maps to; the roster is every member who already matches those sectors.
+        Recomputes live from the Directory.
       </Text>
       {sourceIssue ? <Text style={styles.rowSub}>Planning document: issue #1465</Text> : null}
       {teams.length === 0 ? (
