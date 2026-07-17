@@ -168,6 +168,14 @@ export const TAXONOMY_CHANGES = [
   // confirmed). proposalNormalizedSkills marks the proposal row 'promoted' and attaches the skill to the
   // proposing member on apply.
   { id: 49, op: 'addSkill', sector: 'Tourism & Hospitality', occupation: 'Chefs / Cooks', skill: 'Chef', occupationExisting: true, proposalNormalizedSkills: ['chef'] },
+
+  // Changes 50-51 (owner-approved 2026-07-17): two design/art skills the taxonomy was missing.
+  // "Web and responsive design" under the pre-existing "Graphic / Visual Designers" occupation
+  // (kept out of the design-heavy UX/UI Designers occupation by owner choice); "Illustration and
+  // concept art" under the pre-existing "Artists / Illustrators" occupation. Both additive; a member
+  // can pick them directly. Applies on the next owner run of the seed-skills-taxonomy apply workflow.
+  { id: 50, op: 'addSkill', sector: 'Creative & Media', occupation: 'Graphic / Visual Designers', skill: 'Web and responsive design', occupationExisting: true },
+  { id: 51, op: 'addSkill', sector: 'Creative & Media', occupation: 'Artists / Illustrators', skill: 'Illustration and concept art', occupationExisting: true },
 ];
 
 // ---------------------------------------------------------------------------

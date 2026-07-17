@@ -127,6 +127,10 @@ proposal #1550), alongside the occupation's other cooking skills. A nominated / 
 profile whose SkillsHunt nomination proposed a since-promoted skill (e.g. "Chef" on an unclaimed profile)
 shows that skill as a real chip after the apply run — not a vanished "pending review" chip — because the
 apply also attaches promoted skills to nominated profiles (via `skills_hunt_directory_profiles`).
+After changes 50–51 apply, **Creative & Media › Graphic / Visual Designers** also lists **Web and responsive
+design** and **Creative & Media › Artists / Illustrators** also lists **Illustration and concept art** —
+two design/art skills the taxonomy was missing. UX/UI design was deliberately not added as a skill (it is
+the existing "UX/UI Designers" occupation, a job title, not a skill).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
