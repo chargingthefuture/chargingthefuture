@@ -4,6 +4,11 @@ import { authedFetch } from '../../auth/authedFetch';
 
 const BASE = '/api/peer-programming';
 
+// Max characters a cohort message may contain. Mirrors the web
+// PEER_PROGRAMMING_MAX_MESSAGE_LENGTH in lib/peer-programming/constants.ts so the mobile
+// composer enforces the same limit the route rejects past.
+export const PEER_PROGRAMMING_MAX_MESSAGE_LENGTH = 2000;
+
 export type PeerProgrammingTier = 'cohort_member' | 'authenticated_audience' | 'public_audience';
 
 export type PeerProgrammingTopic = {
@@ -34,7 +39,7 @@ export type PeerProgrammingMessage = {
 };
 
 // How the viewer relates to the cohort whose room is open:
-//   member   — placed in this cohort (can post; mobile is read-only today regardless).
+//   member   — placed in this cohort (can post from the Session tab composer).
 //   admin    — an admin opening another cohort read-only.
 //   listener — any signed-in member reading along on a running cohort they were not placed in.
 export type PeerProgrammingRoomAccess = 'member' | 'admin' | 'listener';
