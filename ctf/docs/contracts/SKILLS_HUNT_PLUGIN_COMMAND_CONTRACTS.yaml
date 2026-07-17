@@ -120,7 +120,10 @@ contracts:
     description: >-
       Create a contributor submission with validated profile URL, skill set, profession claims, and
       the nominee's location. `country` is required; `state`/`city` are optional. On accept the
-      location carries into the generated directory profile (the shared member profile).
+      location carries into the generated directory profile (the shared member profile). Admins are
+      exempt from the scout rate limits (the rolling weekly submission cap and the reputation-driven
+      pre-approval/restricted gate); the active-round window and the one-active-submission-per-Quora-URL
+      duplicate guard still apply to everyone.
     inputSchema:
       roundId:
         type: string

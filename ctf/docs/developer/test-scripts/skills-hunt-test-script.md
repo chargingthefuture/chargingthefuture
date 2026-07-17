@@ -189,6 +189,23 @@ Result: web ☐
 
 ---
 
+### SH-6b — Admins are exempt from the submission rate limit
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** Signed in as an admin. An active round exists.
+
+**Steps:**
+1. As the admin, submit nominations past the point where a regular member would hit the weekly cap (each with a distinct Quora URL).
+2. Confirm each submission is accepted, not blocked by "Submission rate limit exceeded" or "need admin pre-approval".
+3. As a comparison, a non-admin member hitting the same volume is still blocked by the cap.
+
+**Expected:** The admin can keep submitting (distinct Quora URLs) without the rolling weekly cap or the reputation pre-approval gate blocking them. The active-round window and the one-per-Quora-URL duplicate guard still apply to the admin (a repeat URL is still blocked). A non-admin still hits the cap.
+
+Result: web ☐
+
+---
+
 ### SH-7 — Proposed (free-text) skills can be added alongside taxonomy skills
 
 **Role:** member · **Surfaces:** web, android

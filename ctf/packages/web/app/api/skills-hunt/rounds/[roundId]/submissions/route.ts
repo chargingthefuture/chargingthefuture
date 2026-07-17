@@ -92,7 +92,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
   }
 
   try {
-    const submission = await createSubmission(gate.auth.userId, gate.auth.username, input);
+    // Admins bypass the scout rate limits (weekly cap + reputation pre-approval);
+    // the round-active window and duplicate-URL guard still apply.
+    const submission = await createSubmission(gate.auth.userId, gate.auth.username, input, { isAdmin: gate.auth.isAdmin });
 
     logSkillsHuntAudit({
       actorId: gate.auth.userId,
