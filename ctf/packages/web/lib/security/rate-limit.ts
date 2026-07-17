@@ -31,13 +31,16 @@ function pruneExpired(nowMs: number): void {
   if (nowMs - lastPruneMs < PRUNE_INTERVAL_MS) {
     return;
   }
-  lastPruneMs = nowMs;
   for (const [key, entry] of windows) {
     // An entry is dead weight once its own window has fully passed.
     if (nowMs - entry.windowStartMs >= entry.windowMs) {
       windows.delete(key);
     }
   }
+  // Stamped after the loop: the whole prune is synchronous, so nothing can re-enter mid-loop,
+  // and stamping last means a hypothetical future await inside the loop would fail toward
+  // pruning again rather than silently skipping a cycle.
+  lastPruneMs = nowMs;
 }
 
 // Fixed-window check: at most `limit` calls per `windowMs` for this key. Returns whether
@@ -74,13 +77,31 @@ export function checkRateLimit(
 export const PUBLIC_READ_RATE_LIMIT = 30;
 export const PUBLIC_READ_RATE_WINDOW_MS = 60_000;
 
-// Client IP for rate-limit keying: first value of x-forwarded-for (set by the platform's
-// proxy), 'unknown' when absent. 'unknown' callers share one bucket — acceptable for a
-// brake whose goal is to bound total anonymous load, not to meter individuals precisely.
+// Client IP for rate-limit keying; 'unknown' when nothing usable is present. 'unknown'
+// callers share one bucket — acceptable for a brake whose goal is to bound total anonymous
+// load, not to meter individuals precisely.
+//
+// WHY NOT the first x-forwarded-for value: that header is a comma list where each proxy
+// APPENDS the address it received the connection from. The leftmost entries travel in from
+// the outside world — a caller can send `x-forwarded-for: <anything>` and rotate through
+// fake addresses to give themselves a fresh bucket per request, which voids the limit. The
+// app deploys on Render, whose proxy appends to the incoming list rather than replacing it,
+// so the first entry is exactly the part an attacker controls.
+//
+// What is used instead, in order:
+// 1. cf-connecting-ip — set by Cloudflare (Render fronts services with it and forwards its
+//    headers) to the address Cloudflare actually accepted the connection from.
+// 2. The LAST x-forwarded-for entry — appended by the nearest proxy hop, which a caller
+//    cannot forge. With more than one trusted hop this collapses distinct callers into the
+//    upstream proxy's address; that fails toward limiting too much, never toward a bypass.
 export function getClientIp(request: Request): string {
+  const cloudflare = request.headers.get('cf-connecting-ip')?.trim();
+  if (cloudflare) {
+    return cloudflare;
+  }
   const forwarded = request.headers.get('x-forwarded-for');
-  const first = forwarded?.split(',')[0]?.trim();
-  return first || 'unknown';
+  const parts = forwarded?.split(',').map((value) => value.trim()).filter(Boolean) ?? [];
+  return parts[parts.length - 1] || 'unknown';
 }
 
 // Convenience gate for a public read route. Returns null when the call may proceed, or a

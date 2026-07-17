@@ -48,6 +48,18 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ ok: false, code: 'peer_programming_invalid_payload', message: 'weekStartDate, title, and guidance are required.' }, { status: 400 });
   }
 
+  // The week key must be the Monday of the target week in YYYY-MM-DD form — room loads look the
+  // topic up by getWeekStartDate(), which always produces a Monday, so a topic saved under any
+  // other date would never be found. This is the contract's invalid_week_key deny condition.
+  const weekKeyMatch = /^\d{4}-\d{2}-\d{2}$/.test(body.weekStartDate);
+  const parsedWeekStart = new Date(`${body.weekStartDate}T00:00:00Z`);
+  if (!weekKeyMatch || Number.isNaN(parsedWeekStart.getTime()) || parsedWeekStart.getUTCDay() !== 1) {
+    return NextResponse.json(
+      { ok: false, code: 'peer_programming_invalid_week_key', message: 'weekStartDate must be the Monday of the target week, as YYYY-MM-DD.' },
+      { status: 400 },
+    );
+  }
+
   try {
     const topic = await upsertWeeklyTopic({
       actorId: gate.auth.userId,

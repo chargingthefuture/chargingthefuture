@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createMessage, insertPeerProgrammingAudit, isCohortMember } from 'lib/peer-programming/repository';
+import { createMessage, getMessageById, insertPeerProgrammingAudit, isCohortMember } from 'lib/peer-programming/repository';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
 import { PEER_PROGRAMMING_MAX_MESSAGE_LENGTH } from 'lib/peer-programming/constants';
 import { reportError } from 'lib/observability/report';
@@ -57,6 +57,28 @@ export async function POST(request: Request, context: { params: Promise<{ messag
     return NextResponse.json(
       { ok: false, code: 'peer_programming_policy_denied', message: 'Only cohort members can reply in this cohort.' },
       { status: 403 },
+    );
+  }
+
+  // The parent must exist and live in the same cohort — the contract's parentThreadRequired
+  // rule. Without this a member could attach a reply to a fabricated id (an orphan row) or to
+  // a message in another cohort. Checked after membership so a non-member always gets the same
+  // 403 and cannot probe which message ids exist. Cross-cohort ids and unknown ids both return
+  // the same 404, so a member cannot probe other cohorts' ids either.
+  const parent = await getMessageById(messageId);
+  if (!parent || parent.cohortId !== body.cohortId) {
+    await insertPeerProgrammingAudit({
+      actorId: gate.auth.userId,
+      command: 'peer-programming.thread.reply.create',
+      policyStatus: 'deny',
+      reason: 'thread_not_found',
+      targetType: 'message',
+      targetId: messageId,
+      metadata: { cohortId: body.cohortId },
+    });
+    return NextResponse.json(
+      { ok: false, code: 'peer_programming_thread_not_found', message: 'The message you are replying to does not exist in this cohort.' },
+      { status: 404 },
     );
   }
 
