@@ -183,7 +183,7 @@ export function SocketRelayPost({
             Cancel Edit
           </button>
         )}
-        <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6 }}>You choose whether this request is public. A public request shows your @handle, title, and tags — not the details you write. Connections happen after someone offers to help.</div>
+        <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6 }}>Good to know: SocketRelay connects members directly, peer-to-peer. Before transacting with anyone, take the usual precautions — meet in public, and don't send money or share personal details until you're comfortable. Connections happen after someone offers to help.</div>
       </div>
     </div>
   );
