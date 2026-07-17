@@ -22,8 +22,6 @@ export type ReplyTarget = {
 
 type ChatConnectionState = 'loading' | 'live' | 'fallback';
 
-type MessageAction = Pick<ChatMessage, 'actionLabel' | 'actionSlug'>;
-
 // localStorage key for the one-time AI-processing consent (the llm_consent_granted gate the
 // backend expects). Scoped per user so a shared browser does not leak consent between accounts.
 const COMIC_CONSENT_STORAGE_PREFIX = 'ctf.comic.consentGranted';
@@ -60,28 +58,12 @@ function formatTimeLabel(value: string | Date | null | undefined): string {
   return `${datePart}, ${timePart}`;
 }
 
-function getActionForText(text: string): MessageAction | null {
-  const normalized = text.toLowerCase();
-
-  if (normalized.includes('housing') || normalized.includes('lighthouse')) {
-    return { actionLabel: 'Open LightHouse →', actionSlug: 'lighthouse' };
-  }
-
-  if (normalized.includes('gdp') || normalized.includes('economy')) {
-    return { actionLabel: 'Open GDP →', actionSlug: 'gdp' };
-  }
-
-  if (normalized.includes('service credit')) {
-    return { actionLabel: 'Open ServiceCredits →', actionSlug: 'service-credits' };
-  }
-
-  if (normalized.includes('directory') || normalized.includes('provider')) {
-    return { actionLabel: 'Open Directory →', actionSlug: 'directory' };
-  }
-
-  return null;
-}
-
+// Build the base ChatMessage for a stored (server) message. It deliberately attaches NO "Open X"
+// action button: a peer community post must never carry a plugin link the author did not add, and
+// members cannot attach one. (The old keyword inference here wrongly decorated any post containing
+// words like "economy"/"housing" with an "Open GDP"/"Open LightHouse" button, making it look as if
+// the poster had linked a plugin.) Action buttons come only from an explicit source — the local
+// concierge reply sets its own actionLabel/actionSlug — never from message text.
 function buildChatMessage(
   id: string,
   from: 'hub' | 'user',
@@ -89,15 +71,12 @@ function buildChatMessage(
   time: string,
   senderLabel?: string,
 ): ChatMessage {
-  const action = from === 'hub' ? getActionForText(text) : null;
-
   return {
     id,
     from,
     text,
     time,
     senderLabel,
-    ...(action ?? {}),
   };
 }
 
