@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import type { HubMessagesResponse, HubMessage } from 'lib/hub/types';
 import type { FeedTimelineItem } from 'lib/feed/types';
-import { FEED_ERROR_CODE } from 'lib/feed/constants';
+import {
+  FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH,
+  FEED_ERROR_CODE,
+  FEED_MAX_COMMUNITY_POST_LENGTH,
+} from 'lib/feed/constants';
 import {
   createFeedCommunityPost,
   feedAuthorHandle,
@@ -166,7 +170,11 @@ export async function POST(request: Request) {
   const replyToPostId = typeof body.replyToPostId === 'string' ? body.replyToPostId.trim() : null;
   const echoedQuote = readQuotedMessage(body.quotedMessage);
   const input = { body: text, replyToPostId };
-  if (!text || !validateFeedCommunityPostInput(input)) {
+  // Admins (the owner) get a higher length + link cap so a detailed welcome/help post is not blocked
+  // as spam; members keep the low caps.
+  const isPrivileged = gate.auth.isAdmin;
+  const maxLength = isPrivileged ? FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH : FEED_MAX_COMMUNITY_POST_LENGTH;
+  if (!text || !validateFeedCommunityPostInput(input, maxLength)) {
     return NextResponse.json(
       {
         ok: false,
@@ -179,7 +187,7 @@ export async function POST(request: Request) {
   try {
     // A message posted from the Hub input is a peer-to-peer community post.
     const authorUsername = gate.auth.username ?? null;
-    const result = await createFeedCommunityPost(gate.auth.userId, input, authorUsername);
+    const result = await createFeedCommunityPost(gate.auth.userId, input, authorUsername, isPrivileged);
 
     // Normalize to the same public author shape as mapTimelineItemToHubMessage so the
     // optimistic send and the next polled copy share a dedup key (from, senderLabel, text, time).

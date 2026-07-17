@@ -29,6 +29,16 @@ export const FEED_MAX_QUESTION_LENGTH = 600;
 export const FEED_MAX_COMMUNITY_POST_LENGTH = 1200;
 export const FEED_MAX_COMMUNITY_REPLY_LENGTH = 800;
 
+// The number of links (http/https) a community post may contain. Members are capped low to deter
+// spam/link-dumping in the publicly-readable Commons; admins get a generous cap so a detailed,
+// link-rich welcome or help post from the owner is not blocked. The `<>`-tag block still applies
+// to everyone (it prevents raw HTML, not spam).
+export const FEED_MAX_COMMUNITY_POST_URLS = 3;
+export const FEED_ADMIN_MAX_COMMUNITY_POST_URLS = 20;
+// Longer post length for admins — matches the announcement body cap — so the owner can post a full
+// welcome/help message in the flow of the chat. Members keep FEED_MAX_COMMUNITY_POST_LENGTH.
+export const FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH = 4000;
+
 export const FEED_ALLOWED_CHANNELS = ['announcements', 'questions', 'community'] as const;
 
 // Enabled-channel names are plural ('announcements'); the stored feed_items.item_type is singular
