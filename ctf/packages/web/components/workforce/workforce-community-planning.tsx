@@ -113,7 +113,7 @@ function TeamCard({ team, t }: { team: CommunityPlanningTeam; t: WorkforceTokens
               Directory, they appear here automatically.
             </div>
           ) : (
-            <WorkforceMemberList members={team.members} />
+            <WorkforceMemberList members={team.members} linkProfiles />
           )}
         </div>
       ) : null}

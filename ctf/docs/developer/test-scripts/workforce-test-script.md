@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed, team sector names corrected to live taxonomy names |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed, team sector names corrected to live taxonomy names, member names link to Directory profile (web) |
 
 ## How to run this
 
@@ -162,7 +162,9 @@ the full-screen loading state — the current dashboard stays visible until the 
    Agriculture, Health & Wellbeing, Safety & Security, Technology, Communications & Documentation,
    Operations & Maintenance).
 3. Expand at least one team to see its roster; note the matched-member count.
-4. Cross-check one team against the underlying sector drilldown (WF-6): the team's roster is the
+4. (Web) Click a member's name in the expanded roster; confirm it opens that member's Directory
+   profile.
+5. Cross-check one team against the underlying sector drilldown (WF-6): the team's roster is the
    de-duplicated union of its mapped sectors' matched members.
 **Expected:** Each team shows its matched-member count and lists the sectors it draws from; when
 expanded, the matched members by name (same match reasons as the sector drilldown — job title, skill,
@@ -172,7 +174,9 @@ one neighbourhood). A team whose mapped sector is not in the taxonomy shows that
 mapped" rather than silently empty — after the 2026-07-17 name fix (`Housing & Construction`,
 `Energy & Utilities`) no team should show a "not mapped" chip; if one appears, a taxonomy sector was
 renamed and the team table needs the new name. The view is read-only and reflects current Directory data on
-reopen. Member names appear only for a signed-in member — the view is behind the member read gate,
+reopen. On **web**, each member name is a link that opens that member's Directory profile
+(`/apps/directory/profile/:profileId`); on **android** the names are still plain text (parity ticket
+#1615). Member names appear only for a signed-in member — the view is behind the member read gate,
 never public.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
