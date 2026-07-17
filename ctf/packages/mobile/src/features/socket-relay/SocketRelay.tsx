@@ -519,12 +519,13 @@ export function SocketRelay() {
         </TouchableOpacity>
       ) : null}
 
-      {/* Privacy notice — from mockup Shield element */}
+      {/* Good-to-know safety notice (peer-to-peer precautions) — Shield element */}
       <View style={styles.privacyNotice}>
-        <Text style={styles.privacyTitle}>🛡 You choose what's public</Text>
+        <Text style={styles.privacyTitle}>🛡 Good to know</Text>
         <Text style={styles.privacyBody}>
-          A request is public only if you mark it so. A public request shows your @handle, title, and
-          tags — not the details you write.
+          SocketRelay is a peer-to-peer community board — members connect and arrange help directly.
+          Take the usual precautions before transacting with anyone you don't know: meet in public, and
+          don't send money or share personal details until you're comfortable.
         </Text>
       </View>
     </ScrollView>
