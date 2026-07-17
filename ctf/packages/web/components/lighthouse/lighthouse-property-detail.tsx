@@ -34,10 +34,10 @@ export function LighthousePropertyDetail({
     <div style={{ width: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column" }}>
       <div style={{ height: 56, borderBottom: `1px solid ${t.ACCENT}25`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER }}>
         <button onClick={onBack} style={{ color: t.ACCENT, background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>← Back</button>
-        <div style={{ flex: 1, fontSize: 16, fontWeight: 700, color: t.TITLE }}>🏠 Listing Detail</div>
+        <div style={{ flex: 1, fontSize: 16, fontWeight: 700, color: t.TITLE, display: "flex", alignItems: "center", gap: 8 }}><Home size={18} strokeWidth={1.75} style={{ color: t.ACCENT }} /> Listing Detail</div>
       </div>
       <div style={{ flex: 1, padding: "32px 40px", overflow: "auto" }}>
-        <div style={{ fontSize: 48, marginBottom: 20, textAlign: "center", padding: "40px 0", background: "rgba(255,255,255,0.02)", borderRadius: 16, border: `1px solid ${t.BORDER}` }}>{l.img || "🏠"}</div>
+        <div style={{ marginBottom: 20, padding: "40px 0", background: "rgba(255,255,255,0.02)", borderRadius: 16, border: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", justifyContent: "center" }}><Home size={56} strokeWidth={1.5} style={{ color: `${t.ACCENT}80` }} /></div>
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 280 }}>
             <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE, marginBottom: 8 }}>{l.title || l.id}</div>
