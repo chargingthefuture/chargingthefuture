@@ -7,8 +7,10 @@ import {
   FEED_COMMUNITY_CATEGORIES,
   FEED_DEFAULT_PAGE,
   FEED_DEFAULT_PAGE_SIZE,
+  FEED_ADMIN_MAX_COMMUNITY_POST_URLS,
   FEED_MAX_BODY_LENGTH,
   FEED_MAX_COMMUNITY_POST_LENGTH,
+  FEED_MAX_COMMUNITY_POST_URLS,
   FEED_MAX_COMMUNITY_REPLY_LENGTH,
   FEED_MAX_PAGE_SIZE,
   FEED_MAX_QUESTION_LENGTH,
@@ -317,7 +319,7 @@ function getCommunityTitle(category: FeedCommunityCategory): string {
   return `${category.replace(/_/g, ' ')} update`;
 }
 
-function passesFeedModeration(text: string): boolean {
+function passesFeedModeration(text: string, urlCap: number = FEED_MAX_COMMUNITY_POST_URLS): boolean {
   if (text.length === 0) {
     return false;
   }
@@ -327,7 +329,7 @@ function passesFeedModeration(text: string): boolean {
   }
 
   const urlCount = (text.match(/https?:\/\//g) ?? []).length;
-  return urlCount <= 3;
+  return urlCount <= urlCap;
 }
 
 async function evaluateFeedRateLimit(
@@ -592,9 +594,12 @@ export function validateFeedQuestionInput(input: FeedQuestionInput): boolean {
     && typeof input.consentGranted === 'boolean';
 }
 
-export function validateFeedCommunityPostInput(input: FeedCommunityPostInput): boolean {
+export function validateFeedCommunityPostInput(
+  input: FeedCommunityPostInput,
+  maxLength: number = FEED_MAX_COMMUNITY_POST_LENGTH,
+): boolean {
   const body = normalizeText(input.body ?? '');
-  const bodyOk = body.length > 0 && body.length <= FEED_MAX_COMMUNITY_POST_LENGTH;
+  const bodyOk = body.length > 0 && body.length <= maxLength;
   // replyToPostId is optional; when present it must be null or a well-formed UUID. The
   // referenced post's existence is checked inside the transaction in createFeedCommunityPost.
   const replyOk = input.replyToPostId === undefined
@@ -1528,12 +1533,16 @@ export async function createFeedCommunityPost(
   actorId: string,
   input: FeedCommunityPostInput,
   actorUsername: string | null = null,
+  // Admins get a higher link cap so a detailed, link-rich welcome/help post from the owner is not
+  // blocked as spam. Members keep the low cap. The `<>`-tag block still applies to everyone.
+  isPrivileged: boolean = false,
 ): Promise<{ postId: string; createdAtIso: string }> {
   return withDbTransaction(async (client) => {
     const body = normalizeText(input.body);
     const category = normalizeCommunityCategory(input.category);
 
-    if (!passesFeedModeration(body)) {
+    const urlCap = isPrivileged ? FEED_ADMIN_MAX_COMMUNITY_POST_URLS : FEED_MAX_COMMUNITY_POST_URLS;
+    if (!passesFeedModeration(body, urlCap)) {
       throw new Error('content_policy_violation');
     }
 

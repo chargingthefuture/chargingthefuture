@@ -363,7 +363,11 @@ contracts:
   - pluginId: feed
     command: feed.community.post.create
     version: 1.0.0
-    description: Create a community support post visible in the feed community channel.
+    description: >-
+      Create a community support post visible in the feed community channel. Body length and link
+      count are capped as anti-spam: members up to 1200 characters and 3 links; admins up to 4000
+      characters and 20 links (so the owner's detailed welcome/help posts are not blocked). Raw HTML
+      (`<` / `>`) is rejected for everyone.
     inputSchema:
       body:
         type: string
