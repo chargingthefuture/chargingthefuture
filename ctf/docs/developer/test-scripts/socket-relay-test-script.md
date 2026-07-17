@@ -160,14 +160,15 @@ web ☐ android ☐
 **Precondition:** Seed has a request whose `expires_at` is in the past (or manually set one in the DB).
 
 **Steps:**
-1. Sign in as the request owner. Open the feed and activate the "Mine" filter chip.
-2. Find the expired request.
-3. Sign in as a different member. Browse the feed.
+1. Sign in as the request owner. Open the feed on the default "All" filter (do **not** switch to "Mine" yet).
+2. Find the expired request in the main feed.
+3. Switch to the "Mine" filter and confirm it is still there.
+4. Sign in as a different member. Browse the feed.
 
 **Expected:**
-- Owner sees the request with an "Expired" pill plus "Re-post" and "Edit" buttons.
+- Owner sees their expired request in the **main "All" feed** (not only under "Mine") — dimmed, with an "Expired" pill plus "Re-post" and "Edit" buttons. The owner's own post never silently disappears from their feed.
 - The "I Can Help" / claim button is absent or disabled for the expired card.
-- The other member does not see the expired request in their feed.
+- The other member does **not** see the expired request in their feed (expired posts are hidden from everyone except the owner).
 - Tapping "Re-post" (owner) makes the request live again: the Expired pill disappears, the 28-day clock resets, and the card becomes visible to other members.
 
 web ☐ android ☐

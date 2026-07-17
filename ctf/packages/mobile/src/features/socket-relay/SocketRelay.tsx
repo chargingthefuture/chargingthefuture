@@ -521,9 +521,10 @@ export function SocketRelay() {
 
       {/* Privacy notice — from mockup Shield element */}
       <View style={styles.privacyNotice}>
-        <Text style={styles.privacyTitle}>🛡 Privacy Minimized</Text>
+        <Text style={styles.privacyTitle}>🛡 You choose what's public</Text>
         <Text style={styles.privacyBody}>
-          Never includes identifying info.
+          A request is public only if you mark it so. A public request shows your @handle, title, and
+          tags — not the details you write.
         </Text>
       </View>
     </ScrollView>
