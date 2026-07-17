@@ -1,6 +1,7 @@
 'use client';
 
-import { ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
+import { ShieldCheck, ArrowUpRight } from 'lucide-react';
 import styles from './community-shell.module.css';
 
 type AnnouncementCardProps = {
@@ -13,13 +14,16 @@ type AnnouncementCardProps = {
   body: string;
   // Display-only formatted time label (same one the chat bubbles use).
   time: string;
+  // The plugin this announcement links to, rendered as a clickable "Open <Plugin>" chip below the
+  // body (in addition to the plain "Open <Plugin>: <url>" line already in the body). Null when none.
+  linkedPlugin?: { slug: string; name: string } | null;
 };
 
 // Official Survivor Hub announcement, rendered as a distinct card (emerald treatment, shield
 // "Official" badge) so it stands out from peer chat bubbles and AI answers instead of blending into
 // the purple stream. Announcements have no reply/reaction affordances — they are one-way, so the
 // card carries only the header, an optional title, the body, and the time.
-export function AnnouncementCard({ senderName, title, body, time }: AnnouncementCardProps) {
+export function AnnouncementCard({ senderName, title, body, time, linkedPlugin }: AnnouncementCardProps) {
   return (
     <article className={styles.announcementCard} aria-label="Official announcement">
       <div className={styles.announcementHead}>
@@ -36,6 +40,11 @@ export function AnnouncementCard({ senderName, title, body, time }: Announcement
       </div>
       {title ? <p className={styles.announcementTitle}>{title}</p> : null}
       <p className={styles.announcementBody}>{body}</p>
+      {linkedPlugin ? (
+        <Link href={`/apps/${linkedPlugin.slug}`} className={styles.announcementChip}>
+          <ArrowUpRight size={13} color="currentColor" /> Open {linkedPlugin.name}
+        </Link>
+      ) : null}
     </article>
   );
 }

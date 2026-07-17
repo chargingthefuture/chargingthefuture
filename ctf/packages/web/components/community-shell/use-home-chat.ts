@@ -93,6 +93,7 @@ function mapStoredMessage(message: HubMessage, currentUserId: string): ChatMessa
     sentAtIso: message.sentAtIso,
     kind: message.kind,
     announcementTitle: message.title,
+    linkedPlugin: message.linkedPlugin ?? null,
     communityPostId: message.communityPostId,
     quotedMessage: message.quotedMessage,
     reactions: message.reactions ?? [],
