@@ -344,8 +344,17 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
     if (typingUsers.length === 2) return `${typingUsers[0].name} and ${typingUsers[1].name} are typing…`;
     return `${typingUsers[0].name} and ${typingUsers.length - 1} others are typing…`;
   }, [typingUsers]);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-grow the composer as the member types multiple lines (capped, then it scrolls). Runs on
+  // every input change — including the reset to '' after a send, which shrinks it back to one line.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [input]);
   const isMobile = useIsMobile();
 
   // Build the interleaved, time-ordered stream: tag hub messages and comic items with a numeric
@@ -683,11 +692,12 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
 
       <div className={styles.chatInputWrap}>
         <label className={styles.visuallyHidden} htmlFor="chat-input">Share with the community, or type @comic to ask the AI Assistant</label>
-        <input
+        <textarea
           ref={inputRef}
           id="chat-input"
           className={styles.chatInput}
           placeholder="Share with the community, or type @comic to ask…"
+          rows={1}
           value={input}
           onChange={(event) => {
             setInput(event.target.value);
@@ -695,7 +705,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
             notifyTyping();
           }}
           onKeyDown={(event) => {
-            if (event.key === 'Enter') {
+            // Enter sends; Shift+Enter inserts a line break so members can write paragraphs.
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
               // While the first-use consent modal is open, Enter belongs to the modal ("turn it
               // on"), not the composer. Sending here would only re-open the already-open modal.
               if (consentModalOpen) return;
