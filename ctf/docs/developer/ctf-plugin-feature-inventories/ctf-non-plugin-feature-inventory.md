@@ -214,6 +214,17 @@ Backend-only endpoints with no UI, each guarded by a dedicated bearer secret and
 
 ## 5) Change Log
 
+- 2026-07-17: **Public-read rate limiter hardening (code-review findings #1579, #1581).** `getClientIp`
+  in `ctf/packages/web/lib/security/rate-limit.ts` no longer keys on the **first** `x-forwarded-for`
+  value: that entry travels in from the outside world (Render's proxy appends to the incoming list
+  rather than replacing it), so a caller could send a fake header and rotate through fresh per-request
+  buckets, voiding the limit. It now prefers `cf-connecting-ip` (set by Cloudflare, which fronts
+  Render services, to the address it actually accepted the connection from) and falls back to the
+  **last** `x-forwarded-for` entry — appended by the nearest proxy hop, which a caller cannot forge;
+  with several trusted hops that collapses callers into the upstream proxy's address, which fails
+  toward limiting too much, never toward a bypass. Also moved the `lastPruneMs` stamp to after the
+  prune loop with a comment on why (re-entry safety if the loop ever gains an await). Same 30/min
+  limit, same endpoints, no route or contract change.
 - 2026-07-17: **Clerk `user.deleted` webhook + ghost-reward report (§1.13).** Closes a data-integrity gap: a member who deletes their Clerk account directly (Clerk's hosted "Delete account", outside the app's own flow) left every plugin's data orphaned on a dead id, and the v2 Quora port re-approved + re-rewarded them (surfaced by a real case — an `approved_full`, reward-granted Unlock row whose Clerk user was gone). New signature-verified `POST /api/webhooks/clerk` runs the same cleanup as the app's Delete Account flow on `user.deleted` (record + ServiceCredits reclaim + `deleteAllAccountData`), idempotent against the app flow's own Clerk `deleteUser` (which fires the same webhook), and inert until `CLERK_WEBHOOK_SIGNING_SECRET` is configured. New read-only `ctf/scripts/reportGhostUnlockRewards.mjs` lists existing v2-ported submissions whose Clerk user no longer exists (stranded rewards) for a batch revoke. Preventive companion (owner action, no code): disable the "Delete account" option in Clerk's hosted user profile so all deletions route through the app flow. No schema change.
 - 2026-07-16: **Crawler policy and public-endpoint rate limiting (owner approved).** New
   `ctf/packages/web/app/robots.ts` serves `/robots.txt`: allow `/` (the public marketing shells are

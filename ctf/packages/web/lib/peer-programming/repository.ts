@@ -420,6 +420,18 @@ export async function listMessages(cohortId: string): Promise<PeerProgrammingMes
   return result.rows.map(mapMessageRow);
 }
 
+export async function getMessageById(messageId: string): Promise<PeerProgrammingMessage | null> {
+  const result = await queryDb<MessageRow>(
+    `SELECT id, cohort_id, author_user_id, parent_message_id, body, tier, created_at
+     FROM peer_programming_messages
+     WHERE id = $1`,
+    [messageId],
+  );
+
+  const row = result.rows[0];
+  return row ? mapMessageRow(row) : null;
+}
+
 export async function createMessage(input: {
   cohortId: string;
   authorUserId: string;

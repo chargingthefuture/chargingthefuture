@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Users } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -170,11 +170,25 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     return () => controller.abort();
   }, []);
 
+  // One controller for the latest reload/switch request. Each new request aborts the previous
+  // one, so two rapid cohort switches (or a switch racing a refresh) can never settle state in
+  // the wrong order, and nothing keeps loading after unmount.
+  const roomRequestRef = useRef<AbortController | null>(null);
+  const nextRoomRequestSignal = useCallback(() => {
+    roomRequestRef.current?.abort();
+    const controller = new AbortController();
+    roomRequestRef.current = controller;
+    return controller.signal;
+  }, []);
+  useEffect(() => () => roomRequestRef.current?.abort(), []);
+
   // Re-pull the currently open room in the background (refresh button) without
   // showing the full-screen loading state.
   const reloadRoom = useCallback(async () => {
+    const signal = nextRoomRequestSignal();
     try {
-      const data = await fetchRoomData(new AbortController().signal, activeCohortId);
+      const data = await fetchRoomData(signal, activeCohortId);
+      if (signal.aborted) return;
       setRoom(data.room);
       setMessages(data.messages);
       setCohorts(data.cohorts);
@@ -182,17 +196,20 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       setMyCohortId(data.myCohortId);
       setAccess(data.access);
     } catch (e: unknown) {
+      if (signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
       setError(e instanceof Error ? e.message : "Failed to refresh PeerProgramming data.");
     }
-  }, [activeCohortId]);
+  }, [activeCohortId, nextRoomRequestSignal]);
 
   // Open another running cohort to listen in (read-only unless you are a member of it). Passing
   // null returns to your own cohort. Refetches the room for that cohort and jumps to the chat.
   async function openCohort(cohortId: string | null) {
     setSwitching(true);
     setError(null);
+    const signal = nextRoomRequestSignal();
     try {
-      const data = await fetchRoomData(new AbortController().signal, cohortId);
+      const data = await fetchRoomData(signal, cohortId);
+      if (signal.aborted) return;
       setRoom(data.room);
       setMessages(data.messages);
       setCohorts(data.cohorts);
@@ -202,9 +219,11 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       setActiveCohortId(cohortId);
       setTab("chat");
     } catch (e: unknown) {
+      if (signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
       setError(e instanceof Error ? e.message : "Failed to open that cohort.");
     } finally {
-      setSwitching(false);
+      // A superseded (aborted) call must not clear the spinner the newer call just turned on.
+      if (!signal.aborted) setSwitching(false);
     }
   }
 
