@@ -19,7 +19,7 @@ import { Feed } from './src/features/feed';
 import { Announcements } from './src/features/announcements';
 import { WorkforceDashboard, AdminWorkforce } from './src/features/workforce';
 import { SkillsHunt, AdminSkillsHunt } from './src/features/skills-hunt';
-import { Foundation, FoundationInstantCallController } from './src/features/foundation';
+import { Foundation, FoundationInstantCallController, AdminFoundation } from './src/features/foundation';
 import { Lighthouse, AdminLighthouse } from './src/features/lighthouse';
 import { SocketRelay, AdminSocketRelay } from './src/features/socket-relay';
 import { TrustTransport, AdminTrustTransport } from './src/features/trust-transport';
@@ -74,6 +74,7 @@ type FeatureKey =
   | 'comic-review'
   | 'peer-programming-admin'
   | 'socket-relay-admin'
+  | 'foundation-admin'
   | 'skills-hunt-admin'
   | 'lighthouse-admin'
   | 'workforce-admin'
@@ -111,6 +112,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'comic-review', label: 'AI Review' },
   { key: 'peer-programming-admin', label: 'PeerProgramming Admin' },
   { key: 'socket-relay-admin', label: 'SocketRelay Admin' },
+  { key: 'foundation-admin', label: 'Foundation Admin' },
   { key: 'skills-hunt-admin', label: 'SkillsHunt Admin' },
   { key: 'lighthouse-admin', label: 'Lighthouse Admin' },
   { key: 'workforce-admin', label: 'Workforce Admin' },
@@ -197,6 +199,7 @@ function buildFeatureViews(
     'comic-review': () => <ComicReviewDashboard />,
     'peer-programming-admin': () => <AdminPeerProgramming />,
     'socket-relay-admin': () => <AdminSocketRelay />,
+    'foundation-admin': () => <AdminFoundation />,
     'skills-hunt-admin': () => <AdminSkillsHunt />,
     'lighthouse-admin': () => <AdminLighthouse />,
     'workforce-admin': () => <AdminWorkforce />,
