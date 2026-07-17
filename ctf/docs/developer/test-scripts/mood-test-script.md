@@ -98,17 +98,22 @@ window) exist, the surface withholds data and shows the not-enough-data state wi
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### MD-6 · "Talk to someone" support links (no crisis hotlines)
-**Role:** member · **Surfaces:** web (desktop) + web (mobile-responsive)
+**Role:** member · **Surfaces:** all
 **Steps:**
-1. Open Mood and find the resources rail ("Talk to someone").
-**Expected:** The rail shows two in-app links — **Find someone in the Directory** (→ `/apps/directory`)
-and **Reach out through Foundation** (→ `/apps/foundation`) — that route a struggling member to a
-community member with mental-health expertise. There are **no** external crisis-hotline numbers
-(National Hotline / Crisis Text Line / RAINN are removed). The Privacy First card still appears below.
-The Directory link's description says "Search community members by specialty" — it does **not** call
-members "verified" (Directory profiles have no verified state, so that word would be an unverifiable
-claim). The Android Mood screen has no resources rail, so this case is web-only.
-**Result:** web ☐ mobile ☐ — notes:
+1. On web, open Mood and find the resources rail ("Talk to someone"). On android, open Mood and tap
+   the **Support** bottom-nav tab.
+2. Tap **Find someone in the Directory**, then go back and tap **Reach out through Foundation**.
+**Expected:** The surface shows the **Talk to someone** heading and two in-app links — **Find someone
+in the Directory** and **Reach out through Foundation** — that route a struggling member to a
+community member with mental-health expertise. On web they link to `/apps/directory` and
+`/apps/foundation`; on android they navigate the app shell to the Directory and Foundation screens.
+There are **no** external crisis-hotline numbers (National Hotline / Crisis Text Line / RAINN are
+removed). The Directory link's description says "Search community members by specialty" — it does
+**not** call members "verified" (Directory profiles have no verified state, so that word would be an
+unverifiable claim). The Privacy First card still appears (below the links on web; on the Private tab
+on android). On android, if the Mood screen is ever shown without navigation wired, the link cards are
+non-interactive rather than crashing.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
 

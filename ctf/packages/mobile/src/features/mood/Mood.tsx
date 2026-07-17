@@ -31,12 +31,35 @@ const MOODS = [
   { emoji: '😄', label: 'Great', value: 5, color: '#22C55E' },
 ] as const;
 
-type NavKey = 'home' | 'checkin' | 'trends' | 'private';
+type NavKey = 'home' | 'checkin' | 'trends' | 'support' | 'private';
 const NAV: Array<{ label: string; key: NavKey }> = [
   { label: 'Home', key: 'home' },
   { label: 'Check-in', key: 'checkin' },
   { label: 'Trends', key: 'trends' },
+  { label: 'Support', key: 'support' },
   { label: 'Private', key: 'private' },
+];
+
+// Where the "Talk to someone" support links route. These are other top-level plugin
+// screens, so navigation is done by the app shell (App.tsx passes a callback that calls
+// setSelected). Mirrors the web rail's two destinations (Directory / Foundation).
+export type MoodNavDest = 'directory' | 'foundation';
+
+// Support links — mirror the web "Talk to someone" rail (mood-crisis-rail.tsx). Owner
+// decision: point a struggling member to the community's own people (a member with
+// mental-health expertise in the Directory, or reaching out through Foundation) rather
+// than to external crisis-hotline numbers. These are in-app navigation links.
+const SUPPORT_LINKS: Array<{ dest: MoodNavDest; title: string; detail: string }> = [
+  {
+    dest: 'directory',
+    title: 'Find someone in the Directory',
+    detail: 'Search community members by specialty — including people with mental-health expertise.',
+  },
+  {
+    dest: 'foundation',
+    title: 'Reach out through Foundation',
+    detail: 'Connect and talk it through with a community member who can help.',
+  },
 ];
 
 function useClientId(): string {
@@ -295,7 +318,39 @@ function PrivateView() {
   );
 }
 
-export function Mood() {
+// Support tab: the "Talk to someone" rail from web (mood-crisis-rail.tsx) as a mobile
+// surface. Two in-app links route a struggling member to a community member with
+// mental-health expertise — via the Directory or Foundation. When no navigation
+// callback is wired (e.g. Mood rendered standalone), the links degrade to non-interactive
+// cards so the screen never crashes. The Privacy First content lives on its own tab.
+function SupportView({ onNavigate }: { onNavigate?: (_dest: MoodNavDest) => void }) {
+  const { s } = useMoodTheme();
+  return (
+    <View>
+      <Text style={s.supportKicker}>Talk to someone</Text>
+      <Text style={s.supportIntro}>
+        If you&apos;re struggling, reach a community member with mental-health expertise.
+      </Text>
+      <View style={s.supportLinks}>
+        {SUPPORT_LINKS.map((r) => (
+          <TouchableOpacity
+            key={r.dest}
+            style={s.supportCard}
+            onPress={onNavigate ? () => onNavigate(r.dest) : undefined}
+            disabled={!onNavigate}
+            accessibilityRole={onNavigate ? 'link' : undefined}
+            accessibilityLabel={r.title}
+          >
+            <Text style={s.supportCardTitle}>{r.title}</Text>
+            <Text style={s.supportCardDetail}>{r.detail}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+export function Mood({ onNavigate }: { onNavigate?: (_dest: MoodNavDest) => void } = {}) {
   const { s, accent } = useMoodTheme();
   const clientId = useClientId();
   const [activeNav, setActiveNav] = useState<NavKey>('checkin');
@@ -386,6 +441,7 @@ export function Mood() {
         {activeNav === 'checkin' && renderCheckin()}
         {activeNav === 'trends' && <TrendsView />}
         {activeNav === 'home' && <HomeView onNavigate={setActiveNav} />}
+        {activeNav === 'support' && <SupportView onNavigate={onNavigate} />}
         {activeNav === 'private' && <PrivateView />}
       </ScrollView>
 
@@ -480,6 +536,19 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderWidth: 1, borderColor: `${COLOR}30`,
   },
   checkAgainText: { color: COLOR, fontSize: 14, fontWeight: '600' },
+  supportKicker: {
+    fontSize: 11, fontWeight: '700', letterSpacing: 0.8,
+    color: t.textMuted, textTransform: 'uppercase', marginBottom: 6,
+  },
+  supportIntro: { fontSize: 13, color: t.textSecondary, lineHeight: 20, marginBottom: 16 },
+  supportLinks: { gap: 10 },
+  supportCard: {
+    padding: 14, borderRadius: 12,
+    backgroundColor: `${COLOR}0F`,
+    borderWidth: 1, borderColor: `${COLOR}30`,
+  },
+  supportCardTitle: { fontSize: 14, fontWeight: '700', color: COLOR, marginBottom: 4 },
+  supportCardDetail: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
   emptyWrap: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 16 },
   emptyEmoji: { fontSize: 56, marginBottom: 16 },
   emptyTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 6, textAlign: 'center' },

@@ -1,1 +1,1 @@
-export { Mood } from './Mood';
+export { Mood, type MoodNavDest } from './Mood';

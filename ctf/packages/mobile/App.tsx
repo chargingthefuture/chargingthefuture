@@ -24,7 +24,7 @@ import { Lighthouse, AdminLighthouse } from './src/features/lighthouse';
 import { SocketRelay, AdminSocketRelay } from './src/features/socket-relay';
 import { TrustTransport, AdminTrustTransport } from './src/features/trust-transport';
 import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-programming';
-import { Mood } from './src/features/mood';
+import { Mood, type MoodNavDest } from './src/features/mood';
 import { GentlePulse } from './src/features/gentle-pulse';
 import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly-performance';
 import { Gdp } from './src/features/gdp';
@@ -177,7 +177,12 @@ function buildFeatureViews(
     'trust-transport': () => <TrustTransport />,
     'trust-transport-admin': () => <AdminTrustTransport />,
     'peer-programming': () => <PeerProgramming />,
-    mood: () => <Mood />,
+    mood: () => (
+      // Mood's "Talk to someone" support links route to two other top-level plugin
+      // screens; MoodNavDest ('directory' | 'foundation') is a subset of FeatureKey, so
+      // the shell's setSelected drives the navigation directly.
+      <Mood onNavigate={(dest: MoodNavDest) => setSelected(dest)} />
+    ),
     'gentle-pulse': () => <GentlePulse />,
     'weekly-performance': () => <WeeklyPerformance />,
     'weekly-performance-admin': () => <AdminWeeklyPerformance />,
