@@ -456,6 +456,10 @@ contracts:
       - skills_hunt_submissions
       - skills_hunt_directory_profiles
       - skills_hunt_audit_log
+      # Reads the Directory takedown suppression list to skip generating a profile for a Quora URL that
+      # was removed at the person's request; logs the skip to the Directory change/audit log.
+      - directory_suppressed_quora_urls
+      - directory_profile_change_events
     purpose: directory_projection_generation
     retentionClass: transactional_long_lived
     idempotency: true

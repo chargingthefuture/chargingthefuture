@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { AtSign, Reply, SmilePlus, X } from 'lucide-react';
+import { AtSign, Reply, SmilePlus, Trash2, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { PublicCommunityPost } from '../../lib/feed/types';
@@ -321,6 +321,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
     beginReply,
     cancelReply,
     toggleReaction,
+    deleteMessage,
     mentionsOnly,
     toggleMentionsOnly,
     isFilterRefreshing,
@@ -546,6 +547,8 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
 
           // A peer post (it carries a community post id) can be replied to Signal-style.
           const canReply = Boolean(msg.communityPostId);
+          // The member can delete their own peer post (there is no edit — delete and repost instead).
+          const canDelete = msg.from === 'user' && Boolean(msg.communityPostId);
           return (
             <Fragment key={msg.id}>
               {divider}
@@ -581,6 +584,20 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
                         aria-label={`Reply to ${senderName}`}
                       >
                         <Reply size={12} /> Reply
+                      </button>
+                    ) : null}
+                    {canDelete && msg.communityPostId ? (
+                      <button
+                        type="button"
+                        className={styles.chatDeleteBtn}
+                        onClick={() => {
+                          if (window.confirm('Delete this post? This cannot be undone. To change it, delete and post again.')) {
+                            void deleteMessage(msg.communityPostId as string);
+                          }
+                        }}
+                        aria-label="Delete your post"
+                      >
+                        <Trash2 size={12} /> Delete
                       </button>
                     ) : null}
                   </div>

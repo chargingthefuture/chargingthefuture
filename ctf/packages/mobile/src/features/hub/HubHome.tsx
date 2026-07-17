@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +17,7 @@ import { useAuth } from '../../auth/auth-context';
 import {
   fetchHubMessages,
   sendHubMessage,
+  deleteHubMessage,
   toggleHubReaction,
   fetchHubLastSeen,
   markHubSeen,
@@ -121,6 +123,7 @@ function MessageCard({
   onToggleReaction,
   canReply,
   onReply,
+  onDelete,
   currentUserId,
 }: {
   message: HubMessage;
@@ -131,6 +134,7 @@ function MessageCard({
   onToggleReaction: (_message: HubMessage, _emoji: HubReactionEmoji) => void;
   canReply: boolean;
   onReply: (_message: HubMessage) => void;
+  onDelete: (_message: HubMessage) => void;
   currentUserId?: string;
 }) {
   const official = isOfficial(message);
@@ -142,7 +146,9 @@ function MessageCard({
   const isOwn = !official && currentUserId != null && message.userId === currentUserId;
   // Only peer posts (community posts) can be reacted to / replied to; announcements / AI cannot.
   const isPeer = message.communityPostId != null;
-  const showActionsRow = isPeer && (message.reactions.length > 0 || canReact || canReply);
+  // The member can delete their own peer post (there is no edit — delete and repost instead).
+  const canDelete = isOwn && isPeer;
+  const showActionsRow = isPeer && (message.reactions.length > 0 || canReact || canReply || canDelete);
   const [showPicker, setShowPicker] = useState(false);
 
   return (
@@ -223,6 +229,16 @@ function MessageCard({
               accessibilityLabel="Reply to this post"
             >
               <Text style={s.replyBtnText}>↩ Reply</Text>
+            </Pressable>
+          )}
+          {canDelete && (
+            <Pressable
+              style={s.deleteBtn}
+              onPress={() => onDelete(message)}
+              accessibilityRole="button"
+              accessibilityLabel="Delete your post"
+            >
+              <Text style={s.deleteBtnText}>🗑 Delete</Text>
             </Pressable>
           )}
         </View>
@@ -479,6 +495,35 @@ export const HubHome = () => {
     [load],
   );
 
+  // Delete the member's own peer post. Confirms first (destructive, no undo — the product has no
+  // edit, so this is delete-and-repost). Optimistically drops it; on failure, reload to restore.
+  const handleDeletePost = useCallback(
+    (message: HubMessage) => {
+      const postId = message.communityPostId;
+      if (!postId) return;
+      Alert.alert(
+        'Delete this post?',
+        'This cannot be undone. To change it, delete and post again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              setMessages((prev) => prev.filter((m) => m.communityPostId !== postId));
+              try {
+                await deleteHubMessage(postId);
+              } catch {
+                load();
+              }
+            },
+          },
+        ],
+      );
+    },
+    [load],
+  );
+
   const hubAccent = getAppAccent('chyme', theme);
   // "X is typing…" line, present only while the live connection is up and others are typing.
   const typingLabel = formatTypingLabel(typingUsers);
@@ -547,6 +592,7 @@ export const HubHome = () => {
                 onToggleReaction={handleToggleReaction}
                 canReply={isAuthenticated}
                 onReply={setReplyTo}
+                onDelete={handleDeletePost}
                 currentUserId={currentUserId}
               />
             </>
@@ -742,6 +788,12 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
       borderRadius: t.radiusChip,
     },
     replyBtnText: { fontSize: 11, fontWeight: '700', color: t.textSecondary },
+    deleteBtn: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: t.radiusChip,
+    },
+    deleteBtnText: { fontSize: 11, fontWeight: '700', color: t.isComic ? t.textSecondary : '#F87171' },
     quotedBlock: {
       borderLeftWidth: 3,
       borderLeftColor: `${t.success}66`,

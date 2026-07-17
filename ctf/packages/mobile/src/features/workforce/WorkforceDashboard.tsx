@@ -198,6 +198,7 @@ export function WorkforceDashboard() {
     { key: 'occupations', label: 'Occupations' },
     { key: 'sector', label: 'Sectors' },
     { key: 'skill-level', label: 'Skill Level' },
+    { key: 'community', label: 'Community' },
   ];
 
   return (

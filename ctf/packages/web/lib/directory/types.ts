@@ -93,3 +93,20 @@ export type DirectoryAnnouncementInput = {
   publishedAtIso?: string | null;
   expiresAtIso?: string | null;
 };
+
+// A row from directory_suppressed_quora_urls — a Quora URL taken down at the person's request. An
+// entry with isOverridden = false is an ACTIVE block: that URL cannot be listed in the directory
+// again until an admin lifts it (override), which stamps the override* fields.
+export type DirectorySuppressedUrl = {
+  id: string;
+  normalizedUrl: string;
+  originalUrl: string;
+  reason: string;
+  removedProfileId: string | null;
+  createdByUserId: string;
+  createdAtIso: string;
+  isOverridden: boolean;
+  overriddenByUserId: string | null;
+  overriddenAtIso: string | null;
+  overrideReason: string | null;
+};
