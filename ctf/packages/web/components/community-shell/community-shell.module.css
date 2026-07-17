@@ -1042,7 +1042,8 @@
 .chatInputWrap {
   margin: 0 20px 8px;
   display: flex;
-  align-items: center;
+  /* flex-end so the send button stays pinned to the bottom line as the textarea grows taller. */
+  align-items: flex-end;
   gap: 10px;
   padding: 10px 16px;
   background: rgba(255, 255, 255, 0.04);
@@ -1058,6 +1059,16 @@
   outline: none;
   font-size: 14px;
   color: var(--ctf-text-shell);
+  /* Multi-line composer: members can Shift+Enter for a new line. It auto-grows in JS up to a cap,
+     then scrolls. Match the surrounding font, kill the manual resize handle, and align the single-
+     line height with the send button. */
+  font-family: inherit;
+  line-height: 1.5;
+  resize: none;
+  overflow-y: auto;
+  max-height: 160px;
+  padding: 0;
+  margin: 0;
 }
 
 .chatInput::placeholder {
