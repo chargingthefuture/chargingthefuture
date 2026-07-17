@@ -16,7 +16,6 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
