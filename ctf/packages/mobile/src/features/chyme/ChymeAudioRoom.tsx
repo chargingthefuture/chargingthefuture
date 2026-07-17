@@ -29,7 +29,7 @@ import {
   type StreamVideoParticipant,
 } from '@stream-io/video-react-native-sdk';
 import type { ChymeJoinResponse } from './ChymeApi';
-import { postChymeHeartbeat, postChymeHand } from './ChymeApi';
+import { postChymeHeartbeat, postChymeHand, getChymeRoom } from './ChymeApi';
 import { ChymeTipButton } from './ChymeTipModal';
 
 // Shared theme wiring for the live audio room. The accent is the Chyme plugin accent for
@@ -91,6 +91,10 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Clerk user ids of members whose hand is raised per the server, refreshed by the room poll below.
+  // Drives the persistent raised-hand indicator for everyone except the local member (who is driven
+  // by their own instant local toggle). Starts empty until the first poll lands.
+  const [raisedHandUserIds, setRaisedHandUserIds] = useState<ReadonlySet<string>>(() => new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -172,6 +176,38 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
     return () => clearInterval(intervalId);
   }, [status]);
 
+  // While joined, poll the room state every 15s (matching the web live shell's cadence) so other
+  // members' server-persisted raised hands appear and disappear on their tiles without a manual
+  // refresh. Stream reactions are transient and auto-clear, so they can't carry this — the persistent
+  // set rides on each member's presence row (POST /api/chyme/hand). This reads the SAME
+  // GET /api/chyme/room the web room already polls, so it adds no Stream/GetStream quota: it is a
+  // database read, not a Stream call. The `cancelled` flag stops any late response from setting state
+  // after unmount, and clearing the interval on unmount / when leaving the room prevents a tight loop
+  // and over-polling. The OS suspends these timers when the app is backgrounded, so it goes quiet on
+  // its own then, mirroring the heartbeat above.
+  useEffect(() => {
+    if (status !== 'joined') return;
+    let cancelled = false;
+    const poll = () => {
+      void getChymeRoom()
+        .then((payload) => {
+          if (cancelled) return;
+          setRaisedHandUserIds(
+            new Set((payload.participants ?? []).filter((p) => p.handRaised).map((p) => p.userId)),
+          );
+        })
+        .catch(() => {
+          /* best-effort: a transient poll failure is ignored; the next tick retries */
+        });
+    };
+    poll();
+    const intervalId = setInterval(poll, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [status]);
+
   if (status !== 'joined' || !client || !call) {
     return (
       <View style={styles.center}>
@@ -195,13 +231,17 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   return (
     <StreamVideo client={client}>
       <StreamCall call={call}>
-        <ChymeAudioRoomLive onOpenChat={onOpenChat} onLeave={onLeave} />
+        <ChymeAudioRoomLive onOpenChat={onOpenChat} onLeave={onLeave} raisedHandUserIds={raisedHandUserIds} />
       </StreamCall>
     </StreamVideo>
   );
 };
 
-const ChymeAudioRoomLive: React.FC<{ onOpenChat: () => void; onLeave: () => void }> = ({ onOpenChat, onLeave }) => {
+const ChymeAudioRoomLive: React.FC<{
+  onOpenChat: () => void;
+  onLeave: () => void;
+  raisedHandUserIds: ReadonlySet<string>;
+}> = ({ onOpenChat, onLeave, raisedHandUserIds }) => {
   const { styles } = useRoomStyles();
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
@@ -250,7 +290,12 @@ const ChymeAudioRoomLive: React.FC<{ onOpenChat: () => void; onLeave: () => void
         ) : (
           <View style={styles.stageGrid}>
             {participants.map((participant) => (
-              <ChymeSpeakerTile key={participant.sessionId} participant={participant} localHandRaised={handRaised} />
+              <ChymeSpeakerTile
+                key={participant.sessionId}
+                participant={participant}
+                localHandRaised={handRaised}
+                raisedHandUserIds={raisedHandUserIds}
+              />
             ))}
           </View>
         )}
@@ -261,18 +306,15 @@ const ChymeAudioRoomLive: React.FC<{ onOpenChat: () => void; onLeave: () => void
   );
 }
 
-const ChymeSpeakerTile: React.FC<{ participant: StreamVideoParticipant; localHandRaised: boolean }> = ({
-  participant,
-  localHandRaised,
-}) => {
+const ChymeSpeakerTile: React.FC<{
+  participant: StreamVideoParticipant;
+  localHandRaised: boolean;
+  raisedHandUserIds: ReadonlySet<string>;
+}> = ({ participant, localHandRaised, raisedHandUserIds }) => {
   const { tileStyles } = useRoomStyles();
   const isSelf = participant.isLocalParticipant;
   const speaking = participant.isSpeaking;
   const publishingAudio = isPublishingAudio(participant);
-  // The local member's raised hand is driven by their own toggle so it is reliable and instant.
-  // Everyone else's still comes from the transient Stream reaction (mobile does not yet poll the
-  // server-persisted set); the persistence above is what makes the raised hand visible on web.
-  const handRaised = isSelf ? localHandRaised : participant.reaction?.type === 'raised_hand';
   const name = participant.name || participant.userId;
   // Signed-out guests join as `chyme-guest-…` and have no wallet, so never show Tip on a guest. The
   // clerk user id (the tip recipient) is the Stream id with the `chyme-` prefix stripped.
@@ -280,6 +322,13 @@ const ChymeSpeakerTile: React.FC<{ participant: StreamVideoParticipant; localHan
   const clerkUserId = participant.userId.startsWith('chyme-')
     ? participant.userId.slice('chyme-'.length)
     : participant.userId;
+  // The local member's raised hand is driven by their own toggle so it is reliable and instant.
+  // Everyone else's comes from the server-persisted set (keyed by clerk user id) that the room poll
+  // refreshes, matching the web room. The transient Stream reaction still gives an instant in-call
+  // cue before the next poll lands. Guests never publish and never raise a hand.
+  const handRaised = isSelf
+    ? localHandRaised
+    : (!isGuest && raisedHandUserIds.has(clerkUserId)) || participant.reaction?.type === 'raised_hand';
 
   return (
     <View style={tileStyles.wrapper}>
