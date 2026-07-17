@@ -63,7 +63,9 @@ shown.
 1. Post a top-level message.
 2. Open it and post a reply on its thread.
 **Expected:** Both appear in order, attributed to you. The reply is nested under its parent, not at the
-top level. An over-long body (past the message limit) is refused with a readable message.
+top level. An over-long body (past the message limit) is refused with a readable message. A reply
+whose parent id does not exist, or belongs to a different cohort (crafted request), is refused with
+404 `peer_programming_thread_not_found` — no orphan reply row is created.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### PP-3 · Persistence across reload
@@ -128,7 +130,8 @@ sidebar.
 1. From the cohort room, open the feedback form.
 2. Pick an issue type and a suggestion category, add a note, and submit.
 **Expected:** The feedback is accepted and recorded. An over-long note (past the feedback limit) is
-refused with a readable message.
+refused with a readable message. A crafted request with a `releaseSurface` other than `web` or
+`android` is refused with 400 (the value is never persisted); omitting it still records `web`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
@@ -157,6 +160,8 @@ reopening the app. Refreshing never clears the current screen to the full-screen
 3. Open the member room and confirm the topic shows in the header.
 **Expected:** The topic saves and publishes for the chosen week. The member room reads the current
 week's published topic. A non-admin reaching the admin screen sees an access notice, not the form.
+A week start that is not a real `YYYY-MM-DD` date or not a Monday is refused with a readable
+message (`invalid week key`) — a topic keyed to a mid-week date would never be found by room loads.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### PP-A2 · Run weekly cohort assignment

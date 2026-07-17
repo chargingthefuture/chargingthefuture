@@ -197,6 +197,26 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 
 ## Change Log
 
+- 2026-07-17: **Code-review batch: route validation, contract-shape, and request-race fixes (findings #1585–#1589).**
+  (1) `GET`/`POST /api/peer-programming/admin/single-open-cohort` now return the four contract
+  fields (`enabled`, `source`, `adminSetting`, `envFlagEnabled`) flat at the top level **plus** the
+  nested `mode` object the web admin shell already reads — the response previously nested everything
+  under `mode` while the contract documented a flat shape (#1585). (2) `POST /api/peer-programming/feedback`
+  refuses a `releaseSurface` outside the contract enum (`web` | `android`) with 400 instead of
+  persisting any arbitrary string; a missing value still defaults to `web` (#1586).
+  (3) `POST /api/peer-programming/messages/[messageId]/replies` now enforces the contract's
+  `parentThreadRequired` rule: after the membership check, the parent message must exist **and**
+  belong to the target cohort, else 404 `peer_programming_thread_not_found` (audited as a deny) — a
+  fabricated or cross-cohort parent id can no longer create an orphan reply, and unknown vs
+  cross-cohort ids are indistinguishable to the caller (#1587). New repository helper
+  `getMessageById`. (4) `PUT /api/peer-programming/admin/topics` validates `weekStartDate` as a real
+  `YYYY-MM-DD` UTC **Monday** (400 `peer_programming_invalid_week_key` otherwise) — room loads look
+  topics up by `getWeekStartDate()`, which always produces a Monday, so a topic saved under any other
+  date was invisible to members (#1588). (5) The web shell's `reloadRoom`/`openCohort` now share one
+  retained `AbortController` (each new request aborts the previous one; aborted calls skip state
+  writes), so rapid cohort switches or a switch racing a refresh can no longer settle state out of
+  order or update after unmount (#1589). No schema change; response shape is an additive change to
+  `admin.single-open-cohort.get/set` (route now matches the documented contract).
 - 2026-07-14: **Added refresh controls (app-wide refresh rollout).** Web: shared `RefreshButton` in the desktop and mobile-responsive shell headers (`peer-programming-shell.tsx`), wired to a new `reloadRoom` callback that re-pulls the currently open room (messages, cohorts, roster) without flashing the full-screen loading state. Android: native pull-to-refresh via `RefreshControl` on the cohort tab's `ScrollView` (`pp-cohort-tab.tsx`, threaded from `PeerProgramming.tsx`), wired to a new background variant of `load` that skips the full loading state. UI-only; no schema, route, or contract change.
 - 2026-06-27: **Cohorts tab: removed the redundant own-cohort row and fixed the misleading count.** Follow-up to the "enter your own cohort" change below, from user feedback that the tab was confusing. (1) The viewer's own cohort is now shown once — the top "Join Session" card — and is filtered out of the running-cohorts list (`RunningCohorts` now lists only `cohort.id !== myCohortId`). So the same cohort no longer appears twice with a second, redundant button; in single standing Cohort 1 mode (your cohort is the only one) the list section disappears entirely. The list heading is now "Other running cohorts", and its rows are only "Viewing" (the one you are listening in on) or "Listen in." You reach your own cohort's conversation from the Direct Line tab. (2) The top card previously showed "N participants" from an always-empty `participants` array (it was always "0 participants", which read as "no one is in this cohort" next to a populated roster). It now shows the cohort's true member count ("N members", from the cohort summary), matching the roster below. Removed the unused `participantCount` prop from `PeerProgrammingCohortsTab` and its shell call site. Web only. No route, schema, or contract change.
 - 2026-06-27: **Fixed: could not enter your own cohort from the running-cohorts list.** In the web cohorts tab (`pp-cohorts-tab.tsx` `CohortListRow`), the action button was disabled whenever a row was the active room (`disabled={busy || isOpen}`). Your own cohort is the active room by default, so its button rendered as a disabled "Open" — there was no way to enter it (a user reported "I can't enter into the one that should be the only one open" for the single standing Cohort 1). The button now reads **"Enter"** for your own cohort and is always enabled: clicking it loads your cohort and switches to the Direct Line (via the existing `onOpenCohort(null)` path). Another cohort you are already listening in on now reads **"Viewing"** (disabled); any other cohort still reads **"Listen in."** This also removes the confusing double use of the word "Open" (the yellow fallback-open badge stays; the button no longer also says "Open"). Web only — the Android running-cohorts list already labels the current cohort "Viewing" and enters via its own tabs. No route, schema, or contract change.

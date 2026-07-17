@@ -59,7 +59,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     id: 'skills-hunt',
     name: 'SkillsHunt',
     kind: 'plugin',
-    summary: 'Discover skills across the network.',
+    summary: 'Nominate survivors to build the Directory and grow the economy.',
   },
   {
     id: 'unlock',

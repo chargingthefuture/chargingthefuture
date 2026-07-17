@@ -8,9 +8,18 @@ type FeedbackBody = {
   cohortId?: string | null;
   issueType?: string;
   suggestionCategory?: string;
-  releaseSurface?: 'web' | 'android';
+  releaseSurface?: string;
   note?: string;
 };
+
+// The contract's releaseSurface enum. The TypeScript type on the body does not constrain a
+// raw request, so the values are checked explicitly before anything is persisted.
+const RELEASE_SURFACES = ['web', 'android'] as const;
+type ReleaseSurface = (typeof RELEASE_SURFACES)[number];
+
+function isReleaseSurface(value: string): value is ReleaseSurface {
+  return (RELEASE_SURFACES as readonly string[]).includes(value);
+}
 
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -32,6 +41,15 @@ export async function POST(request: Request) {
 
   if (!body.issueType || !body.suggestionCategory || !body.note) {
     return NextResponse.json({ ok: false, code: 'peer_programming_invalid_payload', message: 'issueType, suggestionCategory and note are required.' }, { status: 400 });
+  }
+
+  // releaseSurface stays optional (older clients omit it and mean the web app), but a supplied
+  // value must be one of the contract's enum members — anything else is refused, not persisted.
+  if (body.releaseSurface !== undefined && !isReleaseSurface(body.releaseSurface)) {
+    return NextResponse.json(
+      { ok: false, code: 'peer_programming_invalid_payload', message: 'releaseSurface must be "web" or "android".' },
+      { status: 400 },
+    );
   }
 
   if (body.note.length > PEER_PROGRAMMING_MAX_FEEDBACK_LENGTH) {
