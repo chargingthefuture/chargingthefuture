@@ -38,9 +38,9 @@ export function SocketRelayRightPanel({
       <div style={{ marginTop: 8, padding: "14px 16px", borderRadius: 12, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
           <Shield size={12} style={{ color: t.ACCENT }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: t.ACCENT }}>Privacy Minimized</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: t.ACCENT }}>You choose what's public</span>
         </div>
-        <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6 }}>Public requests never include identifying information.</div>
+        <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6 }}>A request is shared publicly only if you mark it public. A public request shows your @handle, title, and tags — never the details you write.</div>
       </div>
       <button onClick={onPost} style={{ width: "100%", marginTop: 12, padding: "12px", borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
         + Post a Request
