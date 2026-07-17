@@ -184,23 +184,42 @@ state — the current list stays visible until the new data lands.
 ## Admin walkthrough
 
 ### FND-A1 · Capacity policy (role-gated)
-**Role:** admin · **Surfaces:** web (admin surface)
+**Role:** admin · **Surfaces:** web (admin surface), android (Foundation Admin screen)
 **Steps:**
-1. As admin, open the Foundation admin surface and read the snapshot counts.
-2. Edit the capacity policy (quota state and the rate-limit numbers); save.
+1. As admin, open the Foundation admin surface. On web, read the snapshot counts (android has no
+   snapshot row — see the gap note below — so skip that step there).
+2. Edit the capacity policy (quota state and the five rate-limit numbers); save. On android the save is
+   behind a confirm dialog before it runs.
 3. Attempt the same as a non-admin.
 **Expected:** The save persists with the CSRF header and the quota threshold (green/yellow/orange/red)
-reflects the policy. A non-admin is denied with a readable message.
+reflects the policy. On android a non-admin sees the "admins only" notice; on web the non-admin is
+redirected/denied with a readable message.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### FND-A2 · Rate-limit evaluation and audit
-**Role:** admin · **Surfaces:** web (admin surface)
+**Role:** admin · **Surfaces:** web (admin surface), android (Foundation Admin screen)
 **Steps:**
-1. Run a rate-limit evaluation for a command family.
-2. Open the admin audit events list.
-**Expected:** The evaluation returns the limit decision for that command family. The audit list shows
-allow/deny outcomes with decision evidence and is admin-gated.
+1. Run a rate-limit evaluation for a member + command family (on android this is the "Rate-limit check"
+   card; it is confirm-gated before it runs).
+2. Open the admin audit events list (the read-only audit trail card on android).
+**Expected:** The evaluation returns the limit decision (within/over limit, count/limit, threshold band)
+for that command family. The audit list shows allow/deny outcomes with decision evidence and is
+admin-gated. The evaluation is a mutation that records an audit row and counts against the member's
+window, so the audit list gains a new entry after running it.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### FND-A4 · Android admin screen gating and states (issue #1603)
+**Role:** admin, then non-admin · **Surfaces:** android (Foundation Admin screen)
+**Steps:**
+1. As a non-admin, open the Foundation Admin screen from the feature list.
+2. As an admin, open it and confirm the capacity policy loads, the audit trail loads, and each
+   state-changing action (save policy, run rate-limit check) asks for confirmation first.
+3. Cancel a confirm dialog and confirm nothing changed; then confirm one and observe the update.
+**Expected:** The non-admin sees the "The Foundation admin tools are available to admins only." notice
+and no data. The admin sees a loading spinner, then the capacity policy card, the rate-limit check card,
+and the audit trail (empty state reads "No audit events yet." when there are none). Cancelling a confirm
+makes no change; confirming a save shows "Capacity policy saved." and the audit trail gains a row.
+**Result:** web n/a ☐ mobile ☐ android ☐ — notes:
 
 ### FND-A3 · Quota-aware degradation
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -244,3 +263,6 @@ of these, it is already tracked, not a new bug:
   access token is provisioned; otherwise the in-app poll is the fallback.
 - Web Push call alerts need the owner to provision VAPID keys; until then the ring is in-app only and
   every push is a no-op.
+- The android Foundation Admin screen has no snapshot counts row (providers/threads/quotes/active
+  calls/pending notifications). No admin HTTP route returns those aggregates — the web reads them
+  server-side inside the page — so the mobile screen omits the snapshot rather than inventing a route.
