@@ -11,11 +11,13 @@ import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import {
+  fetchExperimentSplit,
   fetchSubmissions,
   reconcileRewards,
   reviewSubmission,
   type UnlockAdminQueueFilter,
   type UnlockAdminSubmission,
+  type UnlockExperimentBucketStat,
   type UnlockReviewDecision,
 } from './admin-api';
 
@@ -38,6 +40,7 @@ export const AdminUnlock = () => {
   const { auth, loading: authLoading } = usePluginAuth('clerk');
 
   const [items, setItems] = useState<UnlockAdminSubmission[]>([]);
+  const [experiment, setExperiment] = useState<UnlockExperimentBucketStat[]>([]);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +79,10 @@ export const AdminUnlock = () => {
     setForbidden(false);
     if (!result.ok && result.message) setError(result.message);
     setItems(result.items);
+    // Read-only A/B experiment split alongside the queue. Best-effort: a failure here never blocks the
+    // queue, and an empty rows array is the normal "rollout not started yet" state.
+    const experimentResult = await fetchExperimentSplit();
+    if (experimentResult.ok) setExperiment(experimentResult.rows);
     setLoading(false);
   }, [auth, filter]);
 
@@ -195,6 +202,44 @@ export const AdminUnlock = () => {
         automatically and arrive within {UNLOCK_REWARD_SLA_HOURS} hours — if a reward is still pending it
         will be retried in the background.
       </Text>
+
+      {/* Early Commons access A/B experiment readout. Driven by the experimentBucket recorded on the
+          unlock.status.get / unlock.verification.submit audit rows. Empty until the Unleash rollout is on.
+          Mirrors the web unlock-admin-shell.tsx panel. Read-only. */}
+      <View style={s.experimentPanel}>
+        <Text style={s.experimentTitle}>Early Commons access — A/B experiment</Text>
+        <Text style={s.experimentSubtitle}>
+          Quora-URL completion rate by bucket. Treatment members get early access to the Commons to ask
+          for help before verifying.
+        </Text>
+        {experiment.length === 0 ? (
+          <Text style={s.experimentEmpty}>
+            No experiment data yet. Turn on the feature-unlock-early-commons-access rollout in Unleash
+            (sticky on userId) to start the test.
+          </Text>
+        ) : (
+          <View style={s.experimentGrid}>
+            {experiment.map((row) => {
+              const label =
+                row.bucket === 'early_commons'
+                  ? 'Early Commons (treatment)'
+                  : row.bucket === 'control'
+                    ? 'Control'
+                    : row.bucket;
+              const labelColor = row.bucket === 'early_commons' ? accent : tokens.textSecondary;
+              return (
+                <View key={row.bucket} style={s.experimentCard}>
+                  <Text style={[s.experimentBucketLabel, { color: labelColor }]}>{label}</Text>
+                  <Text style={s.experimentPct}>{row.completionPct}%</Text>
+                  <Text style={s.experimentMeta}>
+                    {row.submitted} of {row.exposed} submitted
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
 
       <Pressable
         style={[s.reconcileBtn, reconciling ? s.btnBusy : null]}
@@ -344,6 +389,32 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: `${accent}4D`,
     },
     reconcileBtnText: { fontSize: 13, fontWeight: '700', color: accent },
+    experimentPanel: {
+      backgroundColor: PANEL,
+      borderWidth: 1,
+      borderColor: BORDER,
+      borderRadius: 14,
+      padding: 16,
+      gap: 4,
+    },
+    experimentTitle: { fontSize: 14, fontWeight: '700', color: t.textPrimary },
+    experimentSubtitle: { fontSize: 12, color: t.textSecondary, lineHeight: 18, marginBottom: 6 },
+    experimentEmpty: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
+    experimentGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    experimentCard: {
+      flexGrow: 1,
+      flexBasis: 140,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: BORDER,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      gap: 2,
+    },
+    experimentBucketLabel: { fontSize: 12, fontWeight: '700' },
+    experimentPct: { fontSize: 20, fontWeight: '800', color: t.textPrimary },
+    experimentMeta: { fontSize: 11, color: t.textSecondary },
     emptyText: { fontSize: 13, color: t.textSecondary },
     tabRow: { flexDirection: 'row', gap: 8 },
     tab: {
