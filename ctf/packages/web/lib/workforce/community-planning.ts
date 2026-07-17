@@ -35,7 +35,9 @@ export type CommunityPlanningTeamDefinition = {
 };
 
 // The ten teams and their sector mapping, transcribed from the "Team model — who helps with what"
-// table in issue #1465. "Trades" in that table is the Construction/Trades sector.
+// table in issue #1465, using the LIVE taxonomy sector names: the table's "Trades" is the
+// "Housing & Construction" sector and its "Energy" is "Energy & Utilities" (the shorthand names
+// rendered as "not mapped" until corrected — owner-confirmed live names, 2026-07-17).
 export const COMMUNITY_PLANNING_TEAMS: CommunityPlanningTeamDefinition[] = [
   {
     key: 'legal-governance',
@@ -54,14 +56,14 @@ export const COMMUNITY_PLANNING_TEAMS: CommunityPlanningTeamDefinition[] = [
   {
     key: 'land-site',
     name: 'Land & Site',
-    sectors: ['Construction/Trades', 'Environmental & Waste Management'],
+    sectors: ['Housing & Construction', 'Environmental & Waste Management'],
     responsibleFor:
       'Site criteria, land search, zoning, water/soil/environmental checks, utilities feasibility',
   },
   {
     key: 'build-infrastructure',
     name: 'Build & Infrastructure',
-    sectors: ['Construction/Trades', 'Energy'],
+    sectors: ['Housing & Construction', 'Energy & Utilities'],
     responsibleFor:
       'Site plan, housing design, build order, roads, power, water, waste, connectivity',
   },
@@ -101,7 +103,7 @@ export const COMMUNITY_PLANNING_TEAMS: CommunityPlanningTeamDefinition[] = [
   {
     key: 'operations-maintenance',
     name: 'Operations & Maintenance',
-    sectors: ['Retail & Services', 'Construction/Trades'],
+    sectors: ['Retail & Services', 'Housing & Construction'],
     responsibleFor:
       'Move-in logistics, shared-resource scheduling, maintenance rosters, supply purchasing',
   },
