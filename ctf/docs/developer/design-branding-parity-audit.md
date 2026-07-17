@@ -50,18 +50,18 @@
 Quick wins first (small, low-risk), then everything else. Commit + push per item; keep both
 `pnpm --filter @ctf/web run typecheck` and `pnpm --filter @ctf/mobile run typecheck` green.
 
-### Quick wins
+### Quick wins — ALL DONE (commit 93a240a)
 
-- [ ] **QW1 — add `beacon` to web `PLUGIN_ACCENTS`.** File `packages/web/lib/theme/theme-tokens.ts`.
+- [x] **QW1 — add `beacon` to web `PLUGIN_ACCENTS`.** File `packages/web/lib/theme/theme-tokens.ts`.
   Add `beacon: { standard: '#F59E0B', comic: '#7A4A05' }` (matches mobile + the web `BEACON_COLOR`).
-- [ ] **QW2 — plugin-name casing `Lighthouse` → `LightHouse` on mobile** to match web's camelCase
+- [x] **QW2 — plugin-name casing `Lighthouse` → `LightHouse` on mobile** to match web's camelCase
   compound convention (ServiceCredits/TrustTransport/SkillsHunt). Grep mobile for the `Lighthouse`
   display string (screen header/nav label) and align. Do NOT change the slug `lighthouse`.
-- [ ] **QW3 — fill web `PLUGIN_VISUALS` emoji gaps** in `packages/web/components/community-shell/shell-plugin-config.ts`.
+- [x] **QW3 — fill web `PLUGIN_VISUALS` emoji gaps** in `packages/web/components/community-shell/shell-plugin-config.ts`.
   Add: `gdp` (alias of gross-domestic-product 🗺️), `level-up` 🎯, `what-works` 🧰, `beacon` 📡,
   `contributions` 🎁, `recurring-activity` 🔁, `trust` 🛡️, `unlock` 🔓. Use each plugin's accent for
   `color` (from PLUGIN_ACCENTS) and its shipped card `bg`. (Chosen emojis are defaults — owner may retune.)
-- [ ] **QW4 — add `controlRadius` to mobile tokens** `packages/mobile/src/theme/theme-tokens.ts`
+- [x] **QW4 — add `controlRadius` to mobile tokens** `packages/mobile/src/theme/theme-tokens.ts`
   (default 10 / comic 0) mirroring web `--ctf-control-radius`. (Applying it to buttons/inputs is E5.)
 
 ### Everything else (bigger, ordered by impact)
@@ -83,7 +83,7 @@ Quick wins first (small, low-risk), then everything else. Commit + push per item
   dot-gradient — use a tiled `ImageBackground` or an SVG dot pattern component behind comic surfaces),
   and CTA tokens (`ctaBg/ctaBorder/ctaText`: default gradient marker + white; comic `#141414`/`#d4c49a`/
   `#d4c49a`). Apply to shared card/CTA primitives (depends on E5).
-- [ ] **E4 — brand token on mobile.** Add `brand` (default `#e91e8c` / comic `#c8a84b`) + `brandText`
+- [~] **E4 (brand+brandText tokens done; CTA lives in E5 primitives) — brand token on mobile.** Add `brand` (default `#e91e8c` / comic `#c8a84b`) + `brandText`
   (`#ffffff` / `#0d0d0d`) to mobile `ThemeTokens`, and a CTA gradient helper (expo-linear-gradient
   `#7c3aed→#0ea5e9`) for the logo/CTA. Consumed by E2/E5.
 - [ ] **E5 — shared mobile primitives + type scale.** Create `src/components/ui/`: `Button` (variants
