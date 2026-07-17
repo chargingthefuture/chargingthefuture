@@ -454,6 +454,9 @@
   font-size: 14px;
   line-height: 1.6;
   color: var(--ctf-text-shell);
+  /* Preserve the author's line breaks and blank lines between paragraphs (stored server-side) so a
+     multi-paragraph message reads as written instead of one wall of text; long lines still wrap. */
+  white-space: pre-wrap;
   /* Break long unbroken strings (e.g. a pasted URL) so a message always fits the bubble/frame. */
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -668,6 +671,8 @@
   font-size: 14px;
   line-height: 1.6;
   color: var(--ctf-text-shell);
+  /* Keep the author's paragraph breaks in the signed-out Commons too (long lines still wrap). */
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
 }

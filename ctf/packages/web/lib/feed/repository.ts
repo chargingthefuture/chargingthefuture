@@ -178,6 +178,21 @@ function normalizeText(value: string): string {
   return value.trim().replace(/\s+/g, ' ');
 }
 
+// Like normalizeText but keeps paragraph/line breaks: it collapses only *horizontal* whitespace
+// (spaces/tabs) within each line, trims each line, and caps runs of blank lines at one — so a
+// member's multi-paragraph message keeps its structure instead of collapsing into one wall of text.
+// Used for conversational bodies (community posts, replies, announcements); the render side pairs
+// this with `white-space: pre-wrap`.
+function normalizeMultilineText(value: string): string {
+  return value
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.replace(/[^\S\n]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function normalizeNullableText(value: string | null | undefined): string | null {
   if (typeof value !== 'string') {
     return null;
@@ -573,7 +588,7 @@ export function validateFeedConfigInput(input: FeedConfigInput): boolean {
 
 export function validateAnnouncementDraftInput(input: AnnouncementDraftInput): boolean {
   const title = normalizeText(input.title ?? '');
-  const body = normalizeText(input.body ?? '');
+  const body = normalizeMultilineText(input.body ?? '');
   const scheduleAt = normalizeNullableText(input.scheduleAtIso);
   const expiresAt = normalizeNullableText(input.expiresAtIso);
 
@@ -598,7 +613,9 @@ export function validateFeedCommunityPostInput(
   input: FeedCommunityPostInput,
   maxLength: number = FEED_MAX_COMMUNITY_POST_LENGTH,
 ): boolean {
-  const body = normalizeText(input.body ?? '');
+  // Measure the multiline-normalized body (the same shape that gets stored) so the length check
+  // matches what is actually saved now that line breaks are preserved.
+  const body = normalizeMultilineText(input.body ?? '');
   const bodyOk = body.length > 0 && body.length <= maxLength;
   // replyToPostId is optional; when present it must be null or a well-formed UUID. The
   // referenced post's existence is checked inside the transaction in createFeedCommunityPost.
@@ -609,7 +626,7 @@ export function validateFeedCommunityPostInput(
 }
 
 export function validateFeedCommunityReplyBody(body: string): boolean {
-  const normalized = normalizeText(body);
+  const normalized = normalizeMultilineText(body);
   return normalized.length > 0 && normalized.length <= FEED_MAX_COMMUNITY_REPLY_LENGTH;
 }
 
@@ -1123,7 +1140,7 @@ async function composeAnnouncementFeedBody(body: string, linkedPluginSlug: strin
 export async function createAnnouncementDraft(actorId: string, input: AnnouncementDraftInput): Promise<Announcement> {
   return withDbTransaction(async (client) => {
     const title = normalizeText(input.title);
-    const body = normalizeText(input.body);
+    const body = normalizeMultilineText(input.body);
     const scheduleAtIso = normalizeNullableText(input.scheduleAtIso);
     const expiresAtIso = normalizeNullableText(input.expiresAtIso);
     const targeting = normalizeTargeting(input.targeting);
@@ -1200,7 +1217,7 @@ export async function updateAnnouncementDraft(actorId: string, announcementId: s
     }
 
     const title = normalizeText(input.title);
-    const body = normalizeText(input.body);
+    const body = normalizeMultilineText(input.body);
     const scheduleAtIso = normalizeNullableText(input.scheduleAtIso);
     const expiresAtIso = normalizeNullableText(input.expiresAtIso);
     const targeting = normalizeTargeting(input.targeting);
@@ -1538,7 +1555,7 @@ export async function createFeedCommunityPost(
   isPrivileged: boolean = false,
 ): Promise<{ postId: string; createdAtIso: string }> {
   return withDbTransaction(async (client) => {
-    const body = normalizeText(input.body);
+    const body = normalizeMultilineText(input.body);
     const category = normalizeCommunityCategory(input.category);
 
     const urlCap = isPrivileged ? FEED_ADMIN_MAX_COMMUNITY_POST_URLS : FEED_MAX_COMMUNITY_POST_URLS;
@@ -1635,7 +1652,7 @@ export async function replyToFeedCommunityPost(
   bodyInput: string,
 ): Promise<{ replyId: string; createdAtIso: string }> {
   return withDbTransaction(async (client) => {
-    const body = normalizeText(bodyInput);
+    const body = normalizeMultilineText(bodyInput);
     if (!passesFeedModeration(body)) {
       throw new Error('content_policy_violation');
     }
