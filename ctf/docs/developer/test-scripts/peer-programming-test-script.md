@@ -167,7 +167,9 @@ week's published topic. A non-admin reaching the admin screen sees an access not
 **Expected:** The run forms cohorts (or, in single standing Cohort 1 mode, ensures the one standing
 cohort and joins active members into it). Re-running does not double-form cohorts or double-send
 assignment notifications — the run is idempotent per week. The manual user-id override path accepts an
-explicit list.
+explicit list. Only unlocked (`approved_full`) members are placed: a recently-active member whose
+unlock submission is not approved is left out of the formed cohorts (the manual override passes ids
+through as an explicit admin choice).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### PP-A3 · Manage cohorts after the week rolls over

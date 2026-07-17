@@ -31,6 +31,10 @@ contracts:
     dataAccess:
       - canonical_user_profile
       - auth_login_activity
+      # Read by the unlocked-members filter (listUnlockedUserIds): only approved_full members
+      # may be placed into cohorts, so the admin route checks each recent-login user against
+      # their unlock submission before assignment.
+      - unlock_verification_submissions
       - peer_programming_cohorts
       - peer_programming_cohort_memberships
       - peer_programming_command_idempotency
