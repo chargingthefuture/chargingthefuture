@@ -92,7 +92,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'workforce', label: 'Workforce' },
   { key: 'skills-hunt', label: 'SkillsHunt' },
   { key: 'foundation', label: 'Foundation' },
-  { key: 'lighthouse', label: 'Lighthouse' },
+  { key: 'lighthouse', label: 'LightHouse' },
   { key: 'socket-relay', label: 'SocketRelay' },
   { key: 'trust-transport', label: 'TrustTransport' },
   { key: 'trust-transport-admin', label: 'TrustTransport Admin' },
@@ -114,7 +114,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'socket-relay-admin', label: 'SocketRelay Admin' },
   { key: 'foundation-admin', label: 'Foundation Admin' },
   { key: 'skills-hunt-admin', label: 'SkillsHunt Admin' },
-  { key: 'lighthouse-admin', label: 'Lighthouse Admin' },
+  { key: 'lighthouse-admin', label: 'LightHouse Admin' },
   { key: 'workforce-admin', label: 'Workforce Admin' },
   { key: 'level-up-admin', label: 'LevelUp Admin' },
 ];

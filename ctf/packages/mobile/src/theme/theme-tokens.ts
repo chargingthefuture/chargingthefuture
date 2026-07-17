@@ -104,9 +104,11 @@ export type ThemeTokens = {
   /** Highlight accent — hero stats, progress, economy callouts. Mirrors web `--ctf-gold`
    *  (sky `#38BDF8` in default, warm gold `#C8A84B` in comic). */
   gold: string;
-  /** Border radius applied to cards / buttons (0 in comic theme). */
+  /** Border radius applied to cards (0 in comic theme). Mirrors web `--ctf-card-radius`. */
   radius: number;
-  /** Border radius for chips / badges (2 in comic theme). */
+  /** Border radius for controls — buttons / inputs (0 in comic theme). Mirrors web `--ctf-control-radius`. */
+  radiusControl: number;
+  /** Border radius for chips / badges (2 in comic theme). Mirrors web `--ctf-chip-radius`. */
   radiusChip: number;
   /** True when the comic theme is active — lets a screen branch on flat styling. */
   isComic: boolean;
@@ -133,6 +135,7 @@ const DEFAULT_TOKENS: ThemeTokens = {
   success: '#22C55E',
   gold: '#38BDF8',
   radius: 14,
+  radiusControl: 10,
   radiusChip: 6,
   isComic: false,
 };
@@ -152,6 +155,7 @@ const COMIC_TOKENS: ThemeTokens = {
   success: '#22C55E',
   gold: '#C8A84B',
   radius: 0,
+  radiusControl: 0,
   radiusChip: 2,
   isComic: true,
 };
