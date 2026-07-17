@@ -220,5 +220,6 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ### Change Log
 
+- 2026-07-17: **Crisis-rail copy fix — dropped the unverifiable "verified" claim (owner directive; same sweep that removed "Verified Community" from the Commons shell).** The Directory support link in `mood-crisis-rail.tsx` read "Search verified community members by specialty…", but Directory profiles carry no verified state (there is no `verified` column on `directory_profiles`), so the claim was unverifiable. It now reads "Search community members by specialty — including people with mental-health expertise." Copy-only; no backend, schema, route, or contract change.
 - 2026-05-31: Seed runtime fix. `seedMood.mjs` now opens its own `pg` Pool and defines a local `withDbTransaction` helper instead of importing the TypeScript `packages/web/lib/db/postgres.ts`, which plain Node (e.g. the Node 20 seed/provision workflows) cannot load. Added `pool.end()` teardown. No change to seeded rows, schema, or API.
 - 2026-02-25: Created initial Mood CTF rewrite checklist with locked scope exclusions (no severe-value safety trigger, no announcements, no in-app admin) and standalone-plugin boundary plus authenticated-route baseline using anonymous `clientId` persistence.

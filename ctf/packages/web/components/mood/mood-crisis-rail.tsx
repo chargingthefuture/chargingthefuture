@@ -13,7 +13,7 @@ const SUPPORT_LINKS = [
   {
     href: "/apps/directory",
     title: "Find someone in the Directory",
-    detail: "Search verified community members by specialty — including people with mental-health expertise.",
+    detail: "Search community members by specialty — including people with mental-health expertise.",
   },
   {
     href: "/apps/foundation",
