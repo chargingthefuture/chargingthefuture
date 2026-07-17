@@ -65,6 +65,42 @@ function SubmittedView({ onReset, s, t, accent }: { onReset: () => void; s: Styl
   );
 }
 
+// One selectable taxonomy skill chip — shared by the sector accordion and the
+// keyword-search results so both look and behave identically (parity with the
+// web SkillsPicker's shared SkillChip).
+function SkillChip({
+  skill,
+  selected,
+  canAddMore,
+  onToggle,
+  s,
+  accent,
+}: {
+  skill: string;
+  selected: boolean;
+  canAddMore: boolean;
+  onToggle: (_skill: string) => void;
+  s: Styles;
+  accent: string;
+}) {
+  const disabled = !canAddMore && !selected;
+  return (
+    <TouchableOpacity
+      disabled={disabled}
+      onPress={() => onToggle(skill)}
+      style={[
+        s.skillBtn,
+        selected && { backgroundColor: accent + '25', borderColor: accent + '60' },
+        disabled && { opacity: 0.4 },
+      ]}
+    >
+      <Text style={[s.skillBtnText, selected && { color: accent, fontWeight: '700' }]}>
+        {selected ? '✓ ' : ''}{skill}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 // ─── Taxonomy accordion ──────────────────────────────────────────────────────
 
 function TaxonomyAccordion({
@@ -112,26 +148,17 @@ function TaxonomyAccordion({
               </TouchableOpacity>
               {isOpen && (
                 <View style={s.accordionBody}>
-                  {catSkills.map(skill => {
-                    const isSelected = selected.includes(skill);
-                    const disabled = !canAddMore && !isSelected;
-                    return (
-                      <TouchableOpacity
-                        key={skill}
-                        disabled={disabled}
-                        onPress={() => onToggle(skill)}
-                        style={[
-                          s.skillBtn,
-                          isSelected && { backgroundColor: accent + '25', borderColor: accent + '60' },
-                          disabled && { opacity: 0.4 },
-                        ]}
-                      >
-                        <Text style={[s.skillBtnText, isSelected && { color: accent, fontWeight: '700' }]}>
-                          {isSelected ? '✓ ' : ''}{skill}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                  {catSkills.map(skill => (
+                    <SkillChip
+                      key={skill}
+                      skill={skill}
+                      selected={selected.includes(skill)}
+                      canAddMore={canAddMore}
+                      onToggle={onToggle}
+                      s={s}
+                      accent={accent}
+                    />
+                  ))}
                 </View>
               )}
             </View>
@@ -183,6 +210,19 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
   const canAddMore = allSkillCount < 10;
   const taxonomyCategories = taxonomy.status === 'ready' ? taxonomy.categories : {};
   const hasCategories = Object.keys(taxonomyCategories).length > 0;
+
+  // Keyword search across every sector — a flat, de-duplicated skill list filtered
+  // by substring (parity with the web SkillsPicker). When a query is present it
+  // replaces the accordion; local UI state only, it never touches the form model.
+  const [skillSearch, setSkillSearch] = useState('');
+  const skillQuery = skillSearch.trim().toLowerCase();
+  const allSkills = useMemo(() => {
+    const cats = taxonomy.status === 'ready' ? taxonomy.categories : {};
+    const set = new Set<string>();
+    for (const list of Object.values(cats)) for (const sk of list) set.add(sk);
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [taxonomy]);
+  const skillMatches = skillQuery ? allSkills.filter(sk => sk.toLowerCase().includes(skillQuery)) : [];
 
   const toggleSkill = (s: string) => {
     setSkills(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
@@ -347,7 +387,56 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
           Could not load the skills list — add skills as free text below.
         </Text>
       )}
+      {/* Keyword search over the whole taxonomy */}
       {canAddMore && taxonomy.status === 'ready' && hasCategories && (
+        <View style={styles.searchWrap}>
+          <TextInput
+            value={skillSearch}
+            onChangeText={setSkillSearch}
+            placeholder="Search skills by keyword…"
+            placeholderTextColor={tokens.textMuted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={styles.searchInput}
+          />
+          {skillSearch.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSkillSearch('')}
+              accessibilityLabel="Clear skill search"
+              style={styles.searchClear}
+            >
+              <Text style={styles.searchClearText}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* When searching, a flat cross-sector result list replaces the accordion. */}
+      {canAddMore && taxonomy.status === 'ready' && hasCategories && skillQuery ? (
+        <View style={styles.searchResults}>
+          {skillMatches.length === 0 ? (
+            <Text style={[styles.tiny, { color: tokens.textMuted }]}>
+              No skills match “{skillSearch.trim()}”. Add it as a free-text skill below.
+            </Text>
+          ) : (
+            <View style={styles.searchResultsChips}>
+              {skillMatches.map(sk => (
+                <SkillChip
+                  key={sk}
+                  skill={sk}
+                  selected={skills.includes(sk)}
+                  canAddMore={canAddMore}
+                  onToggle={toggleSkill}
+                  s={styles}
+                  accent={accent}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      ) : null}
+
+      {canAddMore && taxonomy.status === 'ready' && hasCategories && !skillQuery && (
         <TaxonomyAccordion
           categories={taxonomyCategories}
           selected={skills}
@@ -474,6 +563,30 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderColor: 'rgba(251,191,36,0.3)',
     },
     chipProposedText: { fontSize: 12, color: accent },
+
+    // Keyword search
+    searchWrap: { position: 'relative', justifyContent: 'center', marginBottom: 8 },
+    searchInput: {
+      backgroundColor: 'rgba(255,255,255,0.03)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+      borderRadius: 8,
+      paddingVertical: 8,
+      paddingLeft: 12,
+      paddingRight: 34,
+      fontSize: 13,
+      color: t.textShell,
+    },
+    searchClear: { position: 'absolute', right: 8, padding: 4 },
+    searchClearText: { color: t.textMuted, fontSize: 13 },
+    searchResults: {
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.10)',
+      borderRadius: 10,
+      padding: 10,
+      marginBottom: 8,
+    },
+    searchResultsChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 
     // Accordion
     accordionRoot: {
