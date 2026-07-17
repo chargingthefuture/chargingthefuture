@@ -24,7 +24,7 @@ export function DirectoryRightPanel({
   const t = getDirectoryTokens(theme);
   return (
     <aside style={{ width: 280, borderLeft: `1px solid ${t.BORDER}`, background: t.HEADER, display: "flex", flexDirection: "column", padding: "20px 16px", flexShrink: 0 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.FAINT, textTransform: "uppercase", marginBottom: 12 }}>Top Providers</div>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.FAINT, textTransform: "uppercase", marginBottom: 12 }}>Recent Survivors</div>
       {members.slice(0, 4).map((p) => (
         <div key={p.id} role="button" tabIndex={0} onClick={() => onSelect(p)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(p); } }} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}15`, marginBottom: 8, cursor: "pointer" }}>
           <Avatar style={{ width: 36, height: 36 }}>
@@ -37,15 +37,15 @@ export function DirectoryRightPanel({
         </div>
       ))}
       {members.length === 0 && !loadingMembers && (
-        <div style={{ fontSize: 12, color: t.FAINT, textAlign: "center", padding: "16px 0" }}>No providers loaded yet.</div>
+        <div style={{ fontSize: 12, color: t.FAINT, textAlign: "center", padding: "16px 0" }}>No members loaded yet.</div>
       )}
 
       <div style={{ marginTop: 16, padding: "16px", borderRadius: 12, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
           <Shield size={14} style={{ color: t.ACCENT }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: t.ACCENT }}>Privacy Guarantee</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: t.ACCENT }}>Privacy First</span>
         </div>
-        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>Your identity is protected.</div>
+        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>Profiles show only what each member chooses to share.</div>
       </div>
 
       {sectors.length > 0 && (
