@@ -9,6 +9,22 @@ import { reportError } from 'lib/observability/report';
 
 type SubmissionBody = Partial<Omit<SkillsHuntSubmissionInput, 'roundId'>>;
 
+// Turn the rate-limit reset timestamp into an approximate, timezone-safe hint for
+// the scout ("in about 3 days"). Empty string when there is no usable reset time.
+function formatRetryApprox(resetAtIso: string | null): string {
+  if (!resetAtIso) return '';
+  const resetMs = new Date(resetAtIso).getTime();
+  if (Number.isNaN(resetMs)) return '';
+  const diffMs = resetMs - Date.now();
+  if (diffMs <= 0) return ' You can submit again now — refresh and retry.';
+  const minutes = Math.round(diffMs / 60000);
+  if (minutes < 60) return ` You can submit again in about ${minutes} minute${minutes === 1 ? '' : 's'}.`;
+  const hours = Math.round(diffMs / 3600000);
+  if (hours < 24) return ` You can submit again in about ${hours} hour${hours === 1 ? '' : 's'}.`;
+  const days = Math.round(diffMs / 86400000);
+  return ` You can submit again in about ${days} day${days === 1 ? '' : 's'}.`;
+}
+
 function toSubmissionInput(roundId: string, body: SubmissionBody): SkillsHuntSubmissionInput {
   return {
     roundId,
@@ -125,10 +141,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
       status = 409;
       code = SKILLS_HUNT_ERROR_CODE.roundNotActive;
       responseMessage = 'Round is not currently active.';
-    } else if (message === 'skills_hunt_submission_limit_exceeded') {
+    } else if (message.startsWith('skills_hunt_submission_limit_exceeded')) {
       status = 429;
       code = SKILLS_HUNT_ERROR_CODE.submissionLimitExceeded;
-      responseMessage = 'Submission rate limit exceeded.';
+      const sep = message.indexOf(':');
+      const resetAtIso = sep >= 0 ? message.slice(sep + 1) : null;
+      responseMessage = `You've reached the weekly nomination limit.${formatRetryApprox(resetAtIso)}`;
     } else if (message === 'skills_hunt_pre_approval_required') {
       status = 403;
       code = SKILLS_HUNT_ERROR_CODE.preApprovalRequired;
