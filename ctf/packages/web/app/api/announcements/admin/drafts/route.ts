@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../feed/_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { createAnnouncementDraft, validateAnnouncementDraftInput } from 'lib/feed/repository';
+import { logFeedAudit } from 'lib/feed/audit';
 import type { AnnouncementDraftInput } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
 
@@ -48,9 +49,31 @@ export async function POST(request: Request) {
 
   try {
     const announcement = await createAnnouncementDraft(gate.auth.userId, input);
+    logFeedAudit({
+      actorId: gate.auth.userId,
+      pluginId: 'feed',
+      command: 'feed.announcement.draft.create',
+      status: 'allow',
+      reason: 'actor_admin',
+      targetType: 'announcement',
+      targetId: announcement.id,
+      result: 'success',
+      errorCategory: null,
+    });
     return NextResponse.json({ ok: true, announcement }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'announcements', op: 'admin_drafts' });
+    logFeedAudit({
+      actorId: gate.auth.userId,
+      pluginId: 'feed',
+      command: 'feed.announcement.draft.create',
+      status: 'allow',
+      reason: 'actor_admin',
+      targetType: 'announcement',
+      targetId: 'unknown',
+      result: 'failure',
+      errorCategory: error instanceof Error ? error.message : 'unknown_error',
+    });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to create draft.' },
       { status: 503 },
