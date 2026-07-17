@@ -44,6 +44,9 @@ export type HubMessage = {
   // The announcement's heading, rendered above the body. Null for peer posts and AI answers, whose
   // `text` is the whole message. (The web API splits the title out of the body server-side.)
   title: string | null;
+  // The plugin an announcement links to ({ slug, name }), rendered as a tappable "Open <Plugin>"
+  // chip. Null for peer posts, AI answers, and announcements with no (valid, visible) linked plugin.
+  linkedPlugin: { slug: string; name: string } | null;
   text: string;
   sentAtIso: string;
   // The underlying community post id when this message is a peer post (the id the reactions and

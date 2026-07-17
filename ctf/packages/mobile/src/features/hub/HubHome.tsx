@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   RefreshControl,
@@ -181,6 +182,16 @@ function MessageCard({
           render it above the body so mobile matches the web official card and no title is lost. */}
       {message.title ? <Text style={s.cardTitle}>{message.title}</Text> : null}
       <Text style={s.cardBody}>{message.text}</Text>
+      {message.linkedPlugin ? (
+        <Pressable
+          style={s.linkedPluginChip}
+          onPress={() => { void Linking.openURL(`https://app.chargingthefuture.com/apps/${message.linkedPlugin!.slug}`); }}
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${message.linkedPlugin.name}`}
+        >
+          <Text style={s.linkedPluginChipText}>↗ Open {message.linkedPlugin.name}</Text>
+        </Pressable>
+      ) : null}
 
       {showActionsRow && (
         <View style={s.reactionRow}>
@@ -739,6 +750,8 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
     cardTime: { fontSize: 11, color: t.textSecondary, marginTop: 1 },
     cardTitle: { fontSize: 14, fontWeight: '700', color: t.textPrimary, lineHeight: 20, marginBottom: 3 },
     cardBody: { fontSize: 13, color: t.isComic ? t.textPrimary : '#D1D5DB', lineHeight: 21 },
+    linkedPluginChip: { alignSelf: 'flex-start', marginTop: 10, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: t.isComic ? 'transparent' : 'rgba(52,211,153,0.12)', borderWidth: 1, borderColor: t.isComic ? `${t.border}66` : 'rgba(52,211,153,0.4)' },
+    linkedPluginChipText: { fontSize: 13, fontWeight: '600', color: t.isComic ? t.textPrimary : '#34D399' },
     reactionRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 10 },
     reactionPill: {
       flexDirection: 'row',

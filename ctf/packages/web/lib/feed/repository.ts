@@ -1124,6 +1124,34 @@ async function resolveLinkedPlugin(slug: string | null | undefined): Promise<{ s
   return { slug: plugin.slug, name: plugin.name };
 }
 
+// For a set of announcement ids, resolve each one's linked plugin (when it has one) to { slug, name }.
+// The Hub read uses this to render a clickable "Open <Plugin>" chip on the announcement card, in
+// addition to the plain "Open <Plugin>: <url>" line already in the body. Only visible, non-admin
+// plugins resolve (same rule as the in-body link line); anything else is omitted. Keyed by
+// announcement id so the caller can attach it to the matching feed item.
+export async function resolveAnnouncementLinkedPlugins(
+  announcementIds: string[],
+): Promise<Map<string, { slug: string; name: string }>> {
+  const resolved = new Map<string, { slug: string; name: string }>();
+  const ids = Array.from(new Set(announcementIds.filter((id) => typeof id === 'string' && id.length > 0)));
+  if (ids.length === 0) {
+    return resolved;
+  }
+  const rows = await queryDb<{ id: string; linked_plugin_slug: string | null }>(
+    'SELECT id, linked_plugin_slug FROM announcements WHERE id = ANY($1::uuid[])',
+    [ids],
+  );
+  await Promise.all(
+    rows.rows.map(async (row) => {
+      const plugin = await resolveLinkedPlugin(row.linked_plugin_slug);
+      if (plugin) {
+        resolved.set(row.id, plugin);
+      }
+    }),
+  );
+  return resolved;
+}
+
 // Compose the feed item body for a published announcement: the author's body, plus — when a valid
 // plugin is linked — a trailing call-to-action line with the full app URL so a reader on any surface
 // (mobile feed, Commons) can go straight to the referenced app. Recomposed from the clean body every
