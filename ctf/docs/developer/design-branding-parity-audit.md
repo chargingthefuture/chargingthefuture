@@ -64,33 +64,33 @@ Quick wins first (small, low-risk), then everything else. Commit + push per item
 - [x] **QW4 — add `controlRadius` to mobile tokens** `packages/mobile/src/theme/theme-tokens.ts`
   (default 10 / comic 0) mirroring web `--ctf-control-radius`. (Applying it to buttons/inputs is E5.)
 
-### Everything else (bigger, ordered by impact)
+### Everything else — status
 
-- [ ] **E1 — ship Inter on both platforms.**
-  - Web: self-host via `next/font/local` (add Inter .woff2 to `packages/web`) or `@fontsource/inter`;
-    wire in `app/layout.tsx` and set the CSS var/`font-family` to the loaded family. Keep the existing
-    stack as fallback.
-  - Mobile: `@expo-google-fonts/inter` + `useFonts` in `App.tsx` (block render until loaded), and set a
-    default `fontFamily` — either a `<Text>` wrapper/default or a `fontFamily` token in `ThemeTokens`
-    consumed by the shared primitives (E5).
-- [ ] **E2 — mobile branded shell.** Re-skin `App.tsx` home into a branded launcher: the "SH" logo chip
-  (gradient via `expo-linear-gradient`), brand gradient accent, and a grid of per-plugin emoji tiles
-  (reuse web's emoji↔accent map). Preserve the existing `featureOrder` → screen routing; this is a
-  re-skin of the launcher, not an IA change.
-- [ ] **E3 — comic signature treatments on mobile.** Extend mobile `ThemeTokens` with the comic look:
-  a shadow field (`elevationShadow`: default soft `{0,4,12,0.3}`; comic hard offset `3px 3px 0 #d4c49a`
-  → RN `shadowColor/Offset/Opacity/Radius` + `elevation`), a dot-texture flag/asset (RN has no CSS
-  dot-gradient — use a tiled `ImageBackground` or an SVG dot pattern component behind comic surfaces),
-  and CTA tokens (`ctaBg/ctaBorder/ctaText`: default gradient marker + white; comic `#141414`/`#d4c49a`/
-  `#d4c49a`). Apply to shared card/CTA primitives (depends on E5).
-- [~] **E4 (brand+brandText tokens done; CTA lives in E5 primitives) — brand token on mobile.** Add `brand` (default `#e91e8c` / comic `#c8a84b`) + `brandText`
-  (`#ffffff` / `#0d0d0d`) to mobile `ThemeTokens`, and a CTA gradient helper (expo-linear-gradient
-  `#7c3aed→#0ea5e9`) for the logo/CTA. Consumed by E2/E5.
-- [ ] **E5 — shared mobile primitives + type scale.** Create `src/components/ui/`: `Button` (variants
-  incl. brand-gradient CTA), `Badge`, `Card`, mirroring web `components/ui/*`. Add a shared typography
-  scale module (title/heading/body/label/button sizes+weights+tracking) matching web's values; adopt
-  Inter (E1). Repoint control elements to `controlRadius` (QW4). Migrate high-traffic screens onto the
-  primitives (incremental).
+Delivered on `feat/web-mobile-branding-parity` (PR): E1, E2, E3, E4, E5-primitives. Remaining:
+E5-adoption (incremental screen migration onto the primitives/typeScale) and E6 (owner decision).
+
+- [x] **E1 — ship Inter on both platforms.** Web: `@fontsource/inter` imported in `app/layout.tsx`
+  (family registers as `Inter`, so every existing `font-family: Inter` declaration now renders it;
+  build-verified, no build-time network). Mobile: `@expo-google-fonts/inter` loaded via `useFonts`
+  in `App.tsx` (loading screen until ready); the shared `typeScale` pins the matching Inter family
+  per weight (RN needs the weight in the family name), so primitives + the launcher render real Inter.
+  Un-migrated screens keep the OS default until they adopt `typeScale` (no regression).
+- [x] **E2 — mobile branded launcher.** `App.tsx` now shows the "SH" gradient brand chip
+  (`react-native-svg`, purple→cyan default / flat-ink cream comic) + a "Charging The Future" wordmark,
+  and every nav pill carries its plugin emoji + the plugin accent on the active state. Routing/IA
+  unchanged.
+- [x] **E3 — comic signature treatments on mobile.** Delivered via the `Card` primitive: hard offset
+  cream shadow (absolutely-positioned sibling View — RN can't box-shadow-offset), halftone dot texture
+  (`DotTexture` via `react-native-svg`), sharp corners. `CtaButton` carries the comic flat-ink panel.
+  (These live in the primitives; screens get them as they adopt `Card`/`CtaButton` — see E5-adoption.)
+- [x] **E4 — brand tokens on mobile.** `brand` (#E91E8C / comic #C8A84B) + `brandText` added to
+  `ThemeTokens`; the purple→cyan CTA gradient lives in `Button`(variant `brand`)/`CtaButton` and the
+  launcher `BrandMark`.
+- [~] **E5 — shared mobile primitives + type scale.** DONE: `src/components/ui/` (`Card`, `Button`,
+  `CtaButton`, `Badge`, `DotTexture`, `typeScale`) + `src/theme/plugin-visuals.ts`. REMAINING
+  (incremental, non-blocking): migrate existing feature screens off their hand-rolled `StyleSheet`
+  font sizes/buttons/cards onto `typeScale` + the primitives so every screen renders Inter at the
+  web-matched scale and gets the comic treatments. Do this plugin-by-plugin in follow-up PRs.
 - [ ] **E6 — icon system reconciliation (owner decision).** Web uses lucide; mobile uses Ionicons +
   emoji. Full unification touches ~220 web files or the whole mobile icon approach — too large to do
   silently. RECOMMENDATION: standardize on `lucide-react-native` for mobile chrome icons (keep emoji
@@ -100,4 +100,14 @@ Quick wins first (small, low-risk), then everything else. Commit + push per item
 ## 4. Progress log
 
 - 2026-07-11: Audit run (3 parallel agents: tokens, typography, brand/components). Findings recorded
-  above. Doc created. Starting quick wins.
+  above. Doc created.
+- 2026-07-11: Quick wins QW1–QW4 shipped. Then E1–E5(primitives) shipped on
+  `feat/web-mobile-branding-parity`: brand/brandText/controlRadius tokens; shared UI primitives
+  (`Card`/`Button`/`CtaButton`/`Badge`/`DotTexture`) + `typeScale` + `plugin-visuals`; comic
+  signature treatments (offset shadow, dot texture, flat-ink CTA) in the primitives; branded launcher
+  (SH gradient logo + emoji pills); Inter shipped on web (`@fontsource/inter`) and mobile
+  (`@expo-google-fonts/inter`). Web build verified; both packages typecheck green.
+- REMAINING: **E5-adoption** — migrate feature screens onto `typeScale` + the `Card`/`Button`
+  primitives (plugin-by-plugin, follow-up PRs) so every screen (not just the launcher/primitives)
+  renders Inter at the web-matched scale and picks up the comic treatments. **E6** — icon-system
+  unification is an owner decision (see the E6 recommendation above); not done silently.
