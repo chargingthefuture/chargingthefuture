@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -95,7 +95,7 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### DIR-4 · Edit my own profile
-**Role:** member · **Surfaces:** web (android deferred)
+**Role:** member · **Surfaces:** all
 **Precondition:** you own a claimed profile.
 **Steps:**
 1. Open your own profile; press "Edit my profile".
@@ -121,12 +121,16 @@ at most 40 characters) and round-trips back as a yellow "pending review" chip. (
 becomes a real taxonomy chip only after the owner approves the label — an `addSkill` entry in the
 taxonomy change list (`ctf/scripts/lib/taxonomyChange.mjs`) applied by the owner-run workflow, which
 auto-attaches the official skill to
-every proposing profile; that approval step is owner-side and outside this script.) On android this
-case is **blocked** — there is no member self-edit screen yet.
-**Result:** web ☐ mobile ☐ android ⛔ — notes:
+every proposing profile; that approval step is owner-side and outside this script.) On android, open
+the Directory and tap **"Edit my profile"** in the header to reach the same full-screen editor: it
+prefills every field, uses the searchable Country picker (and the US-state list / free-text region),
+sector and job-title chips, and the same skills accordion + free-text "pending review" box; Save is
+disabled until both first name and country are set, and a save re-sends the complete field set (so an
+untouched payment address / location is never wiped).
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### DIR-4b · Create my profile (member without one yet)
-**Role:** member with no directory profile · **Surfaces:** web + mobile-responsive (android deferred)
+**Role:** member with no directory profile · **Surfaces:** all
 **Precondition:** signed in as a member who has no claimed directory profile.
 **Steps:**
 1. Open the Directory. In the header, confirm the button reads **"Add my profile"** (not "Edit my
@@ -144,8 +148,10 @@ case is **blocked** — there is no member self-edit screen yet.
 **Expected:** The modal is the same editor as DIR-4, starting blank. **Both first name and country are
 required** to save (city/state optional); the save goes through `PUT /api/directory/profile` with the
 CSRF header. After saving, the header button flips to **"Edit my profile"**, and the new profile appears
-in the list. On android this case is **blocked** — there is no member self-edit/create screen yet.
-**Result:** web ☐ mobile ☐ android ⛔ — notes:
+in the list. On android the same "Edit my profile" header button opens the editor titled **"Create my
+profile"** (its submit button reads **"Create profile"**) when the member has none; Save stays disabled
+until both first name and country are set, and after saving the new profile appears in the list.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### DIR-5 · Read announcements
 **Role:** member · **Surfaces:** all
@@ -195,8 +201,9 @@ list stays visible until the new data lands.
 1. Open the dedicated admin page; confirm a non-admin is redirected away.
 2. List every profile, filter All / Claimed / Unclaimed.
 3. Create a profile, then edit one.
-4. In the edit drawer's skills picker (web), expand a sector in the accordion and add/remove a skill,
-   or bulk-add via the profession dropdown; then save and reopen to confirm the change persisted.
+4. In the edit drawer's skills picker (web) or the android edit screen's skills picker, expand a sector
+   in the accordion and add/remove a skill, or bulk-add via the profession prefill; then save and reopen
+   to confirm the change persisted.
 5. In the edit drawer's location controls (web), set Country / State / City and save; reopen to confirm
    they persisted. Confirm an admin edit that leaves location untouched does not wipe it. Then clear the
    Country and press Save: it is refused with a "Country is required." message (the Country label reads
@@ -206,8 +213,9 @@ not authorization). The list, create, and edit flows work. **Country is required
 (city/state optional). On web the edit drawer's skills section is
 the same structured picker as the member self-edit form (selected chips, profession prefill, sector
 accordion) minus the free-text "pending review" box (proposed skills are member-owned); saving sends
-the edited `skillIds` and preserves the sector/job-title classification. On android skills are still
-read-only in the edit screen (parity deferred). Each admin mutation sends the CSRF header and records
+the edited `skillIds` and preserves the sector/job-title classification. The android "Directory Admin"
+edit screen now uses the same picker (skills editable, no free-text box), also sending only `skillIds`
+(plus the existing fields) with no `proposedSkills`. Each admin mutation sends the CSRF header and records
 an allow/deny audit line.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
@@ -277,10 +285,11 @@ summary with the count of each. It is read-only and never mutates the taxonomy.
 
 ## Parity check (web ↔ android)
 
-For DIR-1, DIR-2, and DIR-A1 to DIR-A3, the android app and the mobile-responsive web layout must
-behave the same: same list/filter result, same profile fields, same admin list/attach/delete outcome
-and the same deny taxonomy. Known exception: member self-edit (DIR-4) is web-only — android has no
-self-edit screen yet, so that is a known gap, not drift.
+For DIR-1, DIR-2, DIR-4, and DIR-A1 to DIR-A3, the android app and the mobile-responsive web layout
+must behave the same: same list/filter result, same profile fields, same member self-edit round-trip
+(no field wiped), same admin skill-edit / list / attach / delete outcome and the same deny taxonomy.
+Member self-edit (DIR-4) and admin editable skills (DIR-A1) now ship on android too — a difference
+there is drift, not an expected gap.
 
 **Result:** matches ☐ — drift notes:
 
@@ -295,5 +304,3 @@ of these, it is already tracked, not a new bug:
   profile data is informally decided, not yet codified.
 - Announcement route ownership is enforced by the plugin policy gate, not yet written up as separate
   module documentation.
-- Member self-edit (and the "skill not listed" free-text add) is web-only; the android directory has no
-  member self-edit screen yet.

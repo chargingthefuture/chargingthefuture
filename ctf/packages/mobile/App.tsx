@@ -14,7 +14,7 @@ import {
 import { ChymeRoom } from './src/features/chyme';
 import { ComicReviewDashboard } from './src/features/comic';
 import { HubHome } from './src/features/hub';
-import { DirectoryList, AdminDirectory } from './src/features/directory';
+import { DirectoryList, AdminDirectory, DirectoryProfileEdit } from './src/features/directory';
 import { Feed } from './src/features/feed';
 import { Announcements } from './src/features/announcements';
 import { WorkforceDashboard, AdminWorkforce } from './src/features/workforce';
@@ -49,6 +49,7 @@ type FeatureKey =
   | 'skills-taxonomy'
   | 'directory'
   | 'directory-admin'
+  | 'directory-profile-edit'
   | 'feed-announcements'
   | 'workforce'
   | 'skills-hunt'
@@ -149,8 +150,19 @@ function buildFeatureViews(
     beacon: () => <Beacon />,
     'recurring-activity': () => <RecurringActivity />,
     'skills-taxonomy': () => <SkillsTaxonomy />,
-    directory: () => <DirectoryList onNavigateToFoundation={() => setSelected('foundation')} />,
+    directory: () => (
+      <DirectoryList
+        onNavigateToFoundation={() => setSelected('foundation')}
+        onEditProfile={() => setSelected('directory-profile-edit')}
+      />
+    ),
     'directory-admin': () => <AdminDirectory />,
+    'directory-profile-edit': () => (
+      <DirectoryProfileEdit
+        onClose={() => setSelected('directory')}
+        onSaved={() => setSelected('directory')}
+      />
+    ),
     'feed-announcements': () => (
       <ScrollView contentContainerStyle={feedStackStyle}>
         <Feed />

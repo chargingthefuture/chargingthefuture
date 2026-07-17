@@ -25,11 +25,20 @@ import {
 } from 'react-native';
 import { usePluginAuth } from './usePluginAuth';
 import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
-import type { DirectoryListItem } from './api';
+import { DirectorySkillsPicker } from './DirectorySkillsPicker';
+import type {
+  DirectoryJobTitleOption,
+  DirectoryListItem,
+  DirectorySector,
+  DirectorySkillOption,
+} from './api';
 import {
   assignAdminDirectoryProfile,
   deleteAdminDirectoryProfile,
   fetchAdminDirectoryProfiles,
+  fetchDirectoryJobTitles,
+  fetchDirectorySectors,
+  fetchDirectorySkills,
   updateAdminDirectoryProfile,
 } from './api';
 
@@ -44,6 +53,9 @@ type EditForm = {
   headline: string;
   bio: string;
   profileUrl: string;
+  // Selected taxonomy skill IDs — editable through the picker and sent on save. Seeded from the
+  // profile's existing skills so an untouched edit re-sends the same set.
+  skillIds: string[];
 };
 
 function fullName(p: { firstName: string; lastName: string | null }): string {
@@ -69,10 +81,14 @@ function toForm(p: DirectoryListItem): EditForm {
     headline: p.headline ?? '',
     bio: p.bio ?? '',
     profileUrl: p.profileUrl ?? '',
+    skillIds: p.skills.map((s) => s.id),
   };
 }
 
-const EDIT_FIELDS: { label: string; key: keyof EditForm; placeholder: string }[] = [
+// Only the plain-text fields render as TextInputs; skillIds is handled by the picker below.
+type EditTextField = Exclude<keyof EditForm, 'skillIds'>;
+
+const EDIT_FIELDS: { label: string; key: EditTextField; placeholder: string }[] = [
   { label: 'First name', key: 'firstName', placeholder: 'First name' },
   { label: 'Last name', key: 'lastName', placeholder: 'Last name' },
   { label: 'Headline', key: 'headline', placeholder: 'Role or specialty' },
@@ -93,7 +109,13 @@ export const AdminDirectory = () => {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>('unclaimed');
   const [editing, setEditing] = useState<DirectoryListItem | null>(null);
-  const [form, setForm] = useState<EditForm>({ firstName: '', lastName: '', headline: '', bio: '', profileUrl: '' });
+  const [form, setForm] = useState<EditForm>({ firstName: '', lastName: '', headline: '', bio: '', profileUrl: '', skillIds: [] });
+  // Shared taxonomy for the skills picker. Loaded once on mount (unfiltered) so the accordion groups
+  // every skill by sector and existing picks always resolve to names.
+  const [sectors, setSectors] = useState<DirectorySector[]>([]);
+  const [jobTitles, setJobTitles] = useState<DirectoryJobTitleOption[]>([]);
+  const [skills, setSkills] = useState<DirectorySkillOption[]>([]);
+  const [taxonomyLoading, setTaxonomyLoading] = useState(true);
   const [assignInput, setAssignInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
@@ -122,6 +144,59 @@ export const AdminDirectory = () => {
       void load();
     }
   }, [authLoading, load]);
+
+  // Load the shared taxonomy for the skills picker. Best-effort: if it fails the picker shows an
+  // "unavailable" note and existing picks are preserved on save (the read-only-fallback wording).
+  useEffect(() => {
+    if (authLoading || !auth?.isAuthenticated) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      setTaxonomyLoading(true);
+      try {
+        const [sectorData, jobTitleData, skillData] = await Promise.all([
+          fetchDirectorySectors(),
+          fetchDirectoryJobTitles(),
+          fetchDirectorySkills(),
+        ]);
+        if (cancelled) return;
+        setSectors(sectorData);
+        setJobTitles(jobTitleData);
+        setSkills(skillData);
+      } catch {
+        if (!cancelled) {
+          setSectors([]);
+          setJobTitles([]);
+          setSkills([]);
+        }
+      } finally {
+        if (!cancelled) setTaxonomyLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, auth]);
+
+  const toggleSkill = (id: string) => {
+    setForm((prev) => ({
+      ...prev,
+      skillIds: prev.skillIds.includes(id)
+        ? prev.skillIds.filter((s) => s !== id)
+        : [...prev.skillIds, id],
+    }));
+  };
+
+  const addOccupationSkills = (ids: string[]) => {
+    setForm((prev) => {
+      const merged = [...prev.skillIds];
+      for (const id of ids) {
+        if (!merged.includes(id)) merged.push(id);
+      }
+      return { ...prev, skillIds: merged };
+    });
+  };
 
   const unclaimed = profiles.filter((p) => p.claimedByUserId == null);
   const visible = tab === 'unclaimed' ? unclaimed : profiles;
@@ -153,10 +228,11 @@ export const AdminDirectory = () => {
         headline: form.headline.trim() || null,
         bio: form.bio.trim() || null,
         profileUrl: form.profileUrl.trim() || null,
-        // Preserve existing taxonomy so editing the text fields does not wipe it.
+        // Sector/job-title classification is preserved untouched (this screen edits only skills).
         sectorId: editing.sectorId,
         jobTitleId: editing.jobTitleId,
-        skillIds: editing.skills.map((s) => s.id),
+        // The edited skill set from the picker (seeded from the profile's existing skills).
+        skillIds: form.skillIds,
       });
       setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       closeDrawer();
@@ -261,20 +337,19 @@ export const AdminDirectory = () => {
             </React.Fragment>
           ))}
 
-          {p.skills.length > 0 ? (
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Skills</Text>
-              <View style={styles.skillsRow}>
-                {p.skills.map((s) => (
-                  <React.Fragment key={s.id}>
-                    <View style={styles.skillChip}>
-                      <Text style={styles.skillChipText}>{s.name}</Text>
-                    </View>
-                  </React.Fragment>
-                ))}
-              </View>
-            </View>
-          ) : null}
+          <View style={styles.fieldGroup}>
+            <DirectorySkillsPicker
+              tokens={tokens}
+              accent={accent}
+              sectors={sectors}
+              jobTitles={jobTitles}
+              skills={skills}
+              loading={taxonomyLoading}
+              selectedSkillIds={form.skillIds}
+              onToggleSkill={toggleSkill}
+              onAddOccupationSkills={addOccupationSkills}
+            />
+          </View>
 
           {isUnclaimed ? (
             <View style={styles.fieldGroup}>

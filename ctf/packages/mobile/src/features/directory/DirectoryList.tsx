@@ -376,8 +376,10 @@ function ProfileCard({
 
 export const DirectoryList = ({
   onNavigateToFoundation,
+  onEditProfile,
 }: {
   onNavigateToFoundation?: () => void;
+  onEditProfile?: () => void;
 } = {}) => {
   const { theme, tokens } = useTheme();
   const accent = getAppAccent('directory', theme);
@@ -455,6 +457,11 @@ export const DirectoryList = ({
           <View style={styles.headerTitleWrap}>
             <Text style={styles.headerTitle}>Directory</Text>
           </View>
+          {onEditProfile ? (
+            <TouchableOpacity style={styles.editProfileBtn} onPress={onEditProfile} accessibilityRole="button">
+              <Text style={styles.editProfileBtnText}>Edit my profile</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
         {/* Search bar */}
         <View style={styles.searchWrap}>
@@ -573,6 +580,15 @@ function makeStyles(t: ThemeTokens, accent: string) {
     headerIconText: { fontSize: 18 },
     headerTitleWrap: { flex: 1 },
     headerTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary },
+    editProfileBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 9,
+      backgroundColor: `${accent}18`,
+      borderWidth: 1,
+      borderColor: `${accent}40`,
+    },
+    editProfileBtnText: { fontSize: 12, fontWeight: '700', color: accent },
 
     // Search
     searchWrap: {
