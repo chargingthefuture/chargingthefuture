@@ -99,14 +99,8 @@ function TeamCard({ team, t }: { team: CommunityPlanningTeam; t: WorkforceTokens
           >
             <Users size={13} /> {team.memberCount.toLocaleString()}
           </span>
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: team.gap > 0 ? '#F97316' : '#22C55E',
-            }}
-          >
-            {team.gap > 0 ? `${team.gap.toLocaleString()} to fill` : 'filled'}
+          <span style={{ fontSize: 11, color: t.MUTED }}>
+            {team.memberCount === 1 ? 'member' : 'members'}
           </span>
         </div>
       </button>
@@ -187,8 +181,8 @@ export function WorkforceCommunityPlanning() {
           <div style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.7, marginBottom: 4 }}>
             Proposed rosters for the survivor-built gated community planning document. Each team draws
             from the Workforce sectors it maps to; the roster is every member who already matches those
-            sectors, and the gap is how many positions those sectors still have to fill. This recomputes
-            live from the Directory — it updates itself as members and skills change.
+            sectors. This recomputes live from the Directory — it updates itself as members and skills
+            change.
           </div>
           {report?.sourceIssue ? (
             <a

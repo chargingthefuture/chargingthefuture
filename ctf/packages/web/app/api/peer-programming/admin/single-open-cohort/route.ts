@@ -24,7 +24,10 @@ export async function GET() {
 
   try {
     const mode = await resolveSingleOpenCohortMode();
-    return NextResponse.json({ ok: true, mode }, { status: 200 });
+    // The contract documents the four fields flat (enabled/source/adminSetting/envFlagEnabled);
+    // the web admin shell reads the nested `mode` object. Return both so the response satisfies
+    // the contract shape without breaking the existing consumer.
+    return NextResponse.json({ ok: true, ...mode, mode }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'peer-programming', op: 'admin_single_open_cohort_get' });
     return peerProgrammingErrorResponse(error, 'Single-open-cohort setting unavailable.');
@@ -76,7 +79,9 @@ export async function POST(request: Request) {
       metadata: { requested: enabled, effective: mode.enabled, source: mode.source },
     });
 
-    return NextResponse.json({ ok: true, mode }, { status: 200 });
+    // Same dual shape as GET: flat fields per the contract plus the nested `mode` the web
+    // admin shell reads.
+    return NextResponse.json({ ok: true, ...mode, mode }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'peer-programming', op: 'admin_single_open_cohort_set' });
     return peerProgrammingErrorResponse(error, 'Single-open-cohort setting update unavailable.');
