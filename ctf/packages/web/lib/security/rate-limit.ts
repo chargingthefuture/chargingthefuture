@@ -53,7 +53,12 @@ export function checkRateLimit(
   const entry = windows.get(key);
   if (!entry || nowMs - entry.windowStartMs >= windowMs) {
     windows.set(key, { windowStartMs: nowMs, windowMs, count: 1 });
-    return { allowed: true, retryAfterSeconds: 0 };
+    // Honour the limit even for the first call in a window, so limit=0 blocks everything.
+    if (1 <= limit) {
+      return { allowed: true, retryAfterSeconds: 0 };
+    }
+    const retryAfterSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+    return { allowed: false, retryAfterSeconds };
   }
 
   entry.count += 1;

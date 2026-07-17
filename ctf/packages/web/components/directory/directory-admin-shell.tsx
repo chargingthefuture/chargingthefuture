@@ -690,9 +690,9 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
           </div>
         </header>
 
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 0.9fr 1.2fr auto", gap: 12, padding: "9px 24px", borderBottom: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.01)", flexShrink: 0 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 0.9fr 1.2fr 160px", gap: 12, padding: "9px 24px", borderBottom: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.01)", flexShrink: 0 }}>
           {["Provider", "Source", "Status", "Handle", "Actions"].map((h) => (
-            <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</div>
+            <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.07em", minWidth: 0, textAlign: h === "Actions" ? "right" : "left" }}>{h}</div>
           ))}
         </div>
 
@@ -708,20 +708,22 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
               const b = sourceBadge(p);
               const isEditing = editId === p.id;
               return (
-                <div key={p.id} style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 0.9fr 1.2fr auto", gap: 12, padding: "13px 24px", borderBottom: `1px solid ${BORDER}`, background: isEditing ? `${COLOR}05` : "transparent", alignItems: "center", borderLeft: isEditing ? `3px solid ${COLOR}` : "3px solid transparent" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div key={p.id} style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 0.9fr 1.2fr 160px", gap: 12, padding: "13px 24px", borderBottom: `1px solid ${BORDER}`, background: isEditing ? `${COLOR}05` : "transparent", alignItems: "center", borderLeft: isEditing ? `3px solid ${COLOR}` : "3px solid transparent" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                     <div style={{ width: 34, height: 34, borderRadius: 10, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: COLOR, flexShrink: 0 }}>{initials(fullName(p))}</div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{fullName(p) || "Unnamed"}</div>
-                      <div style={{ fontSize: 11, color: SUBTLE }}>{p.headline ?? p.jobTitleName ?? ""}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fullName(p) || "Unnamed"}</div>
+                      <div style={{ fontSize: 11, color: SUBTLE, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.headline ?? p.jobTitleName ?? ""}</div>
                     </div>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: `${b.color}18`, color: b.color, border: `1px solid ${b.color}30`, width: "fit-content" }}>{b.label}</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: p.claimedByUserId ? "#22C55E" : SUBTLE }}>
-                    <CheckCircle size={13} /> {p.claimedByUserId ? "Claimed" : "Unclaimed"}
+                  <div style={{ minWidth: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: `${b.color}18`, color: b.color, border: `1px solid ${b.color}30`, display: "inline-block", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", boxSizing: "border-box" }}>{b.label}</span>
                   </div>
-                  <div style={{ fontSize: 11, fontFamily: "monospace", color: p.unclaimedHandle ? COMMUNITY : SUBTLE, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{handleText(p)}</div>
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: p.claimedByUserId ? "#22C55E" : SUBTLE, minWidth: 0 }}>
+                    <CheckCircle size={13} style={{ flexShrink: 0 }} /> {p.claimedByUserId ? "Claimed" : "Unclaimed"}
+                  </div>
+                  <div style={{ fontSize: 11, fontFamily: "monospace", color: p.unclaimedHandle ? COMMUNITY : SUBTLE, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{handleText(p)}</div>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0, justifyContent: "flex-end" }}>
                     <button onClick={() => (isEditing ? closeDrawer() : startEdit(p))} style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 7, background: isEditing ? `${COLOR}20` : "rgba(255,255,255,0.04)", border: `1px solid ${isEditing ? COLOR + "50" : BORDER}`, color: isEditing ? COLOR : SUBTLE, fontSize: 12, cursor: "pointer" }}>
                       {isEditing ? <><X size={11} /> Close</> : <><Edit2 size={11} /> Edit</>}
                     </button>

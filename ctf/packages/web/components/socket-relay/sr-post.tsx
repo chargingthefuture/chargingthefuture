@@ -183,7 +183,7 @@ export function SocketRelayPost({
             Cancel Edit
           </button>
         )}
-        <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6 }}>Requests never include identifying information beyond what you write. Connections happen after someone offers to help.</div>
+        <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6 }}>You choose whether this request is public. A public request shows your @handle, title, and tags — not the details you write. Connections happen after someone offers to help.</div>
       </div>
     </div>
   );

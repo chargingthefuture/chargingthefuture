@@ -338,8 +338,11 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     if (category === "Mine") {
       if (r.ownerUserId !== userId) return false;
     } else {
-      // Active feed: expired posts drop out for everyone (the owner manages them under "Mine").
-      if (r.isExpired) return false;
+      // Active feed: an expired post drops out for everyone EXCEPT its owner. The owner always sees
+      // their own posts — including expired ones (dimmed, with the Expired pill + Re-post) — so a post
+      // never silently disappears from the poster's own feed and re-posting is always one click away.
+      // This matches the mobile app, which keeps the owner's expired posts in the feed too.
+      if (r.isExpired && r.ownerUserId !== userId) return false;
       if (category !== "All" && !requestTags(r).some((tag) => tag.toLowerCase() === category.toLowerCase())) return false;
     }
     if (search.trim()) {
