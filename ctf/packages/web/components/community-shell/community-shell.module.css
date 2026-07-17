@@ -591,6 +591,29 @@
   word-break: break-word;
 }
 
+/* Clickable "Open <Plugin>" chip on an official announcement card. Emerald to match the card, so it
+   reads as the card's own call-to-action; sits below the body (the plain URL line stays in the body). */
+.announcementChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: #34D399;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.announcementChip:hover {
+  background: rgba(52, 211, 153, 0.2);
+}
+
 /* Concierge "ask what you need" chips. Emerald — deliberately NOT the sky-blue
    (#38BDF8) the @comic AI Assistant uses, so a member can tell "route me to a
    feature" apart from "ask the AI". The rail scrolls horizontally instead of

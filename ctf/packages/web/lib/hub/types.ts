@@ -33,6 +33,10 @@ export type HubMessage = {
   // The announcement's own title, rendered as a heading above the body on the official card.
   // Null for peer posts and AI answers (their `text` is the whole message).
   title: string | null;
+  // The plugin this announcement links to, resolved to { slug, name } — drives the clickable
+  // "Open <Plugin>" chip on the official card. Null when the announcement has no (valid, visible)
+  // linked plugin, and always null for peer posts and AI answers.
+  linkedPlugin: { slug: string; name: string } | null;
   text: string;
   sentAtIso: string;
   // The underlying community post id (when this message is a peer post). This is the id a

@@ -13,6 +13,7 @@ import {
   feedMentionTokens,
   listFeedTimeline,
   parsePaginationParams,
+  resolveAnnouncementLinkedPlugins,
   validateFeedCommunityPostInput,
 } from 'lib/feed/repository';
 import { requireHubAccess } from '../_lib';
@@ -22,7 +23,10 @@ import { ensureMutationCsrf } from '../../feed/_lib';
 // (feed_items) as the single source of truth. The channel is one blended stream
 // interleaving admin announcements, AI Q&A, and peer-to-peer community posts.
 
-function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
+function mapTimelineItemToHubMessage(
+  item: FeedTimelineItem,
+  linkedPluginsByAnnouncementId: Map<string, { slug: string; name: string }>,
+): HubMessage {
   const isCommunity = item.itemType === 'community';
   const authorUserId = isCommunity ? item.community?.authorUserId ?? 'hub-system' : 'hub-system';
   // This route is gated to signed-in members, so a peer post leads with the
@@ -39,6 +43,12 @@ function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
   const isAnnouncement = item.itemType === 'announcement';
   const title = isAnnouncement ? item.title || null : null;
   const text = item.body;
+
+  // The linked plugin (if any) for this announcement, resolved to { slug, name } for the clickable
+  // "Open <Plugin>" chip. Only announcements carry one; keyed by the source announcement id.
+  const linkedPlugin = isAnnouncement && item.sourceAnnouncementId
+    ? linkedPluginsByAnnouncementId.get(item.sourceAnnouncementId) ?? null
+    : null;
 
   // A peer post may quote another peer post (Signal-style reply). The quoted author handle
   // and short snippet are resolved server-side in the feed repository and carried here.
@@ -58,6 +68,7 @@ function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
     avatarUrl: null,
     kind: item.itemType,
     title,
+    linkedPlugin,
     text,
     sentAtIso: item.publishedAtIso,
     communityPostId: isCommunity ? item.sourceCommunityPostId : null,
@@ -90,10 +101,17 @@ export async function GET(request: Request) {
       mentionsMe ? { channel: 'community', mentionHandles } : { channel: 'all' },
     );
 
+    // Resolve the linked plugin (if any) for the announcements on this page, so each official card
+    // can render a clickable "Open <Plugin>" chip. One batched lookup for all announcement ids.
+    const announcementIds = timeline.items
+      .filter((item) => item.itemType === 'announcement' && item.sourceAnnouncementId)
+      .map((item) => item.sourceAnnouncementId as string);
+    const linkedPluginsByAnnouncementId = await resolveAnnouncementLinkedPlugins(announcementIds);
+
     // Feed timeline is newest-first; present oldest-first for the chat stream.
     const messages: HubMessage[] = [...timeline.items]
       .reverse()
-      .map(mapTimelineItemToHubMessage);
+      .map((item) => mapTimelineItemToHubMessage(item, linkedPluginsByAnnouncementId));
 
     const response: HubMessagesResponse = {
       channelId: 'community',
@@ -200,6 +218,7 @@ export async function POST(request: Request) {
       // A message posted from the composer is always a peer community post.
       kind: 'community',
       title: null,
+      linkedPlugin: null,
       text,
       sentAtIso: result.createdAtIso,
       communityPostId: result.postId,
