@@ -197,6 +197,7 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 
 ## Change Log
 
+- 2026-07-17: **Contract: `cohort.weekly.select` `dataAccess` now lists `unlock_verification_submissions` (code-review finding #1590).** The admin assignment route (`POST /api/peer-programming/admin/assignments/run`) filters the recent-login set through `listUnlockedUserIds` (`lib/unlock/repository.ts`), which reads `unlock_verification_submissions` — only `approved_full` members may be placed into cohorts. That read predates this entry (added with the unlocked-members filter) but was never declared in the command contract's `dataAccess` list, so the contract under-reported what the command touches. Documentation-only: the contract now matches the code; no route, schema, or behavior change.
 - 2026-07-17: **Code-review batch: route validation, contract-shape, and request-race fixes (findings #1585–#1589).**
   (1) `GET`/`POST /api/peer-programming/admin/single-open-cohort` now return the four contract
   fields (`enabled`, `source`, `adminSetting`, `envFlagEnabled`) flat at the top level **plus** the
