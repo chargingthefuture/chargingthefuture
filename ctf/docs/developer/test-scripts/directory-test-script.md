@@ -65,7 +65,10 @@ people in that sector — including a profile whose sector comes only from its s
 sector. Search filters by name, headline, bio, **and skills** — the skill-name search (step 4)
 returns the people who hold that skill, matching the taxonomy skill name, its aliases, and free-text
 "pending review" skills. Search is punctuation-insensitive (step 5): `first-aid`, `first aid`, and
-`First Aid` all return the same people.
+`First Aid` all return the same people. On desktop, the right rail is headed **"Recent Survivors"**
+(the most recently updated profiles — it is **not** a ranking, so it must not say "Top Providers"),
+and its privacy card reads **"Privacy First — Profiles show only what each member chooses to
+share."** — no "guarantee" / "your identity is protected" wording anywhere on the rail.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### DIR-2 · Read a profile (real fields only)
@@ -78,7 +81,9 @@ title, sector, location ("City, State, Country" — only the parts that are set;
 just a country), specializations/skills, and the bio. A community-generated profile shows its
 "Community generated" badge and `@community-…` handle. No endorsements, reviews, booking, or chat
 sections appear (those were removed as out-of-scope mockup elements). Confirm a carried-over v2 profile
-shows its city/state/country (the data was cloned from v2 and is now read directly).
+shows its city/state/country (the data was cloned from v2 and is now read directly). On android, the
+profile detail's privacy note reads **"🔒 Privacy First — Profiles show only what each member chooses
+to share."** — it must not promise a privacy "guarantee" or that "your identity is never exposed".
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### DIR-3 · Pending (nominated/self-added) skills show
