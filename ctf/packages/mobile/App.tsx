@@ -37,6 +37,15 @@ import { Beacon } from './src/features/beacon';
 import { RecurringActivity } from './src/features/recurring-activity';
 import { AccountData } from './src/features/account-data';
 import { BlockedMembers } from './src/features/blocks';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+  Inter_900Black,
+} from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from './src/features/trust-transport/auth-context';
 import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
@@ -78,6 +87,7 @@ function BrandMark({ size = 36 }: { size?: number }) {
         style={{
           fontSize: size * 0.44,
           fontWeight: '800',
+          fontFamily: 'Inter_800ExtraBold',
           color: tokens.isComic ? tokens.border : '#FFFFFF',
           letterSpacing: 0.5,
         }}
@@ -188,6 +198,22 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
 ];
 
 export default function App() {
+  // Load the brand typeface (Inter) so text rendered through the shared type scale uses it at the
+  // right weight. Until the font is ready, show the universal loading screen (which is intentionally
+  // system-font, per spec §11) rather than flashing OS-default text in the branded chrome.
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+    Inter_900Black,
+  });
+
+  if (!fontsLoaded) {
+    return <LoadingScreen />;
+  }
+
   return (
     <AuthProvider>
       <ThemeProvider>
@@ -426,10 +452,12 @@ const styles = StyleSheet.create({
   wordmark: {
     fontSize: 18,
     fontWeight: '800',
+    fontFamily: 'Inter_800ExtraBold',
   },
   subtitle: {
     fontSize: 12,
     fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   pillRow: {
     maxHeight: 48,
@@ -455,6 +483,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#222',
     fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   pillTextActive: {
     color: '#fff',
