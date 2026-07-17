@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Search } from "lucide-react";
+import { ChevronLeft, Home, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import type { Currency } from "@/lib/currency/types";
@@ -206,7 +206,8 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
               <ChevronLeft size={20} />
             </Link>
             {/* Title shrinks and truncates so the trailing controls stay on screen */}
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🏠 LightHouse</span>
+            <Home size={16} strokeWidth={1.75} style={{ color: t.ACCENT, flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>LightHouse</span>
             <PluginAdminButton href="/admin/lighthouse" isAdmin={isAdmin} accent={t.ACCENT} />
             <RefreshButton onRefresh={() => fetchAll()} title="Refresh" />
             <MobileTopActions />
@@ -243,7 +244,7 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
         <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>🏠 LightHouse — Safe Housing</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT, display: "flex", alignItems: "center", gap: 8 }}><Home size={16} strokeWidth={1.75} style={{ color: t.ACCENT }} /> LightHouse — Safe Housing</div>
             <div style={{ fontSize: 12, color: t.MUTED }}>Verified listings · Privacy-first</div>
           </div>
           <RefreshButton onRefresh={() => fetchAll()} title="Refresh" />
