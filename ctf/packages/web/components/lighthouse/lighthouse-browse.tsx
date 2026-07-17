@@ -1,6 +1,6 @@
 "use client";
 
-import { Bath, Bed, Heart, MapPin } from "lucide-react";
+import { Bath, Bed, Heart, Home, MapPin } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { formatRentParts, getLighthouseTokens, listingAcceptsCredits, type CurrencyMap, type Property } from "./shared";
 
@@ -35,7 +35,7 @@ export function LighthouseBrowse({
         ) : (
           properties.map((p) => (
             <div key={p.id} style={{ borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}20`, overflow: "hidden", cursor: "pointer" }}>
-              <div role="button" tabIndex={0} aria-label={`View ${p.title || p.id}`} onClick={() => onSelect(p)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(p); } }} style={{ padding: "32px 0", background: `${t.ACCENT}08`, textAlign: "center", fontSize: 48 }}>{p.img || "🏠"}</div>
+              <div role="button" tabIndex={0} aria-label={`View ${p.title || p.id}`} onClick={() => onSelect(p)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(p); } }} style={{ padding: "32px 0", background: `${t.ACCENT}08`, display: "flex", alignItems: "center", justifyContent: "center" }}><Home size={40} strokeWidth={1.5} style={{ color: `${t.ACCENT}80` }} /></div>
               <div style={{ padding: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE, flex: 1, marginRight: 8, lineHeight: 1.3 }}>{p.title || p.id}</div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Home, Search } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getLighthouseTokens, listingAcceptsCredits, type Property } from "./shared";
 
@@ -56,7 +56,7 @@ export function LighthouseFilterSidebar({
   return (
     <aside style={{ width: 240, background: t.HEADER, borderRight: `1px solid ${t.BORDER}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
       <div style={{ padding: "20px 16px 12px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.MUTED, textTransform: "uppercase", marginBottom: 12 }}>🏠 LightHouse</div>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.MUTED, textTransform: "uppercase", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}><Home size={13} strokeWidth={1.75} style={{ color: t.ACCENT }} /> LightHouse</div>
         <div style={{ position: "relative" }}>
           <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: t.FAINT }} />
           <input
