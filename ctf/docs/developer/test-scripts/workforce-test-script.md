@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed, team sector names corrected to live taxonomy names |
 
 ## How to run this
 
@@ -169,7 +169,9 @@ expanded, the matched members by name (same match reasons as the sector drilldow
 or sector). A member matched through two of a team's sectors appears once. There is **no** "N to fill"
 demand-gap figure on this view (removed 2026-07-17 — it is workforce-scale and irrelevant to planning
 one neighbourhood). A team whose mapped sector is not in the taxonomy shows that sector flagged "not
-mapped" rather than silently empty. The view is read-only and reflects current Directory data on
+mapped" rather than silently empty — after the 2026-07-17 name fix (`Housing & Construction`,
+`Energy & Utilities`) no team should show a "not mapped" chip; if one appears, a taxonomy sector was
+renamed and the team table needs the new name. The view is read-only and reflects current Directory data on
 reopen. Member names appear only for a signed-in member — the view is behind the member read gate,
 never public.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
