@@ -106,7 +106,7 @@ Admin routes:
 - `POST /api/announcements/admin/:announcementId/publish`
 - `POST /api/announcements/admin/:announcementId/archive`
 - `POST /api/announcements/admin/targeting/validate`
-- `POST /api/announcements/membership/events` — records a member join/leave membership event so announcement audience eligibility can be recalculated; admin-gated (`requireFeedAdminAccess`) + CSRF (`x-ctf-csrf: '1'`). Body `{ userId, pluginId, eventType: 'join' | 'leave', requestId?, traceId? }` (`eventType` defaults to `join`; `userId` and `pluginId` required, else 400). Shares the feed membership-events handler (`emitMembershipEvent`, contracts unified under `feed.*`) and returns `{ ok, streamEmitted }` — the announcements-namespaced twin of `POST /api/feed/membership/events`.
+- `POST /api/announcements/membership/events` — records a member join/leave membership event so announcement audience eligibility can be recalculated; admin-gated (`requireFeedAdminAccess`) + CSRF (`x-ctf-csrf: '1'`). Body `{ userId, pluginId, eventType: 'join' | 'leave', requestId?, traceId? }` (`eventType` must be exactly `join` or `leave`, else 400; `userId` and `pluginId` required, else 400). Shares the feed membership-events handler (`emitMembershipEvent`, contracts unified under `feed.*`) and returns `{ ok, streamEmitted }` — the announcements-namespaced twin of `POST /api/feed/membership/events`.
 
 ---
 
