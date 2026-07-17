@@ -307,9 +307,9 @@ function ProfileDetail({
           ) : null}
           {/* Privacy note */}
           <View style={styles.privacyBox}>
-            <Text style={styles.privacyTitle}>🔒 Privacy Guaranteed</Text>
+            <Text style={styles.privacyTitle}>🔒 Privacy First</Text>
             <Text style={styles.privacyBody}>
-              Your identity is never exposed.
+              Profiles show only what each member chooses to share.
             </Text>
           </View>
           {/* Endorsements omitted — no endorsements API */}
