@@ -77,7 +77,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'skills-hunt',
     name: 'SkillsHunt',
-    summary: 'Discover skills across the network.',
+    summary: 'Nominate survivors to build the Directory and grow the economy.',
     availabilityState: 'implemented_shell',
     navRank: 60,
     isVisible: true,
