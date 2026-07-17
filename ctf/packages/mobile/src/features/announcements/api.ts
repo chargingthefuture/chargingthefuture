@@ -10,8 +10,6 @@ export type AnnouncementItem = {
   itemType: 'announcement';
   title: string;
   body: string;
-  priority: number;
-  mandatory: boolean;
   publishedAtIso: string;
   expiresAtIso: string | null;
   isRead: boolean;
