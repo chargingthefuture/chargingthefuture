@@ -14,7 +14,8 @@
     "test": "vitest run",
     "check:auth-env": "node ./scripts/check-auth-env.mjs",
     "check:clerk-env": "node ./scripts/check-auth-env.mjs",
-    "check:formance-env": "node ./scripts/check-formance-env.mjs"
+    "check:formance-env": "node ./scripts/check-formance-env.mjs",
+    "check:stream-env": "node ./scripts/check-stream-env.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^3.4.7",
