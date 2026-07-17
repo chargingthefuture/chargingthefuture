@@ -51,8 +51,10 @@ export interface Room {
 
 export interface Message {
   id: string;
-  author?: string;
-  authorId?: string;
+  // Required so every callsite must resolve a display name (mapMessages sets it from the cohort
+  // roster or a short id fallback); prevents the chat silently rendering "Anonymous" for messages.
+  author: string;
+  authorId: string;
   content: string;
   timestamp: string;
   metadata?: Record<string, unknown>;
