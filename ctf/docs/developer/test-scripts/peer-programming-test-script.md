@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-peer-programming-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-17 (android Session-tab message composer added, issue #1597; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -34,8 +34,9 @@ Member role unless noted.
 
 1. **Room loads.** Open PeerProgramming. The cohort room renders — header, message stream, and the
    running-cohorts list — not a spinner or a "Failed to load room" error. → web ☐ mobile ☐ android ☐
-2. **Member can post.** As a cohort member, post a top-level message. It appears in the stream with
-   your name (not "Anonymous"). → web ☐ mobile ☐ android ☐
+2. **Member can post.** As a cohort member, post a top-level message. On android use the bottom-pinned
+   composer on the Session tab (issue #1597). It appears in the stream with your name (not "Anonymous").
+   → web ☐ mobile ☐ android ☐
 3. **Listener cannot post.** Open another running cohort with `?cohortId=`. You can read it, but the
    composer is replaced by a "you're listening in" notice. → web ☐ mobile ☐ android ☐
 4. **Denied write is readable.** Try to post into a cohort you are not a member of. The denial is a
@@ -60,12 +61,18 @@ shown.
 **Role:** member · **Surfaces:** all
 **Precondition:** member of an open cohort.
 **Steps:**
-1. Post a top-level message.
-2. Open it and post a reply on its thread.
+1. Post a top-level message. On android, use the composer pinned to the bottom of the Session tab
+   (issue #1597): type into "Message your cohort…" and tap send.
+2. Open it and post a reply on its thread (web / mobile-responsive web; the android app posts
+   top-level messages only, no threaded-reply composer yet).
 **Expected:** Both appear in order, attributed to you. The reply is nested under its parent, not at the
 top level. An over-long body (past the message limit) is refused with a readable message. A reply
 whose parent id does not exist, or belongs to a different cohort (crafted request), is refused with
 404 `peer_programming_thread_not_found` — no orphan reply row is created.
+
+On android specifically: the send button is disabled while the send is in flight and for an
+empty/whitespace-only box; on success the box clears and the new message appears (the room re-pulls);
+on failure a readable inline error shows above the box and the typed text is kept so it can be retried.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### PP-3 · Persistence across reload

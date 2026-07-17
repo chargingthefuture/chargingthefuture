@@ -147,6 +147,7 @@ export const PeerProgramming = () => {
             topic={room.topic}
             messages={room.messages}
             readOnly={room.access !== 'member'}
+            onMessageSent={() => load(true)}
           />
         )}
         {activeNav === 'session' && room?.cohort == null && (

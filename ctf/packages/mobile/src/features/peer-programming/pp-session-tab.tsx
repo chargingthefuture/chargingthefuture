@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import {
   joinSession,
+  postMessage,
+  PEER_PROGRAMMING_MAX_MESSAGE_LENGTH,
   type PeerProgrammingCohort,
   type PeerProgrammingMessage,
   type PeerProgrammingSessionCredentials,
@@ -16,8 +18,11 @@ type Props = {
   messages: PeerProgrammingMessage[];
   // True when the viewer is listening in on a cohort they were not placed in (or an admin viewing
   // another cohort): the session is read-only — no live-video join (the call is always the caller's
-  // own cohort, so a listener cannot start the viewed cohort's call).
+  // own cohort, so a listener cannot start the viewed cohort's call), and no message composer.
   readOnly?: boolean;
+  // Re-pull the room after a message posts so the new message appears in the thread. The room
+  // endpoint is the source of truth for the open cohort's messages (mirrors the web shell).
+  onMessageSent?: () => void | Promise<void>;
 };
 
 // What the live-video panel is doing right now.
@@ -133,7 +138,82 @@ const VideoPanel = ({ readOnly }: { readOnly?: boolean }) => {
   );
 };
 
-export const PeerProgrammingSessionTab = ({ cohort, topic, messages, readOnly }: Props) => {
+// Bottom-pinned message composer for cohort members. Sends via POST /api/peer-programming/messages
+// (the existing postMessage client), clears on success, disables while sending, and asks the parent
+// to re-pull the room so the new message shows. Mirrors the web composer's constraints: non-empty and
+// at most PEER_PROGRAMMING_MAX_MESSAGE_LENGTH characters.
+const Composer = ({
+  cohortId,
+  onMessageSent,
+}: {
+  cohortId: string;
+  onMessageSent?: () => void | Promise<void>;
+}) => {
+  const { tokens, theme } = useTheme();
+  const accent = getAppAccent('peer-programming', theme);
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const trimmed = input.trim();
+  const canSend = trimmed.length > 0 && !sending;
+
+  const handleSend = async () => {
+    if (!canSend) return;
+    if (trimmed.length > PEER_PROGRAMMING_MAX_MESSAGE_LENGTH) {
+      setError(`Keep it under ${PEER_PROGRAMMING_MAX_MESSAGE_LENGTH} characters.`);
+      return;
+    }
+    setSending(true);
+    setError(null);
+    try {
+      await postMessage(cohortId, trimmed);
+      setInput('');
+      await onMessageSent?.();
+    } catch {
+      setError('Could not send your message. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <View style={styles.composer}>
+      {error !== null && <Text style={styles.composerError}>{error}</Text>}
+      <View style={styles.composerRow}>
+        <TextInput
+          style={styles.composerInput}
+          value={input}
+          onChangeText={setInput}
+          placeholder="Message your cohort…"
+          placeholderTextColor={tokens.textMuted}
+          multiline
+          maxLength={PEER_PROGRAMMING_MAX_MESSAGE_LENGTH}
+          editable={!sending}
+          accessibilityLabel="Message your cohort"
+        />
+        <TouchableOpacity
+          style={[styles.sendBtn, canSend ? styles.sendBtnActive : styles.sendBtnDisabled]}
+          onPress={() => {
+            void handleSend();
+          }}
+          disabled={!canSend}
+          accessibilityRole="button"
+          accessibilityLabel="Send message"
+        >
+          {sending ? (
+            <ActivityIndicator size="small" color="#04160A" />
+          ) : (
+            <Text style={[styles.sendBtnIcon, !canSend && styles.sendBtnIconDisabled]}>↑</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+export const PeerProgrammingSessionTab = ({ cohort, topic, messages, readOnly, onMessageSent }: Props) => {
   const { tokens, theme } = useTheme();
   const accent = getAppAccent('peer-programming', theme);
   const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
@@ -161,6 +241,7 @@ export const PeerProgrammingSessionTab = ({ cohort, topic, messages, readOnly }:
       contentContainerStyle={styles.messageList}
       style={styles.list}
     />
+    {readOnly ? null : <Composer cohortId={cohort.id} onMessageSent={onMessageSent} />}
   </View>
   );
 };
@@ -233,5 +314,44 @@ function makeStyles(t: ThemeTokens, accent: string) {
   messageTime: { fontSize: 10, color: t.textSecondary },
   emptyState: { alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyText: { fontSize: 14, color: t.textSecondary, textAlign: 'center', lineHeight: 22 },
+  composer: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: t.borderFaint,
+    backgroundColor: t.surfaceAlt,
+  },
+  composerError: { fontSize: 12, color: '#F87171', marginBottom: 8 },
+  composerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: `${accent}30`,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  composerInput: {
+    flex: 1,
+    fontSize: 14,
+    color: t.textShell,
+    maxHeight: 120,
+    paddingTop: 4,
+    paddingBottom: 4,
+  },
+  sendBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendBtnActive: { backgroundColor: accent },
+  sendBtnDisabled: { backgroundColor: `${accent}25` },
+  sendBtnIcon: { fontSize: 18, fontWeight: '800', color: '#04160A' },
+  sendBtnIconDisabled: { color: t.textMuted },
   });
 }
