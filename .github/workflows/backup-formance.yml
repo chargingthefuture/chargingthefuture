@@ -42,7 +42,9 @@ jobs:
         run: corepack enable
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        # Install the ctf workspace (same as ci.yml) — its lockfile is validated on every PR.
+        # The root workspace lockfile is not CI-gated and has drifted before (issue #1229).
+        run: pnpm install --frozen-lockfile --dir ctf
 
       - name: Install PostgreSQL client 18
         # The runner's bundled pg_dump may be missing or older than the
