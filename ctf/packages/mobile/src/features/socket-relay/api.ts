@@ -206,6 +206,54 @@ export async function listMyFulfillments(): Promise<ListMyFulfillmentsResponse> 
   return authedFetchJson<ListMyFulfillmentsResponse>(`${BASE}/my-fulfillments`);
 }
 
+// Stream credentials a member needs to connect to one fulfillment's Direct Line chat channel.
+// Mirrors the web SrChatCredentials fields returned by POST /api/socket-relay/fulfillments/:id/chat.
+export interface SocketRelayChatCredentials {
+  streamApiKey: string;
+  streamToken: string;
+  streamUserId: string;
+  streamChannelId: string;
+}
+
+// Re-mint Stream credentials for one fulfillment's Direct Line and return the channel to connect to.
+// Mirrors the web socket-relay-shell openChat call exactly: POST /api/socket-relay/fulfillments/:id/chat
+// with the x-ctf-csrf header (this is the mutation endpoint that also ensures the channel exists). The
+// server only succeeds when the caller is the requester or the fulfiller of this fulfillment; a
+// non-participant gets 403. The web and mobile clients both connect to the SAME per-fulfillment Stream
+// channel (`socket-relay-fulfillment-<id>`) — mobile opens no new channel type, just a second client.
+export async function fetchFulfillmentChatCredentials(
+  fulfillmentId: string,
+): Promise<SocketRelayChatCredentials> {
+  const res = await authedFetch(`${BASE}/fulfillments/${fulfillmentId}/chat`, {
+    method: 'POST',
+    headers: { 'x-ctf-csrf': '1' },
+  });
+  const body = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    message?: string;
+    streamApiKey?: string;
+    streamToken?: string;
+    streamUserId?: string;
+    streamChannelId?: string;
+  };
+  if (
+    res.ok &&
+    body.ok &&
+    body.streamApiKey &&
+    body.streamToken &&
+    body.streamUserId &&
+    body.streamChannelId
+  ) {
+    return {
+      streamApiKey: body.streamApiKey,
+      streamToken: body.streamToken,
+      streamUserId: body.streamUserId,
+      streamChannelId: body.streamChannelId,
+    };
+  }
+  throw new Error(body.message ?? 'Could not open this Direct Line chat.');
+}
+
 // Resolve (close/reopen) a fulfillment. The server enforces that only the requester (or an admin)
 // may resolve; the mobile UI only surfaces these actions to the requester. Mirrors the web
 // handleResolve: POST /api/socket-relay/fulfillments/:id/close with { outcome }.

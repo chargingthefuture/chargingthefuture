@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import {
   listMyFulfillments,
@@ -16,6 +17,7 @@ import {
   type SocketRelayResolveOutcome,
 } from './api';
 import { SocketRelayLoading } from './SocketRelayLoading';
+import { SocketRelayDirectLineChat } from './SocketRelayDirectLineChat';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
 // The four outcomes a requester can pick. Mirrors the web ResolveBar (sr-chat.tsx) exactly:
@@ -54,14 +56,34 @@ function DirectLineCard({
   const accent = getAppAccent('socket-relay', theme);
   const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   const isActive = fulfillment.status === 'active';
+  const [chatOpen, setChatOpen] = useState(false);
+  const roleLine = isRequester
+    ? "Your request — you're talking with the helper."
+    : 'You offered to help — talking with the requester.';
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{fulfillmentTitle(fulfillment)}</Text>
-      <Text style={styles.cardRole}>
-        {isRequester
-          ? "Your request — you're talking with the helper."
-          : 'You offered to help — talking with the requester.'}
-      </Text>
+      <Text style={styles.cardRole}>{roleLine}</Text>
+
+      {/* Open the live requester <-> helper chat for this Direct Line (Android parity for the web
+          Stream chat panel, issue #1596). Full-screen modal like the TrustTransport Chat button. */}
+      <TouchableOpacity
+        style={styles.chatBtn}
+        onPress={() => setChatOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Open chat"
+      >
+        <Text style={styles.chatBtnText}>💬 Open chat</Text>
+      </TouchableOpacity>
+      <Modal visible={chatOpen} animationType="slide" onRequestClose={() => setChatOpen(false)}>
+        {chatOpen ? (
+          <SocketRelayDirectLineChat
+            fulfillmentId={fulfillment.id}
+            subtitle={roleLine}
+            onBack={() => setChatOpen(false)}
+          />
+        ) : null}
+      </Modal>
 
       {!isActive ? (
         <Text style={styles.note}>
@@ -238,6 +260,16 @@ function makeStyles(t: ThemeTokens, accent: string) {
   },
   cardTitle: { fontSize: 14, fontWeight: '700', color: '#F0FDF4', marginBottom: 4, lineHeight: 20 },
   cardRole: { fontSize: 12, color: t.textSecondary, marginBottom: 10 },
+  chatBtn: {
+    marginBottom: 10,
+    paddingVertical: 10,
+    borderRadius: 9,
+    backgroundColor: `${accent}15`,
+    borderWidth: 1,
+    borderColor: `${accent}30`,
+    alignItems: 'center',
+  },
+  chatBtnText: { fontSize: 13, fontWeight: '600', color: accent },
   note: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   actionBtn: {
