@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
+import { CountryPicker, StateFieldMobile } from '../../components/LocationPickers';
 import type { PropertyCreateInput } from './types';
 
 const SURFACE = 'rgba(255,255,255,0.02)';
@@ -179,8 +180,16 @@ export const LighthouseHostForm: React.FC<Props> = ({ submitting, error, onSubmi
       />
       <Field label="Address" value={form.addressLine} onChange={(v) => setField('addressLine', v)} />
       <Field label="City" value={form.city} onChange={(v) => setField('city', v)} />
-      <Field label="State / region" value={form.state} onChange={(v) => setField('state', v)} />
-      <Field label="Country" value={form.country} onChange={(v) => setField('country', v)} />
+      {/* Country before State so the state control can switch to the US-state list when
+          the country is the United States (parity with the web location-select). */}
+      <View style={styles.field}>
+        <Text style={styles.label}>Country</Text>
+        <CountryPicker value={form.country} onChange={(v) => setField('country', v)} />
+      </View>
+      <View style={styles.field}>
+        <Text style={styles.label}>State / region</Text>
+        <StateFieldMobile country={form.country} value={form.state} onChange={(v) => setField('state', v)} />
+      </View>
       <Field label="Postal code" value={form.zipCode} onChange={(v) => setField('zipCode', v)} />
       <Field label="Bedrooms" value={form.bedrooms} onChange={(v) => setField('bedrooms', v)} keyboardType="numeric" />
       <Field label="Bathrooms" value={form.bathrooms} onChange={(v) => setField('bathrooms', v)} keyboardType="numeric" />

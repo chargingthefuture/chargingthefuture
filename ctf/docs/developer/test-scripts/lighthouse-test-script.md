@@ -123,10 +123,13 @@ action never appears on your own listing.
 **Role:** member · **Surfaces:** web, mobile (android host tab where present)
 **Steps:**
 1. Open the "List your place" tab and fill the create-listing form: title, description, type
-   (a picker: House, Room in a house, Apartment, Camper), address, city, **Country (a dropdown)** and
-   **State/region** (a US-state dropdown when Country is the United States, otherwise a free-text
-   box — web), postal code, bedrooms/bathrooms, monthly rent and rent currency, accepted currencies
-   (toggle ServiceCredits), available-from, amenities, house rules.
+   (a picker: House, Room in a house, Apartment, Camper), address, city, **Country** and
+   **State/region**, postal code, bedrooms/bathrooms, monthly rent and rent currency, accepted currencies
+   (toggle ServiceCredits), available-from, amenities, house rules. Country/State are the same
+   structured selection on **web and android** (#1380): Country is a searchable list (a dropdown on web,
+   a searchable picker button on android), and State/region is a US-state list when Country is the
+   United States, otherwise a free-text box. Confirm the android host form no longer uses plain
+   free-text for Country/State.
 2. Save the listing, then open "Your listings".
 **Expected:** Listing is created with no separate host-profile form and no admin gate. Host identity
 shows your username, your Quora link, and the Trust widget — none re-entered. The new listing appears

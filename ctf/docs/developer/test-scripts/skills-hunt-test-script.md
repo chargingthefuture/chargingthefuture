@@ -83,9 +83,10 @@ Result: web ☐ android ☐
    - Quora URL: a valid-format Quora profile URL (e.g. `https://www.quora.com/profile/seed-test-user`)
    - Country: `United States` (required). State: `California`. City: `Oakland`.
    - Select 2 taxonomy skills from the accordion/picker.
-3. Submit.
+3. Also confirm the **keyword skill search** (web and android): type part of a skill name in the "Search skills by keyword…" box above the sector accordion. The accordion is replaced by a flat, cross-sector list of matching skills; selecting one adds it just like the accordion. Clear the search (✕) to restore the accordion. A no-match query shows the "add it as a free-text skill" hint.
+4. Submit.
 
-**Expected:** Submission succeeds. A confirmation message or pending status appears. The submission shows up in the My Finds tab / "My Finds" section with status "pending". When this submission is later accepted (SH-A3) the generated Directory profile carries the same country/state/city.
+**Expected:** Submission succeeds. A confirmation message or pending status appears. The submission shows up in the My Finds tab / "My Finds" section with status "pending". When this submission is later accepted (SH-A3) the generated Directory profile carries the same country/state/city. The keyword search behaves the same on web and android (flat filtered results replace the accordion while a query is present).
 
 Result: web ☐ android ☐
 
