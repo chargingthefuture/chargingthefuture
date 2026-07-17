@@ -630,6 +630,48 @@
   color: #374151;
 }
 
+/* Signed-out Commons: Discord-style message rows. Each post is a full-width row — avatar on the
+   left, handle + timestamp on top, body text below — and the row background carries a faint
+   per-author tint (set inline from the author's hue) so consecutive messages from different
+   members alternate visibly without reading as colored bubbles. */
+.publicChatRow {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: flex-start;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.publicChatContent {
+  flex: 1;
+  /* Let the column shrink below its content's intrinsic width inside the flex row, so a long word
+     or URL wraps instead of pushing the row past the screen edge. */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.publicChatMeta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.publicChatTime {
+  font-size: 11px;
+  color: var(--ctf-text-secondary, #9CA3AF);
+}
+
+.publicChatBody {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ctf-text-shell);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .chatTimeUser {
   text-align: right;
 }
