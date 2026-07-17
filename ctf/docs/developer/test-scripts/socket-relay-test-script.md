@@ -227,8 +227,8 @@ web ☐ android ☐
 - A row appears for each of the member's own **open, non-expired** requests that have no active fulfillment yet — displayed as "waiting for a helper" placeholder.
 - Cancelled or closed fulfillments do not appear.
 - Claimed requests are represented by their active fulfillment row, not an extra pending row.
-- Tapping a pending-request row shows a "No helper yet" state (not a chat), explaining the request is still open on the feed.
-- Tapping an active-fulfillment row opens the chat thread for that fulfillment.
+- On Android, each pending-request card shows a "No helper yet" note (not a chat), explaining the request is still open on the feed.
+- Tapping an active-fulfillment row opens the chat thread (web); on Android, each active-fulfillment card shows an "Open chat" button that opens the chat (see SR-10a).
 
 web ☐ android ☐
 
@@ -241,7 +241,7 @@ web ☐ android ☐
 **Precondition:** An active fulfillment exists between Member A (requester) and Member B (helper). Both are signed in on separate sessions or devices.
 
 **Steps:**
-1. As Member A, open the Direct Line row for the active fulfillment and send a message.
+1. As Member A, open the Direct Line for the active fulfillment (web: select the row; Android: tap "Open chat" on the card) and send a message.
 2. As Member B, open the same fulfillment's chat and verify the message is visible.
 3. Member B sends a reply. Member A verifies it appears.
 
@@ -251,6 +251,28 @@ web ☐ android ☐
 - When the message list is empty a branded empty state appears ("No messages yet" or similar) — not Stream's default "No chats here yet…".
 
 web ☐ android ☐
+
+---
+
+### SR-10a — Android Direct Line live chat (issue #1596)
+
+**Role:** member (participant) · **Surfaces:** android
+
+**Precondition:** On Android, the member has at least one active fulfillment (as requester or helper). Use SR-3 + SR-7 to set one up.
+
+**Steps:**
+1. Open the Direct Line tab (`SocketRelayDirectLines`). Confirm each active-fulfillment card shows an "Open chat" button alongside the role line, and (for the requester) the resolve buttons.
+2. Tap "Open chat". A full-screen "Direct Line" modal opens with a back control and, briefly, an "Opening Direct Line…" loading state.
+3. Send a message. Confirm it appears, and that the other participant (SR-10) receives it. Long-press a message to check reactions; type "@" to check the mention suggestion list; send a link to check the preview card.
+4. Tap the back control to close the modal, returning to the Direct Lines list. Confirm the resolve buttons still work.
+
+**Expected:**
+- The "Open chat" button opens the live requester <-> helper chat for that fulfillment — the SAME conversation the web shows (`socket-relay-fulfillment-<id>`), not a new/separate thread.
+- The chat surface reuses the shared `StreamChatView`: mentions, in-channel search, link previews, reply threads, and reactions all work.
+- Loading and error states render (a connection/credential failure shows "Could not open this Direct Line chat." rather than crashing); the rest of the Direct Lines tab keeps working.
+- The existing resolve buttons remain and still resolve the fulfillment.
+
+android ☐
 
 ---
 
