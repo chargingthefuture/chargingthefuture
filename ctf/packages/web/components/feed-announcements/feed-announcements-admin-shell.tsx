@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Megaphone, Send, Archive, Link2 } from 'lucide-react';
+import { Megaphone, Send, Archive, Link2, Pencil, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
@@ -50,7 +50,7 @@ function fieldStyle(t: FeedAnnouncementsTokens) {
   } as const;
 }
 
-async function adminMutate(url: string, method: 'POST', body?: unknown): Promise<{ ok: boolean; message?: string }> {
+async function adminMutate(url: string, method: 'POST' | 'PUT', body?: unknown): Promise<{ ok: boolean; message?: string }> {
   try {
     const res = await fetch(url, {
       method,
@@ -80,6 +80,8 @@ export function FeedAnnouncementsAdminShell({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [draft, setDraft] = useState({ title: '', body: '', linkedPluginSlug: '' });
+  // When set, the form is editing this existing draft (PUT) instead of creating a new one (POST).
+  const [editingId, setEditingId] = useState<string | null>(null);
   // Plugin registry options for the "Link a plugin" picker. Best-effort: a failed load just leaves the
   // picker empty and never blocks authoring. The server re-validates the chosen slug on submit.
   const [pluginOptions, setPluginOptions] = useState<PluginOption[]>([]);
@@ -122,19 +124,37 @@ export function FeedAnnouncementsAdminShell({
     return res;
   }
 
-  async function createDraft() {
+  // Load an existing draft into the form for editing (switches the form to PUT mode).
+  function startEdit(a: Announcement) {
+    setEditingId(a.id);
+    setDraft({ title: a.title, body: a.body, linkedPluginSlug: a.linkedPluginSlug ?? '' });
+    setError(null);
+    setMessage(null);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setDraft({ title: '', body: '', linkedPluginSlug: '' });
+    setError(null);
+  }
+
+  async function submitDraft() {
     if (!draft.title.trim() || !draft.body.trim()) {
       setError('Title and body are required.');
       return;
     }
-    const res = await act(
-      () => adminMutate('/api/feed/admin/announcements', 'POST', { title: draft.title.trim(), body: draft.body.trim(), scheduleAtIso: null, expiresAtIso: null, linkedPluginSlug: draft.linkedPluginSlug || null }),
-      'Draft created.',
-    );
+    const payload = { title: draft.title.trim(), body: draft.body.trim(), scheduleAtIso: null, expiresAtIso: null, linkedPluginSlug: draft.linkedPluginSlug || null };
+    const res = editingId
+      ? await act(() => adminMutate(`/api/feed/admin/announcements/${editingId}`, 'PUT', payload), 'Draft saved.')
+      : await act(() => adminMutate('/api/feed/admin/announcements', 'POST', payload), 'Draft created.');
     // Only clear the form on success — a failed submit must keep the typed title and message so the
     // author does not lose their work and can just retry.
     if (res.ok) {
       setDraft({ title: '', body: '', linkedPluginSlug: '' });
+      setEditingId(null);
     }
   }
 
@@ -184,7 +204,7 @@ export function FeedAnnouncementsAdminShell({
 
         {/* Create draft */}
         <div style={{ padding: '16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>New announcement</div>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>{editingId ? 'Edit announcement' : 'New announcement'}</div>
           <input value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} placeholder="Title" style={{ ...fieldStyle(t), marginBottom: 10 }} />
           <textarea value={draft.body} onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))} placeholder="Message" rows={3} style={{ ...fieldStyle(t), resize: 'none', marginBottom: 10 }} />
           {/* Optional: link a plugin. When set, the published announcement gets an "Open <Plugin>"
@@ -207,9 +227,16 @@ export function FeedAnnouncementsAdminShell({
               <span style={{ fontSize: 12, color: t.MUTED }}>Readers will see an “Open {linkedPluginName}” link.</span>
             ) : null}
           </label>
-          <button type="button" disabled={busy} onClick={() => void createDraft()} style={{ padding: '10px 16px', borderRadius: 10, background: busy ? `${t.ACCENT}66` : t.ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 800, cursor: busy ? 'not-allowed' : 'pointer' }}>
-            {busy ? 'Working…' : 'Create draft'}
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" disabled={busy} onClick={() => void submitDraft()} style={{ padding: '10px 16px', borderRadius: 10, background: busy ? `${t.ACCENT}66` : t.ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 800, cursor: busy ? 'not-allowed' : 'pointer' }}>
+              {busy ? 'Working…' : editingId ? 'Save changes' : 'Create draft'}
+            </button>
+            {editingId ? (
+              <button type="button" disabled={busy} onClick={cancelEdit} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 10, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 14, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer' }}>
+                <X size={14} /> Cancel
+              </button>
+            ) : null}
+          </div>
         </div>
 
         {announcements.length === 0 ? (
@@ -231,6 +258,11 @@ export function FeedAnnouncementsAdminShell({
                 </div>
               ) : null}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {a.status === 'draft' ? (
+                  <button type="button" disabled={busy} onClick={() => startEdit(a)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: `${t.ACCENT}1f`, border: `1px solid ${t.ACCENT}4d`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                    <Pencil size={13} /> Edit
+                  </button>
+                ) : null}
                 {a.status === 'draft' ? (
                   <button type="button" disabled={busy} onClick={() => void act(() => adminMutate(`/api/feed/admin/announcements/${a.id}/publish`, 'POST', {}), 'Published.')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
                     <Send size={13} /> Publish
