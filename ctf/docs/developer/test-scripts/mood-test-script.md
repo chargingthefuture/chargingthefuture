@@ -105,7 +105,9 @@ window) exist, the surface withholds data and shows the not-enough-data state wi
 and **Reach out through Foundation** (→ `/apps/foundation`) — that route a struggling member to a
 community member with mental-health expertise. There are **no** external crisis-hotline numbers
 (National Hotline / Crisis Text Line / RAINN are removed). The Privacy First card still appears below.
-The Android Mood screen has no resources rail, so this case is web-only.
+The Directory link's description says "Search community members by specialty" — it does **not** call
+members "verified" (Directory profiles have no verified state, so that word would be an unverifiable
+claim). The Android Mood screen has no resources rail, so this case is web-only.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---
