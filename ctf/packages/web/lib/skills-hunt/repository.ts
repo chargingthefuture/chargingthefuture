@@ -1633,6 +1633,11 @@ export async function createSubmission(
   submitterUserId: string,
   submitterUsername: string | null,
   input: SkillsHuntSubmissionInput,
+  // Admins are exempt from the scout rate limits — the rolling weekly submission
+  // cap and the reputation-driven pre-approval/restricted gate. The active-round
+  // window and the one-active-submission-per-Quora-URL duplicate guard still apply
+  // to everyone.
+  options: { isAdmin?: boolean } = {},
 ): Promise<SkillsHuntSubmission> {
   const normalizedUrlForCheck = normalizeQuoraProfileUrl(input.quoraProfileUrl);
   // Defense-in-depth: only allow true Quora hostnames before we make any
@@ -1654,7 +1659,9 @@ export async function createSubmission(
 
   return withDbTransaction(async (client) => {
     await ensureSubmissionWindow(client, input.roundId);
-    await ensureSubmissionRateLimits(client, submitterUserId);
+    if (!options.isAdmin) {
+      await ensureSubmissionRateLimits(client, submitterUserId);
+    }
 
     const normalizedUrl = normalizedUrlForCheck;
 
