@@ -36,7 +36,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     id: 'skills-taxonomy',
     name: 'Skills Taxonomy',
     kind: 'plugin',
-    summary: 'Hierarchy and CRUD for sectors, job titles, and skills with impact preview.',
+    summary: 'Browse the shared catalog of sectors, job titles, and skills.',
   },
   {
     id: 'directory',

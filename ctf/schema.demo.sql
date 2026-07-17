@@ -2070,7 +2070,7 @@ DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('whatworks', 'trusttranspo
 -- Seed plugin registry (upsert so re-running is safe)
 INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availability_state, nav_rank, is_visible) VALUES
   ('chyme',              'Chyme',                'Live social audio rooms. Broadcast, listen, and connect in real time.',                       'implemented_shell', 10,  TRUE),
-  ('skills-taxonomy',    'Skills Taxonomy',      'Hierarchy and CRUD for sectors, job titles, and skills with impact preview.',                     'implemented_shell', 20,  TRUE),
+  ('skills-taxonomy',    'Skills Taxonomy',      'Browse the shared catalog of sectors, job titles, and skills.',                     'implemented_shell', 20,  TRUE),
   ('directory',          'Directory',            'Browse skills across the survivor community.',                      'implemented_shell', 30,  TRUE),
   ('workforce',          'Workforce',            'Real-time work and skills distribution amongst 5 million survivors globally.',                           'implemented_shell', 50,  TRUE),
   ('skills-hunt',        'SkillsHunt',          'Nominate survivors to build the Directory and grow the economy.', 'implemented_shell', 60,  TRUE),
