@@ -197,6 +197,24 @@ completes, including on a failed request.
 
 ---
 
+### UNLOCK-A8 · A/B experiment readout parity (web ↔ android)
+**Role:** admin / reviewer · **Surfaces:** web (admin surface), android (Unlock Admin)
+**Precondition:** signed in as an admin on both surfaces.
+**Steps:**
+1. Open the web admin (`/admin/unlock`) and find the "Early Commons access — A/B experiment" panel.
+2. Open the android Unlock Admin and find the same "Early Commons access — A/B experiment" panel.
+3. Compare the two while the `feature-unlock-early-commons-access` Unleash rollout is **off**, then
+   (if you can) turn it on and let a few members submit, and compare again.
+**Expected:** With the rollout off, both surfaces show the same empty state pointing at the
+`feature-unlock-early-commons-access` rollout — no fabricated numbers. With the rollout on and data
+present, both show the same per-bucket rows (Early Commons / treatment vs Control) with a matching
+completion % and "N of M submitted". Android reads it from `GET /api/unlock/admin/experiment-split`
+(admin-gated; a non-admin is denied), which returns the same split the web page reads server-side.
+The readout is read-only — no action buttons. A read failure never blocks the queue below it.
+**Result:** web ☐ · android ☐ — notes:
+
+---
+
 ## Parity check (web ↔ android)
 
 The internal verification **queue** is admin-only, so there is no web ↔ android parity row for it.

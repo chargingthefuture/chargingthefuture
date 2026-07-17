@@ -47,6 +47,20 @@ contracts:
     idempotency: true
 
   - pluginId: unlock
+    command: unlock.admin.experiment.read
+    version: 1.0.0
+    description: Read the early-Commons A/B experiment split (per-bucket Quora-URL completion rate) for the admin readout.
+    inputSchema: {}
+    outputSchema:
+      experimentSplit:
+        type: array
+    dataAccess:
+      - unlock_audit_log
+    purpose: experiment_measurement
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: unlock
     command: unlock.admin.submission.review
     version: 1.0.0
     description: Apply admin moderation decision and unlock access tier transition.
