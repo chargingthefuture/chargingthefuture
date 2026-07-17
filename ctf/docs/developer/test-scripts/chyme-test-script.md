@@ -93,9 +93,11 @@ raised hand clears. The room shows "Live" only while at least one fresh member i
 1. Raise your hand. Have the second member look at your tile.
 2. Lower your hand, leave, or go stale.
 **Expected:** The raised hand stays visible to everyone until you lower it, leave, or your presence
-goes stale — not just for a couple of seconds. On web the other member's tile shows the persistent
-hand. (Known limit: android shows other members' persistent hands only from the short-lived Stream
-reaction — see Known gaps.)
+goes stale — not just for a couple of seconds. On web AND android the other member's tile shows the
+persistent hand: android polls `GET /api/chyme/room` every 15s while in the room and renders every
+other member's server-persisted raised hand, so the hand stays up after the short-lived Stream
+reaction clears (#1599). Verify from an android device: with a second member's hand raised on web,
+the android tile keeps the ✋ up (and drops it within ~15s of them lowering it).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-6 · Tip a participant in ServiceCredits
@@ -179,8 +181,8 @@ controls exist yet (every joiner may speak — see Known gaps).
 
 For CH-1, CH-2, CH-4, and CH-6, the android app and the mobile-responsive web layout must behave the
 same: same room state, same chat validation, same presence/leave, same tip rules. Note any drift here
-rather than filing three separate bugs. Known exception: persistent raised-hand display for *other*
-members is web-only today (CH-5) — record that as a known gap, not drift.
+rather than filing three separate bugs. Persistent raised-hand display for *other* members is now at
+parity: both web and android poll room state and render it (CH-5, #1599).
 
 **Result:** matches ☐ — drift notes:
 
@@ -200,7 +202,5 @@ of these, it is already tracked, not a new bug:
   search, reactions, or speaker/audience promotion routes exist.
 - Account/data deletion has no in-app entry point after the Chyme buttons were removed; the deletion
   endpoints still work but a designed account-settings surface to call them is not built.
-- Android does not render other members' persistent raised hands (it shows only the short-lived
-  Stream reaction); it does persist its own hand so web sees it.
 - Guest listen-only is enforced on the server only when `CHYME_GUEST_STREAM_ROLE` and the matching
   Stream role are configured; until then it is client-only enforcement.

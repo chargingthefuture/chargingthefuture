@@ -8,6 +8,10 @@ type ChymeParticipant = {
   userId: string;
   username: string | null;
   role: 'speaker' | 'listener';
+  // Server-persisted raised hand. Rides on the member's presence row (set by POST /api/chyme/hand),
+  // so it stays true until the member lowers their hand or leaves — unlike a transient Stream
+  // reaction. The audio room polls GET /api/chyme/room to show every other member's raised hand.
+  handRaised: boolean;
 };
 
 type ChymeRoomResponse = {
