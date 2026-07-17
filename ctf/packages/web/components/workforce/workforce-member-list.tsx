@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { WorkforceMatchedMember, WorkforceMatchReason } from '../../lib/workforce/types';
 import { useTheme } from '@/hooks/useTheme';
 import { getWorkforceTokens } from './workforce-shared';
@@ -83,7 +84,17 @@ function Chip({ text }: { text: string }) {
   );
 }
 
-export function WorkforceMemberList({ members }: { members: WorkforceMatchedMember[] }) {
+// `linkProfiles` turns each member name into a link to that member's Directory profile
+// (/apps/directory/profile/:profileId — the auth-gated deep link a signed-in member can open). Off by
+// default so the sector / skill-level / occupation drilldowns render plain names; the Community
+// Planning tab opts in, since that view is about assigning named people to teams.
+export function WorkforceMemberList({
+  members,
+  linkProfiles = false,
+}: {
+  members: WorkforceMatchedMember[];
+  linkProfiles?: boolean;
+}) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
   if (members.length === 0) {
@@ -112,7 +123,23 @@ export function WorkforceMemberList({ members }: { members: WorkforceMatchedMemb
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: t.TEXT }}>{m.displayName}</span>
+              {linkProfiles ? (
+                <Link
+                  href={`/apps/directory/profile/${m.profileId}`}
+                  title={`Open ${m.displayName}'s Directory profile`}
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: t.ACCENT,
+                    textDecoration: 'underline',
+                    textUnderlineOffset: 2,
+                  }}
+                >
+                  {m.displayName}
+                </Link>
+              ) : (
+                <span style={{ fontSize: 14, fontWeight: 600, color: t.TEXT }}>{m.displayName}</span>
+              )}
               <span
                 style={{
                   fontSize: 11,
