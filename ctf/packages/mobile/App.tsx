@@ -38,8 +38,76 @@ import { RecurringActivity } from './src/features/recurring-activity';
 import { AccountData } from './src/features/account-data';
 import { BlockedMembers } from './src/features/blocks';
 import { AuthProvider, useAuth } from './src/features/trust-transport/auth-context';
-import { ThemeProvider, useTheme } from './src/theme';
+import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
+import { getPluginEmoji } from './src/theme/plugin-visuals';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
+
+// The "SH" brand chip — the mobile counterpart of the web icon-rail logo. Default theme paints the
+// signature purple→cyan gradient (matches web `--ctf-cta-bg`); comic theme flattens to an ink panel
+// with a hard cream border (matches web's comic CTA treatment). Kept small and self-contained.
+function BrandMark({ size = 36 }: { size?: number }) {
+  const { tokens } = useTheme();
+  const radius = tokens.radiusControl;
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius,
+        overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: tokens.isComic ? tokens.surface : 'transparent',
+        borderWidth: tokens.isComic ? 1.5 : 0,
+        borderColor: tokens.border,
+      }}
+    >
+      {!tokens.isComic ? (
+        <Svg width={size} height={size} style={{ position: 'absolute' }}>
+          <Defs>
+            <SvgLinearGradient id="brandmark" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor="#7C3AED" />
+              <Stop offset="1" stopColor="#0EA5E9" />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect width={size} height={size} fill="url(#brandmark)" />
+        </Svg>
+      ) : null}
+      <Text
+        style={{
+          fontSize: size * 0.44,
+          fontWeight: '800',
+          color: tokens.isComic ? tokens.border : '#FFFFFF',
+          letterSpacing: 0.5,
+        }}
+      >
+        SH
+      </Text>
+    </View>
+  );
+}
+
+// Emoji glyph for a nav pill, mirroring web's per-plugin tile emoji. Admin keys reuse their base
+// plugin's glyph; a few non-plugin keys get their own.
+function keyEmoji(key: FeatureKey): string {
+  const special: Partial<Record<FeatureKey, string>> = {
+    home: '⚡',
+    'account-data': '🗄️',
+    'blocked-members': '🚫',
+    'comic-review': '🤖',
+  };
+  if (special[key]) return special[key] as string;
+  const base = key.replace(/-admin$/, '');
+  return getPluginEmoji(base);
+}
+
+// Accent for a nav pill's active state — the plugin's own accent, so each app keeps its colour
+// identity in the nav (matches web). Non-plugin keys fall back to the neutral accent.
+function keyAccent(key: FeatureKey, theme: ThemeName): string {
+  const base = key.replace(/-admin$/, '');
+  return getAppAccent(base, theme);
+}
 
 type FeatureKey =
   | 'home'
@@ -214,7 +282,7 @@ type UnlockGate = { loading: boolean; walled: boolean };
 
 function AppShell() {
   const { isLoading, isAuthenticated, user } = useAuth();
-  const { tokens } = useTheme();
+  const { tokens, theme } = useTheme();
   const [selected, setSelected] = useState<FeatureKey>('home');
 
   const isAdmin = Boolean(user?.isAdmin);
@@ -298,22 +366,26 @@ function AppShell() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: tokens.bg }]}>
-      <Text style={[styles.title, { color: tokens.textPrimary }]}>ChargingTheFuture Mobile</Text>
-      <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>
-        Web/Android plugin parity hub
-      </Text>
+      <View style={styles.brandRow}>
+        <BrandMark />
+        <View>
+          <Text style={[styles.wordmark, { color: tokens.textPrimary }]}>Charging The Future</Text>
+          <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>Community</Text>
+        </View>
+      </View>
 
       <ScrollView horizontal style={styles.pillRow} contentContainerStyle={styles.pillContent}>
         {featureOrder.map((feature) => {
           const active = selected === feature.key;
+          const accent = keyAccent(feature.key, theme);
           return (
             <TouchableOpacity
               key={feature.key}
               style={[
                 styles.pill,
                 {
-                  backgroundColor: active ? tokens.textPrimary : tokens.surface,
-                  borderColor: active ? tokens.textPrimary : tokens.border,
+                  backgroundColor: active ? `${accent}22` : tokens.surface,
+                  borderColor: active ? accent : tokens.border,
                   borderRadius: tokens.isComic ? 0 : 999,
                 },
               ]}
@@ -322,10 +394,10 @@ function AppShell() {
               <Text
                 style={[
                   styles.pillText,
-                  { color: active ? tokens.bg : tokens.textSecondary },
+                  { color: active ? tokens.textPrimary : tokens.textSecondary },
                 ]}
               >
-                {feature.label}
+                {keyEmoji(feature.key)}  {feature.label}
               </Text>
             </TouchableOpacity>
           );
@@ -345,15 +417,19 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingHorizontal: 12,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  wordmark: {
+    fontSize: 18,
+    fontWeight: '800',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    fontSize: 12,
+    fontWeight: '600',
   },
   pillRow: {
     maxHeight: 48,
