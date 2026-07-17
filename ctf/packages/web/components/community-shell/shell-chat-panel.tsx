@@ -453,24 +453,6 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         </section>
       ) : null}
 
-      {/* "@ Mentions" filter (desktop): on, the stream shows only messages that @-mention the viewer
-          (filtered server-side so old mentions beyond the loaded page are found too). On desktop the
-          chip sits above the stream; at phone width it renders inline as the leading chip of the
-          concierge row below (owner directive, 2026-07-16). */}
-      {!isMobile ? (
-        <div className={styles.mentionsFilterRow}>
-          <button
-            type="button"
-            className={mentionsOnly ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterBtnActive}` : styles.mentionsFilterBtn}
-            onClick={toggleMentionsOnly}
-            aria-pressed={mentionsOnly}
-            aria-label={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
-          >
-            <AtSign size={12} /> Mentions
-          </button>
-        </div>
-      ) : null}
-
       <div className={styles.chatMessages}>
         {(isLoading || isFilterRefreshing) && !hasContent ? (
           <p className={styles.chatFootnote}>{mentionsOnly ? 'Looking for your mentions…' : 'Loading live messages…'}</p>
@@ -620,35 +602,32 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           messages), so a member can always tap one. Unlike the old hidden chips (#471) that merely
           filled the composer with no answer, tapping here runs the local concierge (sendConciergeAsk):
           it posts the question and an instant reply pointing at the best-matching feature, so there is
-          always an immediate response. At phone width the "@ Mentions" filter chip leads this row
-          (owner directive, 2026-07-16) — same pill size as the question chips, sky-blue so it stays
-          visually distinct; it scrolls with the row. */}
-      {starterPrompts.length > 0 || isMobile ? (
-        <div className={styles.conciergeChipRail} role="group" aria-label="Ask what you need">
-          {isMobile ? (
-            <button
-              type="button"
-              className={mentionsOnly ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterChip} ${styles.mentionsFilterBtnActive}` : `${styles.mentionsFilterBtn} ${styles.mentionsFilterChip}`}
-              onClick={toggleMentionsOnly}
-              aria-pressed={mentionsOnly}
-              aria-label={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
-            >
-              <AtSign size={12} /> Mentions
-            </button>
-          ) : null}
-          {starterPrompts.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              className={styles.conciergeChip}
-              title={prompt}
-              onClick={() => sendConciergeAsk(prompt)}
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
-      ) : null}
+          always an immediate response. The "@ Mentions" filter chip leads this row at every width
+          (owner directive, 2026-07-17; it previously floated alone above the desktop stream) —
+          same pill size as the question chips, sky-blue so it stays visually distinct; it scrolls
+          with the row. The rail always renders because the chip is always present. */}
+      <div className={styles.conciergeChipRail} role="group" aria-label="Ask what you need">
+        <button
+          type="button"
+          className={mentionsOnly ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterChip} ${styles.mentionsFilterBtnActive}` : `${styles.mentionsFilterBtn} ${styles.mentionsFilterChip}`}
+          onClick={toggleMentionsOnly}
+          aria-pressed={mentionsOnly}
+          aria-label={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
+        >
+          <AtSign size={12} /> Mentions
+        </button>
+        {starterPrompts.map((prompt) => (
+          <button
+            key={prompt}
+            type="button"
+            className={styles.conciergeChip}
+            title={prompt}
+            onClick={() => sendConciergeAsk(prompt)}
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
 
       {/* @comic mention affordance + helper copy (per the locked design / naming rules). On phones
           the standalone "@comic" chip duplicated the "@comic" in the helper text, so the chip is

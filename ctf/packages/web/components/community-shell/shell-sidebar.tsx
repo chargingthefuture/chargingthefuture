@@ -55,7 +55,9 @@ export function ShellSidebar({
             <span>Admin</span>
           </Link>
         ) : null}
-        <p className={styles.sidebarFooterTitle}>Verified Community · Invite Only</p>
+        {/* Per-member verification exists (admin-reviewed); a community-wide "verified" claim does
+            not, so the footer states only the membership model. */}
+        <p className={styles.sidebarFooterTitle}>Invite Only</p>
         <p className={styles.sidebarFooterMeta}>4.9M survivors worldwide</p>
       </div>
     </aside>

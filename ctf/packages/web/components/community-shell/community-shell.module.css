@@ -1960,18 +1960,10 @@
 }
 
 /* ─── "@ Mentions" stream filter ─────────────────────────────────────────── */
-/* Desktop: a single small toggle above the stream, sized and shaped like the
-   @comic mention chip so it reads as one family of small chat controls. At
-   phone width the toggle instead renders inline as the leading chip of the
-   concierge row (`.mentionsFilterChip` resizes it to match those pills). The
-   active state fills in to show the stream is filtered to the viewer's
-   mentions. */
-.mentionsFilterRow {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 4px 6px;
-}
-
+/* The toggle renders at every width as the leading chip of the concierge row
+   (`.mentionsFilterChip` sizes it to match those pills) in the sky-blue
+   mentions color. The active state fills in to show the stream is filtered to
+   the viewer's mentions. */
 .mentionsFilterBtn {
   display: inline-flex;
   align-items: center;
@@ -1995,9 +1987,9 @@
   border-color: rgba(14, 165, 233, 0.55);
 }
 
-/* Phone width: the toggle leads the concierge chip row, so it takes the same
-   pill size as those chips (padding/radius/type) while keeping the sky-blue
-   mentions color and the @ icon so it stays visually distinct. */
+/* The toggle leads the concierge chip row, so it takes the same pill size as
+   those chips (padding/radius/type) while keeping the sky-blue mentions color
+   and the @ icon so it stays visually distinct. */
 .mentionsFilterChip {
   flex: 0 0 auto;
   white-space: nowrap;
