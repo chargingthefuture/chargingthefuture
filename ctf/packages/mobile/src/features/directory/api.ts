@@ -67,6 +67,68 @@ export interface DirectorySector {
   name: string;
 }
 
+// ID-based taxonomy option shapes returned by the shared directory taxonomy reads. Directory stores
+// and submits skills as taxonomy IDs (unlike SkillsHunt, which is name-string based), so the picker
+// toggles IDs and resolves names for display.
+export interface DirectoryJobTitleOption {
+  id: string;
+  name: string;
+  sectorId: string;
+}
+
+export interface DirectorySkillOption {
+  id: string;
+  name: string;
+  jobTitleId: string;
+}
+
+// The caller's OWN directory profile as returned by GET /api/directory/profile ({ profile }).
+// Mirrors the web DirectoryProfile fields the self-edit form round-trips. `proposedSkills` are the
+// member's own free-text "skill not listed" labels (editable subset of the read-only pendingSkills).
+export interface OwnDirectoryProfile {
+  id: string;
+  claimedByUserId: string | null;
+  firstName: string;
+  lastName: string | null;
+  headline: string | null;
+  bio: string | null;
+  profileUrl: string | null;
+  sectorId: string | null;
+  jobTitleId: string | null;
+  skills: DirectorySkill[];
+  proposedSkills: string[];
+  venmoAddress?: string | null;
+  moneroAddress?: string | null;
+  bitcoinAddress?: string | null;
+  serviceCreditsAddress?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+}
+
+// Full field set accepted by PUT /api/directory/profile. The route is a FULL UPSERT: any omitted
+// string field is reset to ''/null by the server's toProfileInput, so the member save MUST always
+// send every field — edited and unchanged alike — or an untouched payment address / location is
+// wiped. `country` is required server-side.
+export interface OwnDirectoryProfileInput {
+  firstName: string;
+  lastName: string | null;
+  headline: string | null;
+  bio: string | null;
+  profileUrl: string | null;
+  sectorId: string | null;
+  jobTitleId: string | null;
+  skillIds: string[];
+  proposedSkills: string[];
+  venmoAddress: string | null;
+  moneroAddress: string | null;
+  bitcoinAddress: string | null;
+  serviceCreditsAddress: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+}
+
 export async function fetchDirectoryList(
   opts: { page?: number; pageSize?: number; q?: string; sectorId?: string } = {},
 ): Promise<DirectoryListResponse> {
@@ -92,6 +154,60 @@ export async function fetchDirectorySectors(): Promise<DirectorySector[]> {
   }
   const data = (await res.json()) as { items: DirectorySector[] };
   return data.items;
+}
+
+// GET /api/directory/job-titles — the full job-title list (unfiltered) so the skills picker can group
+// every skill by sector and offer the profession prefill. Optional sectorId narrows it server-side.
+export async function fetchDirectoryJobTitles(sectorId?: string): Promise<DirectoryJobTitleOption[]> {
+  const qs = sectorId ? `?sectorId=${encodeURIComponent(sectorId)}` : '';
+  const res = await authedFetch(`${API_BASE}/job-titles${qs}`);
+  if (!res.ok) {
+    throw new Error(`directory/job-titles ${res.status}`);
+  }
+  const data = (await res.json()) as { items: DirectoryJobTitleOption[] };
+  return data.items;
+}
+
+// GET /api/directory/skills — the full skill list (unfiltered) so existing picks always resolve to
+// names and the accordion can show every sector's skills. Optional jobTitleId narrows it server-side.
+export async function fetchDirectorySkills(jobTitleId?: string): Promise<DirectorySkillOption[]> {
+  const qs = jobTitleId ? `?jobTitleId=${encodeURIComponent(jobTitleId)}` : '';
+  const res = await authedFetch(`${API_BASE}/skills${qs}`);
+  if (!res.ok) {
+    throw new Error(`directory/skills ${res.status}`);
+  }
+  const data = (await res.json()) as { items: DirectorySkillOption[] };
+  return data.items;
+}
+
+// GET /api/directory/profile — the caller's own profile, or null when they have none yet (the server
+// returns { profile: null } for a member without a claimed profile). Gated by requireDirectoryReadAccess.
+export async function fetchOwnDirectoryProfile(): Promise<OwnDirectoryProfile | null> {
+  const res = await authedFetch(`${API_BASE}/profile`);
+  if (!res.ok) {
+    throw new Error(`directory/profile ${res.status}`);
+  }
+  const data = (await res.json()) as { profile: OwnDirectoryProfile | null };
+  return data.profile ?? null;
+}
+
+// PUT /api/directory/profile — full upsert of the caller's own profile. Sends the CSRF header the
+// route requires and the COMPLETE field set (see OwnDirectoryProfileInput) so an untouched field is
+// never blanked. Returns the saved profile.
+export async function upsertOwnDirectoryProfile(input: OwnDirectoryProfileInput): Promise<OwnDirectoryProfile> {
+  const res = await authedFetch(`${API_BASE}/profile`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-ctf-csrf': '1',
+    },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`directory/profile update ${res.status}`);
+  }
+  const data = (await res.json()) as { ok: boolean; profile: OwnDirectoryProfile };
+  return data.profile;
 }
 
 // Shape returned by GET /api/directory/announcements (web lib/directory/types
