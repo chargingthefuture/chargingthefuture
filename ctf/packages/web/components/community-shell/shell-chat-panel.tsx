@@ -70,7 +70,7 @@ function formatPostTime(iso: string): string {
 }
 
 // A stable hue (0–359) derived from an author's handle, so the same member always gets the same
-// color. Both the avatar and the bubble tint read from this, keeping one person's posts in one
+// color. Both the avatar and the row highlight read from this, keeping one person's posts in one
 // consistent color family.
 function authorHue(authorUsername: string): number {
   let hash = 0;
@@ -91,16 +91,16 @@ function publicAvatarBackground(authorUsername: string | null): string {
   return `linear-gradient(135deg, hsl(${hue}, 62%, 55%) 0%, hsl(${(hue + 38) % 360}, 62%, 45%) 100%)`;
 }
 
-// Deterministic bubble tint for a signed-out community post, in the same hue family as the author's
-// avatar but dark enough that the light bubble text stays readable. This is the real fix for "every
-// message looks like one person": each member's bubbles carry their own color, not a shared purple.
-// Anonymized posts (no handle) get a neutral slate bubble that matches their neutral avatar.
-function publicBubbleBackground(authorUsername: string | null): string {
+// Faint per-author highlight for a signed-out message row (Discord-style list). Same hue family as
+// the author's avatar, but heavily desaturated and nearly transparent, so it reads as a subtle row
+// highlight — not a colored bubble — while consecutive messages from different members still
+// alternate visibly. Anonymized posts (no handle) share a neutral near-invisible white wash.
+function publicRowBackground(authorUsername: string | null): string {
   if (!authorUsername) {
-    return 'linear-gradient(135deg, #3a4453 0%, #2b333f 100%)';
+    return 'rgba(255, 255, 255, 0.04)';
   }
   const hue = authorHue(authorUsername);
-  return `linear-gradient(135deg, hsl(${hue}, 45%, 34%) 0%, hsl(${hue}, 48%, 26%) 100%)`;
+  return `hsla(${hue}, 30%, 50%, 0.09)`;
 }
 
 // Signed-out Commons: community (peer) posts are public the way Quora posts are, so a not-signed-in
@@ -179,7 +179,14 @@ function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats
             const authorLabel = post.authorUsername ? `@${post.authorUsername}` : 'Community member';
             const initial = post.authorUsername ? post.authorUsername.charAt(0).toUpperCase() : 'C';
             return (
-              <div key={post.id} className={styles.chatRow}>
+              // Discord-style full-width row: avatar left, handle + timestamp on top, body below.
+              // The faint per-author background makes adjacent posts from different members
+              // visibly distinct without turning the message into a colored blob.
+              <div
+                key={post.id}
+                className={styles.publicChatRow}
+                style={{ background: publicRowBackground(post.authorUsername) }}
+              >
                 <div
                   className={styles.chatAvatar}
                   style={{ background: publicAvatarBackground(post.authorUsername) }}
@@ -187,17 +194,12 @@ function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats
                 >
                   {initial}
                 </div>
-                <div className={styles.chatBubbleGroup}>
-                  {/* Sender name above the bubble, matching the signed-in stream. Without it every
-                      post read as one speaker; here each message is clearly attributed to its author. */}
-                  <span className={styles.chatSender}>{authorLabel}</span>
-                  <div
-                    className={`${styles.chatBubble} ${styles.chatBubbleHub}`}
-                    style={{ background: publicBubbleBackground(post.authorUsername) }}
-                  >
-                    {post.body}
+                <div className={styles.publicChatContent}>
+                  <div className={styles.publicChatMeta}>
+                    <span className={styles.chatSender}>{authorLabel}</span>
+                    <span className={styles.publicChatTime}>{formatPostTime(post.createdAtIso)}</span>
                   </div>
-                  <span className={styles.chatTime}>{formatPostTime(post.createdAtIso)}</span>
+                  <div className={styles.publicChatBody}>{post.body}</div>
                 </div>
               </div>
             );
