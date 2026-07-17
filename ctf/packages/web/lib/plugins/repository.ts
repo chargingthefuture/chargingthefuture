@@ -53,7 +53,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'skills-taxonomy',
     name: 'Skills Taxonomy',
-    summary: 'Hierarchy and CRUD for sectors, job titles, and skills with impact preview.',
+    summary: 'Browse the shared catalog of sectors, job titles, and skills.',
     availabilityState: 'implemented_shell',
     navRank: 20,
     isVisible: true,
