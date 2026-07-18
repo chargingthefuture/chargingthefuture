@@ -624,21 +624,24 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           same pill size as the question chips, sky-blue so it stays visually distinct; it scrolls
           with the row. The rail always renders because the chip is always present. */}
       <div className={styles.conciergeChipRail} role="group" aria-label="Ask what you need">
+        {/* Mentions filter — icon-only "@" chip (the word was dropped to match the 📣 chip), so the
+            two stream filters read as a matched pair of small glyph pills. */}
         <button
           type="button"
-          className={mentionsOnly ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterChip} ${styles.mentionsFilterBtnActive}` : `${styles.mentionsFilterBtn} ${styles.mentionsFilterChip}`}
+          className={mentionsOnly ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterBtnActive}` : styles.mentionsFilterBtn}
           onClick={toggleMentionsOnly}
           aria-pressed={mentionsOnly}
           aria-label={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
+          title={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
         >
-          <AtSign size={12} /> Mentions
+          <AtSign size={15} aria-hidden="true" />
         </button>
         {/* Announcements filter — "Announcements" is too long for a chip, so it shows the 📣 emoji
             alone. Filtering to announcements lets a member with limited message history still surface
             official updates that scrolled off the recent page. */}
         <button
           type="button"
-          className={announcementsOnly ? `${styles.announcementsFilterBtn} ${styles.mentionsFilterChip} ${styles.announcementsFilterBtnActive}` : `${styles.announcementsFilterBtn} ${styles.mentionsFilterChip}`}
+          className={announcementsOnly ? `${styles.announcementsFilterBtn} ${styles.announcementsFilterBtnActive}` : styles.announcementsFilterBtn}
           onClick={toggleAnnouncementsOnly}
           aria-pressed={announcementsOnly}
           aria-label={announcementsOnly ? 'Show all messages' : 'Show only announcements'}
