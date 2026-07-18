@@ -235,6 +235,25 @@ ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS summary 
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- === weekly_performance_goal_snapshots ===
+-- Weekly memory for the dashboard's two goal rows (GDP Community Value Index toward 300B,
+-- Workforce recruited toward 2,000,000). Those are STATE metrics — a current total, not a windowed
+-- event — so week-over-week needs a stored reading per week: reading the current week upserts the
+-- live value (last read of the week wins), and past weeks report their stored row. See
+-- ctf/packages/web/lib/weekly-performance/live-metrics.ts and
+-- ctf/docs/developer/PLUGIN_VALUE_METRICS.md.
+CREATE TABLE IF NOT EXISTS weekly_performance_goal_snapshots (
+  metric_key TEXT NOT NULL,
+  week_start_date DATE NOT NULL,
+  metric_value NUMERIC NOT NULL DEFAULT 0,
+  captured_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (metric_key, week_start_date)
+);
+ALTER TABLE IF EXISTS weekly_performance_goal_snapshots ADD COLUMN IF NOT EXISTS metric_key TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS weekly_performance_goal_snapshots ADD COLUMN IF NOT EXISTS week_start_date DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE IF EXISTS weekly_performance_goal_snapshots ADD COLUMN IF NOT EXISTS metric_value NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS weekly_performance_goal_snapshots ADD COLUMN IF NOT EXISTS captured_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- === foundation_connection_threads ===
 CREATE TABLE IF NOT EXISTS foundation_connection_threads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

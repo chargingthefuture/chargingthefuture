@@ -1533,3 +1533,644 @@ canonical_metrics:
     retention: 120 months
     allowed_thresholds:
       min: 0
+
+  # ─── Weekly Performance Rebuild Metrics ─────────────────────────────────
+  # Live weekly numbers computed by ctf/packages/web/lib/weekly-performance/live-metrics.ts.
+  # Each value.* metric counts one plugin's defining action inside the week window
+  # [:week_start, :week_end). The two wp_goal_* entries register only the weekly snapshot
+  # semantics; the underlying state metrics are already registered as gdp_value_index and
+  # workforce_recruited_current_count.
+
+  - id: wp_value_foundation_calls_answered
+    name: Weekly Foundation Calls Answered
+    description: Count of Foundation 1:1 calls that were answered and charged (at least one block charged) within the week window. Aggregate-only and shown on the admin surface only; the underlying participation is sensitive under rule 132 (wellbeing/payment), so it must never appear on a public surface or as any per-member figure.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: calls
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM foundation_call_sessions
+      WHERE answered_at >= :week_start
+        AND answered_at < :week_end
+        AND blocks_charged > 0;
+    inputs:
+      - name: foundation_call_sessions.answered_at
+        type: datetime
+      - name: foundation_call_sessions.blocks_charged
+        type: integer
+    example_values:
+      - 4
+      - 11
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_socket_relay_requests_fulfilled
+    name: Weekly SocketRelay Requests Fulfilled
+    description: Count of SocketRelay fulfillments the requester closed as successful within the week window. The table has no closed_at column; updated_at is written by the close, so it anchors the week.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: requests
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM socket_relay_fulfillments
+      WHERE updated_at >= :week_start
+        AND updated_at < :week_end
+        AND close_reason = 'successful';
+    inputs:
+      - name: socket_relay_fulfillments.updated_at
+        type: datetime
+      - name: socket_relay_fulfillments.close_reason
+        type: string
+    example_values:
+      - 6
+      - 14
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_trust_transport_trips_completed
+    name: Weekly TrustTransport Trips Completed
+    description: Count of TrustTransport trips completed within the week window where both the requester and the provider confirmed completion.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: trips
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM trust_transport_trips
+      WHERE completed_at >= :week_start
+        AND completed_at < :week_end
+        AND status = 'completed'
+        AND requester_completion_confirmed_at IS NOT NULL
+        AND provider_completion_confirmed_at IS NOT NULL;
+    inputs:
+      - name: trust_transport_trips.completed_at
+        type: datetime
+      - name: trust_transport_trips.status
+        type: string
+      - name: trust_transport_trips.requester_completion_confirmed_at
+        type: datetime|null
+      - name: trust_transport_trips.provider_completion_confirmed_at
+        type: datetime|null
+    example_values:
+      - 9
+      - 21
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_lighthouse_stays_completed
+    name: Weekly Lighthouse Stays Completed
+    description: Count of Lighthouse stays that reached completed status within the week window. The table has no completed_at column, so the window keys on updated_at of rows now in 'completed' — the status flip is the last write in the normal flow.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: stays
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM lighthouse_matches
+      WHERE updated_at >= :week_start
+        AND updated_at < :week_end
+        AND status = 'completed';
+    inputs:
+      - name: lighthouse_matches.updated_at
+        type: datetime
+      - name: lighthouse_matches.status
+        type: string
+    example_values:
+      - 2
+      - 7
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_chyme_tips_sent
+    name: Weekly Chyme Tips Sent
+    description: Count of peer tips sent through Chyme within the week window — completed ServiceCredits transfers originated by the Chyme plugin, never self-to-self.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: tips
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM service_credits_transfers
+      WHERE completed_at >= :week_start
+        AND completed_at < :week_end
+        AND status = 'completed'
+        AND origin_plugin = 'chyme'
+        AND sender_user_id <> recipient_user_id;
+    inputs:
+      - name: service_credits_transfers.completed_at
+        type: datetime
+      - name: service_credits_transfers.status
+        type: string
+      - name: service_credits_transfers.origin_plugin
+        type: string
+      - name: service_credits_transfers.sender_user_id
+        type: uuid
+      - name: service_credits_transfers.recipient_user_id
+        type: uuid
+    example_values:
+      - 33
+      - 58
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_service_credits_peer_sends
+    name: Weekly ServiceCredits Peer Sends
+    description: Count of completed direct peer-to-peer ServiceCredits sends within the week window. Scoping on origin_plugin keeps plugin-mediated transfers (Chyme tips, LevelUp flows) counted once, in their originating plugin.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: sends
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM service_credits_transfers
+      WHERE completed_at >= :week_start
+        AND completed_at < :week_end
+        AND status = 'completed'
+        AND origin_plugin = 'service-credits'
+        AND sender_user_id <> recipient_user_id;
+    inputs:
+      - name: service_credits_transfers.completed_at
+        type: datetime
+      - name: service_credits_transfers.status
+        type: string
+      - name: service_credits_transfers.origin_plugin
+        type: string
+      - name: service_credits_transfers.sender_user_id
+        type: uuid
+      - name: service_credits_transfers.recipient_user_id
+        type: uuid
+    example_values:
+      - 47
+      - 90
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_contributions_confirmed_usd
+    name: Weekly Contributions Confirmed USD
+    description: Sum (not a row count) of confirmed contribution dollars reviewed within the week window. Differs from contributions_fiat_confirmed_total, which is the cumulative all-time gift-card total; this one is windowed on reviewed_at.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: number
+    unit: USD
+    calculation: |
+      SELECT COALESCE(SUM(confirmed_amount_usd), 0) AS v
+      FROM contributions_submissions
+      WHERE status = 'confirmed'
+        AND reviewed_at >= :week_start
+        AND reviewed_at < :week_end;
+    inputs:
+      - name: contributions_submissions.status
+        type: string
+      - name: contributions_submissions.reviewed_at
+        type: datetime
+      - name: contributions_submissions.confirmed_amount_usd
+        type: currency
+    example_values:
+      - 45
+      - 120.5
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_skills_hunt_nominations_accepted
+    name: Weekly SkillsHunt Nominations Accepted
+    description: Count of SkillsHunt nominations a moderator accepted within the week window (an accepted nomination produces a real Directory profile plus a reward).
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: nominations
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM skills_hunt_submissions
+      WHERE reviewed_at >= :week_start
+        AND reviewed_at < :week_end
+        AND status = 'accepted'
+        AND deleted_at IS NULL;
+    inputs:
+      - name: skills_hunt_submissions.reviewed_at
+        type: datetime
+      - name: skills_hunt_submissions.status
+        type: string
+      - name: skills_hunt_submissions.deleted_at
+        type: datetime|null
+    example_values:
+      - 3
+      - 12
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_what_works_tools_approved
+    name: Weekly WhatWorks Tools Approved
+    description: Count of WhatWorks tools that were reviewed and approved within the week window.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: tools
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM what_works_products
+      WHERE reviewed_at >= :week_start
+        AND reviewed_at < :week_end
+        AND status = 'approved';
+    inputs:
+      - name: what_works_products.reviewed_at
+        type: datetime
+      - name: what_works_products.status
+        type: string
+    example_values:
+      - 2
+      - 5
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_what_works_endorsements_given
+    name: Weekly WhatWorks Endorsements Given
+    description: Count of WhatWorks endorsements created within the week window.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: endorsements
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM what_works_endorsements
+      WHERE created_at >= :week_start
+        AND created_at < :week_end;
+    inputs:
+      - name: what_works_endorsements.created_at
+        type: datetime
+    example_values:
+      - 8
+      - 19
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_level_up_completions
+    name: Weekly LevelUp Completions
+    description: Count of LevelUp enrollments that reached completed status within the week window (delivered value is completion, not the enrollment start). No completed_at column exists; the status flip writes updated_at.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: completions
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM level_up_enrollments
+      WHERE updated_at >= :week_start
+        AND updated_at < :week_end
+        AND status = 'completed';
+    inputs:
+      - name: level_up_enrollments.updated_at
+        type: datetime
+      - name: level_up_enrollments.status
+        type: string
+    example_values:
+      - 5
+      - 16
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_level_up_trainer_payouts
+    name: Weekly LevelUp Trainer Payouts
+    description: Count of LevelUp trainer payout disbursements created within the week window.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: payouts
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM level_up_disbursements
+      WHERE created_at >= :week_start
+        AND created_at < :week_end
+        AND disbursement_type = 'trainer_payout';
+    inputs:
+      - name: level_up_disbursements.created_at
+        type: datetime
+      - name: level_up_disbursements.disbursement_type
+        type: string
+    example_values:
+      - 3
+      - 9
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_recurring_ties_confirmed
+    name: Weekly Recurring Ties Confirmed
+    description: Count of Recurring Activity ties the counterparty confirmed within the week window.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: ties
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM recurring_activities
+      WHERE confirmed_at >= :week_start
+        AND confirmed_at < :week_end;
+    inputs:
+      - name: recurring_activities.confirmed_at
+        type: datetime
+    example_values:
+      - 4
+      - 13
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_peer_programming_active_posters
+    name: Weekly PeerProgramming Active Posters
+    description: Count of distinct members who posted at least one message in their PeerProgramming cohort within the week window. Participation is the plugin's purpose, so distinct posters is the honest dashboard signal.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: members
+    calculation: |
+      SELECT COUNT(DISTINCT author_user_id) AS v
+      FROM peer_programming_messages
+      WHERE created_at >= :week_start
+        AND created_at < :week_end;
+    inputs:
+      - name: peer_programming_messages.author_user_id
+        type: uuid
+      - name: peer_programming_messages.created_at
+        type: datetime
+    example_values:
+      - 11
+      - 26
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_beacon_broadcast_engagement
+    name: Weekly Beacon Broadcast Engagement
+    description: Count of distinct (member, broadcast) pairs that engaged with a Beacon broadcast's Commons replay post within the week window, via a reaction or a reply. One member engaging with the same broadcast many times counts once. Live in-event chat and reactions are held only in Stream and expire there, so they are not counted. Broadcast completion itself is not counted either — only the owner can start a session, so it would measure the admin, not members.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: engagements
+    calculation: |
+      SELECT COUNT(*) AS v FROM (
+        SELECT r.user_id AS member_id, b.id AS broadcast_id
+        FROM beacon_events b
+        JOIN feed_community_post_reactions r ON r.post_id = b.commons_recording_post_id
+        WHERE r.created_at >= :week_start AND r.created_at < :week_end
+        UNION
+        SELECT p.author_user_id AS member_id, b.id AS broadcast_id
+        FROM beacon_events b
+        JOIN feed_community_replies p ON p.post_id = b.commons_recording_post_id
+        WHERE p.created_at >= :week_start AND p.created_at < :week_end
+      ) engagement;
+    inputs:
+      - name: beacon_events.commons_recording_post_id
+        type: uuid
+      - name: feed_community_post_reactions.post_id
+        type: uuid
+      - name: feed_community_post_reactions.user_id
+        type: uuid
+      - name: feed_community_post_reactions.created_at
+        type: datetime
+      - name: feed_community_replies.post_id
+        type: uuid
+      - name: feed_community_replies.author_user_id
+        type: uuid
+      - name: feed_community_replies.created_at
+        type: datetime
+    example_values:
+      - 15
+      - 42
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_adoption_directory_findable_members
+    name: Weekly Directory Findable Members
+    description: Cumulative state count — claimed, active, non-deleted Directory profiles holding at least one skill, created by the end of the week window. Claim time is not stored, so the count reflects each profile's CURRENT claimed/active/skilled state, not its state at the time.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: members
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM directory_profiles p
+      WHERE p.claimed_by_user_id IS NOT NULL
+        AND p.is_active = TRUE
+        AND p.deleted_at IS NULL
+        AND p.created_at < :week_end
+        AND EXISTS (SELECT 1 FROM directory_profile_skills s WHERE s.profile_id = p.id);
+    inputs:
+      - name: directory_profiles.claimed_by_user_id
+        type: uuid|null
+      - name: directory_profiles.is_active
+        type: boolean
+      - name: directory_profiles.deleted_at
+        type: datetime|null
+      - name: directory_profiles.created_at
+        type: datetime
+      - name: directory_profile_skills.profile_id
+        type: uuid
+    example_values:
+      - 54
+      - 61
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_adoption_mood_checkins
+    name: Weekly Mood Check-ins
+    description: Count of mood check-ins submitted within the week window. Aggregate only — never an individual reading.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: check-ins
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM mood_submissions
+      WHERE submitted_at >= :week_start
+        AND submitted_at < :week_end;
+    inputs:
+      - name: mood_submissions.submitted_at
+        type: datetime
+    example_values:
+      - 38
+      - 72
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_adoption_mood_average
+    name: Weekly Mood Average
+    description: Average mood value across all check-ins submitted within the week window, rounded to two decimals. Aggregate only — never an individual reading.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: float
+    unit: mood_scale
+    calculation: |
+      SELECT ROUND(AVG(mood_value)::numeric, 2) AS v
+      FROM mood_submissions
+      WHERE submitted_at >= :week_start
+        AND submitted_at < :week_end;
+    inputs:
+      - name: mood_submissions.mood_value
+        type: integer
+      - name: mood_submissions.submitted_at
+        type: datetime
+    example_values:
+      - 3.4
+      - 3.72
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_adoption_click_log_incidents
+    name: Weekly ClickLog Incidents
+    description: Count of ClickLog incidents logged within the week window. ClickLog is a private personal tally, so this is aggregate only — never per-member detail.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: incidents
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM click_log_incidents
+      WHERE created_at >= :week_start
+        AND created_at < :week_end;
+    inputs:
+      - name: click_log_incidents.created_at
+        type: datetime
+    example_values:
+      - 22
+      - 40
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_adoption_click_log_active_loggers
+    name: Weekly ClickLog Active Loggers
+    description: Count of distinct members who logged at least one ClickLog incident within the week window. Aggregate only — never per-member detail.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: members
+    calculation: |
+      SELECT COUNT(DISTINCT user_id) AS v
+      FROM click_log_incidents
+      WHERE created_at >= :week_start
+        AND created_at < :week_end;
+    inputs:
+      - name: click_log_incidents.user_id
+        type: uuid
+      - name: click_log_incidents.created_at
+        type: datetime
+    example_values:
+      - 9
+      - 17
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_goal_gdp_value_index_weekly_snapshot
+    name: Weekly Goal Snapshot — Community Value Index
+    description: Weekly snapshot of the Community Value Index (the state metric already registered as gdp_value_index) toward the platform goal of 300000000000 index points. The index is a state metric, so week-over-week needs memory — each read of the current week upserts the live value into weekly_performance_goal_snapshots; past weeks report their stored snapshot; a week never read while current reports 0 and renders as not captured.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: index
+    calculation: |
+      -- Current week: compute the live gdp_value_index value, then upsert it as this week's snapshot
+      -- (last read of the week wins — the row converges to the week's closing value):
+      INSERT INTO weekly_performance_goal_snapshots (metric_key, week_start_date, metric_value, captured_at)
+      VALUES ('goal.gdp_value_index', :week_start, :live_value, NOW())
+      ON CONFLICT (metric_key, week_start_date)
+      DO UPDATE SET metric_value = EXCLUDED.metric_value, captured_at = NOW();
+      -- Past week: report the stored snapshot:
+      SELECT metric_value AS v
+      FROM weekly_performance_goal_snapshots
+      WHERE metric_key = 'goal.gdp_value_index'
+        AND week_start_date = :week_start;
+    inputs:
+      - name: weekly_performance_goal_snapshots.metric_key
+        type: string
+      - name: weekly_performance_goal_snapshots.week_start_date
+        type: date
+      - name: weekly_performance_goal_snapshots.metric_value
+        type: number
+      - name: weekly_performance_goal_snapshots.captured_at
+        type: datetime
+    example_values:
+      - 13340
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 120 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_goal_workforce_recruited_weekly_snapshot
+    name: Weekly Goal Snapshot — Workforce Recruited
+    description: Weekly snapshot of the workforce recruited count (the state metric already registered as workforce_recruited_current_count — all active, non-deleted Directory profiles) toward the platform goal of 2000000 members. A state metric, so week-over-week needs memory — each read of the current week upserts the live value into weekly_performance_goal_snapshots; past weeks report their stored snapshot; a week never read while current reports 0 and renders as not captured.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: members
+    calculation: |
+      -- Live value for the current week (the workforce_recruited_current_count definition):
+      SELECT COUNT(*) AS v
+      FROM directory_profiles
+      WHERE is_active = TRUE
+        AND deleted_at IS NULL;
+      -- Current week: upsert that live value as this week's snapshot (last read of the week wins):
+      INSERT INTO weekly_performance_goal_snapshots (metric_key, week_start_date, metric_value, captured_at)
+      VALUES ('goal.workforce_recruited', :week_start, :live_value, NOW())
+      ON CONFLICT (metric_key, week_start_date)
+      DO UPDATE SET metric_value = EXCLUDED.metric_value, captured_at = NOW();
+      -- Past week: report the stored snapshot:
+      SELECT metric_value AS v
+      FROM weekly_performance_goal_snapshots
+      WHERE metric_key = 'goal.workforce_recruited'
+        AND week_start_date = :week_start;
+    inputs:
+      - name: directory_profiles.is_active
+        type: boolean
+      - name: directory_profiles.deleted_at
+        type: datetime|null
+      - name: weekly_performance_goal_snapshots.metric_key
+        type: string
+      - name: weekly_performance_goal_snapshots.week_start_date
+        type: date
+      - name: weekly_performance_goal_snapshots.metric_value
+        type: number
+      - name: weekly_performance_goal_snapshots.captured_at
+        type: datetime
+    example_values:
+      - 67
+    last_updated: "2026-07-18T00:00:00Z"
+    update_cadence: weekly
+    retention: 120 months
+    allowed_thresholds:
+      min: 0

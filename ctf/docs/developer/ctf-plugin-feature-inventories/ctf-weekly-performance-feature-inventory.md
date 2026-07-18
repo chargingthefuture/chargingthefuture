@@ -70,6 +70,17 @@ Admin-or-operations routes (`ensureWeeklyPerformanceAdmin` admits `isAdmin` or t
 - `PUT /api/weekly-performance/admin/week-selection` — marks a week active (body `{ weekStartDate }`); requires the `x-ctf-csrf: '1'` header and writes a `weekly-performance.admin.week.select` audit row.
 - `GET /api/weekly-performance/export?weekStartDate=...` — returns the week's metrics snapshot as a synchronous inline JSON download (`{ok, weekStartDate, metrics}`); additionally guarded by the `WEEKLY_PERFORMANCE_EXPORT_ENABLED` environment flag and writes a `weekly-performance.report.export` audit row. There is no asynchronous artifact pipeline (no `exportId`/`artifactUrl`/`weekly_performance_exports` record) — the command contract was reconciled to this shipped behavior (#1128).
 
+Internal (service-to-service, never member/browser callable):
+
+- `POST /api/internal/weekly-performance/goal-snapshot` — records the current week's goal readings
+  (GDP Community Value Index, Workforce recruited) into `weekly_performance_goal_snapshots` by
+  computing the current week's metrics (the compute upserts the snapshot rows). Guarded by
+  `Authorization: Bearer INTERNAL_SERVICE_SECRET` (same posture as `/api/internal/product-update`);
+  501 when the secret is unconfigured, 401 on a bad token. Called daily by the scheduled workflow
+  `.github/workflows/weekly-performance-goal-snapshot.yml` so goal history never depends on someone
+  opening the dashboard that week (last capture of the week wins — the stored value converges to the
+  week's closing reading). Contract: `weekly-performance.goal-snapshot.capture`.
+
 ## 3) Data Dependencies and Contracts
 
 1. Aggregated users-domain metrics (new users, verification/approval totals).
@@ -85,6 +96,12 @@ The aggregates above are persisted in two tables in `ctf/schema.sql`:
 
 - `weekly_performance_metrics` — the per-week aggregate store. One row per metric: `id`, `week_start_date` (DATE), `metric_key`, `metric_value` (NUMERIC), `metric_unit`, `source_plugin`, `created_at`.
 - `weekly_performance_audit_trail` — the admin allow/deny audit log. Columns: `id`, `actor_id`, `command`, `policy_status`, `reason`, `target_type`, `target_id`, `metadata` (jsonb), `created_at` — the audit coverage required by §4.4.
+- `weekly_performance_goal_snapshots` — weekly memory for the dashboard's two goal rows (GDP
+  Community Value Index toward 300B; Workforce recruited toward 2,000,000). Those are state metrics
+  (a current total, not a windowed event), so week-over-week needs a stored reading per week: a read
+  of the current week upserts the live value (last read of the week wins), and past weeks report
+  their stored row. Columns: `metric_key` (TEXT), `week_start_date` (DATE), `metric_value`
+  (NUMERIC), `captured_at` — primary key `(metric_key, week_start_date)`.
 
 ## 4) Security and Compliance Controls
 
@@ -136,6 +153,39 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 ## 8) Change Log
 
+- 2026-07-18: **Dashboard rebuilt around the owner-locked value-metric table
+  (`ctf/docs/developer/PLUGIN_VALUE_METRICS.md`).** The old near-useless metric set (login counts,
+  feed counts, LevelUp *enrollments started*) is replaced in
+  `ctf/packages/web/lib/weekly-performance/live-metrics.ts` by three sections, in card order:
+  (1) **two goal rows** — GDP Community Value Index week-over-week toward the 300B goal (via the GDP
+  plugin's live report) and Workforce recruited toward 2,000,000 (active Directory profiles), both
+  snapshotted weekly in the new `weekly_performance_goal_snapshots` table (state metrics need memory
+  for week-over-week; the current-week read upserts the live value, past weeks report their stored
+  row); (2) **fifteen per-plugin value events** — each plugin's defining action (answered charged
+  Foundation calls — aggregate only, rule 132; successful SocketRelay closes; mutually-confirmed
+  TrustTransport trips; completed Lighthouse stays; Chyme tips; direct ServiceCredits peer sends;
+  confirmed Contributions dollars; accepted SkillsHunt nominations; approved WhatWorks tools +
+  endorsements; LevelUp completions + trainer payouts — replacing enrollments-started; confirmed
+  Recurring Activity ties; distinct PeerProgramming posters; Beacon engagement per unique broadcast
+  via the Commons replay post's reactions/replies); (3) **adoption rows** for Directory (findable
+  members), Mood (check-ins + average, aggregate only), and ClickLog (aggregate incidents + distinct
+  loggers). GentlePulse and Skills Taxonomy carry no dashboard stats (owner ruling). Web UI groups
+  the cards under Goals / Value delivered / Adoption headings, with goal cards showing compact
+  values and a progress bar toward the target (`wp-metric-cards.tsx`, `wp-shared.ts`, shared goal
+  constants in `lib/weekly-performance/goal-constants.ts`). All 22 metrics are registered in the
+  canonical metric registry (`ctf/config/canonical_metrics.yaml`, `wp_value_*` / `wp_adoption_*` /
+  `wp_goal_*`), and the command contracts' `dataAccess` lists now name the real upstream reads.
+  Android renders the new keys through its existing generic metric list (labels humanized from the
+  key); the goal progress *bar* is web-only for now — tracked as a gap. Schema: one new table
+  (`weekly_performance_goal_snapshots`), guarded CREATE/ALTER; `schema.demo.sql` regenerated.
+  **History guarantees (owner requirement):** the fifteen value events and three adoption rows are
+  never stored — any week, however old, recomputes live from the upstream rows, so week 1 vs week 53
+  works forever and past weeks recalculate when data changes. The two goal rows are the exception
+  (state totals), so a new internal route
+  (`POST /api/internal/weekly-performance/goal-snapshot`, bearer `INTERNAL_SERVICE_SECRET`, contract
+  `weekly-performance.goal-snapshot.capture`) is called daily by
+  `.github/workflows/weekly-performance-goal-snapshot.yml` to record the current week's goal
+  readings — goal history never depends on someone opening the dashboard that week.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
   the previous in-app page and falls back to All Apps when there is no in-app history. The admin
