@@ -55,20 +55,31 @@ good inside the channel, not just at the door.
 **Storage:** a computed eligibility flag plus a non-exposed reason snapshot. Reuse the Trust snapshot
 infrastructure rather than building a second scoring system.
 
-## 2. Gated channels
+## 2. The gated channel (one, not many)
 
-- **Channel model:** admin-created, or auto-formed the way PeerProgramming cohorts are — **topical**
-  channels with a purpose. **Not** user-created private rooms (a private room for a few friends is a
-  group DM by another name, and it moves trolling into an unwatched back-room). Keep the number
-  **small**.
+**One gated channel, not topic channels.** This is a correction from real evidence: the owner ran
+several topic-based Signal groups, nobody adhered to the topics, they were folded into one group, and
+a member said they preferred the single group. That result is not an anomaly — at low population there
+is not enough traffic to keep several rooms alive, so topic-splitting produces dead channels while a
+single general room is what actually gets used. The app already learned this twice: **Commons folded
+to one channel**, and **PeerProgramming runs a single standing cohort** in low-population mode instead
+of splitting members into tiny rooms. So the gated space is differentiated by **who is in it**
+(trusted members) and **what features it has**, **not** by topic.
+
+- **Channel model:** a single admin-owned channel — "Commons for trusted members." **Not** multiple
+  topic rooms, and **not** user-created private rooms (a private room for a few friends is a group DM
+  by another name, and it moves trolling into an unwatched back-room). Split into more than one channel
+  only if and when the single channel becomes genuinely too noisy to follow — the same low-population
+  reasoning PeerProgramming uses to decide whether to split cohorts.
+- **Launch gate:** do not open the channel until enough members qualify to make it feel alive. A cold,
+  near-empty "trusted" room reads worse than not having one, so gate the launch on a minimum number of
+  eligible members and let it open populated.
 - **Access:** channel membership is synced from the eligibility flag. Lose eligibility, lose access.
 - **Features (v1):** a richer reaction set / more emoji, threads, and longer messages. **No image
   upload.**
-- **Moderation:** moderators keep **read access** to these channels, and members are told so in-channel
+- **Moderation:** moderators keep **read access** to the channel, and members are told so in-channel
   ("moderators can read this channel"). That is what keeps a "non-public" channel from becoming an
   unmoderated back-room where the same trolling simply relocates.
-- **Detection:** keep the channel count small, logged, and moderated, so the spam-detection advantage
-  of few channels is not diluted.
 - **Implementation:** a distinct GetStream channel-type with the richer feature config; Commons stays
   its own, more limited channel-type. Stream already powers Chyme/Hub, so per-channel-type feature
   configuration (uploads off, reaction set, threads) is a native setting, not custom plumbing.
@@ -101,7 +112,9 @@ members something to aim for — and "you can earn it too" keeps it from reading
 - The exact eligibility weights/thresholds and the minimum account age.
 - The recompute cadence (weekly? alongside the trust snapshot?).
 - The badge's name and click-through wording (brand-voice pass).
-- How many gated channels, their topics, and admin-created vs auto-formed.
+- The minimum number of eligible members required before the single gated channel opens.
+- When (if ever) the single gated channel is noisy enough to justify splitting — the same
+  low-population trigger PeerProgramming uses for cohorts.
 - Whether a member can opt out of showing the badge.
 - Whether eligibility loss on a report is immediate or applies at the next recompute.
 
