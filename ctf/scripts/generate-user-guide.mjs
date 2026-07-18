@@ -1,0 +1,267 @@
+#!/usr/bin/env node
+/**
+ * Regenerates the public user guide from each member-facing plugin's own documentation.
+ *
+ * Grounding (this is the whole point): the ONLY facts fed to the model are, per plugin, the
+ * inventory's "User Features" section and the test script's "Core smoke" walkthrough — the two
+ * plain-language, always-current descriptions of what a member can do and how. The model rewrites
+ * those into the project's plain voice and is told, in the strongest terms, to invent nothing. This
+ * mirrors the product-update generator's grounding fix (issue #1471): a public page must never claim
+ * a capability its own docs do not state.
+ *
+ * Output:
+ *   - ctf/packages/web/app/guide/guide-content.json  (rendered by /guide)
+ *   - ctf/docs/USER_GUIDE.md                          (a plain markdown copy to share / paste to the wiki)
+ *
+ * Reads: ANTHROPIC_API_KEY (optional — without it, falls back to a deterministic, un-polished but
+ * still grounded extraction so the build never hard-depends on the model).
+ *
+ * Per-section "Last updated" is the last commit date touching that plugin's inventory + test script,
+ * so each section honestly reflects how current its source docs are.
+ */
+
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const repoRoot = join(__dirname, '../..');
+const ctfRoot = join(repoRoot, 'ctf');
+
+const INVENTORY_DIR = join(ctfRoot, 'docs/developer/ctf-plugin-feature-inventories');
+const TEST_SCRIPT_DIR = join(ctfRoot, 'docs/developer/test-scripts');
+const OUT_JSON = join(ctfRoot, 'packages/web/app/guide/guide-content.json');
+const OUT_MD = join(ctfRoot, 'docs/USER_GUIDE.md');
+
+// Reading order for the guide — people/connection first, then the ways to contribute, then the
+// quieter tools and stats. Each entry: [slug, display name]. Only member-facing plugins appear.
+const ORDER = [
+  ['directory', 'Directory'],
+  ['foundation', 'Foundation'],
+  ['chyme', 'Chyme'],
+  ['socket-relay', 'SocketRelay'],
+  ['beacon', 'Beacon'],
+  ['peer-programming', 'PeerProgramming'],
+  ['mood', 'Mood'],
+  ['gentle-pulse', 'GentlePulse'],
+  ['what-works', 'WhatWorks'],
+  ['skills-hunt', 'SkillsHunt'],
+  ['workforce', 'Workforce'],
+  ['skills-taxonomy', 'Skills Taxonomy'],
+  ['service-credits', 'ServiceCredits'],
+  ['contributions', 'Contributions'],
+  ['level-up', 'LevelUp'],
+  ['trust-transport', 'TrustTransport'],
+  ['lighthouse', 'LightHouse'],
+  ['click-log', 'ClickLog'],
+  ['recurring-activity', 'Recurring Activity'],
+  ['gdp', 'GDP'],
+];
+
+const repoUrl = 'https://github.com/chargingthefuture/chargingthefuture';
+
+const brandVoice = existsSync(join(ctfRoot, 'docs/BRAND_VOICE_LEXICON.md'))
+  ? readFileSync(join(ctfRoot, 'docs/BRAND_VOICE_LEXICON.md'), 'utf-8').slice(0, 2500)
+  : '';
+
+// ── Source resolution ──────────────────────────────────────────────────────────
+
+function inventoryPath(slug) {
+  const direct = join(INVENTORY_DIR, `ctf-${slug}-feature-inventory.md`);
+  if (existsSync(direct)) return direct;
+  // A few slugs map to a differently-named inventory file (e.g. gdp → gross-domestic-product).
+  const found = readdirSync(INVENTORY_DIR).find(
+    (f) => f.startsWith('ctf-') && f.includes(slug) && f.endsWith('-feature-inventory.md'),
+  );
+  if (found) return join(INVENTORY_DIR, found);
+  if (slug === 'gdp') {
+    const gdp = join(INVENTORY_DIR, 'ctf-gross-domestic-product-feature-inventory.md');
+    if (existsSync(gdp)) return gdp;
+  }
+  return null;
+}
+
+function testScriptPath(slug) {
+  const p = join(TEST_SCRIPT_DIR, `${slug}-test-script.md`);
+  return existsSync(p) ? p : null;
+}
+
+// Return the body of the first markdown section whose heading matches `headingRe`, stopping at the
+// next heading of the same or higher level. Empty string when not found.
+function extractSection(md, headingRe) {
+  const lines = md.split('\n');
+  let start = -1;
+  let level = 0;
+  for (let i = 0; i < lines.length; i += 1) {
+    const m = /^(#{1,6})\s+(.*)$/.exec(lines[i]);
+    if (m && headingRe.test(m[2])) {
+      start = i + 1;
+      level = m[1].length;
+      break;
+    }
+  }
+  if (start === -1) return '';
+  const out = [];
+  for (let i = start; i < lines.length; i += 1) {
+    const m = /^(#{1,6})\s+/.exec(lines[i]);
+    if (m && m[1].length <= level) break;
+    out.push(lines[i]);
+  }
+  return out.join('\n').trim();
+}
+
+// Last commit date (YYYY-MM-DD) touching any of the given files; today when git is unavailable.
+function lastUpdated(paths) {
+  const real = paths.filter(Boolean);
+  if (real.length === 0) return new Date().toISOString().slice(0, 10);
+  try {
+    const out = execFileSync(
+      'git',
+      ['log', '-1', '--format=%ad', '--date=short', '--', ...real],
+      { cwd: repoRoot, encoding: 'utf-8' },
+    ).trim();
+    return out || new Date().toISOString().slice(0, 10);
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+// ── Model call ───────────────────────────────────────────────────────────────
+
+const GROUNDING = `GROUNDING — DO NOT FABRICATE (most important rule, overrides everything):
+- The two source blocks below (this plugin's "User Features" and its "Core smoke" steps) are your ONLY facts. Every claim you write must trace to them. If they do not say it, you do not write it.
+- Invent no capability, number, date, rating, or outcome. When unsure what something does, say less — a vaguer true sentence beats a specific false one. A short section is fine.
+- The platform verifies NO ONE's identity, background, or work, and has no trust "score". Never write "verified", "verification", "vetted", "background check", or "trust score", even for Directory, Foundation, or Trust features. Foundation helpers are fellow community members, not a formally vetted service. Trust features are peer/social information only.
+- Describe MEMBER actions only. Skip anything admin-only.`;
+
+const VOICE = `VOICE:
+- Plain, about a 6th-grade reading level. Short sentences. Everyday words. Write to a capable adult, plainly.
+- Built and run by a single operator, not a company: never use "we", "our", or "us". Prefer person-free sentences ("Open X and pick…"); a singular "I" only if unavoidable.
+- No selling ("powerful", "seamless", "game-changer", "matters deeply"), no rhetorical questions, no closing flourish, no guessing at the reader's feelings.
+- Never use any of these words: thanks, sorry, glad, happy, excited, feel free, hope, phase, punch list.`;
+
+async function rewrite(slug, title, features, coreSmoke) {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      system: `You write a plain-language user guide for Charging the Future, a platform for survivors of Specterati harassment.\n\n${GROUNDING}\n\n${VOICE}\n\nBRAND VOICE NOTES:\n${brandVoice}`,
+      messages: [
+        {
+          role: 'user',
+          content: `Write the "${title}" section of the user guide, grounded ONLY in the two source blocks below.\n\n=== ${title} — User Features (what a member can do) ===\n${features || '(none documented)'}\n\n=== ${title} — Core smoke (plain member steps) ===\n${coreSmoke || '(none documented)'}\n\nReturn ONLY a JSON object with these exact keys:\n- summary: one plain sentence saying what ${title} is for.\n- body: an array of 1 to 3 short plain paragraphs on what a member can do here (strings).\n- howTo: an array of 2 to 4 plain steps for using it, drawn from the Core smoke block (strings). Use an empty array if there is no meaningful walkthrough.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
+        },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    console.error(`  model call failed for ${slug}: ${res.status}`);
+    return null;
+  }
+  const data = await res.json();
+  const text = data?.content?.[0]?.text ?? '';
+  try {
+    const parsed = JSON.parse(text.trim());
+    return {
+      summary: String(parsed.summary ?? '').trim(),
+      body: (Array.isArray(parsed.body) ? parsed.body : []).map((s) => String(s).trim()).filter(Boolean),
+      howTo: (Array.isArray(parsed.howTo) ? parsed.howTo : []).map((s) => String(s).trim()).filter(Boolean),
+    };
+  } catch {
+    console.error(`  could not parse model JSON for ${slug}`);
+    return null;
+  }
+}
+
+// Deterministic, un-polished but still grounded fallback: pull plain lines straight from the docs.
+function fallback(title, features, coreSmoke) {
+  const bullets = features
+    .split('\n')
+    .map((l) => l.replace(/^[\s\-*\d.)]+/, '').trim())
+    .filter((l) => l.length > 0 && !l.startsWith('#'))
+    .slice(0, 4);
+  const steps = coreSmoke
+    .split('\n')
+    .map((l) => l.replace(/^[\s\-*\d.)]+/, '').replace(/→.*$/, '').trim())
+    .filter((l) => l.length > 0 && !l.startsWith('#') && !l.startsWith('>'))
+    .slice(0, 4);
+  return {
+    summary: `${title} is part of the Charging the Future app.`,
+    body: bullets.length ? bullets : [`See the app to use ${title}.`],
+    howTo: steps,
+  };
+}
+
+// ── Build ──────────────────────────────────────────────────────────────────────
+
+const sections = [];
+for (const [slug, title] of ORDER) {
+  const invPath = inventoryPath(slug);
+  const tsPath = testScriptPath(slug);
+  const inv = invPath ? readFileSync(invPath, 'utf-8') : '';
+  const ts = tsPath ? readFileSync(tsPath, 'utf-8') : '';
+  const features = extractSection(inv, /User Features/i);
+  const coreSmoke = extractSection(ts, /Core smoke/i);
+  const updated = lastUpdated([invPath, tsPath]);
+
+  console.error(`generating ${slug}…`);
+  const written = (await rewrite(slug, title, features, coreSmoke)) ?? fallback(title, features, coreSmoke);
+  sections.push({
+    id: slug,
+    title,
+    updated,
+    summary: written.summary,
+    body: written.body,
+    ...(written.howTo && written.howTo.length ? { howTo: written.howTo } : {}),
+  });
+}
+
+const overallUpdated = sections
+  .map((s) => s.updated)
+  .sort()
+  .reverse()[0] ?? new Date().toISOString().slice(0, 10);
+
+const guide = {
+  updated: overallUpdated,
+  intro: [
+    'Charging the Future is a set of apps survivors use to work with and support each other, outside the Specterati economy. This guide walks through each part: what it does and how to use it.',
+    'Pick an app from the list below to jump to it.',
+  ],
+  sections,
+};
+
+writeFileSync(OUT_JSON, `${JSON.stringify(guide, null, 2)}\n`);
+
+// Plain markdown copy — easy to share and to paste into the GitHub wiki.
+const md = [
+  '# How to use Charging the Future',
+  '',
+  `_Last updated: ${overallUpdated}_`,
+  '',
+  ...guide.intro,
+  '',
+  ...sections.flatMap((s) => [
+    `## ${s.title}`,
+    '',
+    `_Last updated: ${s.updated}_`,
+    '',
+    s.summary,
+    '',
+    ...s.body.flatMap((p) => [p, '']),
+    ...(s.howTo && s.howTo.length ? ['**How to use it**', '', ...s.howTo.map((step, i) => `${i + 1}. ${step}`), ''] : []),
+  ]),
+  `The code is open source at ${repoUrl}.`,
+  '',
+].join('\n');
+
+writeFileSync(OUT_MD, md);
+
+console.error(`Wrote ${sections.length} sections. Overall last updated ${overallUpdated}.`);

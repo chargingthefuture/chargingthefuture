@@ -592,11 +592,19 @@ export function validateAnnouncementDraftInput(input: AnnouncementDraftInput): b
   const scheduleAt = normalizeNullableText(input.scheduleAtIso);
   const expiresAt = normalizeNullableText(input.expiresAtIso);
 
+  // The command contract marks targeting as required and the access policy lists
+  // targetingValidation: required. Reject an absent or non-object targeting here rather than
+  // letting normalizeTargeting silently coerce it to {} and persist a malformed draft.
+  const targeting = input.targeting;
+  const targetingOk =
+    typeof targeting === 'object' && targeting !== null && !Array.isArray(targeting);
+
   const checks = [
     title.length > 0 && title.length <= FEED_MAX_TITLE_LENGTH,
     body.length > 0 && body.length <= FEED_MAX_BODY_LENGTH,
     !scheduleAt || isValidIsoDatetime(scheduleAt),
     !expiresAt || isValidIsoDatetime(expiresAt),
+    targetingOk,
   ];
 
   return checks.every(Boolean);

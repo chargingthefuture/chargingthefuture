@@ -176,6 +176,25 @@ export const TAXONOMY_CHANGES = [
   // can pick them directly. Applies on the next owner run of the seed-skills-taxonomy apply workflow.
   { id: 50, op: 'addSkill', sector: 'Creative & Media', occupation: 'Graphic / Visual Designers', skill: 'Web and responsive design', occupationExisting: true },
   { id: 51, op: 'addSkill', sector: 'Creative & Media', occupation: 'Artists / Illustrators', skill: 'Illustration and concept art', occupationExisting: true },
+
+  // Changes 52-57 (owner-approved 2026-07-17): a "Web Developers" job title the taxonomy was missing.
+  // A live-DB check found no occupation containing "web" — the nearest were "Software Engineers /
+  // Developers" (R&D & High-Tech) and "Software Developers" (Telecommunications & IT), neither of them
+  // a web-development home. New occupation "Web Developers" under R&D & High-Tech (owner's sector pick —
+  // it clusters the web-building trades already there, UX/UI Designers and Software Engineers /
+  // Developers), seeded with five starter skills so the occupation is not inert (Workforce matches
+  // holders by skill name; a skill-less occupation matches nobody and shows empty in the browser).
+  // "Web and responsive design" repeats the name added under Graphic / Visual Designers in change 50 —
+  // deliberate: the same skill name may live under several occupations and each listing extends where
+  // its holders are matched. Op 52 creates the occupation; ops 53-57 add skills to it in the same apply
+  // transaction, so no occupationExisting flag is needed. Applies on the next owner run of the
+  // seed-skills-taxonomy apply workflow.
+  { id: 52, op: 'addOccupation', sector: 'R&D & High-Tech', occupation: 'Web Developers' },
+  { id: 53, op: 'addSkill', sector: 'R&D & High-Tech', occupation: 'Web Developers', skill: 'Front-end development' },
+  { id: 54, op: 'addSkill', sector: 'R&D & High-Tech', occupation: 'Web Developers', skill: 'Back-end development' },
+  { id: 55, op: 'addSkill', sector: 'R&D & High-Tech', occupation: 'Web Developers', skill: 'Full-stack development' },
+  { id: 56, op: 'addSkill', sector: 'R&D & High-Tech', occupation: 'Web Developers', skill: 'Web and responsive design' },
+  { id: 57, op: 'addSkill', sector: 'R&D & High-Tech', occupation: 'Web Developers', skill: 'JavaScript / TypeScript' },
 ];
 
 // ---------------------------------------------------------------------------

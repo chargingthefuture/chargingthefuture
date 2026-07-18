@@ -249,28 +249,44 @@ export async function ensureStandingCohort(actorId: string): Promise<PeerProgram
   return mapCohortRow(reread.rows[0]);
 }
 
+// Ensure the caller is a member of the single standing cohort (single-open mode only), creating the
+// standing cohort if needed and idempotently inserting the membership row. This is a WRITE and must
+// only be called by a route AFTER its access gate has authorized the user — it is deliberately kept
+// out of the read path (getMyCohort) so a plain read can never place a member. No-op in weekly mode,
+// where membership comes from runWeeklyAssignment, not from opening the room.
+export async function joinStandingCohort(userId: string): Promise<void> {
+  if (!userId || !(await isSingleOpenCohortModeEnabled())) {
+    return;
+  }
+  const standing = await ensureStandingCohort(userId);
+  await queryDb(
+    `INSERT INTO peer_programming_cohort_members (id, cohort_id, user_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (cohort_id, user_id) DO NOTHING`,
+    [randomUUID(), standing.id, userId],
+  );
+}
+
+// Resolve the caller's current cohort. READ-ONLY: it never writes, so it is safe to call from any
+// path regardless of the access gate. In single-open mode the caller is a member of the standing
+// cohort only once a gated route has called joinStandingCohort (that is where the write lives); until
+// then this returns null, exactly like the weekly path returns null for an unassigned user.
 export async function getMyCohort(userId: string): Promise<PeerProgrammingCohort | null> {
-  // Single standing, always-open Cohort 1 mode: resolve the one standing cohort (is_standing = TRUE),
-  // regardless of week, and idempotently add the requesting member to it so any active member who
-  // opens the room can POST, not just listen. The room read-access gate already authorized this
-  // user, so we only insert the membership row for that gated user here.
+  if (!userId) {
+    return null;
+  }
+
   if (await isSingleOpenCohortModeEnabled()) {
-    const standing = await ensureStandingCohort(userId);
-    await queryDb(
-      `INSERT INTO peer_programming_cohort_members (id, cohort_id, user_id)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (cohort_id, user_id) DO NOTHING`,
-      [randomUUID(), standing.id, userId],
-    );
-    // Re-read so the returned member_count reflects this just-added membership.
-    const refreshed = await queryDb<CohortRow>(
+    const standingResult = await queryDb<CohortRow>(
       `SELECT ${COHORT_SELECT_COLUMNS}
        FROM peer_programming_cohorts c
-       WHERE c.id = $1
+       INNER JOIN peer_programming_cohort_members m ON m.cohort_id = c.id
+       WHERE c.is_standing = TRUE
+         AND m.user_id = $1
        LIMIT 1`,
-      [standing.id],
+      [userId],
     );
-    return refreshed.rows[0] ? mapCohortRow(refreshed.rows[0]) : standing;
+    return standingResult.rows[0] ? mapCohortRow(standingResult.rows[0]) : null;
   }
 
   const weekStartDate = getWeekStartDate();
@@ -529,14 +545,17 @@ export async function runWeeklyAssignment(input: { actorId: string; activeUserId
       );
 
       const idempotencyKey = `${weekStartDate}:${standing.cohortLabel}:${userId}`;
-      await queryDb(
+      const notificationResult = await queryDb<{ id: string }>(
         `INSERT INTO peer_programming_assignment_notifications (id, cohort_id, user_id, idempotency_key, payload, delivered_at)
          VALUES ($1, $2, $3, $4, $5::jsonb, NOW())
-         ON CONFLICT (user_id, idempotency_key) DO NOTHING`,
+         ON CONFLICT (user_id, idempotency_key) DO NOTHING
+         RETURNING id`,
         [randomUUID(), standing.id, userId, idempotencyKey, JSON.stringify({ weekStartDate, cohortLabel: standing.cohortLabel })],
       );
 
-      notificationsCreated += 1;
+      if (notificationResult.rows.length > 0) {
+        notificationsCreated += 1;
+      }
     }
     return { cohortsCreated: 1, notificationsCreated };
   }
@@ -574,14 +593,17 @@ export async function runWeeklyAssignment(input: { actorId: string; activeUserId
       );
 
       const idempotencyKey = `${weekStartDate}:${cohortLabel}:${userId}`;
-      await queryDb(
+      const notificationResult = await queryDb<{ id: string }>(
         `INSERT INTO peer_programming_assignment_notifications (id, cohort_id, user_id, idempotency_key, payload, delivered_at)
          VALUES ($1, $2, $3, $4, $5::jsonb, NOW())
-         ON CONFLICT (user_id, idempotency_key) DO NOTHING`,
+         ON CONFLICT (user_id, idempotency_key) DO NOTHING
+         RETURNING id`,
         [randomUUID(), cohortId, userId, idempotencyKey, JSON.stringify({ weekStartDate, cohortLabel })],
       );
 
-      notificationsCreated += 1;
+      if (notificationResult.rows.length > 0) {
+        notificationsCreated += 1;
+      }
     }
   }
 

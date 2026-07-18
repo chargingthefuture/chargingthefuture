@@ -1,4 +1,4 @@
-export type PeerProgrammingTier = 'cohort_member' | 'authenticated_audience' | 'public_audience';
+export type PeerProgrammingTier = 'cohort_member' | 'authenticated_audience' | 'unauthenticated_audience';
 
 export type PeerProgrammingTopic = {
   id: string;
