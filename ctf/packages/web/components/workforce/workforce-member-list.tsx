@@ -18,7 +18,15 @@ const REASON_STYLE: Record<WorkforceMatchReason, { label: string; color: string 
 // One matched occupation with its own reason, the specific skills that produced it (skill matches
 // only), and how many positions the occupation still has to fill — so the card shows how this
 // member's skills fill the demand instead of implying every listed skill caused every match.
-function OccupationMatchRow({ occupation }: { occupation: WorkforceMatchedMember['matchingOccupations'][number] }) {
+// `showGap` renders the population-model "N to fill" / "filled" column; the Community Planning tab
+// turns it off because that figure is workforce-scale and irrelevant to planning one neighbourhood.
+function OccupationMatchRow({
+  occupation,
+  showGap,
+}: {
+  occupation: WorkforceMatchedMember['matchingOccupations'][number];
+  showGap: boolean;
+}) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
   const reason = REASON_STYLE[occupation.reason];
@@ -54,13 +62,15 @@ function OccupationMatchRow({ occupation }: { occupation: WorkforceMatchedMember
           via {occupation.viaSkills.join(', ')}
         </span>
       ) : null}
-      {occupation.gap > 0 ? (
-        <span style={{ fontSize: 11, fontWeight: 600, color: '#F97316', marginLeft: 'auto' }}>
-          {occupation.gap.toLocaleString()} to fill
-        </span>
-      ) : (
-        <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>filled</span>
-      )}
+      {showGap ? (
+        occupation.gap > 0 ? (
+          <span style={{ fontSize: 11, fontWeight: 600, color: '#F97316', marginLeft: 'auto' }}>
+            {occupation.gap.toLocaleString()} to fill
+          </span>
+        ) : (
+          <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>filled</span>
+        )
+      ) : null}
     </div>
   );
 }
@@ -88,12 +98,17 @@ function Chip({ text }: { text: string }) {
 // (/apps/directory/profile/:profileId — the auth-gated deep link a signed-in member can open). Off by
 // default so the sector / skill-level / occupation drilldowns render plain names; the Community
 // Planning tab opts in, since that view is about assigning named people to teams.
+// `showOccupationGap` (default on) renders each occupation row's population-model "N to fill" column;
+// the Community Planning tab turns it off — that workforce-scale figure means nothing for planning one
+// neighbourhood, matching the team-level gap already dropped from that view.
 export function WorkforceMemberList({
   members,
   linkProfiles = false,
+  showOccupationGap = true,
 }: {
   members: WorkforceMatchedMember[];
   linkProfiles?: boolean;
+  showOccupationGap?: boolean;
 }) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
@@ -164,7 +179,7 @@ export function WorkforceMemberList({
             {m.matchingOccupations.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {m.matchingOccupations.map((o) => (
-                  <OccupationMatchRow key={o.id} occupation={o} />
+                  <OccupationMatchRow key={o.id} occupation={o} showGap={showOccupationGap} />
                 ))}
               </div>
             ) : null}
