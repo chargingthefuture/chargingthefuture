@@ -247,12 +247,18 @@ contracts:
 
   - pluginId: contributor-access
     command: contributor-access.channel.message.create
-    version: 1.0.0
+    version: 1.1.0
     description: >-
       Post to the gated channel (optionally as a Signal-style quoted reply - the channel's thread
       mechanism). Same three-way gate as the list command. Text only, up to 4000 characters
       (longer than the Commons' 1200); there is NO image or file path - uploads are also disabled
-      on the Stream channel type. CSRF-confirmed mutation.
+      on the Stream channel type. CSRF-confirmed mutation. Runs the same two pre-store guards the
+      Commons runs on community posts: the content gate (no raw angle-bracket markup, at most
+      three links - a failing post is refused with 422 and the stable code
+      content_policy_violation, never stored, never visible to anyone) and the per-member posting
+      rate limit (8 posts per 30 minutes counted in the database, the Commons community-post
+      threshold - over the window is 429 with the stable code rate_limit_exceeded). A stored post
+      carries moderation_status 'accepted' and every read filters to that status.
     inputSchema:
       text:
         type: string
@@ -269,6 +275,39 @@ contracts:
       - contributor_access_config
       - contributor_access_eligibility
       - contributor_access_channel_posts
+    purpose: channel_messaging
+    retentionClass: user_content
+    idempotency: false
+
+  - pluginId: contributor-access
+    command: contributor-access.channel.post.delete
+    version: 1.0.0
+    description: >-
+      Soft-delete a gated-channel post (DELETE on the post id - the same route shape as the
+      Commons author delete). Two allowed paths - the post's author, or an admin removing any
+      post (the moderator power the in-channel disclosure line discloses). Soft delete only:
+      deleted_at/deleted_by are set and every read excludes the row - content is hidden, not
+      erased. Anyone else gets 403 (the denied attempt is audited). Both allowed paths write the
+      audit trail under distinct commands - the author path as
+      contributor-access.channel.post.delete (reason author_delete), the admin path as
+      contributor-access.channel.post.moderator-delete (reason admin_moderation_delete). There is
+      no Stream-side message to remove: the database is the message source of truth and Stream
+      carries only presence/typing for this channel. Same three-way gate as the list command;
+      CSRF-confirmed mutation.
+    inputSchema:
+      postId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      postId:
+        type: string
+    dataAccess:
+      - contributor_access_config
+      - contributor_access_eligibility
+      - contributor_access_channel_posts
+      - contributor_access_audit_trail
     purpose: channel_messaging
     retentionClass: user_content
     idempotency: false
@@ -352,3 +391,15 @@ changelog:
       audit-trailed (same posture as the Commons hub routes); the launch-gate deny IS audited.
       Membership visibility is server-filtered: the Hub channel list includes the gated channel
       only for eligible members and admins - never a teaser for anyone else.
+  - date: 2026-07-18
+    change: >-
+      Channel moderation, rate limit, and delete (closes the two recorded inventory gaps).
+      channel.message.create 1.1.0 - gains the Commons-mirrored content gate (422
+      content_policy_violation; the post is never stored) and the Commons community-post rate
+      limit (8 per 30 minutes per member, counted in the database; 429 rate_limit_exceeded);
+      stored posts carry moderation_status 'accepted' and reads filter to it (new guarded column).
+      New channel.post.delete - author or admin soft delete (deleted_at/deleted_by guarded
+      columns; reads exclude deleted rows; a quote of a deleted post resolves to nothing); the
+      author and admin paths are audited under distinct commands
+      (contributor-access.channel.post.delete / contributor-access.channel.post.moderator-delete)
+      and a non-owner attempt is a 403 with an audited deny.

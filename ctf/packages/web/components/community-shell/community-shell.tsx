@@ -275,6 +275,11 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
   return (
     <div className={`${styles.shell} ctf-self-responsive`}>
       <header className={styles.mobileBar}>
+        {/* Brand mark on the phone bar (styled in CSS, previously unused): it is the first product
+            identity a member sees on a phone. It sits on the left; the section tabs keep their
+            margin-left:auto so the tabs + controls cluster on the right. "TSE" matches the site
+            title "TI Skills Economy (TSE)" in layout.tsx. */}
+        <div className={styles.mobileBarLogo} aria-hidden="true">TSE</div>
         <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
           <button
             type="button"
@@ -341,6 +346,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           channels={channels}
           activeChannel={activeChannel}
           onChannelSelect={handleChannelSelect}
+          shellStats={shellStats}
           isAdmin={isAdmin}
         />
         <main className={`${styles.panel} ${styles.content}`}>
@@ -380,7 +386,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           ) : null}
           {section === 'chat' ? (
             activeChannel === GATED_CHANNEL_SLUG ? (
-              <GatedChatPanel currentUser={currentUser} />
+              <GatedChatPanel currentUser={currentUser} isAdmin={isAdmin} />
             ) : (
               <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} signInUrl={signInUrl} />
             )

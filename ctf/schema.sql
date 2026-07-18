@@ -5557,13 +5557,19 @@ ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS cr
 -- visible ONLY to channel members (the eligibility flag) and admins — never to the public
 -- Commons/feed. `reply_to_post_id` is the Signal-style quoted reply (the channel's thread
 -- mechanism). Text only — there is no image/file column and none may be added (proposal hard
--- guardrail: no images in v1).
+-- guardrail: no images in v1). `moderation_status` mirrors the Commons feed_community_posts
+-- column (posts that pass the content gate store 'accepted'; reads filter to it). `deleted_at` /
+-- `deleted_by` are the author/admin soft delete: content is hidden from every read, not erased,
+-- and `deleted_by` records who removed it (the author, or an admin acting as moderator).
 CREATE TABLE IF NOT EXISTS contributor_access_channel_posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   author_user_id TEXT NOT NULL,
   author_username TEXT NULL,
   body TEXT NOT NULL,
   reply_to_post_id UUID NULL,
+  moderation_status TEXT NOT NULL DEFAULT 'accepted',
+  deleted_at TIMESTAMPTZ NULL,
+  deleted_by TEXT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS id UUID;
@@ -5571,6 +5577,9 @@ ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS 
 ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS author_username TEXT;
 ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS reply_to_post_id UUID;
+ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS deleted_by TEXT;
 ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS contributor_access_channel_posts_created_idx ON contributor_access_channel_posts (created_at DESC);
 

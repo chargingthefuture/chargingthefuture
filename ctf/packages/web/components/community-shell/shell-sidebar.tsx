@@ -3,16 +3,32 @@
 import Link from 'next/link';
 import { SlidersHorizontal } from 'lucide-react';
 import type { HubChannelInfo } from '../../lib/hub/types';
+import type { ShellStats } from './shell-types';
+import { formatScaledValue } from './shell-format';
 import styles from './community-shell.module.css';
 
 type ShellSidebarProps = {
   channels: HubChannelInfo[];
   activeChannel: string | null;
   onChannelSelect: (slug: string) => void;
+  // Live shell stats (member count) for the footer, so the count is real instead of hardcoded.
+  shellStats?: ShellStats;
   // Admins get an Admin link in the sidebar footer. This rail is desktop-only
   // (hidden on phones); on phones admins reach /admin from the top bar instead.
   isAdmin?: boolean;
 };
+
+// A readable label for a channel: prefer the server-provided displayName, falling back to a
+// Title-cased version of the slug ("general-announcements" → "General Announcements") so the rail
+// never shows a raw database slug.
+function channelLabel(channel: HubChannelInfo): string {
+  const name = channel.displayName?.trim();
+  if (name) return name;
+  return channel.slug
+    .split('-')
+    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+    .join(' ');
+}
 
 // The sidebar is the chat-channel navigation only. Apps are browsed in the main "Apps"
 // grid (ShellAppsPanel), so the sidebar deliberately does not list them — having the same
@@ -22,8 +38,10 @@ export function ShellSidebar({
   channels,
   activeChannel,
   onChannelSelect,
+  shellStats,
   isAdmin = false,
 }: ShellSidebarProps) {
+  const memberCount = shellStats?.memberCount ?? null;
   return (
     <aside className={`${styles.panel} ${styles.leftNav}`}>
       <div className={styles.sidebarHeader}>
@@ -42,7 +60,7 @@ export function ShellSidebar({
               onClick={() => onChannelSelect(ch.slug)}
             >
               <span className={styles.sidebarChannelHash}>#</span>
-              <span className={styles.sidebarChannelName}>{ch.slug}</span>
+              <span className={styles.sidebarChannelName}>{channelLabel(ch)}</span>
             </button>
           );
         })}
@@ -58,7 +76,9 @@ export function ShellSidebar({
         {/* Per-member verification exists (admin-reviewed); a community-wide "verified" claim does
             not, so the footer states only the membership model. */}
         <p className={styles.sidebarFooterTitle}>Invite Only</p>
-        <p className={styles.sidebarFooterMeta}>4.9M survivors worldwide</p>
+        <p className={styles.sidebarFooterMeta}>
+          {memberCount ? `${formatScaledValue(memberCount)} survivors worldwide` : 'Survivors worldwide'}
+        </p>
       </div>
     </aside>
   );

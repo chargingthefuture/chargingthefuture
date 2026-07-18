@@ -18,7 +18,8 @@ type IconRailProps = {
 export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthenticated = false, isAdmin = false }: IconRailProps) {
   return (
     <aside className={styles.iconRail}>
-      <div className={styles.iconRailLogo} aria-hidden="true">SH</div>
+      {/* Product wordmark — matches the site title "TI Skills Economy (TSE)" in layout.tsx. */}
+      <div className={styles.iconRailLogo} aria-hidden="true">TSE</div>
 
       <button
         type="button"

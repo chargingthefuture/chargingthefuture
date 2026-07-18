@@ -13,6 +13,7 @@ import { useHomeChat } from './use-home-chat';
 import { ComicAnswerCard, ComicPendingCard } from './comic-cards';
 import { AnnouncementCard } from './announcement-card';
 import { ComicConsentModal } from './comic-consent-modal';
+import { formatScaledValue } from './shell-format';
 import styles from './community-shell.module.css';
 
 const ECONOMY_TARGET_USD = 300_000_000_000;
@@ -24,14 +25,6 @@ function avatarFromSender(label: string): string {
   if (!trimmed || trimmed.toLowerCase() === 'survivor hub') return 'SH';
   const handle = trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
   return handle.charAt(0).toUpperCase() || 'SH';
-}
-
-function formatScaledValue(value: number | null, prefix = ''): string {
-  if (!value) return `${prefix}0`;
-  if (value >= 1_000_000_000) return `${prefix}${(value / 1_000_000_000).toFixed(0)}B`;
-  if (value >= 1_000_000) return `${prefix}${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `${prefix}${(value / 1_000).toFixed(1)}K`;
-  return `${prefix}${value.toLocaleString()}`;
 }
 
 // One unified stream entry: either a peer/hub chat message or an AI Assistant (@comic) Q&A item.
@@ -111,6 +104,7 @@ function publicRowBackground(authorUsername: string | null): string {
 function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats; plugins: PluginRegistryItem[]; signInUrl: string }) {
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
   const opportunityValue = Math.max(ECONOMY_TARGET_USD - (stats.gdpValueUsd ?? 0), 0);
+  const isMobile = useIsMobile();
 
   const [posts, setPosts] = useState<PublicCommunityPost[]>([]);
   const [isPublic, setIsPublic] = useState(false);
@@ -149,26 +143,31 @@ function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats
           <h1 className={styles.heroBannerTitle}>Welcome to Survivor Hub</h1>
           <p className={styles.heroBannerSub}>Connect with your community. Access {implementedCount} live plugins for housing, work, safety, and support.</p>
         </div>
-        <div className={styles.heroStats}>
-          <div className={styles.heroStatBlock}>
-            <span className={styles.heroStatValue} style={{ color: '#A78BFA' }}>
-              {formatScaledValue(stats.memberCount)}
-            </span>
-            <span className={styles.heroStatLabel}>Members</span>
+        {/* Stats are hidden on phones, where the three blocks filled a quarter of the first screen
+            before any community posts were visible (the authenticated panel already hides its whole
+            hero on mobile). The title + description above stay. */}
+        {!isMobile ? (
+          <div className={styles.heroStats}>
+            <div className={styles.heroStatBlock}>
+              <span className={`${styles.heroStatValue} ${styles.heroStatMembers}`}>
+                {formatScaledValue(stats.memberCount)}
+              </span>
+              <span className={styles.heroStatLabel}>Members</span>
+            </div>
+            <div className={styles.heroStatBlock}>
+              <span className={`${styles.heroStatValue} ${styles.heroStatGdp}`}>
+                {formatScaledValue(stats.gdpValueUsd, '$')}
+              </span>
+              <span className={styles.heroStatLabel}>GDP</span>
+            </div>
+            <div className={styles.heroStatBlock}>
+              <span className={`${styles.heroStatValue} ${styles.heroStatOpport}`}>
+                {formatScaledValue(opportunityValue, '$')}
+              </span>
+              <span className={styles.heroStatLabel}>Opportunity</span>
+            </div>
           </div>
-          <div className={styles.heroStatBlock}>
-            <span className={styles.heroStatValue} style={{ color: '#38BDF8' }}>
-              {formatScaledValue(stats.gdpValueUsd, '$')}
-            </span>
-            <span className={styles.heroStatLabel}>GDP</span>
-          </div>
-          <div className={styles.heroStatBlock}>
-            <span className={styles.heroStatValue} style={{ color: '#34D399' }}>
-              {formatScaledValue(opportunityValue, '$')}
-            </span>
-            <span className={styles.heroStatLabel}>Opportunity</span>
-          </div>
-        </div>
+        ) : null}
       </div>
 
       <div className={styles.chatMessages}>
@@ -435,19 +434,19 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         </div>
         <div className={styles.heroStats}>
           <div className={styles.heroStatBlock}>
-            <span className={styles.heroStatValue} style={{ color: '#A78BFA' }}>
+            <span className={`${styles.heroStatValue} ${styles.heroStatMembers}`}>
               {formatScaledValue(stats.memberCount)}
             </span>
             <span className={styles.heroStatLabel}>Members</span>
           </div>
           <div className={styles.heroStatBlock}>
-            <span className={styles.heroStatValue} style={{ color: '#38BDF8' }}>
+            <span className={`${styles.heroStatValue} ${styles.heroStatGdp}`}>
               {formatScaledValue(stats.gdpValueUsd, '$')}
             </span>
             <span className={styles.heroStatLabel}>GDP</span>
           </div>
           <div className={styles.heroStatBlock}>
-            <span className={styles.heroStatValue} style={{ color: '#34D399' }}>
+            <span className={`${styles.heroStatValue} ${styles.heroStatOpport}`}>
               {formatScaledValue(opportunityValue, '$')}
             </span>
             <span className={styles.heroStatLabel}>Opportunity</span>

@@ -13,7 +13,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` (the engine reads upstream seeded tables) |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributor-access-feature-inventory.md` |
-| **Generated** | 2026-07-18 (initial authoring) · updated 2026-07-18 (badge + gated channel slices) |
+| **Generated** | 2026-07-18 (initial authoring) · updated 2026-07-18 (badge + gated channel slices; channel moderation, rate limit, delete) |
 
 ## How to run this
 
@@ -224,6 +224,52 @@ outage during revoke/reinstate never blocks the action itself (the response carr
 `channelSyncWarning` and membership reconciles on the next sync).
 **Result:** web ☐ mobile ☐ — notes:
 
+### CA-C5 · Posting rate limit (same threshold as the Commons)
+**Role:** eligible member · **Surfaces:** web (desktop), web (mobile-responsive)
+**Steps:**
+1. In `#contributors`, post 8 short messages inside a few minutes.
+2. Post a 9th.
+3. Wait past the window (or use a second account) and post again.
+**Expected:** The first 8 send. The 9th is refused with the same error-banner state the Commons
+shows when its posting limit trips (the route answers 429 with the stable code
+`rate_limit_exceeded`); nothing is stored for it. Deleting one of your posts does NOT free a slot
+(deleted rows still count toward the window). After the 30-minute window passes, posting works
+again.
+**Result:** web ☐ mobile ☐ — notes:
+
+### CA-C6 · Content gate — a blocked post is never shown to anyone
+**Role:** eligible member + a second eligible account · **Surfaces:** web (desktop), web (mobile-responsive)
+**Steps:**
+1. Try to post a message containing raw angle-bracket markup (e.g. `<script>hello</script>`).
+2. Try to post a message containing four or more `https://` links.
+3. On the second account, watch the channel during and after both attempts.
+**Expected:** Both posts are refused with a visible moderation message (the route answers 422
+with the stable code `content_policy_violation`) — the same content gate the Commons runs on
+community posts. Neither post is ever stored, so the second account never sees them, not even
+briefly; the composer keeps the text so the member can fix and resend.
+**Result:** web ☐ mobile ☐ — notes:
+
+### CA-C7 · Delete — author-only, admin-any, gone for good
+**Role:** two eligible members + an admin · **Surfaces:** web (desktop), web (mobile-responsive)
+**Steps:**
+1. As member A: post a message; confirm a Delete action shows on your own message but NOT on
+   member B's messages; delete your message (a confirm step must appear).
+2. As member A: call `DELETE /api/contributor-access/channel/messages/[postId]` directly on one
+   of member B's posts.
+3. As the admin: confirm the Delete action shows on every message; delete one of member B's
+   posts (confirm step again).
+4. On every account: hard-refresh the channel and re-read
+   `GET /api/contributor-access/channel/messages`.
+**Expected:** The member's own delete works after the confirm and the message disappears
+everywhere (both accounts, within the poll interval). The direct API attempt on someone else's
+post is refused with 403 and changes nothing (the denied attempt lands in
+`contributor_access_audit_trail`). The admin can delete any message — that is the disclosed
+moderator power — and the removal is audited under the distinct moderator command. Deleted
+messages stay gone after refresh and re-login (soft delete: `deleted_at`/`deleted_by` set,
+content excluded from every read, and a reply that quoted a deleted message shows no quoted
+block). Reacting to or replying to a deleted message answers 404/400.
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ## Known gaps — do not file these as bugs
@@ -235,6 +281,6 @@ Carried from the inventory's "Gaps & Known Technical Debt" section:
   returns a `channelSyncWarning`.
 - Android has no gated-channel surface and no badge rendering yet (tracked parity gaps #1681 and
   #1680; the shared Directory API already carries the badge boolean).
-- Gated-channel posts have no content-moderation/rate-limit pass yet, and no author delete.
+- No message edit in the gated channel (deliberate — delete and post again, same as the Commons).
 - Default weights/threshold are a starting point pending owner tuning.
 - Active blocks/safety reports are not yet an admission gate (owner decision pending).
