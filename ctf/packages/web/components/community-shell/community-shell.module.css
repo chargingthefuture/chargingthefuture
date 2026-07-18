@@ -2038,6 +2038,34 @@
   font-weight: 600;
 }
 
+/* ─── Announcements stream filter ────────────────────────────────────────── */
+/* Sits next to the "@ Mentions" chip in the concierge row. "Announcements" is too long for a chip,
+   so it shows the 📣 emoji alone; the emerald color matches the official-announcement card so its
+   purpose reads at a glance. When active the stream is filtered to announcements only — a member
+   with limited history can still surface them even when they scrolled off the recent page. */
+.announcementsFilterBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34D399;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.announcementsFilterBtn:hover {
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.announcementsFilterBtnActive {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
 .comicComposerHelperText {
   font-size: 12px;
   color: var(--ctf-text-subtle);
@@ -2486,6 +2514,18 @@
 }
 
 :global([data-theme='comic']) .mentionsFilterBtnActive {
+  background: #7a6a5022;
+  border-color: var(--ctf-border-dim);
+}
+
+/* Announcements stream filter → the same inkDim chip treatment. */
+:global([data-theme='comic']) .announcementsFilterBtn {
+  background: var(--ctf-bg);
+  border: 1px solid var(--ctf-border-dim);
+  color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .announcementsFilterBtnActive {
   background: #7a6a5022;
   border-color: var(--ctf-border-dim);
 }
