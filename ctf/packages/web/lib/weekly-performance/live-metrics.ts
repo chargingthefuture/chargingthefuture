@@ -1,19 +1,33 @@
 import { queryDb } from 'lib/db/postgres';
+import { buildLiveGdpReport } from 'lib/gdp/repository';
 
-// Live weekly numbers.
+// Live weekly numbers — rebuilt around the per-plugin value-metric decision record
+// (ctf/docs/developer/PLUGIN_VALUE_METRICS.md, owner-locked 2026-07-18).
 //
-// Weekly numbers are computed on read, scoped to the selected week window, directly from the
-// upstream plugin tables — the same way the V2 dashboard aggregated. There is no "close the week"
-// step and no stored snapshot: the current week keeps moving as members use the platform, and any
-// past week reports the real counts for its window.
+// The dashboard's shape, in card order:
+//   1. Two GOAL rows — the two numbers the whole platform is driving toward:
+//      GDP Community Value Index (goal: $300B) and Workforce recruited (goal: 2,000,000).
+//      Both are STATE metrics (a current total, not a windowed event count), so week-over-week
+//      needs memory: each read of the current week upserts the live value into
+//      weekly_performance_goal_snapshots, and past weeks report their stored snapshot.
+//   2. The per-plugin VALUE EVENTS — each plugin's defining action, the event that means the
+//      plugin was used as intended (a completed trip, a hosted stay, a confirmed contribution…).
+//      These are windowed on the event's own timestamp, so any week reports its real count.
+//   3. Honest ADOPTION rows for the no-value-to-others plugins the owner wants visible:
+//      Directory (findable members), Mood (check-ins + average, aggregate only), ClickLog
+//      (aggregate incidents + distinct loggers — never per-member detail).
 //
-// This set mirrors the metrics V2 captured, minus everything revenue/financial (revenue, MRR, ARR,
-// CLV) — V3 is free to end users, so those have no meaning here. What remains is membership, growth,
-// activity (DAU/WAU/MAU), churn, engagement, and wellbeing — all non-financial. Every query is
-// guarded on table existence (environments built only from schema.sql, or the Clerk-mirrored `users`
-// table, may lack a table) and never throws: a missing table or a transient error contributes 0
-// rather than failing the whole dashboard. All table and column names below are fixed literals — no
-// user input is interpolated into SQL.
+// Dropped from the old set (owner decision): login/engagement counts (logins are downstream of
+// value, not value), feed counts, and LevelUp enrollments-started (intent, not delivered value —
+// replaced by completions). GentlePulse and Skills Taxonomy carry no dashboard stats at all.
+//
+// The Foundation row is an aggregate count on this admin-only surface; per rule 132 the underlying
+// participation is sensitive (wellbeing/payment), so it must never appear on a public surface or as
+// any per-member figure.
+//
+// Every query is guarded on table existence and never throws: a missing table or a transient error
+// contributes 0 rather than failing the whole dashboard. All table and column names below are fixed
+// literals — no user input is interpolated into SQL.
 
 type LiveMetric = {
   metricKey: string;
@@ -22,16 +36,21 @@ type LiveMetric = {
   sourcePlugin: string;
 };
 
+export const GOAL_METRIC_KEYS = ['goal.gdp_value_index', 'goal.workforce_recruited'] as const;
+
 async function tableExists(table: string): Promise<boolean> {
   const reg = await queryDb<{ reg: string | null }>(`SELECT to_regclass($1)::text AS reg`, [`public.${table}`]);
   return !!reg.rows[0]?.reg;
 }
 
-// Run a single scalar query (a COUNT or an AVG aliased as `v`) guarded by table existence.
-// Returns 0 on a missing table, a NULL result, or any read error.
-async function guardedScalar(table: string, sql: string, weekStart: string): Promise<number> {
+// Run a single scalar query (a COUNT / SUM / AVG aliased as `v`) guarded on the existence of every
+// table it touches. Returns 0 on a missing table, a NULL result, or any read error.
+async function guardedScalar(tables: string | string[], sql: string, weekStart: string): Promise<number> {
   try {
-    if (!(await tableExists(table))) return 0;
+    const needed = Array.isArray(tables) ? tables : [tables];
+    for (const table of needed) {
+      if (!(await tableExists(table))) return 0;
+    }
     const result = await queryDb<{ v: string | null }>(sql, [weekStart]);
     const value = result.rows[0]?.v;
     return value == null ? 0 : Number(value);
@@ -40,78 +59,8 @@ async function guardedScalar(table: string, sql: string, weekStart: string): Pro
   }
 }
 
-// The week window is [weekStart, weekStart + 7 days). Counting on each row's creation time anchors
-// every number to the week the activity actually happened in.
-
-// Distinct members seen at all up to the end of this week — a cumulative membership count that
-// grows over time, so the week-over-week delta reads as roughly "members added this week".
-function totalMembers(weekStart: string): Promise<number> {
-  return guardedScalar(
-    'login_events',
-    `SELECT COUNT(DISTINCT user_id)::text AS v FROM login_events
-     WHERE created_at < $1::date + INTERVAL '7 days'`,
-    weekStart,
-  );
-}
-
-// Members whose very first recorded activity falls inside this week (first-seen = MIN(created_at)).
-function newMembers(weekStart: string): Promise<number> {
-  return guardedScalar(
-    'login_events',
-    `SELECT COUNT(*)::text AS v FROM (
-       SELECT user_id, MIN(created_at) AS first_seen FROM login_events GROUP BY user_id
-     ) t
-     WHERE t.first_seen >= $1::date AND t.first_seen < $1::date + INTERVAL '7 days'`,
-    weekStart,
-  );
-}
-
-// Distinct members active at any point during the week (weekly active members / WAU).
-function weeklyActiveMembers(weekStart: string): Promise<number> {
-  return guardedScalar(
-    'login_events',
-    `SELECT COUNT(DISTINCT user_id)::text AS v FROM login_events
-     WHERE created_at >= $1::date AND created_at < $1::date + INTERVAL '7 days'`,
-    weekStart,
-  );
-}
-
-// Average daily active members across the week's seven days. login_events holds one row per member
-// per UTC day, so the row count over the window divided by 7 is the average DAU.
-function dailyActiveAverage(weekStart: string): Promise<number> {
-  return guardedScalar(
-    'login_events',
-    `SELECT ROUND(COUNT(*)::numeric / 7)::text AS v FROM login_events
-     WHERE created_at >= $1::date AND created_at < $1::date + INTERVAL '7 days'`,
-    weekStart,
-  );
-}
-
-// Distinct members active in the 30 days ending at this week's end (monthly active members / MAU).
-function monthlyActiveMembers(weekStart: string): Promise<number> {
-  return guardedScalar(
-    'login_events',
-    `SELECT COUNT(DISTINCT user_id)::text AS v FROM login_events
-     WHERE created_at >= ($1::date + INTERVAL '7 days' - INTERVAL '30 days')
-       AND created_at < $1::date + INTERVAL '7 days'`,
-    weekStart,
-  );
-}
-
-// Churn proxy for a free product: members active in the prior week who did not return this week.
-function lapsedMembers(weekStart: string): Promise<number> {
-  return guardedScalar(
-    'login_events',
-    `SELECT COUNT(DISTINCT p.user_id)::text AS v FROM login_events p
-     WHERE p.created_at >= $1::date - INTERVAL '7 days' AND p.created_at < $1::date
-       AND NOT EXISTS (
-         SELECT 1 FROM login_events c
-         WHERE c.user_id = p.user_id
-           AND c.created_at >= $1::date AND c.created_at < $1::date + INTERVAL '7 days'
-       )`,
-    weekStart,
-  );
-}
+// The week window is [weekStart, weekStart + 7 days). Counting on each row's own event timestamp
+// anchors every number to the week the value was actually delivered in.
 
 // COUNT(*) of a table's rows whose date column falls in the week window, with an optional fixed filter.
 function windowCount(table: string, dateColumn: string, filter = ''): (weekStart: string) => Promise<number> {
@@ -125,14 +74,218 @@ function windowCount(table: string, dateColumn: string, filter = ''): (weekStart
     );
 }
 
-// Average mood (1–5) submitted during the week. Aggregate only — never an individual reading.
-function moodAverage(weekStart: string): Promise<number> {
-  return guardedScalar(
+// ── Value events ───────────────────────────────────────────────────────────────
+
+// Foundation: an answered, charged 1:1 call — the only Foundation signal (messages are too easy to
+// game; quote completion is not tracked as an event). Aggregate count only, admin surface only.
+const foundationCallsAnswered = (weekStart: string) =>
+  guardedScalar(
+    'foundation_call_sessions',
+    `SELECT COUNT(*)::text AS v FROM foundation_call_sessions
+     WHERE answered_at >= $1::date AND answered_at < $1::date + INTERVAL '7 days'
+       AND blocks_charged > 0`,
+    weekStart,
+  );
+
+// TrustTransport: a trip both sides confirmed complete.
+const trustTransportTripsCompleted = windowCount(
+  'trust_transport_trips',
+  'completed_at',
+  `status = 'completed' AND requester_completion_confirmed_at IS NOT NULL AND provider_completion_confirmed_at IS NOT NULL`,
+);
+
+// Lighthouse: a completed stay. The table has no completed_at column, so the window keys on
+// updated_at of rows now in 'completed' — the status flip is the last write in the normal flow.
+const lighthouseStaysCompleted = windowCount('lighthouse_matches', 'updated_at', `status = 'completed'`);
+
+// SocketRelay: a request the requester closed as successful. No closed_at column; updated_at is
+// written by the close, so it anchors the week.
+const socketRelayFulfilled = windowCount(
+  'socket_relay_fulfillments',
+  'updated_at',
+  `close_reason = 'successful'`,
+);
+
+// Chyme: a peer tip (a completed ServiceCredits transfer originated by Chyme, never self-to-self).
+const chymeTips = windowCount(
+  'service_credits_transfers',
+  'completed_at',
+  `status = 'completed' AND origin_plugin = 'chyme' AND sender_user_id <> recipient_user_id`,
+);
+
+// ServiceCredits: a completed DIRECT peer send. origin_plugin scoping keeps plugin-mediated
+// transfers (Chyme tips, LevelUp flows…) counted once, in their originating plugin.
+const serviceCreditsPeerSends = windowCount(
+  'service_credits_transfers',
+  'completed_at',
+  `status = 'completed' AND origin_plugin = 'service-credits' AND sender_user_id <> recipient_user_id`,
+);
+
+// Contributions: confirmed real dollars this week (SUM, not a row count).
+const contributionsConfirmedUsd = (weekStart: string) =>
+  guardedScalar(
+    'contributions_submissions',
+    `SELECT COALESCE(SUM(confirmed_amount_usd), 0)::text AS v FROM contributions_submissions
+     WHERE status = 'confirmed'
+       AND reviewed_at >= $1::date AND reviewed_at < $1::date + INTERVAL '7 days'`,
+    weekStart,
+  );
+
+// SkillsHunt: a nomination a moderator accepted (produces a real Directory profile + reward).
+const skillsHuntAccepted = windowCount(
+  'skills_hunt_submissions',
+  'reviewed_at',
+  `status = 'accepted' AND deleted_at IS NULL`,
+);
+
+// WhatWorks: an approved tool contributed (primary) and an endorsement given (secondary).
+const whatWorksApproved = windowCount('what_works_products', 'reviewed_at', `status = 'approved'`);
+const whatWorksEndorsements = windowCount('what_works_endorsements', 'created_at');
+
+// LevelUp: delivered value is COMPLETION (the old dashboard counted enrollments started — intent).
+// No completed_at column; the status flip writes updated_at.
+const levelUpCompletions = windowCount('level_up_enrollments', 'updated_at', `status = 'completed'`);
+const levelUpTrainerPayouts = windowCount(
+  'level_up_disbursements',
+  'created_at',
+  `disbursement_type = 'trainer_payout'`,
+);
+
+// Recurring Activity: a tie the counterparty confirmed this week.
+const recurringTiesConfirmed = windowCount('recurring_activities', 'confirmed_at');
+
+// PeerProgramming: distinct members who posted in their cohort this week (participation IS the
+// plugin's purpose; weighs low for gating but is the honest dashboard signal).
+const peerProgrammingActivePosters = (weekStart: string) =>
+  guardedScalar(
+    'peer_programming_messages',
+    `SELECT COUNT(DISTINCT author_user_id)::text AS v FROM peer_programming_messages
+     WHERE created_at >= $1::date AND created_at < $1::date + INTERVAL '7 days'`,
+    weekStart,
+  );
+
+// Beacon: member engagement per unique broadcast — distinct (member, broadcast) pairs that reacted
+// to or replied on a broadcast's Commons replay post this week. Broadcast completion itself does NOT
+// count (only the owner can start a session — an admin action measures the admin, not members), and
+// one member engaging with the same broadcast many times counts once. Live in-event chat/reactions
+// are Stream-ephemeral and are not countable here.
+const beaconBroadcastEngagement = (weekStart: string) =>
+  guardedScalar(
+    ['beacon_events', 'feed_community_post_reactions', 'feed_community_replies'],
+    `SELECT COUNT(*)::text AS v FROM (
+       SELECT r.user_id AS member_id, b.id AS broadcast_id
+       FROM beacon_events b
+       JOIN feed_community_post_reactions r ON r.post_id = b.commons_recording_post_id
+       WHERE r.created_at >= $1::date AND r.created_at < $1::date + INTERVAL '7 days'
+       UNION
+       SELECT p.author_user_id AS member_id, b.id AS broadcast_id
+       FROM beacon_events b
+       JOIN feed_community_replies p ON p.post_id = b.commons_recording_post_id
+       WHERE p.created_at >= $1::date AND p.created_at < $1::date + INTERVAL '7 days'
+     ) engagement`,
+    weekStart,
+  );
+
+// ── Adoption rows (honest non-value metrics) ──────────────────────────────────
+
+// Directory: findable members — claimed, active, non-deleted profiles holding at least one skill.
+// Claim time is not stored, so this is the cumulative count of such profiles created by week end
+// (their CURRENT claimed/active state) — the same cumulative pattern the old members.total used.
+const directoryFindableMembers = (weekStart: string) =>
+  guardedScalar(
+    ['directory_profiles', 'directory_profile_skills'],
+    `SELECT COUNT(*)::text AS v FROM directory_profiles p
+     WHERE p.claimed_by_user_id IS NOT NULL AND p.is_active = TRUE AND p.deleted_at IS NULL
+       AND p.created_at < $1::date + INTERVAL '7 days'
+       AND EXISTS (SELECT 1 FROM directory_profile_skills s WHERE s.profile_id = p.id)`,
+    weekStart,
+  );
+
+// Mood: adoption, aggregate only — never an individual reading.
+const moodCheckins = windowCount('mood_submissions', 'submitted_at');
+const moodAverage = (weekStart: string) =>
+  guardedScalar(
     'mood_submissions',
     `SELECT ROUND(AVG(mood_value)::numeric, 2)::text AS v FROM mood_submissions
      WHERE submitted_at >= $1::date AND submitted_at < $1::date + INTERVAL '7 days'`,
     weekStart,
   );
+
+// ClickLog: adoption, aggregate only — a private personal tally, so never per-member detail.
+const clickLogIncidents = windowCount('click_log_incidents', 'created_at');
+const clickLogActiveLoggers = (weekStart: string) =>
+  guardedScalar(
+    'click_log_incidents',
+    `SELECT COUNT(DISTINCT user_id)::text AS v FROM click_log_incidents
+     WHERE created_at >= $1::date AND created_at < $1::date + INTERVAL '7 days'`,
+    weekStart,
+  );
+
+// ── Goal rows (state metrics with weekly snapshots) ───────────────────────────
+
+// Current live values. GDP: the Community Value Index (an estimate, never money/price) from the
+// same builder the GDP plugin serves. Workforce: recruited = the count of all active Directory
+// profiles — the registry definition of workforce_recruited_current_count.
+async function liveGdpValueIndex(): Promise<number> {
+  try {
+    const report = await buildLiveGdpReport();
+    const row = report.metrics.find((m) => m.metricKey === 'gdp_value_index');
+    return row ? row.metricValue : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function liveWorkforceRecruited(weekStart: string): Promise<number> {
+  // The trailing ($1::date IS NOT NULL) is always true — it only consumes the week parameter
+  // guardedScalar binds, since this is a current-state count with no window.
+  return guardedScalar(
+    'directory_profiles',
+    `SELECT COUNT(*)::text AS v FROM directory_profiles
+     WHERE is_active = TRUE AND deleted_at IS NULL AND ($1::date IS NOT NULL)`,
+    weekStart,
+  );
+}
+
+// ISO Monday of the current UTC week — "the current week" for snapshot purposes.
+function currentWeekStart(): string {
+  const now = new Date();
+  const utc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = utc.getUTCDay();
+  utc.setUTCDate(utc.getUTCDate() + (day === 0 ? -6 : 1 - day));
+  return utc.toISOString().slice(0, 10);
+}
+
+// Reading the CURRENT week records the live value into that week's snapshot row (last read of the
+// week wins — the row converges to the week's closing value). A past week reports its stored
+// snapshot; a week that was never read while current reports 0 and renders as "not captured".
+async function goalMetricForWeek(metricKey: string, weekStartDate: string, live: () => Promise<number>): Promise<number> {
+  const isCurrentWeek = weekStartDate === currentWeekStart();
+  try {
+    if (!(await tableExists('weekly_performance_goal_snapshots'))) {
+      return isCurrentWeek ? await live() : 0;
+    }
+    if (isCurrentWeek) {
+      const value = await live();
+      await queryDb(
+        `INSERT INTO weekly_performance_goal_snapshots (metric_key, week_start_date, metric_value, captured_at)
+         VALUES ($1, $2::date, $3, NOW())
+         ON CONFLICT (metric_key, week_start_date)
+         DO UPDATE SET metric_value = EXCLUDED.metric_value, captured_at = NOW()`,
+        [metricKey, weekStartDate, value],
+      );
+      return value;
+    }
+    const stored = await queryDb<{ v: string | null }>(
+      `SELECT metric_value::text AS v FROM weekly_performance_goal_snapshots
+       WHERE metric_key = $1 AND week_start_date = $2::date`,
+      [metricKey, weekStartDate],
+    );
+    const value = stored.rows[0]?.v;
+    return value == null ? 0 : Number(value);
+  } catch {
+    return 0;
+  }
 }
 
 type MetricSpec = {
@@ -142,20 +295,41 @@ type MetricSpec = {
   compute: (weekStart: string) => Promise<number>;
 };
 
-// Order here is the card order on the dashboard. All non-financial (no revenue/MRR/ARR/CLV).
+// Order here is the card order on the dashboard: goals, value events, adoption.
 const METRIC_SPECS: MetricSpec[] = [
-  { metricKey: 'members.total', metricUnit: 'members', sourcePlugin: 'engagement', compute: totalMembers },
-  { metricKey: 'members.new', metricUnit: 'members', sourcePlugin: 'engagement', compute: newMembers },
-  { metricKey: 'engagement.active_members', metricUnit: 'members', sourcePlugin: 'engagement', compute: weeklyActiveMembers },
-  { metricKey: 'engagement.daily_active', metricUnit: 'members', sourcePlugin: 'engagement', compute: dailyActiveAverage },
-  { metricKey: 'engagement.monthly_active', metricUnit: 'members', sourcePlugin: 'engagement', compute: monthlyActiveMembers },
-  { metricKey: 'retention.lapsed_members', metricUnit: 'members', sourcePlugin: 'engagement', compute: lapsedMembers },
-  { metricKey: 'engagement.questions_asked', metricUnit: 'questions', sourcePlugin: 'feed', compute: windowCount('feed_questions', 'created_at') },
-  { metricKey: 'engagement.answers_posted', metricUnit: 'answers', sourcePlugin: 'feed', compute: windowCount('feed_answers', 'created_at') },
-  { metricKey: 'community.posts_created', metricUnit: 'posts', sourcePlugin: 'feed', compute: windowCount('feed_community_posts', 'created_at', "moderation_status = 'accepted'") },
-  { metricKey: 'learning.enrollments_started', metricUnit: 'enrollments', sourcePlugin: 'level-up', compute: windowCount('level_up_enrollments', 'created_at') },
-  { metricKey: 'wellbeing.mood_checkins', metricUnit: 'check-ins', sourcePlugin: 'mood', compute: windowCount('mood_submissions', 'submitted_at') },
-  { metricKey: 'wellbeing.mood_average', metricUnit: '', sourcePlugin: 'mood', compute: moodAverage },
+  {
+    metricKey: 'goal.gdp_value_index',
+    metricUnit: 'index',
+    sourcePlugin: 'gdp',
+    compute: (weekStart) => goalMetricForWeek('goal.gdp_value_index', weekStart, liveGdpValueIndex),
+  },
+  {
+    metricKey: 'goal.workforce_recruited',
+    metricUnit: 'members',
+    sourcePlugin: 'workforce',
+    compute: (weekStart) =>
+      goalMetricForWeek('goal.workforce_recruited', weekStart, () => liveWorkforceRecruited(weekStart)),
+  },
+  { metricKey: 'value.foundation_calls_answered', metricUnit: 'calls', sourcePlugin: 'foundation', compute: foundationCallsAnswered },
+  { metricKey: 'value.socket_relay_requests_fulfilled', metricUnit: 'requests', sourcePlugin: 'socket-relay', compute: socketRelayFulfilled },
+  { metricKey: 'value.trust_transport_trips_completed', metricUnit: 'trips', sourcePlugin: 'trust-transport', compute: trustTransportTripsCompleted },
+  { metricKey: 'value.lighthouse_stays_completed', metricUnit: 'stays', sourcePlugin: 'lighthouse', compute: lighthouseStaysCompleted },
+  { metricKey: 'value.chyme_tips_sent', metricUnit: 'tips', sourcePlugin: 'chyme', compute: chymeTips },
+  { metricKey: 'value.service_credits_peer_sends', metricUnit: 'sends', sourcePlugin: 'service-credits', compute: serviceCreditsPeerSends },
+  { metricKey: 'value.contributions_confirmed_usd', metricUnit: 'USD', sourcePlugin: 'contributions', compute: contributionsConfirmedUsd },
+  { metricKey: 'value.skills_hunt_nominations_accepted', metricUnit: 'nominations', sourcePlugin: 'skills-hunt', compute: skillsHuntAccepted },
+  { metricKey: 'value.what_works_tools_approved', metricUnit: 'tools', sourcePlugin: 'what-works', compute: whatWorksApproved },
+  { metricKey: 'value.what_works_endorsements_given', metricUnit: 'endorsements', sourcePlugin: 'what-works', compute: whatWorksEndorsements },
+  { metricKey: 'value.level_up_completions', metricUnit: 'completions', sourcePlugin: 'level-up', compute: levelUpCompletions },
+  { metricKey: 'value.level_up_trainer_payouts', metricUnit: 'payouts', sourcePlugin: 'level-up', compute: levelUpTrainerPayouts },
+  { metricKey: 'value.recurring_ties_confirmed', metricUnit: 'ties', sourcePlugin: 'recurring-activity', compute: recurringTiesConfirmed },
+  { metricKey: 'value.peer_programming_active_posters', metricUnit: 'members', sourcePlugin: 'peer-programming', compute: peerProgrammingActivePosters },
+  { metricKey: 'value.beacon_broadcast_engagement', metricUnit: 'engagements', sourcePlugin: 'beacon', compute: beaconBroadcastEngagement },
+  { metricKey: 'adoption.directory_findable_members', metricUnit: 'members', sourcePlugin: 'directory', compute: directoryFindableMembers },
+  { metricKey: 'adoption.mood_checkins', metricUnit: 'check-ins', sourcePlugin: 'mood', compute: moodCheckins },
+  { metricKey: 'adoption.mood_average', metricUnit: '', sourcePlugin: 'mood', compute: moodAverage },
+  { metricKey: 'adoption.click_log_incidents', metricUnit: 'incidents', sourcePlugin: 'click-log', compute: clickLogIncidents },
+  { metricKey: 'adoption.click_log_active_loggers', metricUnit: 'members', sourcePlugin: 'click-log', compute: clickLogActiveLoggers },
 ];
 
 // Compute the live numbers for a week window from upstream plugin tables. Always returns the full

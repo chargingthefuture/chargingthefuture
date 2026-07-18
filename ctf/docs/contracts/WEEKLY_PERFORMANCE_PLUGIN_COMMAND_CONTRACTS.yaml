@@ -64,6 +64,27 @@ contracts:
     dataAccess:
       - weekly_performance_metrics
       - canonical_metrics_registry
+      - weekly_performance_goal_snapshots
+      - foundation_call_sessions
+      - trust_transport_trips
+      - lighthouse_matches
+      - socket_relay_fulfillments
+      - service_credits_transfers
+      - contributions_submissions
+      - skills_hunt_submissions
+      - what_works_products
+      - what_works_endorsements
+      - level_up_enrollments
+      - level_up_disbursements
+      - recurring_activities
+      - peer_programming_messages
+      - beacon_events
+      - feed_community_post_reactions
+      - feed_community_replies
+      - directory_profiles
+      - directory_profile_skills
+      - mood_submissions
+      - click_log_incidents
     purpose: operational_metrics_review
     retentionClass: derived_short_lived
     idempotency: true
@@ -92,6 +113,27 @@ contracts:
     dataAccess:
       - weekly_performance_metrics
       - canonical_metrics_registry
+      - weekly_performance_goal_snapshots
+      - foundation_call_sessions
+      - trust_transport_trips
+      - lighthouse_matches
+      - socket_relay_fulfillments
+      - service_credits_transfers
+      - contributions_submissions
+      - skills_hunt_submissions
+      - what_works_products
+      - what_works_endorsements
+      - level_up_enrollments
+      - level_up_disbursements
+      - recurring_activities
+      - peer_programming_messages
+      - beacon_events
+      - feed_community_post_reactions
+      - feed_community_replies
+      - directory_profiles
+      - directory_profile_skills
+      - mood_submissions
+      - click_log_incidents
     purpose: operational_metrics_comparison
     retentionClass: derived_short_lived
     idempotency: true
@@ -116,12 +158,43 @@ contracts:
         type: array
     dataAccess:
       - weekly_performance_metrics
+      - canonical_metrics_registry
+      - weekly_performance_goal_snapshots
+      - foundation_call_sessions
+      - trust_transport_trips
+      - lighthouse_matches
+      - socket_relay_fulfillments
+      - service_credits_transfers
+      - contributions_submissions
+      - skills_hunt_submissions
+      - what_works_products
+      - what_works_endorsements
+      - level_up_enrollments
+      - level_up_disbursements
+      - recurring_activities
+      - peer_programming_messages
+      - beacon_events
+      - feed_community_post_reactions
+      - feed_community_replies
+      - directory_profiles
+      - directory_profile_skills
+      - mood_submissions
+      - click_log_incidents
       - weekly_performance_audit_trail
     purpose: operational_metrics_export
     retentionClass: audit_long_lived
     idempotency: false
 
 changelog:
+  - date: 2026-07-18
+    change: >-
+      Metrics rebuild (owner-locked decision record ctf/docs/developer/PLUGIN_VALUE_METRICS.md): the
+      metrics/comparison/export reads now compute each plugin's defining value event live from the
+      upstream plugin tables, plus two goal rows (GDP Community Value Index toward 300B via the GDP
+      plugin's live report - see the GDP contracts for that command's own reads - and Workforce
+      recruited toward 2,000,000) snapshotted weekly in the new weekly_performance_goal_snapshots
+      table so week-over-week works for state metrics. dataAccess lists updated to the real read set;
+      the current-week read also upserts the goal snapshot row.
   - date: 2026-02-25
     change: Initial Weekly Performance command contract skeleton added for week listing, snapshot retrieval, comparison, and export workflows.
   - date: 2026-06-27

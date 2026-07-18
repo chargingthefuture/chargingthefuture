@@ -40,10 +40,11 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    `/apps/weekly-performance` gets a plain 404 — never a public landing/marketing page (the plugin
    has no public visitor shell; the unreachable one was deleted 2026-07-15). → web ☐ mobile ☐ android ☐
 2. **Numbers are always live — no "closed" week.** Open the dashboard. Every week shows live numbers
-   computed from that week's activity (active members, questions, answers, community posts,
-   enrollments) — there is no "metrics appear when the week closes" placeholder and no week status to
-   wait on. The current week is marked **Live**; past weeks are plain historical windows with no
-   "Closed" badge. With no activity yet the cards read zero, which is still a real value. → web ☐ mobile ☐ android ☐
+   computed from that week's activity — there is no "metrics appear when the week closes" placeholder
+   and no week status to wait on. The current week is marked **Live**; past weeks are plain historical
+   windows with no "Closed" badge. With no activity yet the cards read zero, which is still a real
+   value. (Exception: the two Goal rows are state totals snapshotted weekly — a past week that was
+   never opened while current reads 0 there.) → web ☐ mobile ☐ android ☐
 3. **Admin surface is review-only — no "set active week".** Open `/admin/weekly-performance`. There is
    one header (no duplicate), a pick-a-week-to-review picker, the week's live metrics, and Export. There
    is **no** "Active week / Set as active week" control and no open/locked/published status. → web ☐ mobile ☐ android ☐
@@ -80,19 +81,31 @@ and no per-week status. The current week is shown even when the weeks table has 
 ### WP-A3 · Metrics and week-over-week comparison
 **Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Steps:**
-1. Open a week's metric cards. The set mirrors V2 minus revenue (non-financial only): total members,
-   new members, weekly/daily/monthly active members, lapsed members (churn), questions, answers,
-   community posts, enrollments, and aggregate mood (check-ins + average). No revenue/MRR/ARR/CLV.
+1. Open a week's metric cards. The set is the owner-locked value-metric table
+   (`ctf/docs/developer/PLUGIN_VALUE_METRICS.md`), grouped on web under three headings:
+   **Goals** — GDP Community Value Index (progress bar toward the 300B goal) and Workforce recruited
+   (progress bar toward 2,000,000); **Value delivered** — one card per plugin's defining event
+   (Foundation answered calls, SocketRelay successful closes, TrustTransport completed trips,
+   Lighthouse completed stays, Chyme tips, ServiceCredits direct peer sends, Contributions confirmed
+   USD, SkillsHunt accepted nominations, WhatWorks approved tools + endorsements, LevelUp
+   completions + trainer payouts, Recurring Activity confirmed ties, PeerProgramming distinct
+   posters, Beacon engagement per unique broadcast); **Adoption** — Directory findable members, Mood
+   check-ins + average, ClickLog incidents + distinct loggers. There are NO login/engagement cards,
+   NO feed cards, NO LevelUp enrollments-started card, and nothing for GentlePulse or Skills
+   Taxonomy. No revenue/MRR/ARR/CLV.
 2. Supply a compare week so the route returns a comparison
    (`GET /api/weekly-performance/metrics?weekStartDate=...&compareWeekStartDate=...`).
 3. On the current week, leave the dashboard open: it silently re-fetches about every 60s and on tab
    focus, so the numbers refresh without a manual reload. Past weeks are settled and do not poll.
-**Expected:** Metric cards render humanized labels from `metric_key` and real values computed live
-for the selected week window from upstream tables (every week, current or past — there is no stored
-snapshot and no "closed" state). The current week shows a **Live** marker; past weeks show none. The
-comparison shows per-metric deltas (this week vs last week); a declining metric shows a
-downward-trend indicator. Reads audit `weekly-performance.metrics.get` or `…comparison.get` per
-branch. Loading, empty, and error states are all distinct.
+**Expected:** Metric cards render humanized labels from `metric_key` (acronyms read correctly: GDP,
+USD) and real values computed live for the selected week window from upstream tables. The two Goal
+cards show a compact value (e.g. "1.2K"), a progress bar, and "% of the 300B/2M goal"; opening the
+current week also records that week's goal snapshot, so next week's comparison has a prior value.
+The current week shows a **Live** marker; past weeks show none. The comparison shows per-metric
+deltas (this week vs last week); a declining metric shows a downward-trend indicator. Reads audit
+`weekly-performance.metrics.get` or `…comparison.get` per branch. Loading, empty, and error states
+are all distinct. Android renders the same metric list with humanized labels (goal progress bars are
+web-only for now — a tracked gap, not a bug).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### WP-A4 · Export gate

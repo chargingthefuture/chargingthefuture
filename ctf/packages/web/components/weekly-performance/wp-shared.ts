@@ -99,16 +99,40 @@ export function formatWeekRange(week: WpWeek): string {
   return `${startLabel}–${endLabel}, ${end.year}`;
 }
 
-// Turn a dotted/snake/camel metric key into a readable label (no label column exists).
-// The namespace dot is treated as a separator too, so "engagement.active_members" reads as
+// The dashboard's three sections, keyed by metric-key prefix (see live-metrics.ts card order):
+// goals the platform drives toward, each plugin's delivered-value event, and honest adoption rows.
+export type WpMetricGroup = "goal" | "value" | "adoption" | "other";
+
+export function metricGroup(key: string): WpMetricGroup {
+  if (key.startsWith("goal.")) return "goal";
+  if (key.startsWith("value.")) return "value";
+  if (key.startsWith("adoption.")) return "adoption";
+  return "other";
+}
+
+export const METRIC_GROUP_HEADINGS: Record<WpMetricGroup, string> = {
+  goal: "Goals",
+  value: "Value delivered",
+  adoption: "Adoption",
+  other: "Other",
+};
+
+// Acronyms the generic title-caser would mangle ("Gdp" → "GDP").
+const LABEL_ACRONYMS: Record<string, string> = { Gdp: "GDP", Usd: "USD" };
+
+// Turn a dotted/snake/camel metric key into a readable label (no label column exists). The group
+// prefix (goal./value./adoption.) is dropped — the section heading already says it — and any other
+// namespace dot is treated as a separator, so "engagement.active_members" reads as
 // "Engagement Active Members" rather than "Engagement.Active Members".
 export function humanizeMetricKey(key: string): string {
-  return key
+  const withoutGroup = key.replace(/^(goal|value|adoption)\./, "");
+  return withoutGroup
     .replace(/[._-]+/g, " ")
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/\s+/g, " ")
     .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/\b(Gdp|Usd)\b/g, (word) => LABEL_ACRONYMS[word] ?? word);
 }
 
 export function formatMetricValue(value: number, unit: string): string {
