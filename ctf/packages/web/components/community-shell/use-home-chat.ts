@@ -258,20 +258,33 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   // older callback identity) always read the current mode without re-bootstrapping the chat.
   const [mentionsOnly, setMentionsOnly] = useState(false);
   const mentionsOnlyRef = useRef(false);
-  // True while the stream is being re-fetched right after a mentions-mode flip, so the panel can
-  // show a loading line instead of a premature "No mentions yet" empty state.
+  // "Announcements" filter (📣 chip): when on, history reads add `channel=announcements` so the
+  // server returns only official announcements — including ones that scrolled off the recent page,
+  // so a member with limited history can still surface them. Mutually exclusive with mentions.
+  const [announcementsOnly, setAnnouncementsOnly] = useState(false);
+  const announcementsOnlyRef = useRef(false);
+  // True while the stream is being re-fetched right after a filter flip, so the panel can
+  // show a loading line instead of a premature empty state.
   const [isFilterRefreshing, setIsFilterRefreshing] = useState(false);
 
   // Whether the composer currently contains an @comic mention — used to show the mention chip
   // affordance live as the asker types.
   const composerMentionsComic = useMemo(() => mentionsComic(input), [input]);
 
+  // The active stream filter, derived from the refs so the poll/live handlers (which hold older
+  // callback identities) always read the current mode. Mentions and announcements are mutually
+  // exclusive; 'all' is the unfiltered blended stream.
+  const currentFilterKey = (): 'mentions' | 'announcements' | 'all' =>
+    mentionsOnlyRef.current ? 'mentions' : announcementsOnlyRef.current ? 'announcements' : 'all';
+
   const refreshHistory = useCallback(async () => {
-    const mentionsParam = mentionsOnlyRef.current ? '&mentions=me' : '';
-    const payload = await requestJson<HubMessagesResponse>(`/api/hub/messages?limit=50${mentionsParam}`);
-    // Ignore a response that raced a mode flip (e.g. a slow unfiltered poll landing after the
-    // member turned mentions on) so the filtered view never gets polluted with the full stream.
-    if (mentionsOnlyRef.current !== mentionsParam.includes('mentions=me')) {
+    const filterKey = currentFilterKey();
+    const filterParam =
+      filterKey === 'mentions' ? '&mentions=me' : filterKey === 'announcements' ? '&channel=announcements' : '';
+    const payload = await requestJson<HubMessagesResponse>(`/api/hub/messages?limit=50${filterParam}`);
+    // Ignore a response that raced a mode flip (e.g. a slow read landing after the member changed
+    // the filter) so the filtered view never gets polluted with the wrong stream.
+    if (currentFilterKey() !== filterKey) {
       return;
     }
     const nextMessages = payload.messages.map((message) => mapStoredMessage(message, currentUser.userId));
@@ -324,12 +337,9 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     })();
   }, []);
 
-  // Flip the "@ Mentions" filter. The message list is cleared and re-fetched in the new mode so
-  // the two modes never blend (merge is additive, so a shared list would keep old rows around).
-  const toggleMentionsOnly = useCallback(() => {
-    const next = !mentionsOnlyRef.current;
-    mentionsOnlyRef.current = next;
-    setMentionsOnly(next);
+  // Clear the loaded messages and re-fetch in the current filter mode. The list is cleared first so
+  // modes never blend (merge is additive, so a shared list would keep old rows around).
+  const refreshForFilterChange = useCallback(() => {
     setMessages([]);
     setIsFilterRefreshing(true);
     void refreshHistory()
@@ -338,6 +348,30 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
       })
       .finally(() => setIsFilterRefreshing(false));
   }, [refreshHistory]);
+
+  // Flip the "@ Mentions" filter. Turning it on clears the mutually-exclusive announcements filter.
+  const toggleMentionsOnly = useCallback(() => {
+    const next = !mentionsOnlyRef.current;
+    mentionsOnlyRef.current = next;
+    setMentionsOnly(next);
+    if (next) {
+      announcementsOnlyRef.current = false;
+      setAnnouncementsOnly(false);
+    }
+    refreshForFilterChange();
+  }, [refreshForFilterChange]);
+
+  // Flip the announcements (📣) filter. Turning it on clears the mutually-exclusive mentions filter.
+  const toggleAnnouncementsOnly = useCallback(() => {
+    const next = !announcementsOnlyRef.current;
+    announcementsOnlyRef.current = next;
+    setAnnouncementsOnly(next);
+    if (next) {
+      mentionsOnlyRef.current = false;
+      setMentionsOnly(false);
+    }
+    refreshForFilterChange();
+  }, [refreshForFilterChange]);
 
   // Emit a typing event as the member writes in the composer. No-op when there is no live
   // connection (polling-only mode), so the composer can call it unconditionally on every keystroke.
@@ -782,6 +816,8 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     deleteMessage,
     mentionsOnly,
     toggleMentionsOnly,
+    announcementsOnly,
+    toggleAnnouncementsOnly,
     isFilterRefreshing,
     lastSeenAtIso,
     markSeen,

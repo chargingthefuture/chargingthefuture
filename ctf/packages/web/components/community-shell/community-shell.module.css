@@ -1999,21 +1999,21 @@
 }
 
 /* ─── "@ Mentions" stream filter ─────────────────────────────────────────── */
-/* The toggle renders at every width as the leading chip of the concierge row
-   (`.mentionsFilterChip` sizes it to match those pills) in the sky-blue
-   mentions color. The active state fills in to show the stream is filtered to
-   the viewer's mentions. */
+/* Leads the concierge row as a small icon-only "@" pill (the word was dropped so it matches the
+   📣 announcements chip — the two filters read as a matched pair). Sky-blue mentions color; the
+   active state fills in to show the stream is filtered to the viewer's mentions. */
 .mentionsFilterBtn {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
   padding: 3px 9px;
   border-radius: 7px;
   background: transparent;
   border: 1px solid rgba(14, 165, 233, 0.3);
   color: #38BDF8;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -2026,16 +2026,33 @@
   border-color: rgba(14, 165, 233, 0.55);
 }
 
-/* The toggle leads the concierge chip row, so it takes the same pill size as
-   those chips (padding/radius/type) while keeping the sky-blue mentions color
-   and the @ icon so it stays visually distinct. */
-.mentionsFilterChip {
+/* ─── Announcements stream filter ────────────────────────────────────────── */
+/* Sits next to the "@" chip in the concierge row. "Announcements" is too long for a chip, so it
+   shows the 📣 emoji alone; the emerald color matches the official-announcement card so its
+   purpose reads at a glance. When active the stream is filtered to announcements only — a member
+   with limited history can still surface them even when they scrolled off the recent page. */
+.announcementsFilterBtn {
   flex: 0 0 auto;
-  white-space: nowrap;
-  padding: 7px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34D399;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.announcementsFilterBtn:hover {
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.announcementsFilterBtnActive {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: rgba(16, 185, 129, 0.6);
 }
 
 .comicComposerHelperText {
@@ -2486,6 +2503,18 @@
 }
 
 :global([data-theme='comic']) .mentionsFilterBtnActive {
+  background: #7a6a5022;
+  border-color: var(--ctf-border-dim);
+}
+
+/* Announcements stream filter → the same inkDim chip treatment. */
+:global([data-theme='comic']) .announcementsFilterBtn {
+  background: var(--ctf-bg);
+  border: 1px solid var(--ctf-border-dim);
+  color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .announcementsFilterBtnActive {
   background: #7a6a5022;
   border-color: var(--ctf-border-dim);
 }

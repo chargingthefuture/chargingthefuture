@@ -1,0 +1,181 @@
+contracts:
+  - pluginId: contributor-access
+    command: contributor-access.config.get
+    version: 1.0.0
+    description: Read the single owner-tunable eligibility config row (weights, threshold, gate minimums, channel_open); defaults when the row has never been written.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      config:
+        type: object
+    dataAccess:
+      - contributor_access_config
+      - contributor_access_audit_trail
+    purpose: eligibility_configuration
+    retentionClass: derived_long_lived
+    idempotency: true
+
+  - pluginId: contributor-access
+    command: contributor-access.config.update
+    version: 1.0.0
+    description: >-
+      Update the eligibility config (per-event weight overrides keyed by the fixed value-event key
+      list, score threshold, minimum account age, minimum distinct plugins, minimum distinct
+      counterparties, the eligible-member minimum for opening the gated channel, and the
+      channel_open toggle). CSRF-confirmed mutation.
+    inputSchema:
+      weights:
+        type: object
+        required: false
+      threshold:
+        type: number
+        required: false
+      minAccountAgeDays:
+        type: number
+        required: false
+      minDistinctPlugins:
+        type: number
+        required: false
+      minCounterparties:
+        type: number
+        required: false
+      minEligibleToOpenChannel:
+        type: number
+        required: false
+      channelOpen:
+        type: boolean
+        required: false
+    outputSchema:
+      ok:
+        type: boolean
+      config:
+        type: object
+    dataAccess:
+      - contributor_access_config
+      - contributor_access_audit_trail
+    purpose: eligibility_configuration
+    retentionClass: derived_long_lived
+    idempotency: true
+
+  - pluginId: contributor-access
+    command: contributor-access.eligible.list
+    version: 1.0.0
+    description: >-
+      List members who earned eligibility - user id, username (via the users table), first earned
+      date, and revoke flag/reason. Categorical only - no score and no reason_snapshot is ever
+      returned by this or any other surface (proposal hard guardrail).
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      members:
+        type: array
+      eligibleCount:
+        type: integer
+    dataAccess:
+      - contributor_access_eligibility
+      - users
+      - contributor_access_audit_trail
+    purpose: eligibility_review
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: contributor-access
+    command: contributor-access.member.revoke
+    version: 1.0.0
+    description: >-
+      For-cause revoke - the ONLY path that removes eligibility (a reviewed harm/abuse action;
+      never inactivity, never an unreviewed report alone). Requires a non-empty reason; sets
+      revoked_for_cause and turns the eligible flag off until reinstated. CSRF-confirmed mutation.
+    inputSchema:
+      userId:
+        type: string
+        required: true
+      reason:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - contributor_access_eligibility
+      - contributor_access_audit_trail
+    purpose: eligibility_moderation
+    retentionClass: audit_long_lived
+    idempotency: false
+
+  - pluginId: contributor-access
+    command: contributor-access.member.reinstate
+    version: 1.0.0
+    description: >-
+      Clear a for-cause revocation. Eligibility returns because it was previously earned
+      (first_earned_at is permanent) - this is not a fresh grant. CSRF-confirmed mutation.
+    inputSchema:
+      userId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - contributor_access_eligibility
+      - contributor_access_audit_trail
+    purpose: eligibility_moderation
+    retentionClass: audit_long_lived
+    idempotency: false
+
+  - pluginId: contributor-access
+    command: contributor-access.eligibility.recompute
+    version: 1.0.0
+    description: >-
+      Internal, schedule-driven recompute of the categorical eligibility flag for every member with
+      at least one value event. Counts the same fifteen per-plugin value events as Weekly
+      Performance (owner-locked decision record ctf/docs/developer/PLUGIN_VALUE_METRICS.md), per
+      member, all-time; applies the owner-tuned weights, the score threshold, and the gates
+      (account age from the first login_events row, distinct plugins, distinct counterparties
+      across the two-sided events). Additive only - it admits newly-qualified members and never
+      revokes on signal decay. Guarded by INTERNAL_SERVICE_SECRET (bearer); never member or browser
+      callable; called weekly by .github/workflows/contributor-access-recompute.yml. Foundation
+      per-member counts feed the math internally and are never exposed (rule 132). Reads no
+      trust_* table.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      evaluated:
+        type: integer
+      eligible:
+        type: integer
+    dataAccess:
+      - contributor_access_config
+      - contributor_access_eligibility
+      - foundation_call_sessions
+      - socket_relay_fulfillments
+      - trust_transport_trips
+      - lighthouse_matches
+      - service_credits_transfers
+      - contributions_submissions
+      - skills_hunt_submissions
+      - what_works_products
+      - what_works_endorsements
+      - level_up_enrollments
+      - level_up_disbursements
+      - recurring_activities
+      - peer_programming_messages
+      - beacon_events
+      - feed_community_post_reactions
+      - feed_community_replies
+      - login_events
+    purpose: eligibility_recompute
+    retentionClass: derived_long_lived
+    idempotency: true
+
+changelog:
+  - date: 2026-07-18
+    change: >-
+      Initial Contributor Access contract set - the first slice of the trusted-channel /
+      contributor-badge module (proposal:
+      ctf/docs/developer/TRUSTED_CHANNELS_AND_CONTRIBUTOR_BADGE_PROPOSAL.md). Admin config,
+      eligible list, for-cause revoke/reinstate, and the internal weekly recompute. Categorical
+      output only; no member-facing surface exists yet (badge and gated channel are later slices).

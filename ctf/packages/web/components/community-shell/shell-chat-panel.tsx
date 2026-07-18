@@ -324,6 +324,8 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
     deleteMessage,
     mentionsOnly,
     toggleMentionsOnly,
+    announcementsOnly,
+    toggleAnnouncementsOnly,
     isFilterRefreshing,
     lastSeenAtIso,
     markSeen,
@@ -368,8 +370,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
       return Number.isNaN(epoch) ? fallback : epoch;
     };
 
-    // Mentions mode shows only the matching peer chat messages (the server already filters the
-    // history read); the AI (@comic) cards are local to this member and are hidden with it.
+    // A filtered mode (mentions or announcements) shows only the matching messages the server
+    // returned; the AI (@comic) cards are local to this member and are hidden while any filter is on.
+    const filterActive = mentionsOnly || announcementsOnly;
     const entries: StreamEntry[] = [
       ...messages.map((message, index): StreamEntry => ({
         kind: 'message',
@@ -377,7 +380,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         epoch: toEpoch(message.sentAtIso, index),
         order: index,
       })),
-      ...(mentionsOnly ? [] : comicItems).map((item, index): StreamEntry => ({
+      ...(filterActive ? [] : comicItems).map((item, index): StreamEntry => ({
         kind: 'comic',
         item,
         epoch: toEpoch(item.askedAtIso, index),
@@ -387,7 +390,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
 
     entries.sort((a, b) => (a.epoch - b.epoch) || (a.order - b.order));
     return entries;
-  }, [messages, comicItems, mentionsOnly]);
+  }, [messages, comicItems, mentionsOnly, announcementsOnly]);
 
   const hasContent = streamEntries.length > 0;
 
@@ -464,7 +467,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
 
       <div className={styles.chatMessages}>
         {(isLoading || isFilterRefreshing) && !hasContent ? (
-          <p className={styles.chatFootnote}>{mentionsOnly ? 'Looking for your mentions…' : 'Loading live messages…'}</p>
+          <p className={styles.chatFootnote}>
+            {mentionsOnly ? 'Looking for your mentions…' : announcementsOnly ? 'Loading announcements…' : 'Loading live messages…'}
+          </p>
         ) : null}
 
         {!isLoading && !isFilterRefreshing && !hasContent ? (
@@ -472,6 +477,8 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
             <div className={`${styles.chatBubble} ${styles.chatBubbleHub}`}>
               {mentionsOnly ? (
                 <>No mentions yet. When someone writes <strong>{ownMentionLabel}</strong>, it shows here.</>
+              ) : announcementsOnly ? (
+                <>No announcements yet. Official updates from the team show here.</>
               ) : (
                 <>Survivor Hub is live. Share with the community, or type <strong>@comic</strong> to ask the AI Assistant.</>
               )}
@@ -617,14 +624,30 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           same pill size as the question chips, sky-blue so it stays visually distinct; it scrolls
           with the row. The rail always renders because the chip is always present. */}
       <div className={styles.conciergeChipRail} role="group" aria-label="Ask what you need">
+        {/* Mentions filter — icon-only "@" chip (the word was dropped to match the 📣 chip), so the
+            two stream filters read as a matched pair of small glyph pills. */}
         <button
           type="button"
-          className={mentionsOnly ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterChip} ${styles.mentionsFilterBtnActive}` : `${styles.mentionsFilterBtn} ${styles.mentionsFilterChip}`}
+          className={mentionsOnly ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterBtnActive}` : styles.mentionsFilterBtn}
           onClick={toggleMentionsOnly}
           aria-pressed={mentionsOnly}
           aria-label={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
+          title={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
         >
-          <AtSign size={12} /> Mentions
+          <AtSign size={15} aria-hidden="true" />
+        </button>
+        {/* Announcements filter — "Announcements" is too long for a chip, so it shows the 📣 emoji
+            alone. Filtering to announcements lets a member with limited message history still surface
+            official updates that scrolled off the recent page. */}
+        <button
+          type="button"
+          className={announcementsOnly ? `${styles.announcementsFilterBtn} ${styles.announcementsFilterBtnActive}` : styles.announcementsFilterBtn}
+          onClick={toggleAnnouncementsOnly}
+          aria-pressed={announcementsOnly}
+          aria-label={announcementsOnly ? 'Show all messages' : 'Show only announcements'}
+          title={announcementsOnly ? 'Show all messages' : 'Show only announcements'}
+        >
+          <span aria-hidden="true">📣</span>
         </button>
         {starterPrompts.map((prompt) => (
           <button
