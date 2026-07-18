@@ -18,42 +18,74 @@ discover that space and want to reach it.
 - **No images in v1.** Image upload in a survivor community is a serious safety and legal risk (a
   patient perp or a compromised account can post illegal or targeting images). It is a separate,
   later decision that requires a moderation pipeline — never a free perk bundled into the tier.
-- **No numeric trust score. No points, no tiers, no leaderboard, no ranking.** This stays consistent
-  with the Trust plugin rule: standing is categorical, never a number.
+- **No numeric score. No points, no tiers, no leaderboard, no ranking** on any surface. Standing is
+  categorical: a member is eligible or not-yet.
+- **This is its own gating module — it does NOT touch the Trust plugin.** The eligibility engine
+  described here reads existing signals to make an access decision; it never writes to, changes, or
+  re-uses the Trust plugin's model, status, or rules. Keep the two entirely separate.
 - **No claim of verification or vetting.** The platform verifies no one's identity, background, or
   work. No surface may say "verified," "vetted," or "trusted by the platform."
-- **The "material value first" norm still applies** inside these channels — they are not a
+- **The "material value first" norm still applies** inside the channel — it is not a
   pure-socializing lounge.
 
-## 1. Trust eligibility (private, server-computed)
+## 1. How access is earned (material value, weighted per plugin)
 
-A single categorical decision per member: **eligible** or **not-yet**. It is computed on the server
-and never shown as a number or a rank.
+A single categorical decision per member: **eligible** or **not-yet**, computed on the server and
+never shown as a number or a rank.
 
-**Signals (all from data already stored):**
+### The core property: gaming the gate means helping the community
 
-- **Account tenure** — a minimum account age.
-- **Login consistency** (`auth_login_activity`) — weighted **low**, because it is the easiest signal
-  to script.
-- **Unlock status** — `approved_full`.
-- **Participation breadth** — active in more than one plugin, not just one.
-- **Counterparty diversity** — interacts/transacts with **many distinct** people over a window, not
-  the same one or two. This is the strongest anti-collusion signal (it resists sockpuppet rings far
-  better than raw volume) and is the owner's key idea.
-- **Clean standing** — no active blocks or reports against the member.
+Access is bought **only with real material value delivered to real people**. So the only way to
+"game" it is to actually provide steady aid to the community — which is the outcome the platform
+wants. A perp who grinds for access has to spend genuine effort helping survivors; that is
+self-defeating, which is why this gate needs very little fraud detection. Everything below is just
+calibrating "material value" honestly.
 
-**How the signals combine:** an owner-tunable rule (a threshold over weighted signals, or an explicit
-set of minimums). Keep the exact formula server-side and adjustable **without a redeploy**, the same
-way the single-open-cohort toggle and the trust snapshot already work.
+### What counts as value (not logins, not presence)
 
-**Cadence:** recomputed on a schedule (for example, alongside the trust snapshot), **not instantly**.
-This prevents a "spike the signals then coast" gaming pattern.
+- **Value = each plugin's core value-action**, i.e. its *defining metric of success* — the action
+  that means the plugin is being used as intended. Examples: a TrustTransport delivery completed, a
+  Lighthouse stay hosted, a SocketRelay request filled, a Foundation quote fulfilled, a WhatWorks
+  endorsement others found useful. The reference point is Airbnb's "active user = someone who books,"
+  not "someone who logs in."
+- **Logins are downstream of value, so they carry near-zero admission weight.** Recent activity is
+  used only as a **liveness floor** ("is this member still around"), never as a positive score. A
+  member who adds value logs in as a consequence; rewarding the login directly rewards the wrong thing
+  and is the easiest signal to script.
+- **Delivered to distinct people** (counterparty diversity): the value has to reach **many different**
+  members over a window, so it is real community aid, not self-dealing or a sockpuppet ring.
+- **Clean standing:** no active blocks or reports against the member.
+- **Minimum tenure:** an account-age floor.
 
-**Earn and keep:** eligibility can lapse if the signals decay or a report lands, so behaviour stays
-good inside the channel, not just at the door.
+### Weighting value across plugins
 
-**Storage:** a computed eligibility flag plus a non-exposed reason snapshot. Reuse the Trust snapshot
-infrastructure rather than building a second scoring system.
+- **Each plugin's value-action is weighted, normalized by its base rate / effort.** A frequent, small
+  action (a TrustTransport delivery) and a rare, large one (hosting a Lighthouse stay) must not count
+  equally: one Lighthouse action is worth many TrustTransport actions. The weights reflect *value
+  contributed*, not raw event count, and are **owner-tunable without a redeploy** (the model the
+  single-open-cohort toggle already uses).
+- **Reuse each plugin's defining metric — do not reinvent it.** "Material value per plugin" is exactly
+  what the **canonical metric registry (rule 121)** and the **Weekly Performance** plugin are meant to
+  define (each plugin's success metric, tied to whether it is used in its intended form). The gating
+  module should *consume* those per-plugin metrics. This is a real dependency: the cleanest version of
+  this waits on the per-plugin success metrics being settled (part of the tabled Weekly Performance
+  work). Build the admission engine on top of that layer, not beside it.
+- **Note on plugin archetypes:** most plugins mirror a known app, so their value-action is borrowed
+  from that archetype (Lighthouse ≈ a stay, TrustTransport ≈ a delivery/ride, Foundation ≈ a fulfilled
+  service). A few — PeerProgramming, Workforce, LevelUp — are bespoke, so their value-action has to be
+  defined from their own intended use rather than copied.
+
+### Output, cadence, and storage
+
+- **Output:** a categorical eligibility flag per member (internal). Any internal score used to reach
+  it stays server-side and is never surfaced.
+- **Cadence:** recomputed on a schedule (not instantly), so nobody spikes the signals then coasts.
+- **Earn and keep:** eligibility can lapse if value dries up or a report lands, so good behaviour
+  continues inside the channel, not just at the door.
+- **High churn is expected and fine.** With typical messaging-app churn, most members never qualify;
+  the badge is for the persistent value-adding minority, by design.
+- **Storage:** a computed eligibility flag plus a non-exposed reason snapshot, owned by this module —
+  separate from the Trust plugin's storage.
 
 ## 2. The gated channel (one, not many)
 
@@ -109,8 +141,13 @@ members something to aim for — and "you can earn it too" keeps it from reading
 
 ## Open decisions for the owner
 
-- The exact eligibility weights/thresholds and the minimum account age.
-- The recompute cadence (weekly? alongside the trust snapshot?).
+- **The per-plugin value-action weights** and the base-rate normalization (how much one Lighthouse
+  action is worth vs one TrustTransport action, and so on), plus the overall threshold and the minimum
+  account age.
+- **The dependency on per-plugin success metrics:** whether to settle each plugin's defining metric
+  (canonical metric registry / Weekly Performance) first and have the gating module consume it, or to
+  ship an interim weighting and reconcile later.
+- The recompute cadence (weekly?).
 - The badge's name and click-through wording (brand-voice pass).
 - The minimum number of eligible members required before the single gated channel opens.
 - When (if ever) the single gated channel is noisy enough to justify splitting — the same
@@ -120,9 +157,14 @@ members something to aim for — and "you can earn it too" keeps it from reading
 
 ## Build sequence (only when approved)
 
-1. Eligibility computation (reuse the trust snapshot) producing the categorical flag.
+0. **(Dependency)** Settle each plugin's defining value-metric via the canonical metric registry /
+   Weekly Performance, so the gating module has a real per-plugin definition of material value to
+   consume rather than a guessed one.
+1. Eligibility computation in this new gating module (reads the per-plugin value-actions + counterparty
+   diversity + liveness floor + clean standing; owner-tunable weights), producing the categorical flag.
+   It does not touch the Trust plugin.
 2. The Directory badge + click-through + a short "how it's earned" page.
 3. One gated Stream channel (richer reactions, threads, **no images**), membership synced from the
-   flag, moderators read-in and disclosed.
+   flag, moderators read-in and disclosed. Open it only once enough members qualify.
 4. Observe how it behaves. Only then consider images, and only with a full report → fast-removal →
    retention pipeline (the Foundation retention model is the reference).
