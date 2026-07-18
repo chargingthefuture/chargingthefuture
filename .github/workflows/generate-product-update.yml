@@ -33,8 +33,21 @@ jobs:
             RANGE="${LAST_TAG}..HEAD"
           fi
 
-          COMMITS=$(git log "$RANGE" --pretty=format:"%h %s" | head -30)
-          COUNT=$(echo "$COMMITS" | grep -cE " (feat|fix|perf):" || true)
+          # The has_changes gate keys on subjects only (a body can contain the word
+          # "fix:" mid-sentence, which must not inflate the count).
+          SUBJECTS=$(git log "$RANGE" --pretty=format:"%h %s" | head -30)
+          COUNT=$(echo "$SUBJECTS" | grep -cE " (feat|fix|perf):" || true)
+
+          # The model is fed the subject AND the full message body of each commit —
+          # the body is the real, factual description of what changed (it carries the
+          # merged PR's "what changed" context), which grounds the generator so it
+          # stops inventing capabilities from a five-word subject (see issue #1471).
+          # Trailer lines (session URL, co-author, the Claude attribution, and the
+          # Parity Status gate line) are stripped as noise, and the whole block is
+          # capped so it can never overflow the $GITHUB_OUTPUT size limit.
+          COMMITS=$(git log "$RANGE" --max-count=30 --pretty=format:"=== %h %s%n%b%n" \
+            | grep -vaiE '^(co-authored-by:|claude-session:|https://claude\.ai/code/|🤖 generated with|generated with \[claude|parity status:|parity ticket:)' \
+            | head -c 18000)
 
           echo "commits<<EOF" >> "$GITHUB_OUTPUT"
           echo "$COMMITS" >> "$GITHUB_OUTPUT"
