@@ -1,0 +1,146 @@
+policies:
+  - pluginId: contributor-access
+    command: contributor-access.config.get
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+    consentRequirements:
+      scopes:
+        - contributor_access_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - insufficient_role
+
+  - pluginId: contributor-access
+    command: contributor-access.config.update
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      csrfHeader: required
+      weightKeys: fixed_value_event_keys_only
+    consentRequirements:
+      scopes:
+        - contributor_access_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - csrf_denied
+      - invalid_payload
+
+  - pluginId: contributor-access
+    command: contributor-access.eligible.list
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      outputScope: categorical_only_no_score
+    consentRequirements:
+      scopes:
+        - contributor_access_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - insufficient_role
+
+  - pluginId: contributor-access
+    command: contributor-access.member.revoke
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      csrfHeader: required
+      revokeReason: non_empty_required
+      revokeBasis: for_cause_only
+    consentRequirements:
+      scopes:
+        - contributor_access_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - csrf_denied
+      - missing_reason
+      - no_earned_eligibility
+
+  - pluginId: contributor-access
+    command: contributor-access.member.reinstate
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      csrfHeader: required
+    consentRequirements:
+      scopes:
+        - contributor_access_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - csrf_denied
+      - not_revoked
+
+  - pluginId: contributor-access
+    command: contributor-access.eligibility.recompute
+    version: 1.0.0
+    requiredRoles: []
+    attributePolicies:
+      authentication: internal_service_secret_bearer
+      callerScope: service_to_service_only
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - secret_unconfigured
+      - invalid_bearer_token
+
+changelog:
+  - date: 2026-07-18
+    change: >-
+      Initial Contributor Access access policies. Every admin command is admin-only (requiredRoles
+      [admin] - no operations role: revoke/reinstate are standing decisions). The recompute command
+      is internal-service-secret gated, never member or browser callable.
