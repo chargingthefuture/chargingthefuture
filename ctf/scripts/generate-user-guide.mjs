@@ -13,8 +13,10 @@
  *   - ctf/packages/web/app/guide/guide-content.json  (rendered by /guide)
  *   - ctf/docs/USER_GUIDE.md                          (a plain markdown copy to share / paste to the wiki)
  *
- * Reads: ANTHROPIC_API_KEY (optional — without it, falls back to a deterministic, un-polished but
- * still grounded extraction so the build never hard-depends on the model).
+ * Reads: ANTHROPIC_API_KEY (required — the script refuses to run without it rather than publish
+ * ungrounded fallback text). GUIDE_FORCE=1 regenerates every section; otherwise a section whose
+ * source docs have not changed since its last generation is kept verbatim with no model call, so a
+ * scheduled run with no doc changes costs nothing and opens no PR.
  *
  * Per-section "Last updated" is the last commit date touching that plugin's inventory + test script,
  * so each section honestly reflects how current its source docs are.
@@ -211,6 +213,17 @@ for (const [slug, title] of ORDER) {
   const features = extractSection(inv, /User Features/i);
   const coreSmoke = extractSection(ts, /Core smoke/i);
   const updated = lastUpdated([invPath, tsPath]);
+
+  // Cost control: the guide is regenerated on a schedule (see the workflow), so most runs happen
+  // with no doc changes. Skip the model call for any section whose source docs have not changed
+  // since it was last generated — its `updated` date already equals the source's last-commit date.
+  // A GUIDE_FORCE=1 run (manual "force full rebuild") regenerates everything.
+  const existing = prev.get(slug);
+  if (process.env.GUIDE_FORCE !== '1' && existing && existing.updated === updated) {
+    console.error(`  ${slug}: source docs unchanged since ${updated} — keeping current section (no API call).`);
+    sections.push(existing);
+    continue;
+  }
 
   console.error(`generating ${slug}…`);
   const written = await rewrite(slug, title, features, coreSmoke);

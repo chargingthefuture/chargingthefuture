@@ -5,25 +5,30 @@ name: User Guide — Regenerate
 # rewritten in the project's plain voice by ctf/scripts/generate-user-guide.mjs. The generator is
 # grounded: it can only describe what those docs already say (see issue #1471 for why that matters).
 #
-# Runs when a plugin's user-facing docs change, and on manual dispatch. It never publishes directly:
-# it opens a pull request so the generated wording is reviewed before it goes live on the public
-# page. A manual run with publish_wiki=true also pushes the markdown copy to the GitHub wiki.
+# Runs on a schedule (weekly) and on manual dispatch — NOT on every doc-touching push, to
+# keep the model-API cost bounded. Each run only regenerates the sections whose source docs changed
+# since they were last generated (the generator skips unchanged sections, so a run with no doc
+# changes makes no API calls and opens no PR). It never publishes directly: it opens a pull request
+# so the generated wording is reviewed before it goes live. A manual run with publish_wiki=true also
+# pushes the markdown copy to the GitHub wiki; force=true regenerates every section from scratch.
 
 on:
   workflow_dispatch:
     inputs:
+      force:
+        description: 'Regenerate every section from scratch (ignore the unchanged-docs skip).'
+        required: false
+        default: false
+        type: boolean
       publish_wiki:
         description: 'Also push the markdown copy to the GitHub wiki page (User-Guide).'
         required: false
         default: false
         type: boolean
-  push:
-    branches: [main]
-    paths:
-      - 'ctf/docs/developer/ctf-plugin-feature-inventories/**'
-      - 'ctf/docs/developer/test-scripts/**'
-      - 'ctf/scripts/generate-user-guide.mjs'
-      - 'ctf/config/manual-test-script-manifest.json'
+  schedule:
+    # Weekly, Mondays at 06:00 UTC — a fresh guide at the start of the week. Change-aware, so a week
+    # with no doc changes makes no API calls and opens no PR.
+    - cron: '0 6 * * 1'
 
 permissions:
   contents: write
@@ -61,6 +66,10 @@ jobs:
           recursive: true
 
       - name: Regenerate the guide
+        # GUIDE_FORCE=1 (manual force run) regenerates every section; otherwise the generator skips
+        # sections whose source docs have not changed since their last generation.
+        env:
+          GUIDE_FORCE: ${{ inputs.force == true && '1' || '0' }}
         run: node ctf/scripts/generate-user-guide.mjs
 
       - name: Open a pull request if the guide changed
