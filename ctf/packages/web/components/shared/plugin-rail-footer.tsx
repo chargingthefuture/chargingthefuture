@@ -2,10 +2,9 @@
 
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { ArrowLeft, Settings } from "lucide-react";
-import { resolveBackTarget } from "@/lib/nav/back-target";
+import { useSmartBack } from "@/lib/nav/back-history";
 
 // The shared bottom of every plugin's left icon rail. These controls are identical on every screen —
 // only the top of the rail (the plugin's own brand mark and its tabs) changes. Keeping them in one
@@ -30,16 +29,16 @@ const ICON_BTN: CSSProperties = {
 // Render this as the last child of a plugin's rail <aside>. It includes the flexible spacer that
 // pushes itself to the bottom, so the rail's top section does not need its own spacer.
 export function PluginRailFooter() {
-  // Same one-level-up policy as the mobile/desktop header: an admin rail (comic, directory) goes back
-  // to the admin directory, a member plugin rail goes back to all apps.
-  const pathname = usePathname();
-  const back = resolveBackTarget(pathname);
+  // History-aware back, same as the mobile/desktop header (owner decision, 2026-07-17): previous
+  // in-app page when one exists; else the one-level-up fallback (admin rail → /admin, member rail
+  // → all apps).
+  const back = useSmartBack();
   return (
     <>
       <div style={{ flex: 1 }} />
-      <Link href={back.href} aria-label={back.label} title={back.label} style={ICON_BTN}>
+      <button type="button" onClick={back.goBack} aria-label={back.label} title={back.label} style={ICON_BTN}>
         <ArrowLeft size={20} />
-      </Link>
+      </button>
       <Link href="/account" aria-label="Your account and settings" title="Your account and settings" style={ICON_BTN}>
         <Settings size={20} />
       </Link>
