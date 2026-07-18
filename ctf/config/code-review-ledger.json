@@ -28,10 +28,14 @@
     {
       "name": "announcements",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-17T19:04:58.791Z",
+      "lastRunIssues": 4,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/announcements",
+        "ctf/packages/web/app/api/announcements"
+      ]
     },
     {
       "name": "auth",
@@ -348,42 +352,64 @@
     {
       "name": "peer-programming",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-18T08:14:09.048Z",
+      "lastRunIssues": 7,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/peer-programming",
+        "ctf/packages/web/app/api/peer-programming",
+        "ctf/packages/web/components/peer-programming",
+        "ctf/packages/web/lib/peer-programming"
+      ]
     },
     {
       "name": "plugin",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-07-16T08:37:32.172Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/plugin"
+      ]
     },
     {
       "name": "plugins",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-15T08:39:32.823Z",
+      "lastRunIssues": 5,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/plugins",
+        "ctf/packages/web/components/plugins",
+        "ctf/packages/web/lib/plugins"
+      ]
     },
     {
       "name": "presence",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-14T15:52:17.449Z",
+      "lastRunIssues": 4,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/presence",
+        "ctf/packages/web/lib/presence"
+      ]
     },
     {
       "name": "questions",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-14T14:58:05.350Z",
+      "lastRunIssues": 5,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/questions",
+        "ctf/packages/web/app/api/questions"
+      ]
     },
     {
       "name": "recurring-activity",
@@ -410,6 +436,17 @@
         "ctf/packages/web/app/api/safety",
         "ctf/packages/web/components/safety",
         "ctf/packages/web/lib/safety"
+      ]
+    },
+    {
+      "name": "security",
+      "type": "module",
+      "lastReviewedAt": "2026-07-17T08:31:47.697Z",
+      "lastRunIssues": 3,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/security"
       ]
     },
     {
@@ -544,6 +581,14 @@
         "ctf/packages/web/components/unlock",
         "ctf/packages/web/lib/unlock"
       ]
+    },
+    {
+      "name": "webhooks",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "weekly-performance",

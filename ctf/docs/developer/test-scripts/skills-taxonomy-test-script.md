@@ -130,7 +130,11 @@ apply also attaches promoted skills to nominated profiles (via `skills_hunt_dire
 After changes 50–51 apply, **Creative & Media › Graphic / Visual Designers** also lists **Web and responsive
 design** and **Creative & Media › Artists / Illustrators** also lists **Illustration and concept art** —
 two design/art skills the taxonomy was missing. UX/UI design was deliberately not added as a skill (it is
-the existing "UX/UI Designers" occupation, a job title, not a skill).
+the existing "UX/UI Designers" occupation, a job title, not a skill). After changes 52–57 apply, **R&D &
+High-Tech** lists a new **Web Developers** occupation with five skills — Front-end development, Back-end
+development, Full-stack development, Web and responsive design, JavaScript / TypeScript. "Web and responsive
+design" appears under both Web Developers and Graphic / Visual Designers on purpose (same skill name under
+several occupations is expected, not a duplicate to clean up — Workforce matches by name).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
