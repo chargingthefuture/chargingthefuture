@@ -90,15 +90,25 @@ export async function GET(request: Request) {
     // (`@<username>` and the `@user-<id token>` pseudonym) — a client-supplied handle is
     // never trusted. Mentions mode is peer-chat only, so it reads just the community
     // channel (announcements and AI Q&A cards are not part of the mentions view).
-    const mentionsMe = new URL(request.url).searchParams.get('mentions') === 'me';
+    const params = new URL(request.url).searchParams;
+    const mentionsMe = params.get('mentions') === 'me';
     const mentionHandles = mentionsMe
       ? feedMentionTokens(gate.identity.username, gate.auth.userId)
       : null;
+    // Announcements filter (`?channel=announcements`, from the 📣 chip): return only official
+    // announcements, including ones that scrolled off the recent page, so a member with limited
+    // history can still surface them. Only this value is honored; anything else falls back to 'all'.
+    // Mentions takes precedence when both are present.
+    const announcementsOnly = !mentionsMe && params.get('channel') === 'announcements';
     const timeline = await listFeedTimeline(
       gate.auth.userId,
       gate.auth.role,
       pagination,
-      mentionsMe ? { channel: 'community', mentionHandles } : { channel: 'all' },
+      mentionsMe
+        ? { channel: 'community', mentionHandles }
+        : announcementsOnly
+          ? { channel: 'announcements' }
+          : { channel: 'all' },
     );
 
     // Resolve the linked plugin (if any) for the announcements on this page, so each official card
