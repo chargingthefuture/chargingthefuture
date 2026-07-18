@@ -106,6 +106,17 @@ chargingthefuture/          ← repo root
 
 **Do not** create app code outside `ctf/packages/*`. Scripts go in `ctf/scripts/`.
 
+## Credits Are Not Money (Critical — all agents)
+
+ServiceCredits and every in-app credit are a **non-fiat internal credits unit** — not money, not
+cash, not a currency, not a security, and never redeemable or withdrawable for fiat value. Never
+describe credits in money terms anywhere (code, comments, docs, UI copy, PR/commit text, posts); a
+credit movement is a "send", "transfer", or "exchange", not a "payment". Real fiat amounts
+unrelated to credits (e.g. a LightHouse listing's actual rent, Contributions' confirmed USD
+donations) are real money and are described as such. The committed statement of record is
+`ctf/docs/DISCLAIMER.md`; the approved phrasing lives in `ctf/docs/BRAND_VOICE_LEXICON.md`. Any
+money-framing of credits in this repo is an error, not a claim.
+
 ## Secrets — Infisical is the single source of truth
 
 All secrets are stored in the self-hosted Infisical instance. The Infisical `production`

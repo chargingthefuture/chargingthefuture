@@ -27,6 +27,8 @@ It must:
 
 Cross-plugin usage is mandatory for any CTF flow that transfers economic value, and fiat redemption paths are out of scope and explicitly denied.
 
+**Credits are not money.** ServiceCredits are a non-fiat internal credits unit — not money, not a currency, not a security, and never redeemable or withdrawable for cash or any fiat value. The committed statement of record is `ctf/docs/DISCLAIMER.md`; any money-framing of credits anywhere in the repo is an error, not a claim.
+
 For GDP/accounting semantics, deletion-based treasury reclaim is reserve reallocation and not GDP recognition.
 
 The plugin must provide equivalent core behavior across web and Android, with phased parity tracked and closed before GA.

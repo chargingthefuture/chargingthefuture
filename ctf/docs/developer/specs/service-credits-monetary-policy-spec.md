@@ -233,7 +233,7 @@ number:
   barter, free — folded into one relative **Community Value Index** via owner-set contribution weights
   (`currency_usd_rates`, USD only as a reference base of 1). It is an index, not dollars, and it never
   expresses a per-wallet ServiceCredits-to-fiat value.
-- **Circulation (this dashboard)** measures the ServiceCredits *money itself* — supply in circulation,
+- **Circulation (this dashboard)** measures the ServiceCredits *credit supply itself* (not money — see `ctf/docs/DISCLAIMER.md`) — supply in circulation,
   total issued/burned, treasury, velocity, mutual-credit debt — always in **credits**, never in dollars.
 
 They touch at exactly one point, and only as an input: ServiceCredits *transaction activity*. Even there

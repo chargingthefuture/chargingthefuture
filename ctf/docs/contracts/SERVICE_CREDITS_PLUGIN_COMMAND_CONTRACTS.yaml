@@ -1,3 +1,5 @@
+# ServiceCredits are non-fiat internal credits — not money, never redeemable for fiat value.
+# Statement of record: ctf/docs/DISCLAIMER.md. Money-framing of credits anywhere is an error.
 contracts:
   - pluginId: service-credits
     command: wallet.create
