@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed, team sector names corrected to live taxonomy names, member names link to Directory profile (web) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) |
 
 ## How to run this
 
@@ -169,8 +169,9 @@ the full-screen loading state — the current dashboard stays visible until the 
 **Expected:** Each team shows its matched-member count and lists the sectors it draws from; when
 expanded, the matched members by name (same match reasons as the sector drilldown — job title, skill,
 or sector). A member matched through two of a team's sectors appears once. There is **no** "N to fill"
-demand-gap figure on this view (removed 2026-07-17 — it is workforce-scale and irrelevant to planning
-one neighbourhood). A team whose mapped sector is not in the taxonomy shows that sector flagged "not
+demand-gap figure anywhere on this view — neither the team-level total nor the per-occupation figure
+inside each member card (both removed 2026-07-17 — workforce-scale and irrelevant to planning one
+neighbourhood; the match reason and "via <skills>" attribution stay). A team whose mapped sector is not in the taxonomy shows that sector flagged "not
 mapped" rather than silently empty — after the 2026-07-17 name fix (`Housing & Construction`,
 `Energy & Utilities`) no team should show a "not mapped" chip; if one appears, a taxonomy sector was
 renamed and the team table needs the new name. The view is read-only and reflects current Directory data on

@@ -49,7 +49,10 @@ function useWorkforceStyles() {
   return { tokens, accent, styles };
 }
 
-function MemberCard({ m }: { m: WorkforceMatchedMember }) {
+// `showOccupationGap` (default on) renders each occupation row's population-model "N to fill" / "filled"
+// figure; the Community planning tab turns it off — that workforce-scale number is irrelevant to
+// planning one neighbourhood, matching the web Community view and the team-level gap already dropped.
+function MemberCard({ m, showOccupationGap = true }: { m: WorkforceMatchedMember; showOccupationGap?: boolean }) {
   const { styles } = useWorkforceStyles();
   const r = REASON[m.matchReason];
   return (
@@ -72,7 +75,9 @@ function MemberCard({ m }: { m: WorkforceMatchedMember }) {
               <View style={[styles.badge, { backgroundColor: or_.color + '1A', borderColor: or_.color + '40' }]}>
                 <Text style={[styles.badgeText, { color: or_.color }]}>{or_.label}</Text>
               </View>
-              <Text style={styles.memberSub}>{o.gap > 0 ? `${fmt(o.gap)} to fill` : 'filled'}</Text>
+              {showOccupationGap ? (
+                <Text style={styles.memberSub}>{o.gap > 0 ? `${fmt(o.gap)} to fill` : 'filled'}</Text>
+              ) : null}
             </View>
           </View>
         );
@@ -332,7 +337,7 @@ function TeamRow({ team }: { team: CommunityPlanningTeamRoster }) {
           {team.memberCount === 0 ? (
             <Text style={styles.muted}>No members match this team&apos;s sectors yet.</Text>
           ) : (
-            team.members.map((m) => <MemberCard key={m.profileId} m={m} />)
+            team.members.map((m) => <MemberCard key={m.profileId} m={m} showOccupationGap={false} />)
           )}
         </View>
       ) : null}
