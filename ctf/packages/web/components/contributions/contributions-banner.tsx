@@ -15,11 +15,6 @@ import {
 
 const CSRF_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' } as const;
 
-// The dismiss ("Not now") control is temporarily hidden per owner request. The button markup and the
-// onDismiss snooze handler are kept in place so it can be brought back by flipping this flag to true —
-// nothing was removed.
-const SHOW_DISMISS_BUTTON: boolean = false;
-
 type BannerGoal = { label: string; current: number; target: number; unit: string; Icon: typeof DollarSign; color: string };
 
 function bannerGoals(f: FundraiserResponse['fundraiser']): BannerGoal[] {
@@ -32,9 +27,13 @@ function bannerGoals(f: FundraiserResponse['fundraiser']): BannerGoal[] {
 
 /**
  * The app-wide, dismissible fundraiser banner. It is non-blocking (a slim bar, never a modal) and
- * only renders while a drive is active and the snapshot says it is visible for this member.
- * "Contribute" opens the plugin; "Not now" calls the server-side silent snooze (the duration is
- * never shown). Desktop and phone-width layouts mirror the Contributions*Banner mockups.
+ * only renders while a drive is active and the banner feature is on. "Contribute" opens the plugin;
+ * "Not now" calls the server-side silent snooze (the duration is never shown).
+ *
+ * On phone width, dismissing does not remove the reminder entirely — the full banner collapses to a
+ * small gift emoji in its place that still opens the plugin, so it stays a subtle nudge without
+ * taking up space. The full banner returns on its own when the snooze lapses. On desktop, dismissing
+ * hides it until the snooze lapses (no emoji — a slim desktop bar is already unobtrusive).
  */
 export function ContributionsBanner() {
   const isMobile = useIsMobile();
@@ -43,7 +42,7 @@ export function ContributionsBanner() {
   const router = useRouter();
 
   const [fundraiser, setFundraiser] = useState<FundraiserResponse['fundraiser'] | null>(null);
-  const [dismissed, setDismissed] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -65,21 +64,47 @@ export function ContributionsBanner() {
     return () => controller.abort();
   }, []);
 
+  const onContribute = useCallback(() => router.push('/apps/contributions'), [router]);
+
   const onDismiss = useCallback(async () => {
-    setDismissed(true);
+    setCollapsed(true);
     try {
       await fetch('/api/contributions/banner/dismiss', { method: 'POST', headers: CSRF_HEADERS });
     } catch {
-      // Best-effort: even if the snooze write fails, the banner stays hidden for this session.
+      // Best-effort: even if the snooze write fails, the banner stays collapsed for this session.
     }
   }, []);
 
-  if (dismissed || !fundraiser || !fundraiser.cycle || !fundraiser.bannerVisible) {
+  // No active drive, or the banner feature is turned off entirely → render nothing.
+  if (!fundraiser || !fundraiser.cycle || !fundraiser.bannerEnabled) {
+    return null;
+  }
+
+  const showFullBanner = fundraiser.bannerVisible && !collapsed;
+
+  // Phone width, dismissed or snoozed → a subtle gift-emoji reminder in the banner's place.
+  if (isMobile && !showFullBanner) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '5px 12px', background: `${t.ACCENT}0A`, borderBottom: `1px solid ${t.ACCENT}20`, fontFamily: FONT_FAMILY }}>
+        <button
+          type="button"
+          onClick={onContribute}
+          aria-label="Contribute to the platform"
+          title="Contribute"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 4 }}
+        >
+          🎁
+        </button>
+      </div>
+    );
+  }
+
+  // Desktop, dismissed or snoozed → nothing until the snooze lapses.
+  if (!showFullBanner) {
     return null;
   }
 
   const goals = bannerGoals(fundraiser);
-  const onContribute = () => router.push('/apps/contributions');
 
   if (isMobile) {
     return (
@@ -107,11 +132,9 @@ export function ContributionsBanner() {
           <button type="button" onClick={onContribute} style={{ flex: 1, padding: '7px 0', borderRadius: 7, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
             Contribute
           </button>
-          {SHOW_DISMISS_BUTTON && (
-            <button type="button" onClick={() => void onDismiss()} style={{ flex: 1, padding: '7px 0', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, cursor: 'pointer' }}>
-              Not now
-            </button>
-          )}
+          <button type="button" onClick={() => void onDismiss()} style={{ flex: 1, padding: '7px 0', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, cursor: 'pointer' }}>
+            Not now
+          </button>
         </div>
       </div>
     );
@@ -150,11 +173,9 @@ export function ContributionsBanner() {
         <button type="button" onClick={onContribute} style={{ padding: '6px 16px', borderRadius: 7, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           Contribute
         </button>
-        {SHOW_DISMISS_BUTTON && (
-          <button type="button" onClick={() => void onDismiss()} style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, cursor: 'pointer' }}>
-            Not now
-          </button>
-        )}
+        <button type="button" onClick={() => void onDismiss()} style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, cursor: 'pointer' }}>
+          Not now
+        </button>
       </div>
     </div>
   );

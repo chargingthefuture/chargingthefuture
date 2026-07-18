@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributions-feature-inventory.md` |
-| **Generated** | 2026-07-01 (live credit valuations in member copy; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-18 (phone banner dismiss + emoji reminder; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -101,16 +101,19 @@ out — honest retries still work.
 plain language. An empty history shows the empty state, not an error.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### CON-5 · Fundraiser banner — Contribute (dismiss button hidden)
-**Role:** member · **Surfaces:** all
+### CON-5 · Fundraiser banner — Contribute, dismiss, and the phone emoji reminder
+**Role:** member · **Surfaces:** web (desktop) · web (mobile-responsive)
 **Steps:**
 1. With the banner showing in the Hub, press **Contribute**.
-2. Look for a "Not now" / dismiss control on the banner.
-**Expected:** **Contribute** opens the drive at `/apps/contributions` — the page renders (it is
-**not** a 404; the plugin registry row is visible, `is_visible = TRUE`). There is **no** "Not now"
-button on the banner — it is currently hidden by owner request (the `SHOW_DISMISS_BUTTON` flag is
-off). The server-side snooze endpoint still exists but has no UI entry point for now.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+2. Press **Not now** to dismiss.
+3. On phone width, look at where the banner was. On desktop, look at where the banner was.
+**Expected:** **Contribute** opens the drive at `/apps/contributions` — the page renders (not a 404).
+The banner shows a **Not now** dismiss on both layouts. After dismissing on **phone width**, the full
+banner is replaced by a small gift emoji (🎁) in its place that still opens the plugin when tapped
+(the full banner returns on its own after the snooze lapses). After dismissing on **desktop**, the
+banner is gone until the snooze lapses (no emoji). If the admin turns the banner feature off, neither
+the banner nor the emoji shows. (Android app has no fundraiser banner.)
+**Result:** web ☐ mobile ☐ android n/a — notes:
 
 ### CON-6 · Refresh the drive
 **Role:** member · **Surfaces:** all
