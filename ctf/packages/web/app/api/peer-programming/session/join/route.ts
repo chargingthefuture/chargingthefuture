@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
-import { getMyCohort, insertPeerProgrammingAudit } from 'lib/peer-programming/repository';
+import { getMyCohort, insertPeerProgrammingAudit, joinStandingCohort } from 'lib/peer-programming/repository';
 import { createPeerProgrammingVideoCredentials } from 'lib/peer-programming/stream';
 import { PEER_PROGRAMMING_ERROR_CODE } from 'lib/peer-programming/constants';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
@@ -21,6 +21,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Same as the room route: after the access gate, ensure the caller is a member of the standing
+    // cohort (single-open mode) so a member who jumps straight to the live session is placed too. The
+    // membership write lives here, not in getMyCohort (a read).
+    await joinStandingCohort(gate.auth.userId);
+
     const cohort = await getMyCohort(gate.auth.userId);
     if (!cohort) {
       await insertPeerProgrammingAudit({

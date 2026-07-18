@@ -6,6 +6,7 @@ import {
   getMyCohort,
   getPublishedWeeklyTopic,
   isCohortMember,
+  joinStandingCohort,
   listActiveCohorts,
   listMessages,
 } from 'lib/peer-programming/repository';
@@ -27,6 +28,11 @@ export async function GET(request: Request) {
   const requestedCohortId = new URL(request.url).searchParams.get('cohortId');
 
   try {
+    // Opening the room auto-joins the caller to the single standing cohort (single-open mode only) so
+    // any authorized member can post, not just listen. This membership WRITE is done here, after the
+    // access gate above, rather than inside getMyCohort (a read) — no-op in weekly mode.
+    await joinStandingCohort(gate.auth.userId);
+
     const [topic, myCohort, cohorts] = await Promise.all([
       getPublishedWeeklyTopic(),
       getMyCohort(gate.auth.userId),

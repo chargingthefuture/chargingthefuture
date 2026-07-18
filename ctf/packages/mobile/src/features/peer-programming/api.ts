@@ -9,7 +9,7 @@ const BASE = '/api/peer-programming';
 // composer enforces the same limit the route rejects past.
 export const PEER_PROGRAMMING_MAX_MESSAGE_LENGTH = 2000;
 
-export type PeerProgrammingTier = 'cohort_member' | 'authenticated_audience' | 'public_audience';
+export type PeerProgrammingTier = 'cohort_member' | 'authenticated_audience' | 'unauthenticated_audience';
 
 export type PeerProgrammingTopic = {
   id: string;
