@@ -13,7 +13,10 @@ Foundation provides trauma-informed survivors with deterministic access to vette
 
 ## Target User Features
 
-1. Provider discovery and search by service type, location, language, and trauma-informed criteria.
+1. Provider discovery and search. Shipped: a text search over provider name, headline, and bio,
+   plus an offered-skill filter (`searchProviders` — providers are claimed directory profiles that
+   opted in by offering at least one skill). Location/language/trauma-informed filters from the
+   original target scope were never built and are not claimed anywhere member-facing.
 2. Survivor-provider 1:1 text messaging with delivery/read/seen semantics and file attachment support.
 3. Voice and video session initiation and join for approved 1:1 participants.
 4. Quote request lifecycle (requested → provider_responded → closed) with immutable timeline view. The 1:1 text/voice/video channel is scoped to an active connection/quote between exactly the two parties and opens with it; when the connection/quote reaches a terminal state (closed, declined, or ended) the chat closes — no new messages may be sent, both parties keep read-only access for a limited window, and message/session records are retained server-side for moderation/abuse evidence per the deletion contract. No 1:1 messaging exists outside an active connection/quote (platform rule 100, "Messaging Scope and Lifecycle").
@@ -160,6 +163,14 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 10. **Web Push requires the owner to provision VAPID keys.** Until `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` are set (the owner generates them once with `npx web-push generate-vapid-keys` and stores them in Infisical `production`), the ring is delivered in-app only — every push is a graceful no-op. No keys are generated or committed in the repo (open-source secrets policy). See `.claude/rules/123-environment-configuration-rules.mdc`.
 
 ## Change Log
+
+- 2026-07-18: **Corrected the provider-search feature claim (owner report via the user guide).**
+  Target-feature item 1 claimed search "by service type, location, language, and trauma-informed
+  criteria"; the shipped search is a text match over name/headline/bio plus an offered-skill
+  filter, and nothing else. The item now describes the shipped behavior, and the public user guide
+  (`guide-content.json` / `USER_GUIDE.md`) was corrected to match — the guide generator grounds in
+  this inventory, so the aspirational wording had propagated to members as fact. Docs only; no
+  code change.
 
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
