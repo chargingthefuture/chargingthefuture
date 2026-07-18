@@ -95,6 +95,10 @@ export default function TermsPage() {
           ·{' '}
           <a className={styles.link} href="/accessibility">
             Accessibility
+          </a>{' '}
+          ·{' '}
+          <a className={styles.link} href="/guide">
+            How to use it
           </a>
         </footer>
       </div>

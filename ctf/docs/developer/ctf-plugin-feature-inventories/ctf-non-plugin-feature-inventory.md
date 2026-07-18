@@ -214,6 +214,18 @@ Backend-only endpoints with no UI, each guarded by a dedicated bearer secret and
 
 ## 5) Change Log
 
+- 2026-07-18: **Public user guide at `/guide` + grounded auto-generator.** New public, no-auth page
+  (`ctf/packages/web/app/guide/`, modeled on `/terms`): one branded page with a jump-link table of
+  contents, a per-section "Last updated" date, and back-to-top links, rendering a generated
+  `guide-content.json`. `ctf/scripts/generate-user-guide.mjs` builds that file (and a shareable
+  `ctf/docs/USER_GUIDE.md` copy) from each member-facing plugin's inventory "User Features" section
+  and its test script "Core smoke" steps, rewritten in the project's plain voice under the same
+  anti-fabrication grounding as the product-update generator (issue #1471): it can only describe what
+  those docs already state, never "verified/vetted/score" or any invented capability, and dates each
+  section from the last commit touching its source docs. `.github/workflows/generate-user-guide.yml`
+  regenerates on plugin-doc changes and opens a PR for review before the public page updates; a manual
+  run with `publish_wiki=true` also pushes the markdown copy to the GitHub wiki. The `/terms` footer
+  links to it. Content-only public surface; no schema, route, or contract change.
 - 2026-07-17: **Public-read rate limiter hardening (code-review findings #1579, #1581).** `getClientIp`
   in `ctf/packages/web/lib/security/rate-limit.ts` no longer keys on the **first** `x-forwarded-for`
   value: that entry travels in from the outside world (Render's proxy appends to the incoming list

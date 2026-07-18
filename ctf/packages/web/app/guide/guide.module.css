@@ -1,0 +1,210 @@
+/* Public user guide at /guide. Uses the shared theme tokens from globals.css so the page follows
+   both the default and comic themes without hardcoding colors. It is a long static document, so the
+   page scrolls naturally (it must not depend on the desktop body being overflow:hidden). Styling
+   mirrors the Terms page so the two public pages read as one brand. */
+
+.page {
+  min-height: 100dvh;
+  background: var(--ctf-root-bg);
+  color: var(--ctf-root-text);
+  padding: 48px 20px 96px;
+  display: flex;
+  justify-content: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 760px;
+  scroll-margin-top: 0;
+}
+
+.header {
+  margin-bottom: 8px;
+}
+
+.brand {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ctf-text-secondary);
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.title {
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--ctf-text);
+  margin: 0 0 10px;
+}
+
+.updated {
+  font-size: 14px;
+  color: var(--ctf-text-subtle);
+  margin: 0 0 20px;
+}
+
+.intro {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ctf-text-secondary);
+  margin: 0 0 12px;
+}
+
+.toc {
+  margin: 28px 0 0;
+  padding: 16px 20px;
+  background: var(--ctf-surface);
+  border: 1px solid var(--ctf-border);
+  border-radius: var(--ctf-card-radius);
+}
+
+.tocHeading {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ctf-text-secondary);
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.tocList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 20px;
+}
+
+.tocLink {
+  font-size: 15px;
+  color: var(--ctf-gold);
+}
+
+.tocLink:hover {
+  text-decoration: underline;
+}
+
+.section {
+  margin-top: 48px;
+  scroll-margin-top: 24px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ctf-border);
+}
+
+.sectionTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ctf-text);
+  margin: 0;
+}
+
+.sectionUpdated {
+  font-size: 13px;
+  color: var(--ctf-text-subtle);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.summary {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ctf-text);
+  font-weight: 500;
+  margin: 0 0 14px;
+}
+
+.paragraph {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ctf-text-secondary);
+  margin: 0 0 14px;
+}
+
+.howTo {
+  margin: 18px 0 14px;
+  padding: 16px 20px;
+  background: var(--ctf-surface);
+  border: 1px solid var(--ctf-border);
+  border-radius: var(--ctf-card-radius);
+}
+
+.howToHeading {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ctf-text-secondary);
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.howToList {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.howToItem {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ctf-text-secondary);
+}
+
+.backToTop {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--ctf-text-subtle);
+}
+
+.backToTop:hover {
+  color: var(--ctf-gold);
+  text-decoration: underline;
+}
+
+.link {
+  color: var(--ctf-gold);
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.footer {
+  margin-top: 64px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ctf-border);
+  font-size: 14px;
+  color: var(--ctf-text-subtle);
+}
+
+@media (max-width: 767px) {
+  .page {
+    padding: 32px 16px 72px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+
+  .sectionTitle {
+    font-size: 21px;
+  }
+
+  .tocList {
+    grid-template-columns: 1fr;
+  }
+}
