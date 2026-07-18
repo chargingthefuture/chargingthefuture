@@ -2,409 +2,378 @@
 
 _Last updated: 2026-07-18_
 
-Charging the Future is a set of apps survivors use to work with and support each other, outside the Specterati economy. This guide walks through each part: what it does and how to use it.
-Pick an app from the list below to jump to it.
+This guide explains what each part of the app does and how to use it, in plain words.
+The app is made of small apps, each doing one job. Open any of them from the main menu.
+Below, each app has a short summary, a few notes on what a member can do, and simple steps where they help.
 
 ## Directory
 
 _Last updated: 2026-07-17_
 
-Directory is part of the Charging the Future app.
+A list of members and the skills they hold.
 
-Authenticated dashboard/profile experience for create, update, and delete profile operations.
+Directory shows fellow community members and the skills they list. Everyone signed in sees every active member.
 
-Directory list and profile discovery experience for authenticated users.
+Open a member's profile to read their name, job title, sector, and skills. They are fellow community members sharing their skills, not a formal service.
 
-Directory is no longer public-facing** (2026-05-18). The `isPublic` toggle was removed; every authenticated member sees every active, non-deleted profile. There is no anonymous projection route. Legacy public URLs are not redirected — backwards compatibility is intentionally not preserved.
-
-Announcement consumption in user-visible contexts.
+Directory only shows people. It does not message, book, or transact — those actions live in other apps.
 
 **How to use it**
 
-1. Directory lists members and the skills they hold — it does not transact. These are the
-2. can't-ship-broken checks. Member role unless noted.
-3. List loads.** Open Directory as a signed-in member. Active, non-deleted profiles render — not a
-4. spinner or an error — even if you have no profile of your own.
+1. Open Directory while signed in. The list of members loads.
+2. Open a member's profile to read their name, job title, sector, and skills.
+3. Create or update your own profile so others can find you.
 
 ## Foundation
 
 _Last updated: 2026-07-18_
 
-Foundation is part of the Charging the Future app.
+Find a support provider and connect with them one to one.
 
-Provider discovery and search by service type, location, language, and trauma-informed criteria.
+Foundation lets you search for providers by service type, location, language, and trauma-informed criteria. Providers are fellow community members, not a formal service.
 
-Survivor-provider 1:1 text messaging with delivery/read/seen semantics and file attachment support.
+When you want help, request a quote or connect. That opens a private one-to-one chat between you and the provider. Voice and video calls are available once connected, and a call may cost ServiceCredits, shown in credits only.
 
-Voice and video session initiation and join for approved 1:1 participants.
-
-Quote request lifecycle (requested → provider_responded → closed) with immutable timeline view. The 1:1 text/voice/video channel is scoped to an active connection/quote between exactly the two parties and opens with it; when the connection/quote reaches a terminal state (closed, declined, or ended) the chat closes — no new messages may be sent, both parties keep read-only access for a limited window, and message/session records are retained server-side for moderation/abuse evidence per the deletion contract. No 1:1 messaging exists outside an active connection/quote (platform rule 100, "Messaging Scope and Lifecycle").
+Private chat exists only inside an active connection or quote — there is no open inbox to message anyone. When the connection ends, the chat closes.
 
 **How to use it**
 
-1. Foundation carries 1:1 support messaging and a paid live call — these are the can't-ship-broken
-2. checks. Member role unless noted.
-3. Provider search loads.** Open Foundation. The provider list renders with name, headline, and
-4. bio, not a spinner or error.
+1. Open Foundation. The provider list loads with each provider's name, headline, and bio.
+2. Search or filter to find a provider that fits.
+3. Request a quote or connect to open a private chat with them.
+4. Start a voice or video call once connected.
 
 ## Chyme
 
 _Last updated: 2026-07-17_
 
-Chyme is part of the Charging the Future app.
+One shared audio room where members can talk and chat.
 
-Authenticated room bootstrap via `GET /api/chyme/room` with deterministic room provisioning (`chyme-main-room`) and participant upsert.
+Chyme is a single shared audio room. Join the call to talk with other members, or type in the chat panel alongside it.
 
-Companion text chat read/send via `GET /api/chyme/messages` and `POST /api/chyme/messages`, with DB persistence and Stream message fan-out through shared adapters.
+You start muted and can mute or unmute your own microphone. You can send a Tip in ServiceCredits to another participant from their tile.
 
-Stream-backed room join/token flow via `POST /api/chyme/join`, using shared Stream wrappers in `packages/shared`.
-
-Service-scoped deletion request via `DELETE /api/account/chyme-profile`.
+Signed-out visitors get a free listen view and must sign in to speak.
 
 **How to use it**
 
-1. The one shared audio room — these are the can't-ship-broken checks. Member role unless noted.
-2. Room loads.** Open Chyme as a signed-in member. The room ("Chyme Main Room: Exit the
-3. Gauntlet"), the participant list, and the chat panel render — not a spinner or an error.
-4. Join the call.** Press join. You connect to the live audio room, start muted, and can mute
+1. Open Chyme signed in. The room, participant list, and chat panel load.
+2. Press join to enter the audio room. You start muted; mute and unmute yourself as you like.
+3. Type in the chat panel to send a message; it stays after reload.
+4. Use the Tip action on another participant's tile to send them ServiceCredits.
 
 ## SocketRelay
 
 _Last updated: 2026-07-17_
 
-SocketRelay is part of the Charging the Future app.
+Post a request for help and connect with a member who offers to fill it.
 
-Authenticated request dashboard with active and owned request views.
+SocketRelay is a feed of member requests. Post a request with a title and one to three tags; others browse and filter the feed by tag.
 
-Request create/update/repost flows with deterministic status semantics. Owners can edit their
+A member can offer to help by claiming a request, which opens a private chat between the two of you to work it out.
 
-own open requests from the feed (web); the edit reuses the post form and the existing
-
-`PUT /api/socket-relay/requests/:id` route.
+Your own posts stay in your feed even after they expire, shown dimmed with a Re-post button. The Direct Line tab lists the conversations you are waiting on or talking through.
 
 **How to use it**
 
-1. Sign in as a member. Navigate to the SocketRelay feed on web and open the SocketRelay screen on Android. The feed loads without a JS error, shows a list of seeded requests (not a blank page and not a raw `{ items, page, pageSize, total }` JSON dump), and each card shows a title and at least one tag.
-2. web ☐ android ☐
-3. While signed out (or in a fresh incognito window on web / signed-out state on Android), open the SocketRelay feed. The app shows a public or sign-in-gated state rather than crashing or exposing authenticated data.
-4. web ☐ android ☐
+1. Open SocketRelay signed in. The feed of requests loads.
+2. Post your own request with a title and one to three tags.
+3. Claim a request to help; a private chat opens with the poster.
+4. Open the Direct Line tab to see your active conversations.
 
 ## Beacon
 
 _Last updated: 2026-07-14_
 
-Beacon is part of the Charging the Future app.
+Watch a live broadcast and chat during it if signed in.
 
-Watch publicly.** Anyone with the link watches the live broadcast (HLS), no sign-in.
+Beacon is a one-way live broadcast anyone can watch with the link — no sign-in needed. When nothing is live, a calm "No live event right now" screen shows, with the last replay if there is one.
 
-Idle state.** When nothing is live, a calm "No live event right now" screen (with the last
+Signed-in members can post chat messages and send reactions during the event. Signed-out viewers see a "sign in to chat" prompt.
 
-replay, if any).
-
-Live chat (members).** Signed-in members post chat messages during the event; anonymous viewers
+The broadcast is marked as live and public so everyone knows their comments are visible. After the event, the recording is watchable.
 
 **How to use it**
 
-1. One-way admin broadcast; public watch, sign-in to chat. Member role unless noted.
-2. Idle state loads.** Open `/apps/beacon` when nothing is live. A calm "No live event right now"
-3. screen renders, with the last replay if one exists. No spinner stuck, no error.
-4. Anyone can watch, no sign-in.** Sign out and open `/apps/beacon`. The viewer surface still loads
+1. Open Beacon. If nothing is live, you see the idle screen or the last replay.
+2. During a live event, watch the broadcast — no account needed.
+3. Sign in to post chat messages and send reactions.
 
 ## PeerProgramming
 
 _Last updated: 2026-07-18_
 
-PeerProgramming is part of the Charging the Future app.
+A weekly small-group room built around a shared topic.
 
-Weekly active-user selection includes only accounts with login activity in the prior 7 days.
+PeerProgramming places active members into small weekly groups of about five people. When you are assigned, you get an in-app notice with the group and the week's topic.
 
-Cohorts are formed with a target size of 5 users per cohort.
+The room is text-first with a topic header and supports threaded replies. The timeline stays and comes back after you reconnect.
 
-Assignment status and cohort metadata are visible in the user room entry surface.
-
-In-app notifications are generated when users are assigned to a cohort.
+Group members can post and reply; others may have a more limited view. You can submit feedback from the room.
 
 **How to use it**
 
-1. These are the checks that must pass before anything else is worth testing.
-2. Room loads for a seeded member**
-3. Sign in as a seeded member. Navigate to `/apps/peer-programming` (web) or open the PeerProgramming screen (android). The room loads without an error banner. A cohort or the "you're not in a cohort yet" / empty state is visible within a few seconds.
-4. web ☐ android ☐
+1. Open PeerProgramming. Your group loads, or you see a "not in a group yet" state.
+2. Read the week's topic in the room header.
+3. Post a message or reply in a thread with your group.
+4. Submit feedback from the room when you have a suggestion.
 
 ## Mood
 
 _Last updated: 2026-07-17_
 
-Mood is part of the Charging the Future app.
+A private mood check-in you can submit once a week.
 
-Plugin route for mood check (`/apps/mood`).
+Mood lets you record how you are doing on a scale of 1 to 5, with an optional note. You can check in once every 7 days.
 
-Authenticated user can submit a mood check via `POST /api/mood/submissions`.
+Right after submitting, the screen moves to a cooldown state until the window opens again.
 
-Mood scale validation (`1..5`) is enforced.
-
-Submission response does not include severe-value safety trigger fields.
+The community pulse shows only an aggregate chart — no individual check-in, note, or identifier is ever shown.
 
 **How to use it**
 
-1. Member role unless noted.
-2. Check-in screen loads.** Open Mood. The check-in form (mood picker + optional note) renders, not a
-3. spinner or error.
-4. Submit a mood check.** Pick a mood value (1–5), submit. The submission is accepted and the screen
+1. Open Mood. The check-in form loads with a mood picker and an optional note.
+2. Pick a value from 1 to 5 and submit.
+3. Return after 7 days to check in again.
 
 ## GentlePulse
 
 _Last updated: 2026-07-14_
 
-GentlePulse is part of the Charging the Future app.
+A library of meditations you can play, rate, and favorite.
 
-Plugin route for meditation library (`/apps/gentle-pulse`).
+GentlePulse is a library of meditations. Each card shows a title, description, tags, duration, average rating, and rating count.
 
-Meditation listing with pagination (`limit`, `offset`).
+Sort by newest, most-rated, or highest-rating, filter by tag, or show only your favorites.
 
-Sort modes: `newest`, `most-rated`, `highest-rating`.
-
-Tag-based filtering.
+Play a meditation to open its media. You can rate it from 1 to 5 stars and add or remove it from your favorites. A support page explains the app and its privacy statement.
 
 **How to use it**
 
-1. Member role unless noted.
-2. Library loads.** Open GentlePulse. The meditation library renders with items (title, description),
-3. not a spinner or error.
-4. Play records.** Play a meditation. The play is recorded and the media URL opens.
+1. Open GentlePulse. The library loads with meditations.
+2. Play a meditation to open its media.
+3. Give it a 1-to-5 star rating.
+4. Add or remove it from your favorites.
 
 ## WhatWorks
 
 _Last updated: 2026-07-14_
 
-WhatWorks is part of the Charging the Future app.
+A shared list of tools that have helped, grouped by problem.
 
-Browse the shared list: active problems, each with its approved tools (emoji, name, type, a short
+WhatWorks is a shared list of everyday problems, each with tools members have found useful — an emoji, a name, a short "why it works" note, a count of how many members marked it helpful, and a direct purchase link.
 
-"why it works" note, a verified count, and a direct purchase link).
+Mark a tool Helpful to add your own endorsement, or toggle it off to withdraw it.
 
-Mark a tool **Helpful** ("this helped me") — a one-per-survivor endorsement whose tally renders as
-
-"N survivors verified"; toggle off to withdraw it.
+You can suggest a tool for a problem by adding a product name, a purchase link, and an optional note. Suggestions are reviewed before they appear and stay anonymous to other members. Search across tools and problems, and use the side nav to jump to a problem.
 
 **How to use it**
 
-1. One shared survivor-verified list of tools by problem. Member role unless noted.
-2. List loads.** Open `/apps/what-works` signed in. Active problems render, each with its approved
-3. tools — emoji, name, a short "why it works" note, a verified count, and a purchase link. No
-4. spinner stuck, no error.
+1. Open WhatWorks signed in. Problems load, each with its tools.
+2. Mark a tool Helpful if it helped you; toggle off to take it back.
+3. Suggest a tool: pick a problem, add a product name and purchase link, and submit for review.
 
 ## SkillsHunt
 
 _Last updated: 2026-07-17_
 
-SkillsHunt is part of the Charging the Future app.
+Nominate skilled people for scouting rounds and follow the leaderboard.
 
-List active, upcoming, and closed SkillsHunt rounds.
+SkillsHunt runs rounds where members nominate skilled people. Browse active, upcoming, and closed rounds, and open one to see its rules, scoring, and dates.
 
-View round details including scoring config, rules, and dates.
+During an active round, submit a nomination with the person's name, a short bio, their Quora profile link, and the skills they hold.
 
-Submit entries only during active windows.
-
-Submit display name (2–100 chars, alphanumeric + spaces), bio (max 280 chars), Quora profile URL, taxonomy-selected skills, optional proposed (free-text) skills, and claimed professions *(deferred — not in the locked Wave 1 design)*.
+The leaderboard ranks nominations by accepted points; every number shown comes from live data. You earn achievements and in-app notices as your nominations are reviewed.
 
 **How to use it**
 
-1. CS-1 — Rounds list loads for a signed-in member**
-2. Open `/apps/skills-hunt` (web) and the SkillsHunt screen (Android). Confirm at least one seeded round appears with a name and status visible. No error state, no blank screen.
-3. web ☐ android ☐
-4. CS-2 — Scout tab / nomination form is reachable**
+1. Open SkillsHunt signed in. The list of rounds loads.
+2. Open an active round and go to the Scout tab.
+3. Fill the "Nominate a Survivor" form — name, bio, Quora link, skills, and location — and submit.
+4. Check the Leaderboard tab to see the ranking.
 
 ## Workforce
 
 _Last updated: 2026-07-18_
 
-Workforce is part of the Charging the Future app.
+A live read-only dashboard of the community's workforce and skill gaps.
 
-Live dashboard: Population, Workforce Total, Total Headcount Target, Recruited, Recruitment Progress, Sector Gaps, Skill Level Breakdown, and Top Training Gaps.
+Workforce is a read-only tracker. The dashboard shows population, workforce total, headcount target, recruited count, recruitment progress, sector gaps, skill-level breakdown, and top training gaps, all computed live.
 
-Demand is population-scale: `population × participation_rate` (workforce config), spread across sectors by each sector's Skills Taxonomy `workforce_share`, then split across the sector's job titles. Supply is read live from Directory: members = active profiles; recruited = the V2 aspirational 3-way match (profiles matching a bucket by sector, job title, or a skill registered under the job title), with the top-line recruited mirroring V2 as the count of all active profiles. Gap = demand − recruited. See section 5 for the exact definition.
+Drill down by sector, skill level, or occupation to see where the gaps are.
 
-Drilldowns by sector, skill level, and occupation (the per-occupation training gaps).
-
-Deterministic loading/empty/error states for the core screens.
+Your own Workforce profile is read-only and comes from your Directory profile; there is no editor. You can browse occupations, largest gap first.
 
 **How to use it**
 
-1. Workforce is a read-only live tracker — these are the can't-ship-broken checks. Member role unless noted.
-2. Dashboard loads with numbers.** Open the Workforce dashboard. Population, Workforce Total,
-3. Total Headcount Target, and Recruited all render as numbers, not a spinner or error.
-4. Top-line numbers reconcile.** Recruited equals the count of all active Directory members, and
+1. Open the Workforce dashboard. The live numbers load.
+2. Drill down by sector, skill level, or occupation to see the gaps.
+3. Browse the occupations list to see demand and supply per job title.
 
 ## Skills Taxonomy
 
 _Last updated: 2026-07-18_
 
-Skills Taxonomy is part of the Charging the Future app.
+The shared list of sectors, job titles, and skills the rest of the app reads from.
 
-See the app to use Skills Taxonomy.
+Skills Taxonomy owns the shared, three-level list of sectors, job titles, and skills that other apps draw on.
+
+As a member you can open the browser and read the sector, job title, and skill tree, but there are no create, edit, or delete controls — the list is read-only for members and maintained centrally.
+
+The skill choices you see in other apps come from this list.
 
 **How to use it**
 
-1. This plugin owns the shared list of sectors, job titles, and skills the rest of the app reads. These
-2. are the can't-ship-broken checks.
-3. Hierarchy loads.** Open the Skills Taxonomy browser as a signed-in member. The three-level tree
-4. (sector
+1. Open Skills Taxonomy signed in. The three-level tree loads.
+2. Expand a sector to see its job titles and skills.
 
 ## ServiceCredits
 
 _Last updated: 2026-07-14_
 
-ServiceCredits is part of the Charging the Future app.
+Your wallet of ServiceCredits and where you send them to other members.
 
-See the app to use ServiceCredits.
+ServiceCredits is the app's non-money credit. Your wallet shows your available, held, and total balance, with plain labels for each kind of activity (transfer, escrow, treasury fee, adjustment).
+
+You can send credits directly to another member. A plain send delivers immediately — the sender's balance drops and the recipient's rises with no pending step.
+
+Credits are never shown as cash and cannot be withdrawn for real money. The Economy tab shows community totals like credits in circulation, total issued, and total burned.
 
 **How to use it**
 
-1. These are the checks that must pass before any other case is meaningful.
-2. Wallet loads for a seeded member**
-3. Sign in as a seeded member account. Navigate to the ServiceCredits section (web: `/service-credits`; android: ServiceCredits screen). The wallet tab must appear showing an available balance figure (a number of credits, not a currency symbol) and no error state.
-4. web ☐ android ☐
+1. Open ServiceCredits signed in. Your wallet and balance load.
+2. Send a small amount to another member; the transfer completes right away.
+3. Open the Economy tab to see community-wide totals.
 
 ## Contributions
 
 _Last updated: 2026-07-14_
 
-Contributions is part of the Charging the Future app.
+Support the current fundraiser and log how you helped.
 
-Submit a contribution claim of one of three kinds:
+Contributions is a voluntary fundraiser. You can submit a claim of one of three kinds: a gift card (you state the amount and your Signal contact — the code is never entered in the app; you send it to the owner over Signal), a Quora comment (paste the comment link), or a GitHub star (paste your GitHub profile link).
 
-Gift card** (`amazon`, `apple`, or `dennys`): the member states the amount (over 0, at most
+See your own claim history and its statuses (pending, confirmed, rejected), and the cycle's collective progress toward the owner-set goals.
 
-USD) and their own Signal contact (URL or phone number — reduces fraud). It can be a physical
-
-or a digital gift card. The gift-card **code is never collected or stored anywhere** — the member
+Contributing is optional, nothing is locked behind it, and any credits are given in recognition, not as a purchase or real money.
 
 **How to use it**
 
-1. Voluntary fundraiser drives; thank-you credits, never money. Member role unless noted.
-2. Drive loads.** Open `/apps/contributions` signed in. The current cycle and collective progress
-3. render — USD raised, comments, stars, contributor count — toward the owner-set goals. No spinner
-4. stuck, no error.
+1. Open Contributions signed in. The current cycle and its progress load.
+2. Choose one of the three cards — gift card, Quora comment, or GitHub star.
+3. Fill the form that opens below and submit your claim.
+4. Check your claim history for its status.
 
 ## LevelUp
 
 _Last updated: 2026-07-14_
 
-LevelUp is part of the Charging the Future app.
+Learning cohorts with milestones, plus a view-only credits wallet.
 
-Cohort listing with filters for `track`, `status`, and `startDate`.
+LevelUp lists learning cohorts you can filter by track, status, and start date. Open a cohort to see its curriculum, milestones, and how to enroll; enrolling may involve an optional deposit held in escrow and released per milestone.
 
-Cohort detail view with curriculum, milestones, and enrollment affordance.
+Your dashboard shows your wallet balance, escrow totals, active enrollments, and recent transactions. You can browse trainer profiles and see achievement badges you have earned.
 
-Enrollment flow with optional deposit policy and escrow split per milestone.
-
-User dashboard with wallet balance, LevelUp escrow totals, active enrollments, and recent transactions.
+The Credits Wallet here is view-only — it shows credits you earned or were granted and has no spend or transfer control. If an action is not allowed for your account, the app explains why in plain words.
 
 **How to use it**
 
-1. Learning cohorts with escrow-backed milestones — these are the can't-ship-broken checks. Member role
-2. unless noted.
-3. Cohort list loads.** Open LevelUp. Cohorts render with track, status, seats, and required
-4. deposit — not a spinner or error.
+1. Open LevelUp. The cohort list loads.
+2. Filter by track and status to narrow it.
+3. Open a cohort to read its curriculum and milestones, then enroll.
+4. Open the Credits Wallet to see credits you have earned (view only).
 
 ## TrustTransport
 
 _Last updated: 2026-07-14_
 
-TrustTransport is part of the Charging the Future app.
+Request a ride, a package delivery, or food, and track it.
 
-Single landing decision flow for:
+TrustTransport is one booking surface for three kinds of trips: a ride, a package, or food. Pick a mode, enter your origin and destination or location, and see quote previews before you submit.
 
-Ride,
+For a ride you request, choose an offer, track the driver, and complete it. For a package you create a job with details and track its state. For food you browse providers, place an order, and confirm receipt.
 
-Package,
-
-Food.
+Safety controls include sharing your trip status, an emergency help shortcut, and a trusted-contact visibility toggle.
 
 **How to use it**
 
-1. Plugin loads for a signed-in member**
-2. Open `/apps/trust-transport` (web) or the TrustTransport screen (android). You should see the booking surface — mode selector, origin/destination fields, and your existing requests listed. No crash, no blank screen.
-3. web ☐ android ☐
-4. Plugin is auth-gated — unauthenticated users cannot access it**
+1. Open TrustTransport signed in. The booking surface loads with the mode selector.
+2. Choose ride, package, or food.
+3. Enter your origin and destination and review the quote preview.
+4. Submit the request and track it to completion.
 
 ## LightHouse
 
 _Last updated: 2026-07-17_
 
-LightHouse is part of the Charging the Future app.
+Browse places to stay, list your own place, and request a stay.
 
-Route parity target for LightHouse home dashboard (`/apps/lighthouse`).
+LightHouse opens straight to a browse screen of available places — no profile needed to look. Each listing shows details like title, location, and rent; rent may be in a regular currency, or a listing may accept ServiceCredits, shown with an "Accepts ServiceCredits" badge (never a cash figure for credits).
 
-No profile is required to use LightHouse** (owner decision, 2026-06-12). Opening LightHouse goes
+Any member can list their own place from the "List your place" tab. To request a stay on a listing you don't own, use "Request to stay"; if you have no seeker details saved yet, you are sent to the "Your details" screen first, then the request goes through.
 
-straight to the browse screen — there is no "create a LightHouse profile" gate and no no-profile
-
-splash. (V3 uses one canonical identity with optional per-plugin extension data, not a standalone
+Hosts accept or reject requests, and an accepted request opens a private chat. You can block another member for safety.
 
 **How to use it**
 
-1. Member role unless noted.
-2. Opens straight to browse.** Open LightHouse. It lands on the property browse screen — no
-3. "create a LightHouse profile" gate and no no-profile splash.
-4. Listings load.** The browse list shows available active properties with real fields (title,
+1. Open LightHouse. It lands on the browse screen.
+2. Open a listing to see its details, rent, and whether it accepts ServiceCredits.
+3. Use "Request to stay" on a listing you don't own; save your details if prompted.
+4. To host, open "List your place" and fill in your listing.
 
 ## ClickLog
 
 _Last updated: 2026-07-14_
 
-ClickLog is part of the Charging the Future app.
+A private, one-tap incident counter only you can see.
 
-Log incident (with optional location/notes)
+ClickLog is a private counter for logging incidents. Press the large "Log Incident" button to record one, with an optional location or note, and your total rises by one.
 
-View incident count and history
+You see your own total and recent history and can delete your own incidents.
 
-Delete own incidents
-
-Mobile and web parity
+The log is private to you — no one else's rows appear, and there is no public view. Sign-in is required.
 
 **How to use it**
 
-1. A private, sign-in-only incident counter — these confirm logging works and stays private to the
-2. member. Member role unless noted.
-3. Counter loads.** Open ClickLog. The total count and recent-incident list render with real
-4. numbers, not a spinner or error.
+1. Open ClickLog signed in. Your total and recent list load.
+2. Press "Log Incident" to record one; add an optional note or location.
+3. Delete any of your own incidents you no longer want.
 
 ## Recurring Activity
 
 _Last updated: 2026-07-14_
 
-Recurring Activity is part of the Charging the Future app.
+Record an ongoing tie with another member that both of you confirm.
 
-Declare a new recurring activity with another member (owner side): counterparty + sector + currency +
+Recurring Activity lets you declare an ongoing arrangement with another member — the other party, sector, currency, and cadence, plus a ServiceCredits value when the currency is credits. It starts as pending.
 
-cadence, plus an optional ServiceCredits value only when the currency is ServiceCredits. Created as
+The other member confirms or declines it, and only a confirmed activity counts toward Trust or GDP. Either party can end an ongoing activity so the record stays accurate.
 
-`pending`.
-
-Confirm or decline a pending activity another member recorded with you (counterparty side). Only a
+You control whether an activity is private (the default), restricted, or public. The hub shows your ongoing activities and any pending confirmations.
 
 **How to use it**
 
-1. Sign in as a seeded member and navigate to `/apps/recurring-activity` (web) or open Recurring Activity on Android. The hub loads and shows at least the two confirmed seeded activities (one fiat housing tie, one ServiceCredits service tie).
-2. web ☐ android ☐
-3. The seeded ServiceCredits service activity shows `50 SC / month` — a declared value is visible. The seeded fiat housing activity shows a currency label and cadence but **no fiat amount anywhere on the row**.
-4. web ☐ android ☐
+1. Open Recurring Activity signed in. Your ongoing activities and pending confirmations load.
+2. Declare a new activity: pick the other member, sector, currency, and cadence.
+3. When another member records one with you, confirm or decline it.
+4. End an activity when it is over, or change its visibility.
 
 ## GDP
 
 _Last updated: 2026-07-16_
 
-GDP is part of the Charging the Future app.
+A live transparency report of the community's total activity value.
 
-See the app to use GDP.
+GDP is a read-only report. It shows the headline community figure — total, service, and goods/local value — with plain-language explanations, per-capita indicators, and progress toward the target goals.
+
+You can see the breakdown by service category, provider participation and hourly-rate trends, and year-by-year rollout tracking. Freshness and definition cues show how current each figure is, and estimates are labelled.
+
+The figure is computed live each time you load it. It is a community total, never a per-wallet money value, and no credits-to-cash line appears. Sign-in is required.
 
 **How to use it**
 
-1. Transparency-reporting plugin — these confirm the community figure shows and never reads as a
-2. per-wallet money value. Member role unless noted.
-3. Dashboard loads.** Open the GDP report. The headline community figure and total member count
-4. render with numbers, not a spinner or error. There is no "active members" stat.
+1. Open the GDP report signed in. The headline figure and member count load.
+2. Read the plain-language explanations and per-capita indicators.
+3. Open the "Value by Source" breakdown to see which apps contribute.
 
 The code is open source at https://github.com/chargingthefuture/chargingthefuture.
