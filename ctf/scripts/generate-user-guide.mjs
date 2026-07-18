@@ -163,7 +163,10 @@ async function rewrite(slug, title, features, coreSmoke) {
     }),
   });
   if (!res.ok) {
-    console.error(`  model call failed for ${slug}: ${res.status}`);
+    // Log the API's own error message, not just the status, so a bad model id / request is
+    // diagnosable from the run log rather than a bare "400".
+    const detail = await res.text().catch(() => '');
+    console.error(`  model call failed for ${slug}: ${res.status} ${detail.slice(0, 300)}`);
     return null;
   }
   const data = await res.json();
