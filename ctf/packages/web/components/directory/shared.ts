@@ -46,6 +46,10 @@ export interface Member {
   city?: string | null;
   state?: string | null;
   country?: string | null;
+  // "Weavers of the Commons" contributor badge. Set by the server ONLY on claimed profiles;
+  // community-generated (unclaimed) profiles never carry it. Positive-only rendering: the badge
+  // shows when this is true and NOTHING renders otherwise (no empty slot, no absence state).
+  hasWeaversBadge?: boolean;
 }
 
 export interface Sector {

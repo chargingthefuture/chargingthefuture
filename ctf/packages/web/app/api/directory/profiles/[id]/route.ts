@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireDirectoryReadAccess } from '../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { getDirectoryProfileForMember } from 'lib/directory/repository';
+import { getWeaversBadgeHolders } from 'lib/contributor-access/badge';
 import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 
@@ -35,6 +36,17 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json(
         { ok: false, code: DIRECTORY_ERROR_CODE.notFound, message: 'Profile not found.' },
         { status: 404 },
+      );
+    }
+
+    // "Weavers of the Commons" contributor badge — only a claimed profile (bound to a real user)
+    // carries the field; a community-generated (unclaimed) profile never gets it. Guarded read:
+    // any Contributor Access error yields the empty set and the profile still returns.
+    if (member.claimedByUserId != null) {
+      const badgeHolders = await getWeaversBadgeHolders([member.claimedByUserId]);
+      return NextResponse.json(
+        { member: { ...member, hasWeaversBadge: badgeHolders.has(member.claimedByUserId) } },
+        { status: 200 },
       );
     }
 

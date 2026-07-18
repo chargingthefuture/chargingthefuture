@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -193,6 +193,29 @@ The header back chevron returns to the page you came from (falling back to All A
 directly), and the admin screen header shows a "Member view" pill opening `/apps/directory`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### DIR-8 · "Weavers of the Commons" contributor badge (positive-only, claimed-only)
+**Role:** member · **Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** at least one claimed profile whose member holds the Contributor Access badge
+(`contributor_access_eligibility`: `eligible = TRUE`, `revoked_for_cause = FALSE`), plus a claimed
+profile without it and a community-generated (unclaimed) profile.
+**Steps:**
+1. Open the badge-holder's profile. Confirm the small braid badge (rust circle, cream/gold braid
+   ring) renders next to the name.
+2. Click/tap the badge.
+3. Follow the "How it's earned" link.
+4. Open a claimed profile whose member does NOT hold the badge, then an unclaimed
+   (community-generated) profile.
+**Expected:** The badge shows only on the holder's claimed profile. The dialog is titled "Weavers
+of the Commons" with the body "This member is a consistent, broad contributor to the community —
+real help, delivered over time. Anyone can earn this." and a "How it's earned" link — the copy
+must NOT contain "verified", "vetted", or "trusted". The link opens
+`/apps/directory/weavers-of-the-commons` (signed-in only; signed out it redirects to
+`/apps/directory`), which explains the badge in plain language and shows **no score, points, tier,
+or leaderboard**. On the non-holder and unclaimed profiles NOTHING badge-related renders — no
+empty slot, no lock, no "not yet earned" state, and the unclaimed profile's API payload carries no
+`hasWeaversBadge` field at all.
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ## Admin walkthrough
@@ -306,3 +329,5 @@ of these, it is already tracked, not a new bug:
   profile data is informally decided, not yet codified.
 - Announcement route ownership is enforced by the plugin policy gate, not yet written up as separate
   module documentation.
+- The "Weavers of the Commons" badge (DIR-8) does not render on android yet — display-only parity
+  gap tracked in the Contributor Access inventory (the shared API already carries the boolean).

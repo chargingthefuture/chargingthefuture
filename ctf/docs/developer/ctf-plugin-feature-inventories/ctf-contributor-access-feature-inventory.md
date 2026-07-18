@@ -4,10 +4,11 @@
 
 - Module name: `Contributor Access`
 - Module slug / service key: `contributor-access`
-- First slice of the trusted-channel / contributor-badge system described in
-  `ctf/docs/developer/TRUSTED_CHANNELS_AND_CONTRIBUTOR_BADGE_PROPOSAL.md`. The badge's working name
-  ("Keeper of the Commons") appears only in doc comments — there is no member-facing copy in this
-  slice.
+- First two slices of the trusted-channel / contributor-badge system described in
+  `ctf/docs/developer/TRUSTED_CHANNELS_AND_CONTRIBUTOR_BADGE_PROPOSAL.md`: the eligibility engine
+  (slice 1) and the Directory contributor badge (slice 2). The badge's member-facing name is
+  **"Weavers of the Commons"** (owner-picked, 2026-07-18 — replacing the earlier working name
+  "Keeper of the Commons", which may still appear in older doc comments).
 - Hard boundary: this module **never touches the Trust plugin** — no reads or writes of any
   `trust_*` table, no imports from `ctf/packages/web/lib/trust/`. It reads other plugins' value
   tables to make an access decision and owns its own storage.
@@ -24,8 +25,26 @@ removal is for-cause only via an admin action.
 
 ## Target User Features
 
-**None in this slice.** There is no member surface: the Directory badge, the "how it's earned"
-page, and the gated channel itself are later slices — see the proposal document
+1. **"Weavers of the Commons" badge on Directory profiles** (web + mobile-responsive). The braid
+   emblem (`components/contributor-access/weavers-badge.tsx` — a static copy of the owner-picked
+   small braid badge from the owner's emblem repo `chargingthefuture/emblem`) renders next to the
+   member's name on the Directory profile detail when the profile is **claimed** and the claimed
+   member currently holds the badge (`eligible = TRUE` and `revoked_for_cause = FALSE`).
+   Positive-only: nothing at all renders for members without it (no empty slot, no lock, no
+   "not yet earned" state), and a community-generated (unclaimed) profile never carries the field.
+2. **Click-through dialog** (`components/contributor-access/weavers-badge-control.tsx`): title
+   "Weavers of the Commons", honest body copy ("This member is a consistent, broad contributor to
+   the community — real help, delivered over time. Anyone can earn this.") and a "How it's earned"
+   link. The copy never claims verification or vetting.
+3. **"How it's earned" page** at `/apps/directory/weavers-of-the-commons`
+   (`components/contributor-access/weavers-earned-page.tsx`; signed-in only — everyone else is
+   redirected to `/apps/directory`, same gate as the Directory profile deep link). Plain-language
+   explainer: earned by steadily delivering real help to other members across the platform;
+   permanent once earned; no application and no way to buy it; no score shown anywhere; the same
+   standing opens the members-only channel in the Commons when it launches. Mobile-responsive,
+   rendered in the Directory shell tokens.
+
+The gated channel itself is a later slice — see the proposal document
 (`TRUSTED_CHANNELS_AND_CONTRIBUTOR_BADGE_PROPOSAL.md`) for the full plan and its hard guardrails.
 
 ## Target Admin Features
@@ -68,6 +87,15 @@ Internal (service-to-service, never member/browser callable):
   `{ ok, evaluated, eligible }` counts only. Called weekly (Mondays 06:30 UTC) by
   `.github/workflows/contributor-access-recompute.yml`. Contract:
   `contributor-access.eligibility.recompute`.
+
+Member-facing badge read (no new route in this module): the Directory read routes
+(`GET /api/directory/list`, `GET /api/directory/profiles/:id`) call
+`getWeaversBadgeHolders(userIds)` in `lib/contributor-access/badge.ts` — one
+table-existence-guarded query over `contributor_access_eligibility` returning only the subset of
+the given user ids with `eligible = TRUE AND revoked_for_cause = FALSE` (empty set on any error).
+The routes set a `hasWeaversBadge` boolean on **claimed** profiles only; no score or any other
+contributor-access data ever leaves this module. Recorded in the Directory command contracts
+(`directory.list.fetch`, `directory.profile.get` `dataAccess`).
 
 ## Data Model and Storage Contracts
 
@@ -115,6 +143,11 @@ counts still feed the score internally).
 - **Categorical flag only — no score is ever surfaced**, to members or admins. The internal score
   and per-event counts live only in `reason_snapshot`, which no API returns (the admin eligible
   list carries id/username/date/flags only). Proposal hard guardrail.
+- **Badge surfaces are positive-only and claimed-only**: the Directory shows the badge only on a
+  claimed profile whose member holds it; nothing renders for anyone else, and unclaimed
+  (community-generated) profiles never carry the field. The member-facing read is one boolean per
+  user id (`getWeaversBadgeHolders`) — no score, no dates, no reasons. The click-through and
+  explainer copy never says "verified", "vetted", or "trusted by the platform".
 - **Foundation per-member counts are internal-only** (rule 132 — sensitive wellbeing/payment
   participation): computed as gating fuel, never exposed on any surface.
 - **Never touches the Trust plugin** — no `trust_*` table reads/writes, no `lib/trust/` imports.
@@ -133,10 +166,14 @@ counts still feed the score internally).
 
 ## Web and Android Delivery Status
 
-Web admin only (`/admin/contributor-access`, desktop + mobile-responsive). Android: not applicable
-in this slice — there is no member surface, and admin surfaces are web-first. PRs for this module
-use `Parity Status: web + mobile-responsive + android complete` (backend + web-admin-only change)
-until a member surface exists.
+Web admin (`/admin/contributor-access`, desktop + mobile-responsive) plus the member-facing badge
+slice on the Directory (badge + dialog on the profile detail, and the
+`/apps/directory/weavers-of-the-commons` explainer page), web + mobile-responsive.
+
+**Android parity gap (tracked):** the React Native Directory profile detail does not yet render
+the "Weavers of the Commons" badge, its dialog, or the "how it's earned" screen. The badge boolean
+is already on the shared `GET /api/directory/list` / `GET /api/directory/profiles/:id` responses,
+so the Android work is display-only. Badge-slice PRs use a `Parity Ticket:` line until this lands.
 
 ## Seed Coverage Status
 
@@ -146,9 +183,8 @@ dedicated seed becomes worthwhile with the member-facing slice.
 
 ## Gaps & Known Technical Debt
 
-- Badge slice not built: Directory badge, click-through copy, and the "how it's earned" page are a
-  later slice (brand-voice pass required; badge name unconfirmed — "Keeper of the Commons" is a
-  working name only).
+- Android badge parity not built: the RN Directory profile does not yet show the badge/dialog or
+  the explainer screen (the API already carries `hasWeaversBadge`; display-only work).
 - Channel slice not built: the gated Stream channel, membership sync from the flag, and the
   `channel_open` behavior are a later slice; the toggle is stored but nothing reads it to grant
   access.
@@ -162,6 +198,21 @@ dedicated seed becomes worthwhile with the member-facing slice.
 
 ## Change Log
 
+- 2026-07-18 — Badge slice (slice 2): the contributor badge is member-visible on the Directory.
+  Owner decisions: name **"Weavers of the Commons"**; artwork is ONLY the small braid-ring badge
+  (rust `#8b3a2f` circle, cream/gold three-strand braid), copied as a static SVG from the owner's
+  emblem repo (`chargingthefuture/emblem`) into
+  `components/contributor-access/weavers-badge.tsx` — the generative math was not ported and no
+  other emblem concept is used. New guarded read `lib/contributor-access/badge.ts`
+  (`getWeaversBadgeHolders`: eligible AND not revoked-for-cause, empty set on any error), wired
+  into `GET /api/directory/list` and `GET /api/directory/profiles/:id`, which set `hasWeaversBadge`
+  on **claimed** profiles only. The Directory profile detail renders the badge next to the name
+  (positive-only — nothing renders for members without it) with a click-through dialog
+  (`weavers-badge-control.tsx`) and a "How it's earned" link to the new signed-in page
+  `/apps/directory/weavers-of-the-commons` (`weavers-earned-page.tsx`). Directory command
+  contracts (`directory.list.fetch`, `directory.profile.get`) record the
+  `contributor_access_eligibility` read; no new API route, schema change, or contributor-access
+  contract command. Web + mobile-responsive; Android badge display is a tracked parity gap.
 - 2026-07-18 — First slice: schema (config / eligibility / audit tables), the eligibility engine
   (fifteen per-member all-time value-event counts mirroring Weekly Performance, weighted score,
   age/plugin-spread/counterparty gates, additive-only recompute), internal recompute route + weekly
@@ -179,8 +230,10 @@ Ordered, dependency-based task list for this module (each item names what blocks
 5. Admin page + shell (`/admin/contributor-access`) — blocked by 4. **Done.**
 6. Contracts + inventory + manual test script — blocked by 3, 4, 5. **Done.**
 7. Owner pass on weights/threshold/minimums via the config editor — blocked by 5; owner decision.
-8. Badge slice (Directory badge, click-through copy, "how it's earned" page) — blocked by 7 and
-   the owner's badge-name/wording decisions.
+8. Badge slice (Directory badge, click-through copy, "how it's earned" page) — owner decided the
+   name ("Weavers of the Commons") and the braid emblem, 2026-07-18. **Done (web +
+   mobile-responsive).** Android badge display remains a tracked parity gap (display-only; the
+   shared Directory API already carries the boolean).
 9. Channel slice (gated Stream channel type, membership sync from the flag, moderator read-in
    disclosure, launch gate on `min_eligible_to_open_channel`) — blocked by 7; independent of 8.
 10. Clean-standing admission gate (blocks/safety reports) — blocked by an owner decision on which

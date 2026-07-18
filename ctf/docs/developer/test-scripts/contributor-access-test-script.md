@@ -8,12 +8,12 @@
 | | |
 |---|---|
 | **Module** | Contributor Access (`contributor-access`) |
-| **Visibility** | Admin-only — no launcher tile, no member surface in this slice |
-| **Roles to test** | admin (and a plain member to confirm denial) |
+| **Visibility** | Admin surface + one member-facing output: the "Weavers of the Commons" badge on Directory profiles (no launcher tile) |
+| **Roles to test** | admin, member |
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` (the engine reads upstream seeded tables) |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributor-access-feature-inventory.md` |
-| **Generated** | 2026-07-18 (initial authoring) |
+| **Generated** | 2026-07-18 (initial authoring; same day hand-updated for the badge slice — see CA-M1/CA-M2) |
 
 ## How to run this
 
@@ -23,8 +23,9 @@
   next run knows it's already filed.
 - Run the **Core smoke** block every session. Run the full walkthrough when you changed this
   module or on a pre-release sweep.
-- This is an admin-only gating module. There is no member surface — the first thing to confirm is
-  that a non-admin cannot reach any of it.
+- The gating engine and its controls are admin-only; the one member-facing output is the
+  "Weavers of the Commons" badge on Directory profiles (CA-M1/CA-M2). The first thing to confirm
+  is that a non-admin cannot reach any of the admin surface.
 
 ---
 
@@ -42,7 +43,49 @@
 4. **No score anywhere.** Nothing on the page, in any API response, or in any error shows a
    numeric score, points, rank, or per-event counts for a member — the standing is only
    eligible / revoked. This includes the eligible list payload
-   (`GET /api/contributor-access/admin/eligible`: id, username, date, flags only). → web ☐ mobile ☐
+   (`GET /api/contributor-access/admin/eligible`: id, username, date, flags only) and the
+   Directory badge read (`hasWeaversBadge` boolean only). → web ☐ mobile ☐
+5. **Badge is positive-only.** On the Directory, a member without the badge shows nothing
+   badge-related — no empty slot, no lock, no "not yet earned" state — and a community-generated
+   (unclaimed) profile never carries the field. → web ☐ mobile ☐
+
+---
+
+## Member walkthrough — the "Weavers of the Commons" badge
+
+### CA-M1 · Badge appears only on claimed profiles of badge holders
+**Role:** member · **Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** a claimed Directory profile whose member holds the badge
+(`contributor_access_eligibility`: `eligible = TRUE`, `revoked_for_cause = FALSE`), a claimed
+profile without it, an unclaimed (community-generated) profile, and — if available — a member who
+was revoked for cause.
+**Steps:**
+1. Open the badge-holder's Directory profile.
+2. Open the claimed profile without the badge, then the unclaimed profile.
+3. If a revoked member exists, open their claimed profile.
+**Expected:** The braid badge (rust circle, cream/gold three-strand braid ring) renders next to
+the holder's name only. On everyone else — non-holder, unclaimed, revoked-for-cause — NOTHING
+badge-related renders: no empty slot, no lock, no "not yet earned" state. The unclaimed profile's
+API payload (`GET /api/directory/profiles/:id`) has no `hasWeaversBadge` field at all; a claimed
+non-holder carries `hasWeaversBadge: false` in the payload but shows nothing in the UI.
+**Result:** web ☐ mobile ☐ — notes:
+
+### CA-M2 · Click-through dialog + "how it's earned" page
+**Role:** member · **Surfaces:** web (desktop), web (mobile-responsive)
+**Steps:**
+1. Click/tap the badge on a holder's profile.
+2. Read every word of the dialog.
+3. Follow the "How it's earned" link.
+4. Sign out and open `/apps/directory/weavers-of-the-commons` directly.
+**Expected:** The dialog is titled **"Weavers of the Commons"** with the body "This member is a
+consistent, broad contributor to the community — real help, delivered over time. Anyone can earn
+this." and a "How it's earned" link. Neither the dialog nor the page contains the words
+"verified", "vetted", or "trusted". The page explains in plain language: earned by steadily
+delivering real help to other members; permanent once earned; no application and no way to buy
+it; no score shown anywhere; the same standing opens the members-only channel in the Commons when
+it launches. It renders in the Directory shell style and works at phone width. Signed out, the
+page redirects to `/apps/directory`.
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -112,6 +155,8 @@ recompute never revokes. The weekly workflow (`contributor-access-recompute.yml`
 
 Carried from the inventory's "Gaps & Known Technical Debt" section:
 
-- The badge and the gated channel are later slices; `channel_open` is stored but grants nothing.
+- The gated channel is a later slice; `channel_open` is stored but grants nothing.
+- The badge does not render on android yet (display-only parity gap; the shared Directory API
+  already carries the boolean).
 - Default weights/threshold are a starting point pending owner tuning.
 - Active blocks/safety reports are not yet an admission gate (owner decision pending).
