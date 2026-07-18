@@ -46,7 +46,7 @@
       "updated": "2026-07-18",
       "summary": "One shared audio room where members can talk and chat.",
       "body": [
-        "Chyme is a single shared audio room. Join the call to talk with other members, or type in the chat panel alongside it.",
+        "Chyme is a single shared audio room. Join the call to talk with other members, or type in the chat panel.",
         "You start muted and can mute or unmute your own microphone. You can send a Tip in ServiceCredits to another participant from their tile.",
         "Signed-out visitors get a free listen view and must sign in to speak."
       ],
