@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { WeaversBadge } from "./weavers-badge";
 
@@ -22,6 +22,14 @@ export type WeaversBadgeControlTokens = {
 export function WeaversBadgeControl({ size = 20, tokens }: { size?: number; tokens: WeaversBadgeControlTokens }) {
   const [open, setOpen] = useState(false);
 
+  // Escape closes the dialog; listener attached only while open.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
     <>
       <button
@@ -39,12 +47,17 @@ export function WeaversBadgeControl({ size = 20, tokens }: { size?: number; toke
           role="dialog"
           aria-modal="true"
           aria-label="Weavers of the Commons"
-          onClick={() => setOpen(false)}
-          style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
         >
+          {/* Backdrop is a real button so closing works by mouse, keyboard, and touch alike. */}
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => setOpen(false)}
+            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", border: "none", padding: 0, cursor: "default" }}
+          />
           <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ width: "100%", maxWidth: 380, background: tokens.HEADER, border: `1px solid ${tokens.BORDER}`, borderRadius: 16, padding: "22px 22px 18px", fontFamily: "'Inter', system-ui, sans-serif" }}
+            style={{ position: "relative", width: "100%", maxWidth: 380, background: tokens.HEADER, border: `1px solid ${tokens.BORDER}`, borderRadius: 16, padding: "22px 22px 18px", fontFamily: "'Inter', system-ui, sans-serif" }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
               <WeaversBadge size={32} />
