@@ -70,6 +70,17 @@ Admin-or-operations routes (`ensureWeeklyPerformanceAdmin` admits `isAdmin` or t
 - `PUT /api/weekly-performance/admin/week-selection` — marks a week active (body `{ weekStartDate }`); requires the `x-ctf-csrf: '1'` header and writes a `weekly-performance.admin.week.select` audit row.
 - `GET /api/weekly-performance/export?weekStartDate=...` — returns the week's metrics snapshot as a synchronous inline JSON download (`{ok, weekStartDate, metrics}`); additionally guarded by the `WEEKLY_PERFORMANCE_EXPORT_ENABLED` environment flag and writes a `weekly-performance.report.export` audit row. There is no asynchronous artifact pipeline (no `exportId`/`artifactUrl`/`weekly_performance_exports` record) — the command contract was reconciled to this shipped behavior (#1128).
 
+Internal (service-to-service, never member/browser callable):
+
+- `POST /api/internal/weekly-performance/goal-snapshot` — records the current week's goal readings
+  (GDP Community Value Index, Workforce recruited) into `weekly_performance_goal_snapshots` by
+  computing the current week's metrics (the compute upserts the snapshot rows). Guarded by
+  `Authorization: Bearer INTERNAL_SERVICE_SECRET` (same posture as `/api/internal/product-update`);
+  501 when the secret is unconfigured, 401 on a bad token. Called daily by the scheduled workflow
+  `.github/workflows/weekly-performance-goal-snapshot.yml` so goal history never depends on someone
+  opening the dashboard that week (last capture of the week wins — the stored value converges to the
+  week's closing reading). Contract: `weekly-performance.goal-snapshot.capture`.
+
 ## 3) Data Dependencies and Contracts
 
 1. Aggregated users-domain metrics (new users, verification/approval totals).
@@ -167,6 +178,14 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   Android renders the new keys through its existing generic metric list (labels humanized from the
   key); the goal progress *bar* is web-only for now — tracked as a gap. Schema: one new table
   (`weekly_performance_goal_snapshots`), guarded CREATE/ALTER; `schema.demo.sql` regenerated.
+  **History guarantees (owner requirement):** the fifteen value events and three adoption rows are
+  never stored — any week, however old, recomputes live from the upstream rows, so week 1 vs week 53
+  works forever and past weeks recalculate when data changes. The two goal rows are the exception
+  (state totals), so a new internal route
+  (`POST /api/internal/weekly-performance/goal-snapshot`, bearer `INTERNAL_SERVICE_SECRET`, contract
+  `weekly-performance.goal-snapshot.capture`) is called daily by
+  `.github/workflows/weekly-performance-goal-snapshot.yml` to record the current week's goal
+  readings — goal history never depends on someone opening the dashboard that week.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
   the previous in-app page and falls back to All Apps when there is no in-app history. The admin

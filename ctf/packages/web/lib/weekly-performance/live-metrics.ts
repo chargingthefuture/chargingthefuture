@@ -247,8 +247,10 @@ function liveWorkforceRecruited(weekStart: string): Promise<number> {
   );
 }
 
-// ISO Monday of the current UTC week — "the current week" for snapshot purposes.
-function currentWeekStart(): string {
+// ISO Monday of the current UTC week — "the current week" for snapshot purposes. Exported for the
+// internal goal-snapshot capture route, which records the week's goal readings on a schedule so
+// goal history never depends on someone opening the dashboard that week.
+export function currentWeekStart(): string {
   const now = new Date();
   const utc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const day = utc.getUTCDay();

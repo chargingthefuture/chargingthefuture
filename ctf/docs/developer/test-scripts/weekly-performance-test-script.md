@@ -43,8 +43,11 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    computed from that week's activity — there is no "metrics appear when the week closes" placeholder
    and no week status to wait on. The current week is marked **Live**; past weeks are plain historical
    windows with no "Closed" badge. With no activity yet the cards read zero, which is still a real
-   value. (Exception: the two Goal rows are state totals snapshotted weekly — a past week that was
-   never opened while current reads 0 there.) → web ☐ mobile ☐ android ☐
+   value. Any two weeks compare (week 1 vs week 53): event and adoption rows recompute live from the
+   upstream tables for any window, so past weeks recalculate when data changes. (Exception: the two
+   Goal rows are state totals snapshotted weekly — captured daily by the scheduled
+   goal-snapshot workflow, so a week has its reading even if nobody opened the dashboard; a week from
+   before the capture workflow existed reads 0.) → web ☐ mobile ☐ android ☐
 3. **Admin surface is review-only — no "set active week".** Open `/admin/weekly-performance`. There is
    one header (no duplicate), a pick-a-week-to-review picker, the week's live metrics, and Export. There
    is **no** "Active week / Set as active week" control and no open/locked/published status. → web ☐ mobile ☐ android ☐

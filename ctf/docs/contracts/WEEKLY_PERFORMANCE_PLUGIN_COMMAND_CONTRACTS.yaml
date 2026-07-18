@@ -185,6 +185,33 @@ contracts:
     retentionClass: audit_long_lived
     idempotency: false
 
+  - pluginId: weekly-performance
+    command: weekly-performance.goal-snapshot.capture
+    version: 1.0.0
+    description: >-
+      Internal, schedule-driven capture of the two goal readings (GDP Community Value Index toward
+      300B; Workforce recruited toward 2,000,000) into weekly_performance_goal_snapshots for the
+      current week. Goal metrics are state totals - past weeks cannot be recomputed - so each week
+      needs at least one stored reading; the daily workflow calling this command makes goal history
+      independent of anyone opening the dashboard. Guarded by INTERNAL_SERVICE_SECRET (bearer);
+      never member or browser callable. Computing the current week's metrics performs the snapshot
+      upsert (last capture of the week wins). The GDP reading comes from the GDP plugin's live
+      report - see the GDP contracts for that command's own reads.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      weekStartDate:
+        type: string
+      goals:
+        type: array
+    dataAccess:
+      - weekly_performance_goal_snapshots
+      - directory_profiles
+    purpose: operational_metrics_capture
+    retentionClass: derived_long_lived
+    idempotency: true
+
 changelog:
   - date: 2026-07-18
     change: >-

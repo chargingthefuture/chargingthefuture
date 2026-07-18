@@ -1,0 +1,57 @@
+name: Weekly Performance — Goal Snapshot Capture
+
+# Records the Weekly Performance goal readings (GDP Community Value Index toward 300B; Workforce
+# recruited toward 2,000,000) into weekly_performance_goal_snapshots by calling the app's internal
+# capture route. Goal metrics are state totals — a past week cannot be recomputed — so each week
+# needs at least one stored reading, and goal history must never depend on someone opening the
+# dashboard that week. Runs daily; each run refreshes the current week's row (last capture of the
+# week wins), so the stored value converges to the week's closing reading. If a run fails, the next
+# day's run covers it — only a whole week of failures loses that week's reading, which is why this
+# is daily rather than weekly.
+#
+# Needs (from Infisical, injected below): APP_URL, INTERNAL_SERVICE_SECRET.
+
+on:
+  schedule:
+    - cron: '35 5 * * *' # daily at 05:35 UTC, offset from the other scheduled jobs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-performance-goal-snapshot
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    name: Capture the goal snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      - name: Call the internal capture route
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ] || [ -z "${INTERNAL_SERVICE_SECRET:-}" ]; then
+            echo "APP_URL or INTERNAL_SERVICE_SECRET missing — cannot capture." >&2
+            exit 1
+          fi
+          HTTP_CODE=$(curl -sS -o /tmp/capture-response.json -w '%{http_code}' \
+            -X POST "${APP_URL%/}/api/internal/weekly-performance/goal-snapshot" \
+            -H "Authorization: Bearer ${INTERNAL_SERVICE_SECRET}")
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Capture failed with HTTP ${HTTP_CODE}:" >&2
+            cat /tmp/capture-response.json >&2
+            exit 1
+          fi
+          echo "Goal snapshot captured."
