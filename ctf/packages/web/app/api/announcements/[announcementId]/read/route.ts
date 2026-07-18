@@ -25,6 +25,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { announcementId } = await params;
 
   try {
+    const readAt = new Date().toISOString();
     await markAnnouncementRead(gate.auth.userId, announcementId);
     logFeedAudit({
       actorId: gate.auth.userId,
@@ -38,7 +39,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       errorCategory: null,
     });
 
-    return NextResponse.json({ ok: true, announcementId }, { status: 200 });
+    // The command contract (announcements.read.mark) declares { announcementId, readAt } as output.
+    return NextResponse.json({ ok: true, announcementId, readAt }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'announcements', op: 'announcementid_read' });
     return NextResponse.json(
