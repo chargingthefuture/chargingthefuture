@@ -20,7 +20,6 @@ import { WeeklyPerformanceIconRail } from "./wp-icon-rail";
 import { WeeklyPerformanceSidebar } from "./wp-sidebar";
 import { WeeklyPerformanceDashboardMain } from "./wp-dashboard-main";
 import { WeeklyPerformanceRightRail } from "./wp-right-rail";
-import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 
@@ -175,7 +174,6 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
             <BackChevronButton style={{ background: t.BTN_BG, border: `1px solid ${t.BORDER_HI}`, color: t.TITLE }} />
             {/* Title shrinks and truncates so the trailing controls stay on screen */}
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Weekly Performance</span>
-            <PluginAdminButton href="/admin/weekly-performance" isAdmin={isAdmin} accent={t.ACCENT} />
             <RefreshButton onRefresh={refreshSelectedWeek} title="Refresh" />
             <MobileTopActions />
           </div>

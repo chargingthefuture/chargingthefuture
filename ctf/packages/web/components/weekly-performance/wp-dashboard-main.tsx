@@ -6,7 +6,6 @@ import { getWeeklyPerformanceTokens, type WpComparison, type WpMetric, type WpWe
 import { WeeklyPerformanceMetricCards } from "./wp-metric-cards";
 import { WeeklyPerformanceComparisonChart } from "./wp-comparison-chart";
 import { WeeklyPerformanceEmptyMain } from "./wp-empty-main";
-import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { RefreshButton } from "@/components/shared/refresh-button";
 
 export function WeeklyPerformanceDashboardMain({
@@ -54,7 +53,6 @@ export function WeeklyPerformanceDashboardMain({
               <Download size={14} /> Export
             </button>
           )}
-          <PluginAdminButton href="/admin/weekly-performance" isAdmin={isAdmin} accent={t.ACCENT} />
           <RefreshButton onRefresh={onRefresh} title="Refresh" />
         </header>
       )}

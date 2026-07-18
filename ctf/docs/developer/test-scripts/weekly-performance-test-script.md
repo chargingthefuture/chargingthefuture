@@ -35,8 +35,8 @@
 Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / operations role.
 
 1. **Non-admin cannot reach it.** As a plain member, the plugin is not in navigation, and the admin
-   page `/admin/weekly-performance` redirects to `/apps/weekly-performance`; the admin-or-operations
-   routes deny with a stable reason. A non-admin or signed-out visitor opening
+   page `/admin/weekly-performance` redirects to `/apps` (there is no member shell to land on); the
+   admin-or-operations routes deny with a stable reason. A non-admin or signed-out visitor opening
    `/apps/weekly-performance` gets a plain 404 — never a public landing/marketing page (the plugin
    has no public visitor shell; the unreachable one was deleted 2026-07-15). → web ☐ mobile ☐ android ☐
 2. **Numbers are always live — no "closed" week.** Open the dashboard. Every week shows live numbers
@@ -48,9 +48,13 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    Goal rows are state totals snapshotted weekly — captured daily by the scheduled
    goal-snapshot workflow, so a week has its reading even if nobody opened the dashboard; a week from
    before the capture workflow existed reads 0.) → web ☐ mobile ☐ android ☐
-3. **Admin surface is review-only — no "set active week".** Open `/admin/weekly-performance`. There is
-   one header (no duplicate), a pick-a-week-to-review picker, the week's live metrics, and Export. There
-   is **no** "Active week / Set as active week" control and no open/locked/published status. → web ☐ mobile ☐ android ☐
+3. **One surface only — the admin page serves the full dashboard.** Open `/admin/weekly-performance`
+   as an admin: it renders the full dashboard (desktop: week-history sidebar + grouped metric cards +
+   comparison chart; phone: week selector + Export in the sticky header). Opening
+   `/apps/weekly-performance` as an admin redirects straight to `/admin/weekly-performance` — there
+   is no separate member view, no "Member view" pill, and no "Admin" pill anywhere in the plugin.
+   There is **no** "Active week / Set as active week" control and no open/locked/published
+   status. → web ☐ mobile ☐ android ☐
 4. **Numbers, not a spinner.** Metric cards and the this-week-vs-last-week comparison render real
    values, not a stuck loading state. → web ☐ mobile ☐ android ☐
 
@@ -65,10 +69,10 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
 1. As a plain member, look for the plugin in navigation and try `/admin/weekly-performance`.
 2. As an admin, open the same page.
 3. If an `operations`-role account is available, confirm it also passes.
-**Expected:** The member does not see the plugin in nav; the admin page redirects them to
-`/apps/weekly-performance` and the read routes deny with a stable reason (`insufficient_role`). The
-admin sees the full admin UI. The admin gate (`ensureWeeklyPerformanceAdmin`) admits `admin` or the
-`operations` role, matching `requiredRoles: [admin, operations]`.
+**Expected:** The member does not see the plugin in nav; the admin page redirects them to `/apps`
+and the read routes deny with a stable reason (`insufficient_role`). The admin sees the full
+dashboard on the admin page (the only surface). The admin gate (`ensureWeeklyPerformanceAdmin`)
+admits `admin` or the `operations` role, matching `requiredRoles: [admin, operations]`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### WP-A2 · Week navigation and review picker
@@ -147,8 +151,8 @@ shows. The selected week's metrics re-pull and the updated numbers appear withou
 reopening the app. Refreshing never clears the current screen to the full-screen loading state or
 flashes the metric cards to the empty state.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
-directly), and the admin screen header shows a "Member view" pill opening `/apps/weekly-
-performance`.
+directly). There is no "Member view" pill and no "Admin" pill anywhere in the header — the admin
+page is the plugin's only surface.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

@@ -113,7 +113,9 @@ The aggregates above are persisted in two tables in `ctf/schema.sql`:
 
 ## 5) Web and Android Delivery Status
 
-`web+android complete`. Week-selector behavior, current-week polling policy, empty/error semantics, metric definitions, formatting, and deny reasons are consistent across web (`/apps/weekly-performance`) and Android (`packages/mobile/src/features/weekly-performance`).
+`web+android complete`. Week-selector behavior, current-week polling policy, empty/error semantics, metric definitions, formatting, and deny reasons are consistent across web (`/admin/weekly-performance` — the single surface) and Android (`packages/mobile/src/features/weekly-performance`).
+
+Single admin surface (2026-07-18, owner directive): there is exactly one web surface, the admin page `/admin/weekly-performance`, which serves the full dashboard (`weekly-performance-shell.tsx` — sidebar week history, grouped metric cards, comparison chart, export). `/apps/weekly-performance` renders nothing: it redirects admins to the admin page and still 404s everyone else (admin-only gate). The thin review shell `wp-admin-shell.tsx` and the admin↔member cross-links ("Member view" pill, "Admin" pill, sidebar "Manage weeks") were deleted.
 
 Web pixel pass (design `c5d83c0`): the user-facing shell is rebuilt to `design/.../survivor-hub/WeeklyPerformance.tsx` and its Empty/Loading states — icon rail, week-history sidebar, metric cards, a this-week-vs-last-week comparison chart, and a week-summary right rail. Week selection drives `GET /api/weekly-performance/weeks`, `/current-week`, and `/metrics` (with `compareWeekStartDate` for per-metric deltas); admin export opens `GET /api/weekly-performance/export`. Real data only — the mockup's fabricated daily series became a real per-metric current-vs-compare chart scaled relative to the max value in view, metric labels are humanized from `metric_key` (no label column exists), and the unbacked "Top Apps" widget was omitted rather than faked. Decomposed into modular sub-components within the rule-116 limits.
 
@@ -153,6 +155,16 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 ## 8) Change Log
 
+- 2026-07-18: **Consolidated to a single admin surface (owner directive: "the member view should
+  now be removed. Only an admin page for weekly performance").** `/admin/weekly-performance` now
+  renders the full dashboard (`weekly-performance-shell.tsx`); the thin review shell
+  (`wp-admin-shell.tsx`) is deleted. `/apps/weekly-performance` no longer renders a page — it
+  redirects admins to `/admin/weekly-performance` and continues to 404 non-admins (the admin-only
+  gate runs first). The admin↔member cross-links are gone with the second surface: the "Member
+  view" pill, the dashboard's "Admin" pill, and the sidebar's "Manage weeks" link (all
+  self-referential or dead after consolidation). A non-admin hitting `/admin/weekly-performance`
+  is sent to `/apps` (there is no member shell to land on). UI/routing only; no schema, API-route,
+  or contract change.
 - 2026-07-18: **Dashboard rebuilt around the owner-locked value-metric table
   (`ctf/docs/developer/PLUGIN_VALUE_METRICS.md`).** The old near-useless metric set (login counts,
   feed counts, LevelUp *enrollments started*) is replaced in
