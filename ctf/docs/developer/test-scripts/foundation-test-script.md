@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
-| **Generated** | 2026-07-17 (hand-updated for the admin "Providers" count aligning with Browse; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-18 (hand-updated for the fresh-DB Request Quote NOT-NULL fix; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -101,7 +101,10 @@ the thread token. When Stream is unreachable, Request Quote still succeeds — t
 the member lands in Quotes (no "Connections are temporarily unavailable" on quote creation); only
 opening the Direct Line then reports chat is unavailable, and the server logs the underlying Stream
 error. (Note: making chat itself work in demo requires valid demo Stream staging credentials — a
-config matter, not a code fix.)
+config matter, not a code fix.) On a freshly-built / demo database (schema applied from
+`schema.demo.sql`), Request Quote must create the connection thread and quote without a database error
+— it does not fail with "Connections are temporarily unavailable" because a legacy `NOT NULL` column
+(`thread_key`, `user_id`, `request_text`) was left unset.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### FND-4 · Quote lifecycle and history
