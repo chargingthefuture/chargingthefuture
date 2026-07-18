@@ -74,6 +74,15 @@ calibrating "material value" honestly.
   from that archetype (Lighthouse ≈ a stay, TrustTransport ≈ a delivery/ride, Foundation ≈ a fulfilled
   service). A few — PeerProgramming, Workforce, LevelUp — are bespoke, so their value-action has to be
   defined from their own intended use rather than copied.
+- **The bar is intentionally high (owner directive).** Access is meant to be genuinely hard to earn —
+  sustained, broad, real contribution — not an easy unlock. The exact threshold and weights are
+  **deferred until the per-plugin value metrics are settled** (that work defines what "contribution"
+  even means per plugin), then set high on purpose.
+- **Count each value event once, in its originating plugin (no double-counting).** A Chyme tip is a
+  ServiceCredits transfer; a TrustTransport trip writes a credit line. If several metrics counted the
+  same underlying event the total would inflate. Define each plugin's value event to be mutually
+  exclusive — the GDP recognition model (fixed contribution weights, distinct recognition sources)
+  already does this and is the reference.
 
 ### Output, cadence, and storage
 
