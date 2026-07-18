@@ -277,8 +277,9 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
       <header className={styles.mobileBar}>
         {/* Brand mark on the phone bar (styled in CSS, previously unused): it is the first product
             identity a member sees on a phone. It sits on the left; the section tabs keep their
-            margin-left:auto so the tabs + controls cluster on the right. */}
-        <div className={styles.mobileBarLogo} aria-hidden="true">SH</div>
+            margin-left:auto so the tabs + controls cluster on the right. "TSE" matches the site
+            title "TI Skills Economy (TSE)" in layout.tsx. */}
+        <div className={styles.mobileBarLogo} aria-hidden="true">TSE</div>
         <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
           <button
             type="button"
