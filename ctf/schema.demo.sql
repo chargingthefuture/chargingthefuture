@@ -238,7 +238,12 @@ ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS updated_
 -- === foundation_connection_threads ===
 CREATE TABLE IF NOT EXISTS foundation_connection_threads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  thread_key TEXT NOT NULL UNIQUE,
+  -- thread_key is a legacy column: the current connection-thread create path keys a thread by
+  -- (survivor_user_id, provider_user_id) and never writes thread_key. It must be NULLABLE so a fresh
+  -- database (e.g. the demo schema) matches production, where thread_key was added later via ALTER as a
+  -- nullable column. Leaving it NOT NULL made every Request Quote fail on a fresh DB (the insert omits
+  -- it). UNIQUE still holds; Postgres allows multiple NULLs under a UNIQUE constraint.
+  thread_key TEXT UNIQUE,
   created_by_user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -248,6 +253,9 @@ ALTER TABLE IF EXISTS foundation_connection_threads ADD COLUMN IF NOT EXISTS thr
 ALTER TABLE IF EXISTS foundation_connection_threads ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS foundation_connection_threads ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS foundation_connection_threads ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Fix an existing fresh/demo DB where thread_key was created NOT NULL: the create path never writes it.
+-- On production (thread_key already nullable) this is a no-op.
+ALTER TABLE IF EXISTS foundation_connection_threads ALTER COLUMN thread_key DROP NOT NULL;
 -- Ensure chyme_rooms exists before dependent indexes/foreign keys below.
 CREATE TABLE IF NOT EXISTS chyme_rooms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -741,12 +749,22 @@ CREATE INDEX IF NOT EXISTS idx_feed_items_timeline_lookup ON feed_items(item_typ
 -- === foundation_quote_requests ===
 CREATE TABLE IF NOT EXISTS foundation_quote_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  request_text TEXT NOT NULL,
+  -- user_id and request_text are legacy columns. The current quote flow writes survivor_user_id /
+  -- provider_user_id / service_type / request_details (added below via ALTER) and never sets these two.
+  -- They carry a DEFAULT '' so an insert that omits them still satisfies NOT NULL — matching production,
+  -- where the ALTER ... ADD COLUMN below first created them as NOT NULL DEFAULT ''. Without the default a
+  -- fresh database (e.g. the demo schema) created them NOT NULL with no default, so the second step of
+  -- Request Quote failed.
+  user_id TEXT NOT NULL DEFAULT '',
+  request_text TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Repair an existing fresh/demo DB where these legacy columns were created NOT NULL with no default: add
+-- the default so an omitting insert gets ''. On production (already NOT NULL DEFAULT '') these are no-ops.
+ALTER TABLE IF EXISTS foundation_quote_requests ALTER COLUMN user_id SET DEFAULT '';
+ALTER TABLE IF EXISTS foundation_quote_requests ALTER COLUMN request_text SET DEFAULT '';
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS request_text TEXT NOT NULL DEFAULT '';
