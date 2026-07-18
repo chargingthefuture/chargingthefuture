@@ -212,6 +212,17 @@ for (const [slug, title] of ORDER) {
   const coreSmoke = extractSection(ts, /Core smoke/i);
   const updated = lastUpdated([invPath, tsPath]);
 
+  // Cost control: the guide is regenerated on a schedule (see the workflow), so most runs happen
+  // with no doc changes. Skip the model call for any section whose source docs have not changed
+  // since it was last generated — its `updated` date already equals the source's last-commit date.
+  // A GUIDE_FORCE=1 run (manual "force full rebuild") regenerates everything.
+  const existing = prev.get(slug);
+  if (process.env.GUIDE_FORCE !== '1' && existing && existing.updated === updated) {
+    console.error(`  ${slug}: source docs unchanged since ${updated} — keeping current section (no API call).`);
+    sections.push(existing);
+    continue;
+  }
+
   console.error(`generating ${slug}…`);
   const written = await rewrite(slug, title, features, coreSmoke);
   if (!written || !written.summary || !written.body.length) {
