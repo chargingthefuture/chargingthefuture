@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -27,10 +27,6 @@ function formatTime(iso: string): string {
   return date.toLocaleDateString();
 }
 
-function isUrgent(item: AnnouncementItem): boolean {
-  return item.mandatory || item.priority >= 80;
-}
-
 function AnnouncementCard({
   item,
   onRead,
@@ -40,19 +36,13 @@ function AnnouncementCard({
 }) {
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
-  const urgent = isUrgent(item);
   const accent = '#A78BFA';
 
   return (
     <Pressable
-      style={[s.card, { borderColor: urgent ? '#EF444440' : tokens.border }]}
+      style={[s.card, { borderColor: tokens.border }]}
       onPress={() => onRead(item.id)}
     >
-      {urgent && (
-        <View style={s.urgentBadge}>
-          <Text style={s.urgentText}>URGENT</Text>
-        </View>
-      )}
       <View style={s.cardHeader}>
         <View style={[s.avatar, { backgroundColor: `${accent}25` }]}>
           <Text style={[s.avatarText, { color: accent }]}>AH</Text>
@@ -69,13 +59,6 @@ function AnnouncementCard({
       <Text style={s.cardBody} numberOfLines={4}>
         {item.body}
       </Text>
-      {item.mandatory && (
-        <View style={s.mandatoryRow}>
-          <View style={s.mandatoryPill}>
-            <Text style={s.mandatoryText}>Required reading</Text>
-          </View>
-        </View>
-      )}
     </Pressable>
   );
 }
@@ -104,9 +87,15 @@ export const Announcements = () => {
   const [error, setError] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
+  // Guards against concurrent loads: if a fetch is already in flight (e.g. pull-to-refresh fires
+  // while the initial load is still running), skip the second call so a slower response cannot
+  // overwrite a newer one.
+  const loadingRef = useRef(false);
 
   // `background` skips the full-screen spinner so pull-to-refresh keeps the current list visible.
   const load = useCallback(async (background = false) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     if (!background) setLoading(true);
     setError(null);
     try {
@@ -115,6 +104,7 @@ export const Announcements = () => {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to load announcements.');
     } finally {
+      loadingRef.current = false;
       if (!background) setLoading(false);
     }
   }, []);
@@ -231,23 +221,6 @@ function makeStyles(t: ThemeTokens) {
     padding: 16,
     marginBottom: 12,
   },
-  urgentBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#EF444415',
-    borderWidth: 1,
-    borderColor: '#EF444430',
-    marginBottom: 8,
-  },
-  urgentText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#EF4444',
-  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -296,23 +269,6 @@ function makeStyles(t: ThemeTokens) {
     color: t.textSecondary,
     lineHeight: 20,
     marginBottom: 8,
-  },
-  mandatoryRow: {
-    flexDirection: 'row',
-    marginTop: 4,
-  },
-  mandatoryPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-    backgroundColor: '#F97316' + '20',
-    borderWidth: 1,
-    borderColor: '#F97316' + '40',
-  },
-  mandatoryText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#F97316',
   },
   center: {
     flex: 1,
