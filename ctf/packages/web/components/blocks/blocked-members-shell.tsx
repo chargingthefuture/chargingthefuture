@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ChevronLeft, Loader2, ShieldOff, UserX } from 'lucide-react';
+import { Loader2, ShieldOff, UserX } from 'lucide-react';
+import { BackChevronButton } from '@/lib/nav/back-history';
 import { useTheme } from '@/hooks/useTheme';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { getAccountDataTokens } from '@/components/account-data/account-data-shared';
@@ -93,9 +93,7 @@ export function BlockedMembersShell() {
       <style>{'@keyframes blocks-spin{to{transform:rotate(360deg)}}.blocks-spin{animation:blocks-spin 0.8s linear infinite}'}</style>
 
       <header style={{ height: 56, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, position: 'sticky', top: 0, background: BG, zIndex: 1 }}>
-        <Link href="/account" aria-label="Back to your account" title="Back to your account" style={{ width: 38, height: 38, borderRadius: 10, background: `${BRAND}14`, border: `1px solid ${BRAND}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: BRAND, textDecoration: 'none', flexShrink: 0 }}>
-          <ChevronLeft size={20} />
-        </Link>
+        <BackChevronButton accent={BRAND} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <ShieldOff size={17} color={BRAND} />
           <div style={{ fontSize: 15, fontWeight: 700 }}>Blocked members</div>

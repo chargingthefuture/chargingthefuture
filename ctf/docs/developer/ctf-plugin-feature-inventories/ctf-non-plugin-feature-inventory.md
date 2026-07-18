@@ -214,6 +214,22 @@ Backend-only endpoints with no UI, each guarded by a dedicated bearer secret and
 
 ## 5) Change Log
 
+- 2026-07-17: **History-aware back navigation (owner directive) + shared admin↔member navigation
+  controls.** The in-app back control (the shared chevron on every screen) now returns to the
+  **previous in-app page** when there is one, instead of always jumping one level up; the tailored
+  one-level-up destination (`resolveBackTarget`) remains the fallback for screens opened with no
+  in-app history (deep links, installed-app cold starts). Implemented centrally in
+  `ctf/packages/web/lib/nav/back-history.tsx`: `NavHistoryTracker` (mounted once in the root layout)
+  keeps a per-tab pathname stack in sessionStorage, `useSmartBack()` picks real history back vs the
+  fallback, and `BackChevronButton` is the standalone shared chevron for shells with their own
+  phone-width headers. `MobileScreenHeader` and `PluginRailFooter` now route through `useSmartBack`
+  (buttons instead of fixed links; identical styling), and `MobileScreenHeader` gained an `actions`
+  prop for extra header controls on both breakpoints. New shared `PluginUserShellButton`
+  (`components/shared/plugin-user-shell-button.tsx`) — the admin-side counterpart of
+  `PluginAdminButton` — links an admin surface to its plugin's member shell. Rule
+  `.claude/rules/134-navigation-and-back-control-rules.mdc` updated with the superseding owner
+  decision (2026-07-17). UI-only; no schema, route, or contract change.
+
 - 2026-07-18: **Public user guide at `/guide` + grounded auto-generator.** New public, no-auth page
   (`ctf/packages/web/app/guide/`, modeled on `/terms`): one branded page with a jump-link table of
   contents, a per-section "Last updated" date, and back-to-top links, rendering a generated

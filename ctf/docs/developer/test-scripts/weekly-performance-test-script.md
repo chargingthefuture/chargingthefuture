@@ -130,6 +130,9 @@ mobile-responsive layout uses its own header.)
 shows. The selected week's metrics re-pull and the updated numbers appear without closing and
 reopening the app. Refreshing never clears the current screen to the full-screen loading state or
 flashes the metric cards to the empty state.
+The header back chevron returns to the page you came from (falling back to All Apps when opened
+directly), and the admin screen header shows a "Member view" pill opening `/apps/weekly-
+performance`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

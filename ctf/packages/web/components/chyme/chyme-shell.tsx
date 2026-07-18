@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { ChevronLeft, Radio } from 'lucide-react';
+import { Radio } from 'lucide-react';
+import { BackChevronButton } from '@/lib/nav/back-history';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { ChymeLiveShell } from '@/components/chyme/chyme-live-shell';
@@ -27,13 +27,7 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
     return (
       <div style={{ minHeight: '100dvh', background: t.BG }}>
         <div style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-          <Link
-            href="/apps"
-            aria-label="Back to apps"
-            style={{ width: 38, height: 38, borderRadius: 10, background: t.ACCENT_TINT_10, border: `1px solid ${t.ACCENT_TINT_30}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.ACCENT, textDecoration: 'none', flexShrink: 0 }}
-          >
-            <ChevronLeft size={20} />
-          </Link>
+          <BackChevronButton accent={t.ACCENT} />
           <div style={{ width: 32, height: 32, borderRadius: 9, background: t.ACCENT_TINT_15, border: `1px solid ${t.ACCENT_TINT_40}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.ACCENT, flexShrink: 0 }}>
             <Radio size={18} />
           </div>

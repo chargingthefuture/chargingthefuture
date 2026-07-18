@@ -2,8 +2,8 @@
 
 // STATE: Authenticated, no incidents logged yet. Ported from
 // design/.../survivor-hub/ClickLogEmpty.tsx.
-import Link from "next/link";
-import { AlertTriangle, ChevronLeft } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { BackChevronButton } from "@/lib/nav/back-history";
 import { useTheme } from "@/hooks/useTheme";
 import { getClickLogTokens } from "./click-log-shared";
 
@@ -19,16 +19,10 @@ export function ClickLogEmptyState({ onLog }: { onLog: () => void }) {
   return (
     <div style={{ width: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter',system-ui", color: t.TITLE, display: "flex", flexDirection: "column" }}>
       <div style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, background: t.HEADER, flexShrink: 0 }}>
-        {/* Back to /apps — the empty state renders full-screen before the shell's
+        {/* Back control — the empty state renders full-screen before the shell's
             own back chrome, so without this a member with no incidents (common on
             mobile) has no way back to the launcher. */}
-        <Link
-          href="/apps"
-          aria-label="Back to apps"
-          style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}40`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}
-        >
-          <ChevronLeft size={20} />
-        </Link>
+        <BackChevronButton accent={t.ACCENT} />
         <AlertTriangle size={18} color={t.ACCENT} />
         <div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>ClickLog</div>

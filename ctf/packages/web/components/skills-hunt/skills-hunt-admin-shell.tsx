@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { MobileScreenHeader } from "@/components/shared/mobile-screen-header";
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import type { SkillsHuntRound } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
 import { getSkillsHuntAdminTokens } from "./sha-shared";
@@ -35,14 +36,12 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
 
   return (
     <div style={{ ...(isMobile ? { minHeight: "100vh" } : { height: "100dvh", overflowY: "auto" }), background: t.BG, color: t.TEXT, fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
-      <MobileScreenHeader title="SkillsHunt Admin" accent={t.ACCENT} icon={<Search size={18} color={t.ACCENT} />} />
+      <MobileScreenHeader title="SkillsHunt Admin" accent={t.ACCENT} icon={<Search size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/skills-hunt" accent={t.ACCENT} />} />
       <header style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, margin: 0 }}>SkillsHunt — Admin</h1>
           <div style={{ fontSize: 13, color: t.MUTED }}>Run rounds, pay scouts in ServiceCredits, review nominations, publish missions, handle reports.</div>
-        </div>
-        <a href="/apps/skills-hunt" style={{ fontSize: 13, color: t.ACCENT, textDecoration: "none" }}>← Open player shell</a>
-      </header>
+        </div>      </header>
 
       <div role="tablist" aria-label="SkillsHunt admin sections" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
         {TABS.map((entry) => {

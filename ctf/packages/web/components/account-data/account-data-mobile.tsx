@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import {
-  Shield, Trash2, Lock, AlertTriangle, Info, ChevronLeft, ChevronRight, Loader2,
+  Shield, Trash2, Lock, AlertTriangle, Info, ChevronRight, Loader2,
 } from 'lucide-react';
+import { BackChevronButton } from '@/lib/nav/back-history';
 import {
   getAccountDataTokens,
   glyphForService, type AccountService, type AccountDataTokens,
@@ -41,9 +41,7 @@ export function AccountDataMobile({
       <div style={{ padding: '14px 16px 10px', borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           {/* Back to the account hub — mobile had no way back from this screen. */}
-          <Link href="/account" aria-label="Back to your account" title="Back to your account" style={{ width: 34, height: 34, borderRadius: 9, background: `${BRAND}14`, border: `1px solid ${BRAND}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: BRAND, textDecoration: 'none', flexShrink: 0 }}>
-            <ChevronLeft size={18} />
-          </Link>
+          <BackChevronButton accent={BRAND} size={34} />
           <div style={{ width: 34, height: 34, borderRadius: 9, background: `${BRAND}20`, border: `1px solid ${BRAND}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Shield size={16} color={BRAND} />
           </div>

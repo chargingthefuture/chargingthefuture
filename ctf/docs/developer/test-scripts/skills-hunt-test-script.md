@@ -392,6 +392,8 @@ Result: web ☐
 - On web the refresh icon spins while the re-pull is in flight; on android the pull-to-refresh spinner shows.
 - The rounds, leaderboard, missions, and My Finds data re-fetches and the change from the other session appears without closing and reopening the app.
 - Refreshing never clears the screen to the full-screen loading state — the current content stays visible until the new data lands.
+The header back chevron returns to the page you came from (falling back to All Apps when opened
+directly), and the admin screen header shows a "Member view" pill opening `/apps/skills-hunt`.
 
 Result: web ☐ android ☐
 

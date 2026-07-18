@@ -7,7 +7,7 @@ import { UnlockLoading } from "./unlock-loading";
 import { UnlockSubmissionView } from "./unlock-submission-view";
 import { UnlockStatusView } from "./unlock-status-view";
 
-export function UnlockShell() {
+export function UnlockShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<UnlockStatus | null>(null);
   const [url, setUrl] = useState("");
@@ -66,6 +66,7 @@ export function UnlockShell() {
         onSubmit={() => void submit(url)}
         submitting={submitting}
         error={error}
+        isAdmin={isAdmin}
       />
     );
   }
@@ -78,6 +79,7 @@ export function UnlockShell() {
       onResubmit={() => void submit(url)}
       submitting={submitting}
       error={error}
+      isAdmin={isAdmin}
     />
   );
 }
