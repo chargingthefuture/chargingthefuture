@@ -143,6 +143,22 @@ const VOICE = `VOICE:
 - No selling ("powerful", "seamless", "game-changer", "matters deeply"), no rhetorical questions, no closing flourish, no guessing at the reader's feelings.
 - Never use any of these words: thanks, sorry, glad, happy, excited, feel free, hope, phase, punch list.`;
 
+// Pull the JSON object out of the model's reply. Haiku often wraps it in a ```json fence or adds a
+// line of preamble, so a strict JSON.parse of the raw text rejects a perfectly good answer (that is
+// what silently preserved the old wording on the first successful run). Strip a fence if present,
+// else slice from the first "{" to the last "}".
+function extractJson(text) {
+  let t = String(text).trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) t = fence[1].trim();
+  if (!t.startsWith('{')) {
+    const open = t.indexOf('{');
+    const close = t.lastIndexOf('}');
+    if (open >= 0 && close > open) t = t.slice(open, close + 1);
+  }
+  return t;
+}
+
 async function rewrite(slug, title, features, coreSmoke) {
   if (!process.env.ANTHROPIC_API_KEY) return null;
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -174,7 +190,7 @@ async function rewrite(slug, title, features, coreSmoke) {
   const data = await res.json();
   const text = data?.content?.[0]?.text ?? '';
   try {
-    const parsed = JSON.parse(text.trim());
+    const parsed = JSON.parse(extractJson(text));
     return {
       summary: String(parsed.summary ?? '').trim(),
       body: (Array.isArray(parsed.body) ? parsed.body : []).map((s) => String(s).trim()).filter(Boolean),
