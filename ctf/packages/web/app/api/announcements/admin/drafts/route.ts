@@ -60,7 +60,11 @@ export async function POST(request: Request) {
       result: 'success',
       errorCategory: null,
     });
-    return NextResponse.json({ ok: true, announcement }, { status: 201 });
+    // The command contract (announcements.draft.create) declares { announcementId, status, createdAt }.
+    return NextResponse.json(
+      { ok: true, announcementId: announcement.id, status: announcement.status, createdAt: announcement.createdAtIso },
+      { status: 201 },
+    );
   } catch (error) {
     reportError(error, { area: 'announcements', op: 'admin_drafts' });
     logFeedAudit({

@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
-| **Generated** | 2026-07-16 (hand-updated for the phone-width "Good to know" bottom placement; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-18 (hand-updated for the fresh-DB Request Quote NOT-NULL fix; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -101,7 +101,10 @@ the thread token. When Stream is unreachable, Request Quote still succeeds — t
 the member lands in Quotes (no "Connections are temporarily unavailable" on quote creation); only
 opening the Direct Line then reports chat is unavailable, and the server logs the underlying Stream
 error. (Note: making chat itself work in demo requires valid demo Stream staging credentials — a
-config matter, not a code fix.)
+config matter, not a code fix.) On a freshly-built / demo database (schema applied from
+`schema.demo.sql`), Request Quote must create the connection thread and quote without a database error
+— it does not fail with "Connections are temporarily unavailable" because a legacy `NOT NULL` column
+(`thread_key`, `user_id`, `request_text`) was left unset.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### FND-4 · Quote lifecycle and history
@@ -193,7 +196,9 @@ state — the current list stays visible until the new data lands.
 3. Attempt the same as a non-admin.
 **Expected:** The save persists with the CSRF header and the quota threshold (green/yellow/orange/red)
 reflects the policy. On android a non-admin sees the "admins only" notice; on web the non-admin is
-redirected/denied with a readable message.
+redirected/denied with a readable message. The web "Providers" snapshot count matches the number of
+providers shown in Browse — both count claimed, active profiles that offer at least one skill (a
+Directory member who never opted into Foundation is not counted).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### FND-A2 · Rate-limit evaluation and audit

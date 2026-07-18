@@ -545,14 +545,17 @@ export async function runWeeklyAssignment(input: { actorId: string; activeUserId
       );
 
       const idempotencyKey = `${weekStartDate}:${standing.cohortLabel}:${userId}`;
-      await queryDb(
+      const notificationResult = await queryDb<{ id: string }>(
         `INSERT INTO peer_programming_assignment_notifications (id, cohort_id, user_id, idempotency_key, payload, delivered_at)
          VALUES ($1, $2, $3, $4, $5::jsonb, NOW())
-         ON CONFLICT (user_id, idempotency_key) DO NOTHING`,
+         ON CONFLICT (user_id, idempotency_key) DO NOTHING
+         RETURNING id`,
         [randomUUID(), standing.id, userId, idempotencyKey, JSON.stringify({ weekStartDate, cohortLabel: standing.cohortLabel })],
       );
 
-      notificationsCreated += 1;
+      if (notificationResult.rows.length > 0) {
+        notificationsCreated += 1;
+      }
     }
     return { cohortsCreated: 1, notificationsCreated };
   }
@@ -590,14 +593,17 @@ export async function runWeeklyAssignment(input: { actorId: string; activeUserId
       );
 
       const idempotencyKey = `${weekStartDate}:${cohortLabel}:${userId}`;
-      await queryDb(
+      const notificationResult = await queryDb<{ id: string }>(
         `INSERT INTO peer_programming_assignment_notifications (id, cohort_id, user_id, idempotency_key, payload, delivered_at)
          VALUES ($1, $2, $3, $4, $5::jsonb, NOW())
-         ON CONFLICT (user_id, idempotency_key) DO NOTHING`,
+         ON CONFLICT (user_id, idempotency_key) DO NOTHING
+         RETURNING id`,
         [randomUUID(), cohortId, userId, idempotencyKey, JSON.stringify({ weekStartDate, cohortLabel })],
       );
 
-      notificationsCreated += 1;
+      if (notificationResult.rows.length > 0) {
+        notificationsCreated += 1;
+      }
     }
   }
 

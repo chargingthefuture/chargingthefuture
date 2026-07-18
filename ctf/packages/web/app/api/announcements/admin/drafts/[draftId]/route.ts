@@ -66,7 +66,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
       result: 'success',
       errorCategory: null,
     });
-    return NextResponse.json({ ok: true, announcement }, { status: 200 });
+    // The command contract (announcements.draft.update) declares { announcementId, status, updatedAt }.
+    return NextResponse.json(
+      { ok: true, announcementId: announcement.id, status: announcement.status, updatedAt: announcement.updatedAtIso },
+      { status: 200 },
+    );
   } catch (error) {
     reportError(error, { area: 'announcements', op: 'admin_drafts_draftid' });
     const message = error instanceof Error ? error.message : 'error';
