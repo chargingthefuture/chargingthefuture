@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { computeEligibility } from 'lib/contributor-access/eligibility';
+import { syncGatedChannelMembershipIfOpen } from 'lib/contributor-access/gated-channel';
 import { reportError } from 'lib/observability/report';
 
 // Internal, schedule-driven recompute of Contributor Access eligibility. Recomputing on a schedule
@@ -24,7 +25,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await computeEligibility();
-    return NextResponse.json({ ok: true, evaluated: result.evaluated, eligible: result.eligible }, { status: 200 });
+    // Membership sync runs only while the channel is open, and a Stream failure never fails the
+    // recompute response — it comes back as a warning field instead.
+    const channelSyncWarning = await syncGatedChannelMembershipIfOpen('internal_recompute_channel_sync');
+    return NextResponse.json(
+      { ok: true, evaluated: result.evaluated, eligible: result.eligible, ...(channelSyncWarning ? { channelSyncWarning } : {}) },
+      { status: 200 },
+    );
   } catch (error) {
     reportError(error, { area: 'contributor-access', op: 'internal_recompute' });
     return NextResponse.json({ error: 'Recompute failed' }, { status: 500 });

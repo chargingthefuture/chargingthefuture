@@ -4,26 +4,36 @@
 
 - Module name: `Contributor Access`
 - Module slug / service key: `contributor-access`
-- First two slices of the trusted-channel / contributor-badge system described in
+- All three slices of the trusted-channel / contributor-badge system described in
   `ctf/docs/developer/TRUSTED_CHANNELS_AND_CONTRIBUTOR_BADGE_PROPOSAL.md`: the eligibility engine
-  (slice 1) and the Directory contributor badge (slice 2). The badge's member-facing name is
-  **"Weavers of the Commons"** (owner-picked, 2026-07-18 — replacing the earlier working name
-  "Keeper of the Commons", which may still appear in older doc comments).
+  (slice 1), the Directory contributor badge (slice 2), and the single gated channel (slice 3).
+  The badge's member-facing name is **"Weavers of the Commons"** (owner-picked, 2026-07-18 —
+  replacing the earlier working name "Keeper of the Commons", which may still appear in older doc
+  comments).
 - Hard boundary: this module **never touches the Trust plugin** — no reads or writes of any
   `trust_*` table, no imports from `ctf/packages/web/lib/trust/`. It reads other plugins' value
   tables to make an access decision and owns its own storage.
-- No Stream/GetStream code in this slice (the gated channel is a later slice).
+- Stream/GetStream usage mirrors the Commons exactly: the app database is the message source of
+  truth, Stream is the live layer only, and all credentials come from the shared resolver
+  (`lib/integrations/stream-credentials.ts` — demo mode selects the `*_STAGING` app). The gated
+  channel uses its own Stream channel type (`ctf-gated`, uploads OFF), created once by
+  `ctf/scripts/setupGatedChannelType.mjs`.
 
 ## Intent
 
 Compute one categorical decision per member — **eligible** or **not-yet** — from real material
-value delivered to real people, so the platform can later grant a contributor badge and access to a
-single gated channel. The score behind the decision is internal only and is never surfaced to
+value delivered to real people, and grant exactly two things with it: membership of the single
+gated `#contributors` channel and the "Weavers of the Commons" badge on the member's claimed
+Directory profile. The score behind the decision is internal only and is never surfaced to
 anyone as a number: standing is categorical, with no points, tiers, leaderboard, or ranking on any
 surface. Eligibility is additive (the recompute only ever admits) and permanent once earned;
 removal is for-cause only via an admin action.
 
 ## Target User Features
+
+The member surfaces are the **single gated `#contributors` channel inside the Commons shell** —
+"Commons for trusted members", one channel, admin-owned (no topic rooms, no user-created rooms,
+no DMs) — and the **"Weavers of the Commons" badge** on Directory.
 
 1. **"Weavers of the Commons" badge on Directory profiles** (web + mobile-responsive). The braid
    emblem (`components/contributor-access/weavers-badge.tsx` — a static copy of the owner-picked
@@ -44,8 +54,26 @@ removal is for-cause only via an admin action.
    standing opens the members-only channel in the Commons when it launches. Mobile-responsive,
    rendered in the Directory shell tokens.
 
-The gated channel itself is a later slice — see the proposal document
-(`TRUSTED_CHANNELS_AND_CONTRIBUTOR_BADGE_PROPOSAL.md`) for the full plan and its hard guardrails.
+4. **Eligible members see the gated channel alongside the Commons.** The Hub channel list
+   (`GET /api/hub/channels`) adds `#contributors` server-side only when `channel_open` is TRUE and
+   the caller's eligibility flag is set (admins/moderators also see it — read access, disclosed).
+   Desktop: the existing channel rail. Phone widths: a channel-pill switch row appears in the chat
+   section once the member has more than one channel.
+5. **No-teaser rule (no shaming).** A non-eligible member sees *nothing*: no locked entry, no
+   absence state, no different layout — the channel list simply never contains the channel, and
+   the channel API routes answer a bare 404 with no trace that the channel exists. Discovery of
+   the perk belongs to the badge slice, never to a locked door.
+6. **Channel features (v1, per the proposal):** Signal-style threaded replies (the same quoted
+   reply mechanism as the Commons), a richer fixed reaction set (twelve emojis vs the Commons'
+   six), and longer messages (4000 characters vs 1200). **No image or file upload** — no
+   affordance in the UI, no storage column, and uploads disabled on the Stream channel type.
+7. **Moderator disclosure, always visible:** the channel header carries "Moderators can read this
+   channel." (also repeated in the composer footnote), so the space can never read as an
+   unwatched back-room.
+8. **Live layer:** same architecture as the Commons — polling is the source of truth,
+   `/api/contributor-access/channel/join` mints Stream credentials for instant refresh + typing
+   indicators when Stream is configured, and the channel keeps working when it is not.
+
 
 ## Target Admin Features
 
@@ -54,8 +82,12 @@ The gated channel itself is a later slice — see the proposal document
 2. Config editor for the owner-tunable eligibility rules: score threshold, minimum account age,
    minimum distinct plugins, minimum distinct counterparties, the eligible-member minimum required
    before the gated channel opens, and per-event weights over the fixed value-event key list. The
-   channel-open toggle is shown disabled — the channel ships in a later slice.
-3. Channel launch status card: eligible count vs `min_eligible_to_open_channel`.
+   channel-open toggle is live, launch-gated: it stays locked (with an explanatory note) until the
+   eligible count reaches the minimum, and the server enforces the same precondition again with a
+   409 (`contributor_access_channel_below_minimum`). Flipping it on creates the gated Stream
+   channel and runs the first membership sync; closing an open channel is always allowed.
+3. Channel status card: eligible count vs `min_eligible_to_open_channel`, an OPEN/CLOSED badge,
+   and the synced Stream member count (best-effort; "unavailable" when Stream is not configured).
 4. Admin page `/admin/contributor-access` (server-side admin gate; non-admins redirect to
    `/apps`), rendering `components/contributor-access/contributor-access-admin-shell.tsx` with
    loading/empty/error/populated states and the mobile-responsive `MobileScreenHeader` layout.
@@ -66,27 +98,60 @@ Admin routes (admin-only via `requireContributorAccessAdmin`; every allow **and*
 `contributor_access_audit_trail` row; mutations additionally require the `x-ctf-csrf: '1'` header):
 
 - `GET /api/contributor-access/admin/config` — the single config row (defaults when never
-  written); audits `contributor-access.config.get`.
+  written) plus `channelMemberCount` (best-effort synced Stream member count; null when Stream is
+  unconfigured or the channel is closed); audits `contributor-access.config.get`.
 - `PUT /api/contributor-access/admin/config` — update weights/threshold/minimums/channel_open
-  (weight keys are validated against the fixed value-event key list); audits
-  `contributor-access.config.update`.
+  (weight keys are validated against the fixed value-event key list). Launch gate: turning
+  `channelOpen` on is refused with 409 `contributor_access_channel_below_minimum` (deny audited)
+  while the eligible count is under `minEligibleToOpenChannel`; a successful open creates the
+  gated Stream channel and runs the first membership sync (guarded — a Stream failure returns a
+  `channelSyncWarning`, never a rollback). Audits `contributor-access.config.update`.
 - `GET /api/contributor-access/admin/eligible` — members who earned eligibility (user id, username
   via the `users` table, `first_earned_at`, revoke flag/reason) plus the current eligible count.
   **Never any score.** Audits `contributor-access.eligible.list`.
 - `POST /api/contributor-access/admin/revoke` — body `{ userId, reason }`; for-cause only, reason
-  must be non-empty; sets `revoked_for_cause` and turns `eligible` off; audits
+  must be non-empty; sets `revoked_for_cause` and turns `eligible` off; when the channel is open a
+  guarded membership sync removes the member from the Stream channel right away
+  (`channelSyncWarning` on failure, never a failed revoke); audits
   `contributor-access.member.revoke`.
 - `POST /api/contributor-access/admin/reinstate` — body `{ userId }`; clears the revocation and
-  restores `eligible` (it was previously earned — `first_earned_at` is permanent); audits
-  `contributor-access.member.reinstate`.
+  restores `eligible` (it was previously earned — `first_earned_at` is permanent); same guarded
+  membership sync re-adds the member; audits `contributor-access.member.reinstate`.
+
+Member channel routes (gate: approved member + `channel_open` + the eligibility flag, or the
+admin role; every deny is a bare 404 with no channel trace — the no-shaming rule; mutations
+require the `x-ctf-csrf: '1'` header; deliberately not audit-trailed, same posture as the Commons
+hub routes):
+
+- `GET /api/contributor-access/channel/messages` — last 50 messages, oldest-first, with
+  quoted-reply references and the viewer's reaction state. Contract:
+  `contributor-access.channel.messages.list`.
+- `POST /api/contributor-access/channel/messages` — body `{ text, replyToPostId? }`; text only,
+  max 4000 characters; `replyToPostId` makes it a Signal-style threaded reply. Contract:
+  `contributor-access.channel.message.create`.
+- `POST /api/contributor-access/channel/messages/[postId]/reactions` — body `{ emoji }`; toggles
+  the viewer's reaction; emoji validated against the fixed twelve-emoji gated set. Contract:
+  `contributor-access.channel.reaction.toggle`.
+- `POST /api/contributor-access/channel/join` — mints Stream live-layer credentials (channel type
+  `ctf-gated`, channel `ctf-contributors`) via the shared resolver; `configured: false` when
+  Stream is absent and the client stays on polling. Contract: `contributor-access.channel.join`.
+
+Cross-plugin read: `GET /api/hub/channels` (the Hub) reads `contributor_access_config` +
+`contributor_access_eligibility` to append the `#contributors` entry server-side for eligible
+members and admins only.
 
 Internal (service-to-service, never member/browser callable):
 
 - `POST /api/internal/contributor-access/recompute` — runs `computeEligibility()`; guarded by
   `Authorization: Bearer INTERNAL_SERVICE_SECRET` (501 when unset, 401 on a bad token); returns
-  `{ ok, evaluated, eligible }` counts only. Called weekly (Mondays 06:30 UTC) by
-  `.github/workflows/contributor-access-recompute.yml`. Contract:
+  `{ ok, evaluated, eligible }` counts only, plus `channelSyncWarning` when the guarded
+  post-recompute membership sync fails (a Stream failure never fails the recompute). Called
+  weekly (Mondays 06:30 UTC) by `.github/workflows/contributor-access-recompute.yml`. Contract:
   `contributor-access.eligibility.recompute`.
+- `syncGatedChannelMembership()` (`lib/contributor-access/gated-channel.ts`, no route of its own)
+  — the ONLY membership path: adds every eligible member to the Stream channel, removes every
+  for-cause-revoked member; invoked (guarded, only while open) from the recompute, revoke,
+  reinstate, and the config open flip. Contract: `contributor-access.channel.membership.sync`.
 
 Member-facing badge read (no new route in this module): the Directory read routes
 (`GET /api/directory/list`, `GET /api/directory/profiles/:id`) call
@@ -116,6 +181,22 @@ Owned tables in `ctf/schema.sql` (all guarded `CREATE TABLE IF NOT EXISTS` + per
 - `contributor_access_audit_trail` — same shape as `weekly_performance_audit_trail`: `id`,
   `actor_id`, `command`, `policy_status`, `reason`, `target_type`, `target_id`, `metadata` JSONB,
   `created_at`.
+- `contributor_access_channel_posts` — gated-channel messages (the DB is the source of truth,
+  mirroring the Commons; Stream is the live layer only): `id` UUID PK, `author_user_id` TEXT,
+  `author_username` TEXT NULL (captured at post time), `body` TEXT (max 4000 enforced in code),
+  `reply_to_post_id` UUID NULL (Signal-style threaded reply), `created_at`. Index on
+  `(created_at DESC)`. Text only — no image/file column, by proposal guardrail.
+- `contributor_access_channel_post_reactions` — `(post_id, user_id, emoji)` PK plus `created_at`;
+  emoji validated in code against the fixed gated set.
+
+Account deletion: registered in `lib/account/deletion-registry.ts` (entry `contributor-access`) —
+channel posts, reactions, and the eligibility row are deleted with the account (deletion resets
+the earned barrier, per the proposal), the audit trail is retained.
+
+Stream (external, not a table): channel type `ctf-gated` (threads on, reactions on, uploads OFF,
+max message length 4000 — one-time setup via `ctf/scripts/setupGatedChannelType.mjs` per Stream
+app, production and staging), channel `ctf-contributors`, member ids `feed-<userId>` (the same
+Stream identity the Commons uses).
 
 Upstream reads (engine only, `ctf/packages/web/lib/contributor-access/`): the same tables and
 fixed filters as `lib/weekly-performance/live-metrics.ts`, all-time and grouped per the member who
@@ -158,36 +239,65 @@ counts still feed the score internally).
   responds with counts only.
 - Revocation is for-cause only (a reviewed harm/abuse action) with a required reason — never for
   inactivity, never on an unreviewed report alone.
+- **Channel membership comes ONLY from the eligibility flag** — synced server-side to the Stream
+  channel; there is no invite, no self-join for the non-eligible, and no other add path. A
+  for-cause revoke removes the member from the channel on the spot (guarded sync).
+- **Moderator read access is disclosed in-channel** — "Moderators can read this channel." renders
+  in the channel header and the composer footnote. Admins retain read access without the
+  eligibility flag; that is the moderation design, not a bypass.
+- **No images, anywhere in the channel** — no UI affordance, no storage column, uploads disabled
+  on the Stream channel type (`ctf-gated`). Text only.
+- **No-shaming denies:** every member channel route answers a bare 404 to the non-eligible (and
+  while the channel is closed) — no locked teaser, no absence state, no channel trace in the Hub
+  channel list.
+- **Launch gate enforced server-side:** `channel_open` cannot turn on below
+  `min_eligible_to_open_channel` (409 with a stable code; the deny is audited) — the client
+  toggle state is never trusted.
+- Stream secrets are reused exactly as the Hub/Feed uses them (`resolveStreamCredentials` — demo
+  mode selects `STREAM_API_KEY_STAGING`/`STREAM_API_SECRET_STAGING`); no key was added, renamed,
+  or restructured.
 - Contracts: `ctf/docs/contracts/CONTRIBUTOR_ACCESS_PLUGIN_COMMAND_CONTRACTS.yaml`,
   `CONTRIBUTOR_ACCESS_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`,
-  `CONTRIBUTOR_ACCESS_PLUGIN_AUDIT_CONTRACTS.yaml`. No deletion contract yet: the module stores
-  only the derived eligibility row and audit rows; a profile-deletion contract lands with the
-  member-facing slice.
+  `CONTRIBUTOR_ACCESS_PLUGIN_AUDIT_CONTRACTS.yaml`. Deletion handling lives in the account
+  deletion registry (see the data model section); a standalone profile-and-deletion contract
+  document is still to be authored.
 
 ## Web and Android Delivery Status
 
-Web admin (`/admin/contributor-access`, desktop + mobile-responsive) plus the member-facing badge
-slice on the Directory (badge + dialog on the profile detail, and the
-`/apps/directory/weavers-of-the-commons` explainer page), web + mobile-responsive.
-
-**Android parity gap (tracked):** the React Native Directory profile detail does not yet render
-the "Weavers of the Commons" badge, its dialog, or the "how it's earned" screen. The badge boolean
-is already on the shared `GET /api/directory/list` / `GET /api/directory/profiles/:id` responses,
-so the Android work is display-only. Badge-slice PRs use a `Parity Ticket:` line until this lands.
+- **Web (desktop):** complete — admin (`/admin/contributor-access`), the member gated channel
+  inside the Commons shell (channel rail entry, gated panel), the Directory profile badge +
+  dialog, and the `/apps/directory/weavers-of-the-commons` explainer page.
+- **Web (mobile-responsive):** complete — the admin shell keeps its `MobileScreenHeader` layout;
+  the gated channel is reachable at phone widths via the channel-pill switch row (the desktop
+  channel rail is hidden there) and the panel reuses the Commons' responsive chat layout; the
+  badge, dialog, and explainer page are responsive in the Directory shell.
+- **Android (React Native):** **tracked gaps — deliberately not built in these slices.** (1) The
+  gated channel: the mobile app has no gated-channel feature directory yet; parity should follow
+  the same server-filtered channel list (`/api/hub/channels`) and the same member routes, so no
+  client-side eligibility logic is ever needed (issue #1681). (2) The badge: the RN Directory
+  profile does not yet render the badge/dialog or the explainer screen — the boolean is already
+  on the shared Directory responses, so the work is display-only (issue #1680). PRs for these
+  slices carry a `Parity Ticket:` line instead of claiming android complete.
 
 ## Seed Coverage Status
 
 No seed script. The engine reads upstream tables that the existing plugin seeds populate
-(`seed:demo`); the owned tables start empty and fill on the first recompute / config save. A
-dedicated seed becomes worthwhile with the member-facing slice.
+(`seed:demo`); the owned tables — including the channel post/reaction tables — start empty and
+fill on the first recompute / config save / member post.
 
 ## Gaps & Known Technical Debt
 
-- Android badge parity not built: the RN Directory profile does not yet show the badge/dialog or
-  the explainer screen (the API already carries `hasWeaversBadge`; display-only work).
-- Channel slice not built: the gated Stream channel, membership sync from the flag, and the
-  `channel_open` behavior are a later slice; the toggle is stored but nothing reads it to grant
-  access.
+- **One-time manual Stream step (owner):** the `ctf-gated` channel type must exist in each Stream
+  app before the channel can be created. Run `ctf/scripts/setupGatedChannelType.mjs` once against
+  the production credentials and once against the staging/demo credentials (usage at the top of
+  the script). Until it runs, opening the channel stores the config flip and returns a
+  `channelSyncWarning`; membership reconciles on the next sync after the type exists.
+- Android parity gaps: see the delivery-status section (issues #1680 badge, #1681 channel).
+- Gated-channel posts have no content-moderation or rate-limit pass yet (the Commons runs both on
+  its feed path). Blast radius is small — members are flag-gated contributors and moderators read
+  the channel — but the same guards should follow.
+- No message delete/edit in the gated channel yet (the Commons supports author delete); needs a
+  small follow-up.
 - Default weights need owner tuning: the shipped `DEFAULT_WEIGHTS` are a reasoned starting point
   (rare/large actions weigh more), but the proposal defers the real calibration and threshold to
   the owner; the bar is meant to be deliberately high.
@@ -195,6 +305,8 @@ dedicated seed becomes worthwhile with the member-facing slice.
   are not yet read as an admission gate (needs an owner decision on which signals count).
 - No per-member admin drill-down (deliberate for now — it would tempt exposing the internal
   evidence; revisit only with strong cause).
+- A standalone `CONTRIBUTOR_ACCESS_PROFILE_AND_DELETION_CONTRACT.md` document is still to be
+  authored; the deletion behavior itself is already wired via the account deletion registry.
 
 ## Change Log
 
@@ -218,6 +330,17 @@ dedicated seed becomes worthwhile with the member-facing slice.
   age/plugin-spread/counterparty gates, additive-only recompute), internal recompute route + weekly
   workflow, admin routes (config get/update, eligible list, revoke, reinstate), the admin page and
   shell, contracts, and this inventory.
+- 2026-07-18 — Gated channel slice: the single `#contributors` channel. Schema (channel posts +
+  reactions tables), `lib/contributor-access/gated-channel.ts` (+`gated-channel-shared.ts`,
+  `channel-repository.ts`), member routes (messages list/create, reaction toggle, Stream join),
+  server-filtered Hub channel-list entry (eligible members and admins only — the no-teaser rule),
+  membership sync wired into recompute/revoke/reinstate/config-open (guarded, warning-not-failure),
+  the launch-gated `channel_open` toggle (409 below the minimum) with the admin status card
+  (open/closed + synced member count), the Commons-shell gated panel (moderator disclosure header,
+  threads via quoted replies, twelve-emoji reactions, 4000-char messages, no upload affordance) with
+  a phone-width channel switcher, the one-time `setupGatedChannelType.mjs` Stream script (uploads
+  off at the channel-type level), the account-deletion registry entry, and contract/test-script
+  updates.
 
 ## Build Checklist
 
@@ -236,5 +359,7 @@ Ordered, dependency-based task list for this module (each item names what blocks
    shared Directory API already carries the boolean).
 9. Channel slice (gated Stream channel type, membership sync from the flag, moderator read-in
    disclosure, launch gate on `min_eligible_to_open_channel`) — blocked by 7; independent of 8.
+   **Done** (web + mobile-responsive; the one-time channel-type script is the owner's manual
+   step, and Android parity is tracked in Gaps).
 10. Clean-standing admission gate (blocks/safety reports) — blocked by an owner decision on which
     signals count; can land any time after 2.

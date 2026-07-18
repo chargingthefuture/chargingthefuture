@@ -5477,8 +5477,9 @@ CREATE INDEX IF NOT EXISTS recurring_activity_audit_trail_activity_idx ON recurr
 -- deliberately separate from the Trust plugin: it never reads or writes any trust_* table.
 
 -- Single-row owner-tunable config (id fixed to 1). `weights` holds per value-event-key overrides
--- of the engine's DEFAULT_WEIGHTS; a missing key falls back to the default. `channel_open` is a
--- forward-looking toggle for the gated channel (a later slice) — nothing reads it to grant access yet.
+-- of the engine's DEFAULT_WEIGHTS; a missing key falls back to the default. `channel_open` is the
+-- gated channel's launch gate: the admin config route only lets it turn on once the eligible count
+-- reaches `min_eligible_to_open_channel`, and the member channel routes deny while it is off.
 CREATE TABLE IF NOT EXISTS contributor_access_config (
   id INT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
   weights JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -5548,6 +5549,42 @@ ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS ta
 ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Gated contributor channel messages. Same architecture as the Commons: the database is the
+-- message source of truth (custom UI + polling) and Stream is only the live layer. Rows are
+-- visible ONLY to channel members (the eligibility flag) and admins — never to the public
+-- Commons/feed. `reply_to_post_id` is the Signal-style quoted reply (the channel's thread
+-- mechanism). Text only — there is no image/file column and none may be added (proposal hard
+-- guardrail: no images in v1).
+CREATE TABLE IF NOT EXISTS contributor_access_channel_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  author_user_id TEXT NOT NULL,
+  author_username TEXT NULL,
+  body TEXT NOT NULL,
+  reply_to_post_id UUID NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS author_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS author_username TEXT;
+ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS reply_to_post_id UUID;
+ALTER TABLE IF EXISTS contributor_access_channel_posts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS contributor_access_channel_posts_created_idx ON contributor_access_channel_posts (created_at DESC);
+
+-- Emoji reactions on gated-channel posts. Emoji values are validated in code against the fixed
+-- gated reaction set (richer than the Commons set).
+CREATE TABLE IF NOT EXISTS contributor_access_channel_post_reactions (
+  post_id UUID NOT NULL,
+  user_id TEXT NOT NULL,
+  emoji TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (post_id, user_id, emoji)
+);
+ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS post_id UUID;
+ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 COMMIT;
 
 -- ── post migration: 0001_directory_display_name_to_first_last.sql ──

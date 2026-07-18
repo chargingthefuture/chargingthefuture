@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireContributorAccessAdmin } from '../_lib';
 import { insertContributorAccessAudit, reinstateEligibility } from 'lib/contributor-access/repository';
+import { syncGatedChannelMembershipIfOpen } from 'lib/contributor-access/gated-channel';
 import { reportError } from 'lib/observability/report';
 
 // Clears a for-cause revocation. Eligibility returns because it was previously earned
@@ -57,7 +58,10 @@ export async function POST(request: Request) {
       targetId: userId,
     });
 
-    return NextResponse.json({ ok: true }, { status: 200 });
+    // A reinstated member rejoins the gated channel right away (when it is open). Guarded: a
+    // Stream failure never fails the reinstate — membership reconciles on the next sync.
+    const channelSyncWarning = await syncGatedChannelMembershipIfOpen('admin_reinstate_channel_sync');
+    return NextResponse.json({ ok: true, ...(channelSyncWarning ? { channelSyncWarning } : {}) }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'contributor-access', op: 'admin_member_reinstate' });
     return NextResponse.json(

@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { HubChannelsResponse } from 'lib/hub/types';
 import { requireHubAccess } from '../_lib';
+import { getContributorAccessConfig, isMemberEligible } from 'lib/contributor-access/repository';
+import {
+  GATED_CHANNEL_DISPLAY_NAME,
+  GATED_CHANNEL_SLUG,
+  GATED_STREAM_CHANNEL_ID,
+} from 'lib/contributor-access/gated-channel-shared';
 import { reportError } from 'lib/observability/report';
 
 export async function GET() {
@@ -10,10 +16,6 @@ export async function GET() {
   }
 
   try {
-    // TODO: Fetch hub_channels from database, filtered by visibility_scope.
-    // For now, return stub channels to satisfy type contract.
-    // At minimum, unauthenticated users see only #general; authenticated users see more.
-
     const response: HubChannelsResponse = {
       channels: [
         {
@@ -24,6 +26,23 @@ export async function GET() {
         },
       ],
     };
+
+    // The gated contributor channel is listed ONLY when it is open AND this member holds the
+    // eligibility flag (or is an admin — moderators keep read access, disclosed in-channel).
+    // The filter is server-side on purpose: a non-eligible member's response contains no trace
+    // of the channel — no locked teaser, no absence state (the spec's no-shaming rule).
+    const [config, eligible] = await Promise.all([
+      getContributorAccessConfig(),
+      isMemberEligible(gate.auth.userId),
+    ]);
+    if (config.channelOpen && (eligible || gate.auth.isAdmin)) {
+      response.channels.push({
+        slug: GATED_CHANNEL_SLUG,
+        displayName: GATED_CHANNEL_DISPLAY_NAME,
+        visibilityScope: 'eligible',
+        streamChannelId: GATED_STREAM_CHANNEL_ID,
+      });
+    }
 
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
