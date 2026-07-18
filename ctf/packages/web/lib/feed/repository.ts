@@ -592,12 +592,15 @@ export function validateAnnouncementDraftInput(input: AnnouncementDraftInput): b
   const scheduleAt = normalizeNullableText(input.scheduleAtIso);
   const expiresAt = normalizeNullableText(input.expiresAtIso);
 
-  // The command contract marks targeting as required and the access policy lists
-  // targetingValidation: required. Reject an absent or non-object targeting here rather than
-  // letting normalizeTargeting silently coerce it to {} and persist a malformed draft.
+  // Targeting is optional in the shipped product: the admin authoring UI has no targeting control
+  // and posts drafts without it, meaning "broadcast to everyone" (normalizeTargeting yields {}).
+  // An earlier change made targeting mandatory here to satisfy the deprecated announcements command
+  // contract, but that broke the real Create-draft flow, so targeting is intentionally not required.
+  // When targeting IS supplied it must be a plain object; an array or other non-object is rejected.
   const targeting = input.targeting;
   const targetingOk =
-    typeof targeting === 'object' && targeting !== null && !Array.isArray(targeting);
+    targeting === undefined
+    || (typeof targeting === 'object' && targeting !== null && !Array.isArray(targeting));
 
   const checks = [
     title.length > 0 && title.length <= FEED_MAX_TITLE_LENGTH,
