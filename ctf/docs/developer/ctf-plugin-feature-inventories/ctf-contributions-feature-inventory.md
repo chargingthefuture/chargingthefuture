@@ -57,7 +57,12 @@ flow is one-way, like gas-station reward points.
 - See their own claim history and statuses (pending / confirmed / rejected).
 - See the current fundraiser cycle and collective progress (USD raised, comments, stars,
   contributor count) toward the owner-set goals.
-- Dismiss the fundraiser banner — a silent six-month snooze.
+- Dismiss the fundraiser banner — a silent six-month snooze. On phone width, dismissing does not
+  remove the reminder entirely: the full banner collapses to a small gift emoji (🎁) in its place that
+  still opens the plugin, so it stays a subtle nudge without taking up space; the full banner returns
+  on its own when the snooze lapses. On desktop, dismissing hides it until the snooze lapses (no
+  emoji — the slim desktop bar is already unobtrusive). If the admin turns the banner feature off,
+  neither the banner nor the emoji shows.
 - Open to any signed-in member: contributing requires no Unlock verification and never changes
   Unlock state.
 
@@ -92,7 +97,10 @@ flow is one-way, like gas-station reward points.
   `ownerSignalUrl` (the owner's Signal contact from the server-only `CONTRIBUTIONS_OWNER_SIGNAL_URL`
   env var, or null to fall back to the instructions copy), and the live thank-you valuations
   `creditsPerUsd` (SC per dollar) and `creditsPerActionSc` (SC for one confirmed comment or star,
-  = `nonMonetaryUnitValueUsd × creditsPerUsd`), so member copy always matches the admin settings.
+  = `nonMonetaryUnitValueUsd × creditsPerUsd`), so member copy always matches the admin settings. The
+  snapshot also carries `bannerEnabled` (the banner feature on/off, independent of the per-member
+  snooze in `bannerVisible`) so the phone-width banner can tell "snoozed" (show the emoji reminder)
+  from "turned off" (show nothing).
 - `POST /api/contributions/banner/dismiss` — Silent banner snooze (not audited).
 - `GET /api/contributions/admin/submissions` — Admin review queue (`?status=` filter).
 - `POST /api/contributions/admin/submissions/[submissionId]/review` — Confirm/reject (body:
@@ -289,6 +297,14 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-07-18: Phone-width fundraiser banner is dismissible again and collapses to a subtle emoji
+  (owner request). The "Not now" dismiss control is restored on both layouts. On phone width,
+  dismissing no longer removes the reminder — the full banner collapses to a small gift emoji (🎁) in
+  its place that opens the plugin, so it stays a subtle nudge without taking up space; the full banner
+  returns when the snooze lapses. On desktop, dismissing hides it until the snooze lapses (no emoji).
+  The fundraiser snapshot now also returns `bannerEnabled` (feature on/off, independent of the
+  per-member snooze) so the phone-width UI can tell "snoozed" (show the emoji) from "turned off" (show
+  nothing). Fundraiser command contract `outputSchema` updated. No database schema change.
 - 2026-07-17: **Admin↔member navigation (app-wide sweep).** The admin surface header gained the
   shared "Member view" pill (`PluginUserShellButton`) linking to `/apps/contributions`. The member
   shell header now shows the shared Admin shortcut (`PluginAdminButton`, admins only). UI-only; no

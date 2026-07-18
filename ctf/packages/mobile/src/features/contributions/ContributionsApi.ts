@@ -52,6 +52,7 @@ export type FundraiserSnapshot = {
   githubStarsConfirmed: number;
   contributorCount: number;
   bannerVisible: boolean;
+  bannerEnabled: boolean;
   githubStarAlreadyCredited: boolean;
 };
 

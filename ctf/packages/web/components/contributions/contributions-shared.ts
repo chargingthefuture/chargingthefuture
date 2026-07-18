@@ -58,6 +58,9 @@ export type FundraiserResponse = {
     githubStarsConfirmed: number;
     contributorCount: number;
     bannerVisible: boolean;
+    // Whether the fundraiser banner feature is on at all (admin toggle), independent of the
+    // per-member snooze that drives bannerVisible.
+    bannerEnabled: boolean;
     githubStarAlreadyCredited: boolean;
   };
   signalInstructions: string;
