@@ -1,0 +1,55 @@
+name: Contributor Access — Eligibility Recompute
+
+# Recomputes Contributor Access eligibility (the categorical eligible / not-yet flag) by calling
+# the app's internal recompute route. The recompute runs on a schedule — not instantly on member
+# actions — so nobody spikes the signals and coasts, and it is additive only: it admits
+# newly-qualified members and never revokes on signal decay (revocation is for-cause only, via the
+# admin surface). Weekly is enough because eligibility is earned over months of steady
+# contribution; a missed week is covered by the next run or a manual workflow_dispatch.
+#
+# Needs (from Infisical, injected below): APP_URL, INTERNAL_SERVICE_SECRET.
+
+on:
+  schedule:
+    - cron: '30 6 * * 1' # weekly, Mondays at 06:30 UTC, offset from the other scheduled jobs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contributor-access-recompute
+  cancel-in-progress: false
+
+jobs:
+  recompute:
+    name: Recompute eligibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      - name: Call the internal recompute route
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ] || [ -z "${INTERNAL_SERVICE_SECRET:-}" ]; then
+            echo "APP_URL or INTERNAL_SERVICE_SECRET missing — cannot recompute." >&2
+            exit 1
+          fi
+          HTTP_CODE=$(curl -sS -o /tmp/recompute-response.json -w '%{http_code}' \
+            -X POST "${APP_URL%/}/api/internal/contributor-access/recompute" \
+            -H "Authorization: Bearer ${INTERNAL_SERVICE_SECRET}")
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Recompute failed with HTTP ${HTTP_CODE}:" >&2
+            cat /tmp/recompute-response.json >&2
+            exit 1
+          fi
+          echo "Eligibility recompute completed."

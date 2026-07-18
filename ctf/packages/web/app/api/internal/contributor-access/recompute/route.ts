@@ -1,0 +1,32 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { computeEligibility } from 'lib/contributor-access/eligibility';
+import { reportError } from 'lib/observability/report';
+
+// Internal, schedule-driven recompute of Contributor Access eligibility. Recomputing on a schedule
+// (not instantly on an action) means nobody spikes the signals and coasts; the recompute is
+// additive only — it admits newly-qualified members and never revokes on signal decay (revocation
+// is for-cause only, via the admin route). Called weekly by the contributor-access-recompute
+// workflow.
+//
+// Guarded by INTERNAL_SERVICE_SECRET, the same posture as
+// /api/internal/weekly-performance/goal-snapshot — never callable by browsers or members. The
+// response carries counts only: no per-member data and no score ever leaves the engine.
+export async function POST(request: NextRequest) {
+  const secret = process.env.INTERNAL_SERVICE_SECRET;
+  if (!secret) {
+    return NextResponse.json({ error: 'Not configured' }, { status: 501 });
+  }
+
+  const auth = request.headers.get('authorization');
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const result = await computeEligibility();
+    return NextResponse.json({ ok: true, evaluated: result.evaluated, eligible: result.eligible }, { status: 200 });
+  } catch (error) {
+    reportError(error, { area: 'contributor-access', op: 'internal_recompute' });
+    return NextResponse.json({ error: 'Recompute failed' }, { status: 500 });
+  }
+}
