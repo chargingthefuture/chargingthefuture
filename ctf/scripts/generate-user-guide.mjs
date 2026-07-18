@@ -13,8 +13,10 @@
  *   - ctf/packages/web/app/guide/guide-content.json  (rendered by /guide)
  *   - ctf/docs/USER_GUIDE.md                          (a plain markdown copy to share / paste to the wiki)
  *
- * Reads: ANTHROPIC_API_KEY (optional — without it, falls back to a deterministic, un-polished but
- * still grounded extraction so the build never hard-depends on the model).
+ * Reads: ANTHROPIC_API_KEY (required — the script refuses to run without it rather than publish
+ * ungrounded fallback text). GUIDE_FORCE=1 regenerates every section; otherwise a section whose
+ * source docs have not changed since its last generation is kept verbatim with no model call, so a
+ * scheduled run with no doc changes costs nothing and opens no PR.
  *
  * Per-section "Last updated" is the last commit date touching that plugin's inventory + test script,
  * so each section honestly reflects how current its source docs are.
