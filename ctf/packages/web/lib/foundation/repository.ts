@@ -1679,7 +1679,17 @@ export async function getFoundationDashboard(): Promise<{
   generatedAtIso: string;
 }> {
   const [providers, threads, quotes, activeCalls, pendingNotifications] = await Promise.all([
-    queryDb<{ total: string }>(`SELECT COUNT(*)::text AS total FROM directory_profiles WHERE is_active = TRUE AND claimed_by_user_id IS NOT NULL`),
+    // Count Foundation providers the same way Browse does: a claimed, active directory profile that has
+    // opted in by offering at least one skill (a foundation_provider_skills row). Without the EXISTS
+    // clause this counted every claimed Directory member, so the admin "Providers" stat could read (say)
+    // 8 while Browse showed only 1 — the 7 others are Directory members who never opted into Foundation.
+    queryDb<{ total: string }>(
+      `SELECT COUNT(*)::text AS total
+       FROM directory_profiles dp
+       WHERE dp.is_active = TRUE
+         AND dp.claimed_by_user_id IS NOT NULL
+         AND EXISTS (SELECT 1 FROM foundation_provider_skills fps WHERE fps.user_id = dp.claimed_by_user_id)`,
+    ),
     queryDb<{ total: string }>(`SELECT COUNT(*)::text AS total FROM foundation_connection_threads`),
     queryDb<{ total: string }>(`SELECT COUNT(*)::text AS total FROM foundation_quote_requests`),
     queryDb<{ total: string }>(`SELECT COUNT(*)::text AS total FROM foundation_call_sessions WHERE status IN ('created', 'active')`),
