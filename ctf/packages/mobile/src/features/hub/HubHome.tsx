@@ -24,7 +24,7 @@ import {
   markHubSeen,
   HUB_REACTION_EMOJIS,
 } from './api';
-import type { HubMessage, HubReactionEmoji, HubReactionSummary } from './api';
+import type { HubMessage, HubReactionEmoji, HubReactionSummary, HubStreamFilter } from './api';
 import {
   fetchHubJoin,
   connectHubLive,
@@ -258,18 +258,31 @@ function MessageCard({
   );
 }
 
-function EmptyState({ s, mentionsOnly, mentionLabel }: { s: Styles; mentionsOnly: boolean; mentionLabel: string }) {
+function EmptyState({
+  s,
+  mentionsOnly,
+  announcementsOnly,
+  mentionLabel,
+}: {
+  s: Styles;
+  mentionsOnly: boolean;
+  announcementsOnly: boolean;
+  mentionLabel: string;
+}) {
+  const icon = mentionsOnly ? '@' : announcementsOnly ? '📣' : '💬';
+  const title = mentionsOnly ? 'No mentions yet' : announcementsOnly ? 'No announcements yet' : 'Nothing posted yet';
+  const body = mentionsOnly
+    ? `When someone writes ${mentionLabel}, it shows here.`
+    : announcementsOnly
+      ? 'Official updates from the team show here.'
+      : 'Announcements, answers, and community posts will appear here. Be the first to share an update.';
   return (
     <View style={s.emptyWrap}>
       <View style={s.emptyIcon}>
-        <Text style={{ fontSize: 28 }}>{mentionsOnly ? '@' : '💬'}</Text>
+        <Text style={{ fontSize: 28 }}>{icon}</Text>
       </View>
-      <Text style={s.emptyTitle}>{mentionsOnly ? 'No mentions yet' : 'Nothing posted yet'}</Text>
-      <Text style={s.emptyBody}>
-        {mentionsOnly
-          ? `When someone writes ${mentionLabel}, it shows here.`
-          : 'Announcements, answers, and community posts will appear here. Be the first to share an update.'}
-      </Text>
+      <Text style={s.emptyTitle}>{title}</Text>
+      <Text style={s.emptyBody}>{body}</Text>
     </View>
   );
 }
@@ -292,6 +305,11 @@ export const HubHome = () => {
   // ref so the poll's stable `load` always reads the current mode.
   const [mentionsOnly, setMentionsOnly] = useState(false);
   const mentionsOnlyRef = useRef(false);
+  // Announcements filter (📣): on, the stream shows only official announcements (server-side, so old
+  // ones beyond the loaded page are found) — a member with limited history can still surface them.
+  // Mutually exclusive with mentions. Mirrored in a ref so the poll's stable `load` reads the mode.
+  const [announcementsOnly, setAnnouncementsOnly] = useState(false);
+  const announcementsOnlyRef = useRef(false);
   // The id of the first message newer than the member's last-seen marker; a single "New messages"
   // divider is drawn before it. Computed once on entry so it does not jump as new posts arrive.
   const [dividerBeforeId, setDividerBeforeId] = useState<string | null>(null);
@@ -318,21 +336,27 @@ export const HubHome = () => {
     setMessages(merged);
   }, []);
 
+  // The active stream filter, derived from the refs. Mentions and announcements are mutually
+  // exclusive; 'all' is the unfiltered blended stream.
+  const currentFilter = useCallback((): HubStreamFilter => (
+    mentionsOnlyRef.current ? 'mentions' : announcementsOnlyRef.current ? 'announcements' : 'all'
+  ), []);
+
   const load = useCallback(async () => {
     setError(null);
     // Capture the mode this read was made in; a slow response that lands after the member flips
-    // the toggle is dropped so the filtered view is never polluted with the other mode's rows.
-    const requestedMentionsOnly = mentionsOnlyRef.current;
+    // a filter is dropped so the filtered view is never polluted with the other mode's rows.
+    const requestedFilter = currentFilter();
     try {
-      const data = await fetchHubMessages(requestedMentionsOnly);
-      if (mentionsOnlyRef.current !== requestedMentionsOnly) return;
+      const data = await fetchHubMessages(requestedFilter);
+      if (currentFilter() !== requestedFilter) return;
       mergeMessages(data.messages);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to load the Hub.');
     } finally {
       setLoading(false);
     }
-  }, [mergeMessages]);
+  }, [mergeMessages, currentFilter]);
 
   // Pull-to-refresh: re-pull messages in the background (load only shows the full-screen
   // spinner on the initial mount, so the current chat stays visible while it re-pulls).
@@ -424,18 +448,38 @@ export const HubHome = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Flip the "@ Mentions" filter: clear the list and re-pull in the new mode behind the spinner,
-  // so the two modes never blend (the merge replaces wholesale, but a blank list avoids showing
-  // the old mode's rows while the new read is in flight).
-  const toggleMentionsOnly = useCallback(() => {
-    const next = !mentionsOnlyRef.current;
-    mentionsOnlyRef.current = next;
-    setMentionsOnly(next);
+  // Clear the list and re-pull in the current filter mode behind the spinner, so modes never blend
+  // (the merge replaces wholesale, but a blank list avoids showing the old mode's rows mid-read).
+  const reloadForFilterChange = useCallback(() => {
     setMessages([]);
     seenKeys.current = new Set();
     setLoading(true);
     void load();
   }, [load]);
+
+  // Flip the "@ Mentions" filter. Turning it on clears the mutually-exclusive announcements filter.
+  const toggleMentionsOnly = useCallback(() => {
+    const next = !mentionsOnlyRef.current;
+    mentionsOnlyRef.current = next;
+    setMentionsOnly(next);
+    if (next) {
+      announcementsOnlyRef.current = false;
+      setAnnouncementsOnly(false);
+    }
+    reloadForFilterChange();
+  }, [reloadForFilterChange]);
+
+  // Flip the announcements (📣) filter. Turning it on clears the mutually-exclusive mentions filter.
+  const toggleAnnouncementsOnly = useCallback(() => {
+    const next = !announcementsOnlyRef.current;
+    announcementsOnlyRef.current = next;
+    setAnnouncementsOnly(next);
+    if (next) {
+      mentionsOnlyRef.current = false;
+      setMentionsOnly(false);
+    }
+    reloadForFilterChange();
+  }, [reloadForFilterChange]);
 
   // Emit a typing event as the member writes in the composer. No-op when there is no live connection
   // (polling-only mode), so the composer can call it unconditionally on every keystroke.
@@ -562,6 +606,19 @@ export const HubHome = () => {
             <Text style={[s.mentionsToggleText, mentionsOnly ? s.mentionsToggleTextActive : null]}>@ Mentions</Text>
           </Pressable>
         )}
+        {/* Announcements filter — emoji-only chip (the word is too long). Lets a member with limited
+            history surface official announcements that scrolled off the recent page. */}
+        {isAuthenticated && (
+          <Pressable
+            style={[s.announcementsToggle, announcementsOnly ? s.announcementsToggleActive : null]}
+            onPress={toggleAnnouncementsOnly}
+            accessibilityRole="button"
+            accessibilityState={{ selected: announcementsOnly }}
+            accessibilityLabel={announcementsOnly ? 'Show all messages' : 'Show only announcements'}
+          >
+            <Text style={s.announcementsToggleText}>📣</Text>
+          </Pressable>
+        )}
       </View>
 
       {/* Early-Commons treatment members land here without passing the Unlock screen, so prompt them to
@@ -580,7 +637,7 @@ export const HubHome = () => {
           </Pressable>
         </View>
       ) : messages.length === 0 ? (
-        <EmptyState s={s} mentionsOnly={mentionsOnly} mentionLabel={mentionLabelFor(user?.username, currentUserId)} />
+        <EmptyState s={s} mentionsOnly={mentionsOnly} announcementsOnly={announcementsOnly} mentionLabel={mentionLabelFor(user?.username, currentUserId)} />
       ) : (
         <FlatList
           data={messages}
@@ -733,6 +790,21 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
     },
     mentionsToggleText: { fontSize: 11, fontWeight: '700', color: t.textSecondary },
     mentionsToggleTextActive: { color: t.success },
+    // Announcements filter pill (📣). "Announcements" is too long for a chip, so it shows the emoji
+    // alone; the active state uses the official-announcement accent so its purpose reads at a glance.
+    announcementsToggle: {
+      paddingHorizontal: 9,
+      paddingVertical: 5,
+      borderRadius: t.radiusChip,
+      backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.05)',
+      borderWidth: 1,
+      borderColor: t.isComic ? `${t.border}40` : 'rgba(255,255,255,0.1)',
+    },
+    announcementsToggleActive: {
+      backgroundColor: `${official}1F`,
+      borderColor: `${official}66`,
+    },
+    announcementsToggleText: { fontSize: 13, lineHeight: 16 },
     list: { padding: 16, gap: 10 },
     card: { borderRadius: r, borderWidth: t.isComic ? 1.5 : 1, padding: 14, marginBottom: 10 },
     cardOfficial: { backgroundColor: t.isComic ? `${official}10` : 'rgba(124,58,237,0.07)', borderColor: t.isComic ? `${official}50` : 'rgba(124,58,237,0.22)' },

@@ -64,12 +64,15 @@ export type HubMessagesResponse = {
   messages: HubMessage[];
 };
 
+// The stream filter the Hub home can apply. 'mentions' adds `?mentions=me` (only peer messages
+// whose body @-mentions the caller); 'announcements' adds `?channel=announcements` (only official
+// announcements). Both are resolved server-side beyond the loaded page — the same filters behind
+// the web Commons "@ Mentions" and 📣 chips. 'all' is the unfiltered blended stream.
+export type HubStreamFilter = 'all' | 'mentions' | 'announcements';
+
 // The server returns the blended stream oldest-first (ready for a chat view).
-// `mentionsOnly` adds `?mentions=me`: the server then returns only peer messages whose body
-// @-mentions the caller (handles derived server-side from the authenticated user), searched
-// beyond the loaded page — the same filter behind the web Commons "@ Mentions" toggle.
-export async function fetchHubMessages(mentionsOnly = false): Promise<HubMessagesResponse> {
-  const query = mentionsOnly ? '?mentions=me' : '';
+export async function fetchHubMessages(filter: HubStreamFilter = 'all'): Promise<HubMessagesResponse> {
+  const query = filter === 'mentions' ? '?mentions=me' : filter === 'announcements' ? '?channel=announcements' : '';
   const res = await authedFetch(`${HUB_API_BASE}/messages${query}`);
   if (!res.ok) {
     throw new Error(`Hub messages request failed: ${res.status}`);
