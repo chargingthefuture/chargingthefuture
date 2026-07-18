@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { BackChevronButton } from "@/lib/nav/back-history";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import {
@@ -173,9 +172,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
-            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: t.BTN_BG, border: `1px solid ${t.BORDER_HI}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.TITLE, textDecoration: "none", flexShrink: 0 }}>
-              <ChevronLeft size={20} />
-            </Link>
+            <BackChevronButton style={{ background: t.BTN_BG, border: `1px solid ${t.BORDER_HI}`, color: t.TITLE }} />
             {/* Title shrinks and truncates so the trailing controls stay on screen */}
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Weekly Performance</span>
             <PluginAdminButton href="/admin/weekly-performance" isAdmin={isAdmin} accent={t.ACCENT} />
