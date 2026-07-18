@@ -75,7 +75,7 @@ Result: web ☐ android ☐
 2. Type a short message, e.g. "Test post from manual run".
 3. Tap/click Send.
 
-**Expected:** The message appears in the message list attributed to your username (e.g. `@alice` or a short member label). The composer clears after sending. No error message is shown.
+**Expected:** The message appears in the message list attributed to your username (e.g. `@alice` or a short member label). The composer clears after sending. No error message is shown. In single standing Cohort 1 mode, simply opening the room (or the live session) is what enrolls you in Cohort 1 so you can post — a member who has opened PeerProgramming at least once can post; a pure listen-in / read never enrolls anyone.
 
 Result: web ☐ android ☐
 
