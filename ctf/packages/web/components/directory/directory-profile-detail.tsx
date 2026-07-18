@@ -10,6 +10,7 @@ import { getDirectoryTokens, initials, type Member } from "./shared";
 import { DirectoryProfileEdit } from "./directory-profile-edit";
 import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
 import { BlockMemberButton } from "@/components/blocks/block-member-button";
+import { WeaversBadgeControl } from "@/components/contributor-access/weavers-badge-control";
 import { ShareLink } from "@/components/shared/share-link";
 import type { TrustUserExtension } from "@/lib/trust/types";
 
@@ -176,7 +177,15 @@ export function DirectoryProfileDetail({
               <AvatarFallback style={{ background: `${t.ACCENT}30`, color: t.ACCENT, fontSize: 26, fontWeight: 800 }}>{initials(p.name)}</AvatarFallback>
             </Avatar>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE, marginBottom: headline || isCommunityGenerated ? 4 : 8 }}>{p.name}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 24, fontWeight: 800, color: t.TITLE, marginBottom: headline || isCommunityGenerated ? 4 : 8 }}>
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</span>
+                {/* "Weavers of the Commons" contributor badge — POSITIVE-ONLY: rendered when the
+                    claimed member holds it, and nothing at all renders for anyone else (no empty
+                    slot, no lock, no "not yet earned"). Clicking opens the honest explainer. */}
+                {claimedUserId != null && p.hasWeaversBadge === true && (
+                  <WeaversBadgeControl size={20} tokens={t} />
+                )}
+              </div>
               {isCommunityGenerated ? (
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT }}>Community-generated profile</div>

@@ -20,6 +20,16 @@ Directory in CTF provides authenticated users with a deterministic profile-and-d
 3. **Directory is no longer public-facing** (2026-05-18). The `isPublic` toggle was removed; every authenticated member sees every active, non-deleted profile. There is no anonymous projection route. Legacy public URLs are not redirected — backwards compatibility is intentionally not preserved.
 5. Announcement consumption in user-visible contexts.
 6. Deterministic validation limits for description, selectors, and URL fields.
+7. **"Weavers of the Commons" contributor badge on the profile detail** (2026-07-18, web +
+   mobile-responsive). A claimed profile whose member holds the Contributor Access badge
+   (`eligible = TRUE AND revoked_for_cause = FALSE`) shows the braid badge next to the name; the
+   read routes set `hasWeaversBadge` on claimed profiles only (guarded cross-plugin read —
+   `lib/contributor-access/badge.ts`). Positive-only: members without it show nothing (no empty
+   slot, no absence state) and community-generated (unclaimed) profiles never carry the field.
+   Clicking the badge opens a small dialog (honest copy, no verification/vetting claim) with a
+   "How it's earned" link to the signed-in explainer page
+   `/apps/directory/weavers-of-the-commons`. Owned by the Contributor Access module — see
+   `ctf-contributor-access-feature-inventory.md` for the full badge spec.
 
 ## Target Admin Features
 
@@ -40,8 +50,11 @@ Implemented routes:
   - `POST /api/directory/profile`
   - `PUT /api/directory/profile` — full upsert of the caller's own profile. Bound on web by the member-facing "Edit my profile" form (`components/directory/directory-profile-edit.tsx`), opened from the owner's own profile in the detail view. The form loads `GET /api/directory/profile`, prefills every editable field, and re-sends the complete field set on save (a missing field is reset to null/'' by `toProfileInput`, so the form never omits one). The Specializations picker has a typed-search box that filters the full (still scrollable) taxonomy list in place, plus a "Your skill not listed? Add it" box that accepts free-text labels (`proposedSkills`) for skills not in the taxonomy — those persist to `directory_profile_proposed_skills` and round-trip back into the form. `GET /api/directory/profile` returns both `proposedSkills` (the member's own free-text additions, editable) and the merged display set `pendingSkills`.
   - `DELETE /api/directory/profile`
-  - `GET /api/directory/list`
-  - `GET /api/directory/profiles/:id` — fetch one active directory profile by id, behind the same `requireDirectoryReadAccess` gate as the list. Backs the auth-gated deep-link page `/apps/directory/profile/[id]` (the destination a shared `ShareLink` points at): a signed-in member opens the Directory with that profile's detail; an unauthenticated visitor is redirected to the directory landing by the page, never reaching this route. Returns `{ member }` (a `DirectoryProfile`) on 200, `{ ok: false, code: DIRECTORY_NOT_FOUND }` 404 when no active profile matches, or `DIRECTORY_PERSISTENCE_UNAVAILABLE` 503.
+  - `GET /api/directory/list` — also decorates each **claimed** item with the
+    `hasWeaversBadge` boolean (guarded read of `contributor_access_eligibility` via
+    `lib/contributor-access/badge.ts`; unclaimed items never carry the field; empty result on any
+    error so the list can never fail because of it).
+  - `GET /api/directory/profiles/:id` — fetch one active directory profile by id, behind the same `requireDirectoryReadAccess` gate as the list. Backs the auth-gated deep-link page `/apps/directory/profile/[id]` (the destination a shared `ShareLink` points at): a signed-in member opens the Directory with that profile's detail; an unauthenticated visitor is redirected to the directory landing by the page, never reaching this route. Returns `{ member }` (a `DirectoryProfile`) on 200, `{ ok: false, code: DIRECTORY_NOT_FOUND }` 404 when no active profile matches, or `DIRECTORY_PERSISTENCE_UNAVAILABLE` 503. A **claimed** member also carries the `hasWeaversBadge` boolean (same guarded contributor-access read as the list; never set on an unclaimed profile).
   - `GET /api/directory/skills`
   - `GET /api/directory/sectors`
   - `GET /api/directory/job-titles`
@@ -159,6 +172,16 @@ Web and Android implementations:
 - Admin role-gated controls reach parity (same policy outcomes and deny taxonomy across platforms).
 - Unified UI contract governs both clients, with platform-specific presentation only.
 
+Weavers of the Commons badge (2026-07-18, web + mobile-responsive): the profile detail
+(`directory-profile-detail.tsx`) renders the Contributor Access braid badge next to the name of a
+claimed, badge-holding member (`Member.hasWeaversBadge`, set by the read routes on claimed
+profiles only), with a click-through dialog and the `/apps/directory/weavers-of-the-commons`
+explainer page (`app/apps/directory/weavers-of-the-commons/page.tsx`, signed-in only — same gate
+as the profile deep link). Positive-only rendering; no change to any other shipped element.
+**Android parity gap (tracked in the Contributor Access inventory):** the RN profile detail does
+not yet render the badge/dialog/explainer — display-only work, the shared API already carries the
+boolean.
+
 Web pixel pass: the `DirectoryShell` is aligned to `design/.../survivor-hub/Directory.tsx` and its Loading/Empty states (`DirectoryLoading.tsx`, `DirectoryEmpty.tsx`). The app surface background was corrected to `#0F1117` (the mockup's rendered surface), the loading state now renders the skeleton layout, and the empty state matches the mockup's category-grid + "Browse All / Clear Filters" treatment (driven by real sector data). The shell was decomposed into modular sub-components (`directory-profile-detail`, `directory-browse`, `directory-right-panel`, `directory-loading-skeleton`, `directory-empty-state`, `shared`) so each unit stays within the rule-116 complexity/length limits. API wiring is unchanged.
 
 Member self-edit (2026-06-24, web): a member viewing their OWN directory profile in the detail view now sees an "Edit my profile" button (shown only when `currentUserId` matches the profile's `claimedByUserId`). It opens `components/directory/directory-profile-edit.tsx`, a modal that loads `GET /api/directory/profile`, prefills every editable field (first name, last name, headline, About/bio, Quora URL, sector + job-title dropdowns, specializations picker, and the four payment addresses), and on save sends `PUT /api/directory/profile` with the COMPLETE field set so the server's full-upsert can never blank an untouched field. Sector/job-title/skill options come from `GET /api/directory/sectors`, `GET /api/directory/job-titles`, and `GET /api/directory/skills` (all loaded unfiltered so existing picks always resolve and the picker can group every skill by sector). On success the shell re-fetches the member list and refreshes the open detail view. No new API routes or schema; binds the existing PUT. **Android parity shipped (2026-07-17)** — see the Android self-edit + admin-skills parity paragraph below.
@@ -190,6 +213,23 @@ Seeded content:
 
 ## Change Log
 
+- 2026-07-18: **"Weavers of the Commons" contributor badge on claimed profiles (web +
+  mobile-responsive).** Slice 2 of the trusted-channel / contributor-badge system (owned by the
+  Contributor Access module — see `ctf-contributor-access-feature-inventory.md`). `GET
+  /api/directory/list` and `GET /api/directory/profiles/:id` now decorate each **claimed** profile
+  with a `hasWeaversBadge` boolean via `getWeaversBadgeHolders`
+  (`lib/contributor-access/badge.ts`) — one table-existence-guarded query over
+  `contributor_access_eligibility` (`eligible = TRUE AND revoked_for_cause = FALSE`, empty set on
+  any error so a contributor-access outage can never break the directory). Community-generated
+  (unclaimed) profiles never carry the field. The profile detail renders the braid badge
+  (`components/contributor-access/weavers-badge.tsx`, static SVG from the owner's emblem repo)
+  next to the name **only when true** — positive-only, nothing renders for anyone else — and
+  clicking it opens a small dialog (title "Weavers of the Commons", honest copy with no
+  verification/vetting claim) linking to the new signed-in explainer page
+  `/apps/directory/weavers-of-the-commons`. Additive UI only; no schema change; Directory command
+  contracts (`directory.list.fetch`, `directory.profile.get`) gained
+  `contributor_access_eligibility` in `dataAccess`. **Android parity deferred** (display-only;
+  tracked in the Contributor Access inventory).
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
   the previous in-app page and falls back to All Apps when there is no in-app history. The admin

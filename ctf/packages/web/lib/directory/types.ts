@@ -45,6 +45,12 @@ export type DirectoryProfile = {
   city?: string | null;
   state?: string | null;
   country?: string | null;
+  // "Weavers of the Commons" contributor badge (Contributor Access module). Set by the read
+  // ROUTES (list / profile-by-id), not by the repository, and ONLY on a claimed profile bound to
+  // a real user — a community-generated (unclaimed) profile never carries the field. True means
+  // the claimed member currently holds the badge (eligible and not revoked for cause). The UI is
+  // positive-only: false/absent renders nothing (no empty slot, no "not yet earned" state).
+  hasWeaversBadge?: boolean;
 };
 
 export type DirectoryAnnouncement = {

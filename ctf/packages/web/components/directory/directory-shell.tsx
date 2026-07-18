@@ -45,6 +45,8 @@ type DirectoryListItem = {
   city?: string | null;
   state?: string | null;
   country?: string | null;
+  // "Weavers of the Commons" contributor badge — present only on claimed profiles.
+  hasWeaversBadge?: boolean;
 };
 
 export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: string; isAdmin: boolean; initialProfileId?: string }) {
@@ -171,6 +173,7 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
             city: item.city ?? null,
             state: item.state ?? null,
             country: item.country ?? null,
+            hasWeaversBadge: item.hasWeaversBadge,
           }));
           setMembers(mapped);
           // Keep the open detail view in sync with the refreshed list (e.g. after the owner
@@ -217,6 +220,7 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
           city: item.city ?? null,
           state: item.state ?? null,
           country: item.country ?? null,
+          hasWeaversBadge: item.hasWeaversBadge,
         });
       } catch {
         // Aborted or unavailable: the browse view stays open instead of the deep-linked detail.
