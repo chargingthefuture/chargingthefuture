@@ -59,6 +59,8 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   'account-data': { standard: '#D946EF', comic: '#B91C1C' },
   // Recurring Activity: a calm teal. Recognition of everyday ties, never a bill — no red or warning tone.
   'recurring-activity': { standard: '#2DD4BF', comic: '#0F5C54' },
+  // Beacon uses the amber accent as the viewer (BEACON_COLOR = #F59E0B); mirrors the mobile table.
+  beacon: { standard: '#F59E0B', comic: '#7A4A05' },
 };
 
 const FALLBACK_ACCENT: AccentPair = { standard: '#6B7280', comic: '#7A6A50' };
