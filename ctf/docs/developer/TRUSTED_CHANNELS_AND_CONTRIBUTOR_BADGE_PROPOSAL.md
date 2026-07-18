@@ -80,10 +80,37 @@ calibrating "material value" honestly.
 - **Output:** a categorical eligibility flag per member (internal). Any internal score used to reach
   it stays server-side and is never surfaced.
 - **Cadence:** recomputed on a schedule (not instantly), so nobody spikes the signals then coasts.
-- **Earn and keep:** eligibility can lapse if value dries up or a report lands, so good behaviour
-  continues inside the channel, not just at the door.
+  The recompute is **additive only** — it admits newly-qualified members and never revokes on signal
+  decay (see the next two points).
+- **The badge is permanent once earned.** It is recognition of real past contribution, so it is
+  **never** removed for going quiet, a dip in activity, or a hard stretch. Stripping a real survivor
+  for struggling or stepping away is not trauma-informed. No decay, no "use it or lose it."
+- **Channel access is revoked only for substantiated cause** — a *reviewed* harm or abuse action
+  inside the space, handled by moderation. **Not** for inactivity, and **not** on an unreviewed report
+  alone (an auto-revoke-on-report rule would be weaponized against real victims via report-brigading).
+  A quiet survivor keeps everything; only someone who actually causes harm loses access.
 - **High churn is expected and fine.** With typical messaging-app churn, most members never qualify;
   the badge is for the persistent value-adding minority, by design.
+
+### Threat model: the long-game perp
+
+A patient perp could earn access, then try to cause harm later. Perfect prevention is not the bar (no
+community achieves it); **bounded, observable, recoverable** harm is — and the design already reaches
+it:
+
+- **Entry cost is real aid.** Getting in requires sustained material value delivered to many real
+  survivors first. That is slow and expensive, and the survivors were genuinely helped along the way —
+  the net is not zero even if the perp is later removed.
+- **The blast radius is small and watched.** Inside there are no DMs, no images (v1), it is group-only,
+  and moderators read it (disclosed). A perp cannot do 1:1 targeting or post images; harm is bounded
+  and observable, which is what makes it actionable.
+- **Removal is for-cause and immediate.** The moment they cause harm, moderation revokes access — you
+  do not need to have caught them earlier, you catch them when they act, in a space built to make
+  acting visible.
+- **Account deletion resets the barrier.** A perp who deletes and returns loses the earned history and
+  must re-grind real aid from scratch, so deletion is self-defeating, not a loophole. The broader
+  "same person, new identity" problem is platform-level (Unlock's Quora social proof, suppression /
+  takedown tools); this gate only adds cost on top.
 - **Storage:** a computed eligibility flag plus a non-exposed reason snapshot, owned by this module —
   separate from the Trust plugin's storage.
 
@@ -153,7 +180,12 @@ members something to aim for — and "you can earn it too" keeps it from reading
 - When (if ever) the single gated channel is noisy enough to justify splitting — the same
   low-population trigger PeerProgramming uses for cohorts.
 - Whether a member can opt out of showing the badge.
-- Whether eligibility loss on a report is immediate or applies at the next recompute.
+- **Does stopping contributing cost channel access?** Recommended: **no** — access is for-cause-only
+  (removed only for a reviewed harm/abuse action), so a member who goes quiet keeps their seat. This is
+  the trauma-informed default and inactivity is not a safety threat in a no-DM, no-image, moderated
+  group; an inactivity-decay rule would mostly punish struggling survivors and would not stop a
+  determined lurker anyway. The trade-off is channel vibrancy vs. trauma-informed retention — the owner
+  can choose active-contributors-only instead, at that cost.
 
 ## Build sequence (only when approved)
 
