@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { Eye, Reply, X } from 'lucide-react';
+import { Eye, Reply, Trash2, X } from 'lucide-react';
 import {
   GATED_CHANNEL_DISPLAY_NAME,
   GATED_CHANNEL_MODERATOR_DISCLOSURE,
@@ -21,9 +21,12 @@ import styles from './community-shell.module.css';
 
 type GatedChatPanelProps = {
   currentUser: ShellCurrentUser;
+  // Admins may delete ANY post (the moderator power the in-channel disclosure line discloses);
+  // members only their own. The server enforces this again — the flag only shows the affordance.
+  isAdmin?: boolean;
 };
 
-export function GatedChatPanel({ currentUser }: GatedChatPanelProps) {
+export function GatedChatPanel({ currentUser, isAdmin = false }: GatedChatPanelProps) {
   const {
     messages,
     input,
@@ -35,6 +38,7 @@ export function GatedChatPanel({ currentUser }: GatedChatPanelProps) {
     cancelReply,
     sendMessage,
     toggleReaction,
+    deleteMessage,
     isLoading,
     isSending,
     error,
@@ -129,6 +133,20 @@ export function GatedChatPanel({ currentUser }: GatedChatPanelProps) {
                 >
                   <Reply size={12} /> Reply
                 </button>
+                {msg.from === 'user' || isAdmin ? (
+                  <button
+                    type="button"
+                    className={styles.chatDeleteBtn}
+                    onClick={() => {
+                      if (window.confirm('Delete this message? This cannot be undone. To change it, delete and post again.')) {
+                        void deleteMessage(msg.id);
+                      }
+                    }}
+                    aria-label={msg.from === 'user' ? 'Delete your message' : `Delete message from ${msg.senderLabel}`}
+                  >
+                    <Trash2 size={12} /> Delete
+                  </button>
+                ) : null}
               </div>
               <ChatReactionRow
                 postId={msg.id}

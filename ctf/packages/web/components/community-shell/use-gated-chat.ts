@@ -232,6 +232,36 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
     }
   }, [input, isSending, refreshHistory, replyTarget]);
 
+  // Delete a post (author-only server-side; admins may remove any post — the disclosed moderator
+  // power). Same optimistic pattern as the Commons deleteMessage: drop it from the stream, then
+  // DELETE; on failure restore it and surface the error.
+  const deleteMessage = useCallback(async (postId: string) => {
+    let removed: GatedChatMessage[] = [];
+    setMessages((previous) => {
+      removed = previous.filter((message) => message.id === postId);
+      return previous.filter((message) => message.id !== postId);
+    });
+
+    try {
+      await requestJson<{ ok: true; postId: string }>(
+        `/api/contributor-access/channel/messages/${encodeURIComponent(postId)}`,
+        {
+          method: 'DELETE',
+          headers: { 'x-ctf-csrf': '1' },
+        },
+      );
+      await refreshHistory().catch(() => undefined);
+    } catch (deleteError) {
+      // Restore the optimistically removed post in time order and surface the error.
+      if (removed.length > 0) {
+        setMessages((previous) =>
+          [...previous, ...removed].sort((a, b) => a.sentAtIso.localeCompare(b.sentAtIso)),
+        );
+      }
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete the message right now.');
+    }
+  }, [refreshHistory]);
+
   const beginReply = useCallback((message: GatedChatMessage) => {
     setReplyTarget({
       postId: message.id,
@@ -276,6 +306,7 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
     cancelReply,
     sendMessage,
     toggleReaction,
+    deleteMessage,
     isLoading,
     isLive,
     isSending,

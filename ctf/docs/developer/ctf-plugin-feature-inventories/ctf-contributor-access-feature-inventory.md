@@ -100,15 +100,30 @@ Admin routes (admin-only via `requireContributorAccessAdmin`; every allow **and*
 
 Member channel routes (gate: approved member + `channel_open` + the eligibility flag, or the
 admin role; every deny is a bare 404 with no channel trace — the no-shaming rule; mutations
-require the `x-ctf-csrf: '1'` header; deliberately not audit-trailed, same posture as the Commons
-hub routes):
+require the `x-ctf-csrf: '1'` header; reads/posts/reactions/join are deliberately not
+audit-trailed, same posture as the Commons hub routes — post deletions ARE audited, see below):
 
 - `GET /api/contributor-access/channel/messages` — last 50 messages, oldest-first, with
-  quoted-reply references and the viewer's reaction state. Contract:
-  `contributor-access.channel.messages.list`.
+  quoted-reply references and the viewer's reaction state. Reads exclude soft-deleted posts and
+  filter to `moderation_status = 'accepted'`; a quote of a deleted post resolves to nothing.
+  Contract: `contributor-access.channel.messages.list`.
 - `POST /api/contributor-access/channel/messages` — body `{ text, replyToPostId? }`; text only,
-  max 4000 characters; `replyToPostId` makes it a Signal-style threaded reply. Contract:
-  `contributor-access.channel.message.create`.
+  max 4000 characters; `replyToPostId` makes it a Signal-style threaded reply. Runs the same two
+  pre-store guards the Commons runs on community posts: the content gate (no raw `<`/`>` markup,
+  at most three links — a failing post is refused with 422 `content_policy_violation`, never
+  stored, never visible to anyone) and the per-member posting rate limit (8 posts per 30 minutes,
+  counted in the database like the Commons' `evaluateFeedRateLimit` — over the window is 429
+  `rate_limit_exceeded`, shown to the member as the same error banner the Commons shows).
+  Contract: `contributor-access.channel.message.create`.
+- `DELETE /api/contributor-access/channel/messages/[postId]` — soft-delete a post (same route
+  shape as the Commons' `DELETE /api/hub/messages/[postId]`): the author may delete their own
+  post; an admin may delete any post (the moderator power the disclosure line discloses). Sets
+  `deleted_at`/`deleted_by` — content hidden from every read, not erased. A non-owner attempt is
+  403 with an audited deny. Both allowed paths write `contributor_access_audit_trail` under
+  distinct commands: `contributor-access.channel.post.delete` (author) and
+  `contributor-access.channel.post.moderator-delete` (admin). No Stream-side removal is needed —
+  message content never enters Stream (the live layer carries only presence/typing). Contract:
+  `contributor-access.channel.post.delete`.
 - `POST /api/contributor-access/channel/messages/[postId]/reactions` — body `{ emoji }`; toggles
   the viewer's reaction; emoji validated against the fixed twelve-emoji gated set. Contract:
   `contributor-access.channel.reaction.toggle`.
@@ -155,8 +170,13 @@ Owned tables in `ctf/schema.sql` (all guarded `CREATE TABLE IF NOT EXISTS` + per
 - `contributor_access_channel_posts` — gated-channel messages (the DB is the source of truth,
   mirroring the Commons; Stream is the live layer only): `id` UUID PK, `author_user_id` TEXT,
   `author_username` TEXT NULL (captured at post time), `body` TEXT (max 4000 enforced in code),
-  `reply_to_post_id` UUID NULL (Signal-style threaded reply), `created_at`. Index on
-  `(created_at DESC)`. Text only — no image/file column, by proposal guardrail.
+  `reply_to_post_id` UUID NULL (Signal-style threaded reply), `moderation_status` TEXT NOT NULL
+  default `'accepted'` (mirrors the Commons `feed_community_posts` column; every read filters to
+  `'accepted'`), `deleted_at` TIMESTAMPTZ NULL / `deleted_by` TEXT NULL (author/admin soft
+  delete — content hidden from every read, not erased; `deleted_by` records who removed it),
+  `created_at`. Index on `(created_at DESC)`. Text only — no image/file column, by proposal
+  guardrail. Soft-deleted rows still count toward the posting rate-limit window, so
+  delete-and-repost cannot bypass it.
 - `contributor_access_channel_post_reactions` — `(post_id, user_id, emoji)` PK plus `created_at`;
   emoji validated in code against the fixed gated set.
 
@@ -213,6 +233,16 @@ counts still feed the score internally).
   eligibility flag; that is the moderation design, not a bypass.
 - **No images, anywhere in the channel** — no UI affordance, no storage column, uploads disabled
   on the Stream channel type (`ctf-gated`). Text only.
+- **Posting runs the Commons' guards:** the same content gate the Commons applies to community
+  posts (no raw `<`/`>` markup, at most three links — refused with 422, never stored) and the
+  same per-member rate limit (8 posts per 30 minutes, counted in the database — 429 with a stable
+  code). Stored posts carry `moderation_status 'accepted'` and reads filter to it.
+- **Author/admin delete is a soft delete and is audited:** only the post's author (or an admin,
+  as the disclosed moderator power) can remove a post; `deleted_at`/`deleted_by` hide the content
+  from every read without erasing it; the author and admin paths write the audit trail under
+  distinct commands (`contributor-access.channel.post.delete` /
+  `contributor-access.channel.post.moderator-delete`) and a non-owner attempt is an audited 403
+  deny — moderator removals stay distinguishable from author removals.
 - **No-shaming denies:** every member channel route answers a bare 404 to the non-eligible (and
   while the channel is closed) — no locked teaser, no absence state, no channel trace in the Hub
   channel list.
@@ -260,11 +290,8 @@ fill on the first recompute / config save / member post.
   later slice (brand-voice pass required; badge name unconfirmed — "Keeper of the Commons" is a
   working name only). Until it ships, the gated channel has no in-product discovery for
   non-members (by design — the no-teaser rule).
-- Gated-channel posts have no content-moderation or rate-limit pass yet (the Commons runs both on
-  its feed path). Blast radius is small — members are flag-gated contributors and moderators read
-  the channel — but the same guards should follow.
-- No message delete/edit in the gated channel yet (the Commons supports author delete); needs a
-  small follow-up.
+- No message edit in the gated channel (deliberate — same as the Commons: to change a message,
+  delete it and post again, so a corrected message gets a fresh content-gate pass).
 - Default weights need owner tuning: the shipped `DEFAULT_WEIGHTS` are a reasoned starting point
   (rare/large actions weigh more), but the proposal defers the real calibration and threshold to
   the owner; the bar is meant to be deliberately high.
@@ -293,6 +320,17 @@ fill on the first recompute / config save / member post.
   a phone-width channel switcher, the one-time `setupGatedChannelType.mjs` Stream script (uploads
   off at the channel-type level), the account-deletion registry entry, and contract/test-script
   updates.
+- 2026-07-18 — Channel moderation, rate limit, and author/admin delete (closes the two recorded
+  gaps). Posting now runs the Commons-mirrored content gate (422 `content_policy_violation`; the
+  post is never stored) and the Commons community-post rate limit (8 per 30 minutes per member,
+  database-counted; 429 `rate_limit_exceeded`); `contributor_access_channel_posts` gains guarded
+  `moderation_status` (default `'accepted'`; reads filter to it), `deleted_at`, and `deleted_by`
+  columns (`schema.demo.sql` regenerated). New `DELETE
+  /api/contributor-access/channel/messages/[postId]` — soft delete by the author, or by an admin
+  as the disclosed moderator power; both paths audited under distinct commands and a non-owner
+  attempt is an audited 403. Panel gains a confirm-gated Delete action on the member's own
+  messages (all messages for admins), styled like the Commons message actions. Contracts
+  (command/policy/audit), this inventory, and the manual test script updated.
 
 ## Build Checklist
 
