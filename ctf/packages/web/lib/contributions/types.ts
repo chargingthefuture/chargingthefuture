@@ -107,6 +107,10 @@ export type FundraiserSnapshot = {
   githubStarsConfirmed: number;
   contributorCount: number;
   bannerVisible: boolean;
+  // Whether the fundraiser banner feature is on at all (admin toggle), independent of the per-member
+  // snooze that drives bannerVisible. Lets the phone-width UI tell "snoozed" (show the emoji reminder)
+  // from "turned off" (show nothing).
+  bannerEnabled: boolean;
   // True when this member already holds a confirmed, credit-earning github_star contribution.
   // The github-star path is then a once-per-member-ever lifetime grant, so the UI greys it out.
   githubStarAlreadyCredited: boolean;

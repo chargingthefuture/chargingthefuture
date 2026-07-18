@@ -593,8 +593,8 @@ export const HubHome = () => {
           <Text style={s.headerTitle}>Survivor Hub</Text>
           <Text style={s.headerSub}>Community · Live</Text>
         </View>
-        {/* "@ Mentions" filter — signed-in only (the handles are derived from the member). Small
-            pill matching the reaction-pill family; filled while the filter is on. */}
+        {/* Mentions filter — signed-in only (the handles are derived from the member). Icon-only "@"
+            chip (the word was dropped to match the 📣 chip); filled while the filter is on. */}
         {isAuthenticated && (
           <Pressable
             style={[s.mentionsToggle, mentionsOnly ? s.mentionsToggleActive : null]}
@@ -603,7 +603,7 @@ export const HubHome = () => {
             accessibilityState={{ selected: mentionsOnly }}
             accessibilityLabel={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
           >
-            <Text style={[s.mentionsToggleText, mentionsOnly ? s.mentionsToggleTextActive : null]}>@ Mentions</Text>
+            <Text style={[s.mentionsToggleText, mentionsOnly ? s.mentionsToggleTextActive : null]}>@</Text>
           </Pressable>
         )}
         {/* Announcements filter — emoji-only chip (the word is too long). Lets a member with limited
@@ -775,9 +775,9 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
     headerMeta: { flex: 1 },
     headerTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary, letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
     headerSub: { fontSize: 11, color: t.success },
-    // "@ Mentions" filter pill in the header — same chip family as the reaction pills.
+    // Mentions filter pill in the header — icon-only "@" chip, same compact size as the 📣 pill.
     mentionsToggle: {
-      paddingHorizontal: 10,
+      paddingHorizontal: 9,
       paddingVertical: 5,
       borderRadius: t.radiusChip,
       backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.05)',
@@ -788,7 +788,7 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
       backgroundColor: `${t.success}1F`,
       borderColor: `${t.success}66`,
     },
-    mentionsToggleText: { fontSize: 11, fontWeight: '700', color: t.textSecondary },
+    mentionsToggleText: { fontSize: 15, fontWeight: '800', lineHeight: 16, color: t.textSecondary },
     mentionsToggleTextActive: { color: t.success },
     // Announcements filter pill (📣). "Announcements" is too long for a chip, so it shows the emoji
     // alone; the active state uses the official-announcement accent so its purpose reads at a glance.
