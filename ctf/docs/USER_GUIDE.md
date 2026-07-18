@@ -8,7 +8,7 @@ Below, each app has a short summary, a few notes on what a member can do, and si
 
 ## Directory
 
-_Last updated: 2026-07-17_
+_Last updated: 2026-07-18_
 
 A list of people and the skills they hold — members and community-nominated profiles alike.
 
@@ -46,7 +46,7 @@ Private chat exists only inside an active connection or quote — there is no op
 
 ## Chyme
 
-_Last updated: 2026-07-17_
+_Last updated: 2026-07-18_
 
 One shared audio room where members can talk and chat.
 
@@ -65,7 +65,7 @@ Signed-out visitors get a free listen view and must sign in to speak.
 
 ## SocketRelay
 
-_Last updated: 2026-07-17_
+_Last updated: 2026-07-18_
 
 Post a request for help and connect with a member who offers to fill it.
 
@@ -84,7 +84,7 @@ Your own posts stay in your feed even after they expire, shown dimmed with a Re-
 
 ## Beacon
 
-_Last updated: 2026-07-14_
+_Last updated: 2026-07-18_
 
 Watch a live broadcast and chat during it if signed in.
 
@@ -121,7 +121,7 @@ Group members can post and reply; others may have a more limited view. You can s
 
 ## Mood
 
-_Last updated: 2026-07-17_
+_Last updated: 2026-07-18_
 
 A private mood check-in you can submit once a week.
 
@@ -139,7 +139,7 @@ The community pulse shows only an aggregate chart — no individual check-in, no
 
 ## GentlePulse
 
-_Last updated: 2026-07-14_
+_Last updated: 2026-07-18_
 
 A library of meditations you can play, rate, and favorite.
 
@@ -158,7 +158,7 @@ Play a meditation to open its media. You can rate it from 1 to 5 stars and add o
 
 ## WhatWorks
 
-_Last updated: 2026-07-14_
+_Last updated: 2026-07-18_
 
 A shared list of tools that have helped, grouped by problem.
 
@@ -176,7 +176,7 @@ You can suggest a tool for a problem by adding a product name, a purchase link, 
 
 ## SkillsHunt
 
-_Last updated: 2026-07-17_
+_Last updated: 2026-07-18_
 
 Nominate skilled people for scouting rounds and follow the leaderboard.
 
@@ -230,7 +230,7 @@ The skill choices you see in other apps come from this list.
 
 ## ServiceCredits
 
-_Last updated: 2026-07-14_
+_Last updated: 2026-07-18_
 
 Your wallet of ServiceCredits and where you send them to other members.
 
@@ -248,7 +248,7 @@ Credits are never shown as cash and cannot be withdrawn for real money. The Econ
 
 ## Contributions
 
-_Last updated: 2026-07-14_
+_Last updated: 2026-07-18_
 
 Support the current fundraiser and log how you helped.
 
@@ -267,7 +267,7 @@ Contributing is optional, nothing is locked behind it, and any credits are given
 
 ## LevelUp
 
-_Last updated: 2026-07-14_
+_Last updated: 2026-07-18_
 
 Learning cohorts with milestones, plus a view-only credits wallet.
 
@@ -286,7 +286,7 @@ The Credits Wallet here is view-only — it shows credits you earned or were gra
 
 ## TrustTransport
 
-_Last updated: 2026-07-14_
+_Last updated: 2026-07-18_
 
 Request a ride, a package delivery, or food, and track it.
 
@@ -305,7 +305,7 @@ Safety controls include sharing your trip status, an emergency help shortcut, an
 
 ## LightHouse
 
-_Last updated: 2026-07-17_
+_Last updated: 2026-07-18_
 
 Browse places to stay, list your own place, and request a stay.
 
@@ -324,7 +324,7 @@ Hosts accept or reject requests, and an accepted request opens a private chat. Y
 
 ## ClickLog
 
-_Last updated: 2026-07-14_
+_Last updated: 2026-07-18_
 
 A private, one-tap incident counter only you can see.
 
@@ -361,7 +361,7 @@ You control whether an activity is private (the default), restricted, or public.
 
 ## GDP
 
-_Last updated: 2026-07-16_
+_Last updated: 2026-07-18_
 
 A live transparency report of the community's total activity value.
 
