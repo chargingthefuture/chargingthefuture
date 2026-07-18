@@ -191,7 +191,7 @@ policies:
 
   - pluginId: contributor-access
     command: contributor-access.channel.message.create
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles:
       - member
       - admin
@@ -201,6 +201,8 @@ policies:
       channelGate: channel_open_and_eligibility_flag_or_admin
       denyShape: bare_404_no_channel_trace
       contentShape: text_only_no_uploads_max_4000
+      contentGate: commons_mirrored_no_markup_max_three_links
+      rateLimit: eight_posts_per_thirty_minutes_per_member_db_counted
     consentRequirements:
       scopes: []
       fallbackLawfulBasis: legitimate_interest
@@ -217,6 +219,40 @@ policies:
       - not_eligible
       - csrf_denied
       - invalid_payload
+      - content_policy_violation
+      - rate_limit_exceeded
+
+  - pluginId: contributor-access
+    command: contributor-access.channel.post.delete
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      csrfHeader: required
+      channelGate: channel_open_and_eligibility_flag_or_admin
+      denyShape: bare_404_no_channel_trace
+      deleteScope: author_only_or_admin_moderator
+      deleteMode: soft_delete_hidden_not_erased
+      auditPaths: distinct_commands_author_vs_moderator
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - unauthenticated
+      - channel_closed
+      - not_eligible
+      - csrf_denied
+      - post_not_found
+      - not_post_owner
 
   - pluginId: contributor-access
     command: contributor-access.channel.reaction.toggle
@@ -288,3 +324,11 @@ changelog:
       with no channel trace (no-shaming rule). membership.sync is server-internal with the
       eligibility flag as the only membership source. config.update gains the channel-open
       launch-gate precondition and its audited deny condition.
+  - date: 2026-07-18
+    change: >-
+      Channel moderation, rate limit, and delete. channel.message.create 1.1.0 adds the
+      Commons-mirrored content gate and per-member posting rate limit as deny conditions
+      (content_policy_violation, rate_limit_exceeded). New channel.post.delete policy: author
+      only, or admin as the disclosed moderator power; soft delete (hidden, not erased); both
+      allowed paths audited under distinct commands and a non-owner attempt denied with
+      not_post_owner (audited).

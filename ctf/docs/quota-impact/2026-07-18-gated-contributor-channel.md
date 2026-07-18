@@ -29,3 +29,13 @@
 - What degrades first: live delivery. Messages are DB-backed (Stream is the live layer only, same as the Commons), so if Stream is unavailable or over quota the channel still reads and writes through the API routes; only real-time push degrades.
 - User-visible messaging behavior: messages appear on refresh instead of live; no data loss.
 - Kill switch / feature flag: `contributor_access_config.channel_open` — the admin toggle closes the channel instantly (server-side gate on every route); membership sync failures are warnings, never hard failures. Demo mode uses the `*_STAGING` Stream credentials, so recordings never touch the production quota.
+
+## Observability
+
+- Metrics and alerts added/updated: none new. Membership sync failures surface as a `channelSyncWarning` field in the recompute/revoke/reinstate responses and in the weekly recompute workflow's logs; the admin status card shows the synced member count, so a sync stall is visible on the dashboard the owner already checks.
+- Dashboard link (if available): `/admin/contributor-access` (channel status card).
+
+## Validation
+
+- Tests added for degraded mode: manual test-script cases CA-C1–C4 cover the access gates and posting flow; the DB-backed read path is the degraded mode (messages persist and render without Stream) and is the same pattern already validated for the Commons.
+- Rollback strategy: flip `channel_open` off in the admin page (instant, server-enforced on every route). Full rollback is reverting the PR; the two message tables are additive and guarded, so reverting code leaves the database consistent.
