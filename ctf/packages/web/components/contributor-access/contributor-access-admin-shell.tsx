@@ -1,0 +1,207 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { KeyRound } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useTheme } from '@/hooks/useTheme';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { getContributorAccessTokens } from './contributor-access-shared';
+import { EligibleMembersSection, type EligibleMember } from './eligible-members-section';
+import { ConfigEditorSection, type ContributorAccessConfigView } from './config-editor-section';
+
+// Contributor Access admin dashboard (module slug contributor-access). Three sections: the eligible
+// members list (revoke/reinstate), the owner-tunable eligibility settings, and the channel launch
+// status card. Admin chrome uses the neutral admin indigo via getContributorAccessTokens (rule 131).
+// There is no member surface in this slice, so there is no "Member view" pill anywhere.
+
+type LoadState = 'loading' | 'ready' | 'error';
+
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, { cache: 'no-store', ...init });
+  const payload = (await response.json().catch(() => null)) as T | { message?: string } | null;
+  if (!response.ok) {
+    const message =
+      payload && typeof payload === 'object' && 'message' in payload ? payload.message : 'Request failed.';
+    throw new Error(typeof message === 'string' ? message : 'Request failed.');
+  }
+  return payload as T;
+}
+
+function StatusCard({ t, eligibleCount, needed }: { t: ReturnType<typeof getContributorAccessTokens>; eligibleCount: number; needed: number }) {
+  const ready = eligibleCount >= needed;
+  return (
+    <section style={{ marginBottom: 20, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <h2 style={{ fontSize: 14, fontWeight: 800, color: t.TITLE, margin: '0 0 6px' }}>Channel launch status</h2>
+      <div style={{ fontSize: 22, fontWeight: 800, color: ready ? '#22C55E' : t.TITLE }}>
+        {eligibleCount} / {needed}
+      </div>
+      <p style={{ fontSize: 12, color: t.MUTED, margin: '4px 0 0' }}>
+        Eligible members vs the minimum needed before the gated channel opens.{' '}
+        {ready ? 'The minimum is met.' : 'Below the minimum — the channel stays unopened.'} The channel itself ships in a
+        later slice.
+      </p>
+    </section>
+  );
+}
+
+export function ContributorAccessAdminShell() {
+  const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getContributorAccessTokens(theme);
+  const [loadState, setLoadState] = useState<LoadState>('loading');
+  const [members, setMembers] = useState<EligibleMember[]>([]);
+  const [eligibleCount, setEligibleCount] = useState(0);
+  const [config, setConfig] = useState<ContributorAccessConfigView | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [eligiblePayload, configPayload] = await Promise.all([
+        requestJson<{ members: EligibleMember[]; eligibleCount: number }>('/api/contributor-access/admin/eligible'),
+        requestJson<{ config: ContributorAccessConfigView }>('/api/contributor-access/admin/config'),
+      ]);
+      setMembers(eligiblePayload.members);
+      setEligibleCount(eligiblePayload.eligibleCount);
+      setConfig(configPayload.config);
+      setLoadState('ready');
+      setError(null);
+    } catch (loadError) {
+      setLoadState('error');
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load Contributor Access data.');
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const mutate = useCallback(
+    async (url: string, body: Record<string, unknown>, failMessage: string) => {
+      setError(null);
+      try {
+        await requestJson(url, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
+          body: JSON.stringify(body),
+        });
+        await refresh();
+      } catch (mutateError) {
+        setError(mutateError instanceof Error ? mutateError.message : failMessage);
+      }
+    },
+    [refresh],
+  );
+
+  // Revoke is for-cause only: a non-empty reason is required, and the admin confirms before it lands.
+  const revoke = useCallback(
+    async (userId: string) => {
+      if (typeof window === 'undefined') return;
+      const reason = window.prompt('Reason for revoking (required — for-cause only, e.g. a reviewed harm or abuse action):');
+      if (reason === null) return;
+      if (reason.trim().length === 0) {
+        setError('A non-empty reason is required to revoke.');
+        return;
+      }
+      if (!window.confirm('Revoke this member for cause? Their access flag turns off until reinstated.')) return;
+      setBusyId(userId);
+      await mutate('/api/contributor-access/admin/revoke', { userId, reason: reason.trim() }, 'Unable to revoke.');
+      setBusyId(null);
+    },
+    [mutate],
+  );
+
+  const reinstate = useCallback(
+    async (userId: string) => {
+      if (typeof window !== 'undefined' && !window.confirm('Reinstate this member? Their earned eligibility returns.')) {
+        return;
+      }
+      setBusyId(userId);
+      await mutate('/api/contributor-access/admin/reinstate', { userId }, 'Unable to reinstate.');
+      setBusyId(null);
+    },
+    [mutate],
+  );
+
+  const saveConfig = useCallback(
+    async (update: ContributorAccessConfigView) => {
+      setSaving(true);
+      setError(null);
+      try {
+        await requestJson('/api/contributor-access/admin/config', {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
+          body: JSON.stringify(update),
+        });
+        await refresh();
+      } catch (saveError) {
+        setError(saveError instanceof Error ? saveError.message : 'Unable to save settings.');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [refresh],
+  );
+
+  return (
+    <div
+      style={{
+        // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
+        // own its vertical scroll or its lower rows are clipped. On mobile the document scrolls, so
+        // only set a min-height there. Matches the bug-reports / unlock admin shells.
+        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        background: t.BG,
+        color: t.TITLE,
+        fontFamily: "'Inter',system-ui,sans-serif",
+      }}
+    >
+      <MobileScreenHeader title="Contributor Access Admin" accent={t.ACCENT} icon={<KeyRound size={18} color={t.ACCENT} />} />
+      <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <KeyRound size={18} color={t.ACCENT} />
+          </div>
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>Contributor Access</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Earned-standing eligibility</div>
+          </div>
+          <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, color: '#6366F1', fontWeight: 700 }}>ADMIN</span>
+        </div>
+
+        <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, marginBottom: 16 }}>
+          Members earn a single categorical standing — eligible or not-yet — through steady, broad contribution across
+          plugins. The weekly recompute only ever admits; revoking is for cause only, never for going quiet. No score is
+          shown anywhere, to admins or members.
+        </p>
+
+        {error ? (
+          <div role="status" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
+            {error}
+          </div>
+        ) : null}
+
+        {loadState === 'loading' ? (
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+            Loading…
+          </div>
+        ) : null}
+
+        {loadState === 'ready' && config ? (
+          <>
+            <EligibleMembersSection t={t} members={members} busyId={busyId} onRevoke={(id) => void revoke(id)} onReinstate={(id) => void reinstate(id)} />
+            <ConfigEditorSection key={config.threshold + JSON.stringify(config.weights)} t={t} config={config} saving={saving} onSave={(update) => void saveConfig(update)} />
+            <StatusCard t={t} eligibleCount={eligibleCount} needed={config.minEligibleToOpenChannel} />
+          </>
+        ) : null}
+
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${t.BORDER_SOLID}`, fontSize: 13 }}>
+          <Link href="/admin" style={{ color: t.ACCENT, textDecoration: 'none' }}>
+            ← Back to admin
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}

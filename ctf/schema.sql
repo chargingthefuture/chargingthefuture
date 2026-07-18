@@ -5471,4 +5471,83 @@ ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS tr
 ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS recurring_activity_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS recurring_activity_audit_trail_activity_idx ON recurring_activity_audit_trail (activity_id, created_at DESC);
+
+-- === contributor-access (gated-channel / contributor badge eligibility module) ===
+-- Owns the categorical "eligible / not-yet" decision described in
+-- ctf/docs/developer/TRUSTED_CHANNELS_AND_CONTRIBUTOR_BADGE_PROPOSAL.md (working badge name
+-- "Keeper of the Commons" — doc-comment only, no member-facing copy in this slice). This module is
+-- deliberately separate from the Trust plugin: it never reads or writes any trust_* table.
+
+-- Single-row owner-tunable config (id fixed to 1). `weights` holds per value-event-key overrides
+-- of the engine's DEFAULT_WEIGHTS; a missing key falls back to the default. `channel_open` is a
+-- forward-looking toggle for the gated channel (a later slice) — nothing reads it to grant access yet.
+CREATE TABLE IF NOT EXISTS contributor_access_config (
+  id INT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  weights JSONB NOT NULL DEFAULT '{}'::jsonb,
+  threshold NUMERIC NOT NULL DEFAULT 100,
+  min_account_age_days INT NOT NULL DEFAULT 90,
+  min_distinct_plugins INT NOT NULL DEFAULT 3,
+  min_counterparties INT NOT NULL DEFAULT 5,
+  min_eligible_to_open_channel INT NOT NULL DEFAULT 10,
+  channel_open BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS contributor_access_config ADD COLUMN IF NOT EXISTS id INT;
+ALTER TABLE IF EXISTS contributor_access_config ADD COLUMN IF NOT EXISTS weights JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS contributor_access_config ADD COLUMN IF NOT EXISTS threshold NUMERIC NOT NULL DEFAULT 100;
+ALTER TABLE IF EXISTS contributor_access_config ADD COLUMN IF NOT EXISTS min_account_age_days INT NOT NULL DEFAULT 90;
+ALTER TABLE IF EXISTS contributor_access_config ADD COLUMN IF NOT EXISTS min_distinct_plugins INT NOT NULL DEFAULT 3;
+ALTER TABLE IF EXISTS contributor_access_config ADD COLUMN IF NOT EXISTS min_counterparties INT NOT NULL DEFAULT 5;
+ALTER TABLE IF EXISTS contributor_access_config ADD COLUMN IF NOT EXISTS min_eligible_to_open_channel INT NOT NULL DEFAULT 10;
+ALTER TABLE IF EXISTS contributor_access_config ADD COLUMN IF NOT EXISTS channel_open BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS contributor_access_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Per-member eligibility. Additive only: once `eligible` is TRUE it is never unset by recompute —
+-- only a for-cause revoke (a reviewed harm/abuse action) flips it off. `reason_snapshot` is the
+-- internal evidence behind the decision (per-event counts, gates); it is never exposed on any
+-- member-facing surface — no numeric score, ever (proposal hard guardrail; rule 132 for the
+-- Foundation per-member counts inside it).
+CREATE TABLE IF NOT EXISTS contributor_access_eligibility (
+  user_id TEXT PRIMARY KEY,
+  eligible BOOLEAN NOT NULL DEFAULT FALSE,
+  first_earned_at TIMESTAMPTZ NULL,
+  reason_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+  computed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  revoked_for_cause BOOLEAN NOT NULL DEFAULT FALSE,
+  revoked_reason TEXT NULL,
+  revoked_at TIMESTAMPTZ NULL,
+  revoked_by TEXT NULL
+);
+ALTER TABLE IF EXISTS contributor_access_eligibility ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS contributor_access_eligibility ADD COLUMN IF NOT EXISTS eligible BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS contributor_access_eligibility ADD COLUMN IF NOT EXISTS first_earned_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS contributor_access_eligibility ADD COLUMN IF NOT EXISTS reason_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS contributor_access_eligibility ADD COLUMN IF NOT EXISTS computed_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS contributor_access_eligibility ADD COLUMN IF NOT EXISTS revoked_for_cause BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS contributor_access_eligibility ADD COLUMN IF NOT EXISTS revoked_reason TEXT;
+ALTER TABLE IF EXISTS contributor_access_eligibility ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS contributor_access_eligibility ADD COLUMN IF NOT EXISTS revoked_by TEXT;
+CREATE INDEX IF NOT EXISTS contributor_access_eligibility_eligible_idx ON contributor_access_eligibility (eligible, first_earned_at);
+
+-- Admin allow/deny audit log. Same shape as weekly_performance_audit_trail.
+CREATE TABLE IF NOT EXISTS contributor_access_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS contributor_access_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 COMMIT;
