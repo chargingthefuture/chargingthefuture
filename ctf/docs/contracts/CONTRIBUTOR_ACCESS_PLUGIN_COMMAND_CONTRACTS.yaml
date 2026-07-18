@@ -18,12 +18,17 @@ contracts:
 
   - pluginId: contributor-access
     command: contributor-access.config.update
-    version: 1.0.0
+    version: 1.1.0
     description: >-
       Update the eligibility config (per-event weight overrides keyed by the fixed value-event key
       list, score threshold, minimum account age, minimum distinct plugins, minimum distinct
       counterparties, the eligible-member minimum for opening the gated channel, and the
-      channel_open toggle). CSRF-confirmed mutation.
+      channel_open toggle). CSRF-confirmed mutation. Launch-gate precondition (server-side):
+      channel_open may only turn on when the eligible count is at least
+      min_eligible_to_open_channel - otherwise 409 with the stable code
+      contributor_access_channel_below_minimum (the deny is audited). A successful open creates
+      the gated Stream channel and runs the first membership sync; a Stream failure never rolls
+      the config back and is returned as a channelSyncWarning field.
     inputSchema:
       weights:
         type: object
@@ -51,8 +56,12 @@ contracts:
         type: boolean
       config:
         type: object
+      channelSyncWarning:
+        type: string
+        required: false
     dataAccess:
       - contributor_access_config
+      - contributor_access_eligibility
       - contributor_access_audit_trail
     purpose: eligibility_configuration
     retentionClass: derived_long_lived
@@ -83,11 +92,14 @@ contracts:
 
   - pluginId: contributor-access
     command: contributor-access.member.revoke
-    version: 1.0.0
+    version: 1.1.0
     description: >-
       For-cause revoke - the ONLY path that removes eligibility (a reviewed harm/abuse action;
       never inactivity, never an unreviewed report alone). Requires a non-empty reason; sets
-      revoked_for_cause and turns the eligible flag off until reinstated. CSRF-confirmed mutation.
+      revoked_for_cause and turns the eligible flag off until reinstated. When the gated channel
+      is open, a guarded membership sync removes the member from the Stream channel right away; a
+      Stream failure never fails the revoke and is returned as channelSyncWarning.
+      CSRF-confirmed mutation.
     inputSchema:
       userId:
         type: string
@@ -98,8 +110,12 @@ contracts:
     outputSchema:
       ok:
         type: boolean
+      channelSyncWarning:
+        type: string
+        required: false
     dataAccess:
       - contributor_access_eligibility
+      - contributor_access_config
       - contributor_access_audit_trail
     purpose: eligibility_moderation
     retentionClass: audit_long_lived
@@ -107,10 +123,12 @@ contracts:
 
   - pluginId: contributor-access
     command: contributor-access.member.reinstate
-    version: 1.0.0
+    version: 1.1.0
     description: >-
       Clear a for-cause revocation. Eligibility returns because it was previously earned
-      (first_earned_at is permanent) - this is not a fresh grant. CSRF-confirmed mutation.
+      (first_earned_at is permanent) - this is not a fresh grant. When the gated channel is open,
+      a guarded membership sync re-adds the member to the Stream channel; a Stream failure never
+      fails the reinstate and is returned as channelSyncWarning. CSRF-confirmed mutation.
     inputSchema:
       userId:
         type: string
@@ -118,8 +136,12 @@ contracts:
     outputSchema:
       ok:
         type: boolean
+      channelSyncWarning:
+        type: string
+        required: false
     dataAccess:
       - contributor_access_eligibility
+      - contributor_access_config
       - contributor_access_audit_trail
     purpose: eligibility_moderation
     retentionClass: audit_long_lived
@@ -147,6 +169,9 @@ contracts:
         type: integer
       eligible:
         type: integer
+      channelSyncWarning:
+        type: string
+        required: false
     dataAccess:
       - contributor_access_config
       - contributor_access_eligibility
@@ -171,6 +196,132 @@ contracts:
     retentionClass: derived_long_lived
     idempotency: true
 
+  - pluginId: contributor-access
+    command: contributor-access.channel.membership.sync
+    version: 1.0.0
+    description: >-
+      Internal membership sync for the gated Stream channel - the ONLY membership path. Reads the
+      eligibility rows and reconciles the Stream channel: every eligible member is added, every
+      for-cause-revoked member is removed. No other add path exists (no invites, no self-join for
+      the non-eligible). Not a standalone route: it runs inside the weekly recompute, the admin
+      revoke/reinstate, and the config channel-open flip, only while channel_open is TRUE, and is
+      always guarded - a Stream failure never fails the invoking command (it surfaces as that
+      command's channelSyncWarning). Talks to Stream via the shared credential resolver (demo mode
+      selects the *_STAGING app).
+    inputSchema: {}
+    outputSchema:
+      added:
+        type: integer
+      removed:
+        type: integer
+    dataAccess:
+      - contributor_access_config
+      - contributor_access_eligibility
+    purpose: channel_membership_sync
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: contributor-access
+    command: contributor-access.channel.messages.list
+    version: 1.0.0
+    description: >-
+      Read the gated contributor channel's recent messages (oldest-first, quoted-reply references,
+      the viewer's reaction state). Member-facing but gated three ways server-side: approved
+      member, channel_open TRUE, and the caller's eligibility flag (admins/moderators keep read
+      access - disclosed in-channel). A caller who fails the gate receives a bare 404 with no
+      trace of the channel (no-shaming rule: no locked teaser, no absence state).
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      messages:
+        type: array
+    dataAccess:
+      - contributor_access_config
+      - contributor_access_eligibility
+      - contributor_access_channel_posts
+      - contributor_access_channel_post_reactions
+    purpose: channel_messaging
+    retentionClass: user_content
+    idempotency: true
+
+  - pluginId: contributor-access
+    command: contributor-access.channel.message.create
+    version: 1.0.0
+    description: >-
+      Post to the gated channel (optionally as a Signal-style quoted reply - the channel's thread
+      mechanism). Same three-way gate as the list command. Text only, up to 4000 characters
+      (longer than the Commons' 1200); there is NO image or file path - uploads are also disabled
+      on the Stream channel type. CSRF-confirmed mutation.
+    inputSchema:
+      text:
+        type: string
+        required: true
+      replyToPostId:
+        type: string
+        required: false
+    outputSchema:
+      ok:
+        type: boolean
+      message:
+        type: object
+    dataAccess:
+      - contributor_access_config
+      - contributor_access_eligibility
+      - contributor_access_channel_posts
+    purpose: channel_messaging
+    retentionClass: user_content
+    idempotency: false
+
+  - pluginId: contributor-access
+    command: contributor-access.channel.reaction.toggle
+    version: 1.0.0
+    description: >-
+      Toggle the caller's emoji reaction on a gated-channel post. The emoji must belong to the
+      fixed gated reaction set (twelve emojis - richer than the Commons' six), validated
+      server-side. Same three-way gate as the list command. CSRF-confirmed mutation.
+    inputSchema:
+      emoji:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      reacted:
+        type: boolean
+    dataAccess:
+      - contributor_access_config
+      - contributor_access_eligibility
+      - contributor_access_channel_posts
+      - contributor_access_channel_post_reactions
+    purpose: channel_messaging
+    retentionClass: user_content
+    idempotency: true
+
+  - pluginId: contributor-access
+    command: contributor-access.channel.join
+    version: 1.0.0
+    description: >-
+      Mint Stream live-layer credentials for the gated channel (same posture as the Commons'
+      /api/hub/join): the client opens a live connection beneath the custom UI for instant refresh
+      and typing indicators; when Stream is unconfigured the response says configured false and
+      the client stays on polling. Same three-way gate as the list command - the add to the Stream
+      channel only reconciles a flag-verified member into the synced membership, never grants
+      access. Reuses the existing Stream credential helpers unchanged (demo mode selects the
+      *_STAGING app).
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      configured:
+        type: boolean
+    dataAccess:
+      - contributor_access_config
+      - contributor_access_eligibility
+    purpose: channel_messaging
+    retentionClass: derived_short_lived
+    idempotency: true
+
 changelog:
   - date: 2026-07-18
     change: >-
@@ -179,3 +330,15 @@ changelog:
       ctf/docs/developer/TRUSTED_CHANNELS_AND_CONTRIBUTOR_BADGE_PROPOSAL.md). Admin config,
       eligible list, for-cause revoke/reinstate, and the internal weekly recompute. Categorical
       output only; no member-facing surface exists yet (badge and gated channel are later slices).
+  - date: 2026-07-18
+    change: >-
+      Gated channel slice. New commands - channel.membership.sync (internal, the only membership
+      path), channel.messages.list, channel.message.create, channel.reaction.toggle, channel.join
+      (the member surface: DB-backed history, Stream live layer, threads via quoted replies,
+      twelve-emoji reaction set, 4000-char messages, NO images). config.update gains the
+      server-side launch-gate precondition (409 contributor_access_channel_below_minimum) and
+      creates + syncs the channel on open; revoke/reinstate/recompute run the guarded membership
+      sync and may return channelSyncWarning. The member channel commands are deliberately not
+      audit-trailed (same posture as the Commons hub routes); the launch-gate deny IS audited.
+      Membership visibility is server-filtered: the Hub channel list includes the gated channel
+      only for eligible members and admins - never a teaser for anyone else.

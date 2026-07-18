@@ -8,12 +8,12 @@
 | | |
 |---|---|
 | **Module** | Contributor Access (`contributor-access`) |
-| **Visibility** | Admin-only — no launcher tile, no member surface in this slice |
-| **Roles to test** | admin (and a plain member to confirm denial) |
+| **Visibility** | Admin dashboard + one member surface: the gated `#contributors` channel inside the Commons (eligible members and admins only — invisible to everyone else) |
+| **Roles to test** | admin · an eligible member · a non-eligible member |
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` (the engine reads upstream seeded tables) |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributor-access-feature-inventory.md` |
-| **Generated** | 2026-07-18 (initial authoring) |
+| **Generated** | 2026-07-18 (initial authoring) · updated 2026-07-18 (gated channel slice) |
 
 ## How to run this
 
@@ -23,8 +23,8 @@
   next run knows it's already filed.
 - Run the **Core smoke** block every session. Run the full walkthrough when you changed this
   module or on a pre-release sweep.
-- This is an admin-only gating module. There is no member surface — the first thing to confirm is
-  that a non-admin cannot reach any of it.
+- The member surface is the gated channel only. The single most important property to confirm is
+  the negative one: a non-eligible member finds **no trace** of the channel anywhere.
 
 ---
 
@@ -43,6 +43,11 @@
    numeric score, points, rank, or per-event counts for a member — the standing is only
    eligible / revoked. This includes the eligible list payload
    (`GET /api/contributor-access/admin/eligible`: id, username, date, flags only). → web ☐ mobile ☐
+5. **Non-eligible member sees no gated channel.** As a signed-in member without the eligibility
+   flag: the Commons channel list shows only `#general` (desktop rail; at phone widths no channel
+   switch row appears at all), `GET /api/hub/channels` contains no `contributors` entry, and every
+   `/api/contributor-access/channel/...` call answers a bare 404 — no locked teaser, no absence
+   state, no different copy. → web ☐ mobile ☐
 
 ---
 
@@ -81,16 +86,24 @@ populated states all render.
 3. Look at the channel-open toggle.
 **Expected:** Valid saves persist and reload; invalid values are refused with a plain message
 (client-side and again server-side — the route rejects unknown weight keys and negative numbers).
-The channel-open toggle is disabled with the note that the channel ships in a later slice.
 **Result:** web ☐ mobile ☐ — notes:
 
-### CA-A4 · Channel launch status card
+### CA-A4 · Channel launch gate and status card
 **Role:** admin · **Surfaces:** web (desktop), web (mobile-responsive)
 **Steps:**
-1. Read the status card.
-2. Lower `min_eligible_to_open_channel` below the current eligible count and save.
-**Expected:** The card shows `eligible / needed`; when the minimum is met the count turns green
-and the copy says the minimum is met (it still notes the channel ships later — no channel opens).
+1. With the eligible count BELOW `min_eligible_to_open_channel`: look at the channel-open toggle,
+   then try to force it anyway with a direct
+   `PUT /api/contributor-access/admin/config` carrying `{"channelOpen": true}`.
+2. Lower `min_eligible_to_open_channel` to at or below the current eligible count, save, and flip
+   the toggle on.
+3. Read the status card in both states.
+**Expected:** Below the minimum the toggle is disabled with the explanatory note (locked until N
+members are eligible), and the direct API call is refused with 409 and the stable code
+`contributor_access_channel_below_minimum` (the deny lands in the audit trail) — the client is
+never trusted. At or above the minimum the toggle works; saving open creates the Stream channel
+and runs the first membership sync. The status card shows `eligible / needed`, the OPEN/CLOSED
+badge, and (when open and Stream is configured) the synced member count; closing an open channel
+is always allowed.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CA-A5 · Internal recompute route
@@ -108,10 +121,76 @@ recompute never revokes. The weekly workflow (`contributor-access-recompute.yml`
 
 ---
 
+## Gated channel walkthrough (member surface)
+
+> Precondition for all cases: the channel is open (`channel_open` TRUE — see CA-A4) and the
+> one-time Stream channel-type script has run for this environment (only needed for the live
+> layer; polling works without it).
+
+### CA-C1 · Non-eligible member sees nothing, anywhere
+**Role:** signed-in member WITHOUT the eligibility flag · **Surfaces:** web (desktop), web (mobile-responsive)
+**Steps:**
+1. Open the Commons. Inspect the desktop channel rail and the phone-width chat section.
+2. Call `GET /api/hub/channels` and each `/api/contributor-access/channel/...` route directly.
+**Expected:** Only `#general` in the rail; at phone widths NO channel switch row renders (it only
+exists with more than one channel). The channels payload has no `contributors` entry. Every
+channel route answers a bare 404 with no channel name, no "locked", no "you need X" — nothing
+that reveals the channel exists. There is no teaser on any surface.
+**Result:** web ☐ mobile ☐ — notes:
+
+### CA-C2 · Eligible member: sees, posts, threads, reacts — no image upload
+**Role:** eligible member · **Surfaces:** web (desktop), web (mobile-responsive)
+**Steps:**
+1. Open the Commons: pick `#contributors` (desktop rail; phone-width pill row).
+2. Post a message; reply to an existing message (Reply → send); toggle reactions, opening the
+   picker to view the full set.
+3. Try to attach an image by any means (look for any attach/upload affordance; paste an image
+   into the composer).
+4. Write a long message (over 1200 characters, under 4000) and send it.
+**Expected:** The channel renders with the Commons look. Posting works; the reply renders with the
+quoted block (thread); the reaction picker offers the twelve-emoji gated set (richer than the
+Commons' six) and toggling works. There is NO image/file affordance anywhere and pasting an image
+does nothing — text only. The long message sends (the gated cap is 4000, higher than the Commons'
+1200). With a second eligible account: a new post appears on the other screen within the poll
+interval (or instantly when the live layer is connected, with typing indicators).
+**Result:** web ☐ mobile ☐ — notes:
+
+### CA-C3 · Moderator disclosure is plainly visible
+**Role:** eligible member (and an admin) · **Surfaces:** web (desktop), web (mobile-responsive)
+**Steps:**
+1. Open `#contributors` and read the header area and the composer footnote.
+2. As an admin (without the eligibility flag): confirm the channel is listed and readable.
+**Expected:** The header carries "Moderators can read this channel." at all widths, always — not
+in a tooltip, not behind a tap; the composer footnote repeats it. The admin can open and read the
+channel (that read access is exactly what the disclosure line discloses).
+**Result:** web ☐ mobile ☐ — notes:
+
+### CA-C4 · Revoke removes the member from the channel
+**Role:** admin + the revoked member · **Surfaces:** web (desktop), web (mobile-responsive)
+**Steps:**
+1. With the channel open, revoke an eligible member for cause (CA-A2 flow).
+2. As that member: reload the Commons; call the channel routes directly.
+3. Reinstate the member and re-check.
+**Expected:** After the revoke, the member's channel entry is gone from `/api/hub/channels`, the
+channel routes answer a bare 404, and the Stream membership sync has removed them from
+`ctf-contributors` (the admin status card's member count drops). No teaser remains — their Commons
+looks exactly like a never-eligible member's. Reinstating restores the entry and access. A Stream
+outage during revoke/reinstate never blocks the action itself (the response carries a
+`channelSyncWarning` and membership reconciles on the next sync).
+**Result:** web ☐ mobile ☐ — notes:
+
+---
+
 ## Known gaps — do not file these as bugs
 
 Carried from the inventory's "Gaps & Known Technical Debt" section:
 
-- The badge and the gated channel are later slices; `channel_open` is stored but grants nothing.
+- The badge slice is not built; the gated channel has no in-product discovery for non-members (by
+  design — the no-teaser rule).
+- One-time owner step per Stream app: run `ctf/scripts/setupGatedChannelType.mjs` (production and
+  staging) before the live layer/channel config exists in Stream; until then opening the channel
+  returns a `channelSyncWarning`.
+- Android has no gated-channel surface yet (tracked parity gap).
+- Gated-channel posts have no content-moderation/rate-limit pass yet, and no author delete.
 - Default weights/threshold are a starting point pending owner tuning.
 - Active blocks/safety reports are not yet an admission gate (owner decision pending).

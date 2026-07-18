@@ -1,15 +1,24 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireContributorAccessAdmin } from '../_lib';
 import {
+  countEligibleMembers,
   getContributorAccessConfig,
   insertContributorAccessAudit,
   upsertContributorAccessConfig,
 } from 'lib/contributor-access/repository';
+import {
+  ensureGatedChannel,
+  getGatedChannelMemberCount,
+  syncGatedChannelMembership,
+} from 'lib/contributor-access/gated-channel';
 import { CONTRIBUTOR_VALUE_EVENT_KEYS } from 'lib/contributor-access/weights';
 import { reportError } from 'lib/observability/report';
 
 // Admin read/update of the single owner-tunable config row (weights, threshold, gate minimums,
-// channel_open). Admin-only; every allow/deny audits.
+// channel_open). Admin-only; every allow/deny audits. The channel_open launch gate is enforced
+// HERE, server-side: it can only turn on once the eligible count meets
+// min_eligible_to_open_channel; flipping it on creates the gated Stream channel and runs the
+// first membership sync.
 
 export async function GET() {
   const gate = await requireContributorAccessAdmin('contributor-access.config.get');
@@ -19,6 +28,9 @@ export async function GET() {
 
   try {
     const config = await getContributorAccessConfig();
+    // Best-effort synced member count for the status card (null when Stream is unconfigured or
+    // the channel is not open yet).
+    const channelMemberCount = config.channelOpen ? await getGatedChannelMemberCount() : null;
     await insertContributorAccessAudit({
       actorId: gate.auth.userId,
       command: 'contributor-access.config.get',
@@ -27,7 +39,7 @@ export async function GET() {
       targetType: 'config',
       targetId: 'singleton',
     });
-    return NextResponse.json({ ok: true, config }, { status: 200 });
+    return NextResponse.json({ ok: true, config, channelMemberCount }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'contributor-access', op: 'admin_config_get' });
     return NextResponse.json(
@@ -124,6 +136,34 @@ export async function PUT(request: Request) {
       minEligibleToOpenChannel: Math.floor(minEligibleToOpenChannel),
       channelOpen: body.channelOpen ?? current.channelOpen,
     };
+
+    // Launch gate (server-side, never client-trusted): the channel can only turn on once enough
+    // members are eligible — a cold, near-empty "trusted" room reads worse than none. Checked
+    // against the minimum in this same update. Stable reason code for the shell.
+    const opening = update.channelOpen && !current.channelOpen;
+    if (opening) {
+      const eligibleCount = await countEligibleMembers();
+      if (eligibleCount < update.minEligibleToOpenChannel) {
+        await insertContributorAccessAudit({
+          actorId: gate.auth.userId,
+          command: 'contributor-access.config.update',
+          policyStatus: 'deny',
+          reason: 'contributor_access_channel_below_minimum',
+          targetType: 'config',
+          targetId: 'singleton',
+          metadata: { eligibleCount, minEligibleToOpenChannel: update.minEligibleToOpenChannel },
+        });
+        return NextResponse.json(
+          {
+            ok: false,
+            code: 'contributor_access_channel_below_minimum',
+            message: `The channel opens at ${update.minEligibleToOpenChannel} eligible members; there are ${eligibleCount}.`,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     await upsertContributorAccessConfig(update);
 
     await insertContributorAccessAudit({
@@ -136,8 +176,29 @@ export async function PUT(request: Request) {
       metadata: update,
     });
 
+    // Opening the channel creates it in Stream and runs the first membership sync. Guarded: a
+    // Stream failure never rolls the config back — the flip already landed, membership
+    // reconciles on the next sync, and the admin sees the warning.
+    let channelSyncWarning: string | undefined;
+    if (opening) {
+      try {
+        const configured = await ensureGatedChannel();
+        if (configured) {
+          await syncGatedChannelMembership();
+        } else {
+          channelSyncWarning = 'Stream is not configured in this environment; the channel exists in config only.';
+        }
+      } catch (syncError) {
+        reportError(syncError, { area: 'contributor-access', op: 'admin_config_channel_open_sync' });
+        channelSyncWarning = 'Gated channel membership sync failed; it reconciles on the next sync.';
+      }
+    }
+
     const config = await getContributorAccessConfig();
-    return NextResponse.json({ ok: true, config }, { status: 200 });
+    return NextResponse.json(
+      { ok: true, config, ...(channelSyncWarning ? { channelSyncWarning } : {}) },
+      { status: 200 },
+    );
   } catch (error) {
     reportError(error, { area: 'contributor-access', op: 'admin_config_update' });
     return NextResponse.json(

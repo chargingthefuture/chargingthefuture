@@ -11,9 +11,10 @@ import { EligibleMembersSection, type EligibleMember } from './eligible-members-
 import { ConfigEditorSection, type ContributorAccessConfigView } from './config-editor-section';
 
 // Contributor Access admin dashboard (module slug contributor-access). Three sections: the eligible
-// members list (revoke/reinstate), the owner-tunable eligibility settings, and the channel launch
-// status card. Admin chrome uses the neutral admin indigo via getContributorAccessTokens (rule 131).
-// There is no member surface in this slice, so there is no "Member view" pill anywhere.
+// members list (revoke/reinstate), the owner-tunable eligibility settings (including the gated
+// channel's launch-gated open toggle), and the channel status card (open/closed + synced member
+// count). Admin chrome uses the neutral admin indigo via getContributorAccessTokens (rule 131).
+// The member surface is the gated #contributors channel inside the Commons shell, not here.
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -28,18 +29,51 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
-function StatusCard({ t, eligibleCount, needed }: { t: ReturnType<typeof getContributorAccessTokens>; eligibleCount: number; needed: number }) {
+function StatusCard({
+  t,
+  eligibleCount,
+  needed,
+  channelOpen,
+  channelMemberCount,
+}: {
+  t: ReturnType<typeof getContributorAccessTokens>;
+  eligibleCount: number;
+  needed: number;
+  channelOpen: boolean;
+  channelMemberCount: number | null;
+}) {
   const ready = eligibleCount >= needed;
   return (
     <section style={{ marginBottom: 20, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-      <h2 style={{ fontSize: 14, fontWeight: 800, color: t.TITLE, margin: '0 0 6px' }}>Channel launch status</h2>
-      <div style={{ fontSize: 22, fontWeight: 800, color: ready ? '#22C55E' : t.TITLE }}>
-        {eligibleCount} / {needed}
+      <h2 style={{ fontSize: 14, fontWeight: 800, color: t.TITLE, margin: '0 0 6px' }}>Channel status</h2>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: ready ? '#22C55E' : t.TITLE }}>
+          {eligibleCount} / {needed}
+        </div>
+        <span
+          style={{
+            padding: '2px 9px',
+            borderRadius: 6,
+            fontSize: 11,
+            fontWeight: 700,
+            background: channelOpen ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.15)',
+            border: channelOpen ? '1px solid rgba(34,197,94,0.3)' : `1px solid ${t.BORDER_SOLID}`,
+            color: channelOpen ? '#22C55E' : t.MUTED,
+          }}
+        >
+          {channelOpen ? 'OPEN' : 'CLOSED'}
+        </span>
       </div>
       <p style={{ fontSize: 12, color: t.MUTED, margin: '4px 0 0' }}>
         Eligible members vs the minimum needed before the gated channel opens.{' '}
-        {ready ? 'The minimum is met.' : 'Below the minimum — the channel stays unopened.'} The channel itself ships in a
-        later slice.
+        {channelOpen
+          ? channelMemberCount != null
+            ? `The channel is open with ${channelMemberCount} synced member${channelMemberCount === 1 ? '' : 's'}.`
+            : 'The channel is open; the synced member count is unavailable right now.'
+          : ready
+            ? 'The minimum is met — the channel can be opened from the settings below.'
+            : 'Below the minimum — the open toggle stays locked.'}{' '}
+        Membership follows the eligibility flag only; moderators keep read access and the channel says so.
       </p>
     </section>
   );
@@ -53,6 +87,7 @@ export function ContributorAccessAdminShell() {
   const [members, setMembers] = useState<EligibleMember[]>([]);
   const [eligibleCount, setEligibleCount] = useState(0);
   const [config, setConfig] = useState<ContributorAccessConfigView | null>(null);
+  const [channelMemberCount, setChannelMemberCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -61,11 +96,12 @@ export function ContributorAccessAdminShell() {
     try {
       const [eligiblePayload, configPayload] = await Promise.all([
         requestJson<{ members: EligibleMember[]; eligibleCount: number }>('/api/contributor-access/admin/eligible'),
-        requestJson<{ config: ContributorAccessConfigView }>('/api/contributor-access/admin/config'),
+        requestJson<{ config: ContributorAccessConfigView; channelMemberCount: number | null }>('/api/contributor-access/admin/config'),
       ]);
       setMembers(eligiblePayload.members);
       setEligibleCount(eligiblePayload.eligibleCount);
       setConfig(configPayload.config);
+      setChannelMemberCount(configPayload.channelMemberCount ?? null);
       setLoadState('ready');
       setError(null);
     } catch (loadError) {
@@ -191,8 +227,8 @@ export function ContributorAccessAdminShell() {
         {loadState === 'ready' && config ? (
           <>
             <EligibleMembersSection t={t} members={members} busyId={busyId} onRevoke={(id) => void revoke(id)} onReinstate={(id) => void reinstate(id)} />
-            <ConfigEditorSection key={config.threshold + JSON.stringify(config.weights)} t={t} config={config} saving={saving} onSave={(update) => void saveConfig(update)} />
-            <StatusCard t={t} eligibleCount={eligibleCount} needed={config.minEligibleToOpenChannel} />
+            <ConfigEditorSection key={config.threshold + JSON.stringify(config.weights) + String(config.channelOpen)} t={t} config={config} eligibleCount={eligibleCount} saving={saving} onSave={(update) => void saveConfig(update)} />
+            <StatusCard t={t} eligibleCount={eligibleCount} needed={config.minEligibleToOpenChannel} channelOpen={config.channelOpen} channelMemberCount={channelMemberCount} />
           </>
         ) : null}
 

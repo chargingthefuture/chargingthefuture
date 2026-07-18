@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireContributorAccessAdmin } from '../_lib';
 import { insertContributorAccessAudit, revokeEligibility } from 'lib/contributor-access/repository';
+import { syncGatedChannelMembershipIfOpen } from 'lib/contributor-access/gated-channel';
 import { reportError } from 'lib/observability/report';
 
 // For-cause revoke — the ONLY way eligibility is removed (a reviewed harm/abuse action). Never for
@@ -60,7 +61,11 @@ export async function POST(request: Request) {
       metadata: { revokedReason: reason },
     });
 
-    return NextResponse.json({ ok: true }, { status: 200 });
+    // A revoked member leaves the gated channel right away (when it is open). Guarded: a Stream
+    // failure never fails the revoke — the flag is already off, and membership reconciles on the
+    // next sync.
+    const channelSyncWarning = await syncGatedChannelMembershipIfOpen('admin_revoke_channel_sync');
+    return NextResponse.json({ ok: true, ...(channelSyncWarning ? { channelSyncWarning } : {}) }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'contributor-access', op: 'admin_member_revoke' });
     return NextResponse.json(

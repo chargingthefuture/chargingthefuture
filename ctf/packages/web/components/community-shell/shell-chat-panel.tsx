@@ -232,15 +232,18 @@ function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats
 // Compact reaction row under a peer bubble: each emoji that has at least one reaction shows as a
 // pill (emoji + count, highlighted when the member reacted), plus a small "add reaction"
 // affordance that reveals the fixed quick set to pick from. Tapping a pill or a picker emoji
-// toggles the reaction. Only rendered for peer posts (which carry a communityPostId).
-function ChatReactionRow({
+// toggles the reaction. Only rendered for peer posts (which carry a communityPostId). Exported so
+// the gated contributor channel panel reuses it with its own (richer) fixed emoji set.
+export function ChatReactionRow({
   postId,
   reactions,
   onToggle,
+  emojis = FEED_REACTION_EMOJIS,
 }: {
   postId: string;
   reactions: ChatMessage['reactions'];
   onToggle: (postId: string, emoji: string) => void;
+  emojis?: readonly string[];
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const summaries = reactions ?? [];
@@ -273,7 +276,7 @@ function ChatReactionRow({
 
       {pickerOpen ? (
         <div className={styles.chatReactionPicker} role="menu" aria-label="Pick a reaction">
-          {FEED_REACTION_EMOJIS.map((emoji) => (
+          {emojis.map((emoji) => (
             <button
               key={emoji}
               type="button"

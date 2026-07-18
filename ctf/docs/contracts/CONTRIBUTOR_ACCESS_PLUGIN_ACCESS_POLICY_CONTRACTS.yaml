@@ -22,13 +22,14 @@ policies:
 
   - pluginId: contributor-access
     command: contributor-access.config.update
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles:
       - admin
     attributePolicies:
       tenancy: same_workspace
       csrfHeader: required
       weightKeys: fixed_value_event_keys_only
+      channelOpenPrecondition: eligible_count_at_least_min_eligible_to_open_channel
     consentRequirements:
       scopes:
         - contributor_access_admin
@@ -44,6 +45,7 @@ policies:
       - insufficient_role
       - csrf_denied
       - invalid_payload
+      - contributor_access_channel_below_minimum
 
   - pluginId: contributor-access
     command: contributor-access.eligible.list
@@ -138,9 +140,151 @@ policies:
       - secret_unconfigured
       - invalid_bearer_token
 
+  - pluginId: contributor-access
+    command: contributor-access.channel.membership.sync
+    version: 1.0.0
+    requiredRoles: []
+    attributePolicies:
+      callerScope: server_internal_only_no_route
+      membershipSource: eligibility_flag_only
+      runsOnlyWhen: channel_open_true
+      failureMode: guarded_never_fails_invoker
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - channel_closed
+      - stream_unconfigured
+
+  - pluginId: contributor-access
+    command: contributor-access.channel.messages.list
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      channelGate: channel_open_and_eligibility_flag_or_admin
+      denyShape: bare_404_no_channel_trace
+      outputScope: member_content_no_score
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthenticated
+      - channel_closed
+      - not_eligible
+
+  - pluginId: contributor-access
+    command: contributor-access.channel.message.create
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      csrfHeader: required
+      channelGate: channel_open_and_eligibility_flag_or_admin
+      denyShape: bare_404_no_channel_trace
+      contentShape: text_only_no_uploads_max_4000
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthenticated
+      - channel_closed
+      - not_eligible
+      - csrf_denied
+      - invalid_payload
+
+  - pluginId: contributor-access
+    command: contributor-access.channel.reaction.toggle
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      csrfHeader: required
+      channelGate: channel_open_and_eligibility_flag_or_admin
+      denyShape: bare_404_no_channel_trace
+      emojiSet: fixed_gated_reaction_set_only
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthenticated
+      - channel_closed
+      - not_eligible
+      - csrf_denied
+      - invalid_emoji
+      - post_not_found
+
+  - pluginId: contributor-access
+    command: contributor-access.channel.join
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      channelGate: channel_open_and_eligibility_flag_or_admin
+      denyShape: bare_404_no_channel_trace
+      credentialScope: stream_live_layer_only_shared_resolver
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthenticated
+      - channel_closed
+      - not_eligible
+
 changelog:
   - date: 2026-07-18
     change: >-
       Initial Contributor Access access policies. Every admin command is admin-only (requiredRoles
       [admin] - no operations role: revoke/reinstate are standing decisions). The recompute command
       is internal-service-secret gated, never member or browser callable.
+  - date: 2026-07-18
+    change: >-
+      Gated channel slice. Member channel commands (messages.list, message.create,
+      reaction.toggle, join) require an approved member plus the eligibility flag with the channel
+      open; admins retain read/moderation access, disclosed in-channel. Every deny is a bare 404
+      with no channel trace (no-shaming rule). membership.sync is server-internal with the
+      eligibility flag as the only membership source. config.update gains the channel-open
+      launch-gate precondition and its audited deny condition.

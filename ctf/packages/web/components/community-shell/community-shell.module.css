@@ -2611,3 +2611,74 @@
     transform: translateY(-2px);
   }
 }
+
+/* ─── Gated contributor channel (#contributors) ──────────────────────────── */
+/* Header for the gated channel panel. The moderator-read disclosure line is a hard product
+   requirement (the channel must plainly say moderators can read it), so it has its own styled
+   line here rather than living in a tooltip or footer only. */
+.gatedHeader {
+  flex-shrink: 0;
+  margin: 12px 16px 4px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: linear-gradient(135deg, rgba(49, 46, 129, 0.45) 0%, rgba(30, 41, 59, 0.6) 100%);
+}
+
+.gatedHeaderTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #E0E7FF;
+}
+
+.gatedHeaderSub {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #A5B4FC;
+}
+
+.gatedHeaderNote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #C7D2FE;
+}
+
+/* Channel switch pills — phone widths only. The desktop channel rail (.leftNav) is hidden below
+   900px, so when a member has more than one channel (Commons + the gated contributor channel)
+   these pills restore the switch. Hidden on desktop, where the rail already does this. */
+.channelSwitchRow {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .channelSwitchRow {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    padding: 10px 16px 0;
+  }
+
+  .channelSwitchBtn {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(30, 41, 59, 0.6);
+    color: #94A3B8;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .channelSwitchBtnActive {
+    border-color: rgba(99, 102, 241, 0.55);
+    background: rgba(99, 102, 241, 0.18);
+    color: #C7D2FE;
+  }
+}
