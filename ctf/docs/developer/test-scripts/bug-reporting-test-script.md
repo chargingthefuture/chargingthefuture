@@ -62,7 +62,9 @@ same-origin cookies. Page URL and (on `/apps/<slug>`) the plugin slug are attach
 no technical detail is asked of the user. A 201 shows the calm success state; the report row is
 stored privately as `new` (or `held_for_review` if flagged). On phone width the modal renders as a
 bottom sheet; android mirrors the same five states.
-The admin screen header shows a "Member view" pill opening `/apps/bug-reporting`.
+The admin screen header shows no "Member view" pill — bug reporting has no member page
+(`/apps/bug-reporting` does not exist; members report through the in-app modal), so the admin
+header carries only the back chevron and title.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### BUG-2 · Required field and the five modal states
