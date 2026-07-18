@@ -131,6 +131,11 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-07-18: **"Member view" pill removed from the admin header (owner report: it 404s).** Bug
+  reporting has no member page — `/apps/bug-reporting` does not exist; members report through the
+  in-app modal — so the pill added in the 2026-07-17 sweep linked to a 404 and is removed. The
+  rule-134 admin↔member pairing does not apply to a plugin with no member shell. UI-only; no
+  schema, route, or contract change.
 - 2026-07-17: **Admin↔member navigation (app-wide sweep).** The admin surface header gained the
   shared "Member view" pill (`PluginUserShellButton`) linking to `/apps/bug-reporting`. UI-only;
   no schema, route, or contract change.
