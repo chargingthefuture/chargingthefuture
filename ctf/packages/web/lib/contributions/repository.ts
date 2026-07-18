@@ -561,6 +561,9 @@ export async function getFundraiserSnapshot(userId: string): Promise<FundraiserS
     githubStarsConfirmed: Number(progress.github_stars_confirmed),
     contributorCount: Number(progress.contributor_count),
     bannerVisible,
+    // bannerEnabled (feature on/off, independent of the per-member snooze) lets the mobile UI tell
+    // "snoozed" (show the small emoji reminder) from "turned off" (show nothing at all).
+    bannerEnabled: config.bannerEnabled,
     githubStarAlreadyCredited,
   };
 }
