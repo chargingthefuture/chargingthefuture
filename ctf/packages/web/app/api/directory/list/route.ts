@@ -3,6 +3,7 @@ import { requireDirectoryReadAccess } from '../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { listDirectoryForMember, parsePaginationParams } from 'lib/directory/repository';
 import { logDirectoryAudit } from 'lib/directory/audit';
+import { getWeaversBadgeHolders } from 'lib/contributor-access/badge';
 import { reportError } from 'lib/observability/report';
 
 function getFilters(url: string) {
@@ -27,6 +28,20 @@ export async function GET(request: Request) {
   try {
     const payload = await listDirectoryForMember(pagination, getFilters(request.url));
 
+    // "Weavers of the Commons" contributor badge — one guarded set-lookup for the whole page.
+    // Only a claimed profile (bound to a real user) can carry the field; community-generated
+    // (unclaimed) profiles never get it. The helper returns the empty set on any error, so a
+    // Contributor Access outage can never break the directory list.
+    const claimedIds = payload.items
+      .map((item) => item.claimedByUserId)
+      .filter((id): id is string => id != null);
+    const badgeHolders = await getWeaversBadgeHolders(claimedIds);
+    const items = payload.items.map((item) =>
+      item.claimedByUserId == null
+        ? item
+        : { ...item, hasWeaversBadge: badgeHolders.has(item.claimedByUserId) },
+    );
+
     logDirectoryAudit({
       actorId: gate.auth.userId,
       command: 'directory.list.fetch',
@@ -38,7 +53,7 @@ export async function GET(request: Request) {
       errorCategory: null,
     });
 
-    return NextResponse.json(payload, { status: 200 });
+    return NextResponse.json({ ...payload, items }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'list_members', extra: { userId: gate.auth.userId } });
     logDirectoryAudit({

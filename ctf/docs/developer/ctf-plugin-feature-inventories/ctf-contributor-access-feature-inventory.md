@@ -4,10 +4,12 @@
 
 - Module name: `Contributor Access`
 - Module slug / service key: `contributor-access`
-- Slices 1 and 3 of the trusted-channel / contributor-badge system described in
+- All three slices of the trusted-channel / contributor-badge system described in
   `ctf/docs/developer/TRUSTED_CHANNELS_AND_CONTRIBUTOR_BADGE_PROPOSAL.md`: the eligibility engine
-  (slice 1) and the single gated channel (slice 3). The badge's working name ("Keeper of the
-  Commons") appears only in doc comments — the badge itself (slice 2) is not built.
+  (slice 1), the Directory contributor badge (slice 2), and the single gated channel (slice 3).
+  The badge's member-facing name is **"Weavers of the Commons"** (owner-picked, 2026-07-18 —
+  replacing the earlier working name "Keeper of the Commons", which may still appear in older doc
+  comments).
 - Hard boundary: this module **never touches the Trust plugin** — no reads or writes of any
   `trust_*` table, no imports from `ctf/packages/web/lib/trust/`. It reads other plugins' value
   tables to make an access decision and owns its own storage.
@@ -20,40 +22,58 @@
 ## Intent
 
 Compute one categorical decision per member — **eligible** or **not-yet** — from real material
-value delivered to real people, and grant exactly one thing with it today: membership of the
-single gated `#contributors` channel (the contributor badge is a later slice, built on the same
-flag). The score behind the decision is internal only and is never surfaced to
+value delivered to real people, and grant exactly two things with it: membership of the single
+gated `#contributors` channel and the "Weavers of the Commons" badge on the member's claimed
+Directory profile. The score behind the decision is internal only and is never surfaced to
 anyone as a number: standing is categorical, with no points, tiers, leaderboard, or ranking on any
 surface. Eligibility is additive (the recompute only ever admits) and permanent once earned;
 removal is for-cause only via an admin action.
 
 ## Target User Features
 
-The member surface is the **single gated `#contributors` channel inside the Commons shell** —
-"Commons for trusted members", one channel, admin-owned. No topic rooms, no user-created rooms,
-no DMs.
+The member surfaces are the **single gated `#contributors` channel inside the Commons shell** —
+"Commons for trusted members", one channel, admin-owned (no topic rooms, no user-created rooms,
+no DMs) — and the **"Weavers of the Commons" badge** on Directory.
 
-1. **Eligible members see the gated channel alongside the Commons.** The Hub channel list
+1. **"Weavers of the Commons" badge on Directory profiles** (web + mobile-responsive). The braid
+   emblem (`components/contributor-access/weavers-badge.tsx` — a static copy of the owner-picked
+   small braid badge from the owner's emblem repo `chargingthefuture/emblem`) renders next to the
+   member's name on the Directory profile detail when the profile is **claimed** and the claimed
+   member currently holds the badge (`eligible = TRUE` and `revoked_for_cause = FALSE`).
+   Positive-only: nothing at all renders for members without it (no empty slot, no lock, no
+   "not yet earned" state), and a community-generated (unclaimed) profile never carries the field.
+2. **Click-through dialog** (`components/contributor-access/weavers-badge-control.tsx`): title
+   "Weavers of the Commons", honest body copy ("This member is a consistent, broad contributor to
+   the community — real help, delivered over time. Anyone can earn this.") and a "How it's earned"
+   link. The copy never claims verification or vetting.
+3. **"How it's earned" page** at `/apps/directory/weavers-of-the-commons`
+   (`components/contributor-access/weavers-earned-page.tsx`; signed-in only — everyone else is
+   redirected to `/apps/directory`, same gate as the Directory profile deep link). Plain-language
+   explainer: earned by steadily delivering real help to other members across the platform;
+   permanent once earned; no application and no way to buy it; no score shown anywhere; the same
+   standing opens the members-only channel in the Commons when it launches. Mobile-responsive,
+   rendered in the Directory shell tokens.
+
+4. **Eligible members see the gated channel alongside the Commons.** The Hub channel list
    (`GET /api/hub/channels`) adds `#contributors` server-side only when `channel_open` is TRUE and
    the caller's eligibility flag is set (admins/moderators also see it — read access, disclosed).
    Desktop: the existing channel rail. Phone widths: a channel-pill switch row appears in the chat
    section once the member has more than one channel.
-2. **No-teaser rule (no shaming).** A non-eligible member sees *nothing*: no locked entry, no
+5. **No-teaser rule (no shaming).** A non-eligible member sees *nothing*: no locked entry, no
    absence state, no different layout — the channel list simply never contains the channel, and
    the channel API routes answer a bare 404 with no trace that the channel exists. Discovery of
    the perk belongs to the badge slice, never to a locked door.
-3. **Channel features (v1, per the proposal):** Signal-style threaded replies (the same quoted
+6. **Channel features (v1, per the proposal):** Signal-style threaded replies (the same quoted
    reply mechanism as the Commons), a richer fixed reaction set (twelve emojis vs the Commons'
    six), and longer messages (4000 characters vs 1200). **No image or file upload** — no
    affordance in the UI, no storage column, and uploads disabled on the Stream channel type.
-4. **Moderator disclosure, always visible:** the channel header carries "Moderators can read this
+7. **Moderator disclosure, always visible:** the channel header carries "Moderators can read this
    channel." (also repeated in the composer footnote), so the space can never read as an
    unwatched back-room.
-5. **Live layer:** same architecture as the Commons — polling is the source of truth,
+8. **Live layer:** same architecture as the Commons — polling is the source of truth,
    `/api/contributor-access/channel/join` mints Stream credentials for instant refresh + typing
    indicators when Stream is configured, and the channel keeps working when it is not.
 
-Still not built (later slices): the Directory badge and the "how it's earned" page.
 
 ## Target Admin Features
 
@@ -133,6 +153,15 @@ Internal (service-to-service, never member/browser callable):
   for-cause-revoked member; invoked (guarded, only while open) from the recompute, revoke,
   reinstate, and the config open flip. Contract: `contributor-access.channel.membership.sync`.
 
+Member-facing badge read (no new route in this module): the Directory read routes
+(`GET /api/directory/list`, `GET /api/directory/profiles/:id`) call
+`getWeaversBadgeHolders(userIds)` in `lib/contributor-access/badge.ts` — one
+table-existence-guarded query over `contributor_access_eligibility` returning only the subset of
+the given user ids with `eligible = TRUE AND revoked_for_cause = FALSE` (empty set on any error).
+The routes set a `hasWeaversBadge` boolean on **claimed** profiles only; no score or any other
+contributor-access data ever leaves this module. Recorded in the Directory command contracts
+(`directory.list.fetch`, `directory.profile.get` `dataAccess`).
+
 ## Data Model and Storage Contracts
 
 Owned tables in `ctf/schema.sql` (all guarded `CREATE TABLE IF NOT EXISTS` + per-column
@@ -195,6 +224,11 @@ counts still feed the score internally).
 - **Categorical flag only — no score is ever surfaced**, to members or admins. The internal score
   and per-event counts live only in `reason_snapshot`, which no API returns (the admin eligible
   list carries id/username/date/flags only). Proposal hard guardrail.
+- **Badge surfaces are positive-only and claimed-only**: the Directory shows the badge only on a
+  claimed profile whose member holds it; nothing renders for anyone else, and unclaimed
+  (community-generated) profiles never carry the field. The member-facing read is one boolean per
+  user id (`getWeaversBadgeHolders`) — no score, no dates, no reasons. The click-through and
+  explainer copy never says "verified", "vetted", or "trusted by the platform".
 - **Foundation per-member counts are internal-only** (rule 132 — sensitive wellbeing/payment
   participation): computed as gating fuel, never exposed on any surface.
 - **Never touches the Trust plugin** — no `trust_*` table reads/writes, no `lib/trust/` imports.
@@ -230,16 +264,20 @@ counts still feed the score internally).
 
 ## Web and Android Delivery Status
 
-- **Web (desktop):** complete — admin (`/admin/contributor-access`) and the member gated channel
-  inside the Commons shell (channel rail entry, gated panel).
+- **Web (desktop):** complete — admin (`/admin/contributor-access`), the member gated channel
+  inside the Commons shell (channel rail entry, gated panel), the Directory profile badge +
+  dialog, and the `/apps/directory/weavers-of-the-commons` explainer page.
 - **Web (mobile-responsive):** complete — the admin shell keeps its `MobileScreenHeader` layout;
   the gated channel is reachable at phone widths via the channel-pill switch row (the desktop
-  channel rail is hidden there) and the panel reuses the Commons' responsive chat layout.
-- **Android (React Native):** **tracked gap — deliberately not built in this slice.** The mobile
-  app has no gated-channel feature directory yet; parity should follow the same server-filtered
-  channel list (`/api/hub/channels`) and the same member routes, so no client-side eligibility
-  logic is ever needed. PRs for this slice carry a `Parity Ticket:` line referencing the Android
-  gap issue instead of claiming android complete.
+  channel rail is hidden there) and the panel reuses the Commons' responsive chat layout; the
+  badge, dialog, and explainer page are responsive in the Directory shell.
+- **Android (React Native):** **tracked gaps — deliberately not built in these slices.** (1) The
+  gated channel: the mobile app has no gated-channel feature directory yet; parity should follow
+  the same server-filtered channel list (`/api/hub/channels`) and the same member routes, so no
+  client-side eligibility logic is ever needed (issue #1681). (2) The badge: the RN Directory
+  profile does not yet render the badge/dialog or the explainer screen — the boolean is already
+  on the shared Directory responses, so the work is display-only (issue #1680). PRs for these
+  slices carry a `Parity Ticket:` line instead of claiming android complete.
 
 ## Seed Coverage Status
 
@@ -254,12 +292,7 @@ fill on the first recompute / config save / member post.
   the production credentials and once against the staging/demo credentials (usage at the top of
   the script). Until it runs, opening the channel stores the config flip and returns a
   `channelSyncWarning`; membership reconciles on the next sync after the type exists.
-- **Android parity gap (tracked):** the gated channel is web + mobile-responsive only in this
-  slice; the React Native app needs its own feature directory + parity-contract entry.
-- Badge slice not built: Directory badge, click-through copy, and the "how it's earned" page are a
-  later slice (brand-voice pass required; badge name unconfirmed — "Keeper of the Commons" is a
-  working name only). Until it ships, the gated channel has no in-product discovery for
-  non-members (by design — the no-teaser rule).
+- Android parity gaps: see the delivery-status section (issues #1680 badge, #1681 channel).
 - Gated-channel posts have no content-moderation or rate-limit pass yet (the Commons runs both on
   its feed path). Blast radius is small — members are flag-gated contributors and moderators read
   the channel — but the same guards should follow.
@@ -277,6 +310,21 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-07-18 — Badge slice (slice 2): the contributor badge is member-visible on the Directory.
+  Owner decisions: name **"Weavers of the Commons"**; artwork is ONLY the small braid-ring badge
+  (rust `#8b3a2f` circle, cream/gold three-strand braid), copied as a static SVG from the owner's
+  emblem repo (`chargingthefuture/emblem`) into
+  `components/contributor-access/weavers-badge.tsx` — the generative math was not ported and no
+  other emblem concept is used. New guarded read `lib/contributor-access/badge.ts`
+  (`getWeaversBadgeHolders`: eligible AND not revoked-for-cause, empty set on any error), wired
+  into `GET /api/directory/list` and `GET /api/directory/profiles/:id`, which set `hasWeaversBadge`
+  on **claimed** profiles only. The Directory profile detail renders the badge next to the name
+  (positive-only — nothing renders for members without it) with a click-through dialog
+  (`weavers-badge-control.tsx`) and a "How it's earned" link to the new signed-in page
+  `/apps/directory/weavers-of-the-commons` (`weavers-earned-page.tsx`). Directory command
+  contracts (`directory.list.fetch`, `directory.profile.get`) record the
+  `contributor_access_eligibility` read; no new API route, schema change, or contributor-access
+  contract command. Web + mobile-responsive; Android badge display is a tracked parity gap.
 - 2026-07-18 — First slice: schema (config / eligibility / audit tables), the eligibility engine
   (fifteen per-member all-time value-event counts mirroring Weekly Performance, weighted score,
   age/plugin-spread/counterparty gates, additive-only recompute), internal recompute route + weekly
@@ -305,8 +353,10 @@ Ordered, dependency-based task list for this module (each item names what blocks
 5. Admin page + shell (`/admin/contributor-access`) — blocked by 4. **Done.**
 6. Contracts + inventory + manual test script — blocked by 3, 4, 5. **Done.**
 7. Owner pass on weights/threshold/minimums via the config editor — blocked by 5; owner decision.
-8. Badge slice (Directory badge, click-through copy, "how it's earned" page) — blocked by 7 and
-   the owner's badge-name/wording decisions.
+8. Badge slice (Directory badge, click-through copy, "how it's earned" page) — owner decided the
+   name ("Weavers of the Commons") and the braid emblem, 2026-07-18. **Done (web +
+   mobile-responsive).** Android badge display remains a tracked parity gap (display-only; the
+   shared Directory API already carries the boolean).
 9. Channel slice (gated Stream channel type, membership sync from the flag, moderator read-in
    disclosure, launch gate on `min_eligible_to_open_channel`) — blocked by 7; independent of 8.
    **Done** (web + mobile-responsive; the one-time channel-type script is the owner's manual

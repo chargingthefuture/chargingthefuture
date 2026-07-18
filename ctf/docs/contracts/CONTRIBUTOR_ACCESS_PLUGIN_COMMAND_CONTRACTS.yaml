@@ -325,6 +325,16 @@ contracts:
 changelog:
   - date: 2026-07-18
     change: >-
+      Badge slice - the "Weavers of the Commons" badge (owner-picked name and braid emblem) is now
+      surfaced on Directory profiles. No new contributor-access route or command: the Directory
+      read commands (directory.list.fetch, directory.profile.get in
+      DIRECTORY_PLUGIN_COMMAND_CONTRACTS.yaml) perform the cross-plugin read via
+      lib/contributor-access/badge.ts (getWeaversBadgeHolders) - a single guarded query over
+      contributor_access_eligibility returning only the categorical holder set (eligible = TRUE
+      and revoked_for_cause = FALSE); those two commands' dataAccess lists now record
+      contributor_access_eligibility. Boolean only, claimed profiles only, positive-only surfaces.
+  - date: 2026-07-18
+    change: >-
       Initial Contributor Access contract set - the first slice of the trusted-channel /
       contributor-badge module (proposal:
       ctf/docs/developer/TRUSTED_CHANNELS_AND_CONTRIBUTOR_BADGE_PROPOSAL.md). Admin config,

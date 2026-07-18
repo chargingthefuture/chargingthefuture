@@ -29,7 +29,11 @@ contracts:
   - pluginId: directory
     command: directory.list.fetch
     version: 1.0.0
-    description: Fetch directory list with selector filters and pagination.
+    description: >-
+      Fetch directory list with selector filters and pagination. Also decorates each CLAIMED
+      profile with the categorical "Weavers of the Commons" contributor-badge boolean
+      (hasWeaversBadge) via a guarded read of contributor_access_eligibility — boolean only, never
+      a score, and never set on a community-generated (unclaimed) profile.
     inputSchema:
       filters:
         type: object
@@ -48,6 +52,7 @@ contracts:
     dataAccess:
       - directory_profiles
       - directory_profile_tags
+      - contributor_access_eligibility
     purpose: directory_discovery
     retentionClass: derived_short_lived
     idempotency: true
@@ -55,7 +60,12 @@ contracts:
   - pluginId: directory
     command: directory.profile.get
     version: 1.0.0
-    description: Fetch one active directory profile by id behind the same read-access gate as the list. Backs the auth-gated deep-link page so a shared profile link opens that profile for a signed-in member.
+    description: >-
+      Fetch one active directory profile by id behind the same read-access gate as the list. Backs
+      the auth-gated deep-link page so a shared profile link opens that profile for a signed-in
+      member. A CLAIMED profile is decorated with the categorical "Weavers of the Commons"
+      contributor-badge boolean (hasWeaversBadge) via a guarded read of
+      contributor_access_eligibility — boolean only, never a score, never on an unclaimed profile.
     inputSchema:
       id:
         type: string
@@ -67,6 +77,7 @@ contracts:
       - directory_profiles
       - directory_profile_skills
       - directory_profile_proposed_skills
+      - contributor_access_eligibility
     purpose: directory_discovery
     retentionClass: derived_short_lived
     idempotency: true
