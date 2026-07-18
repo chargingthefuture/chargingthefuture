@@ -17,12 +17,11 @@ import { SocketRelayShell } from '@/components/socket-relay/socket-relay-shell';
 import { SkillsHuntShell } from '@/components/skills-hunt/skills-hunt-shell';
 import { SkillsTaxonomyShell } from '@/components/skills-taxonomy/skills-taxonomy-shell';
 import { TrustTransportShell } from '@/components/trust-transport/trust-transport-shell';
-import { WeeklyPerformanceShell } from '@/components/weekly-performance/weekly-performance-shell';
 import { ClickLogShell } from '@/components/click-log/click-log-shell';
 import { WhatWorksShell } from '@/components/what-works/what-works-shell';
 import { WorkforceShell } from '@/components/workforce/workforce-shell';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 type PluginRoutePageProps = {
   params: Promise<{
@@ -266,7 +265,9 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'weekly-performance') {
-    return <WeeklyPerformanceShell isAdmin={decision.isAdmin} />;
+    // Weekly Performance has no member view — the dashboard lives on the admin page only.
+    // Non-admins never reach this branch (the admin-only gate above 404s them).
+    redirect('/admin/weekly-performance');
   }
 
   if (selectedPlugin.slug === 'gdp') {

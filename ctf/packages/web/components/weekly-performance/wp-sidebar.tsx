@@ -53,7 +53,6 @@ export function WeeklyPerformanceSidebar({
         <div style={{ padding: 12, borderTop: `1px solid ${t.BORDER_SOLID}` }}>
           <div style={{ padding: "10px 12px", borderRadius: 10, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: t.ACCENT, marginBottom: 6 }}>Admin Controls</div>
-            <a href="/admin/weekly-performance" style={{ width: "100%", padding: "7px", borderRadius: 7, background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 11, cursor: "pointer", marginBottom: 5, display: "block", textAlign: "center", textDecoration: "none", boxSizing: "border-box" }}>Manage weeks</a>
             <button onClick={onExport} style={{ width: "100%", padding: "7px", borderRadius: 7, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
               <Download size={11} /> Export CSV
             </button>
