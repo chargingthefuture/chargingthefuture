@@ -10,19 +10,20 @@ Below, each app has a short summary, a few notes on what a member can do, and si
 
 _Last updated: 2026-07-17_
 
-A list of members and the skills they hold.
+A list of people and the skills they hold — members and community-nominated profiles alike.
 
-Directory shows fellow community members and the skills they list. Everyone signed in sees every active member.
+Directory lists people and the skills they hold. Some profiles are made by members themselves. Others are community-generated: a member nominated someone who does not have an account yet, so the profile carries a "Community generated" badge. Signed in, you see every active, listed profile.
 
-Open a member's profile to read their name, job title, sector, and skills. They are fellow community members sharing their skills, not a formal service.
+Open a profile to read the person's name, job title, sector, and skills. They are fellow community members sharing their skills, not a formal service. If a community-generated profile is yours, you can claim it as your own.
 
 Directory only shows people. It does not message, book, or transact — those actions live in other apps.
 
 **How to use it**
 
-1. Open Directory while signed in. The list of members loads.
-2. Open a member's profile to read their name, job title, sector, and skills.
-3. Create or update your own profile so others can find you.
+1. Open Directory while signed in. The list of profiles loads.
+2. Search by name or skill, or filter by sector, to find someone.
+3. Open a profile to read their name, job title, sector, and skills.
+4. Create your own profile, or claim a community-generated one that is yours, so others can find you.
 
 ## Foundation
 
