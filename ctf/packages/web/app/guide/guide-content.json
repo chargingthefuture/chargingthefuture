@@ -9,7 +9,7 @@
     {
       "id": "directory",
       "title": "Directory",
-      "updated": "2026-07-17",
+      "updated": "2026-07-18",
       "summary": "A list of people and the skills they hold — members and community-nominated profiles alike.",
       "body": [
         "Directory lists people and the skills they hold. Some profiles are made by members themselves. Others are community-generated: a member nominated someone who does not have an account yet, so the profile carries a \"Community generated\" badge. Signed in, you see every active, listed profile.",
@@ -43,7 +43,7 @@
     {
       "id": "chyme",
       "title": "Chyme",
-      "updated": "2026-07-17",
+      "updated": "2026-07-18",
       "summary": "One shared audio room where members can talk and chat.",
       "body": [
         "Chyme is a single shared audio room. Join the call to talk with other members, or type in the chat panel alongside it.",
@@ -60,7 +60,7 @@
     {
       "id": "socket-relay",
       "title": "SocketRelay",
-      "updated": "2026-07-17",
+      "updated": "2026-07-18",
       "summary": "Post a request for help and connect with a member who offers to fill it.",
       "body": [
         "SocketRelay is a feed of member requests. Post a request with a title and one to three tags; others browse and filter the feed by tag.",
@@ -77,7 +77,7 @@
     {
       "id": "beacon",
       "title": "Beacon",
-      "updated": "2026-07-14",
+      "updated": "2026-07-18",
       "summary": "Watch a live broadcast and chat during it if signed in.",
       "body": [
         "Beacon is a one-way live broadcast anyone can watch with the link — no sign-in needed. When nothing is live, a calm \"No live event right now\" screen shows, with the last replay if there is one.",
@@ -110,7 +110,7 @@
     {
       "id": "mood",
       "title": "Mood",
-      "updated": "2026-07-17",
+      "updated": "2026-07-18",
       "summary": "A private mood check-in you can submit once a week.",
       "body": [
         "Mood lets you record how you are doing on a scale of 1 to 5, with an optional note. You can check in once every 7 days.",
@@ -126,7 +126,7 @@
     {
       "id": "gentle-pulse",
       "title": "GentlePulse",
-      "updated": "2026-07-14",
+      "updated": "2026-07-18",
       "summary": "A library of meditations you can play, rate, and favorite.",
       "body": [
         "GentlePulse is a library of meditations. Each card shows a title, description, tags, duration, average rating, and rating count.",
@@ -143,7 +143,7 @@
     {
       "id": "what-works",
       "title": "WhatWorks",
-      "updated": "2026-07-14",
+      "updated": "2026-07-18",
       "summary": "A shared list of tools that have helped, grouped by problem.",
       "body": [
         "WhatWorks is a shared list of everyday problems, each with tools members have found useful — an emoji, a name, a short \"why it works\" note, a count of how many members marked it helpful, and a direct purchase link.",
@@ -159,7 +159,7 @@
     {
       "id": "skills-hunt",
       "title": "SkillsHunt",
-      "updated": "2026-07-17",
+      "updated": "2026-07-18",
       "summary": "Nominate skilled people for scouting rounds and follow the leaderboard.",
       "body": [
         "SkillsHunt runs rounds where members nominate skilled people. Browse active, upcoming, and closed rounds, and open one to see its rules, scoring, and dates.",
@@ -207,7 +207,7 @@
     {
       "id": "service-credits",
       "title": "ServiceCredits",
-      "updated": "2026-07-14",
+      "updated": "2026-07-18",
       "summary": "Your wallet of ServiceCredits and where you send them to other members.",
       "body": [
         "ServiceCredits is the app's non-money credit. Your wallet shows your available, held, and total balance, with plain labels for each kind of activity (transfer, escrow, treasury fee, adjustment).",
@@ -223,7 +223,7 @@
     {
       "id": "contributions",
       "title": "Contributions",
-      "updated": "2026-07-14",
+      "updated": "2026-07-18",
       "summary": "Support the current fundraiser and log how you helped.",
       "body": [
         "Contributions is a voluntary fundraiser. You can submit a claim of one of three kinds: a gift card (you state the amount and your Signal contact — the code is never entered in the app; you send it to the owner over Signal), a Quora comment (paste the comment link), or a GitHub star (paste your GitHub profile link).",
@@ -240,7 +240,7 @@
     {
       "id": "level-up",
       "title": "LevelUp",
-      "updated": "2026-07-14",
+      "updated": "2026-07-18",
       "summary": "Learning cohorts with milestones, plus a view-only credits wallet.",
       "body": [
         "LevelUp lists learning cohorts you can filter by track, status, and start date. Open a cohort to see its curriculum, milestones, and how to enroll; enrolling may involve an optional deposit held in escrow and released per milestone.",
@@ -257,7 +257,7 @@
     {
       "id": "trust-transport",
       "title": "TrustTransport",
-      "updated": "2026-07-14",
+      "updated": "2026-07-18",
       "summary": "Request a ride, a package delivery, or food, and track it.",
       "body": [
         "TrustTransport is one booking surface for three kinds of trips: a ride, a package, or food. Pick a mode, enter your origin and destination or location, and see quote previews before you submit.",
@@ -274,7 +274,7 @@
     {
       "id": "lighthouse",
       "title": "LightHouse",
-      "updated": "2026-07-17",
+      "updated": "2026-07-18",
       "summary": "Browse places to stay, list your own place, and request a stay.",
       "body": [
         "LightHouse opens straight to a browse screen of available places — no profile needed to look. Each listing shows details like title, location, and rent; rent may be in a regular currency, or a listing may accept ServiceCredits, shown with an \"Accepts ServiceCredits\" badge (never a cash figure for credits).",
@@ -291,7 +291,7 @@
     {
       "id": "click-log",
       "title": "ClickLog",
-      "updated": "2026-07-14",
+      "updated": "2026-07-18",
       "summary": "A private, one-tap incident counter only you can see.",
       "body": [
         "ClickLog is a private counter for logging incidents. Press the large \"Log Incident\" button to record one, with an optional location or note, and your total rises by one.",
@@ -324,7 +324,7 @@
     {
       "id": "gdp",
       "title": "GDP",
-      "updated": "2026-07-16",
+      "updated": "2026-07-18",
       "summary": "A live transparency report of the community's total activity value.",
       "body": [
         "GDP is a read-only report. It shows the headline community figure — total, service, and goods/local value — with plain-language explanations, per-capita indicators, and progress toward the target goals.",
