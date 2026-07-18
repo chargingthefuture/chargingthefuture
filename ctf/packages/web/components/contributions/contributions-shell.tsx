@@ -384,16 +384,19 @@ function MobileFrame({ t, children, tab, onTab, onRefresh, isAdmin }: { t: Contr
         title="Contributions"
         accent={t.ACCENT}
         icon={<Gift size={18} color={t.ACCENT} />}
-        actions={<PluginAdminButton href="/admin/contributions" isAdmin={isAdmin} accent={t.ACCENT} />}
+        actions={
+          <>
+            <PluginAdminButton href="/admin/contributions" isAdmin={isAdmin} accent={t.ACCENT} />
+            {onRefresh ? <RefreshButton onRefresh={onRefresh} title="Refresh" /> : null}
+          </>
+        }
       />
       <div style={{ padding: '12px 16px 10px', background: t.SURFACE, borderBottom: `1px solid ${t.BORDER_SOLID}`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <div style={{ width: 26, height: 26, borderRadius: 7, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Gift size={13} color="#fff" />
           </div>
-          {/* Title shrinks and truncates so the refresh control stays on screen */}
-          <span style={{ fontSize: 17, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Contributions</span>
-          {onRefresh ? <RefreshButton onRefresh={onRefresh} title="Refresh" /> : null}
+          <span style={{ fontSize: 17, fontWeight: 700, color: t.TITLE }}>Contributions</span>
         </div>
         <div style={{ fontSize: 12, color: t.MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Community support drive</div>
       </div>
