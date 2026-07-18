@@ -1,4 +1,13 @@
 import type { Metadata, Viewport } from 'next';
+// Self-host the brand typeface. globals.css declares `font-family: Inter` everywhere but the app never
+// shipped the font, so it silently fell back to system-ui. @fontsource bundles the weights we use and
+// registers the family as "Inter", so the existing declarations now render the real Inter offline.
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
+import '@fontsource/inter/800.css';
+import '@fontsource/inter/900.css';
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ThemeProvider } from '@/hooks/useTheme';

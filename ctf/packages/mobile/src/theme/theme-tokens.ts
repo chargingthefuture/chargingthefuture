@@ -104,9 +104,15 @@ export type ThemeTokens = {
   /** Highlight accent — hero stats, progress, economy callouts. Mirrors web `--ctf-gold`
    *  (sky `#38BDF8` in default, warm gold `#C8A84B` in comic). */
   gold: string;
-  /** Border radius applied to cards / buttons (0 in comic theme). */
+  /** Brand hue. Mirrors web `--ctf-brand` (pink `#E91E8C` in default, warm gold `#C8A84B` in comic). */
+  brand: string;
+  /** Text/icon colour that sits on a `brand` fill. Mirrors web `--ctf-brand-text`. */
+  brandText: string;
+  /** Border radius applied to cards (0 in comic theme). Mirrors web `--ctf-card-radius`. */
   radius: number;
-  /** Border radius for chips / badges (2 in comic theme). */
+  /** Border radius for controls — buttons / inputs (0 in comic theme). Mirrors web `--ctf-control-radius`. */
+  radiusControl: number;
+  /** Border radius for chips / badges (2 in comic theme). Mirrors web `--ctf-chip-radius`. */
   radiusChip: number;
   /** True when the comic theme is active — lets a screen branch on flat styling. */
   isComic: boolean;
@@ -132,7 +138,10 @@ const DEFAULT_TOKENS: ThemeTokens = {
   danger: '#B91C1C',
   success: '#22C55E',
   gold: '#38BDF8',
+  brand: '#E91E8C',
+  brandText: '#FFFFFF',
   radius: 14,
+  radiusControl: 10,
   radiusChip: 6,
   isComic: false,
 };
@@ -151,7 +160,10 @@ const COMIC_TOKENS: ThemeTokens = {
   danger: '#B91C1C',
   success: '#22C55E',
   gold: '#C8A84B',
+  brand: '#C8A84B',
+  brandText: '#0D0D0D',
   radius: 0,
+  radiusControl: 0,
   radiusChip: 2,
   isComic: true,
 };
