@@ -1,0 +1,360 @@
+{
+  "updated": "2026-07-18",
+  "intro": [
+    "Charging the Future is a set of apps survivors use to work with and support each other, outside the Specterati economy. This guide walks through each part: what it does and how to use it.",
+    "Pick an app from the list below to jump to it."
+  ],
+  "sections": [
+    {
+      "id": "directory",
+      "title": "Directory",
+      "updated": "2026-07-17",
+      "summary": "Directory is part of the Charging the Future app.",
+      "body": [
+        "Authenticated dashboard/profile experience for create, update, and delete profile operations.",
+        "Directory list and profile discovery experience for authenticated users.",
+        "Directory is no longer public-facing** (2026-05-18). The `isPublic` toggle was removed; every authenticated member sees every active, non-deleted profile. There is no anonymous projection route. Legacy public URLs are not redirected — backwards compatibility is intentionally not preserved.",
+        "Announcement consumption in user-visible contexts."
+      ],
+      "howTo": [
+        "Directory lists members and the skills they hold — it does not transact. These are the",
+        "can't-ship-broken checks. Member role unless noted.",
+        "List loads.** Open Directory as a signed-in member. Active, non-deleted profiles render — not a",
+        "spinner or an error — even if you have no profile of your own."
+      ]
+    },
+    {
+      "id": "foundation",
+      "title": "Foundation",
+      "updated": "2026-07-18",
+      "summary": "Foundation is part of the Charging the Future app.",
+      "body": [
+        "Provider discovery and search by service type, location, language, and trauma-informed criteria.",
+        "Survivor-provider 1:1 text messaging with delivery/read/seen semantics and file attachment support.",
+        "Voice and video session initiation and join for approved 1:1 participants.",
+        "Quote request lifecycle (requested → provider_responded → closed) with immutable timeline view. The 1:1 text/voice/video channel is scoped to an active connection/quote between exactly the two parties and opens with it; when the connection/quote reaches a terminal state (closed, declined, or ended) the chat closes — no new messages may be sent, both parties keep read-only access for a limited window, and message/session records are retained server-side for moderation/abuse evidence per the deletion contract. No 1:1 messaging exists outside an active connection/quote (platform rule 100, \"Messaging Scope and Lifecycle\")."
+      ],
+      "howTo": [
+        "Foundation carries 1:1 support messaging and a paid live call — these are the can't-ship-broken",
+        "checks. Member role unless noted.",
+        "Provider search loads.** Open Foundation. The provider list renders with name, headline, and",
+        "bio, not a spinner or error."
+      ]
+    },
+    {
+      "id": "chyme",
+      "title": "Chyme",
+      "updated": "2026-07-17",
+      "summary": "Chyme is part of the Charging the Future app.",
+      "body": [
+        "Authenticated room bootstrap via `GET /api/chyme/room` with deterministic room provisioning (`chyme-main-room`) and participant upsert.",
+        "Companion text chat read/send via `GET /api/chyme/messages` and `POST /api/chyme/messages`, with DB persistence and Stream message fan-out through shared adapters.",
+        "Stream-backed room join/token flow via `POST /api/chyme/join`, using shared Stream wrappers in `packages/shared`.",
+        "Service-scoped deletion request via `DELETE /api/account/chyme-profile`."
+      ],
+      "howTo": [
+        "The one shared audio room — these are the can't-ship-broken checks. Member role unless noted.",
+        "Room loads.** Open Chyme as a signed-in member. The room (\"Chyme Main Room: Exit the",
+        "Gauntlet\"), the participant list, and the chat panel render — not a spinner or an error.",
+        "Join the call.** Press join. You connect to the live audio room, start muted, and can mute"
+      ]
+    },
+    {
+      "id": "socket-relay",
+      "title": "SocketRelay",
+      "updated": "2026-07-17",
+      "summary": "SocketRelay is part of the Charging the Future app.",
+      "body": [
+        "Authenticated request dashboard with active and owned request views.",
+        "Request create/update/repost flows with deterministic status semantics. Owners can edit their",
+        "own open requests from the feed (web); the edit reuses the post form and the existing",
+        "`PUT /api/socket-relay/requests/:id` route."
+      ],
+      "howTo": [
+        "Sign in as a member. Navigate to the SocketRelay feed on web and open the SocketRelay screen on Android. The feed loads without a JS error, shows a list of seeded requests (not a blank page and not a raw `{ items, page, pageSize, total }` JSON dump), and each card shows a title and at least one tag.",
+        "web ☐ android ☐",
+        "While signed out (or in a fresh incognito window on web / signed-out state on Android), open the SocketRelay feed. The app shows a public or sign-in-gated state rather than crashing or exposing authenticated data.",
+        "web ☐ android ☐"
+      ]
+    },
+    {
+      "id": "beacon",
+      "title": "Beacon",
+      "updated": "2026-07-14",
+      "summary": "Beacon is part of the Charging the Future app.",
+      "body": [
+        "Watch publicly.** Anyone with the link watches the live broadcast (HLS), no sign-in.",
+        "Idle state.** When nothing is live, a calm \"No live event right now\" screen (with the last",
+        "replay, if any).",
+        "Live chat (members).** Signed-in members post chat messages during the event; anonymous viewers"
+      ],
+      "howTo": [
+        "One-way admin broadcast; public watch, sign-in to chat. Member role unless noted.",
+        "Idle state loads.** Open `/apps/beacon` when nothing is live. A calm \"No live event right now\"",
+        "screen renders, with the last replay if one exists. No spinner stuck, no error.",
+        "Anyone can watch, no sign-in.** Sign out and open `/apps/beacon`. The viewer surface still loads"
+      ]
+    },
+    {
+      "id": "peer-programming",
+      "title": "PeerProgramming",
+      "updated": "2026-07-18",
+      "summary": "PeerProgramming is part of the Charging the Future app.",
+      "body": [
+        "Weekly active-user selection includes only accounts with login activity in the prior 7 days.",
+        "Cohorts are formed with a target size of 5 users per cohort.",
+        "Assignment status and cohort metadata are visible in the user room entry surface.",
+        "In-app notifications are generated when users are assigned to a cohort."
+      ],
+      "howTo": [
+        "These are the checks that must pass before anything else is worth testing.",
+        "Room loads for a seeded member**",
+        "Sign in as a seeded member. Navigate to `/apps/peer-programming` (web) or open the PeerProgramming screen (android). The room loads without an error banner. A cohort or the \"you're not in a cohort yet\" / empty state is visible within a few seconds.",
+        "web ☐ android ☐"
+      ]
+    },
+    {
+      "id": "mood",
+      "title": "Mood",
+      "updated": "2026-07-17",
+      "summary": "Mood is part of the Charging the Future app.",
+      "body": [
+        "Plugin route for mood check (`/apps/mood`).",
+        "Authenticated user can submit a mood check via `POST /api/mood/submissions`.",
+        "Mood scale validation (`1..5`) is enforced.",
+        "Submission response does not include severe-value safety trigger fields."
+      ],
+      "howTo": [
+        "Member role unless noted.",
+        "Check-in screen loads.** Open Mood. The check-in form (mood picker + optional note) renders, not a",
+        "spinner or error.",
+        "Submit a mood check.** Pick a mood value (1–5), submit. The submission is accepted and the screen"
+      ]
+    },
+    {
+      "id": "gentle-pulse",
+      "title": "GentlePulse",
+      "updated": "2026-07-14",
+      "summary": "GentlePulse is part of the Charging the Future app.",
+      "body": [
+        "Plugin route for meditation library (`/apps/gentle-pulse`).",
+        "Meditation listing with pagination (`limit`, `offset`).",
+        "Sort modes: `newest`, `most-rated`, `highest-rating`.",
+        "Tag-based filtering."
+      ],
+      "howTo": [
+        "Member role unless noted.",
+        "Library loads.** Open GentlePulse. The meditation library renders with items (title, description),",
+        "not a spinner or error.",
+        "Play records.** Play a meditation. The play is recorded and the media URL opens."
+      ]
+    },
+    {
+      "id": "what-works",
+      "title": "WhatWorks",
+      "updated": "2026-07-14",
+      "summary": "WhatWorks is part of the Charging the Future app.",
+      "body": [
+        "Browse the shared list: active problems, each with its approved tools (emoji, name, type, a short",
+        "\"why it works\" note, a verified count, and a direct purchase link).",
+        "Mark a tool **Helpful** (\"this helped me\") — a one-per-survivor endorsement whose tally renders as",
+        "\"N survivors verified\"; toggle off to withdraw it."
+      ],
+      "howTo": [
+        "One shared survivor-verified list of tools by problem. Member role unless noted.",
+        "List loads.** Open `/apps/what-works` signed in. Active problems render, each with its approved",
+        "tools — emoji, name, a short \"why it works\" note, a verified count, and a purchase link. No",
+        "spinner stuck, no error."
+      ]
+    },
+    {
+      "id": "skills-hunt",
+      "title": "SkillsHunt",
+      "updated": "2026-07-17",
+      "summary": "SkillsHunt is part of the Charging the Future app.",
+      "body": [
+        "List active, upcoming, and closed SkillsHunt rounds.",
+        "View round details including scoring config, rules, and dates.",
+        "Submit entries only during active windows.",
+        "Submit display name (2–100 chars, alphanumeric + spaces), bio (max 280 chars), Quora profile URL, taxonomy-selected skills, optional proposed (free-text) skills, and claimed professions *(deferred — not in the locked Wave 1 design)*."
+      ],
+      "howTo": [
+        "CS-1 — Rounds list loads for a signed-in member**",
+        "Open `/apps/skills-hunt` (web) and the SkillsHunt screen (Android). Confirm at least one seeded round appears with a name and status visible. No error state, no blank screen.",
+        "web ☐ android ☐",
+        "CS-2 — Scout tab / nomination form is reachable**"
+      ]
+    },
+    {
+      "id": "workforce",
+      "title": "Workforce",
+      "updated": "2026-07-18",
+      "summary": "Workforce is part of the Charging the Future app.",
+      "body": [
+        "Live dashboard: Population, Workforce Total, Total Headcount Target, Recruited, Recruitment Progress, Sector Gaps, Skill Level Breakdown, and Top Training Gaps.",
+        "Demand is population-scale: `population × participation_rate` (workforce config), spread across sectors by each sector's Skills Taxonomy `workforce_share`, then split across the sector's job titles. Supply is read live from Directory: members = active profiles; recruited = the V2 aspirational 3-way match (profiles matching a bucket by sector, job title, or a skill registered under the job title), with the top-line recruited mirroring V2 as the count of all active profiles. Gap = demand − recruited. See section 5 for the exact definition.",
+        "Drilldowns by sector, skill level, and occupation (the per-occupation training gaps).",
+        "Deterministic loading/empty/error states for the core screens."
+      ],
+      "howTo": [
+        "Workforce is a read-only live tracker — these are the can't-ship-broken checks. Member role unless noted.",
+        "Dashboard loads with numbers.** Open the Workforce dashboard. Population, Workforce Total,",
+        "Total Headcount Target, and Recruited all render as numbers, not a spinner or error.",
+        "Top-line numbers reconcile.** Recruited equals the count of all active Directory members, and"
+      ]
+    },
+    {
+      "id": "skills-taxonomy",
+      "title": "Skills Taxonomy",
+      "updated": "2026-07-18",
+      "summary": "Skills Taxonomy is part of the Charging the Future app.",
+      "body": [
+        "See the app to use Skills Taxonomy."
+      ],
+      "howTo": [
+        "This plugin owns the shared list of sectors, job titles, and skills the rest of the app reads. These",
+        "are the can't-ship-broken checks.",
+        "Hierarchy loads.** Open the Skills Taxonomy browser as a signed-in member. The three-level tree",
+        "(sector"
+      ]
+    },
+    {
+      "id": "service-credits",
+      "title": "ServiceCredits",
+      "updated": "2026-07-14",
+      "summary": "ServiceCredits is part of the Charging the Future app.",
+      "body": [
+        "See the app to use ServiceCredits."
+      ],
+      "howTo": [
+        "These are the checks that must pass before any other case is meaningful.",
+        "Wallet loads for a seeded member**",
+        "Sign in as a seeded member account. Navigate to the ServiceCredits section (web: `/service-credits`; android: ServiceCredits screen). The wallet tab must appear showing an available balance figure (a number of credits, not a currency symbol) and no error state.",
+        "web ☐ android ☐"
+      ]
+    },
+    {
+      "id": "contributions",
+      "title": "Contributions",
+      "updated": "2026-07-14",
+      "summary": "Contributions is part of the Charging the Future app.",
+      "body": [
+        "Submit a contribution claim of one of three kinds:",
+        "Gift card** (`amazon`, `apple`, or `dennys`): the member states the amount (over 0, at most",
+        "USD) and their own Signal contact (URL or phone number — reduces fraud). It can be a physical",
+        "or a digital gift card. The gift-card **code is never collected or stored anywhere** — the member"
+      ],
+      "howTo": [
+        "Voluntary fundraiser drives; thank-you credits, never money. Member role unless noted.",
+        "Drive loads.** Open `/apps/contributions` signed in. The current cycle and collective progress",
+        "render — USD raised, comments, stars, contributor count — toward the owner-set goals. No spinner",
+        "stuck, no error."
+      ]
+    },
+    {
+      "id": "level-up",
+      "title": "LevelUp",
+      "updated": "2026-07-14",
+      "summary": "LevelUp is part of the Charging the Future app.",
+      "body": [
+        "Cohort listing with filters for `track`, `status`, and `startDate`.",
+        "Cohort detail view with curriculum, milestones, and enrollment affordance.",
+        "Enrollment flow with optional deposit policy and escrow split per milestone.",
+        "User dashboard with wallet balance, LevelUp escrow totals, active enrollments, and recent transactions."
+      ],
+      "howTo": [
+        "Learning cohorts with escrow-backed milestones — these are the can't-ship-broken checks. Member role",
+        "unless noted.",
+        "Cohort list loads.** Open LevelUp. Cohorts render with track, status, seats, and required",
+        "deposit — not a spinner or error."
+      ]
+    },
+    {
+      "id": "trust-transport",
+      "title": "TrustTransport",
+      "updated": "2026-07-14",
+      "summary": "TrustTransport is part of the Charging the Future app.",
+      "body": [
+        "Single landing decision flow for:",
+        "Ride,",
+        "Package,",
+        "Food."
+      ],
+      "howTo": [
+        "Plugin loads for a signed-in member**",
+        "Open `/apps/trust-transport` (web) or the TrustTransport screen (android). You should see the booking surface — mode selector, origin/destination fields, and your existing requests listed. No crash, no blank screen.",
+        "web ☐ android ☐",
+        "Plugin is auth-gated — unauthenticated users cannot access it**"
+      ]
+    },
+    {
+      "id": "lighthouse",
+      "title": "LightHouse",
+      "updated": "2026-07-17",
+      "summary": "LightHouse is part of the Charging the Future app.",
+      "body": [
+        "Route parity target for LightHouse home dashboard (`/apps/lighthouse`).",
+        "No profile is required to use LightHouse** (owner decision, 2026-06-12). Opening LightHouse goes",
+        "straight to the browse screen — there is no \"create a LightHouse profile\" gate and no no-profile",
+        "splash. (V3 uses one canonical identity with optional per-plugin extension data, not a standalone"
+      ],
+      "howTo": [
+        "Member role unless noted.",
+        "Opens straight to browse.** Open LightHouse. It lands on the property browse screen — no",
+        "\"create a LightHouse profile\" gate and no no-profile splash.",
+        "Listings load.** The browse list shows available active properties with real fields (title,"
+      ]
+    },
+    {
+      "id": "click-log",
+      "title": "ClickLog",
+      "updated": "2026-07-14",
+      "summary": "ClickLog is part of the Charging the Future app.",
+      "body": [
+        "Log incident (with optional location/notes)",
+        "View incident count and history",
+        "Delete own incidents",
+        "Mobile and web parity"
+      ],
+      "howTo": [
+        "A private, sign-in-only incident counter — these confirm logging works and stays private to the",
+        "member. Member role unless noted.",
+        "Counter loads.** Open ClickLog. The total count and recent-incident list render with real",
+        "numbers, not a spinner or error."
+      ]
+    },
+    {
+      "id": "recurring-activity",
+      "title": "Recurring Activity",
+      "updated": "2026-07-14",
+      "summary": "Recurring Activity is part of the Charging the Future app.",
+      "body": [
+        "Declare a new recurring activity with another member (owner side): counterparty + sector + currency +",
+        "cadence, plus an optional ServiceCredits value only when the currency is ServiceCredits. Created as",
+        "`pending`.",
+        "Confirm or decline a pending activity another member recorded with you (counterparty side). Only a"
+      ],
+      "howTo": [
+        "Sign in as a seeded member and navigate to `/apps/recurring-activity` (web) or open Recurring Activity on Android. The hub loads and shows at least the two confirmed seeded activities (one fiat housing tie, one ServiceCredits service tie).",
+        "web ☐ android ☐",
+        "The seeded ServiceCredits service activity shows `50 SC / month` — a declared value is visible. The seeded fiat housing activity shows a currency label and cadence but **no fiat amount anywhere on the row**.",
+        "web ☐ android ☐"
+      ]
+    },
+    {
+      "id": "gdp",
+      "title": "GDP",
+      "updated": "2026-07-16",
+      "summary": "GDP is part of the Charging the Future app.",
+      "body": [
+        "See the app to use GDP."
+      ],
+      "howTo": [
+        "Transparency-reporting plugin — these confirm the community figure shows and never reads as a",
+        "per-wallet money value. Member role unless noted.",
+        "Dashboard loads.** Open the GDP report. The headline community figure and total member count",
+        "render with numbers, not a spinner or error. There is no \"active members\" stat."
+      ]
+    }
+  ]
+}
