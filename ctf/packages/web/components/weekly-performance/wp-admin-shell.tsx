@@ -6,6 +6,7 @@ import { BarChart2, ChevronLeft, Download } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { MobileScreenHeader } from "@/components/shared/mobile-screen-header";
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import {
   getWeeklyPerformanceTokens,
   formatMetricValue,
@@ -124,6 +125,7 @@ export function WeeklyPerformanceAdminShell() {
         <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: t.TITLE }}>Weekly Performance Admin</h1>
         <div style={{ fontSize: 12, color: t.MUTED }}>Review weekly metrics and export.</div>
       </div>
+      <PluginUserShellButton href="/apps/weekly-performance" accent={t.ACCENT} />
       <span style={{ padding: "3px 8px", borderRadius: 6, background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", fontSize: 11, color: "#818CF8", fontWeight: 700, flexShrink: 0 }}>ADMIN</span>
     </div>
   );
@@ -213,7 +215,7 @@ export function WeeklyPerformanceAdminShell() {
     >
       {/* This shell renders its own desktop header (with a back chevron) above, so the shared header
           only supplies the mobile bar here — opt out of its desktop back to avoid a duplicate. */}
-      <MobileScreenHeader title="Weekly Performance Admin" accent={t.ACCENT} icon={<BarChart2 size={18} color={t.ACCENT} />} desktopBack={false} />
+      <MobileScreenHeader title="Weekly Performance Admin" accent={t.ACCENT} icon={<BarChart2 size={18} color={t.ACCENT} />} desktopBack={false} actions={<PluginUserShellButton href="/apps/weekly-performance" accent={t.ACCENT} />} />
       <div style={{ maxWidth: 880, margin: "0 auto" }}>
         {header}
         {body}

@@ -4,8 +4,8 @@
 // suggestion is reviewed before it joins the shared list, so the submit + success copy is
 // review-honest (the mockup's "added" framing assumes immediate publish).
 import { useState, type CSSProperties, type ReactNode } from 'react';
-import Link from 'next/link';
 import { ListChecks, Plus, ExternalLink, Send, CheckCircle, Tag, ChevronDown, ChevronLeft } from 'lucide-react';
+import { BackChevronButton } from '@/lib/nav/back-history';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { getWhatWorksTokens, type SuggestDraft, type WhatWorksProblemOption, type WhatWorksTokens } from './ww-shared';
@@ -94,9 +94,7 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Inter',system-ui", color: t.TITLE, overflow: 'hidden' }}>
       <div style={{ height: 56, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, background: t.HEADER, flexShrink: 0 }}>
-        <Link href="/apps" aria-label="Back to apps" style={{ width: 36, height: 36, borderRadius: 9, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.ACCENT, textDecoration: 'none', flexShrink: 0 }}>
-          <ChevronLeft size={18} />
-        </Link>
+        <BackChevronButton accent={t.ACCENT} size={36} />
         <ListChecks size={18} color={t.ACCENT} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 600 }}>What Works</div>

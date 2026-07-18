@@ -127,6 +127,8 @@ non-interactive rather than crashing.
 **Expected:** On web the refresh icon spins while loading; on android the pull-to-refresh spinner
 shows. Eligibility re-pulls and the cooldown state from the other session appears without closing and
 reopening the app. Refreshing never clears the current screen to the full-screen loading state.
+The header back chevron returns to the page you came from (falling back to All Apps when opened
+directly).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

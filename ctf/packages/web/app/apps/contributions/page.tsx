@@ -25,5 +25,5 @@ export default async function ContributionsPage() {
     return <ContributionsPublicShell pluginSlug="contributions" pluginName="Contributions" signInUrl={signInUrl} />;
   }
 
-  return <ContributionsShell />;
+  return <ContributionsShell isAdmin={decision.isAdmin} />;
 }

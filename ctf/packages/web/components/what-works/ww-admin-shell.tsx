@@ -4,11 +4,11 @@
 // the admin-owned problem categories. Dark admin design system (shared admin look), accent lime.
 // Mutations carry the CSRF header via adminMutate().
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { ThumbsUp } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import type { WhatWorksProductStatus } from 'lib/what-works/types';
 import { adminMutate, type AdminProblem, type AdminProduct } from './ww-admin-shared';
 import { getWhatWorksTokens } from './ww-shared';
@@ -208,7 +208,7 @@ export function WhatWorksAdminShell() {
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="WhatWorks Admin" accent={t.ACCENT} icon={<ThumbsUp size={18} color={t.ACCENT} />} />
+      <MobileScreenHeader title="WhatWorks Admin" accent={t.ACCENT} icon={<ThumbsUp size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/what-works" accent={t.ACCENT} />} />
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
@@ -222,11 +222,6 @@ export function WhatWorksAdminShell() {
           <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, color: '#6366F1', fontWeight: 700 }}>ADMIN</span>
         </div>
 
-        <div style={{ marginBottom: 16 }}>
-          <Link href="/apps/what-works" style={{ fontSize: 13, color: t.ACCENT, textDecoration: 'underline', textUnderlineOffset: 4 }}>
-            Open the WhatWorks list
-          </Link>
-        </div>
 
         {/* Snapshot */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>

@@ -1,11 +1,9 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import { resolveBackTarget } from '@/lib/nav/back-target';
+import { useSmartBack } from '@/lib/nav/back-history';
 import { MobileTopActions } from './mobile-top-actions';
 
 // A uniform on-brand top bar for screens that do not build their own — chiefly the admin shells,
@@ -26,20 +24,23 @@ export function MobileScreenHeader({
   accent,
   backHref = '/apps',
   desktopBack = true,
+  actions,
 }: {
   title: string;
   icon?: ReactNode;
   accent?: string;
   backHref?: string;
   desktopBack?: boolean;
+  // Extra header controls (e.g. an admin surface's "Member view" link) rendered on the right of
+  // both the mobile bar and the desktop slim bar.
+  actions?: ReactNode;
 }) {
   const isMobile = useIsMobile();
 
-  // One-level-up back destination, from the shared policy: admin area pages go to /admin, the admin
-  // directory goes home, and everything else uses the caller's fallback (/apps). This keeps the back
-  // control's destination and label consistent across every screen and breakpoint.
-  const pathname = usePathname();
-  const back = resolveBackTarget(pathname, backHref);
+  // History-aware back (owner decision, 2026-07-17): return to the previous in-app page when one
+  // exists; otherwise fall back to the shared one-level-up destination (resolveBackTarget via
+  // useSmartBack) so a deep-linked or freshly-opened screen still has a sensible way back.
+  const back = useSmartBack(backHref);
 
   // Derive translucent tints from the accent hex (#RRGGBB + alpha suffix). Fall back to neutral
   // surface tokens when no accent is supplied.
@@ -70,8 +71,9 @@ export function MobileScreenHeader({
           WebkitBackdropFilter: 'blur(8px)',
         }}
       >
-        <Link
-          href={back.href}
+        <button
+          type="button"
+          onClick={back.goBack}
           aria-label={back.label}
           style={{
             display: 'inline-flex',
@@ -83,13 +85,14 @@ export function MobileScreenHeader({
             background: chevronBg,
             border: `1px solid ${chevronBorder}`,
             color: chevronColor,
-            textDecoration: 'none',
+            cursor: 'pointer',
             fontSize: 13,
             fontWeight: 600,
           }}
         >
           <ChevronLeft size={18} aria-hidden="true" /> {back.label}
-        </Link>
+        </button>
+        {actions ? <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 8 }}>{actions}</span> : null}
       </div>
     );
   }
@@ -111,8 +114,9 @@ export function MobileScreenHeader({
         WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      <Link
-        href={back.href}
+      <button
+        type="button"
+        onClick={back.goBack}
         aria-label={back.label}
         style={{
           width: 38,
@@ -124,12 +128,13 @@ export function MobileScreenHeader({
           alignItems: 'center',
           justifyContent: 'center',
           color: chevronColor,
-          textDecoration: 'none',
+          cursor: 'pointer',
+          padding: 0,
           flexShrink: 0,
         }}
       >
         <ChevronLeft size={20} aria-hidden="true" />
-      </Link>
+      </button>
 
       {icon ? (
         <span
@@ -154,6 +159,7 @@ export function MobileScreenHeader({
         {title}
       </span>
 
+      {actions}
       <MobileTopActions />
     </div>
   );

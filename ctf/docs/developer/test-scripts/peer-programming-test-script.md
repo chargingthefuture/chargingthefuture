@@ -58,7 +58,7 @@ web ☐ android ☐
 1. Open `/apps/peer-programming` (web) or the PeerProgramming screen (android).
 2. Look at the room header area.
 
-**Expected:** The weekly topic title and guidance text are displayed. A participation summary (member count or cohort label such as "C1") is also visible. No placeholder or "undefined" text appears.
+**Expected:** The weekly topic title and guidance text are displayed. A participation summary (member count or cohort label such as "C1") is also visible. No placeholder or "undefined" text appears. On web, the header back chevron returns to the page you came from (falling back to All Apps when the screen was opened directly), and an admin viewing the member shell sees the "Admin" pill in the header; the admin screen header shows a "Member view" pill opening `/apps/peer-programming`.
 
 Result: web ☐ android ☐
 

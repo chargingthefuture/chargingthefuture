@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { ChevronLeft, Users } from "lucide-react";
+import { Users } from "lucide-react";
+import { BackChevronButton } from "@/lib/nav/back-history";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { BG, getPeerProgrammingTokens, type CohortSummary, type Message, type PeerProgrammingTokens, type Room, type RoomAccess, type Tab } from "./pp-shared";
@@ -341,9 +341,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
-            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: t.ACCENT_TINT_BG, border: `1px solid ${t.ACCENT_TINT_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}>
-              <ChevronLeft size={20} />
-            </Link>
+            <BackChevronButton accent={t.ACCENT} />
             <Users size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             {/* Title shrinks and truncates so the trailing controls always stay on screen */}
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>PeerProgramming</span>

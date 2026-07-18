@@ -178,6 +178,8 @@ Where applicable, a blocked pair cannot send a match request to each other.
 spinner shows. The listings (and on web also matches and the currency catalog) re-fetch and the change
 from the other session appears without closing and reopening the app. Refreshing never clears the screen
 to the full-screen loading skeleton — the current list stays visible until the new data lands.
+The header back chevron returns to the page you came from (falling back to All Apps when opened
+directly), and the admin screen header shows a "Member view" pill opening `/apps/lighthouse`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

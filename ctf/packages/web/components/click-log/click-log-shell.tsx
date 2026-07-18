@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { BackChevronButton } from "@/lib/nav/back-history";
 import type { ClickLogIncident } from "../../lib/click-log/types";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
@@ -13,7 +13,7 @@ import { ClickLogLogPanel } from "./click-log-log-panel";
 import { ClickLogIncidentList } from "./click-log-incident-list";
 import { ClickLogEmptyState } from "./click-log-empty-state";
 import { ClickLogLoading } from "./click-log-loading";
-import { AlertTriangle, ChevronLeft } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 
@@ -185,9 +185,7 @@ export function ClickLogShell() {
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
-            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}40`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}>
-              <ChevronLeft size={20} />
-            </Link>
+            <BackChevronButton accent={t.ACCENT} />
             <AlertTriangle size={18} color={t.ACCENT} style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               {/* Title and subtitle truncate so the trailing controls stay on screen */}

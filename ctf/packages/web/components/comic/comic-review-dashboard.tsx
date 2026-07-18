@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { useTheme } from '@/hooks/useTheme';
 import { getComicTokens } from './comic-shared';
 import type { ComicReviewItem, ComicTrainingStats } from '../../lib/comic/types';
@@ -328,6 +329,7 @@ export function ComicReviewDashboard() {
         accent={t.ACCENT}
         icon={<ShieldCheck size={18} color={t.ACCENT} />}
         desktopBack={false}
+        actions={<PluginUserShellButton href="/" accent={t.ACCENT} label="Commons" />}
       />
       <div className={`${styles.dashboard} ${selected ? styles.dashboardDetail : styles.dashboardList}`}>
         {/* Icon rail */}
@@ -426,6 +428,10 @@ export function ComicReviewDashboard() {
               <AlertTriangle size={12} /> {confidenceBand(selected.nluConfidence).label}
             </span>
           ) : null}
+          {/* Desktop-only: at phone width the shared mobile bar above already carries this pill. */}
+          <span className={styles.memberViewPill}>
+            <PluginUserShellButton href="/" accent={t.ACCENT} label="Commons" />
+          </span>
         </header>
 
         {error ? <div className={styles.errorBanner} role="status">{error}</div> : null}

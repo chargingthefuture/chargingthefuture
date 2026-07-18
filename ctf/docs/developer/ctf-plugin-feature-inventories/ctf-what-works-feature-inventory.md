@@ -163,6 +163,12 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 
 ## Change Log
 
+- 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
+  shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
+  the previous in-app page and falls back to All Apps when there is no in-app history. The admin
+  surface header gained the shared "Member view" pill (`PluginUserShellButton`) linking to
+  `/apps/what-works`. The member shell swapped its bespoke admin link for the shared Admin
+  shortcut (`PluginAdminButton`, admins only). UI-only; no schema, route, or contract change.
 - 2026-07-14: Added refresh controls (app-wide refresh rollout). Web: the shared `RefreshButton` now
   sits in the member shell's desktop header (after the search box) and the mobile-responsive header
   (before the shared top actions), wired to a `refreshAll` that re-runs `loadList()` and

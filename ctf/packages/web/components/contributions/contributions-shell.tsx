@@ -16,6 +16,7 @@ import {
 } from './contributions-shared';
 import { AppLoading } from '@/components/shared/app-loading';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { RefreshButton } from '@/components/shared/refresh-button';
 import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
 import { goalsFromFundraiser, GoalCard, GoalRow } from './contributions-drive-progress';
@@ -29,7 +30,7 @@ type MobileTab = 'drive' | 'contribute' | 'history';
 
 const CSRF_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' } as const;
 
-export function ContributionsShell() {
+export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getContributionsTokens(theme);
@@ -169,7 +170,7 @@ export function ContributionsShell() {
       />
     );
     return isMobile ? (
-      <MobileFrame t={t}>{confirmation}</MobileFrame>
+      <MobileFrame t={t} isAdmin={isAdmin}>{confirmation}</MobileFrame>
     ) : (
       <DesktopFrame t={t}>
         <ContributionsSidebar t={t} active="contribute" />
@@ -192,7 +193,7 @@ export function ContributionsShell() {
 
   if (isMobile) {
     return (
-      <MobileFrame t={t} tab={mobileTab} onTab={setMobileTab} onRefresh={() => loadData()}>
+      <MobileFrame t={t} tab={mobileTab} onTab={setMobileTab} onRefresh={() => loadData()} isAdmin={isAdmin}>
         {mobileTab === 'drive' && (
           <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
             <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.7, margin: '0 0 16px' }}>
@@ -228,7 +229,10 @@ export function ContributionsShell() {
         <div ref={driveRef} style={{ marginBottom: 28, scrollMarginTop: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 6 }}>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: t.TITLE }}>{driveTitle}</h1>
-            <RefreshButton onRefresh={() => loadData()} title="Refresh" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <PluginAdminButton href="/admin/contributions" isAdmin={isAdmin} accent={t.ACCENT} />
+              <RefreshButton onRefresh={() => loadData()} title="Refresh" />
+            </div>
           </div>
           <p style={{ margin: '0 0 18px', fontSize: 13, color: t.MUTED, lineHeight: 1.7, maxWidth: 620 }}>
             If every member who can give a little does, the platform&apos;s costs are covered — and it stays free for everyone.
@@ -368,7 +372,7 @@ function ContributionsSidebar({
   );
 }
 
-function MobileFrame({ t, children, tab, onTab, onRefresh }: { t: ContributionsTokens; children: React.ReactNode; tab?: MobileTab; onTab?: (tab: MobileTab) => void; onRefresh?: () => Promise<void> }) {
+function MobileFrame({ t, children, tab, onTab, onRefresh, isAdmin }: { t: ContributionsTokens; children: React.ReactNode; tab?: MobileTab; onTab?: (tab: MobileTab) => void; onRefresh?: () => Promise<void>; isAdmin?: boolean }) {
   const tabs: { key: MobileTab; label: string }[] = [
     { key: 'drive', label: 'Drive' },
     { key: 'contribute', label: 'Contribute' },
@@ -376,7 +380,12 @@ function MobileFrame({ t, children, tab, onTab, onRefresh }: { t: ContributionsT
   ];
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
-      <MobileScreenHeader title="Contributions" accent={t.ACCENT} icon={<Gift size={18} color={t.ACCENT} />} />
+      <MobileScreenHeader
+        title="Contributions"
+        accent={t.ACCENT}
+        icon={<Gift size={18} color={t.ACCENT} />}
+        actions={<PluginAdminButton href="/admin/contributions" isAdmin={isAdmin} accent={t.ACCENT} />}
+      />
       <div style={{ padding: '12px 16px 10px', background: t.SURFACE, borderBottom: `1px solid ${t.BORDER_SOLID}`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <div style={{ width: 26, height: 26, borderRadius: 7, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

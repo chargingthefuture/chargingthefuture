@@ -6,6 +6,7 @@ import { Megaphone, Send, Archive, Link2, Pencil, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import type { Announcement, FeedConfig } from 'lib/feed/types';
 import { getFeedAnnouncementsTokens, type FeedAnnouncementsTokens } from './feed-announcements-shared';
 
@@ -170,7 +171,7 @@ export function FeedAnnouncementsAdminShell({
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="Feed & Announcements Admin" accent={t.ACCENT} icon={<Megaphone size={18} color={t.ACCENT} />} />
+      <MobileScreenHeader title="Feed & Announcements Admin" accent={t.ACCENT} icon={<Megaphone size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/" accent={t.ACCENT} label="Commons" />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>

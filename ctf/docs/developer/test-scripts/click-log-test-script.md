@@ -95,6 +95,8 @@ string. Trailing whitespace on a note is trimmed before the length check.
 the pull-to-refresh spinner shows and then the list updates. After step 3 the change (new or removed
 incident, updated total) appears without closing and reopening the app. Refreshing never clears the
 current screen to the full-screen loading state.
+The header back chevron returns to the page you came from (falling back to All Apps when opened
+directly).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

@@ -273,6 +273,8 @@ Result: web ☐ android ☐
 3. In another session, change the balance (e.g. send this member credits), then refresh as above.
 
 **Expected:** The refresh icon spins while loading (web) or the pull-to-refresh spinner shows (android), the wallet re-pulls from the server, and after step 3 the new balance appears without closing and reopening the app. Refreshing never clears the current screen to the full-screen loading state.
+The header back chevron returns to the page you came from (falling back to All Apps when opened
+directly), and the admin screen header shows a "Member view" pill opening `/apps/service-credits`.
 
 Result: web ☐ android ☐
 

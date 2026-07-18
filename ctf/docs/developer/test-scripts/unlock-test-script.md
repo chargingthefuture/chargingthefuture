@@ -64,6 +64,9 @@ regardless of the `feature-unlock-early-commons-access` flag.
 submission form, and the re-submit field on a rejected status), for every member regardless of A/B
 bucket or flag state. The link opens the network's Quora space. There is no longer an "Ask in the
 Commons" link on the Unlock screen — help points to Quora.
+The header back chevron returns to the page you came from (falling back to All Apps when opened
+directly), admins see the shared Admin pill in the member shell header, and the admin screen
+header shows a "Member view" pill opening `/apps/unlock`.
 **Result:** web ☐ android ☐ — notes:
 
 ### UNLOCK-M2 · Verify prompt on the Commons (A/B treatment)
