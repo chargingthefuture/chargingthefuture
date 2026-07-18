@@ -399,6 +399,23 @@
   display: block;
 }
 
+/* Per-stat accent colors. These replace the old inline style={{ color }} on the three hero stats,
+   which the comic theme could not reach (inline styles win over a data-theme rule), so the neon
+   purple/cyan leaked onto the warm comic newsprint. As classes the default palette is preserved
+   pixel-for-pixel while the comic override below swaps them to the warm ink palette. */
+.heroStatMembers {
+  color: #a78bfa;
+}
+
+.heroStatGdp {
+  /* --ctf-gold is #38bdf8 in the default theme — identical to the old inline value. */
+  color: var(--ctf-gold);
+}
+
+.heroStatOpport {
+  color: #34d399;
+}
+
 .heroStatLabel {
   font-size: 11px;
   color: var(--ctf-text-subtle);
@@ -626,7 +643,14 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 4px;
-  scrollbar-width: thin;
+  /* Hide the scrollbar (matches .chatChipRow) so it doesn't reserve a gutter on desktop where the
+     chips fit without scrolling; the row still scrolls horizontally on a phone when they overflow. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.conciergeChipRail::-webkit-scrollbar {
+  display: none;
 }
 
 .conciergeChip {
@@ -653,7 +677,9 @@
 
 .chatTime {
   font-size: 11px;
-  color: #374151;
+  /* Token, not the old hardcoded #374151 (~2.8:1 on the panel — below the 4.5:1 AA minimum, so
+     timestamps were effectively invisible). --ctf-text-subtle (#6b7280) clears AA on this bg. */
+  color: var(--ctf-text-subtle);
 }
 
 /* Signed-out Commons: Discord-style message rows. Each post is a full-width row — avatar on the
@@ -1123,7 +1149,8 @@
   margin: 0 0 14px;
   text-align: center;
   font-size: 11px;
-  color: #374151;
+  /* Same fix as .chatTime: the footnote was hardcoded to the sub-AA #374151 and could not be read. */
+  color: var(--ctf-text-subtle);
   flex-shrink: 0;
 }
 
@@ -1183,7 +1210,16 @@
   color: #F3F4F6;
   font-size: 12px;
   font-weight: 600;
-  padding: 7px 10px;
+  /* Extra right padding leaves room for the custom chevron drawn below. */
+  padding: 7px 28px 7px 10px;
+  /* Drop the OS chevron (which flashes light-mode chrome on some systems) and draw our own so the
+     closed control matches the dark custom UI. The dropdown list itself is still OS-native. */
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
 }
 
 .appsSortSelect:focus {
@@ -1224,6 +1260,13 @@
   transition: border-color 0.15s, background 0.15s;
 }
 
+/* The card is a div[role="button"]; without this it had only the browser default focus outline,
+   which the dark card swallows. A visible ring makes keyboard selection legible. */
+.appCard:focus-visible {
+  outline: 2px solid rgba(124, 58, 237, 0.7);
+  outline-offset: 2px;
+}
+
 .appCardTop {
   display: flex;
   align-items: flex-start;
@@ -1255,9 +1298,16 @@
   color: var(--ctf-text-muted);
 }
 
+/* Status badge ("Coming soon" / "Alpha" / "Beta"). Bumped from 10px to a legible 11px pill; the
+   per-plugin accent color is still applied inline, so only geometry/legibility change here. */
 .appCardLive {
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .appCardName {
@@ -1403,21 +1453,27 @@
   font-size: 10px;
 }
 
+/* Secondary (outline) sign-in on the right rail. The primary gradient CTA is the larger
+   "Sign In to Get Started" in the chat panel; above 1280px both are visible at once, so the rail
+   one is demoted to an outline to remove the competing-primaries read. (Comic theme overrides this
+   to its own flat-ink CTA treatment below, unchanged.) */
 .profileLoginBtn {
   display: inline-block;
   padding: 8px 16px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #7C3AED 0%, #0EA5E9 100%);
-  color: #fff;
+  background: transparent;
+  border: 1px solid rgba(124, 58, 237, 0.45);
+  color: #A78BFA;
   text-decoration: none;
   font-size: 13px;
   font-weight: 600;
   margin-top: 8px;
-  transition: opacity 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .profileLoginBtn:hover {
-  opacity: 0.9;
+  background: rgba(124, 58, 237, 0.12);
+  border-color: rgba(124, 58, 237, 0.7);
 }
 
 .rightRailSectionTitle {
@@ -1960,11 +2016,19 @@
   height: 6px;
   border-radius: 50%;
   background: #38BDF8;
+  /* Staggered pulse so the "Reviewing for safety" card reads as in-progress, not frozen. The old
+     static opacities (0.35/0.6/0.85) held still and looked broken. Staggered by animation-delay. */
+  animation: ctf-dot-pulse 1.4s ease-in-out infinite;
 }
 
-.comicPendingDot:nth-child(1) { opacity: 0.35; }
-.comicPendingDot:nth-child(2) { opacity: 0.6; }
-.comicPendingDot:nth-child(3) { opacity: 0.85; }
+.comicPendingDot:nth-child(1) { animation-delay: 0s; }
+.comicPendingDot:nth-child(2) { animation-delay: 0.2s; }
+.comicPendingDot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes ctf-dot-pulse {
+  0%, 80%, 100% { opacity: 0.25; transform: scale(0.9); }
+  40% { opacity: 1; transform: scale(1); }
+}
 
 .comicPendingText {
   font-size: 13px;
@@ -2408,6 +2472,17 @@
   background: var(--ctf-surface);
   border: 1.5px solid var(--ctf-border);
   box-shadow: var(--ctf-elevation-shadow);
+}
+
+/* Hero stat accents in comic: no purple, no blue (§6). Members/GDP take the warm gold; Opportunity
+   keeps the shared success green. (.heroStatGdp already resolves to --ctf-gold, so it flips on its
+   own; Members and Opportunity are mapped here.) */
+:global([data-theme='comic']) .heroStatMembers {
+  color: var(--ctf-gold);
+}
+
+:global([data-theme='comic']) .heroStatOpport {
+  color: var(--ctf-success);
 }
 
 /* User chat bubble gradient → flat ink panel + cream border. */
