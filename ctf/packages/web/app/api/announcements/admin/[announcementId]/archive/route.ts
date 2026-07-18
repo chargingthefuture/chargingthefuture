@@ -35,13 +35,21 @@ export async function POST(request: Request, { params }: RouteParams) {
       result: 'success',
       errorCategory: null,
     });
-    return NextResponse.json({ ok: true, announcement }, { status: 200 });
+    // The command contract (announcements.archive) declares { announcementId, status, archivedAt }
+    // as output. There is no separate archived_at column; archive stamps updated_at, so that is the
+    // archive timestamp.
+    return NextResponse.json(
+      { ok: true, announcementId: announcement.id, status: announcement.status, archivedAt: announcement.updatedAtIso },
+      { status: 200 },
+    );
   } catch (error) {
     reportError(error, { area: 'announcements', op: 'admin_announcementid_archive' });
     const message = error instanceof Error ? error.message : 'error';
     const status = message === 'announcement_not_found' ? 404 : 503;
     const code = message === 'announcement_not_found' ? FEED_ERROR_CODE.notFound : FEED_ERROR_CODE.persistenceUnavailable;
 
+    // `status: 'allow'` is the policy-gate decision (the actor was an authorized admin), not the
+    // operation outcome — that is carried by `result: 'failure'` below.
     logFeedAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',
