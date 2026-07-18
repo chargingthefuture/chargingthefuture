@@ -9,7 +9,9 @@ import {
 } from 'lib/contributor-access/weights';
 
 // Owner-tunable config editor: threshold, gate minimums, per-event weights from the fixed key
-// list, and the channel_open toggle (disabled — the gated channel ships in a later slice).
+// list, and the channel_open toggle. The toggle only becomes usable once the eligible count meets
+// the open minimum (the launch gate — also enforced server-side with a 409); closing an open
+// channel is always allowed.
 
 export type ContributorAccessConfigView = {
   weights: Record<string, number>;
@@ -27,6 +29,7 @@ type FormState = {
   minDistinctPlugins: string;
   minCounterparties: string;
   minEligibleToOpenChannel: string;
+  channelOpen: boolean;
   weights: Record<string, string>;
 };
 
@@ -41,6 +44,7 @@ function toFormState(config: ContributorAccessConfigView): FormState {
     minDistinctPlugins: String(config.minDistinctPlugins),
     minCounterparties: String(config.minCounterparties),
     minEligibleToOpenChannel: String(config.minEligibleToOpenChannel),
+    channelOpen: config.channelOpen,
     weights,
   };
 }
@@ -79,18 +83,20 @@ function NumberField({
 export function ConfigEditorSection({
   t,
   config,
+  eligibleCount,
   saving,
   onSave,
 }: {
   t: ContributorAccessTokens;
   config: ContributorAccessConfigView;
+  eligibleCount: number;
   saving: boolean;
   onSave: (update: ContributorAccessConfigView) => void;
 }) {
   const [form, setForm] = useState<FormState>(() => toFormState(config));
   const [formError, setFormError] = useState<string | null>(null);
 
-  const setField = (field: keyof Omit<FormState, 'weights'>, value: string) =>
+  const setField = (field: keyof Omit<FormState, 'weights' | 'channelOpen'>, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
   const setWeight = (key: string, value: string) =>
     setForm((prev) => ({ ...prev, weights: { ...prev.weights, [key]: value } }));
@@ -128,9 +134,15 @@ export function ConfigEditorSection({
       minDistinctPlugins,
       minCounterparties,
       minEligibleToOpenChannel,
-      channelOpen: config.channelOpen,
+      channelOpen: form.channelOpen,
     });
   };
+
+  // The launch gate, mirrored client-side for the disabled state and its note (the server
+  // enforces it again with a 409). Closing an open channel is always allowed.
+  const minNeeded = parseNonNegative(form.minEligibleToOpenChannel) ?? config.minEligibleToOpenChannel;
+  const canOpen = eligibleCount >= minNeeded;
+  const toggleLocked = !form.channelOpen && !config.channelOpen && !canOpen;
 
   return (
     <section style={{ marginBottom: 20, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
@@ -150,10 +162,21 @@ export function ConfigEditorSection({
         ))}
       </div>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: t.MUTED, marginBottom: 12 }}>
-        <input type="checkbox" checked={config.channelOpen} disabled readOnly />
-        Channel open — channel ships in a later slice
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: t.MUTED, marginBottom: toggleLocked ? 6 : 12 }}>
+        <input
+          type="checkbox"
+          checked={form.channelOpen}
+          disabled={toggleLocked}
+          onChange={(event) => setForm((prev) => ({ ...prev, channelOpen: event.target.checked }))}
+        />
+        Channel open — eligible members see the gated #contributors channel in the Commons
       </label>
+      {toggleLocked ? (
+        <p style={{ fontSize: 12, color: t.MUTED, margin: '0 0 12px 24px' }}>
+          Locked until {minNeeded} members are eligible ({eligibleCount} now) — the channel opens populated, never
+          empty. Save a lower minimum first if you mean to open earlier.
+        </p>
+      ) : null}
 
       {formError ? (
         <div role="status" style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 12 }}>

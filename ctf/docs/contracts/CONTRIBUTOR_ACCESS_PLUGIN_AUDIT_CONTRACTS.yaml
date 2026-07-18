@@ -106,6 +106,29 @@ auditEvents:
     timestamp: rfc3339
     actorId: internal_service
     pluginId: contributor-access
+    command: contributor-access.channel.membership.sync
+    commandVersion: 1.0.0
+    purpose: channel_membership_sync
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - contributor_access_config
+      - contributor_access_eligibility
+    targetContext:
+      channelId: ctf-contributors
+      addedCount: member_count
+      removedCount: member_count
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: internal_service
+    pluginId: contributor-access
     command: contributor-access.eligibility.recompute
     commandVersion: 1.0.0
     purpose: eligibility_recompute
@@ -132,3 +155,10 @@ changelog:
       contributor_access_audit_trail row (actor, command, policy status, reason, target,
       metadata); the internal recompute is bearer-secret gated and its response carries counts
       only - never per-member data or a score.
+  - date: 2026-07-18
+    change: >-
+      Gated channel slice. Adds the channel.membership.sync audit event (sync outcome counts;
+      failures surface as the invoking command's channelSyncWarning) and the audited
+      contributor_access_channel_below_minimum deny on config.update. The member channel
+      reads/posts/reactions/join are deliberately NOT written to the audit trail - same posture
+      as the Commons hub routes (member chat is not admin-audited content).

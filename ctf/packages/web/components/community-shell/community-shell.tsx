@@ -10,9 +10,11 @@ import type { TrustUserExtension } from '../../lib/trust/types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { HubChannelInfo } from '../../lib/hub/types';
 import type { PluginSortMode, ShellCurrentUser, ShellSection, ShellStats } from './shell-types';
+import { GATED_CHANNEL_SLUG } from '../../lib/contributor-access/gated-channel-shared';
 import { ShellIconRail } from './shell-icon-rail';
 import { ShellSidebar } from './shell-sidebar';
 import { ShellChatPanel } from './shell-chat-panel';
+import { GatedChatPanel } from './gated-chat-panel';
 import { ShellAppsPanel } from './shell-apps-panel';
 import { ShellRightRail } from './shell-right-rail';
 import { ContributionsBanner } from '../contributions/contributions-banner';
@@ -353,8 +355,35 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           {loadError ? (
             <section className={styles.usernameAlert} role="alert">{loadError}</section>
           ) : null}
+          {/* Channel switch pills — phone widths only (the desktop channel rail is hidden there).
+              Rendered only when there is genuinely more than one channel to pick from, i.e. when
+              the server-filtered list includes the gated contributor channel for this member.
+              Non-eligible members never receive that entry, so they never see this row change. */}
+          {section === 'chat' && channels.length > 1 ? (
+            <div className={styles.channelSwitchRow} role="tablist" aria-label="Channels">
+              {channels.map((ch) => {
+                const isActive = (activeChannel ?? channels[0]?.slug) === ch.slug;
+                return (
+                  <button
+                    key={ch.slug}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    className={isActive ? `${styles.channelSwitchBtn} ${styles.channelSwitchBtnActive}` : styles.channelSwitchBtn}
+                    onClick={() => handleChannelSelect(ch.slug)}
+                  >
+                    #{ch.slug}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
           {section === 'chat' ? (
-            <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} signInUrl={signInUrl} />
+            activeChannel === GATED_CHANNEL_SLUG ? (
+              <GatedChatPanel currentUser={currentUser} />
+            ) : (
+              <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} signInUrl={signInUrl} />
+            )
           ) : (
             <ShellAppsPanel
               plugins={filteredPlugins}

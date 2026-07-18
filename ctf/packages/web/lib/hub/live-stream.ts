@@ -14,6 +14,9 @@ export type HubLiveCredentials = {
   streamToken: string;
   streamUserId: string;
   streamChannelId: string;
+  // Stream channel type. Omitted for the Commons ('messaging'); the gated contributor channel
+  // passes its own distinct type ('ctf-gated').
+  streamChannelType?: string;
 };
 
 // A member currently typing in the Commons, identified by Stream user id and a display name to
@@ -64,7 +67,7 @@ export async function connectHubLive(
     client = StreamChat.getInstance(credentials.streamApiKey);
     await client.connectUser({ id: credentials.streamUserId }, credentials.streamToken);
 
-    const channel = client.channel('messaging', credentials.streamChannelId);
+    const channel = client.channel(credentials.streamChannelType ?? 'messaging', credentials.streamChannelId);
     await channel.watch();
 
     const selfId = credentials.streamUserId;

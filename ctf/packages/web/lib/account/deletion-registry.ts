@@ -423,6 +423,20 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       retain('service_credits_account_deletion_reclaims', 'The reclaim record produced by account deletion.'),
     ],
   },
+  {
+    slug: 'contributor-access',
+    name: 'Contributor Access',
+    dataSummary: 'Your contributor-channel messages, reactions, and earned-eligibility record.',
+    serviceScopeSupported: false,
+    tables: [
+      // Deleting the account deletes the earned eligibility row too — by design, deletion resets
+      // the barrier (the proposal's answer to a perp who deletes and returns).
+      del('contributor_access_channel_post_reactions', 'user_id', 'Your reactions in the contributor channel.'),
+      del('contributor_access_channel_posts', 'author_user_id', 'Your messages in the contributor channel.'),
+      del('contributor_access_eligibility', 'user_id', 'Your earned-eligibility record.'),
+      retain('contributor_access_audit_trail', 'Admin-action accountability trail.'),
+    ],
+  },
 ];
 
 /** Look up a plugin's deletion entry by slug. */

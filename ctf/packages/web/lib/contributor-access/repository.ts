@@ -130,6 +130,39 @@ export async function listEligibleMembers(): Promise<EligibleMember[]> {
   }));
 }
 
+// Categorical membership check for the gated channel: eligible AND not revoked (a for-cause
+// revoke already sets eligible = FALSE, so the flag alone is the whole answer).
+export async function isMemberEligible(userId: string): Promise<boolean> {
+  const result = await queryDb<{ user_id: string }>(
+    `SELECT user_id FROM contributor_access_eligibility WHERE user_id = $1 AND eligible = TRUE`,
+    [userId],
+  );
+  return result.rows.length > 0;
+}
+
+// The two membership sets the Stream sync needs: members to hold in the gated channel (eligible)
+// and members to remove (revoked for cause). Ids only — no score, no snapshot.
+export async function listChannelMembershipTargets(): Promise<{
+  eligibleUserIds: string[];
+  revokedUserIds: string[];
+}> {
+  const result = await queryDb<{ user_id: string; eligible: boolean; revoked_for_cause: boolean }>(
+    `SELECT user_id, eligible, revoked_for_cause
+     FROM contributor_access_eligibility
+     WHERE eligible = TRUE OR revoked_for_cause = TRUE`,
+  );
+  const eligibleUserIds: string[] = [];
+  const revokedUserIds: string[] = [];
+  for (const row of result.rows) {
+    if (row.eligible) {
+      eligibleUserIds.push(row.user_id);
+    } else if (row.revoked_for_cause) {
+      revokedUserIds.push(row.user_id);
+    }
+  }
+  return { eligibleUserIds, revokedUserIds };
+}
+
 export async function countEligibleMembers(): Promise<number> {
   const result = await queryDb<{ v: string }>(
     `SELECT COUNT(*)::text AS v FROM contributor_access_eligibility WHERE eligible = TRUE`,

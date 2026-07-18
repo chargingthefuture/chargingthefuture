@@ -1,0 +1,104 @@
+import { NextResponse } from 'next/server';
+import { requireGatedChannelAccess } from '../_lib';
+import { ensureMutationCsrf } from '../../admin/_lib';
+import {
+  createGatedChannelPost,
+  listGatedChannelMessages,
+  validateGatedChannelPostBody,
+  type GatedChannelMessage,
+} from 'lib/contributor-access/channel-repository';
+import { feedAuthorHandle } from 'lib/feed/author-handle';
+import { reportError } from 'lib/observability/report';
+
+// Gated channel message history (GET) and posting (POST). Same architecture as the Commons: the
+// database is the message source of truth; Stream is only the live layer (see ../join). Threads
+// are Signal-style quoted replies — the same mechanism the Commons uses. There is no image or
+// file upload path anywhere in this channel (proposal hard guardrail), and the Stream channel
+// type has uploads disabled as well.
+
+export async function GET() {
+  const gate = await requireGatedChannelAccess();
+  if (!gate.allowed) {
+    return gate.response;
+  }
+
+  try {
+    const messages = await listGatedChannelMessages(gate.auth.userId);
+    return NextResponse.json({ ok: true, messages }, { status: 200 });
+  } catch (error) {
+    reportError(error, { area: 'contributor-access', op: 'channel_messages_read' });
+    return NextResponse.json(
+      { ok: false, message: 'Unable to read channel messages.' },
+      { status: 503 },
+    );
+  }
+}
+
+type MessageRequestBody = {
+  text?: unknown;
+  replyToPostId?: unknown;
+};
+
+export async function POST(request: Request) {
+  const gate = await requireGatedChannelAccess();
+  if (!gate.allowed) {
+    return gate.response;
+  }
+
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
+  let body: MessageRequestBody;
+  try {
+    body = (await request.json()) as MessageRequestBody;
+  } catch {
+    return NextResponse.json({ ok: false, message: 'Invalid JSON payload.' }, { status: 400 });
+  }
+
+  const text = typeof body.text === 'string' ? body.text.trim() : '';
+  const replyToPostId = typeof body.replyToPostId === 'string' && body.replyToPostId.trim().length > 0
+    ? body.replyToPostId.trim()
+    : null;
+  if (!text || !validateGatedChannelPostBody(text)) {
+    return NextResponse.json(
+      { ok: false, message: 'Message text is required and must fit the channel length limit.' },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const authorUsername = gate.auth.username ?? null;
+    const result = await createGatedChannelPost({
+      authorUserId: gate.auth.userId,
+      authorUsername,
+      body: text,
+      replyToPostId,
+    });
+
+    const message: GatedChannelMessage = {
+      id: result.postId,
+      authorUserId: gate.auth.userId,
+      authorUsername,
+      displayName: feedAuthorHandle(authorUsername, gate.auth.userId),
+      body: text,
+      createdAtIso: result.createdAtIso,
+      // Echoed as null; the next polled read resolves the authoritative quote from the stored
+      // reply_to_post_id (the client keeps its own optimistic quote meanwhile).
+      quotedMessage: null,
+      reactions: [],
+    };
+    return NextResponse.json({ ok: true, message }, { status: 201 });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : 'unknown_error';
+    if (code === 'reply_target_not_found') {
+      return NextResponse.json(
+        { ok: false, message: 'The message you are replying to is no longer available.' },
+        { status: 400 },
+      );
+    }
+    reportError(error, { area: 'contributor-access', op: 'channel_message_create' });
+    return NextResponse.json({ ok: false, message: 'Unable to send message.' }, { status: 503 });
+  }
+}
