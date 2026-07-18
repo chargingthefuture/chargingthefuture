@@ -50,7 +50,7 @@ _Last updated: 2026-07-18_
 
 One shared audio room where members can talk and chat.
 
-Chyme is a single shared audio room. Join the call to talk with other members, or type in the chat panel alongside it.
+Chyme is a single shared audio room. Join the call to talk with other members, or type in the chat panel.
 
 You start muted and can mute or unmute your own microphone. You can send a Tip in ServiceCredits to another participant from their tile.
 
