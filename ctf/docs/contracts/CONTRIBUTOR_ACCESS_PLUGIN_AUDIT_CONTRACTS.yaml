@@ -148,6 +148,46 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: contributor-access
+    command: contributor-access.channel.post.delete
+    commandVersion: 1.0.0
+    purpose: channel_messaging
+    policyDecision:
+      status: allow_or_deny
+      reason: author_delete_or_actor_not_post_owner
+    dataClassesAccessed:
+      - contributor_access_channel_posts
+    targetContext:
+      postId: channel_post_id
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: contributor-access
+    command: contributor-access.channel.post.moderator-delete
+    commandVersion: 1.0.0
+    purpose: channel_messaging
+    policyDecision:
+      status: allow
+      reason: admin_moderation_delete
+    dataClassesAccessed:
+      - contributor_access_channel_posts
+    targetContext:
+      postId: channel_post_id
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
 changelog:
   - date: 2026-07-18
     change: >-
@@ -162,3 +202,11 @@ changelog:
       contributor_access_channel_below_minimum deny on config.update. The member channel
       reads/posts/reactions/join are deliberately NOT written to the audit trail - same posture
       as the Commons hub routes (member chat is not admin-audited content).
+  - date: 2026-07-18
+    change: >-
+      Channel post delete audit events. Deletions ARE audited (unlike reads/posts/reactions):
+      the author path writes contributor-access.channel.post.delete (reason author_delete; a
+      denied non-owner attempt writes the same command with policy status deny and reason
+      actor_not_post_owner), and the admin/moderator path writes the distinct command
+      contributor-access.channel.post.moderator-delete (reason admin_moderation_delete), so
+      moderator removals are always distinguishable from author removals in the trail.

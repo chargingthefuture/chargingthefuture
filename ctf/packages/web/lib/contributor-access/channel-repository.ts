@@ -1,6 +1,12 @@
 import { queryDb } from 'lib/db/postgres';
 import { feedAuthorHandle } from 'lib/feed/author-handle';
-import { GATED_MAX_MESSAGE_LENGTH, isGatedReactionEmoji } from './gated-channel-shared';
+import {
+  GATED_MAX_MESSAGE_LENGTH,
+  GATED_MAX_MESSAGE_URLS,
+  GATED_POST_RATE_LIMIT,
+  GATED_POST_RATE_WINDOW_MINUTES,
+  isGatedReactionEmoji,
+} from './gated-channel-shared';
 
 // Gated contributor channel — message history storage. Mirrors the Commons architecture exactly:
 // the app database is the source of truth for messages (custom UI + polling) and Stream is only
@@ -46,6 +52,9 @@ type ReactionRow = {
 };
 
 // Recent messages, oldest-first, with quoted-reply references and the viewer's reaction state.
+// Reads exclude soft-deleted posts and filter to moderation_status 'accepted' (mirroring the
+// Commons column); a quote whose source post was since deleted or not accepted resolves to
+// nothing rather than resurfacing hidden content.
 export async function listGatedChannelMessages(
   viewerUserId: string,
   limit = 50,
@@ -57,7 +66,12 @@ export async function listGatedChannelMessages(
             q.author_username AS quoted_author_username,
             q.body AS quoted_body
      FROM contributor_access_channel_posts p
-     LEFT JOIN contributor_access_channel_posts q ON q.id = p.reply_to_post_id
+     LEFT JOIN contributor_access_channel_posts q
+       ON q.id = p.reply_to_post_id
+      AND q.deleted_at IS NULL
+      AND q.moderation_status = 'accepted'
+     WHERE p.deleted_at IS NULL
+       AND p.moderation_status = 'accepted'
      ORDER BY p.created_at DESC, p.id DESC
      LIMIT $1`,
     [Math.max(1, Math.min(limit, 100))],
@@ -103,30 +117,106 @@ export function validateGatedChannelPostBody(body: string): boolean {
   return trimmed.length > 0 && trimmed.length <= GATED_MAX_MESSAGE_LENGTH;
 }
 
-// Create a post (optionally as a Signal-style reply). Throws 'reply_target_not_found' when the
-// quoted post no longer exists.
+// Content gate — the same checks the Commons runs on community posts (passesFeedModeration in
+// lib/feed/repository.ts): non-empty, no raw `<`/`>` (blocks pasted markup/script), and at most
+// GATED_MAX_MESSAGE_URLS links. A failing post is refused outright (422 at the route), exactly
+// like the Commons — it is never stored, so there is nothing for other members to ever see.
+export function passesGatedChannelModeration(text: string): boolean {
+  if (text.length === 0) {
+    return false;
+  }
+  if (/[<>]/.test(text)) {
+    return false;
+  }
+  const urlCount = (text.match(/https?:\/\//g) ?? []).length;
+  return urlCount <= GATED_MAX_MESSAGE_URLS;
+}
+
+// Posting rate limit — the same shape and threshold as the Commons community-post limit
+// (evaluateFeedRateLimit: count the member's rows inside the window; 8 per 30 minutes).
+// Soft-deleted rows still count, so delete-and-repost cannot bypass the window.
+async function evaluateGatedChannelPostRateLimit(authorUserId: string): Promise<boolean> {
+  const result = await queryDb<{ total: string }>(
+    `SELECT COUNT(*)::text AS total
+     FROM contributor_access_channel_posts
+     WHERE author_user_id = $1
+       AND created_at >= NOW() - ($2::text || ' minutes')::interval`,
+    [authorUserId, String(GATED_POST_RATE_WINDOW_MINUTES)],
+  );
+  return Number.parseInt(result.rows[0]?.total ?? '0', 10) < GATED_POST_RATE_LIMIT;
+}
+
+// Create a post (optionally as a Signal-style reply). Runs the Commons-mirrored content gate and
+// per-member rate limit first. Throws 'content_policy_violation' when the content gate fails,
+// 'rate_limit_exceeded' when the member is over the posting window, and 'reply_target_not_found'
+// when the quoted post no longer exists (or was deleted / not accepted).
 export async function createGatedChannelPost(input: {
   authorUserId: string;
   authorUsername: string | null;
   body: string;
   replyToPostId: string | null;
 }): Promise<{ postId: string; createdAtIso: string }> {
+  const body = input.body.trim();
+  if (!passesGatedChannelModeration(body)) {
+    throw new Error('content_policy_violation');
+  }
   if (input.replyToPostId) {
     const target = await queryDb<{ id: string }>(
-      `SELECT id FROM contributor_access_channel_posts WHERE id = $1`,
+      `SELECT id FROM contributor_access_channel_posts
+       WHERE id = $1 AND deleted_at IS NULL AND moderation_status = 'accepted'`,
       [input.replyToPostId],
     );
     if (target.rows.length === 0) {
       throw new Error('reply_target_not_found');
     }
   }
+  const allowed = await evaluateGatedChannelPostRateLimit(input.authorUserId);
+  if (!allowed) {
+    throw new Error('rate_limit_exceeded');
+  }
   const result = await queryDb<{ id: string; created_at: string }>(
-    `INSERT INTO contributor_access_channel_posts (id, author_user_id, author_username, body, reply_to_post_id)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO contributor_access_channel_posts (id, author_user_id, author_username, body, reply_to_post_id, moderation_status)
+     VALUES ($1, $2, $3, $4, $5, 'accepted')
      RETURNING id, created_at::text`,
-    [crypto.randomUUID(), input.authorUserId, input.authorUsername, input.body.trim(), input.replyToPostId],
+    [crypto.randomUUID(), input.authorUserId, input.authorUsername, body, input.replyToPostId],
   );
   return { postId: result.rows[0].id, createdAtIso: result.rows[0].created_at };
+}
+
+// Soft-delete a post: author, or an admin acting as moderator (the disclosed moderator power).
+// Content is hidden from every read, not erased — deleted_at/deleted_by record when and by whom.
+// Returns which path applied so the route can audit them under distinct commands. Throws
+// 'post_not_found' when the post does not exist or is already deleted, and 'not_post_owner' when
+// a non-admin tries to delete someone else's post.
+export async function deleteGatedChannelPost(input: {
+  postId: string;
+  actorId: string;
+  isAdmin: boolean;
+}): Promise<'author' | 'admin'> {
+  // A malformed id is treated as not-found (mirrors the Commons' normalizeUuid handling) instead
+  // of surfacing a database cast error.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.postId)) {
+    throw new Error('post_not_found');
+  }
+  const post = await queryDb<{ author_user_id: string }>(
+    `SELECT author_user_id FROM contributor_access_channel_posts
+     WHERE id = $1 AND deleted_at IS NULL`,
+    [input.postId],
+  );
+  if (post.rows.length === 0) {
+    throw new Error('post_not_found');
+  }
+  const isAuthor = post.rows[0].author_user_id === input.actorId;
+  if (!isAuthor && !input.isAdmin) {
+    throw new Error('not_post_owner');
+  }
+  await queryDb(
+    `UPDATE contributor_access_channel_posts
+     SET deleted_at = NOW(), deleted_by = $2
+     WHERE id = $1 AND deleted_at IS NULL`,
+    [input.postId, input.actorId],
+  );
+  return isAuthor ? 'author' : 'admin';
 }
 
 // Toggle the viewer's reaction on a post. Returns the resulting state, or throws
@@ -140,7 +230,8 @@ export async function toggleGatedChannelReaction(input: {
     throw new Error('invalid_emoji');
   }
   const post = await queryDb<{ id: string }>(
-    `SELECT id FROM contributor_access_channel_posts WHERE id = $1`,
+    `SELECT id FROM contributor_access_channel_posts
+     WHERE id = $1 AND deleted_at IS NULL AND moderation_status = 'accepted'`,
     [input.postId],
   );
   if (post.rows.length === 0) {

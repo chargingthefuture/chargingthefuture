@@ -20,6 +20,16 @@ export const GATED_CHANNEL_MODERATOR_DISCLOSURE = 'Moderators can read this chan
 // Longer messages than the Commons (FEED_MAX_COMMUNITY_POST_LENGTH = 1200).
 export const GATED_MAX_MESSAGE_LENGTH = 4000;
 
+// Link cap for the content gate — the same member cap the Commons applies to community posts
+// (FEED_MAX_COMMUNITY_POST_URLS = 3). Checked server-side in the channel repository.
+export const GATED_MAX_MESSAGE_URLS = 3;
+
+// Posting rate limit — the same threshold the Commons applies to community posts
+// (evaluateFeedRateLimit on feed_community_posts: 8 posts per 30 minutes per member).
+// Enforced server-side by counting recent rows, exactly like the Commons.
+export const GATED_POST_RATE_LIMIT = 8;
+export const GATED_POST_RATE_WINDOW_MINUTES = 30;
+
 // Richer reaction set than the Commons' six (FEED_REACTION_EMOJIS). Fixed list — reactions are
 // validated server-side against it. No image upload exists anywhere in this channel (proposal
 // hard guardrail: no images in v1).
