@@ -5,7 +5,8 @@
 > being used as intended. Two consumers will read it once settled: the **Weekly Performance rebuild**
 > (the dashboard shows these instead of the current near-useless set) and the **gated-channel
 > eligibility engine** (see `TRUSTED_CHANNELS_AND_CONTRIBUTOR_BADGE_PROPOSAL.md`). Nothing in this
-> file is implemented yet; rows marked **locked** are owner-decided.
+> file is implemented yet. **All rows are now owner-locked (2026-07-18)** — the metrics pass is
+> complete; what remains is implementation in the blocked order at the bottom.
 
 ## Principles (owner-confirmed)
 
@@ -50,18 +51,18 @@ Weekly Performance** with the metrics below.
 | Directory | **Coverage:** claimed, active profiles with ≥1 skill (findable members), plus growth over the window | `directory_profiles` claimed + active + non-deleted, joined to ≥1 `directory_profile_skills` | **Locked (in WP)** |
 | Mood | **Adoption:** check-ins per window + community average (already computed today — keep). Aggregate only, never per-member. | `mood_submissions` count, `AVG(mood_value)` | **Locked (in WP)** |
 | ClickLog | **Adoption, aggregate only:** incidents logged per window + distinct members logging. Never per-member detail on the dashboard — it is a private personal tally. | `click_log_incidents` count + distinct `user_id` count | **Locked (in WP)** |
-| GentlePulse | Engagement: completed plays, ratings submitted | `gentle_pulse_play_events`, `gentle_pulse_ratings` | Proposed |
-| Workforce | Lens accuracy/coverage (derived gap model) — no event of its own | derived from Directory + Skills Taxonomy | Proposed |
-| Skills Taxonomy | Vocabulary coverage (active sectors / job titles / skills) | `skills_taxonomy_*` counts | Proposed |
-| GDP | None of its own — it is the downstream reporter (Community Value Index) of the value table above | `gdp_value_index` | Proposed |
+| GentlePulse | **None — no Weekly Performance stats** (owner ruling) | — | **Locked (absent)** |
+| Skills Taxonomy | **None — no Weekly Performance stats** (owner ruling) | — | **Locked (absent)** |
+| Workforce | **People recruited, week over week, toward the 2,000,000-recruited goal.** Workforce aids in reaching the GDP goal; its dashboard row shows recruited count + weekly delta + progress toward 2M. | `workforce_recruited_current_count` (registry; derived from active Directory profiles) | **Locked (in WP)** |
+| GDP | **Community Value Index, week over week, toward the $300B goal.** The goal is reaching 300B in community value; the dashboard row shows the index + weekly delta + progress toward 300B. (The index is an estimate, never money/price — keep the existing honest framing.) | `gdp_value_index` (registry; `buildLiveGdpReport`) | **Locked (in WP)** |
 
 ## What happens next (blocked order)
 
-1. Owner finishes locking the remaining **Proposed** rows (GentlePulse, Workforce, Skills Taxonomy,
-   GDP presence/absence on the dashboard).
-2. Register the locked metrics in the canonical metric registry (`ctf/config/canonical_metrics.yaml`,
+1. Register the locked metrics in the canonical metric registry (`ctf/config/canonical_metrics.yaml`,
    rule 121) — most value events are not registered today.
-3. Rebuild Weekly Performance around this table (replace the current metric set; fix LevelUp to
-   completion; add Directory/Mood/ClickLog rows; respect the Foundation privacy constraint).
-4. Only then: the gating eligibility engine consumes the value table with owner-set weights — the
+2. Rebuild Weekly Performance around this table: replace the current metric set; fix LevelUp to
+   completion; add Directory/Mood/ClickLog rows; add the two goal rows (GDP Community Value Index
+   week-over-week toward $300B, Workforce recruited week-over-week toward 2,000,000); drop
+   GentlePulse and Skills Taxonomy entirely; respect the Foundation privacy constraint.
+3. Only then: the gating eligibility engine consumes the value table with owner-set weights — the
    admission bar is deliberately high (owner directive; see the trusted-channels proposal).
