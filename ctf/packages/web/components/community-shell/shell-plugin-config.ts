@@ -14,6 +14,7 @@ const PLUGIN_VISUALS: Record<string, PluginVisuals> = {
   foundation: { emoji: '🪛', color: '#F59E0B', bg: '#1B1101' },
   'peer-programming': { emoji: '🏘️', color: '#6EE7B7', bg: '#0C1914' },
   'gross-domestic-product': { emoji: '🗺️', color: '#06B6D4', bg: '#011417' },
+  gdp: { emoji: '🗺️', color: '#06B6D4', bg: '#011417' },
   'service-credits': { emoji: '⚙️', color: '#A855F7', bg: '#12091B' },
   workforce: { emoji: '💼', color: '#F97316', bg: '#1B0D02' },
   'gentle-pulse': { emoji: '💚', color: '#34D399', bg: '#061711' },
@@ -24,6 +25,13 @@ const PLUGIN_VISUALS: Record<string, PluginVisuals> = {
   'skills-taxonomy': { emoji: '🧩', color: '#818CF8', bg: '#0E0F1B' },
   'weekly-performance': { emoji: '📊', color: '#6366F1', bg: '#01162e' },
   'click-log': { emoji: '📍', color: '#EC4899', bg: '#1A0811' },
+  'level-up': { emoji: '🎯', color: '#10B981', bg: '#04140D' },
+  'what-works': { emoji: '🧰', color: '#84CC16', bg: '#0F1405' },
+  beacon: { emoji: '📡', color: '#F59E0B', bg: '#1B1101' },
+  contributions: { emoji: '🎁', color: '#F472B6', bg: '#1A0812' },
+  'recurring-activity': { emoji: '🔁', color: '#2DD4BF', bg: '#04140F' },
+  trust: { emoji: '🛡️', color: '#0EA5E9', bg: '#02121B' },
+  unlock: { emoji: '🔓', color: '#C084FC', bg: '#120A1B' },
 };
 
 const FALLBACK: PluginVisuals = { emoji: '🔌', color: '#9CA3AF', bg: '#1a1a2e' };
