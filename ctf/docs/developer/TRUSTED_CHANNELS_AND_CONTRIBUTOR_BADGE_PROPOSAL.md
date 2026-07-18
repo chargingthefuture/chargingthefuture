@@ -148,9 +148,15 @@ of splitting members into tiny rooms. So the gated space is differentiated by **
 A hidden perk that nobody can find is not a perk. One earnable badge solves discovery and gives
 members something to aim for — and "you can earn it too" keeps it from reading as a clique.
 
-- **One categorical badge** on the Directory profile, fitting the existing badge pattern (for example
-  the "Community generated" badge). Binary: a member has it or does not. **No tiers, no points, no
-  leaderboard, no visible ranking.**
+- **It is a designed award emblem, not a UI chip.** A commissioned-quality vector seal
+  (challenge-coin / die-cut sticker feel — something a member would print and put on a laptop),
+  because it is an award, not a plain interface distinction. A first concept exists (a navy-and-gold
+  seal, working name "Keeper of the Commons": a beacon-flame woven from many contributor nodes on a
+  "Commons" baseline, ringed "Charging the Future · Keeper of the Commons · Earned"). Motif, palette,
+  and name are still open.
+- **One categorical badge** on the Directory profile, fitting the existing badge slot (alongside, for
+  example, the "Community generated" badge). Binary: a member has it or does not. **No tiers, no
+  points, no leaderboard, no visible ranking.**
 - **Same concept as channel access.** The eligibility that grants channel access is the same thing
   that grants the badge — one system, two surfaces.
 - **Honest click-through copy** (needs a brand-voice pass): say what is true, e.g. *"This member is a
