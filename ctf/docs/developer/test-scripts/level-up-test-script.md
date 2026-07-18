@@ -109,6 +109,8 @@ trainer appears with tracks Tech and Finance. No action mutates a trainer.
 (android), cohorts and the wallet balance re-pull from the server, and after step 3 the change
 appears without closing and reopening the app. Refreshing never clears the current screen to the
 full-screen loading state.
+The header back chevron returns to the page you came from (falling back to All Apps when opened
+directly), and the admin screen header shows a "Member view" pill opening `/apps/level-up`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

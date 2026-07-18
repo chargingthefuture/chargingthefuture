@@ -145,6 +145,8 @@ the existing "UX/UI Designers" occupation, a job title, not a skill).
 spinner shows. The hierarchy re-fetches and the change from the other session appears without closing and
 reopening the app. The currently selected sector stays selected, and refreshing never clears the screen
 to the full-screen loading state — the current columns stay visible until the new data lands.
+The header back chevron returns to the page you came from (falling back to All Apps when opened
+directly).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

@@ -199,6 +199,11 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 
 ## Change Log
 
+- 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
+  shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
+  the previous in-app page and falls back to All Apps when there is no in-app history. The admin
+  surface header gained the shared "Member view" pill (`PluginUserShellButton`) linking to
+  `/apps/peer-programming`. UI-only; no schema, route, or contract change.
 - 2026-07-17: **Send a cohort message on Android (issue #1597).** The Android Session tab (`packages/mobile/src/features/peer-programming/pp-session-tab.tsx`) gained a message composer for cohort members, closing the gap where the mobile Session tab was read-only. A bottom-pinned text input + send button calls the already-present `postMessage(cohortId, body)` client (`POST /api/peer-programming/messages`, headers `Content-Type: application/json` + `x-ctf-csrf: '1'`; author derived server-side from the Clerk bearer). Parity with the web composer: non-empty, max 2000 chars (`PEER_PROGRAMMING_MAX_MESSAGE_LENGTH`, now exported from `api.ts`), clears on success, disables while sending, readable inline error on failure. On success the parent (`PeerProgramming.tsx`) re-pulls the room via `load(true)` so the new message appears. The composer is hidden for listen-in / read-only viewers. UI-only; no schema, route, or contract change (the route already existed).
 - 2026-07-17: **Contract: `cohort.weekly.select` `dataAccess` now lists `unlock_verification_submissions` (code-review finding #1590).** The admin assignment route (`POST /api/peer-programming/admin/assignments/run`) filters the recent-login set through `listUnlockedUserIds` (`lib/unlock/repository.ts`), which reads `unlock_verification_submissions` — only `approved_full` members may be placed into cohorts. That read predates this entry (added with the unlocked-members filter) but was never declared in the command contract's `dataAccess` list, so the contract under-reported what the command touches. Documentation-only: the contract now matches the code; no route, schema, or behavior change.
 - 2026-07-17: **Code-review batch: route validation, contract-shape, and request-race fixes (findings #1585–#1589).**

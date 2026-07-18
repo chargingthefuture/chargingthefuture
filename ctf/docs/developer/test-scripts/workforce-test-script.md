@@ -151,6 +151,8 @@ unavailable the rows fall back to neutral dashes rather than fabricated figures.
 spinner shows. The dashboard, sector, skill-level, and training-gap numbers re-fetch and the change from
 the other session appears without closing and reopening the app. Refreshing never clears the screen to
 the full-screen loading state — the current dashboard stays visible until the new data lands.
+The header back chevron returns to the page you came from (falling back to All Apps when opened
+directly), and the admin screen header shows a "Member view" pill opening `/apps/workforce`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### WF-10 · Community Planning team rosters

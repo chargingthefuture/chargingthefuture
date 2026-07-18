@@ -126,6 +126,8 @@ a redemption value for ServiceCredits or any token. Currencies, where named, app
 the server; on android the pull-to-refresh spinner shows and then the dashboard updates. After step 3
 the change appears without closing and reopening the app. Refreshing never clears the current screen
 to the full-screen loading state.
+The header back chevron returns to the page you came from (falling back to All Apps when opened
+directly).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

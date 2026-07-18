@@ -125,6 +125,8 @@ off). The server-side snooze endpoint still exists but has no UI entry point for
 (android), the drive progress and history re-pull from the server, and after step 3 the change
 appears without closing and reopening the app. Refreshing never clears the current screen to the
 full-screen loading state.
+Admins see the shared Admin pill in the member shell header, and the admin screen header shows a
+"Member view" pill opening `/apps/contributions`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

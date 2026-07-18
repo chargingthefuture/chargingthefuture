@@ -289,6 +289,10 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-07-17: **Admin↔member navigation (app-wide sweep).** The admin surface header gained the
+  shared "Member view" pill (`PluginUserShellButton`) linking to `/apps/contributions`. The member
+  shell header now shows the shared Admin shortcut (`PluginAdminButton`, admins only). UI-only; no
+  schema, route, or contract change.
 - 2026-07-14: Added refresh controls (app-wide refresh rollout). Web: the shared `RefreshButton` now
   sits next to the desktop drive heading and in the mobile-responsive frame's title band (the shared
   `MobileScreenHeader` cannot carry per-shell actions), wired to the shell's existing `loadData`
