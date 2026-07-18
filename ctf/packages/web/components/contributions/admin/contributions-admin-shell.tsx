@@ -11,6 +11,7 @@ import type {
 } from '@/lib/contributions/types';
 import { FONT_FAMILY, getContributionsTokens } from '../contributions-shared';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import {
   createCycle,
   fetchConfig,
@@ -198,7 +199,7 @@ export function ContributionsAdminShell() {
   if (isMobile) {
     return (
       <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
-        <MobileScreenHeader title="Contributions Admin" accent={t.ACCENT} icon={<Gift size={18} color={t.ACCENT} />} />
+        <MobileScreenHeader title="Contributions Admin" accent={t.ACCENT} icon={<Gift size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/contributions" accent={t.ACCENT} />} />
         <div style={{ padding: '12px 16px 10px', background: t.SURFACE, borderBottom: `1px solid ${t.BORDER_SOLID}`, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 26, height: 26, borderRadius: 7, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

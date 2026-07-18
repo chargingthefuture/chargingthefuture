@@ -7,6 +7,7 @@ import type { SafetyReportStatus } from 'lib/safety/constants';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { getSafetyTokens } from './safety-shared';
 
 // Admin chrome (shared admin look, rule 131) comes from the theme tokens. Safety reports are
@@ -157,7 +158,7 @@ export function SafetyAdminShell() {
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="Safety Admin" accent={t.ACCENT} icon={<ShieldAlert size={18} color={t.ACCENT} />} />
+      <MobileScreenHeader title="Safety Admin" accent={t.ACCENT} icon={<ShieldAlert size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/" accent={t.ACCENT} label="App home" />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>

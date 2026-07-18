@@ -232,6 +232,10 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-07-17: **Admin↔member navigation (app-wide sweep).** The admin surface header gained the
+  shared "Member view" pill (`PluginUserShellButton`) linking to `/apps/beacon`. The member shell
+  header now shows the shared Admin shortcut (`PluginAdminButton`, admins only). UI-only; no
+  schema, route, or contract change.
 - 2026-07-14: Evaluated for the app-wide refresh-controls rollout and deliberately skipped — no
   manual refresh control added on either platform. Beacon is a watch-first live surface with no
   member-facing data list or stats view, and both viewers (web `beacon-viewer.tsx` and Android

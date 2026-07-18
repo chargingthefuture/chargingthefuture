@@ -136,6 +136,11 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 ## 8) Change Log
 
+- 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
+  shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
+  the previous in-app page and falls back to All Apps when there is no in-app history. The admin
+  surface header gained the shared "Member view" pill (`PluginUserShellButton`) linking to
+  `/apps/weekly-performance`. UI-only; no schema, route, or contract change.
 - 2026-07-15: **Deleted the unreachable public visitor shell (code-review finding #1535).** Weekly
   Performance is admin-only, and the `/apps/[pluginSlug]` route 404s a non-admin before the
   public-shell branch runs, so `weekly-performance-public-shell.tsx` could never render — dead code,

@@ -5,7 +5,6 @@
 // disputes) into one page. Admin access is enforced server-side by the page wrapper and by
 // every API route; this shell only renders the operator controls. Dark admin design system
 // (rule 131): single centered responsive column. No credits→fiat equivalence is shown anywhere.
-import Link from 'next/link';
 import { Coins } from 'lucide-react';
 import { ServiceCreditsGovernancePanel } from './sca-governance-panel';
 import { ServiceCreditsTreasuryPanel } from './sca-treasury-panel';
@@ -16,6 +15,7 @@ import { ServiceCreditsWalletStatusPanel } from './sca-wallet-status-panel';
 import { ServiceCreditsLedgerStatus } from './sca-ledger-status';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { useTheme } from '@/hooks/useTheme';
 import { getServiceCreditsTokens } from './sc-shared';
 
@@ -35,7 +35,7 @@ export function ServiceCreditsAdminShell() {
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="ServiceCredits Admin" accent={t.ACCENT} icon={<Coins size={18} color={t.ACCENT} />} />
+      <MobileScreenHeader title="ServiceCredits Admin" accent={t.ACCENT} icon={<Coins size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/service-credits" accent={t.ACCENT} />} />
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div
@@ -88,11 +88,6 @@ export function ServiceCreditsAdminShell() {
         <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, margin: '0 0 8px' }}>
           Governance, treasury, and dispute controls for the ServiceCredits ledger. Every action is
           written to the audit trail and asks you to confirm before it commits.
-        </p>
-        <p style={{ fontSize: 13, margin: '0 0 16px' }}>
-          <Link href="/apps/service-credits" style={{ color: t.ACCENT, textDecoration: 'none', fontWeight: 600 }}>
-            Open the plugin shell
-          </Link>
         </p>
 
         <ServiceCreditsLedgerStatus />

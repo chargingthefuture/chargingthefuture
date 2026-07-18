@@ -13,11 +13,11 @@
 // POST /api/beacon/[id]/go-live, POST /api/beacon/[id]/end, POST /api/beacon/[id]/moderate, and the
 // member chat token route for the admin's own chat view.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { Radio, Copy, Check } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { BeaconHostStage, type BeaconHostCredentials } from './beacon-host-stage';
 import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
@@ -239,7 +239,7 @@ export function BeaconAdminShell() {
         color: t.TITLE,
       }}
     >
-      <MobileScreenHeader title="Beacon Admin" accent={t.ACCENT} icon={<Radio size={18} color={t.ACCENT} />} />
+      <MobileScreenHeader title="Beacon Admin" accent={t.ACCENT} icon={<Radio size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/beacon" accent={t.ACCENT} />} />
       <div style={{ maxWidth: 980, margin: '0 auto', padding: '32px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Radio size={22} style={{ color: t.ACCENT }} />
@@ -247,7 +247,6 @@ export function BeaconAdminShell() {
         </div>
         <p style={{ color: t.SUBTLE, fontSize: 14, marginTop: 4 }}>
           Go live with a one-way broadcast. Watching is public; chatting needs a signed-in member.
-          {' '}<Link href="/apps/beacon" style={{ color: t.ACCENT }}>Open the public viewer</Link>.
         </p>
 
         {error ? <div style={{ ...bannerStyle(t), color: '#F87171', borderColor: 'rgba(239,68,68,0.35)' }}>{error}</div> : null}

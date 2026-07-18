@@ -10,7 +10,6 @@
 // them yet — see the inventory's Gaps section). The cohort list is read-only
 // here; cohort creation already lives in the trainer/admin plugin shell.
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { TrendingUp } from 'lucide-react';
 import {
   idempotencyKey,
@@ -23,6 +22,7 @@ import { getLevelUpTokens, type LevelUpTokens } from './lu-shared';
 import { useTheme } from '@/hooks/useTheme';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 
 type AdjustOutcome = { ok: boolean; adjustment?: unknown };
 
@@ -187,7 +187,7 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="LevelUp Admin" accent={t.ACCENT} icon={<TrendingUp size={18} color={t.ACCENT} />} />
+      <MobileScreenHeader title="LevelUp Admin" accent={t.ACCENT} icon={<TrendingUp size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/level-up" accent={t.ACCENT} />} />
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
@@ -379,11 +379,6 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
           )}
         </div>
 
-        <p style={{ fontSize: 13, marginTop: 16 }}>
-          <Link href="/apps/level-up" style={{ color: t.ACCENT, textDecoration: 'none', fontWeight: 600 }}>
-            Open plugin shell
-          </Link>
-        </p>
       </div>
     </div>
   );

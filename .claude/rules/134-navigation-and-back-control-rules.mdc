@@ -8,36 +8,61 @@ agent invents for one screen. This has been shipped wrong more than once (a stra
 pill on the AI Review Dashboard, a stacked back-bar, a screen with no back at all), so it is now a
 hard rule. Read this before adding, moving, or "fixing" any back button or screen header.
 
+**Policy update (owner-directed, 2026-07-17): back is history-first.** The in-app back control now
+returns to the **previous in-app page** when there is one, and only falls back to the tailored
+one-level-up destination when there is no in-app history (e.g. the installed web app opened straight
+onto a deep link). The earlier "always one-level-up, never history" rule is superseded. The shared
+pieces implement this — nothing changes for callers, and the ban on hand-rolled back controls stands.
+
 ## The one shared way (mandatory)
 
-There are exactly two shared pieces. Use them; never hand-roll a back control.
+There are exactly three shared pieces. Use them; never hand-roll a back control.
 
 1. **`MobileScreenHeader`** (`components/shared/mobile-screen-header.tsx`) — the standard top bar:
    an accent-tinted rounded-square **back chevron** on the far left, the plugin's **brand icon**, the
    **screen title**, and the shared **report-bug / settings / account** cluster (`MobileTopActions`)
    on the right. It **self-gates on the breakpoint**: at phone width it renders the full bar; on
    desktop it renders only a slim back bar (or nothing when `desktopBack={false}`). Drop it in
-   unconditionally and let it pick the right bar.
+   unconditionally and let it pick the right bar. Its optional `actions` prop renders extra header
+   controls (e.g. an admin surface's "Member view" link) on both breakpoints.
 2. **`PluginRailFooter`** (`components/shared/plugin-rail-footer.tsx`) — the bottom of a plugin's
-   **desktop left icon rail**: back-to-apps, account & settings, and the account menu. A screen that
+   **desktop left icon rail**: back, account & settings, and the account menu. A screen that
    has a desktop icon rail already gets its desktop back control from this footer.
+3. **`BackChevronButton`** (`lib/nav/back-history.tsx`) — the standalone accent-tinted chevron for a
+   member shell that builds its own phone-width header instead of using `MobileScreenHeader`. Use it
+   in place of any hand-rolled `<Link href="/apps">` chevron.
 
-Both resolve their destination through **`resolveBackTarget(pathname)`** (`lib/nav/back-target.ts`) —
-the single one-level-up policy (an `/admin/*` page → `/admin`; `/admin` → home; `/account/*` →
-`/account`; everything else → all apps). **Never compute a back destination by hand** and never call
-`router.back()` for the in-app back control (that is browser history, not the tailored one-level-up).
+All three resolve behavior through **`useSmartBack()`** (`lib/nav/back-history.tsx`): previous
+in-app page when the per-tab history stack has one (real `router.back()`, so scroll/state restore),
+else the one-level-up fallback from **`resolveBackTarget(pathname)`** (`lib/nav/back-target.ts` —
+an `/admin/*` page → `/admin`; `/admin` → home; `/account/*` → `/account`; everything else → all
+apps). The history stack is maintained by **`NavHistoryTracker`**, mounted once in the root layout —
+do not mount it again. **Never compute a back destination by hand** and never call `router.back()`
+directly outside `useSmartBack` (raw history back can exit the app when there is no in-app history).
+
+## Admin ↔ member navigation (mandatory pair)
+
+- **Every admin surface links to its plugin's member shell** via the shared
+  **`PluginUserShellButton`** (`components/shared/plugin-user-shell-button.tsx`) — a small
+  accent-tinted "Member view" pill in the admin header (pass it through `MobileScreenHeader`'s
+  `actions` prop on rail-less admin shells). Admin surfaces whose member experience is the Commons
+  (comic review, feed announcements) link to `/`.
+- **Every member plugin shell shows the shared `PluginAdminButton`** (admin-only, renders nothing
+  for non-admins) in its header when the plugin has an admin surface, linking to `/admin/<area>`.
 
 ## How to wire it (by screen shape)
 
 - **Rail-less screen (most admin shells, simple pages):** render `<MobileScreenHeader title=… accent=…
-  icon=… />` as the first element. It carries the back control on both breakpoints. Done. Follow a
-  shipped sibling such as `socket-relay-admin-shell.tsx` or `bug-reports-admin-shell.tsx`.
+  icon=… actions={<PluginUserShellButton …/>} />` as the first element. It carries the back control on
+  both breakpoints. Done. Follow a shipped sibling such as `socket-relay-admin-shell.tsx` or
+  `bug-reports-admin-shell.tsx`.
 - **Screen with a desktop left icon rail (e.g. the AI Review Dashboard, community shell):** the rail's
   `PluginRailFooter` is the desktop back, and the rail is hidden at phone width — so render
   `<MobileScreenHeader … desktopBack={false} />` so the mobile header appears on phones and nothing
-  duplicates on desktop. When the screen is a full-height flex/grid, wrap it so the sticky header sits
-  above the content and the panes fill the remaining space (`height: 100%` of a `flex: 1` parent, not a
-  raw `100vh`/`100dvh` that would overflow by the header's height). Follow `contributions-shell.tsx`.
+  duplicates on desktop, or use `BackChevronButton` inside the shell's own phone-width header. When
+  the screen is a full-height flex/grid, wrap it so the sticky header sits above the content and the
+  panes fill the remaining space (`height: 100%` of a `flex: 1` parent, not a raw `100vh`/`100dvh`
+  that would overflow by the header's height). Follow `contributions-shell.tsx`.
 - **Android (React Native):** the app already shows a persistent top navigator on every screen, so a
   member always has a way back. Do not add a second bespoke back control there; keep parity by relying
   on that navigator.
@@ -45,17 +70,19 @@ the single one-level-up policy (an `/admin/*` page → `/admin`; `/admin` → ho
 ## Forbidden (never ship these)
 
 - A hand-rolled back affordance: a custom "Back to …" pill/button, a bare arrow, a text link, or a raw
-  `<Link href="/admin">` styled as a back control, when `MobileScreenHeader` / `PluginRailFooter`
-  already cover the screen.
+  `<Link href="/apps">` styled as a back control, when `MobileScreenHeader` / `PluginRailFooter` /
+  `BackChevronButton` already cover the screen.
 - A screen with **no** way back at phone width (the icon rail is hidden on mobile — that is exactly
   when the shared mobile header is required).
 - A second, stacked, or duplicated back control (e.g. a mobile header **and** a bespoke pill; a desktop
   rail back **and** a desktop `MobileScreenHeader` back — use `desktopBack={false}` to opt out).
-- Inventing the back destination or label inline instead of `resolveBackTarget`.
+- Inventing the back destination or label inline, calling `router.back()` directly, or mounting a
+  second `NavHistoryTracker`.
 
 ## Why this exists
 
 Members and admins are non-technical and use the app mostly on a phone (often installed to the home
 screen, where there is no browser back button). A screen with no back, or with a different-looking
 back on every screen, strands them. One shared control in one place means the way back is always in
-the same spot and looks the same everywhere — and an agent never has to design a back button again.
+the same spot, looks the same everywhere, and — since 2026-07-17 — behaves like the back button
+members already know: it returns to where they just were, not to a fixed hub.

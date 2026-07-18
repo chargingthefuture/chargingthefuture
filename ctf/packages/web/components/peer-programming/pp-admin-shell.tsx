@@ -15,6 +15,7 @@ import { Code2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import type { AssignmentRunResult, PeerProgrammingCohort, PeerProgrammingTopic, SingleOpenCohortMode } from './pp-admin-shared';
 import { ppAdminMutate } from './pp-admin-shared';
 import { getPeerProgrammingTokens } from './pp-shared';
@@ -215,7 +216,7 @@ export function PeerProgrammingAdminShell() {
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="PeerProgramming Admin" accent={t.ACCENT} icon={<Code2 size={18} color={t.ACCENT} />} />
+      <MobileScreenHeader title="PeerProgramming Admin" accent={t.ACCENT} icon={<Code2 size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/peer-programming" accent={t.ACCENT} />} />
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div
@@ -265,14 +266,6 @@ export function PeerProgrammingAdminShell() {
           </span>
         </div>
 
-        <div style={{ marginBottom: 16 }}>
-          <Link
-            href="/apps/peer-programming"
-            style={{ fontSize: 13, fontWeight: 600, color: t.ACCENT, textDecoration: 'none' }}
-          >
-            Open the cohort room →
-          </Link>
-        </div>
 
         {error ? (
           <div

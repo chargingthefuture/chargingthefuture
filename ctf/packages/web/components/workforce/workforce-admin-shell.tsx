@@ -6,6 +6,7 @@ import { Briefcase } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { getWorkforceTokens, type WorkforceTokens } from './workforce-shared';
 import type { WorkforceConfig, WorkforceDashboard } from 'lib/workforce/types';
 
@@ -143,7 +144,7 @@ export function WorkforceAdminShell({
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="Workforce Admin" accent={t.ACCENT} icon={<Briefcase size={18} color={t.ACCENT} />} />
+      <MobileScreenHeader title="Workforce Admin" accent={t.ACCENT} icon={<Briefcase size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/workforce" accent={t.ACCENT} />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>

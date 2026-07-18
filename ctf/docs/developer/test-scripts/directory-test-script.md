@@ -189,6 +189,8 @@ android, if `APP_URL` is unset the share control is simply absent (no crash).
 spinner shows. The list re-fetches and the change from the other session appears without closing and
 reopening the app. Refreshing never clears the screen to the full-screen loading skeleton — the current
 list stays visible until the new data lands.
+The header back chevron returns to the page you came from (falling back to All Apps when opened
+directly), and the admin screen header shows a "Member view" pill opening `/apps/directory`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

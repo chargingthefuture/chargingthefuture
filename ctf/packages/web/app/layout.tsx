@@ -10,6 +10,7 @@ import '@fontsource/inter/800.css';
 import '@fontsource/inter/900.css';
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/hooks/useAuth';
+import { NavHistoryTracker } from '@/lib/nav/back-history';
 import { ThemeProvider } from '@/hooks/useTheme';
 import {
   getClerkRuntimeOptions,
@@ -90,7 +91,10 @@ export default function RootLayout({
           {...(afterSignOutUrl ? { afterSignOutUrl } : {})}
         >
           <AuthProvider>
-            <ThemeProvider>{children}</ThemeProvider>
+            <ThemeProvider>
+              <NavHistoryTracker />
+              {children}
+            </ThemeProvider>
           </AuthProvider>
         </ClerkProvider>
       </body>

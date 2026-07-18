@@ -6,6 +6,7 @@ import { Bug, ExternalLink } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { getBugReportsTokens } from './bug-reports-shared';
 import type { BugReportStatus, BugReportRiskLevel } from 'lib/bug-reports/constants';
 import type { BugReportRiskFlag } from 'lib/bug-reports/sanitize';
@@ -164,7 +165,7 @@ export function BugReportsAdminShell() {
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="Bug Reports Admin" accent={t.ACCENT} icon={<Bug size={18} color={t.ACCENT} />} />
+      <MobileScreenHeader title="Bug Reports Admin" accent={t.ACCENT} icon={<Bug size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/bug-reporting" accent={t.ACCENT} />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>

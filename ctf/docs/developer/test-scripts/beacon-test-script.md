@@ -57,6 +57,8 @@ recording URL.
 2. Open the last replay.
 **Expected:** The idle screen shows "No live event right now" plus the last replay. Opening the replay
 plays the recording. On android the HLS player runs only in an EAS dev/production build (not Expo Go).
+Admins see the shared Admin pill in the member shell header, and the admin screen header shows a
+"Member view" pill opening `/apps/beacon`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### BCN-2 · Watch a live broadcast (public)

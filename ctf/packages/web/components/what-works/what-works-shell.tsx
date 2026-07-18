@@ -4,8 +4,9 @@
 // endorsement toggle, the suggest flow, client-side search, and an admin entry point.
 // Layout + tokens are matched to design/.../survivor-hub/WhatWorks.tsx.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { ChevronLeft, ListChecks, Plus, Search, ShieldCheck } from 'lucide-react';
+import { ListChecks, Plus, Search } from 'lucide-react';
+import { BackChevronButton } from '@/lib/nav/back-history';
+import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import {
@@ -216,17 +217,11 @@ export function WhatWorksShell() {
       <div style={{ minHeight: '100dvh', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
         <div style={{ position: 'sticky', top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px' }}>
-            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.ACCENT, textDecoration: 'none', flexShrink: 0 }}>
-              <ChevronLeft size={20} />
-            </Link>
+            <BackChevronButton accent={t.ACCENT} />
             <ListChecks size={18} color={t.ACCENT} style={{ flexShrink: 0 }} />
             {/* Title shrinks and truncates so the trailing controls stay on screen */}
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>What Works</span>
-            {isAdmin ? (
-              <Link href="/admin/what-works" aria-label="Admin" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '7px 10px', borderRadius: 9, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 12, fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}>
-                <ShieldCheck size={13} /> Admin
-              </Link>
-            ) : null}
+            <PluginAdminButton href="/admin/what-works" isAdmin={isAdmin} accent={t.ACCENT} />
             <RefreshButton onRefresh={refreshAll} title="Refresh" />
             <MobileTopActions />
           </div>
@@ -278,11 +273,7 @@ export function WhatWorksShell() {
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE }}>What Works</div>
             <div style={{ fontSize: 12, color: t.MUTED }}>Survivor-verified tools · by problem</div>
           </div>
-          {isAdmin ? (
-            <Link href="/admin/what-works" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 9, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
-              <ShieldCheck size={13} /> Admin
-            </Link>
-          ) : null}
+          <PluginAdminButton href="/admin/what-works" isAdmin={isAdmin} accent={t.ACCENT} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderRadius: 9, background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}`, width: 220 }}>
             <Search size={14} color={t.MUTED} />
             <input

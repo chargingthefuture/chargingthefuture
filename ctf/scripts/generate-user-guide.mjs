@@ -181,26 +181,23 @@ async function rewrite(slug, title, features, coreSmoke) {
   }
 }
 
-// Deterministic, un-polished but still grounded fallback: pull plain lines straight from the docs.
-function fallback(title, features, coreSmoke) {
-  const bullets = features
-    .split('\n')
-    .map((l) => l.replace(/^[\s\-*\d.)]+/, '').trim())
-    .filter((l) => l.length > 0 && !l.startsWith('#'))
-    .slice(0, 4);
-  const steps = coreSmoke
-    .split('\n')
-    .map((l) => l.replace(/^[\s\-*\d.)]+/, '').replace(/→.*$/, '').trim())
-    .filter((l) => l.length > 0 && !l.startsWith('#') && !l.startsWith('>'))
-    .slice(0, 4);
-  return {
-    summary: `${title} is part of the Charging the Future app.`,
-    body: bullets.length ? bullets : [`See the app to use ${title}.`],
-    howTo: steps,
-  };
+// ── Build ──────────────────────────────────────────────────────────────────────
+
+// A keyless (or Infisical-failed) run must NEVER regenerate the guide: the model is the only thing
+// that turns the raw docs into plain, grounded prose, so without it this script would publish
+// ungrounded doc-scrapings to a public page (that is exactly how the fallback dump once shipped).
+// Fail loudly instead and leave the committed guide untouched.
+if (!process.env.ANTHROPIC_API_KEY) {
+  console.error('ANTHROPIC_API_KEY is not set — refusing to regenerate the user guide. The guide is left unchanged.');
+  process.exit(1);
 }
 
-// ── Build ──────────────────────────────────────────────────────────────────────
+// Load the current guide so a single section whose model call fails keeps its reviewed wording
+// rather than being blanked or replaced with raw text.
+const prev = new Map(
+  (existsSync(OUT_JSON) ? JSON.parse(readFileSync(OUT_JSON, 'utf-8')).sections ?? [] : []).map((s) => [s.id, s]),
+);
+const prevIntro = existsSync(OUT_JSON) ? JSON.parse(readFileSync(OUT_JSON, 'utf-8')).intro : null;
 
 const sections = [];
 for (const [slug, title] of ORDER) {
@@ -213,7 +210,18 @@ for (const [slug, title] of ORDER) {
   const updated = lastUpdated([invPath, tsPath]);
 
   console.error(`generating ${slug}…`);
-  const written = (await rewrite(slug, title, features, coreSmoke)) ?? fallback(title, features, coreSmoke);
+  const written = await rewrite(slug, title, features, coreSmoke);
+  if (!written || !written.summary || !written.body.length) {
+    // Model call failed or returned nothing usable. Keep the reviewed section as-is (only bumping
+    // its date); fail only if there is no prior section to preserve.
+    const keep = prev.get(slug);
+    if (!keep) {
+      console.error(`no usable content for ${slug} and no previous section to keep — failing.`);
+      process.exit(1);
+    }
+    sections.push({ ...keep, updated });
+    continue;
+  }
   sections.push({
     id: slug,
     title,
@@ -231,10 +239,13 @@ const overallUpdated = sections
 
 const guide = {
   updated: overallUpdated,
-  intro: [
-    'Charging the Future is a set of apps survivors use to work with and support each other, outside the Specterati economy. This guide walks through each part: what it does and how to use it.',
-    'Pick an app from the list below to jump to it.',
-  ],
+  // Keep the reviewed intro if one exists; only seed a default on a first-ever build.
+  intro: Array.isArray(prevIntro) && prevIntro.length
+    ? prevIntro
+    : [
+        'Charging the Future is a set of apps survivors use to work with and support each other, outside the Specterati economy. This guide walks through each part: what it does and how to use it.',
+        'Pick an app from the list below to jump to it.',
+      ],
   sections,
 };
 

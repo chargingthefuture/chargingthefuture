@@ -3,6 +3,7 @@
 import { CheckCircle, ExternalLink, Send, Shield, Unlock as UnlockIcon } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { getUnlockTokens, UNLOCK_BENEFITS } from "./unlock-shared";
 import { UnlockQuoraHelp } from "./unlock-quora-help";
 
@@ -21,12 +22,14 @@ export function UnlockSubmissionView({
   onSubmit,
   submitting,
   error,
+  isAdmin,
 }: {
   url: string;
   onUrlChange: (value: string) => void;
   onSubmit: () => void;
   submitting: boolean;
   error: string | null;
+  isAdmin?: boolean;
 }) {
   const canSubmit = url.trim().length > 0 && !submitting;
   const isMobile = useIsMobile();
@@ -36,10 +39,11 @@ export function UnlockSubmissionView({
     <div style={{ width: "100%", minHeight: "100vh", background: tok.BG, fontFamily: "'Inter',system-ui", color: tok.TITLE, display: "flex", flexDirection: "column" }}>
       <div style={{ height: 56, borderBottom: `1px solid ${tok.BORDER}`, display: "flex", alignItems: "center", padding: "0 28px", gap: 12, background: tok.HEADER, flexShrink: 0 }}>
         <UnlockIcon size={18} color={tok.ACCENT} />
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 600 }}>Unlock Full Access</div>
           <div style={{ fontSize: 12, color: tok.MUTED }}>Verify your Quora profile to get started</div>
         </div>
+        <PluginAdminButton href="/admin/unlock" isAdmin={isAdmin} accent={tok.ACCENT} />
       </div>
 
       <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: isMobile ? "24px 16px" : "48px 64px", gap: isMobile ? 24 : 40, flexWrap: "wrap" }}>

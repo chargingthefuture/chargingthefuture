@@ -199,7 +199,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'beacon') {
-    return <BeaconShell />;
+    return <BeaconShell isAdmin={decision.isAdmin} />;
   }
 
   if (selectedPlugin.slug === 'click-log') {
