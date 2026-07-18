@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import {
   BookOpen,
   Search,
@@ -567,6 +568,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
               <div style={{ fontSize: 16, fontWeight: 700 }}>Directory Admin</div>
               <div style={{ fontSize: 11, color: SUBTLE }}>{profiles.length} profiles · {unclaimedCount} unclaimed</div>
             </div>
+            <PluginUserShellButton href="/apps/directory" accent={COLOR} />
             <Bell size={18} color={SUBTLE} />
             <MobileTopActions />
           </div>
@@ -688,6 +690,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
             <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: SUBTLE, pointerEvents: "none" }} />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search profiles…" style={{ padding: "6px 10px 6px 30px", background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12, color: TEXT, outline: "none", width: 200 }} />
           </div>
+          <PluginUserShellButton href="/apps/directory" accent={COLOR} />
         </header>
 
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 0.9fr 1.2fr 160px", gap: 12, padding: "9px 24px", borderBottom: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.01)", flexShrink: 0 }}>

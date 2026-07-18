@@ -2,6 +2,7 @@
 
 import { Unlock as UnlockIcon } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { STATUS_CONFIG, getUnlockTokens, type DisplayStatus } from "./unlock-shared";
@@ -18,6 +19,7 @@ export function UnlockStatusView({
   onResubmit,
   submitting,
   error,
+  isAdmin,
 }: {
   status: DisplayStatus;
   resubmitUrl: string;
@@ -25,6 +27,7 @@ export function UnlockStatusView({
   onResubmit: () => void;
   submitting: boolean;
   error: string | null;
+  isAdmin?: boolean;
 }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
@@ -56,6 +59,7 @@ export function UnlockStatusView({
             <BackChevronButton accent={cfg.color} />
             <UnlockIcon size={18} color={cfg.color} style={{ flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Verification Status</span>
+            <PluginAdminButton href="/admin/unlock" isAdmin={isAdmin} accent={cfg.color} />
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20, background: cfg.bg, border: `1px solid ${cfg.color}30`, fontSize: 11, fontWeight: 600, color: cfg.color, flexShrink: 0 }}>
               <Icon size={11} /> {cfg.label}
             </div>
@@ -78,6 +82,7 @@ export function UnlockStatusView({
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE }}>Verification Status</div>
             <div style={{ fontSize: 12, color: t.MUTED }}>Quora profile · account unlock</div>
           </div>
+          <PluginAdminButton href="/admin/unlock" isAdmin={isAdmin} accent={cfg.color} />
           <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 20, background: cfg.bg, border: `1px solid ${cfg.color}30`, fontSize: 11, fontWeight: 600, color: cfg.color }}>
             <Icon size={11} /> {cfg.label}
           </div>

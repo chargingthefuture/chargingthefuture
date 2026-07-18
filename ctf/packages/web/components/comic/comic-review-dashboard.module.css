@@ -292,6 +292,13 @@
   color: var(--ctf-text-subtle, #6B7280);
 }
 
+/* "Commons" member-view pill in the desktop main header. At phone width the shared mobile top bar
+   already carries the same pill, so hide this one below the 900px collapse to avoid a duplicate. */
+.memberViewPill {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
 .headerConfPill {
   display: inline-flex;
   align-items: center;
@@ -831,6 +838,10 @@
 
   .mobileQueueBack {
     display: inline-flex;
+  }
+
+  .memberViewPill {
+    display: none;
   }
 
   .confCol {
