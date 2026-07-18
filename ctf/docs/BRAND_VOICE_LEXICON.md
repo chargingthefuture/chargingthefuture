@@ -93,6 +93,14 @@ This document is the canonical source of truth for brand language across:
   and CSS class names). Exempt: the JavaScript `console.*` logging API, the literal `console`
   service in the Formance stack, and third-party product names that are actually called a console
   (for example the Neon Console). Enforced in chat by `.claude/hooks/check-no-pleasantries.mjs`.
+- Do not frame credits as money (see `ctf/docs/DISCLAIMER.md`, the statement of record).
+  ServiceCredits and every in-app credit are a non-fiat internal credits unit: never describe them
+  as money, cash, currency, a payment, funds, or anything redeemable/withdrawable for fiat value.
+  A credit movement is a "send", "transfer", or "exchange" — not a "payment" or "payout" (existing
+  code identifiers keep their names). Negations are always correct ("credits are not money",
+  "never redeemable for cash"). Real fiat amounts unrelated to credits — a LightHouse listing's
+  actual rent and its currency, Contributions' confirmed USD donations — are real money and are
+  described as such. Any money-framing of credits anywhere in the repo is an error, not a claim.
 
 ## Canonical Capability Names (Public Surfaces)
 

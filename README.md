@@ -8,9 +8,15 @@ This repository contains the v3 rewrite of the Charging the Future platform — 
 
 - **Web App** — Next.js frontend for the core user experience
 - **Mobile App** — React Native (Expo) Android client with feature parity to web
-- **Ledger** — Formance-backed financial ledger for ServiceCredits
+- **Ledger** — Formance-backed ledger for ServiceCredits (non-fiat internal credits)
 - **Agents** — AI-powered MCP servers for autonomous build, deployment, and operational workflows
 - **Schema** — PostgreSQL schema migrations and audit trails
+
+**Credits are not money.** ServiceCredits and every in-app credit are a non-fiat internal credits
+unit — not money, not a currency, not a security, and never redeemable or withdrawable for cash or
+any fiat value. The project makes no financial, investment, or monetary-value claims; any wording
+in this repository that implies otherwise is an error. The statement of record is
+[`ctf/docs/DISCLAIMER.md`](ctf/docs/DISCLAIMER.md).
 
 ## Architecture
 

@@ -21,6 +21,10 @@ Enforce a unified, trauma-informed brand language.
 - Default to survivors, not victims, except in legal/statutory contexts.
 - Replace gang stalking and gang stalker with Specterati terminology where applicable.
 - Do not refer to chat as a standalone product; use plugin-context naming (for example Chyme chat).
+- Never frame credits as money. ServiceCredits and every in-app credit are non-fiat internal
+  credits — not money, cash, currency, or a payment. Approved phrasing and the fiat exceptions are
+  in the lexicon's Prohibited Patterns; the statement of record is `ctf/docs/DISCLAIMER.md`.
+  (Added 2026-07-18, issue #1181, owner-approved; additive — no control weakened.)
 
 ## Specterati Placement Rules
 - Tier 1 Editorial and explanatory content: full lexicon allowed.
