@@ -232,6 +232,12 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-07-18: **Beacon added to the app launcher (owner report: no way to reach the member page).**
+  The `ctf_plugin_registry` seed in `ctf/schema.sql` had no `beacon` row, so the launcher — which
+  reads the database registry, not the in-code fallback — never showed the tile and members could
+  not reach `/apps/beacon` to see the idle/replay screen. Seed row added (nav rank 230, visible),
+  matching the in-code fallback entry. No route, contract, or behavior change.
+
 - 2026-07-17: **Admin↔member navigation (app-wide sweep).** The admin surface header gained the
   shared "Member view" pill (`PluginUserShellButton`) linking to `/apps/beacon`. The member shell
   header now shows the shared Admin shortcut (`PluginAdminButton`, admins only). UI-only; no
