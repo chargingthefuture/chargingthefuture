@@ -1,5 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 
+import { shouldEnableWebSentry } from './sentry-config';
+
 type ReportContext = {
   // Coarse grouping for the error (e.g. 'chyme', 'directory', 'hub').
   area: string;
@@ -28,6 +30,14 @@ export function reportError(error: unknown, context: ReportContext): void {
     error instanceof Error ? (error.stack ?? error.message) : error,
     context.extra ? JSON.stringify(context.extra) : '',
   );
+
+  // Respect the same enable/disable logic as the rest of this module: when Sentry
+  // is intentionally off (CTF_SKIP_SENTRY_NEXTJS=1, an empty DSN, or the production
+  // build phase), the stdout log above is the only trace and we do not forward to
+  // Sentry.
+  if (!shouldEnableWebSentry()) {
+    return;
+  }
 
   Sentry.captureException(error, {
     tags: { area: context.area, op: context.op },
