@@ -106,13 +106,16 @@ plain language. An empty history shows the empty state, not an error.
 **Steps:**
 1. With the banner showing in the Hub, press **Contribute**.
 2. Press **Not now** to dismiss.
-3. On phone width, look at where the banner was. On desktop, look at where the banner was.
+3. On phone width, look at the top bar (between the TSE mark and the Commons tab). On desktop, look
+   at where the banner was.
 **Expected:** **Contribute** opens the drive at `/apps/contributions` — the page renders (not a 404).
 The banner shows a **Not now** dismiss on both layouts. After dismissing on **phone width**, the full
-banner is replaced by a small gift emoji (🎁) in its place that still opens the plugin when tapped
-(the full banner returns on its own after the snooze lapses). After dismissing on **desktop**, the
-banner is gone until the snooze lapses (no emoji). If the admin turns the banner feature off, neither
-the banner nor the emoji shows. (Android app has no fundraiser banner.)
+banner disappears and a small gift emoji (🎁) appears in the top bar between the TSE mark and the
+section tabs — no leftover strip where the banner was — and it still opens the plugin when tapped
+(the full banner returns on its own after the snooze lapses, in its usual place at the top of the
+content area). After dismissing on **desktop**, the banner is gone until the snooze lapses (no
+emoji). If the admin turns the banner feature off, neither the banner nor the emoji shows. (Android
+app has no fundraiser banner.)
 **Result:** web ☐ mobile ☐ android n/a — notes:
 
 ### CON-6 · Refresh the drive
