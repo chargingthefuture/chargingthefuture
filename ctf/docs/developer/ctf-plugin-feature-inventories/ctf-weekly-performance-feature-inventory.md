@@ -50,7 +50,6 @@ Command groups:
 2. `weekly-performance.week.get`
 3. `weekly-performance.metrics.get`
 4. `weekly-performance.comparison.get`
-5. `weekly-performance.report.export`
 
 ### 2.2 HTTP Projection Routes
 
@@ -60,7 +59,7 @@ actually exist are listed here).
 
 Read routes (admin or approved user). Each writes a `weekly_performance_audit_trail` row on an allow decision:
 
-- `GET /api/weekly-performance/weeks` — tracked weeks (most recent 52); audits `weekly-performance.week.list`.
+- `GET /api/weekly-performance/weeks` — a continuous run of weeks, newest first: every week from the current week (an ISO Monday start) back to the earliest of one year ago or the oldest tracked week, so the list never skips a week. Stored weeks keep their real status; generated weeks with no row are `open` and read live per window. Audits `weekly-performance.week.list`.
 - `GET /api/weekly-performance/weeks/[weekStart]` — canonical window metadata for an arbitrary week start date (`{weekStart, weekEnd, isCurrentWeek, status}`); this is the full `weekly-performance.week.get` surface (accepts any `weekStart`, validated as an ISO `YYYY-MM-DD` date), audits `weekly-performance.week.get`.
 - `GET /api/weekly-performance/current-week` — convenience read of the **current** week plus active-user count (last 7 days); also audits `weekly-performance.week.get` (it is the current-week-only projection of that command, not the parameterized surface).
 - `GET /api/weekly-performance/metrics?weekStartDate=...[&compareWeekStartDate=...]` — week metrics, or a week-over-week comparison when `compareWeekStartDate` is supplied; audits `weekly-performance.metrics.get` or `weekly-performance.comparison.get` per branch.
@@ -68,7 +67,6 @@ Read routes (admin or approved user). Each writes a `weekly_performance_audit_tr
 Admin-or-operations routes (`ensureWeeklyPerformanceAdmin` admits `isAdmin` or the `operations` role):
 
 - `PUT /api/weekly-performance/admin/week-selection` — marks a week active (body `{ weekStartDate }`); requires the `x-ctf-csrf: '1'` header and writes a `weekly-performance.admin.week.select` audit row.
-- `GET /api/weekly-performance/export?weekStartDate=...` — returns the week's metrics snapshot as a synchronous inline JSON download (`{ok, weekStartDate, metrics}`); additionally guarded by the `WEEKLY_PERFORMANCE_EXPORT_ENABLED` environment flag and writes a `weekly-performance.report.export` audit row. There is no asynchronous artifact pipeline (no `exportId`/`artifactUrl`/`weekly_performance_exports` record) — the command contract was reconciled to this shipped behavior (#1128).
 
 Internal (service-to-service, never member/browser callable):
 
@@ -105,17 +103,17 @@ The aggregates above are persisted in two tables in `ctf/schema.sql`:
 
 ## 4) Security and Compliance Controls
 
-1. Admin-only authorization for plugin admin read/report commands.
+1. Admin-only authorization for plugin admin read commands.
 2. Server-side RBAC/ABAC checks and deny-by-default policy enforcement.
-3. CSRF protection for mutation endpoints (including export/report actions).
-4. Audit coverage for allow/deny decisions and report exports.
-5. Privacy-safe field handling for sensitive operator metrics and exports.
+3. CSRF protection for mutation endpoints (the admin week-selection action).
+4. Audit coverage for allow/deny decisions.
+5. Privacy-safe field handling for sensitive operator metrics.
 
 ## 5) Web and Android Delivery Status
 
 `web+android complete`. Week-selector behavior, current-week polling policy, empty/error semantics, metric definitions, formatting, and deny reasons are consistent across web (`/admin/weekly-performance` — the single surface) and Android (`packages/mobile/src/features/weekly-performance`).
 
-Single admin surface (2026-07-18, owner directive): there is exactly one web surface, the admin page `/admin/weekly-performance`, which serves the full dashboard (`weekly-performance-shell.tsx` — sidebar week history, grouped metric cards, comparison chart, export). `/apps/weekly-performance` renders nothing: it redirects admins to the admin page and still 404s everyone else (admin-only gate). The thin review shell `wp-admin-shell.tsx` and the admin↔member cross-links ("Member view" pill, "Admin" pill, sidebar "Manage weeks") were deleted.
+Single admin surface (2026-07-18, owner directive): there is exactly one web surface, the admin page `/admin/weekly-performance`, which serves the full dashboard (`weekly-performance-shell.tsx` — sidebar week history, grouped metric cards, comparison chart). `/apps/weekly-performance` renders nothing: it redirects admins to the admin page and still 404s everyone else (admin-only gate). The thin review shell `wp-admin-shell.tsx` and the admin↔member cross-links ("Member view" pill, "Admin" pill, sidebar "Manage weeks") were deleted.
 
 Web pixel pass (design `c5d83c0`): the user-facing shell is rebuilt to `design/.../survivor-hub/WeeklyPerformance.tsx` and its Empty/Loading states — icon rail, week-history sidebar, metric cards, a this-week-vs-last-week comparison chart, and a week-summary right rail. Week selection drives `GET /api/weekly-performance/weeks`, `/current-week`, and `/metrics` (with `compareWeekStartDate` for per-metric deltas); admin export opens `GET /api/weekly-performance/export`. Real data only — the mockup's fabricated daily series became a real per-metric current-vs-compare chart scaled relative to the max value in view, metric labels are humanized from `metric_key` (no label column exists), and the unbacked "Top Apps" widget was omitted rather than faked. Decomposed into modular sub-components within the rule-116 limits.
 
@@ -149,12 +147,13 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 ## 7) Gaps and Known Technical Debt
 
 1. Non-financial metric dictionary and formulas live in code; no canonical governance document captures the dictionary outside the implementation.
-2. The `operations` role now passes the admin gate (week-selection and export) alongside `admin`, matching the access-policy contract `requiredRoles: [admin, operations]`. Read routes already admit any approved member.
+2. The `operations` role now passes the admin gate (week-selection) alongside `admin`, matching the access-policy contract `requiredRoles: [admin, operations]`. Read routes already admit any approved member.
 3. Mood-related comparison fields are excluded from the current dictionary; whether to reintroduce them is an outstanding product question.
-4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, `comparison.get`, and `report.export`. The week-selection command should be added to the command/access/audit contracts.
+4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
 
+- 2026-07-19: **Fixed the week picker's skipped weeks and ugly mobile labels; deleted the export feature (owner report).** (1) *Week list skipped weeks.* `listWeeks` (`lib/weekly-performance/repository.ts`) previously returned only stored weeks plus the synthesized current week, so the picker jumped straight from an old stored week to the current one. It now generates a continuous run of weeks — the current week (ISO Monday start) back to the earliest of one year ago or the oldest tracked week — unioned with stored weeks so none is dropped; generated weeks with no row read `open` and compute live per window. Both web and Android benefit (shared `/weeks` route). The week **start day is unchanged** (ISO Monday, per owner: v3 does not need the V2 Saturday boundary). (2) *Ugly mobile labels.* The mobile-responsive web week selector showed the raw ISO date (`Week of 2026-07-13`); it now shows the friendly range (`Week of Jul 13–19, 2026`) via `formatWeekRange`, matching desktop. (3) *Deleted the export feature.* Removed the `GET /api/weekly-performance/export` route, every Export button/hint (desktop header, desktop sidebar "Admin Controls" box, mobile-web header button, right-rail "Export available to admins" note, Android history "CSV export is admin-only" hint), the `weekly-performance.report.export` command/access/audit contract entries, and the now-unused `WEEKLY_PERFORMANCE_EXPORT_ENABLED` flag. With export gone the shell's `isAdmin` prop had no remaining UI effect and was dropped (the page still gates admin-only). No schema change.
 - 2026-07-18: **Consolidated to a single admin surface (owner directive: "the member view should
   now be removed. Only an admin page for weekly performance").** `/admin/weekly-performance` now
   renders the full dashboard (`weekly-performance-shell.tsx`); the thin review shell

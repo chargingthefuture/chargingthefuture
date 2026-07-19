@@ -16,23 +16,38 @@ function mapWeek(row: WeekRow) {
 }
 
 
-// The current week is always shown, even before any metrics have been recorded
-// for it, so the dashboard renders with zero/empty values instead of a bare
-// "no weeks tracked" page. When the table has no row for the current week we
-// synthesize an open week from DATE_TRUNC('week', NOW()) at read time; it is
-// persisted only when an admin sets it active (see selectWeek).
+// The week picker lists a continuous run of weeks, newest first, so the history never skips a
+// week. We generate every week from the current week (DATE_TRUNC('week', NOW()), an ISO Monday
+// start) back to the earliest of one year ago or the oldest tracked week, then union in any
+// stored weeks so none is dropped and each keeps its real status. Generated weeks that have no
+// stored row are shown as 'open'; their numbers are computed live per window, so an empty week
+// simply reads zero rather than being missing from the list. Nothing is persisted here — a week
+// gets a row only when an admin sets it active (see selectWeek).
 export async function listWeeks() {
   const result = await queryDb<WeekRow>(
     `WITH current_week AS (
-       SELECT DATE_TRUNC('week', NOW())::date AS week_start_date
+       SELECT DATE_TRUNC('week', NOW())::date AS current_start
+     ),
+     span AS (
+       SELECT
+         cw.current_start,
+         LEAST(
+           (cw.current_start - INTERVAL '51 weeks')::date,
+           COALESCE((SELECT MIN(week_start_date) FROM weekly_performance_weeks), cw.current_start)
+         ) AS earliest_start
+       FROM current_week cw
+     ),
+     series AS (
+       SELECT generate_series(sp.current_start, sp.earliest_start, INTERVAL '-1 week')::date AS week_start_date
+       FROM span sp
      ),
      combined AS (
        SELECT week_start_date, status FROM weekly_performance_weeks
        UNION
-       SELECT cw.week_start_date, 'open' AS status
-       FROM current_week cw
+       SELECT s.week_start_date, 'open' AS status
+       FROM series s
        WHERE NOT EXISTS (
-         SELECT 1 FROM weekly_performance_weeks w WHERE w.week_start_date = cw.week_start_date
+         SELECT 1 FROM weekly_performance_weeks w WHERE w.week_start_date = s.week_start_date
        )
      )
      SELECT week_start_date::text,
@@ -40,7 +55,7 @@ export async function listWeeks() {
             status
      FROM combined
      ORDER BY week_start_date DESC
-     LIMIT 52`,
+     LIMIT 260`,
   );
 
   return result.rows.map(mapWeek);
