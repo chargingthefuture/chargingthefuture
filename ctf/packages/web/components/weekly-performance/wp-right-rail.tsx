@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart2, Lock } from "lucide-react";
+import { BarChart2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getWeeklyPerformanceTokens, type WpWeek, formatWeekRange } from "./wp-shared";
 
@@ -8,13 +8,11 @@ export function WeeklyPerformanceRightRail({
   week,
   metricCount,
   activeUsersLast7Days,
-  isAdmin,
   isCurrent = false,
 }: {
   week: WpWeek | null;
   metricCount: number;
   activeUsersLast7Days: number | null;
-  isAdmin: boolean;
   isCurrent?: boolean;
 }) {
   const { theme } = useTheme();
@@ -47,12 +45,6 @@ export function WeeklyPerformanceRightRail({
           </div>
         ))}
       </div>
-      {!isAdmin && (
-        <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER_SOLID}`, display: "flex", alignItems: "center", gap: 8 }}>
-          <Lock size={13} color={t.MUTED} />
-          <span style={{ fontSize: 11, color: t.MUTED }}>Export available to admins</span>
-        </div>
-      )}
     </aside>
   );
 }

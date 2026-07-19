@@ -237,13 +237,11 @@ function WpHistory({
   selectedWeekStartDate,
   currentWeekStartDate,
   onSelectWeek,
-  isAdmin,
 }: {
   weeks: WeekRow[];
   selectedWeekStartDate: string | null;
   currentWeekStartDate: string | null;
   onSelectWeek: (_w: WeekRow) => void;
-  isAdmin: boolean;
 }) {
   const { styles } = useWpStyles();
   return (
@@ -273,11 +271,6 @@ function WpHistory({
           </TouchableOpacity>
         );
       })}
-      {!isAdmin && (
-        <View style={styles.exportHint}>
-          <Text style={styles.exportHintText}>CSV export is admin-only</Text>
-        </View>
-      )}
     </ScrollView>
   );
 }
@@ -468,7 +461,6 @@ export const WeeklyPerformance: React.FC = () => {
             selectedWeekStartDate={selectedWeek?.weekStartDate ?? null}
             currentWeekStartDate={currentWeekStartDate}
             onSelectWeek={(w) => { setSelectedWeek(w); setTab('metrics'); }}
-            isAdmin={isAdmin}
           />
         )}
       </ScrollView>
@@ -615,18 +607,6 @@ function makeStyles(t: ThemeTokens, accent: string) {
       backgroundColor: 'rgba(255,255,255,0.05)',
       color: t.textSecondary,
     },
-    exportHint: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      padding: 12,
-      borderRadius: 10,
-      backgroundColor: 'rgba(255,255,255,0.02)',
-      borderWidth: 1,
-      borderColor: t.border,
-      marginTop: 4,
-    },
-    exportHintText: { fontSize: 11, color: t.textSecondary },
 
     // Bottom nav
     bottomNav: {

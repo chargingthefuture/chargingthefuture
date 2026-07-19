@@ -139,53 +139,6 @@ contracts:
     idempotency: true
 
   - pluginId: weekly-performance
-    command: weekly-performance.report.export
-    version: 1.0.0
-    description: >-
-      Return the approved weekly metrics snapshot for a selected week as a synchronous inline JSON
-      download for authorized operator workflows. The export is gated behind the
-      WEEKLY_PERFORMANCE_EXPORT_ENABLED environment flag and writes an audit record on every allowed
-      access. There is no asynchronous artifact pipeline: the response carries the metrics directly,
-      so there is no exportId, persisted export record, or downloadable artifact URL.
-    inputSchema:
-      weekStart:
-        type: string
-        required: true
-    outputSchema:
-      weekStartDate:
-        type: string
-      metrics:
-        type: array
-    dataAccess:
-      - weekly_performance_metrics
-      - canonical_metrics_registry
-      - weekly_performance_goal_snapshots
-      - foundation_call_sessions
-      - trust_transport_trips
-      - lighthouse_matches
-      - socket_relay_fulfillments
-      - service_credits_transfers
-      - contributions_submissions
-      - skills_hunt_submissions
-      - what_works_products
-      - what_works_endorsements
-      - level_up_enrollments
-      - level_up_disbursements
-      - recurring_activities
-      - peer_programming_messages
-      - beacon_events
-      - feed_community_post_reactions
-      - feed_community_replies
-      - directory_profiles
-      - directory_profile_skills
-      - mood_submissions
-      - click_log_incidents
-      - weekly_performance_audit_trail
-    purpose: operational_metrics_export
-    retentionClass: audit_long_lived
-    idempotency: false
-
-  - pluginId: weekly-performance
     command: weekly-performance.goal-snapshot.capture
     version: 1.0.0
     description: >-
@@ -213,6 +166,12 @@ contracts:
     idempotency: true
 
 changelog:
+  - date: 2026-07-19
+    change: >-
+      Removed the weekly-performance.report.export command (owner request to delete the export
+      feature). The GET /api/weekly-performance/export route, its UI entry points, and the
+      WEEKLY_PERFORMANCE_EXPORT_ENABLED flag are gone. No schema change; the audit and access-policy
+      contracts drop their matching report.export entries.
   - date: 2026-07-18
     change: >-
       Metrics rebuild (owner-locked decision record ctf/docs/developer/PLUGIN_VALUE_METRICS.md): the

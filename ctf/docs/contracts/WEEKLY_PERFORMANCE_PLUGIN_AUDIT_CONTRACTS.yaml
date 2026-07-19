@@ -87,31 +87,11 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: weekly-performance
-    command: weekly-performance.report.export
-    commandVersion: 1.0.0
-    purpose: operational_metrics_export
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-    dataClassesAccessed:
-      - weekly_performance_metrics
-      - weekly_performance_exports
-    targetContext:
-      workspaceId: workspace_identifier
-      weekStart: week_start_iso
-      exportId: export_identifier
-      format: export_format
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
 changelog:
+  - date: 2026-07-19
+    change: >-
+      Removed the weekly-performance.report.export audit event (owner request to delete the export
+      feature). The command and its route are gone.
   - date: 2026-02-25
     change: Initial Weekly Performance audit contract skeleton added with allow/deny evidence coverage for all v1 commands.
   - date: 2026-06-27

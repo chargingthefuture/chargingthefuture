@@ -1,6 +1,5 @@
 "use client";
 
-import { Download } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getWeeklyPerformanceTokens, type WpWeek, formatWeekRange, isCurrentWeek } from "./wp-shared";
 
@@ -9,15 +8,11 @@ export function WeeklyPerformanceSidebar({
   selectedWeekStart,
   currentWeekStart,
   onSelect,
-  isAdmin,
-  onExport,
 }: {
   weeks: WpWeek[];
   selectedWeekStart: string | null;
   currentWeekStart: string | null;
   onSelect: (weekStartDate: string) => void;
-  isAdmin: boolean;
-  onExport: () => void;
 }) {
   const { theme } = useTheme();
   const t = getWeeklyPerformanceTokens(theme);
@@ -49,16 +44,6 @@ export function WeeklyPerformanceSidebar({
           })
         )}
       </div>
-      {isAdmin && (
-        <div style={{ padding: 12, borderTop: `1px solid ${t.BORDER_SOLID}` }}>
-          <div style={{ padding: "10px 12px", borderRadius: 10, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: t.ACCENT, marginBottom: 6 }}>Admin Controls</div>
-            <button onClick={onExport} style={{ width: "100%", padding: "7px", borderRadius: 7, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-              <Download size={11} /> Export CSV
-            </button>
-          </div>
-        </div>
-      )}
     </aside>
   );
 }

@@ -50,7 +50,8 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    before the capture workflow existed reads 0.) → web ☐ mobile ☐ android ☐
 3. **One surface only — the admin page serves the full dashboard.** Open `/admin/weekly-performance`
    as an admin: it renders the full dashboard (desktop: week-history sidebar + grouped metric cards +
-   comparison chart; phone: week selector + Export in the sticky header). Opening
+   comparison chart; phone: week selector in the sticky header). There is no Export control anywhere
+   (the export feature was removed 2026-07-19). Opening
    `/apps/weekly-performance` as an admin redirects straight to `/admin/weekly-performance` — there
    is no separate member view, no "Member view" pill, and no "Admin" pill anywhere in the plugin.
    There is **no** "Active week / Set as active week" control and no open/locked/published
@@ -78,11 +79,14 @@ admits `admin` or the `operations` role, matching `requiredRoles: [admin, operat
 ### WP-A2 · Week navigation and review picker
 **Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Steps:**
-1. Read the tracked-week history (most recent weeks) and the current week.
+1. Read the week history (current week back through prior weeks) and the current week.
 2. Pick a week to review (web admin picker, or the History tab on Android).
-**Expected:** Weeks use a Saturday-based start with deterministic range labels. Picking a week shows
-that week's live metrics; the current week is marked **Live**. There is no "set active week" action
-and no per-week status. The current week is shown even when the weeks table has no stored rows.
+**Expected:** Weeks use an ISO Monday start. The list is **continuous — it never skips a week**:
+every week from the current one back to the earliest tracked week (or a year, whichever is longer)
+appears, newest first, even for weeks with no activity (they read zero). Labels are a friendly range
+(e.g. "Jul 13–19, 2026") on desktop **and** the mobile-responsive week selector — never a raw ISO
+date. Picking a week shows that week's live metrics; the current week is marked **Live**. There is no
+"set active week" action and no per-week status.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### WP-A3 · Metrics and week-over-week comparison
@@ -114,16 +118,6 @@ deltas (this week vs last week); a declining metric shows a downward-trend indic
 are all distinct. Android renders the same metric list with humanized labels (goal progress bars are
 web-only for now — a tracked gap, not a bug).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
-
-### WP-A4 · Export gate
-**Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive)
-**Steps:**
-1. Trigger the export action for a week (`GET /api/weekly-performance/export?weekStartDate=...`).
-**Expected:** Export is admin/operations-gated and additionally guarded by the
-`WEEKLY_PERFORMANCE_EXPORT_ENABLED` environment flag — when the flag is off, the gate refuses. An
-allowed export writes a `weekly-performance.report.export` audit row. The export action is not
-surfaced on the android screen (web admin only); android shows the admin badge and an export hint.
-**Result:** web ☐ — notes:
 
 ### WP-A5 · Left icon-rail chrome has no dead controls
 **Role:** admin / operations · **Surfaces:** web (desktop)
@@ -160,9 +154,9 @@ page is the plugin's only surface.
 ## Parity check (web ↔ android)
 
 For WP-A1, WP-A2, and WP-A3, the android admin screen and the mobile-responsive web layout must
-behave the same: same access denial for a non-admin, same Saturday week semantics and week
-selection, same metric values and formatting, same empty/error states. Note any drift here rather
-than filing separate bugs. The export action (WP-A4) is web-only by design — not a parity gap.
+behave the same: same access denial for a non-admin, same ISO-Monday week semantics, same
+continuous (gap-free) week list and selection, same metric values and formatting, same empty/error
+states. Note any drift here rather than filing separate bugs.
 
 **Result:** matches ☐ — drift notes:
 
@@ -179,4 +173,4 @@ already tracked, not a new bug:
   them is an open product question.
 - Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command
   `weekly-performance.admin.week.select`) is not yet represented in the command contract YAML,
-  which lists only `week.list`, `week.get`, `metrics.get`, `comparison.get`, and `report.export`.
+  which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`.

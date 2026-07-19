@@ -99,32 +99,11 @@ policies:
       - invalid_comparison_window
       - invalid_metric_set
 
-  - pluginId: weekly-performance
-    command: weekly-performance.report.export
-    version: 1.0.0
-    requiredRoles:
-      - admin
-      - operations
-    attributePolicies:
-      tenancy: same_workspace
-      reportRetentionPolicy: enforced
-    consentRequirements:
-      scopes:
-        - weekly_performance_admin
-      fallbackLawfulBasis: legitimate_interest
-    regionRestrictions:
-      allowedTransferMechanisms:
-        - local_processing
-        - scc
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: true
-    denyConditions:
-      - insufficient_role
-      - export_disabled
-      - export_retention_policy_violation
-
 changelog:
+  - date: 2026-07-19
+    change: >-
+      Removed the report.export access policy (owner request to delete the export feature). The
+      command, its route, and the WEEKLY_PERFORMANCE_EXPORT_ENABLED gate are gone.
   - date: 2026-02-25
     change: Initial Weekly Performance access policy skeleton added with admin-only controls, canonical metric safeguards, and export policy gates.
   - date: 2026-06-27

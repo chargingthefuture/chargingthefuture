@@ -13,6 +13,7 @@ import {
   type WpComparison,
   type WpMetric,
   type WpWeek,
+  formatWeekRange,
   isCurrentWeek,
 } from "./wp-shared";
 import { WeeklyPerformanceLoading } from "./wp-loading";
@@ -22,10 +23,6 @@ import { WeeklyPerformanceDashboardMain } from "./wp-dashboard-main";
 import { WeeklyPerformanceRightRail } from "./wp-right-rail";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
-
-type WeeklyPerformanceShellProps = {
-  isAdmin: boolean;
-};
 
 type ShellData = {
   weeks: WpWeek[];
@@ -59,7 +56,7 @@ async function fetchShellData(): Promise<ShellData> {
   };
 }
 
-export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps) {
+export function WeeklyPerformanceShell() {
   const [loading, setLoading] = useState(true);
   const [weeks, setWeeks] = useState<WpWeek[]>([]);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
@@ -145,12 +142,6 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
 
   const selectedWeek = weeks.find((w) => w.weekStartDate === selectedWeekStart) ?? null;
 
-  function exportSelected() {
-    if (selectedWeekStart) {
-      window.open(`/api/weekly-performance/export?weekStartDate=${encodeURIComponent(selectedWeekStart)}`, "_blank");
-    }
-  }
-
   const content = error ? (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#F87171", fontSize: 14, padding: 24 }}>{error}</div>
   ) : (
@@ -158,8 +149,6 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
       week={selectedWeek}
       metrics={metrics}
       comparison={comparison}
-      isAdmin={isAdmin}
-      onExport={exportSelected}
       onRefresh={refreshSelectedWeek}
       isMobile={isMobile}
       isCurrent={selectedIsCurrent}
@@ -180,12 +169,9 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
           <div style={{ display: "flex", gap: 8, padding: "0 12px 10px" }}>
             <select value={selectedWeekStart ?? ""} onChange={(e) => setSelectedWeekStart(e.target.value)} style={{ flex: 1, padding: "8px 10px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, borderRadius: 8, color: t.TEXT, fontSize: 13 }}>
               {weeks.map((w) => (
-                <option key={w.weekStartDate} value={w.weekStartDate}>Week of {w.weekStartDate}</option>
+                <option key={w.weekStartDate} value={w.weekStartDate}>Week of {formatWeekRange(w)}</option>
               ))}
             </select>
-            {isAdmin && (
-              <button onClick={exportSelected} style={{ padding: "8px 14px", borderRadius: 8, background: t.BTN_BG, border: `1px solid ${t.BORDER_HI}`, color: t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>Export</button>
-            )}
           </div>
         </div>
         {content}
@@ -201,15 +187,12 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
         selectedWeekStart={selectedWeekStart}
         currentWeekStart={currentWeekStart}
         onSelect={setSelectedWeekStart}
-        isAdmin={isAdmin}
-        onExport={exportSelected}
       />
       {content}
       <WeeklyPerformanceRightRail
         week={selectedWeek}
         metricCount={metrics.length}
         activeUsersLast7Days={activeUsers}
-        isAdmin={isAdmin}
         isCurrent={selectedIsCurrent}
       />
     </div>

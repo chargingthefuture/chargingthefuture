@@ -12,5 +12,5 @@ export default async function WeeklyPerformanceAdminPage() {
     redirect('/apps');
   }
 
-  return <WeeklyPerformanceShell isAdmin />;
+  return <WeeklyPerformanceShell />;
 }
