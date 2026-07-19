@@ -1,6 +1,7 @@
+import { PublicPageFooter } from '@/components/shared/public-page-footer';
 import { PublicPageNav } from '@/components/shared/public-page-nav';
 import type { Metadata } from 'next';
-import { OPERATOR_NAME, CONTACT_EMAIL } from '../terms/policy-content';
+import { CONTACT_EMAIL } from '../terms/policy-content';
 import styles from './accessibility.module.css';
 
 // Public Accessibility Statement at /accessibility. Static server component
@@ -119,7 +120,7 @@ export default function AccessibilityPage() {
           </p>
         </section>
 
-        <footer className={styles.footer}>{OPERATOR_NAME}</footer>
+        <PublicPageFooter />
       </div>
     </main>
   );
