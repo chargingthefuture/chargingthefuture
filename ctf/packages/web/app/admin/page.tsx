@@ -9,27 +9,30 @@ export const dynamic = 'force-dynamic';
 // The admin landing page: a single directory of every admin area. Each link points at a
 // route that is itself server-role-gated, so this page only renders for admins. Keep this
 // list in step with the pages under app/admin/* — add a row when a new admin area ships.
-const ADMIN_AREAS: { href: string; name: string; description: string }[] = [
-  { href: '/admin/unlock', name: 'Unlock', description: 'Review and decide who gets full access to the app.' },
-  { href: '/admin/directory', name: 'Directory', description: 'Manage member directory listings and visibility.' },
-  { href: '/admin/socket-relay', name: 'SocketRelay', description: 'Moderate mutual-aid requests and offers.' },
-  { href: '/admin/lighthouse', name: 'LightHouse', description: 'Manage LightHouse listings and review reports.' },
-  { href: '/admin/trust-transport', name: 'TrustTransport', description: 'Oversee transport coordination and disputes.' },
-  { href: '/admin/comic', name: 'AI Assistant', description: 'Review answers from the @comic assistant before they post.' },
-  { href: '/admin/what-works', name: 'WhatWorks', description: 'Curate problems and the products that solve them.' },
-  { href: '/admin/skills-hunt', name: 'SkillsHunt', description: 'Manage missions, scouts, and the leaderboard.' },
-  { href: '/admin/peer-programming', name: 'PeerProgramming', description: 'Set topics and manage pairing assignments.' },
-  { href: '/admin/level-up', name: 'LevelUp', description: 'Run skills-training cohorts and stipend milestones.' },
-  { href: '/admin/weekly-performance', name: 'Weekly Performance', description: 'Manage weekly performance reporting.' },
-  { href: '/admin/workforce', name: 'Workforce', description: 'Manage workforce records and assignments.' },
-  { href: '/admin/foundation', name: 'Foundation', description: 'Manage foundation-level settings and records.' },
-  { href: '/admin/contributions', name: 'Contributions', description: 'Run fundraising drives and review the donation queue.' },
-  { href: '/admin/service-credits', name: 'ServiceCredits', description: 'Treasury, disputes, and governance for the credits ledger.' },
-  { href: '/admin/feed-announcements', name: 'Feed Announcements', description: 'Post and manage announcements in the community feed.' },
-  { href: '/admin/beacon', name: 'Beacon', description: 'Go live and run broadcast events; manage recordings.' },
-  { href: '/admin/bug-reports', name: 'Bug Reports', description: 'Review reports flagged for a human and track ones sent to triage.' },
-  { href: '/admin/contributor-access', name: 'Contributor Access', description: 'Tune the earned-standing eligibility rules and review eligible members.' },
-  { href: '/admin/safety', name: 'Safety Reports', description: 'Review members flagged as a safety concern when blocked.' },
+// Compact launcher (owner decision, 2026-07-19): names only — no descriptions — so two columns
+// fit even at phone width and the list needs far less scrolling. Alphabetical, except Unlock
+// and AI Assistant pinned to the top (the two areas checked constantly).
+const ADMIN_AREAS: { href: string; name: string }[] = [
+  { href: '/admin/unlock', name: 'Unlock' },
+  { href: '/admin/comic', name: 'AI Assistant' },
+  { href: '/admin/beacon', name: 'Beacon' },
+  { href: '/admin/bug-reports', name: 'Bug Reports' },
+  { href: '/admin/contributions', name: 'Contributions' },
+  { href: '/admin/contributor-access', name: 'Contributor Access' },
+  { href: '/admin/directory', name: 'Directory' },
+  { href: '/admin/feed-announcements', name: 'Feed Announcements' },
+  { href: '/admin/foundation', name: 'Foundation' },
+  { href: '/admin/level-up', name: 'LevelUp' },
+  { href: '/admin/lighthouse', name: 'LightHouse' },
+  { href: '/admin/peer-programming', name: 'PeerProgramming' },
+  { href: '/admin/safety', name: 'Safety Reports' },
+  { href: '/admin/service-credits', name: 'ServiceCredits' },
+  { href: '/admin/skills-hunt', name: 'SkillsHunt' },
+  { href: '/admin/socket-relay', name: 'SocketRelay' },
+  { href: '/admin/trust-transport', name: 'TrustTransport' },
+  { href: '/admin/weekly-performance', name: 'Weekly Performance' },
+  { href: '/admin/what-works', name: 'WhatWorks' },
+  { href: '/admin/workforce', name: 'Workforce' },
 ];
 
 export default async function AdminPage() {
@@ -98,7 +101,6 @@ export default async function AdminPage() {
             <li key={area.href}>
               <Link href={area.href} className={styles.card}>
                 <span className={styles.cardName}>{area.name}</span>
-                <span className={styles.cardDesc}>{area.description}</span>
               </Link>
             </li>
           ))}

@@ -442,6 +442,10 @@ Profile read + compliance-delete surface: the profile is read-only (owner decisi
 
 ### Change Log
 
+- 2026-07-19: **Android parity for the overview (owner: "parity android now").** The Android
+  Overview tab drops its "Headcount Target" tile (same duplicate-of-Workforce-Total reasoning as
+  web), and the screen subtitle now reads "{recruited} recruited · {min recruitable} goal" instead
+  of measuring against the headcount target — matching the web card's goal framing. UI-only.
 - 2026-07-19: **Dropped the "Total Headcount Target" hero card from the web overview (owner
   decision).** It was Workforce Total re-summed after per-sector rounding (1,999,998 vs 2,000,000)
   — a duplicate at the top level. The overview now shows Population, Workforce Total, and

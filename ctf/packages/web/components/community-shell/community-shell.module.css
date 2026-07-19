@@ -1587,9 +1587,12 @@
 .mobileBar {
   display: none;
   align-items: center;
-  gap: 8px;
+  /* Tightened (owner report, 2026-07-19): with the TSE mark, gift reminder, tabs, admin, help,
+     settings, and avatar all present, 8px gaps + 12px padding overflowed a 390px phone and clipped
+     the avatar off the right edge. */
+  gap: 5px;
   height: 52px;
-  padding: 0 12px;
+  padding: 0 8px;
   background: var(--ctf-icon-rail);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
@@ -1658,7 +1661,7 @@
 }
 
 .mobileBarSectionBtn {
-  padding: 6px 12px;
+  padding: 6px 9px;
   border-radius: 8px;
   background: transparent;
   border: 1px solid transparent;

@@ -109,7 +109,7 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
 
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: t.MUTED, fontSize: 13 }}>
-          <Loader2 size={14} className="animate-spin" /> Loading occupation…
+          <Loader2 size={14} className="ctf-spin" /> Loading occupation…
         </div>
       ) : error ? (
         <div style={{ fontSize: 13, color: '#EF4444' }}>{error}</div>
@@ -248,7 +248,7 @@ export function WorkforceOccupations() {
 
             {loading ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: t.MUTED, fontSize: 13 }}>
-                <Loader2 size={14} className="animate-spin" /> Loading occupations…
+                <Loader2 size={14} className="ctf-spin" /> Loading occupations…
               </div>
             ) : error ? (
               <div style={{ fontSize: 13, color: '#EF4444' }}>{error}</div>

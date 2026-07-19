@@ -79,7 +79,7 @@ function ProofForm({ tripId, onDone }: { tripId: string; onDone: () => void }) {
       <div style={{ fontSize: 11, color: t.MUTED }}>Stored as a redacted reference for dispute evidence — don&apos;t paste sensitive personal detail.</div>
       {error && <div style={{ fontSize: 12, color: "#EF4444" }}>{error}</div>}
       <button type="button" onClick={() => void submit()} disabled={submitting} style={{ padding: "9px 12px", borderRadius: 8, background: `${t.ACCENT}1F`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-        {submitting && <Loader2 size={14} className="animate-spin" />} Save proof
+        {submitting && <Loader2 size={14} className="ctf-spin" />} Save proof
       </button>
     </div>
   );
@@ -176,7 +176,7 @@ function CompletionConfirm({ tripId, myConfirmedAtIso, otherConfirmedAtIso, onCo
     <div style={{ marginTop: 12 }}>
       {error && <div style={{ fontSize: 12, color: "#EF4444", marginBottom: 8 }}>{error}</div>}
       <button type="button" onClick={() => void confirm()} disabled={submitting} style={{ width: "100%", padding: "10px 12px", borderRadius: 9, background: `${t.ACCENT}1F`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-        {submitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Confirm trip completed
+        {submitting ? <Loader2 size={14} className="ctf-spin" /> : <Check size={14} />} Confirm trip completed
       </button>
       {otherConfirmedAtIso && (
         <div style={{ marginTop: 6, fontSize: 11, color: t.MUTED }}>The other party has already confirmed — this finishes it.</div>
@@ -204,7 +204,7 @@ function ProviderTripCard({ trip, busyId, onAdvance, onConfirmed }: { trip: Prov
       <div style={{ marginTop: 6, fontSize: 12, color: t.SUBTLE }}>{modeLabel(trip.mode)} · {ttSettlementLabel(trip.priceCurrency, trip.priceAmount)}</div>
       {step ? (
         <button type="button" onClick={() => onAdvance(trip.tripId, step.next)} disabled={busyId !== null} style={{ marginTop: 12, width: "100%", padding: "10px 12px", borderRadius: 9, background: `${t.ACCENT}1F`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: busyId !== null ? "default" : "pointer", opacity: busyId !== null && busyId !== trip.tripId ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          {busyId === trip.tripId ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} {step.label}
+          {busyId === trip.tripId ? <Loader2 size={14} className="ctf-spin" /> : <Check size={14} />} {step.label}
         </button>
       ) : awaitingCompletion ? (
         <CompletionConfirm tripId={trip.tripId} myConfirmedAtIso={trip.providerCompletionConfirmedAtIso ?? null} otherConfirmedAtIso={trip.requesterCompletionConfirmedAtIso ?? null} onConfirmed={onConfirmed} />
@@ -349,7 +349,7 @@ function OfferForm({ requestId, onSent }: { requestId: string; onSent: () => voi
         disabled={submitting}
         style={{ padding: "10px 12px", borderRadius: 9, background: `${t.ACCENT}1F`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
       >
-        {submitting && <Loader2 size={14} className="animate-spin" />} Send offer
+        {submitting && <Loader2 size={14} className="ctf-spin" />} Send offer
       </button>
     </div>
   );
@@ -431,7 +431,7 @@ export function TrustTransportHelpTab() {
       <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: t.SUBTLE, marginBottom: 12 }}>Open requests</div>
       {loading ? (
         <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.MUTED, fontSize: 13 }}>
-          <Loader2 size={16} className="animate-spin" /> Loading open requests…
+          <Loader2 size={16} className="ctf-spin" /> Loading open requests…
         </div>
       ) : error ? (
         <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>

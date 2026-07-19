@@ -52,7 +52,7 @@ export function TrustTransportEarningsTab() {
 
       {loading ? (
         <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.MUTED, fontSize: 13 }}>
-          <Loader2 size={16} className="animate-spin" /> Loading earnings…
+          <Loader2 size={16} className="ctf-spin" /> Loading earnings…
         </div>
       ) : error ? (
         <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>

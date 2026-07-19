@@ -165,6 +165,30 @@ export async function toggleHubReaction(
   return { reacted: data.reacted };
 }
 
+// One entry in the Hub channel list. Mirrors the web HubChannelInfo (lib/hub/types).
+export type HubChannelInfo = {
+  slug: string;
+  displayName: string;
+  visibilityScope: string;
+  streamChannelId: string;
+};
+
+// GET /api/hub/channels — the channels this member can see. The server filters by eligibility
+// (the gated `contributors` entry appears ONLY for eligible members and admins), so the client
+// never carries gating logic: when the entry is absent, no channel switch renders at all.
+// Best-effort: any failure resolves to just the always-present general channel view (empty list),
+// so the Commons is never blocked by this read.
+export async function fetchHubChannels(): Promise<HubChannelInfo[]> {
+  try {
+    const res = await authedFetch(`${HUB_API_BASE}/channels`);
+    if (!res.ok) return [];
+    const data = (await res.json()) as { channels?: HubChannelInfo[] };
+    return data.channels ?? [];
+  } catch {
+    return [];
+  }
+}
+
 // The member's last-seen marker for the Hub home channel, used to draw the "New messages" divider.
 // Best-effort: returns null on any failure (the divider simply does not show).
 export async function fetchHubLastSeen(): Promise<string | null> {

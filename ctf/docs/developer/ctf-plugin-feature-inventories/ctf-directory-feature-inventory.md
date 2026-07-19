@@ -21,7 +21,7 @@ Directory in CTF provides authenticated users with a deterministic profile-and-d
 5. Announcement consumption in user-visible contexts.
 6. Deterministic validation limits for description, selectors, and URL fields.
 7. **"Weavers of the Commons" contributor badge on the profile detail** (2026-07-18, web +
-   mobile-responsive). A claimed profile whose member holds the Contributor Access badge
+   mobile-responsive; 2026-07-19, android — #1680). A claimed profile whose member holds the Contributor Access badge
    (`eligible = TRUE AND revoked_for_cause = FALSE`) shows the braid badge next to the name; the
    read routes set `hasWeaversBadge` on claimed profiles only (guarded cross-plugin read —
    `lib/contributor-access/badge.ts`). Positive-only: members without it show nothing (no empty
@@ -178,9 +178,12 @@ claimed, badge-holding member (`Member.hasWeaversBadge`, set by the read routes 
 profiles only), with a click-through dialog and the `/apps/directory/weavers-of-the-commons`
 explainer page (`app/apps/directory/weavers-of-the-commons/page.tsx`, signed-in only — same gate
 as the profile deep link). Positive-only rendering; no change to any other shipped element.
-**Android parity gap (tracked in the Contributor Access inventory):** the RN profile detail does
-not yet render the badge/dialog/explainer — display-only work, the shared API already carries the
-boolean.
+**Android parity shipped (2026-07-19, #1680):** the RN profile detail (`DirectoryList.tsx`
+ProfileDetail) renders the same braid badge next to a claimed badge-holder's name via
+`WeaversBadgeControl` from `packages/mobile/src/features/contributor-access/`; tapping it opens
+the dialog with the web copy verbatim plus a condensed inline "how it's earned" paragraph (the
+app has no explainer page). `DirectoryListItem` in the mobile `api.ts` carries the optional
+`hasWeaversBadge` boolean. Positive-only rendering on all platforms.
 
 Web pixel pass: the `DirectoryShell` is aligned to `design/.../survivor-hub/Directory.tsx` and its Loading/Empty states (`DirectoryLoading.tsx`, `DirectoryEmpty.tsx`). The app surface background was corrected to `#0F1117` (the mockup's rendered surface), the loading state now renders the skeleton layout, and the empty state matches the mockup's category-grid + "Browse All / Clear Filters" treatment (driven by real sector data). The shell was decomposed into modular sub-components (`directory-profile-detail`, `directory-browse`, `directory-right-panel`, `directory-loading-skeleton`, `directory-empty-state`, `shared`) so each unit stays within the rule-116 complexity/length limits. API wiring is unchanged.
 
@@ -213,6 +216,16 @@ Seeded content:
 
 ## Change Log
 
+- 2026-07-19: **Android "Weavers of the Commons" badge on the profile detail (#1680).** The RN
+  Directory profile detail now renders the braid badge next to the name of a claimed member whose
+  payload carries `hasWeaversBadge: true` (the list route already set it; the mobile
+  `DirectoryListItem` type gains the optional boolean). The badge and its tap-through dialog come
+  from the new mobile Contributor Access feature directory
+  (`packages/mobile/src/features/contributor-access/` — `WeaversBadge.tsx`, a react-native-svg
+  port of the static braid SVG, and `WeaversBadgeControl.tsx`, a modal with the web dialog copy
+  verbatim plus a condensed inline "how it's earned" paragraph, since the app has no explainer
+  page). Positive-only: nothing renders for non-holders, unclaimed profiles, or revoked members.
+  Display-only — no route, schema, or contract change. Test script DIR-8 gains an android column.
 - 2026-07-18: **"Weavers of the Commons" contributor badge on claimed profiles (web +
   mobile-responsive).** Slice 2 of the trusted-channel / contributor-badge system (owned by the
   Contributor Access module — see `ctf-contributor-access-feature-inventory.md`). `GET
