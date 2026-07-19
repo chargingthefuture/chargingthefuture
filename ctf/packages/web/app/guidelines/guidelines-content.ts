@@ -56,8 +56,8 @@ export const GUIDELINE_SECTIONS: GuidelineSection[] = [
         items: [
           'Advocating, encouraging, planning, or joking about violence or harm to anyone.',
           'Conversations that are not about a psyop-free economy or lifestyle. You are free to meet members here and continue those conversations off the platform — they just do not belong in these spaces.',
-          'Making the space about perps/turning a channel into a forum about "them". Discussions here focus on what survivors build for each other.',
-          'Harassment, demeaning language, or targeting another member.',
+          'Making the space about perps/turning a channel into a forum about "them." Discussions here focus on what survivors build for each other.',
+          'Harassment, demeaning language to another member.',
           'Soliciting money, gift cards, or financial details from members, or any scam or impersonation.',
           "Sharing another member's personal information, photos, or location without their consent.",
           'Spam, flooding, or advertising unrelated to the community.',
@@ -76,7 +76,7 @@ export const GUIDELINE_SECTIONS: GuidelineSection[] = [
           'A good-faith slip usually gets a reminder and a redirect, in the channel, citing this page.',
           'Messages that cross a line may be removed. In the members-only channel, moderators can read everything (disclosed in the channel) and can remove any post.',
           'Repeated or serious violations lead to account restriction through the safety tools, and members-only channel access is revoked for reviewed cause.',
-          'You can block any member from their profile, and escalate a safety concern with a safety report — you never have to argue with someone who is targeting you.',
+          'You can block any member from their profile, and escalate a safety concern with a safety report — you never have to argue with someone.',
         ],
       },
       {
