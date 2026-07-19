@@ -65,8 +65,10 @@
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+  /* Two columns at every width — cards are name-only now, so they fit side by side even on
+     phones and the list scrolls half as far. */
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -103,13 +105,6 @@
   color: var(--ctf-text, #f9fafb);
 }
 
-.cardDesc {
-  display: block;
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--ctf-text-subtle, #6b7280);
-  line-height: 1.5;
-}
 
 .footer {
   margin-top: 24px;
