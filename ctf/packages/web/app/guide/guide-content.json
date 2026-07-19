@@ -29,13 +29,13 @@
       "updated": "2026-07-18",
       "summary": "Find a support provider and connect with them one to one.",
       "body": [
-        "Foundation lets you search for providers by service type, location, language, and trauma-informed criteria. Providers are fellow community members, not a formal service.",
+        "Foundation lets you search providers by name, headline, or bio, and filter by the skill they offer. Providers are fellow community members who chose to offer help — not a formal service.",
         "When you want help, request a quote or connect. That opens a private one-to-one chat between you and the provider. Voice and video calls are available once connected, and a call may cost ServiceCredits, shown in credits only.",
         "Private chat exists only inside an active connection or quote — there is no open inbox to message anyone. When the connection ends, the chat closes."
       ],
       "howTo": [
         "Open Foundation. The provider list loads with each provider's name, headline, and bio.",
-        "Search or filter to find a provider that fits.",
+        "Search by name or words from a provider's headline or bio, or filter by an offered skill, to find a provider that fits.",
         "Request a quote or connect to open a private chat with them.",
         "Start a voice or video call once connected."
       ]

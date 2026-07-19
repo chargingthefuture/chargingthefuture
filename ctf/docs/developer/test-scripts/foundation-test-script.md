@@ -52,6 +52,9 @@ checks. Member role unless noted.
 
 ### FND-1 · Provider discovery and search
 **Role:** member · **Surfaces:** all · **Seed:** `seed:foundation`
+**Search scope (matches the shipped `searchProviders`):** a text match over provider name,
+headline, and bio, plus the offered-skill filter — there are no location, language, or
+trauma-informed filters, and no surface (including the public user guide) should claim them.
 **Steps:**
 1. Open Foundation and browse providers; filter by an offered skill chip.
 2. On desktop, set a filter (pick a trade in the sidebar, type a search term, or tap a skill chip),
