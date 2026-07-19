@@ -153,7 +153,7 @@ export function WorkforceCommunityPlanning() {
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: t.MUTED, fontSize: 13, padding: 24 }}>
-        <Loader2 size={16} className="animate-spin" /> Building team rosters…
+        <Loader2 size={16} className="ctf-spin" /> Building team rosters…
       </div>
     );
   }

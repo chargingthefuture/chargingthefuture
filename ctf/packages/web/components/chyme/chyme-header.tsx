@@ -54,7 +54,7 @@ export function ChymeHeader({
         title="Refresh the room and chat"
         aria-label="Refresh the room and chat"
       >
-        <RefreshCw size={16} className={refreshing ? 'animate-spin' : undefined} />
+        <RefreshCw size={16} className={refreshing ? 'ctf-spin' : undefined} />
       </button>
     </header>
   );

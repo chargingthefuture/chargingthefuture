@@ -34,6 +34,9 @@ export function RefreshButton({
   const handleRefresh = useCallback(async () => {
     if (refreshing) return;
     setRefreshing(true);
+    // Keep the spinner visible for a beat even when the refresh resolves instantly (silent
+    // re-pulls often do) — a click with zero visible response reads as a broken button.
+    const minSpin = new Promise((resolve) => setTimeout(resolve, 600));
     try {
       if (onRefresh) {
         await onRefresh();
@@ -43,6 +46,7 @@ export function RefreshButton({
     } catch {
       // The shell surfaces its own load errors; the button only drives the refresh.
     } finally {
+      await minSpin;
       setRefreshing(false);
     }
   }, [onRefresh, refreshing, router]);
@@ -71,7 +75,7 @@ export function RefreshButton({
         ...style,
       }}
     >
-      <RefreshCw size={size} className={refreshing ? 'animate-spin' : undefined} />
+      <RefreshCw size={size} className={refreshing ? 'ctf-spin' : undefined} />
     </button>
   );
 }

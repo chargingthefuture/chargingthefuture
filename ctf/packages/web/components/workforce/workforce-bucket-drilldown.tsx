@@ -87,7 +87,7 @@ function BucketRow({ kind, item }: { kind: DrilldownKind; item: WorkforceGrouped
         <div style={{ padding: '4px 6px 16px 34px' }}>
           {loading ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: t.MUTED, fontSize: 13 }}>
-              <Loader2 size={14} className="animate-spin" /> Loading members…
+              <Loader2 size={14} className="ctf-spin" /> Loading members…
             </div>
           ) : error ? (
             <div style={{ fontSize: 13, color: '#EF4444' }}>{error}</div>
