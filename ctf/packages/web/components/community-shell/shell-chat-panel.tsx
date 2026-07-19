@@ -755,7 +755,8 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
       </div>
 
       <p className={styles.chatFootnote}>
-        {isLive ? 'Human-in-the-loop AI support and community support channel.' : 'Support channel keeps syncing as new messages arrive.'}
+        {isLive ? 'Human-in-the-loop AI support and community support channel.' : 'Support channel keeps syncing as new messages arrive.'}{' '}
+        <a href="/guidelines" style={{ color: 'inherit', textDecoration: 'underline' }}>Community guidelines</a>
       </p>
 
       <ComicConsentModal open={consentModalOpen} onConfirm={() => void confirmConsent()} onDismiss={dismissConsent} />

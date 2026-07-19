@@ -219,7 +219,10 @@ export function GatedChatPanel({ currentUser, isAdmin = false }: GatedChatPanelP
         </button>
       </div>
 
-      <p className={styles.chatFootnote}>{GATED_CHANNEL_MODERATOR_DISCLOSURE} No images here — text only.</p>
+      <p className={styles.chatFootnote}>
+        {GATED_CHANNEL_MODERATOR_DISCLOSURE} No images here — text only.{' '}
+        <a href="/guidelines" style={{ color: 'inherit', textDecoration: 'underline' }}>Community guidelines</a>
+      </p>
     </div>
   );
 }
