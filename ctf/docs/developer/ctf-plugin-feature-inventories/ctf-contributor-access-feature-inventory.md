@@ -301,13 +301,22 @@ counts still feed the score internally).
   the gated channel is reachable at phone widths via the channel-pill switch row (the desktop
   channel rail is hidden there) and the panel reuses the Commons' responsive chat layout; the
   badge, dialog, and explainer page are responsive in the Directory shell.
-- **Android (React Native):** **tracked gaps — deliberately not built in these slices.** (1) The
-  gated channel: the mobile app has no gated-channel feature directory yet; parity should follow
-  the same server-filtered channel list (`/api/hub/channels`) and the same member routes, so no
-  client-side eligibility logic is ever needed (issue #1681). (2) The badge: the RN Directory
-  profile does not yet render the badge/dialog or the explainer screen — the boolean is already
-  on the shared Directory responses, so the work is display-only (issue #1680). PRs for these
-  slices carry a `Parity Ticket:` line instead of claiming android complete.
+- **Android (React Native):** **complete (2026-07-19, issues #1680 and #1681)** — both member
+  surfaces ship in `packages/mobile/src/features/contributor-access/`. (1) The gated channel
+  (#1681): `HubHome` reads the server-filtered `/api/hub/channels` (new `fetchHubChannels` in the
+  hub client) and shows a `#general` / `#contributors` pill row ONLY when the response carries the
+  contributors entry — no client-side eligibility logic exists, and a member without the entry
+  sees the shipped single-channel Commons unchanged. `GatedChannel.tsx` binds the same member
+  routes (messages list/create, reaction toggle, delete) over a 10s poll, with quoted replies,
+  the twelve-emoji reaction set, the always-visible moderator disclosure in the header and under
+  the composer, a 4000-character composer cap, no upload affordance, and a confirm-gated delete
+  on own posts; any 404 silently drops the pill row (the no-teaser rule). Deliberate android
+  deltas: no live Stream layer (polling only, no typing indicators) and no admin delete-any
+  affordance in the RN UI (server-enforced on the API). (2) The badge (#1680): the RN Directory
+  profile detail renders `WeaversBadgeControl` (static braid SVG via react-native-svg) next to
+  the name of a claimed badge-holder; the tap-through dialog carries the web copy verbatim plus a
+  condensed inline "how it's earned" paragraph (the app has no explainer page). Positive-only —
+  nothing renders for anyone else.
 
 ## Seed Coverage Status
 
@@ -322,7 +331,9 @@ fill on the first recompute / config save / member post.
   the production credentials and once against the staging/demo credentials (usage at the top of
   the script). Until it runs, opening the channel stores the config flip and returns a
   `channelSyncWarning`; membership reconciles on the next sync after the type exists.
-- Android parity gaps: see the delivery-status section (issues #1680 badge, #1681 channel).
+- Android parity shipped 2026-07-19 (issues #1680 badge, #1681 channel) — see the delivery-status
+  section for the deliberate android deltas (polling only; no admin delete-any affordance in the
+  RN UI; explainer condensed into the badge dialog).
 - No message edit in the gated channel (deliberate — same as the Commons: to change a message,
   delete it and post again, so a corrected message gets a fresh content-gate pass).
 - Default weights need owner tuning: the shipped `DEFAULT_WEIGHTS` are a reasoned starting point
@@ -337,6 +348,25 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-07-19 — Android parity for both member surfaces (issues #1680 and #1681). New mobile
+  feature directory `packages/mobile/src/features/contributor-access/`: `WeaversBadge.tsx`
+  (react-native-svg port of the static braid SVG, path data identical to the web mark),
+  `WeaversBadgeControl.tsx` (tappable badge + modal dialog: web copy verbatim, condensed inline
+  "how it's earned" paragraph — the app has no explainer page), `api.ts` (channel client mirroring
+  the web routes and the `gated-channel-shared.ts` constants: slug, display name, moderator
+  disclosure, 4000-char cap, twelve-emoji set; every 404 resolves to a silent no-access result),
+  and `GatedChannel.tsx` (the channel screen on the mobile Commons chat patterns: 10s poll as the
+  source of truth, optimistic send/reaction/delete, quoted replies, always-visible disclosure in
+  the header + composer footnote, confirm-gated delete on own posts, no upload affordance, no
+  live layer). `HubHome` gains a server-driven `#general` / `#contributors` pill row via the new
+  `fetchHubChannels` hub-client read — rendered only when the response carries the contributors
+  entry, so a non-eligible member's Commons is unchanged (the no-teaser rule); a 404 from any
+  channel route silently drops the row. Directory: `DirectoryListItem` gains the optional
+  `hasWeaversBadge` boolean and the RN profile detail renders the badge for claimed holders only
+  (positive-only). Bookkeeping: the `directory` entry in `config/plugin-parity-contracts.json`
+  now lists the `contributor-access` mobile feature dir (this module has no registry slug of its
+  own, so it cannot carry its own parity entry); Directory inventory and both manual test
+  scripts updated. No route, schema, or contract change — binds existing endpoints.
 - 2026-07-18 — Badge slice (slice 2): the contributor badge is member-visible on the Directory.
   Owner decisions: name **"Weavers of the Commons"**; artwork is ONLY the small braid-ring badge
   (rust `#8b3a2f` circle, cream/gold three-strand braid), copied as a static SVG from the owner's
@@ -393,11 +423,10 @@ Ordered, dependency-based task list for this module (each item names what blocks
 7. Owner pass on weights/threshold/minimums via the config editor — blocked by 5; owner decision.
 8. Badge slice (Directory badge, click-through copy, "how it's earned" page) — owner decided the
    name ("Weavers of the Commons") and the braid emblem, 2026-07-18. **Done (web +
-   mobile-responsive).** Android badge display remains a tracked parity gap (display-only; the
-   shared Directory API already carries the boolean).
+   mobile-responsive + android — android badge shipped 2026-07-19, #1680).**
 9. Channel slice (gated Stream channel type, membership sync from the flag, moderator read-in
    disclosure, launch gate on `min_eligible_to_open_channel`) — blocked by 7; independent of 8.
-   **Done** (web + mobile-responsive; the one-time channel-type script is the owner's manual
-   step, and Android parity is tracked in Gaps).
+   **Done (web + mobile-responsive + android — android channel shipped 2026-07-19, #1681;** the
+   one-time channel-type script is the owner's manual step).
 10. Clean-standing admission gate (blocks/safety reports) — blocked by an owner decision on which
     signals count; can land any time after 2.
