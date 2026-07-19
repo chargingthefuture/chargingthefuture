@@ -22,6 +22,11 @@
 - Run **Core smoke** at the start of every test session before anything else.
 - "Web" means the Next.js app in a desktop browser. "Android" means the React Native app on a real Android device or emulator.
 - Run `pnpm --dir ctf seed:demo` once before the session and do not re-seed mid-session unless a case says to.
+- **"Ways to earn" is accurate (2026-07-19):** on web (signed-out landing + member shell) and the
+  Android Earn tab, the list is: Verify your account (+100), Help another member — they send you
+  credits (Per exchange), Take part in SkillsHunt (Per round), Contribute during a fundraiser
+  (Varies). No GentlePulse/LevelUp/referral platform payouts appear anywhere, and peer-to-peer
+  rows say "send credits", never "pay".
 - **Credits are not money** (`ctf/docs/DISCLAIMER.md`, mirrored in the inventory's Intent section):
   while walking any case below, no surface may describe credits as money/cash/currency/a payment,
   show a credits amount at a fiat equivalent, or offer any cash-out/withdrawal path. If one does,
