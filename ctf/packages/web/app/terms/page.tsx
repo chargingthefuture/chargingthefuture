@@ -1,3 +1,4 @@
+import { PublicPageNav } from '@/components/shared/public-page-nav';
 import type { Metadata } from 'next';
 import {
   POLICY_DOCUMENTS,
@@ -65,6 +66,7 @@ export default function TermsPage() {
   return (
     <main className={styles.page}>
       <div className={styles.container}>
+        <PublicPageNav />
         <header className={styles.header}>
           <p className={styles.brand}>Charging the Future</p>
           <h1 className={styles.title}>Terms &amp; Privacy Policy</h1>

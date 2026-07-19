@@ -1,3 +1,4 @@
+import { PublicPageNav } from '@/components/shared/public-page-nav';
 import type { Metadata } from 'next';
 import styles from '../terms/terms.module.css';
 import { CONTACT_EMAIL, OPERATOR_NAME } from '../terms/policy-content';
@@ -36,6 +37,7 @@ export default function GuidelinesPage() {
   return (
     <main className={styles.page}>
       <div className={styles.container}>
+        <PublicPageNav />
         <header className={styles.header}>
           <p className={styles.brand}>Charging the Future</p>
           <h1 className={styles.title}>Community Guidelines</h1>
