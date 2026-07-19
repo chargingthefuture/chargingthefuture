@@ -1,3 +1,4 @@
+import { PublicPageNav } from '@/components/shared/public-page-nav';
 import type { Metadata } from 'next';
 import guideData from './guide-content.json';
 import type { UserGuide } from './guide-types';
@@ -34,6 +35,7 @@ export default function GuidePage() {
   return (
     <main className={styles.page}>
       <div className={styles.container} id="top">
+        <PublicPageNav />
         <header className={styles.header}>
           <p className={styles.brand}>Charging the Future</p>
           <h1 className={styles.title}>How to use it</h1>
