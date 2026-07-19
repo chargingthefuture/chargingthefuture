@@ -95,9 +95,17 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
 function WorkforceRecruitmentProgress({ dashboard }: WorkforceHeroStatsProps) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
-  const pct = Math.min(100, Math.max(0, dashboard.percentRecruited));
+  // Progress is toward the recruitment goal (min recruitable, the owner's 2,000,000 target — the
+  // same goal Weekly Performance tracks), not toward theoretical sector capacity. The card shows
+  // the recruited count and the countdown to the goal; "remaining capacity" (max recruitable minus
+  // recruited) is a config ceiling, not progress, and confused the read.
+  const goal = Math.max(0, dashboard.minRecruitable);
+  const recruited = Math.max(0, dashboard.recruitedTotal);
+  const goalPct = goal > 0 ? Math.round(((recruited / goal) * 100 + Number.EPSILON) * 100) / 100 : 0;
+  const pct = Math.min(100, Math.max(0, goalPct));
   // Most of the bar is the gap to fill — the signal that tells LevelUp where to recruit and train.
   const barPct = pct < 0.5 && pct > 0 ? 0.5 : pct;
+  const remainingToGoal = Math.max(0, goal - recruited);
 
   return (
     <div
@@ -111,7 +119,7 @@ function WorkforceRecruitmentProgress({ dashboard }: WorkforceHeroStatsProps) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>Recruitment Progress</div>
         <div style={{ fontSize: 13, color: t.ACCENT, fontWeight: 700 }}>
-          {dashboard.percentRecruited.toLocaleString(undefined, { maximumFractionDigits: 2 })}%
+          {goalPct.toLocaleString(undefined, { maximumFractionDigits: 2 })}%
         </div>
       </div>
       <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden', marginBottom: 10 }}>
@@ -119,12 +127,12 @@ function WorkforceRecruitmentProgress({ dashboard }: WorkforceHeroStatsProps) {
       </div>
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 12, color: t.SUBTLE }}>
         <span>
-          Remaining capacity:{' '}
-          <span style={{ color: t.TEXT, fontWeight: 600 }}>{dashboard.remainingCapacity.toLocaleString()}</span>
+          Recruited:{' '}
+          <span style={{ color: t.TEXT, fontWeight: 600 }}>{recruited.toLocaleString()}</span>
         </span>
         <span>
-          Min recruitable:{' '}
-          <span style={{ color: t.TEXT, fontWeight: 600 }}>{dashboard.minRecruitable.toLocaleString()}</span>
+          Remaining to the {goal.toLocaleString()} goal:{' '}
+          <span style={{ color: t.TEXT, fontWeight: 600 }}>{remainingToGoal.toLocaleString()}</span>
         </span>
       </div>
     </div>

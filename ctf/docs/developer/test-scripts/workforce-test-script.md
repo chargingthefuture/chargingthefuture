@@ -53,7 +53,9 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
    Recruitment Progress.
 **Expected:** All four cards show numbers. Workforce Total = population × participation rate.
 Recruited = the count of all active Directory members. Recruitment Progress reads as a percent of
-target.
+the recruitment goal (recruited ÷ min recruitable, the 2,000,000 target) and shows the recruited
+count plus "Remaining to the 2,000,000 goal", which counts down as members are recruited. There is
+no "Remaining capacity" line (the max-recruitable ceiling is config, not progress).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### WF-2 · Sector opportunities
