@@ -55,9 +55,10 @@ function StatGrid({ dashboard }: { dashboard: WorkforceDashboardData }) {
   const { accent, styles } = useWorkforceStyles();
   // Stat-tile series palette (indigo/red/green data colors) stays raw; only the plugin accent is themed.
   const stats = [
+    // "Headcount Target" was dropped (owner decision, 2026-07-19, parity with web): it is
+    // Workforce Total re-summed after per-sector rounding — a duplicate at the overview level.
     { label: 'Population', value: formatCount(dashboard.population), color: '#6366F1' },
     { label: 'Workforce Total', value: formatCount(dashboard.workforceTotal), color: accent },
-    { label: 'Headcount Target', value: formatCount(dashboard.totalHeadcountTarget), color: '#EF4444' },
     { label: 'Recruited', value: formatCount(dashboard.recruitedTotal), color: '#22C55E' },
   ];
 
@@ -190,7 +191,7 @@ export function WorkforceDashboard() {
     || (dashboard.sectorsTotal === 0 && dashboard.occupationsTotal === 0 && dashboard.totalMembers === 0);
 
   const subtitle = dashboard
-    ? `${formatCount(dashboard.recruitedTotal)} recruited · ${formatCount(dashboard.totalHeadcountTarget)} target`
+    ? `${formatCount(dashboard.recruitedTotal)} recruited · ${formatCount(dashboard.minRecruitable)} goal`
     : 'Live workforce tracker';
 
   const tabs: { key: WorkforceTab; label: string }[] = [
