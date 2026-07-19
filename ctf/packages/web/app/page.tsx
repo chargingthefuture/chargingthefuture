@@ -6,7 +6,7 @@ import { resolveRequestIdentity } from '../lib/auth/request-identity';
 import { getUnlockAccessTier, isUnlockEarlyCommonsEnabled } from '../lib/unlock/access';
 import { getUnlockStatusForUser } from '../lib/unlock/repository';
 import { getGdpShellStats } from '../lib/gdp/repository';
-import { listPluginRegistry } from '../lib/plugins/repository';
+import { listPluginRegistry, filterPluginsForViewer } from '../lib/plugins/repository';
 import { getTrustUserExtension } from '../lib/trust/repository';
 import { getHostedSignInUrl } from '../lib/auth/provider-env';
 
@@ -46,6 +46,12 @@ export default async function HomePage() {
 
   const userId = identity?.isAuthenticated ? identity.userId : null;
   const isAdmin = identity?.isAdmin ?? false;
+
+  // Operator-only plugins (e.g. Weekly Performance) must not appear in the member hub's app list.
+  // The /apps launcher and /api/plugins already apply this filter; the home hub did not, so an
+  // admin-only tile leaked to members here. Admins still see the full list. The plugin's own route
+  // is separately gated, so this only hides the tile.
+  const visiblePlugins = filterPluginsForViewer(plugins, isAdmin);
 
   // Unlock is the single source of truth for who reaches the Hub. Resolve the tier once and branch:
   //   - not signed in                         -> anonymous shell (sign-in prompt)
@@ -103,7 +109,7 @@ export default async function HomePage() {
 
   return (
     <CommunityShell
-      initialPlugins={plugins}
+      initialPlugins={visiblePlugins}
       shellStats={shellStats}
       currentUser={currentUser}
       trust={trust}
