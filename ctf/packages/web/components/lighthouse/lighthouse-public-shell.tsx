@@ -72,14 +72,14 @@ function DesktopLightHousePublic({ signInUrl, verifyUrl }: { signInUrl: string; 
 
       <div style={{ padding: '48px 64px 32px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <span style={{ padding: '4px 14px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 12, color: t.ACCENT, fontWeight: 600, display: 'inline-block', width: 'fit-content' }}>
-          Privacy-first housing
+          Community housing
         </span>
         <h1 style={{ margin: 0, fontSize: 34, fontWeight: 800, lineHeight: 1.1 }}>
-          Safe, verified housing —<br />
-          <span style={{ color: t.ACCENT }}>your location stays private</span>
+          Housing listings<br />
+          <span style={{ color: t.ACCENT }}>for the survivor community</span>
         </h1>
         <p style={{ margin: 0, fontSize: 15, color: t.SUBTLE, maxWidth: 520 }}>
-          All listings are privacy-minimized. Your location is never shared without consent. Trauma-informed hosts. ServiceCredits accepted. Month-to-month options available.
+          Trauma-informed hosts. ServiceCredits accepted.
         </p>
         <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
           {verifyUrl ? (
@@ -109,7 +109,7 @@ function DesktopLightHousePublic({ signInUrl, verifyUrl }: { signInUrl: string; 
           <div style={{ width: 52, height: 52, borderRadius: '50%', border: `2px solid ${t.ACCENT}50`, background: t.ACCENT + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Lock size={22} color={t.ACCENT} />
           </div>
-          <div style={{ fontSize: 16, fontWeight: 700, textAlign: 'center' }}>Sign in to view safe housing</div>
+          <div style={{ fontSize: 16, fontWeight: 700, textAlign: 'center' }}>Sign in to view listings</div>
           <div style={{ fontSize: 13, color: t.MUTED, textAlign: 'center', maxWidth: 300 }}>
             Filter by price, location, availability, and Service Credit acceptance.
           </div>
@@ -133,8 +133,8 @@ function MobileLightHousePublic({ signInUrl, verifyUrl }: { signInUrl: string; v
           <Home size={20} color={t.ACCENT} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>LightHouse</span>
         </div>
-        <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Privacy-first housing</span>
-        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Safe, verified housing. Your location is never shared without consent. Trauma-informed hosts. ServiceCredits accepted.</p>
+        <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Community housing</span>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Trauma-informed hosts. ServiceCredits accepted.</p>
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 

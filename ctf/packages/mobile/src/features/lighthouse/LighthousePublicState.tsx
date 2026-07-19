@@ -20,10 +20,9 @@ export const LighthousePublicState: React.FC<Props> = ({ onSignIn, onJoin }) => 
         <Text style={styles.title}>LightHouse</Text>
       </View>
       <View style={styles.badge}>
-        <Text style={styles.badgeText}>Privacy-first housing</Text>
+        <Text style={styles.badgeText}>Community housing</Text>
       </View>
       <Text style={styles.description}>
-        Safe, verified housing. Your location is never shared without consent.
         Trauma-informed hosts. ServiceCredits accepted.
       </Text>
       <TouchableOpacity style={styles.joinBtn} activeOpacity={0.8} onPress={onJoin}>
@@ -54,7 +53,7 @@ export const LighthousePublicState: React.FC<Props> = ({ onSignIn, onJoin }) => 
 };
 
 const PREVIEW_LISTINGS = [
-  { title: 'Private Studio — Safe & Verified', price: '$850/mo' },
+  { title: 'Private Studio — Near transit', price: '$850/mo' },
   { title: 'Furnished 1BR — Female-only Floor', price: '$1,100/mo' },
   { title: 'Micro-unit — Month-to-month', price: '$650/mo' },
 ];

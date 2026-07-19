@@ -159,13 +159,6 @@ export const LighthousePropertyDetail: React.FC<Props> = ({ property, currencies
               ))}
             </View>
           ) : null}
-          <View style={styles.privacyNote}>
-            <Ionicons name="lock-closed-outline" size={12} color={accent} />
-            <Text style={styles.privacyNoteTitle}>Privacy Protected</Text>
-          </View>
-          <Text style={styles.privacyBody}>
-            Your location is never shown until you confirm.
-          </Text>
         </View>
       </ScrollView>
     </View>
