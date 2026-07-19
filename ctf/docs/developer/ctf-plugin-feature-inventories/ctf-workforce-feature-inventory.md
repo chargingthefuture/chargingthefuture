@@ -442,6 +442,12 @@ Profile read + compliance-delete surface: the profile is read-only (owner decisi
 
 ### Change Log
 
+- 2026-07-19: **Dropped the "Total Headcount Target" hero card from the web overview (owner
+  decision).** It was Workforce Total re-summed after per-sector rounding (1,999,998 vs 2,000,000)
+  — a duplicate at the top level. The overview now shows Population, Workforce Total, and
+  Recruited; per-sector targets stay in the Sectors view, where the allocation carries meaning.
+  The dashboard API payload is unchanged; the Android screens are unchanged (tracked as a small
+  parity note — the Android overview still lists a Headcount Target row).
 - 2026-07-19: **Recruitment Progress card now tracks the recruitment goal (owner report: the math
   read wrong).** The card showed "Remaining capacity" (the max-recruitable ceiling minus recruited
   — a config ceiling, not progress) and a static "Min recruitable: 2,000,000". It now shows

@@ -26,12 +26,10 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
       delta: `${participationPct}% participation`,
       color: t.ACCENT,
     },
-    {
-      label: 'Total Headcount Target',
-      value: dashboard.totalHeadcountTarget.toLocaleString(),
-      delta: `${dashboard.sectorsTotal} sectors · ${dashboard.occupationsTotal} occupations`,
-      color: '#EF4444',
-    },
+    // "Total Headcount Target" was dropped from the overview (owner decision, 2026-07-19): it is
+    // Workforce Total re-summed after per-sector rounding (1,999,998 vs 2,000,000), so at the top
+    // level it duplicated the card beside it. The allocation lives where it means something — the
+    // per-sector targets in the Sectors view.
     {
       label: 'Recruited',
       value: dashboard.recruitedTotal.toLocaleString(),
