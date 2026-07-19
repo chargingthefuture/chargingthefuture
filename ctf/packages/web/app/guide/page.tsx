@@ -1,3 +1,4 @@
+import { PublicPageFooter } from '@/components/shared/public-page-footer';
 import { PublicPageNav } from '@/components/shared/public-page-nav';
 import type { Metadata } from 'next';
 import guideData from './guide-content.json';
@@ -89,16 +90,7 @@ export default function GuidePage() {
           </section>
         ))}
 
-        <footer className={styles.footer}>
-          Charging the Future ·{' '}
-          <a className={styles.link} href="/terms">
-            Terms &amp; Privacy
-          </a>{' '}
-          ·{' '}
-          <a className={styles.link} href="/accessibility">
-            Accessibility
-          </a>
-        </footer>
+        <PublicPageFooter />
       </div>
     </main>
   );

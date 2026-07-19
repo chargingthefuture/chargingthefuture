@@ -1,10 +1,9 @@
+import { PublicPageFooter } from '@/components/shared/public-page-footer';
 import { PublicPageNav } from '@/components/shared/public-page-nav';
 import type { Metadata } from 'next';
 import {
   POLICY_DOCUMENTS,
   EFFECTIVE_DATE,
-  OPERATOR_NAME,
-  CONTACT_EMAIL,
   type PolicyBlock,
   type PolicyDocument,
 } from './policy-content';
@@ -89,24 +88,7 @@ export default function TermsPage() {
           <PolicyDoc key={doc.id} doc={doc} />
         ))}
 
-        <footer className={styles.footer}>
-          {OPERATOR_NAME} · Contact{' '}
-          <a className={styles.link} href={`mailto:${CONTACT_EMAIL}`}>
-            {CONTACT_EMAIL}
-          </a>{' '}
-          ·{' '}
-          <a className={styles.link} href="/accessibility">
-            Accessibility
-          </a>{' '}
-          ·{' '}
-          <a className={styles.link} href="/guide">
-            How to use it
-          </a>{' '}
-          ·{' '}
-          <a className={styles.link} href="/guidelines">
-            Community guidelines
-          </a>
-        </footer>
+        <PublicPageFooter />
       </div>
     </main>
   );
