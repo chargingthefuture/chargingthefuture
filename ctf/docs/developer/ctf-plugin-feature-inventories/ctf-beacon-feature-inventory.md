@@ -232,6 +232,12 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-07-19: **Copy: broadcasts are "from Farah", not "from the team" (owner report).** The
+  platform has a single operator, so "the team" was inaccurate. Updated everywhere the phrase
+  shipped: the plugin-registry summary (schema seed + in-code fallback), the web viewer intro and
+  idle line, and the Android intro and idle line. Copy only; no schema-structure, route, or
+  contract change (the seed row's summary text is upserted on the next database update run).
+
 - 2026-07-18: **Beacon added to the app launcher (owner report: no way to reach the member page).**
   The `ctf_plugin_registry` seed in `ctf/schema.sql` had no `beacon` row, so the launcher — which
   reads the database registry, not the in-code fallback — never showed the tile and members could

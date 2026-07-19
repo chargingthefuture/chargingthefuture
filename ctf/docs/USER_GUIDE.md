@@ -110,7 +110,7 @@ PeerProgramming places active members into small weekly groups of about five peo
 
 The room is text-first with a topic header and supports threaded replies. The timeline stays and comes back after you reconnect.
 
-Group members can post and reply; others may have a more limited view. You can submit feedback from the room.
+Group members can post and reply; everyone else can open a group read-only to listen in, and can never post in it. You can submit feedback from the room.
 
 **How to use it**
 

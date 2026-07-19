@@ -26,7 +26,7 @@ export const BeaconIdleView: React.FC<BeaconIdleViewProps> = ({ tokens, replay }
     <View style={styles.idleCard}>
       <Text style={[styles.idleTitle, { color: tokens.textPrimary }]}>No live event right now</Text>
       <Text style={[styles.idleBody, { color: tokens.textSecondary }]}>
-        When the team goes live, it will appear here.
+        When Farah goes live, it will appear here.
       </Text>
       {replay?.recordingUrl ? (
         <View style={styles.replayBlock}>

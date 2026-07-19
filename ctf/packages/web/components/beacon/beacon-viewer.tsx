@@ -161,7 +161,7 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
         <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Beacon</h1>
       </div>
       <p style={{ color: t.SUBTLE, fontSize: 14, marginTop: 0 }}>
-        Live broadcasts from the team. Watch with just a link; sign in to chat and react.
+        Live broadcasts from Farah. Watch with just a link; sign in to chat and react.
       </p>
 
       {loading ? (
@@ -236,7 +236,7 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
         <div style={{ ...panelStyle(t), textAlign: 'center', padding: '48px 24px' }}>
           <Radio size={40} style={{ color: t.SUBTLE, display: 'block', margin: '0 auto 12px' }} />
           <div style={{ fontSize: 16, fontWeight: 600 }}>No live event right now</div>
-          <p style={{ color: t.SUBTLE, fontSize: 14, marginTop: 6 }}>When the team goes live, it will appear here.</p>
+          <p style={{ color: t.SUBTLE, fontSize: 14, marginTop: 6 }}>When Farah goes live, it will appear here.</p>
           {replay?.recordingUrl ? (
             <div style={{ marginTop: 20, textAlign: 'left' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Last replay</div>
