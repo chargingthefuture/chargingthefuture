@@ -34,8 +34,9 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
 
 1. **Dashboard loads with numbers.** Open the Workforce dashboard. Population, Workforce Total,
    and Recruited all render as numbers, not a spinner or error. There is NO "Total Headcount
-   Target" card on web — it duplicated Workforce Total after sector rounding (dropped 2026-07-19);
-   per-sector targets live in the Sectors view. → web ☐ mobile ☐ android ☐
+   Target" card on any surface — it duplicated Workforce Total after sector rounding (dropped
+   2026-07-19, web and android); per-sector targets live in the Sectors view. On android the
+   screen subtitle reads "{recruited} recruited · {goal} goal". → web ☐ mobile ☐ android ☐
 2. **Top-line numbers reconcile.** Recruited equals the count of all active Directory members, and
    the Recruitment Progress shows a percent of target, not a repeated count. → web ☐ mobile ☐ android ☐
 3. **No write controls on the profile.** Open the Workforce profile view. There is no profile editor
