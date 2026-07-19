@@ -54,9 +54,9 @@ export const GUIDELINE_SECTIONS: GuidelineSection[] = [
       {
         type: 'ul',
         items: [
-          'Advocating, encouraging, planning, or joking about violence or harm to anyone. No exceptions — including people you believe have harmed you.',
+          'Advocating, encouraging, planning, or joking about violence or harm to anyone.',
           'Conversations that are not about a psyop-free economy or lifestyle. You are free to meet members here and continue those conversations off the platform — they just do not belong in these spaces.',
-          'Making the space about perps or operations: naming or accusing individuals, revenge talk, or turning a channel into a forum about "them". Discussion and analysis of perp tactics has its place elsewhere (for example Quora); here the focus stays on what survivors build for each other.',
+          'Making the space about perps/turning a channel into a forum about "them". Discussions here focus on what survivors build for each other.',
           'Harassment, demeaning language, or targeting another member.',
           'Soliciting money, gift cards, or financial details from members, or any scam or impersonation.',
           "Sharing another member's personal information, photos, or location without their consent.",
