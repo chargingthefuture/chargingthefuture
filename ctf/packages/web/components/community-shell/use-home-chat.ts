@@ -132,6 +132,15 @@ function applyReactionToggle(message: ChatMessage, emoji: string): ChatMessage {
 }
 
 function getMessageDedupKey(message: ChatMessage): string {
+  // A peer post is the same post wherever it arrived from: the POST /api/hub/messages response
+  // carries the post id with its created time, while the GET list carries the timeline item id
+  // with its published time. Keying on the stable community post id keeps those two copies from
+  // rendering as a temporary duplicate whenever their timestamps straddle a minute boundary (the
+  // composite key below folds the formatted time label in, so "9:32 PM" vs "9:33 PM" defeated
+  // it). Non-post lines (AI answers, concierge, announcement rows) keep the composite key.
+  if (message.communityPostId) {
+    return `post|${message.communityPostId}`;
+  }
   return [message.from, message.senderLabel ?? '', message.text.trim().toLowerCase(), message.time].join('|');
 }
 
