@@ -39,6 +39,9 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 4. **Unauthenticated call blocked.** Call `GET /api/trust/user/self` with no auth header. Expect HTTP 401 or 403, never 200.
    web ☐
 
+5. **Public landing lists four signals — no verification claim.** Signed out, open the Trust public landing. The signal list reads exactly: Quora social proof, ServiceCredits activity, Community connections, Cohort completion record. "Admin-reviewed verification" does NOT appear (removed 2026-07-19 — it read as the platform vetting people, a claim this plugin never makes).
+   web ☐
+
 ---
 
 ## Admin walkthrough
