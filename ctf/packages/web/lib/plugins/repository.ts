@@ -221,7 +221,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'beacon',
     name: 'Beacon',
-    summary: 'Live one-way broadcasts from the team. Watch publicly with just a link; sign in to chat and react.',
+    summary: 'Live one-way broadcasts from Farah. Watch publicly with just a link; sign in to chat and react.',
     availabilityState: 'implemented_shell',
     navRank: 230,
     isVisible: true,

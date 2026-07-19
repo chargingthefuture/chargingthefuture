@@ -110,7 +110,7 @@ export const Beacon: React.FC = () => {
     >
       <Text style={[styles.title, { color: tokens.textPrimary }]}>Beacon</Text>
       <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>
-        Live broadcasts from the team. Watch with just the app; sign in to chat and react.
+        Live broadcasts from Farah. Watch with just the app; sign in to chat and react.
       </Text>
 
       {loading ? (
