@@ -22,9 +22,11 @@ import {
   toggleHubReaction,
   fetchHubLastSeen,
   markHubSeen,
+  fetchHubChannels,
   HUB_REACTION_EMOJIS,
 } from './api';
 import type { HubMessage, HubReactionEmoji, HubReactionSummary, HubStreamFilter } from './api';
+import { GatedChannel, GATED_CHANNEL_SLUG, GATED_CHANNEL_DISPLAY_NAME } from '../contributor-access';
 import {
   fetchHubJoin,
   connectHubLive,
@@ -322,6 +324,38 @@ export const HubHome = () => {
   // Held in a ref so the composer's typing emitters and unmount cleanup can reach it without
   // re-rendering or re-subscribing.
   const liveConnectionRef = useRef<HubLiveConnection | null>(null);
+  // Gated `#contributors` channel switch. The server filters /api/hub/channels by eligibility, so
+  // the pill row renders ONLY when the response carries the contributors entry — a member without
+  // it sees exactly the Commons as it ships today, with no new UI at all (the no-teaser rule).
+  const [hasGatedChannel, setHasGatedChannel] = useState(false);
+  const [activeChannel, setActiveChannel] = useState<'general' | typeof GATED_CHANNEL_SLUG>('general');
+
+  // Read the channel list once per mount (signed-in only — the route requires a member). Any
+  // failure resolves to the general-only view; the Commons is never blocked by this read.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setHasGatedChannel(false);
+      setActiveChannel('general');
+      return;
+    }
+    let active = true;
+    void (async () => {
+      const channels = await fetchHubChannels();
+      if (active) {
+        setHasGatedChannel(channels.some((channel) => channel.slug === GATED_CHANNEL_SLUG));
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
+
+  // A 404 from any gated channel route means access is gone: silently drop the switch and land
+  // back on the Commons — no error banner, no retry loop (the no-teaser rule).
+  const handleGatedUnavailable = useCallback(() => {
+    setHasGatedChannel(false);
+    setActiveChannel('general');
+  }, []);
 
   const mergeMessages = useCallback((incoming: HubMessage[]) => {
     const merged: HubMessage[] = [];
@@ -621,6 +655,38 @@ export const HubHome = () => {
         )}
       </View>
 
+      {/* Channel switch pills — rendered ONLY when the server-filtered channel list carries the
+          gated contributors entry (mirrors the web phone-width pill row: with one channel, no
+          switch row exists at all). */}
+      {hasGatedChannel && (
+        <View style={s.channelSwitchRow}>
+          <Pressable
+            style={[s.channelPill, activeChannel === 'general' ? s.channelPillActive : null]}
+            onPress={() => setActiveChannel('general')}
+            accessibilityRole="button"
+            accessibilityState={{ selected: activeChannel === 'general' }}
+          >
+            <Text style={[s.channelPillText, activeChannel === 'general' ? s.channelPillTextActive : null]}>
+              #general
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[s.channelPill, activeChannel === GATED_CHANNEL_SLUG ? s.channelPillActive : null]}
+            onPress={() => setActiveChannel(GATED_CHANNEL_SLUG)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: activeChannel === GATED_CHANNEL_SLUG }}
+          >
+            <Text style={[s.channelPillText, activeChannel === GATED_CHANNEL_SLUG ? s.channelPillTextActive : null]}>
+              {GATED_CHANNEL_DISPLAY_NAME}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      {activeChannel === GATED_CHANNEL_SLUG ? (
+        <GatedChannel onUnavailable={handleGatedUnavailable} />
+      ) : (
+        <>
       {/* Early-Commons treatment members land here without passing the Unlock screen, so prompt them to
           verify (submit their Quora URL) right here. Self-hides for control / verified members. */}
       {isAuthenticated ? <UnlockVerifyBanner /> : null}
@@ -742,6 +808,8 @@ export const HubHome = () => {
           </Pressable>
         </View>
       )}
+        </>
+      )}
     </View>
   );
 };
@@ -805,6 +873,31 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
       borderColor: `${official}66`,
     },
     announcementsToggleText: { fontSize: 13, lineHeight: 16 },
+    // Channel switch pill row (present only when the gated contributors channel is listed for
+    // this member). Mirrors the web phone-width channel pills.
+    channelSwitchRow: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: t.isComic ? 2 : 1,
+      borderBottomColor: t.isComic ? t.border : t.borderFaint,
+    },
+    channelPill: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: t.radiusChip,
+      backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.05)',
+      borderWidth: 1,
+      borderColor: t.isComic ? `${t.border}40` : 'rgba(255,255,255,0.1)',
+    },
+    channelPillActive: {
+      backgroundColor: `${t.success}1F`,
+      borderColor: `${t.success}66`,
+    },
+    channelPillText: { fontSize: 12, fontWeight: '700', color: t.textSecondary },
+    channelPillTextActive: { color: t.success },
     list: { padding: 16, gap: 10 },
     card: { borderRadius: r, borderWidth: t.isComic ? 1.5 : 1, padding: 14, marginBottom: 10 },
     cardOfficial: { backgroundColor: t.isComic ? `${official}10` : 'rgba(124,58,237,0.07)', borderColor: t.isComic ? `${official}50` : 'rgba(124,58,237,0.22)' },
