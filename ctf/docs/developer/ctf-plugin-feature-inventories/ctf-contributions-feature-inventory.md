@@ -297,6 +297,13 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-07-19: **Phone gift reminder moved into the top bar (owner report: the collapsed strip read
+  as wasted space).** After dismissing the fundraiser banner on phone width, the 🎁 reminder now
+  renders in the top bar between the TSE mark and the section tabs (`ContributionsGiftTrigger` in
+  `contributions-banner.tsx`, mounted by `community-shell.tsx`) instead of keeping a dedicated
+  strip where the banner was. The open banner is unchanged and stays at the top of the content
+  area; desktop dismiss behavior is unchanged (nothing until the snooze lapses). UI-only.
+
 - 2026-07-18: Phone-width fundraiser banner is dismissible again and collapses to a subtle emoji
   (owner request). The "Not now" dismiss control is restored on both layouts. On phone width,
   dismissing no longer removes the reminder — the full banner collapses to a small gift emoji (🎁) in
