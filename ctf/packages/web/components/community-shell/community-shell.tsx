@@ -17,7 +17,7 @@ import { ShellChatPanel } from './shell-chat-panel';
 import { GatedChatPanel } from './gated-chat-panel';
 import { ShellAppsPanel } from './shell-apps-panel';
 import { ShellRightRail } from './shell-right-rail';
-import { ContributionsBanner } from '../contributions/contributions-banner';
+import { ContributionsBanner, ContributionsGiftTrigger } from '../contributions/contributions-banner';
 import { UnlockVerifyBanner } from './unlock-verify-banner';
 import { HelpControl } from '../bug-reports/help-control';
 import type { UnlockReviewStatus } from '../../lib/unlock/types';
@@ -280,6 +280,10 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
             margin-left:auto so the tabs + controls cluster on the right. "TSE" matches the site
             title "TI Skills Economy (TSE)" in layout.tsx. */}
         <div className={styles.mobileBarLogo} aria-hidden="true">TSE</div>
+        {/* Fundraiser gift reminder — sits between the TSE mark and the section tabs (owner
+            placement). Renders only on phone widths while a drive is active and the full banner is
+            dismissed or snoozed; the banner itself (when open) stays in the content area below. */}
+        {isAuthenticated ? <ContributionsGiftTrigger /> : null}
         <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
           <button
             type="button"

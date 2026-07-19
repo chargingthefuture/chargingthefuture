@@ -18,6 +18,23 @@ import { resolveBackTarget } from '@/lib/nav/back-target';
 const STORAGE_KEY = 'ctf-nav-history';
 const MAX_STACK = 60;
 
+// True while the pathname change now landing was caused by browser back/forward (popstate) rather
+// than a push. Without this signal the tracker had to guess: "new pathname equals the entry under
+// the top" was treated as a back — but that is exactly what a forward tap on an admin↔member pill
+// produces, so the stack drifted out of step with real history and the back button bounced
+// between the pair (owner report, Directory). Module-level because the tracker is a singleton.
+let lastNavWasPop = false;
+
+// True while the next pathname change was issued as a history REPLACE (the admin↔member pills do
+// this so toggling the pair never grows history). The tracker then replaces the top of the stack
+// instead of pushing.
+let lastNavWasReplace = false;
+
+// Called by controls that navigate with router/Link `replace` semantics, just before navigating.
+export function markReplaceNav(): void {
+  lastNavWasReplace = true;
+}
+
 function readStack(): string[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -43,15 +60,34 @@ function writeStack(stack: string[]): void {
 export function NavHistoryTracker() {
   const pathname = usePathname();
 
+  // The browser tells us which pathname changes are back/forward traversals: popstate fires for
+  // those and never for pushes. This removes the guessing that made a forward pill tap to the
+  // previous page look like a back.
+  useEffect(() => {
+    const onPop = () => {
+      lastNavWasPop = true;
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
   useEffect(() => {
     if (!pathname) return;
+    const wasPop = lastNavWasPop;
+    const wasReplace = lastNavWasReplace;
+    lastNavWasPop = false;
+    lastNavWasReplace = false;
+
     const stack = readStack();
     const top = stack[stack.length - 1];
     if (top === pathname) return; // same-page (query/hash) change — nothing to record
-    if (stack.length > 1 && stack[stack.length - 2] === pathname) {
-      stack.pop(); // returned to the previous page — a back, not a new visit
+
+    if (wasPop && stack.length > 1 && stack[stack.length - 2] === pathname) {
+      stack.pop(); // real browser/in-app back to the previous page
+    } else if (wasReplace && stack.length > 0) {
+      stack[stack.length - 1] = pathname; // replace navigation — history did not grow
     } else {
-      stack.push(pathname);
+      stack.push(pathname); // forward navigation (including forward-button restores)
     }
     writeStack(stack);
   }, [pathname]);

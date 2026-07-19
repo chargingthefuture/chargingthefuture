@@ -49,7 +49,7 @@ export function ChymeSidebar({
             title="Refresh the room and chat"
             style={{ width: 44, height: 44, borderRadius: 12, background: t.INPUT_BG, border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: refreshing ? 'wait' : 'pointer', color: t.MUTED, flexShrink: 0 }}
           >
-            <RefreshCw size={16} className={refreshing ? 'animate-spin' : undefined} />
+            <RefreshCw size={16} className={refreshing ? 'ctf-spin' : undefined} />
           </button>
         )}
       </div>

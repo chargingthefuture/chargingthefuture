@@ -30,11 +30,16 @@ function bannerGoals(f: FundraiserResponse['fundraiser']): BannerGoal[] {
  * only renders while a drive is active and the banner feature is on. "Contribute" opens the plugin;
  * "Not now" calls the server-side silent snooze (the duration is never shown).
  *
- * On phone width, dismissing does not remove the reminder entirely — the full banner collapses to a
- * small gift emoji in its place that still opens the plugin, so it stays a subtle nudge without
- * taking up space. The full banner returns on its own when the snooze lapses. On desktop, dismissing
- * hides it until the snooze lapses (no emoji — a slim desktop bar is already unobtrusive).
+ * On phone width, dismissing does not remove the reminder entirely — the reminder becomes the small
+ * gift emoji in the top bar (ContributionsGiftTrigger below, mounted between the TSE mark and the
+ * section tabs), so no strip of vertical space is spent on it. The full banner returns on its own
+ * when the snooze lapses. On desktop, dismissing hides it until the snooze lapses (no emoji — a
+ * slim desktop bar is already unobtrusive).
  */
+
+// Cross-component signal: the banner's "Not now" tells the top-bar trigger to appear without a
+// reload (the two components fetch fundraiser state independently).
+const BANNER_DISMISSED_EVENT = 'ctf:contributions-banner-dismissed';
 export function ContributionsBanner() {
   const isMobile = useIsMobile();
   const { theme } = useTheme();
@@ -68,6 +73,7 @@ export function ContributionsBanner() {
 
   const onDismiss = useCallback(async () => {
     setCollapsed(true);
+    window.dispatchEvent(new Event(BANNER_DISMISSED_EVENT));
     try {
       await fetch('/api/contributions/banner/dismiss', { method: 'POST', headers: CSRF_HEADERS });
     } catch {
@@ -82,24 +88,8 @@ export function ContributionsBanner() {
 
   const showFullBanner = fundraiser.bannerVisible && !collapsed;
 
-  // Phone width, dismissed or snoozed → a subtle gift-emoji reminder in the banner's place.
-  if (isMobile && !showFullBanner) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '5px 12px', background: `${t.ACCENT}0A`, borderBottom: `1px solid ${t.ACCENT}20`, fontFamily: FONT_FAMILY }}>
-        <button
-          type="button"
-          onClick={onContribute}
-          aria-label="Contribute to the platform"
-          title="Contribute"
-          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 4 }}
-        >
-          🎁
-        </button>
-      </div>
-    );
-  }
-
-  // Desktop, dismissed or snoozed → nothing until the snooze lapses.
+  // Dismissed or snoozed → nothing here. On phone width the reminder lives on as the gift emoji
+  // in the top bar (ContributionsGiftTrigger); a dedicated strip here read as wasted space.
   if (!showFullBanner) {
     return null;
   }
@@ -178,5 +168,63 @@ export function ContributionsBanner() {
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * The phone-top-bar gift reminder: a small 🎁 between the TSE mark and the section tabs (owner
+ * placement decision, 2026-07-19). It appears only while a drive is active AND the full banner is
+ * not showing (dismissed this session or server-snoozed), so the reminder survives without
+ * spending a strip of vertical space. Opens the Contributions plugin. Phone widths only — on
+ * desktop a dismissed banner shows nothing until the snooze lapses, unchanged.
+ */
+export function ContributionsGiftTrigger() {
+  const isMobile = useIsMobile();
+  const router = useRouter();
+
+  const [fundraiser, setFundraiser] = useState<FundraiserResponse['fundraiser'] | null>(null);
+  const [dismissedThisSession, setDismissedThisSession] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      try {
+        const res = await fetch('/api/contributions/fundraiser', { cache: 'no-store', signal: controller.signal });
+        if (!res.ok) return;
+        const data = (await res.json()) as FundraiserResponse;
+        if (!controller.signal.aborted) setFundraiser(data.fundraiser);
+      } catch {
+        // Non-critical chrome: a failed load just means no reminder.
+      }
+    }
+    void load();
+    return () => controller.abort();
+  }, []);
+
+  // The banner's "Not now" makes this trigger appear immediately, without a reload.
+  useEffect(() => {
+    const onDismissed = () => setDismissedThisSession(true);
+    window.addEventListener(BANNER_DISMISSED_EVENT, onDismissed);
+    return () => window.removeEventListener(BANNER_DISMISSED_EVENT, onDismissed);
+  }, []);
+
+  if (!isMobile || !fundraiser || !fundraiser.cycle || !fundraiser.bannerEnabled) {
+    return null;
+  }
+  // While the full banner is visible (and not just dismissed), the top-bar reminder is redundant.
+  if (fundraiser.bannerVisible && !dismissedThisSession) {
+    return null;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => router.push('/apps/contributions')}
+      aria-label="Contribute to the platform"
+      title="Contribute"
+      style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '2px 4px', flexShrink: 0 }}
+    >
+      🎁
+    </button>
   );
 }

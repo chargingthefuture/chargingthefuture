@@ -33,7 +33,10 @@
 Workforce is a read-only live tracker — these are the can't-ship-broken checks. Member role unless noted.
 
 1. **Dashboard loads with numbers.** Open the Workforce dashboard. Population, Workforce Total,
-   Total Headcount Target, and Recruited all render as numbers, not a spinner or error. → web ☐ mobile ☐ android ☐
+   and Recruited all render as numbers, not a spinner or error. There is NO "Total Headcount
+   Target" card on any surface — it duplicated Workforce Total after sector rounding (dropped
+   2026-07-19, web and android); per-sector targets live in the Sectors view. On android the
+   screen subtitle reads "{recruited} recruited · {goal} goal". → web ☐ mobile ☐ android ☐
 2. **Top-line numbers reconcile.** Recruited equals the count of all active Directory members, and
    the Recruitment Progress shows a percent of target, not a repeated count. → web ☐ mobile ☐ android ☐
 3. **No write controls on the profile.** Open the Workforce profile view. There is no profile editor
@@ -49,11 +52,12 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
 **Role:** member · **Surfaces:** all · **Seed:** `seed:workforce`
 **Steps:**
 1. Open the Workforce dashboard for a signed-in member.
-2. Read the four hero cards (Population, Workforce Total, Total Headcount Target, Recruited) and the
-   Recruitment Progress.
-**Expected:** All four cards show numbers. Workforce Total = population × participation rate.
+2. Read the three hero cards (Population, Workforce Total, Recruited) and the Recruitment Progress.
+**Expected:** All three cards show numbers. Workforce Total = population × participation rate.
 Recruited = the count of all active Directory members. Recruitment Progress reads as a percent of
-target.
+the recruitment goal (recruited ÷ min recruitable, the 2,000,000 target) and shows the recruited
+count plus "Remaining to the 2,000,000 goal", which counts down as members are recruited. There is
+no "Remaining capacity" line (the max-recruitable ceiling is config, not progress).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### WF-2 · Sector opportunities
