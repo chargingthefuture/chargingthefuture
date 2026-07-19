@@ -222,7 +222,7 @@ export function ContributionsGiftTrigger() {
       onClick={() => router.push('/apps/contributions')}
       aria-label="Contribute to the platform"
       title="Contribute"
-      style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '2px 4px', flexShrink: 0 }}
+      style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 2, flexShrink: 0 }}
     >
       🎁
     </button>
