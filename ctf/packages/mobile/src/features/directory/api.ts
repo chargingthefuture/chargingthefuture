@@ -43,6 +43,10 @@ export interface DirectoryListItem {
   venmoAddress?: string | null;
   moneroAddress?: string | null;
   bitcoinAddress?: string | null;
+  // "Weavers of the Commons" contributor badge (Contributor Access). Set by the server on CLAIMED
+  // profiles only; unclaimed items never carry the field. Positive-only display: render the badge
+  // when true, render nothing at all otherwise (no absence state on anyone else).
+  hasWeaversBadge?: boolean;
   // Member location (city / state or region / country) — plain names. Optional for older payloads.
   city?: string | null;
   state?: string | null;
