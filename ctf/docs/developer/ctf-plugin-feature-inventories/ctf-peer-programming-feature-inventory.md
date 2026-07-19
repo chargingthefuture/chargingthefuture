@@ -14,7 +14,7 @@ PeerProgramming is a persistent, async-first collaboration experience that build
 The plugin:
 
 1. Runs weekly cohort assignment from active users (login within the last 7 days),
-2. Assigns up to 5 users per cohort,
+2. Assigns up to 12 users per cohort (participation is voluntary; about 5 are expected to actively show up in a given week),
 3. Records in-app assignment notifications for every assignment cycle with idempotent delivery,
 4. Opens fallback access when fewer than 2 cohort members are present,
 5. Provides a cohort room optimized for async text with threaded replies,
@@ -25,7 +25,7 @@ The plugin:
 
 ### Single standing, always-open Cohort 1 mode (low-population, admin-flippable)
 
-When there are not enough active members to fill weekly cohorts of five, the plugin runs in a
+When there are not enough active members to fill weekly cohorts of twelve, the plugin runs in a
 single standing, always-open Cohort 1 mode instead of splitting members into tiny one-person rooms.
 The effective mode is resolved by the async resolver `isSingleOpenCohortModeEnabled()` (and
 `resolveSingleOpenCohortMode()`, which also reports the source) in
@@ -52,7 +52,7 @@ to the env flag, then the default. With no admin setting and no env override, th
   idempotent and races safely against the partial-unique standing index.
 - **When OFF (admin toggle set to off, or `PEER_PROGRAMMING_SINGLE_OPEN_COHORT=0` with no admin
   setting):** behavior is exactly the original weekly cohorting — members are sliced into week-scoped
-  cohorts of five, `getMyCohort` resolves the current week's cohort, and `runWeeklyAssignment` forms
+  cohorts of twelve, `getMyCohort` resolves the current week's cohort, and `runWeeklyAssignment` forms
   `C1`/`C2`/`C3`. The resolved mode is the only thing that changes behavior, so flipping the admin
   toggle (or the env flag) restores weekly cohorting.
 
@@ -63,7 +63,7 @@ to the env flag, then the default. With no admin setting and no env override, th
 ### Weekly Cohort Assignment
 
 1. Weekly active-user selection includes only accounts with login activity in the prior 7 days.
-2. Cohorts are formed with a target size of 5 users per cohort.
+2. Cohorts are formed with a target size of 12 users per cohort (`PEER_PROGRAMMING_COHORT_TARGET_SIZE`); participation is voluntary, so about 5 are expected to actively take part in a given week.
 3. Assignment status and cohort metadata are visible in the user room entry surface.
 
 ### In-App Assignment Notifications
@@ -200,6 +200,7 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 
 ## Change Log
 
+- 2026-07-18: **Cohort target size raised from 5 to 12 to match the shipped copy.** The UI/marketing copy has long said "12 per cohort" (`peer-programming-shell.tsx` header, `peer-programming-public-shell.tsx`, `pp-sidebar.tsx`), but the code formed cohorts of 5 (`PEER_PROGRAMMING_COHORT_TARGET_SIZE = 5`), so the engine and the copy disagreed. Owner decision: 12 is the intended number — place up to 12 per weekly cohort because participation is voluntary and asynchronous, with roughly 5 expected to actively show up in a given week. Changed `PEER_PROGRAMMING_COHORT_TARGET_SIZE` to 12 (the only place the split size lives; `runWeeklyAssignment` slices by it). This only affects the weekly auto-split, which is currently paused while single standing Cohort 1 mode is on, so there is no live behavior change today. Updated the inventory and manual test script to say 12 (≈5 participating). No schema, route, or contract change.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
   the previous in-app page and falls back to All Apps when there is no in-app history. The admin
@@ -297,7 +298,7 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
     - Selection includes only users with login activity in the prior 7 days.
 - [ ] Implement cohort formation rules.
   - Acceptance criteria:
-    - Target cohort size is 5 users per cohort.
+    - Target cohort size is 12 users per cohort (about 5 expected to actively participate).
     - Partial cohort handling is deterministic and documented.
 - [ ] Implement assignment notification flow.
   - Acceptance criteria:
