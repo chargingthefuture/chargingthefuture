@@ -54,6 +54,9 @@ interface ShellData {
   tab: Tab;
   setTab: (t: Tab) => void;
   noActiveRound: boolean;
+  activeRound: SkillsHuntRound | null;
+  rounds: SkillsHuntRound[];
+  onSelectRound: (id: string) => void;
   submitted: boolean;
   form: ScoutFormModel;
   resetForm: () => void;
@@ -80,7 +83,7 @@ function deriveShellState(args: {
 
 function ShellContent(d: ShellData) {
   if (d.tab === "scout") {
-    return <SkillsHuntScoutTab noActiveRound={d.noActiveRound} submitted={d.submitted} form={d.form} onReset={d.resetForm} onNavTab={d.setTab} />;
+    return <SkillsHuntScoutTab noActiveRound={d.noActiveRound} activeRound={d.activeRound} rounds={d.rounds} onSelectRound={d.onSelectRound} submitted={d.submitted} form={d.form} onReset={d.resetForm} onNavTab={d.setTab} />;
   }
   if (d.tab === "leaderboard") {
     return <SkillsHuntLeaderboardTab loading={d.loadingLeaderboard} leaderboard={d.leaderboard} userId={d.userId} />;
@@ -251,6 +254,8 @@ export function SkillsHuntShell({
   const content = (
     <ShellContent
       tab={tab} setTab={setTab} noActiveRound={noActiveRound} submitted={submitted} form={form} resetForm={resetForm}
+      activeRound={activeRound} rounds={rounds}
+      onSelectRound={(id) => setActiveRound(rounds.find((r) => r.id === id) ?? null)}
       loadingLeaderboard={loadingLeaderboard} leaderboard={leaderboard} userId={userId}
       loadingMissions={loadingMissions} missions={missions}
       loadingFinds={loadingFinds} myFinds={myFinds}
