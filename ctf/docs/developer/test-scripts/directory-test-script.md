@@ -59,13 +59,17 @@ can't-ship-broken checks. Member role unless noted.
 4. Type a skill name that a seeded profile holds but that does not appear in anyone's name or bio
    (e.g. `First Aid`).
 5. Repeat the skill search with different punctuation/spacing (e.g. `first-aid`, `first aid`).
+6. Type a **location** a seeded profile has — a city, state/region, or country (e.g. `United States`,
+   `California`, or a seeded city) — and confirm the people in that location are returned.
 **Expected:** Every active, non-deleted profile is visible to any signed-in member, including
 carried-over unclaimed ones, with no "you must have a profile first" gate. A sector chip returns
 people in that sector — including a profile whose sector comes only from its skills, not a stored
-sector. Search filters by name, headline, bio, **and skills** — the skill-name search (step 4)
-returns the people who hold that skill, matching the taxonomy skill name, its aliases, and free-text
-"pending review" skills. Search is punctuation-insensitive (step 5): `first-aid`, `first aid`, and
-`First Aid` all return the same people. On desktop, the right rail is headed **"Recent Survivors"**
+sector. Search filters by name, headline, bio, **skills, and location** — the skill-name search
+(step 4) returns the people who hold that skill (matching the taxonomy skill name, its aliases, and
+free-text "pending review" skills), and the location search (step 6) returns the members in that
+city/state/country. Search is punctuation-insensitive (step 5): `first-aid`, `first aid`, and
+`First Aid` all return the same people. The search-box placeholder reads "Search name, skill, or
+location…". On desktop, the right rail is headed **"Recent Survivors"**
 (the most recently updated profiles — it is **not** a ranking, so it must not say "Top Providers"),
 and its privacy card reads **"Privacy First — Profiles show only what each member chooses to
 share."** — no "guarantee" / "your identity is protected" wording anywhere on the rail.

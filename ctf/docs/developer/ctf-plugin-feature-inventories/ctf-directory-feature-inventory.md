@@ -216,6 +216,7 @@ Seeded content:
 
 ## Change Log
 
+- 2026-07-19: **The directory search box now matches location (web + mobile-responsive + android).** The signed-out landing promises the directory is "searchable by location and specialty", but the free-text search only matched name, headline, bio, and skills — not the member's city/state/country. `listDirectoryForMember` now also matches the search term against `p.city`, `p.state`, and `p.country` (same punctuation-insensitive normalization as the other fields), applied to both the count and the page query, so typing a city, state/region, or country (e.g. "California", "United States") returns the members there. The search-box placeholder is now "Search name, skill, or location…" on web and the RN list (which already sends `q` to the same `GET /api/directory/list`). Read-only query + placeholder change — no schema, route, or contract change. (Chose to fold location into the existing search rather than add a separate country filter; a dedicated filter control can follow if wanted.)
 - 2026-07-19: **Android "Weavers of the Commons" badge on the profile detail (#1680).** The RN
   Directory profile detail now renders the braid badge next to the name of a claimed member whose
   payload carries `hasWeaversBadge: true` (the list route already set it; the mobile
