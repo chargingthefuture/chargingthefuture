@@ -18,11 +18,11 @@ import {
 // signed-in-but-not-yet-verified member gets a single "Finish verifying" CTA (verifyUrl) instead.
 
 const INTRO =
-  'Acknowledge an ongoing activity you share with another member — one tap, no amounts to report. It is recognition of your everyday ties, never a bill.';
+  'Acknowledge an ongoing activity you share with another member — one tap to recognize an everyday tie. No money changes hands: it is a note to each other, never a bill.';
 
 const FEATURES: Array<{ Icon: typeof Repeat; label: string; desc: string }> = [
-  { Icon: Repeat, label: 'One tap', desc: 'Mark an ongoing tie — no forms, no figures.' },
-  { Icon: EyeOff, label: 'No amounts', desc: 'Recognition of the activity, never a bill.' },
+  { Icon: Repeat, label: 'One tap', desc: 'Mark an ongoing tie — no charge, nothing owed.' },
+  { Icon: EyeOff, label: 'No bill', desc: 'No money moves — it is recognition, not a charge.' },
   { Icon: Users, label: 'Between members', desc: 'Both sides confirm; you decide who can see it.' },
 ];
 
