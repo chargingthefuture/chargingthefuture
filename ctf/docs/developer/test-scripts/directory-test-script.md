@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -194,7 +194,7 @@ directly), and the admin screen header shows a "Member view" pill opening `/apps
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### DIR-8 · "Weavers of the Commons" contributor badge (positive-only, claimed-only)
-**Role:** member · **Surfaces:** web (desktop), web (mobile-responsive)
+**Role:** member · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Precondition:** at least one claimed profile whose member holds the Contributor Access badge
 (`contributor_access_eligibility`: `eligible = TRUE`, `revoked_for_cause = FALSE`), plus a claimed
 profile without it and a community-generated (unclaimed) profile.
@@ -214,7 +214,12 @@ must NOT contain "verified", "vetted", or "trusted". The link opens
 or leaderboard**. On the non-holder and unclaimed profiles NOTHING badge-related renders — no
 empty slot, no lock, no "not yet earned" state, and the unclaimed profile's API payload carries no
 `hasWeaversBadge` field at all.
-**Result:** web ☐ mobile ☐ — notes:
+**Android (#1680):** the RN profile detail renders the same braid badge next to the holder's name;
+tapping it opens the dialog with the same title and body plus a condensed "How it's earned"
+paragraph inline (the app has no explainer page, so the dialog carries the plain-language
+explanation: earned by steadily delivering real help; automatic; permanent; no application, no way
+to buy it, no score anywhere). Non-holder / unclaimed profiles render nothing badge-related.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
 

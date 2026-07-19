@@ -31,6 +31,7 @@ import {
   fetchMemberTrust,
 } from './api';
 import { TrustEvidencePanel } from '../trust/TrustEvidencePanel';
+import { WeaversBadgeControl } from '../contributor-access';
 import { ShareLink } from '../../components/shared/ShareLink';
 import { getApiBaseUrl } from '../../auth/authedFetch';
 import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
@@ -189,6 +190,11 @@ function ProfileDetail({
           {/* Name + badges */}
           <View style={styles.detailNameRow}>
             <Text style={styles.detailName}>{fullName(profile)}</Text>
+            {/* Weavers of the Commons badge — claimed badge-holders only; positive-only, so
+                nothing badge-related renders for anyone else (mirrors the web profile detail). */}
+            {claimedUserId != null && profile.hasWeaversBadge === true && (
+              <WeaversBadgeControl size={20} />
+            )}
             {isCommunity && (
               <View style={styles.communityBadge}>
                 <Text style={styles.communityBadgeText}>Community generated</Text>

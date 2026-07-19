@@ -10,10 +10,10 @@
 | **Module** | Contributor Access (`contributor-access`) |
 | **Visibility** | Admin dashboard + two member surfaces: the gated `#contributors` channel inside the Commons (eligible members and admins only — invisible to everyone else) and the "Weavers of the Commons" badge on Directory profiles (no launcher tile) |
 | **Roles to test** | admin · an eligible member · a non-eligible member |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android (React Native — member badge + gated channel surfaces) |
 | **Seed first** | `pnpm --dir ctf seed:demo` (the engine reads upstream seeded tables) |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributor-access-feature-inventory.md` |
-| **Generated** | 2026-07-18 (initial authoring) · updated 2026-07-18 (badge + gated channel slices; channel moderation, rate limit, delete) |
+| **Generated** | 2026-07-18 (initial authoring) · updated 2026-07-18 (badge + gated channel slices; channel moderation, rate limit, delete) · updated 2026-07-19 (android parity ships: badge #1680 + gated channel #1681 — member cases gain an android column) |
 
 ## How to run this
 
@@ -48,19 +48,20 @@
    Directory badge read (`hasWeaversBadge` boolean only). → web ☐ mobile ☐
 5. **Badge is positive-only.** On the Directory, a member without the badge shows nothing
    badge-related — no empty slot, no lock, no "not yet earned" state — and a community-generated
-   (unclaimed) profile never carries the field. → web ☐ mobile ☐
+   (unclaimed) profile never carries the field. Same on the Android profile detail. → web ☐ mobile ☐ android ☐
 6. **Non-eligible member sees no gated channel.** As a signed-in member without the eligibility
    flag: the Commons channel list shows only `#general` (desktop rail; at phone widths no channel
    switch row appears at all), `GET /api/hub/channels` contains no `contributors` entry, and every
    `/api/contributor-access/channel/...` call answers a bare 404 — no locked teaser, no absence
-   state, no different copy. → web ☐ mobile ☐
+   state, no different copy. On Android, the Commons shows no channel pill row at all — the screen
+   is exactly the shipped single-channel Commons. → web ☐ mobile ☐ android ☐
 
 ---
 
 ## Member walkthrough — the "Weavers of the Commons" badge
 
 ### CA-M1 · Badge appears only on claimed profiles of badge holders
-**Role:** member · **Surfaces:** web (desktop), web (mobile-responsive)
+**Role:** member · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Precondition:** a claimed Directory profile whose member holds the badge
 (`contributor_access_eligibility`: `eligible = TRUE`, `revoked_for_cause = FALSE`), a claimed
 profile without it, an unclaimed (community-generated) profile, and — if available — a member who
@@ -73,11 +74,13 @@ was revoked for cause.
 the holder's name only. On everyone else — non-holder, unclaimed, revoked-for-cause — NOTHING
 badge-related renders: no empty slot, no lock, no "not yet earned" state. The unclaimed profile's
 API payload (`GET /api/directory/profiles/:id`) has no `hasWeaversBadge` field at all; a claimed
-non-holder carries `hasWeaversBadge: false` in the payload but shows nothing in the UI.
-**Result:** web ☐ mobile ☐ — notes:
+non-holder carries `hasWeaversBadge: false` in the payload but shows nothing in the UI. On
+Android, the same rules hold on the Directory profile detail (the RN client reads the same list
+payload).
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CA-M2 · Click-through dialog + "how it's earned" page
-**Role:** member · **Surfaces:** web (desktop), web (mobile-responsive)
+**Role:** member · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Steps:**
 1. Click/tap the badge on a holder's profile.
 2. Read every word of the dialog.
@@ -91,7 +94,12 @@ delivering real help to other members; permanent once earned; no application and
 it; no score shown anywhere; the same standing opens the members-only channel in the Commons when
 it launches. It renders in the Directory shell style and works at phone width. Signed out, the
 page redirects to `/apps/directory`.
-**Result:** web ☐ mobile ☐ — notes:
+**Android:** tapping the badge opens the same-titled dialog with the same body copy; instead of a
+link, a condensed "How it's earned" paragraph renders inline in the dialog (earned by steadily
+delivering real help; automatic; permanent; no application, no way to buy it, no score anywhere) —
+steps 3–4 are web-only. The android copy must also never contain "verified", "vetted", or
+"trusted".
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 
 ---
@@ -173,18 +181,20 @@ recompute never revokes. The weekly workflow (`contributor-access-recompute.yml`
 > layer; polling works without it).
 
 ### CA-C1 · Non-eligible member sees nothing, anywhere
-**Role:** signed-in member WITHOUT the eligibility flag · **Surfaces:** web (desktop), web (mobile-responsive)
+**Role:** signed-in member WITHOUT the eligibility flag · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Steps:**
 1. Open the Commons. Inspect the desktop channel rail and the phone-width chat section.
 2. Call `GET /api/hub/channels` and each `/api/contributor-access/channel/...` route directly.
 **Expected:** Only `#general` in the rail; at phone widths NO channel switch row renders (it only
 exists with more than one channel). The channels payload has no `contributors` entry. Every
 channel route answers a bare 404 with no channel name, no "locked", no "you need X" — nothing
-that reveals the channel exists. There is no teaser on any surface.
-**Result:** web ☐ mobile ☐ — notes:
+that reveals the channel exists. There is no teaser on any surface. On Android, the Commons
+renders exactly as it ships today — no channel pill row exists at all (it only renders when the
+server-filtered channel list carries the contributors entry).
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CA-C2 · Eligible member: sees, posts, threads, reacts — no image upload
-**Role:** eligible member · **Surfaces:** web (desktop), web (mobile-responsive)
+**Role:** eligible member · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Steps:**
 1. Open the Commons: pick `#contributors` (desktop rail; phone-width pill row).
 2. Post a message; reply to an existing message (Reply → send); toggle reactions, opening the
@@ -197,21 +207,25 @@ quoted block (thread); the reaction picker offers the twelve-emoji gated set (ri
 Commons' six) and toggling works. There is NO image/file affordance anywhere and pasting an image
 does nothing — text only. The long message sends (the gated cap is 4000, higher than the Commons'
 1200). With a second eligible account: a new post appears on the other screen within the poll
-interval (or instantly when the live layer is connected, with typing indicators).
-**Result:** web ☐ mobile ☐ — notes:
+interval (or instantly when the live layer is connected, with typing indicators). On Android, the
+Commons header gains a `#general` / `#contributors` pill row; picking `#contributors` opens the
+channel with the same behavior (post, quoted reply, twelve-emoji reaction picker, no upload
+affordance, 4000-character composer limit; polling only — no typing indicators on Android).
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CA-C3 · Moderator disclosure is plainly visible
-**Role:** eligible member (and an admin) · **Surfaces:** web (desktop), web (mobile-responsive)
+**Role:** eligible member (and an admin) · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Steps:**
 1. Open `#contributors` and read the header area and the composer footnote.
 2. As an admin (without the eligibility flag): confirm the channel is listed and readable.
 **Expected:** The header carries "Moderators can read this channel." at all widths, always — not
 in a tooltip, not behind a tap; the composer footnote repeats it. The admin can open and read the
-channel (that read access is exactly what the disclosure line discloses).
-**Result:** web ☐ mobile ☐ — notes:
+channel (that read access is exactly what the disclosure line discloses). Android shows the same
+line in the channel header and repeats it under the composer.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CA-C4 · Revoke removes the member from the channel
-**Role:** admin + the revoked member · **Surfaces:** web (desktop), web (mobile-responsive)
+**Role:** admin + the revoked member · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Steps:**
 1. With the channel open, revoke an eligible member for cause (CA-A2 flow).
 2. As that member: reload the Commons; call the channel routes directly.
@@ -221,11 +235,13 @@ channel routes answer a bare 404, and the Stream membership sync has removed the
 `ctf-contributors` (the admin status card's member count drops). No teaser remains — their Commons
 looks exactly like a never-eligible member's. Reinstating restores the entry and access. A Stream
 outage during revoke/reinstate never blocks the action itself (the response carries a
-`channelSyncWarning` and membership reconciles on the next sync).
-**Result:** web ☐ mobile ☐ — notes:
+`channelSyncWarning` and membership reconciles on the next sync). On Android, a 404 mid-session
+silently drops the pill row and lands the member back on the Commons — no error banner, no retry
+loop.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CA-C5 · Posting rate limit (same threshold as the Commons)
-**Role:** eligible member · **Surfaces:** web (desktop), web (mobile-responsive)
+**Role:** eligible member · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Steps:**
 1. In `#contributors`, post 8 short messages inside a few minutes.
 2. Post a 9th.
@@ -234,11 +250,12 @@ outage during revoke/reinstate never blocks the action itself (the response carr
 shows when its posting limit trips (the route answers 429 with the stable code
 `rate_limit_exceeded`); nothing is stored for it. Deleting one of your posts does NOT free a slot
 (deleted rows still count toward the window). After the 30-minute window passes, posting works
-again.
-**Result:** web ☐ mobile ☐ — notes:
+again. Android shows the refusal as the same send-error line the Commons uses ("You are posting
+too quickly…").
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CA-C6 · Content gate — a blocked post is never shown to anyone
-**Role:** eligible member + a second eligible account · **Surfaces:** web (desktop), web (mobile-responsive)
+**Role:** eligible member + a second eligible account · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Steps:**
 1. Try to post a message containing raw angle-bracket markup (e.g. `<script>hello</script>`).
 2. Try to post a message containing four or more `https://` links.
@@ -246,11 +263,12 @@ again.
 **Expected:** Both posts are refused with a visible moderation message (the route answers 422
 with the stable code `content_policy_violation`) — the same content gate the Commons runs on
 community posts. Neither post is ever stored, so the second account never sees them, not even
-briefly; the composer keeps the text so the member can fix and resend.
-**Result:** web ☐ mobile ☐ — notes:
+briefly; the composer keeps the text so the member can fix and resend. Android surfaces the same
+moderation message on refusal.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CA-C7 · Delete — author-only, admin-any, gone for good
-**Role:** two eligible members + an admin · **Surfaces:** web (desktop), web (mobile-responsive)
+**Role:** two eligible members + an admin · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Steps:**
 1. As member A: post a message; confirm a Delete action shows on your own message but NOT on
    member B's messages; delete your message (a confirm step must appear).
@@ -267,8 +285,10 @@ post is refused with 403 and changes nothing (the denied attempt lands in
 moderator power — and the removal is audited under the distinct moderator command. Deleted
 messages stay gone after refresh and re-login (soft delete: `deleted_at`/`deleted_by` set,
 content excluded from every read, and a reply that quoted a deleted message shows no quoted
-block). Reacting to or replying to a deleted message answers 404/400.
-**Result:** web ☐ mobile ☐ — notes:
+block). Reacting to or replying to a deleted message answers 404/400. On Android, the Delete
+action shows only on the member's own messages and is confirm-gated (system dialog); the admin
+delete-any affordance is web-only for now (the server still enforces admin delete on the API).
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
 
@@ -279,8 +299,10 @@ Carried from the inventory's "Gaps & Known Technical Debt" section:
 - One-time owner step per Stream app: run `ctf/scripts/setupGatedChannelType.mjs` (production and
   staging) before the live layer/channel config exists in Stream; until then opening the channel
   returns a `channelSyncWarning`.
-- Android has no gated-channel surface and no badge rendering yet (tracked parity gaps #1681 and
-  #1680; the shared Directory API already carries the badge boolean).
+- Android parity shipped 2026-07-19 (#1680 badge, #1681 channel). Remaining android deltas
+  (deliberate): no live typing indicators (polling only), no admin delete-any affordance in the
+  RN channel UI (server-enforced on the API), and the "how it's earned" explainer is condensed
+  into the badge dialog instead of a separate page.
 - No message edit in the gated channel (deliberate — delete and post again, same as the Commons).
 - Default weights/threshold are a starting point pending owner tuning.
 - Active blocks/safety reports are not yet an admission gate (owner decision pending).

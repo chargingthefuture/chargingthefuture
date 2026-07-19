@@ -15,7 +15,7 @@
     },
     {
       "slug": "directory",
-      "mobileFeatureDirs": ["directory"],
+      "mobileFeatureDirs": ["directory", "contributor-access"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },
