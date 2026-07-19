@@ -77,7 +77,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     id: 'lighthouse',
     name: 'LightHouse',
     kind: 'plugin',
-    summary: 'Verified survivor housing listings.',
+    summary: 'Community housing listings from trauma-informed hosts; ServiceCredits accepted.',
   },
   {
     id: 'socket-relay',

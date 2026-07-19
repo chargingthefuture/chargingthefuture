@@ -1,3 +1,5 @@
+import { PublicPageFooter } from '@/components/shared/public-page-footer';
+import { PublicPageNav } from '@/components/shared/public-page-nav';
 import type { Metadata } from 'next';
 import guideData from './guide-content.json';
 import type { UserGuide } from './guide-types';
@@ -34,6 +36,7 @@ export default function GuidePage() {
   return (
     <main className={styles.page}>
       <div className={styles.container} id="top">
+        <PublicPageNav />
         <header className={styles.header}>
           <p className={styles.brand}>Charging the Future</p>
           <h1 className={styles.title}>How to use it</h1>
@@ -87,16 +90,7 @@ export default function GuidePage() {
           </section>
         ))}
 
-        <footer className={styles.footer}>
-          Charging the Future ·{' '}
-          <a className={styles.link} href="/terms">
-            Terms &amp; Privacy
-          </a>{' '}
-          ·{' '}
-          <a className={styles.link} href="/accessibility">
-            Accessibility
-          </a>
-        </footer>
+        <PublicPageFooter />
       </div>
     </main>
   );

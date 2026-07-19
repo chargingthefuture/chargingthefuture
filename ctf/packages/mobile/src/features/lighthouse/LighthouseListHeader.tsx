@@ -21,7 +21,7 @@ export const LighthouseListHeader: React.FC<Props> = ({ total }) => {
         <View>
           <Text style={styles.title}>LightHouse</Text>
           <Text style={styles.subtitle}>
-            {total > 0 ? `${total.toLocaleString()} verified listings` : 'Safe & verified housing'}
+            {total > 0 ? `${total.toLocaleString()} listings` : 'Community housing listings'}
           </Text>
         </View>
       </View>

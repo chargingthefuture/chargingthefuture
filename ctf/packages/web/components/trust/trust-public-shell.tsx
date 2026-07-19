@@ -13,15 +13,15 @@ const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
 // Static description of the voluntary signals Trust aggregates (marketing copy). Every item mirrors a
 // real signal in lib/trust (buildTrustEvidence): social proof and participation — never identity
-// verification (there is none) and never a numeric score (none is ever produced). Mapping:
+// verification (there is none) and never a numeric score (none is ever produced). "Admin-reviewed
+// verification" was removed from this list (owner, 2026-07-19): it read as the platform vetting
+// people, which this plugin deliberately never claims. Mapping:
 //   Quora social proof        → the public Quora profile checked at onboarding
-//   Admin-reviewed verification → the admin-set "Verified by an administrator" status
 //   ServiceCredits activity   → distinct members who completed a ServiceCredits transfer with you
 //   Community connections     → Foundation connections-as-provider + ongoing recurring activities
 //   Cohort completion record  → completed LevelUp / joined PeerProgramming cohorts
 const DESKTOP_SIGNALS = [
   'Quora social proof',
-  'Admin-reviewed verification',
   'ServiceCredits activity',
   'Community connections',
   'Cohort completion record',
@@ -29,7 +29,6 @@ const DESKTOP_SIGNALS = [
 
 const MOBILE_SIGNALS = [
   'Quora social proof',
-  'Admin-reviewed verification',
   'ServiceCredits activity',
   'Community connections',
   'Cohort completion record',

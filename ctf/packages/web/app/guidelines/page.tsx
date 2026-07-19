@@ -1,6 +1,7 @@
+import { PublicPageFooter } from '@/components/shared/public-page-footer';
+import { PublicPageNav } from '@/components/shared/public-page-nav';
 import type { Metadata } from 'next';
 import styles from '../terms/terms.module.css';
-import { CONTACT_EMAIL, OPERATOR_NAME } from '../terms/policy-content';
 import { GUIDELINE_SECTIONS, GUIDELINES_EFFECTIVE_DATE, type GuidelineSection } from './guidelines-content';
 
 // Public community discussion guidelines at /guidelines. Static, no auth — the operator
@@ -36,6 +37,7 @@ export default function GuidelinesPage() {
   return (
     <main className={styles.page}>
       <div className={styles.container}>
+        <PublicPageNav />
         <header className={styles.header}>
           <p className={styles.brand}>Charging the Future</p>
           <h1 className={styles.title}>Community Guidelines</h1>
@@ -46,20 +48,7 @@ export default function GuidelinesPage() {
           <GuidelineSectionView key={section.id} section={section} />
         ))}
 
-        <footer className={styles.footer}>
-          {OPERATOR_NAME} · Contact{' '}
-          <a className={styles.link} href={`mailto:${CONTACT_EMAIL}`}>
-            {CONTACT_EMAIL}
-          </a>{' '}
-          ·{' '}
-          <a className={styles.link} href="/terms">
-            Terms &amp; Privacy
-          </a>{' '}
-          ·{' '}
-          <a className={styles.link} href="/guide">
-            How to use it
-          </a>
-        </footer>
+        <PublicPageFooter />
       </div>
     </main>
   );
