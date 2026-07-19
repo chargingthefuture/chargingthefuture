@@ -36,9 +36,10 @@
 One-way admin broadcast; public watch, sign-in to chat. Member role unless noted.
 
 1. **Idle state loads — and Beacon is reachable from the app list.** The Apps launcher shows a
-   Beacon tile (database registry row, nav rank 230) that opens `/apps/beacon`. When nothing is
-   live, a calm "No live event right now" screen renders, with the last replay if one exists. No
-   spinner stuck, no error. → web ☐ mobile ☐ android ☐
+   Beacon tile (database registry row, nav rank 230) that opens `/apps/beacon`. Broadcast copy
+   says "from Farah" (single operator), never "from the team". When nothing is live, a calm "No
+   live event right now" screen renders ("When Farah goes live, it will appear here"), with the
+   last replay if one exists. No spinner stuck, no error. → web ☐ mobile ☐ android ☐
 2. **Anyone can watch, no sign-in.** Sign out and open `/apps/beacon`. The viewer surface still loads
    over the public path (HLS); there is no phone-number or account wall to watch. → web ☐ mobile ☐ android ☐
 3. **Chat is gated to members.** As a signed-out viewer, confirm chat is read-only / shows a "sign in
