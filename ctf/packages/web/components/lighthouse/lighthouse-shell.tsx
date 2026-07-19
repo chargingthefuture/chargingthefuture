@@ -242,8 +242,8 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
         <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT, display: "flex", alignItems: "center", gap: 8 }}><Home size={16} strokeWidth={1.75} style={{ color: t.ACCENT }} /> LightHouse — Safe Housing</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Verified listings · Privacy-first</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT, display: "flex", alignItems: "center", gap: 8 }}><Home size={16} strokeWidth={1.75} style={{ color: t.ACCENT }} /> LightHouse</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Trauma-informed hosts · ServiceCredits accepted</div>
           </div>
           <RefreshButton onRefresh={() => fetchAll()} title="Refresh" />
           <PluginAdminButton href="/admin/lighthouse" isAdmin={isAdmin} accent={t.ACCENT} />

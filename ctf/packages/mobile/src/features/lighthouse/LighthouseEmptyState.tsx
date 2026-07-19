@@ -15,12 +15,8 @@ export const LighthouseEmptyState: React.FC = () => {
       </View>
       <Text style={styles.heading}>No listings match</Text>
       <Text style={styles.body}>
-        Check back soon for safe, verified housing near you.
+        Check back soon for new housing listings near you.
       </Text>
-      <View style={styles.privacyBadge}>
-        <Ionicons name="shield-checkmark-outline" size={13} color={accent} />
-        <Text style={styles.privacyText}>Location is never stored</Text>
-      </View>
       <TouchableOpacity style={styles.primaryBtn} activeOpacity={0.8}>
         <Ionicons name="search-outline" size={16} color="#000" />
         <Text style={styles.primaryBtnText}>Adjust Filters</Text>
