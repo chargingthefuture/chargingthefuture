@@ -139,6 +139,13 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
 
 ## Change Log
 
+- 2026-07-19: **"Admin-reviewed verification" removed from the public landing's signal list
+  (owner report: can be misinterpreted).** The bullet read as the platform vetting people, a claim
+  this plugin deliberately never makes. Both the desktop and phone signal lists in
+  `trust-public-shell.tsx` now list four signals (Quora social proof, ServiceCredits activity,
+  Community connections, Cohort completion record). The underlying admin-set status itself is
+  unchanged — only the marketing bullet is gone. Copy only.
+
 - 2026-07-14: **Android pull-to-refresh on the Trust screen (`Trust.tsx`).** Dragging the empty or populated view down re-pulls `GET /api/trust/self` in the background without flashing the branded loading screen (the load function gained a background flag; the retry button reuses it). Mobile-client only — no backend, schema, route, or contract change.
 - 2026-07-14: Fixed odd trust evidence on the demo account. The demo seed (`seedDemo.mjs` `seedTrust`) wrote `trust_evidence` in a non-canonical shape (`{ type, date, source }` — no `summary`, no `createdAt`) and an invalid `trust_status` of `peer_verified`, so the account-hub `TrustWidgetCard` rendered a raw type slug (e.g. "Demo_second_owner") and "Invalid Date". Corrected the seed to write canonical `TrustEvidenceItem` rows (`type`/`summary`/`createdAt`/`createdBy`) with `trust_status: 'verified'` for both demo participants; re-running `seed:demo` overwrites the malformed rows. Hardened the renderers so a malformed or legacy item degrades gracefully: `TrustWidgetCard` now leads with the human `summary` (falling back to a humanized type instead of a raw slug) and only shows the date when `createdAt` parses (never "Invalid Date"); the mobile `Trust.tsx` and `TrustEvidencePanel.tsx` rows apply the same date guard, and `TrustEvidencePanel` drops the raw type-slug line in favour of the summary. No schema, route, or contract change.
 
