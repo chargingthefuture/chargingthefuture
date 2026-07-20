@@ -135,9 +135,14 @@ External value movement dependencies:
 1. Server-side role and access checks (`admin`, `trainer`, `user`) via plugin access gate.
 2. CSRF checks enforced on mutation endpoints.
 3. Input validation via `zod` on all LevelUp routes.
-4. Command idempotency persistence for mutation replay safety.
+4. Command idempotency persistence for mutation replay safety. `dispute.resolve` reads its
+   idempotency record **before** applying the credit adjustment, so a retried resolve never
+   re-runs the adjustment transfer.
 5. Audit events for all implemented LevelUp commands.
 6. Enrollment and milestone validate rate-limit counters persisted in DB.
+7. Enrollment-party check on `dispute.open`: only the enrollment's learner, its assigned trainer,
+   or an admin may open a dispute on it (enforced in `openDispute`), per the access policy's
+   `enrollment_not_visible` deny condition.
 
 ## Seed Coverage Status
 
@@ -208,6 +213,34 @@ that exist today.
 
 ## Change Log
 
+- 2026-07-20: **Resolved the level-up code-review sweep findings (#1756–#1763).** No schema, route
+  list, or contract change — behaviour and security hardening only:
+  - **dispute.open ownership (#1756, security).** `openDispute` now verifies the actor is the
+    enrollment's learner, its assigned trainer, or an admin before creating the dispute (and before
+    flipping any milestone validation to `disputed`); the route passes `isAdmin`. Previously any
+    authenticated member who guessed an enrollment UUID could file a dispute on someone else's
+    enrollment.
+  - **dispute.resolve idempotency (#1757, correctness).** The stored idempotency response is read
+    before `applyDisputeAdjustment` runs, so a retried resolve returns the prior result instead of
+    re-invoking the credit adjustment. Mirrors `releaseMilestoneCredits`.
+  - **Error mapping consolidation (#1762).** Deleted the dead duplicate
+    `app/api/level-up/_lib.ts` and merged its complete `levelUpErrorResponse` into the active
+    `lib/level-up/_lib.ts`, so `not_found` → 404, `invalid_state` → 409, `rate_limit_exceeded` →
+    429, and the external-ledger errors → 503 (they previously collapsed to a generic 500). Added a
+    `forbidden` → 403 case used by the new dispute ownership guard.
+  - **claim_trainer audit (#1758, compliance).** The `cohort.claim_trainer` audit event now carries
+    `targetContext: { cohortId }`, matching its audit contract (workspaceId is an unpopulated
+    contract placeholder in this single-tenant codebase, consistent with `admin.adjust_credits`).
+  - **admin.adjust_credits zero guard (#1759).** The route schema now rejects `amount === 0` for a
+    clean 400; the signed +/- amount (grant / mistaken-grant correction) is still allowed.
+  - **Trainer sees pending validations (#1760, correctness).** The right-panel Validation section is
+    gated on `isAdmin || isTrainer` (was admin-only); `isTrainer` is threaded page → shell → panel.
+    `milestone.validate` is permitted for trainers by contract, so a trainer must be able to see it.
+  - **Scoping note (#1761).** Documented in the shell that a future pending-validations feed must be
+    scoped to the trainer's own cohorts before being passed to the panel. It is a static empty list
+    today, so there is no exposure yet.
+  - #1763 (seatsAvailable query param) was already correct in current code (`.optional()`), so no
+    code change — the issue is closed as already-fixed.
 - 2026-07-19: **Corrected the "who earns" copy on the signed-out LevelUp screen (and the Android
   empty state).** The public marketing copy read "Complete milestones to earn ServiceCredits" /
   "Earn credits while learning", which implied a learner is paid new credits for each milestone. The
