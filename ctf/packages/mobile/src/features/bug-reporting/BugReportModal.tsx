@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { CheckCircle, AlertCircle, Clock, X, type LucideIcon } from 'lucide-react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { submitBugReport, type BugReportSubmitResult } from './api';
@@ -118,7 +119,8 @@ export function BugReportModal({ visible, onClose, pluginSlug }: BugReportModalP
             {view === 'success' ? (
               <ResultBody
                 s={s}
-                glyph="✓"
+                Icon={CheckCircle}
+                iconColor={tokens.success}
                 glyphStyle={s.iconSuccess}
                 title="Got it — we'll look into this."
                 body={
@@ -136,7 +138,8 @@ export function BugReportModal({ visible, onClose, pluginSlug }: BugReportModalP
             {view === 'error' ? (
               <ResultBody
                 s={s}
-                glyph="!"
+                Icon={AlertCircle}
+                iconColor="#EF4444"
                 glyphStyle={s.iconError}
                 title="Couldn't send your report."
                 body="Check your connection and try again. What you wrote is still there — nothing has been lost."
@@ -150,7 +153,8 @@ export function BugReportModal({ visible, onClose, pluginSlug }: BugReportModalP
             {view === 'rate_limited' ? (
               <ResultBody
                 s={s}
-                glyph="⏱"
+                Icon={Clock}
+                iconColor={tokens.textSecondary}
                 glyphStyle={s.iconWait}
                 title="We already have your recent reports."
                 body="There's no need to send another one right now — try again in a little while."
@@ -201,7 +205,7 @@ function FormBody({
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <Text style={s.closeText}>✕</Text>
+          <X size={14} color={tokens.textSecondary} strokeWidth={2} />
         </TouchableOpacity>
       </View>
       <Text style={s.subtitle}>
@@ -277,7 +281,8 @@ function FormBody({
 
 type ResultBodyProps = {
   s: Styles;
-  glyph: string;
+  Icon: LucideIcon;
+  iconColor: string;
   glyphStyle: object;
   title: string;
   body: string;
@@ -291,7 +296,8 @@ type ResultBodyProps = {
 
 function ResultBody({
   s,
-  glyph,
+  Icon,
+  iconColor,
   glyphStyle,
   title,
   body,
@@ -305,7 +311,7 @@ function ResultBody({
   return (
     <View style={s.resultWrap}>
       <View style={[s.resultIcon, glyphStyle]}>
-        <Text style={s.resultIconText}>{glyph}</Text>
+        <Icon size={28} color={iconColor} strokeWidth={2} />
       </View>
       <Text style={s.resultTitle}>{title}</Text>
       <Text style={s.resultBody}>{body}</Text>

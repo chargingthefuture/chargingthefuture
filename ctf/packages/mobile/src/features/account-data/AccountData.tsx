@@ -27,6 +27,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Trash2, Lock, CheckCircle, X, AlertTriangle } from 'lucide-react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { getApiBaseUrl } from '../../auth/authedFetch';
@@ -298,7 +299,7 @@ export function AccountData() {
                           accessibilityRole="button"
                           accessibilityLabel={`Delete your ${service.name} data`}
                         >
-                          {isPending ? <ActivityIndicator color={brand} size="small" /> : <Text style={s.deleteBtnText}>🗑</Text>}
+                          {isPending ? <ActivityIndicator color={brand} size="small" /> : <Trash2 size={13} color={tokens.danger} strokeWidth={2} />}
                         </TouchableOpacity>
                       </View>
                     </React.Fragment>
@@ -319,7 +320,7 @@ export function AccountData() {
                           <View style={s.rowBody}>
                             <View style={s.retainedNameRow}>
                               <Text style={s.retainedName}>{service.name}</Text>
-                              <Text style={s.lockGlyph}>🔒</Text>
+                              <Lock size={10} color={tokens.textMuted} strokeWidth={2} />
                             </View>
                             <Text style={s.retainedReason}>{service.summary}</Text>
                           </View>
@@ -458,7 +459,7 @@ function ConfirmDelete({ s, tokens, brand, serviceCount, onCancel }: { s: Styles
   if (status === 'done') {
     return (
       <View style={[s.root, s.center]}>
-        <Text style={s.doneGlyph}>✅</Text>
+        <CheckCircle size={48} color={tokens.success} strokeWidth={2} style={{ marginBottom: 18 }} />
         <Text style={s.doneTitle}>Deletion queued</Text>
         <Text style={s.doneSub}>
           Your request has been received. Your personal data is being removed across all services, and your ServiceCredits balance will be settled through the standard process. Some audit records are retained for platform integrity.
@@ -478,14 +479,14 @@ function ConfirmDelete({ s, tokens, brand, serviceCount, onCancel }: { s: Styles
     <View style={s.root}>
       <View style={s.confirmHeader}>
         <View style={s.confirmHeaderIcon}>
-          <Text style={s.confirmHeaderIconText}>⚠️</Text>
+          <AlertTriangle size={16} color={tokens.danger} strokeWidth={2} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitle}>Confirm Deletion</Text>
           <Text style={s.headerSub}>Full account · permanent</Text>
         </View>
         <TouchableOpacity onPress={onCancel} style={s.confirmClose} accessibilityRole="button" accessibilityLabel="Cancel">
-          <Text style={s.confirmCloseText}>✕</Text>
+          <X size={14} color={tokens.textSecondary} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -495,7 +496,11 @@ function ConfirmDelete({ s, tokens, brand, serviceCount, onCancel }: { s: Styles
           {points.map((p, i) => (
             <React.Fragment key={i}>
               <View style={s.bulletRow}>
-                <Text style={[s.confirmBulletGlyph, { color: p.warn ? tokens.danger : tokens.textSecondary }]}>{p.warn ? '🗑' : '🔒'}</Text>
+                {p.warn ? (
+                  <Trash2 size={13} color={tokens.danger} strokeWidth={2} style={{ marginTop: 1 }} />
+                ) : (
+                  <Lock size={13} color={tokens.textSecondary} strokeWidth={2} style={{ marginTop: 1 }} />
+                )}
                 <Text style={s.confirmBulletText}>{p.t}</Text>
               </View>
             </React.Fragment>

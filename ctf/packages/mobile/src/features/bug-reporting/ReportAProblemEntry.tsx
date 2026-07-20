@@ -8,6 +8,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AlertCircle } from 'lucide-react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { BugReportModal } from './BugReportModal';
@@ -22,6 +23,7 @@ export function ReportAProblemEntry({ pluginSlug }: ReportAProblemEntryProps) {
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
   const [open, setOpen] = useState(false);
+  const accent = tokens.isComic ? tokens.gold : '#A78BFA';
 
   return (
     <View>
@@ -32,7 +34,7 @@ export function ReportAProblemEntry({ pluginSlug }: ReportAProblemEntryProps) {
         accessibilityLabel="Report a problem"
       >
         <View style={s.iconWrap}>
-          <Text style={s.iconText}>!</Text>
+          <AlertCircle size={18} color={accent} strokeWidth={2} />
         </View>
         <Text style={s.label}>Report a problem</Text>
         <Text style={s.chevron}>›</Text>
