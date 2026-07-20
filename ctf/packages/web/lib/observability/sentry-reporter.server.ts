@@ -10,6 +10,8 @@ type SentryModule = {
   }) => string;
 };
 
+// The dynamically-imported Sentry SDK is cached for the lifetime of the process (the import is expensive
+// and the module never changes at runtime). Tests that need a clean slate can call resetSentryModuleCache.
 let sentryModulePromise: Promise<SentryModule | null> | null = null;
 
 async function getSentryModule(): Promise<SentryModule | null> {
@@ -22,6 +24,14 @@ async function getSentryModule(): Promise<SentryModule | null> {
   }
 
   return sentryModulePromise;
+}
+
+/**
+ * Clear the cached Sentry SDK import so the next check-in re-imports it. Intended for test isolation only;
+ * in normal operation the module is cached for the process lifetime by design.
+ */
+export function resetSentryModuleCache(): void {
+  sentryModulePromise = null;
 }
 
 export function createSentryReporter(): ObservabilityReporter {

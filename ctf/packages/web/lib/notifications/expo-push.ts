@@ -105,8 +105,9 @@ export async function sendExpoPushToUser(userId: string, payload: WebPushPayload
   const accessToken = resolveExpoAccessToken();
   if (!accessToken) {
     // Not an error: an Expo project without enhanced push security accepts unauthenticated sends. Logged
-    // so an operator can see the send went out without an access token, with no secrets.
-    console.info(`[expo-push] sending without EXPO_ACCESS_TOKEN (userId=${userId}, devices=${rows.length})`);
+    // so an operator can see the send went out without an access token. No user identifier is logged — a
+    // user id is PII and must not land in log aggregation (secrets policy); only the device count.
+    console.info(`[expo-push] sending without EXPO_ACCESS_TOKEN (devices=${rows.length})`);
   }
 
   // One batch request to Expo: an array of messages, one per device token.
@@ -140,20 +141,36 @@ export async function sendExpoPushToUser(userId: string, payload: WebPushPayload
       });
       return;
     }
-    const parsed = (await response.json().catch(() => null)) as { data?: ExpoPushTicket[] } | null;
-    receipts = Array.isArray(parsed?.data) ? parsed.data : [];
+    const parsed = (await response.json().catch(() => null)) as { data?: unknown } | null;
+    receipts = Array.isArray(parsed?.data) ? (parsed.data as ExpoPushTicket[]) : [];
   } catch (error) {
     reportError(error, { area: 'notifications', op: 'expo_push_send' });
     return;
   }
 
-  // Receipts come back in the same order as the messages we sent. A 'DeviceNotRegistered' error means the
-  // token is dead — prune it so it is not retried. Other errors are reported (no token logged).
-  const usedEndpoints: string[] = [];
-  await Promise.all(
-    receipts.map(async (ticket, index) => {
+  // Receipts come back positionally: receipts[i] is the ticket for messages[i], and thus for rows[i].
+  // That alignment only holds when every message is accepted in the one batch. If the counts differ
+  // (a malformed/truncated body, or partial acceptance), the arrays are misaligned and processing them
+  // by index would prune or stamp the WRONG token — so bail out rather than act on a misaligned response.
+  if (receipts.length !== messages.length) {
+    reportError(new Error('Expo push receipt count mismatch'), {
+      area: 'notifications',
+      op: 'expo_push_send',
+      extra: { sent: messages.length, received: receipts.length },
+    });
+    return;
+  }
+
+  // A 'DeviceNotRegistered' error means the token is dead — prune it so it is not retried. Other errors are
+  // reported (no token logged). Collect the successfully-sent endpoints from the Promise.all return value
+  // rather than pushing into a shared array, so the result never depends on callback interleaving.
+  const results = await Promise.all(
+    receipts.map(async (ticket, index): Promise<string | null> => {
       const endpoint = rows[index]?.endpoint;
-      if (!endpoint) return;
+      if (!endpoint) return null;
+      // Guard the runtime shape: a non-object receipt (e.g. a bare string on an error response) must not
+      // be read as a ticket.
+      if (!ticket || typeof ticket !== 'object') return null;
       if (ticket.status === 'error') {
         if (ticket.details?.error === 'DeviceNotRegistered') {
           await pruneDeadExpoSubscription(userId, endpoint);
@@ -164,11 +181,12 @@ export async function sendExpoPushToUser(userId: string, payload: WebPushPayload
             extra: { error: ticket.details?.error ?? 'unknown' },
           });
         }
-        return;
+        return null;
       }
-      usedEndpoints.push(endpoint);
+      return endpoint;
     }),
   );
+  const usedEndpoints = results.filter((endpoint): endpoint is string => endpoint !== null);
 
   if (usedEndpoints.length > 0) {
     try {

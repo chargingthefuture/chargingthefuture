@@ -2,6 +2,11 @@ import webpush from 'web-push';
 import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
 
+// `webpush.setVapidDetails` mutates global module state, so it only needs to run when the keys first
+// resolve (or change). We remember the public key we last configured and skip the call when it is
+// unchanged, rather than re-setting global state on every send.
+let configuredVapidPublicKey: string | null = null;
+
 // Web Push delivery (issue #808 task 5). The first caller is the Foundation instant-call ring: when a
 // member rings a provider, ringInstantCall calls sendWebPushToUser so the provider's device wakes even
 // with the app closed. The in-app poll remains the fallback; push only augments it.
@@ -108,8 +113,9 @@ async function pruneDeadSubscription(userId: string, endpoint: string): Promise<
 export async function sendWebPushToUser(userId: string, payload: WebPushPayload): Promise<void> {
   const keys = resolveWebPushKeys();
   if (!keys) {
-    // No-op when unconfigured. Visible in logs so an operator can see push was skipped, with no secrets.
-    console.info(`[web-push] skipped: VAPID not configured (userId=${userId})`);
+    // No-op when unconfigured. Visible in logs so an operator can see push was skipped. No user
+    // identifier is logged — a user id is PII and must not land in log aggregation (secrets policy).
+    console.info('[web-push] skipped: VAPID not configured');
     return;
   }
 
@@ -129,33 +135,40 @@ export async function sendWebPushToUser(userId: string, payload: WebPushPayload)
     return;
   }
 
-  webpush.setVapidDetails(keys.subject, keys.publicKey, keys.privateKey);
+  // Configure the VAPID details once (or when the key changes), not on every send.
+  if (configuredVapidPublicKey !== keys.publicKey) {
+    webpush.setVapidDetails(keys.subject, keys.publicKey, keys.privateKey);
+    configuredVapidPublicKey = keys.publicKey;
+  }
   const serialized = JSON.stringify(payload);
-  const usedEndpoints: string[] = [];
 
-  await Promise.all(
-    rows.map(async (row) => {
+  // Collect the successfully-sent endpoints from the Promise.all return value rather than pushing into a
+  // shared array, so the result never depends on how the concurrent callbacks interleave.
+  const results = await Promise.all(
+    rows.map(async (row): Promise<string | null> => {
       if (!row.p256dh || !row.auth) {
         // A subscription without its encryption keys cannot receive an encrypted push; skip it.
-        return;
+        return null;
       }
       try {
         await webpush.sendNotification(
           { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } },
           serialized,
         );
-        usedEndpoints.push(row.endpoint);
+        return row.endpoint;
       } catch (error) {
         const statusCode = (error as { statusCode?: number } | null)?.statusCode;
         if (statusCode === 404 || statusCode === 410) {
           await pruneDeadSubscription(userId, row.endpoint);
-          return;
+          return null;
         }
         // Do not include the endpoint (sensitive) in the report; only the status code.
         reportError(error, { area: 'notifications', op: 'web_push_send', extra: { statusCode } });
+        return null;
       }
     }),
   );
+  const usedEndpoints = results.filter((endpoint): endpoint is string => endpoint !== null);
 
   if (usedEndpoints.length > 0) {
     try {
