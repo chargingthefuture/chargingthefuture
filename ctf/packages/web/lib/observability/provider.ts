@@ -18,7 +18,8 @@ export async function getObservabilityReporter(): Promise<ObservabilityReporter>
     return reporterInstance;
   }
 
-  if (resolveProvider() !== 'sentry') {
+  const provider = resolveProvider();
+  if (provider !== 'sentry') {
     reporterInstance = createNoopReporter();
     return reporterInstance;
   }
