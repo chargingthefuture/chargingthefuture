@@ -1,5 +1,7 @@
 # SkillsHunt — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Generated from the SkillsHunt feature inventory and declared contracts; this is the runnable checklist for a human tester on a real device.
 > To regenerate: `pnpm --dir ctf test-script:generate -- skills-hunt`
 
@@ -30,23 +32,23 @@
 
 **CS-1 — Rounds list loads for a signed-in member**
 Open `/apps/skills-hunt` (web) and the SkillsHunt screen (Android). Confirm at least one seeded round appears with a name and status visible. No error state, no blank screen.
-web ☐ android ☐
+web ☐
 
 **CS-2 — Scout tab / nomination form is reachable**
 From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Full name, Bio, Quora URL, a skills picker, and a location block (Country — required, State/region and City — optional). On web the Country field is a dropdown; on Android it is a button that opens a searchable country list.
-web ☐ android ☐
+web ☐
 
 **CS-3 — Leaderboard tab loads**
 Switch to the Leaderboard tab on the same round. A ranked list appears (seeded data). No fabricated figures — every visible number comes from the API.
-web ☐ android ☐
+web ☐
 
 **CS-4 — Admin moderation shell is reachable by an admin**
 Sign in as an admin. Navigate to `/admin/skills-hunt` (web) and the `skills-hunt-admin` screen (Android). A submissions table or list renders; a round selector is visible.
-web ☐ android ☐
+web ☐
 
 **CS-5 — A non-admin is blocked from the admin surface**
 Sign in as a plain member. Navigate to `/admin/skills-hunt` (web). Expect a redirect, 403, or "admins only" notice — not a working admin table. On Android, attempting to reach the admin screen shows the "admins only" notice.
-web ☐ android ☐
+web ☐
 
 ---
 
@@ -65,7 +67,7 @@ web ☐ android ☐
 
 **Expected:** All three round states are represented. Each round card shows a name and its status. Closed rounds are visible but not selectable for new submissions.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -88,7 +90,7 @@ Result: web ☐ android ☐
 
 **Expected:** Submission succeeds. A confirmation message or pending status appears. The submission shows up in the My Finds tab / "My Finds" section with status "pending". When this submission is later accepted (SH-A3) the generated Directory profile carries the same country/state/city. The keyword search behaves the same on web and android (flat filtered results replace the accordion while a query is present).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -110,7 +112,7 @@ Result: web ☐ android ☐
 - Step 4: for a non-US country the State control is free text; for `United States` it is a searchable state list.
 - Step 5: submission with a country but no state/city succeeds — state and city are optional.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -152,7 +154,7 @@ Result: web ☐
 - Step 5: error rejecting HTML/script-like content.
 - Step 7: submission is blocked or the counter turns red beyond 280 chars.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -222,7 +224,7 @@ Result: web ☐
 
 **Expected:** Submission succeeds. The proposed skill is stored and visible in My Finds as a chip. The total skills + proposed skills count does not exceed 10. A proposed skill becomes a real taxonomy skill only after the owner approves it — an `addSkill` entry appended to the taxonomy change list (`ctf/scripts/lib/taxonomyChange.mjs`) and applied by the owner-run apply workflow.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -243,7 +245,7 @@ Result: web ☐ android ☐
 - Team mode: aggregated rows by profession (may be limited by taxonomy sign-off — see Known gaps).
 - If the signed-in member is in the top-100 their row is highlighted; if outside top-100, their rank still appears.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -260,7 +262,7 @@ Result: web ☐ android ☐
 
 **Expected:** Missions load from the real API (not stubbed). Progress bars reflect actual submission counts. Archived missions are not shown.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -277,7 +279,7 @@ Result: web ☐ android ☐
 
 **Expected:** Only the signed-in member's own submissions appear. Statuses are accurate. Achievement codes shown match the 5 named badges: First Finder, Diversity Champion, Rare Talent Scout, Quality Contributor, Leaderboard Champion.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -298,7 +300,7 @@ Result: web ☐ android ☐
 - No numeric dot/count badge appears on the bell icon at any point.
 - The panel polls automatically; waiting ~30 seconds and then triggering a new notification (from admin review) should surface it without a page reload.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -395,7 +397,7 @@ Result: web ☐
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), and the admin screen header shows a "Member view" pill opening `/apps/skills-hunt`.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -448,7 +450,7 @@ Result: web ☐
 
 **Expected:** The button shows a busy state, then a success notice ("Leaderboard rebuilt…" on Android). The Leaderboard reflects the current accepted submissions (individual and team) — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action. On Android the button sits in a "Leaderboard" card under the selected round and sends `x-ctf-csrf: '1'`.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -471,7 +473,7 @@ Result: web ☐ android ☐
 - The leaderboard for that round rebuilds — navigate to the Leaderboard tab and verify the submitter's score increased.
 - The submitter receives a `submission-accepted` notification (check the Status panel as the member, waiting up to 30s for the next poll).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -493,7 +495,7 @@ Result: web ☐ android ☐
 - The submitter receives a `submission-rejected` notification (check Status panel as member, up to 30s).
 - The leaderboard does not increase for this submitter; participation_points (+1) are awarded internally but the member's score reflects the reject correctly.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -509,7 +511,7 @@ Result: web ☐ android ☐
 
 **Expected:** The row disappears from the admin list (soft-deleted). The leaderboard no longer counts it. Crucially, unlike Reject, it does **not** add to the scout's rejection rate — a scout removed this way is not pushed toward the restricted/pre-approval state. It is gone from the scout's My Finds. No ServiceCredits are reversed by this action (that is a separate admin burn). A non-admin cannot reach the Remove action. On Android the "Remove" button shows on every submission card (any status) and sends `x-ctf-csrf: '1'`.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ### SH-A5 — Bulk review: accept multiple pending submissions at once
 
@@ -543,7 +545,7 @@ Result: web ☐
 
 **Expected:** Submission status changes to "flagged". It no longer appears in the pending filter. The action requires a confirm gesture on Android.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -583,7 +585,7 @@ Result: web ☐
 - Summary shows: "Paid so far: X ServiceCredits across Y nominations" (from `totalCreditsPaid` / `rewardedSubmissionCount`).
 - Amounts are shown in full words ("ServiceCredits"), never as a fiat equivalent or bare "SC".
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -600,7 +602,7 @@ Result: web ☐ android ☐
 
 **Expected:** Neither a round-create nor a round-delete affordance exists on the Android admin screen. Only the moderation actions (accept/reject/flag) are available.
 
-Result: android ☐
+Result:
 
 ---
 

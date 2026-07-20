@@ -1,5 +1,7 @@
 # Foundation — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
 > truth, this is the runnable checklist derived from them. Do not edit a step here to match a
@@ -12,7 +14,7 @@
 | **Plugin** | Foundation (`foundation`) |
 | **Visibility** | Member-facing |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
 | **Generated** | 2026-07-18 (hand-updated for the fresh-DB Request Quote NOT-NULL fix; regenerate via CI to stamp the commit) |
@@ -38,13 +40,13 @@ Foundation carries 1:1 support messaging and a paid live call — these are the 
 checks. Member role unless noted.
 
 1. **Provider search loads.** Open Foundation. The provider list renders with name, headline, and
-   bio, not a spinner or error. → web ☐ mobile ☐ android ☐
+   bio, not a spinner or error. → web ☐ mobile ☐
 2. **Messaging is scoped to a connection.** Confirm there is no 1:1 chat anywhere except inside an
-   active connection/quote between the two parties — no open inbox to message any member. → web ☐ mobile ☐ android ☐
+   active connection/quote between the two parties — no open inbox to message any member. → web ☐ mobile ☐
 3. **Can't connect to yourself.** On your own provider profile, "Request Quote" and "Connect now" are
-   disabled with a plain "this is your own profile" note. → web ☐ mobile ☐ android ☐
+   disabled with a plain "this is your own profile" note. → web ☐ mobile ☐
 4. **No fiat equivalent on credits.** Anywhere a ServiceCredits rate or call cost shows, it is in
-   credits only — never shown as a cash/currency amount. → web ☐ mobile ☐ android ☐
+   credits only — never shown as a cash/currency amount. → web ☐ mobile ☐
 
 ---
 
@@ -78,7 +80,7 @@ with no sideways scrolling — the Request Quote button, the self-profile note, 
 1:1 calls" badge all sit fully on-screen (the action block wraps below the name) and are never clipped
 at the right edge. The "Good to know" note is full-width at the very bottom (below the skills and
 About), not a cramped right-hand column; on desktop it stays the right-hand sidebar.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### FND-2 · Offer skills (provider opt-in)
 **Role:** member · **Surfaces:** all
@@ -87,7 +89,7 @@ About), not a cramped right-hand column; on desktop it stays the right-hand side
 1. Open the Offer skills tab; toggle which of your own Directory skills you'll be contacted about; save.
 **Expected:** Only skills on the member's own claimed Directory profile can be offered. The saved set
 persists and the member then appears in provider search for those skills.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### FND-3 · Quote request and Direct Line chat
 **Role:** member · **Surfaces:** all
@@ -108,7 +110,7 @@ config matter, not a code fix.) On a freshly-built / demo database (schema appli
 `schema.demo.sql`), Request Quote must create the connection thread and quote without a database error
 — it does not fail with "Connections are temporarily unavailable" because a legacy `NOT NULL` column
 (`thread_key`, `user_id`, `request_text`) was left unset.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### FND-4 · Quote lifecycle and history
 **Role:** member · **Surfaces:** all
@@ -118,7 +120,7 @@ config matter, not a code fix.) On a freshly-built / demo database (schema appli
 **Expected:** The quote timeline is immutable and shows each transition. History lists are scoped to
 the actor's own connections/quotes. When a connection/quote reaches a terminal state the chat closes
 to new messages but stays read-only for a limited window.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### FND-5 · Instant 1:1 paid call (Connect now)
 **Role:** member · **Surfaces:** all · **Precondition:** native build (Stream video); a provider with instant calls on and a valid rate; the caller has enough credits.
@@ -132,7 +134,7 @@ block (402) or the provider has no valid rate (409). On answer the first block i
 caller→provider at the locked rate. Extend charges one more block under the cap; at the cap the
 control is replaced with a clear message. Ending stops billing (no refund/proration in v1). The
 callee never sees a billing strip. Audio only — no camera.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### FND-6 · Notifications and preferences
 **Role:** member · **Surfaces:** all
@@ -142,7 +144,7 @@ callee never sees a billing strip. Audio only — no camera.
 **Expected:** Messages, quote state changes, and incoming-call rings appear as notification events.
 Acknowledging one updates it. Preferences and quiet hours persist. (Call-alert push wakes a device
 only on a native build with VAPID/Expo keys configured; otherwise the in-app poll is the fallback.)
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### FND-7 · Send ServiceCredits from a Foundation surface
 **Role:** member · **Surfaces:** all
@@ -151,7 +153,7 @@ only on a native build with VAPID/Expo keys configured; otherwise the in-app pol
 **Expected:** The amount must be positive (else a 400). The transfer goes through the shared
 ServiceCredits primitive (idempotent per sender+key) and is recorded only in the canonical
 ServiceCredits ledger — Foundation owns no credits ledger. The send is CSRF-guarded.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### FND-8 · Share a provider and open the deep link (auth-gated)
 **Role:** member · **Surfaces:** web + mobile-responsive
@@ -185,7 +187,7 @@ without closing and reopening the app. Refreshing never clears the screen to the
 state — the current list stays visible until the new data lands.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), and the admin screen header shows a "Member view" pill opening `/apps/foundation`.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -201,14 +203,14 @@ Foundation thread message; access to the Stream dashboard for the app behind `ST
 `foundation-<userId>` is hard-deleted with messages marked deleted — no lingering Stream copy. This runs
 via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If Stream
 is down at delete time, the deletion still succeeds and the failure is logged for retry.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
 ## Admin walkthrough
 
 ### FND-A1 · Capacity policy (role-gated)
-**Role:** admin · **Surfaces:** web (admin surface), android (Foundation Admin screen)
+**Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
 1. As admin, open the Foundation admin surface. On web, read the snapshot counts (android has no
    snapshot row — see the gap note below — so skip that step there).
@@ -220,10 +222,10 @@ reflects the policy. On android a non-admin sees the "admins only" notice; on we
 redirected/denied with a readable message. The web "Providers" snapshot count matches the number of
 providers shown in Browse — both count claimed, active profiles that offer at least one skill (a
 Directory member who never opted into Foundation is not counted).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### FND-A2 · Rate-limit evaluation and audit
-**Role:** admin · **Surfaces:** web (admin surface), android (Foundation Admin screen)
+**Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
 1. Run a rate-limit evaluation for a member + command family (on android this is the "Rate-limit check"
    card; it is confirm-gated before it runs).
@@ -232,10 +234,10 @@ Directory member who never opted into Foundation is not counted).
 for that command family. The audit list shows allow/deny outcomes with decision evidence and is
 admin-gated. The evaluation is a mutation that records an audit row and counts against the member's
 window, so the audit list gains a new entry after running it.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### FND-A4 · Android admin screen gating and states (issue #1603)
-**Role:** admin, then non-admin · **Surfaces:** android (Foundation Admin screen)
+**Role:** admin, then non-admin · **Surfaces:** web
 **Steps:**
 1. As a non-admin, open the Foundation Admin screen from the feature list.
 2. As an admin, open it and confirm the capacity policy loads, the audit trail loads, and each
@@ -245,7 +247,7 @@ window, so the audit list gains a new entry after running it.
 and no data. The admin sees a loading spinner, then the capacity policy card, the rate-limit check card,
 and the audit trail (empty state reads "No audit events yet." when there are none). Cancelling a confirm
 makes no change; confirming a save shows "Capacity policy saved." and the audit trail gains a row.
-**Result:** web n/a ☐ mobile ☐ android ☐ — notes:
+**Result:** web n/a ☐ mobile ☐ — notes:
 
 ### FND-A3 · Quota-aware degradation
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -254,7 +256,7 @@ makes no change; confirming a save shows "Capacity policy saved." and the audit 
    behavior still works while non-critical behavior degrades.
 **Expected:** Under red quota, core 1:1 messaging reliability is preserved; only non-critical behavior
 degrades. The threshold level is derived at evaluation time, not stored.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 

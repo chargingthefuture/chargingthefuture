@@ -1,5 +1,7 @@
 # TrustTransport — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Generated from the feature inventory and contracts for `trust-transport`; this is the runnable checklist for hand-testing on a real device. Regenerate with:
 > `pnpm --dir ctf test-script:generate -- trust-transport`
 
@@ -29,19 +31,19 @@
 
 **1. Plugin loads for a signed-in member**
 Open `/apps/trust-transport` (web) or the TrustTransport screen (android). You should see the booking surface — mode selector, origin/destination fields, and your existing requests listed. No crash, no blank screen.
-web ☐ android ☐
+web ☐
 
 **2. Plugin is auth-gated — unauthenticated users cannot access it**
 Sign out, then navigate directly to `/apps/trust-transport` (web) or open TrustTransport while not signed in (android). You should see a public/unauthenticated state — a landing notice or sign-in prompt — not the booking surface.
-web ☐ android ☐
+web ☐
 
 **3. Mode list loads from the real API**
 On the booking surface, confirm that at least one transport mode (ride, package, or food) appears. The list must come from `/api/trust-transport/modes`. There must be no "nearby drivers" count, no driver ratings, and no vehicle info displayed anywhere on the screen.
-web ☐ android ☐
+web ☐
 
 **4. Admin surface loads for an admin and is blocked for a member**
 Sign in as an admin and open `/admin/trust-transport` (web) or the `trust-transport-admin` feature (android). The admin shell must load with stat blocks and tabs (Incidents, Market controls, Audit). Then sign in as a plain member and attempt the same URL/screen — you must see an "available to admins only" notice, not the admin UI.
-web ☐ android ☐
+web ☐
 
 ---
 
@@ -62,7 +64,7 @@ web ☐ android ☐
 
 **Expected:** The request is created and appears in your request list. The settlement badge shows "Free" (never a raw currency code or a fiat equivalent). No "all drivers background-checked" claim appears anywhere, and no per-request "🛡️ Background checked / ✅ ID verified" badge is shown on the Tracking list. The booking subtitle refers to drivers as community members, not vetted professionals. The post-submit confirmation says the request is now visible to community members who can offer to help — not that it is "being matched with nearby drivers" (there is no automated matching).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -81,7 +83,7 @@ Result: web ☐ android ☐
 
 **Expected:** Request is created. The settlement badge shows the ServiceCredits label (never a bare `SC` code). No fiat equivalent is displayed alongside the ServiceCredits amount.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -100,7 +102,7 @@ Result: web ☐ android ☐
 
 **Expected:** The submit button is disabled or shows an inline error. The request is not sent. No generic server error appears.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -117,7 +119,7 @@ Result: web ☐ android ☐
 
 **Expected:** The offer is accepted and a trip is created. The request moves to an accepted state. Per model B, the pickup/drop-off is now available to the accepted provider through the trip. The trip ID is visible (the sidebar/detail shows it, not "— → —"). A "Chat" control opens the trip's Direct Line on both web and android.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -133,7 +135,7 @@ Result: web ☐ android ☐
 
 **Expected:** The tab shows the current trip status as a text/state label derived from manual status updates. There is no "live map" copy. There is no claim of real-time GPS tracking.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -154,7 +156,7 @@ Result: web ☐ android ☐
 - Step 3: The chat tab shows "Chat opens once a driver accepts this request." — no input field.
 - Step 5: A text chat input is available. Sending a message works. There is no video call button or video room.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -170,7 +172,7 @@ Result: web ☐ android ☐
 
 **Expected:** Chat messages are visible (read-only). There is no text input field — no new messages can be sent.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -186,7 +188,7 @@ Result: web ☐ android ☐
 
 **Expected:** The trip status changes one step forward and the new state shows on the card. Transitions are forward-only and append-only — there is no control to revert to the previous state. An out-of-order transition (via the API) is refused. The forward steps stop at **Mark delivered** — there is no unilateral "Mark complete" tap; from delivered, completion is mutual (see TT-8b). Confirm no single button on this card moves the trip straight to `completed`.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -206,7 +208,7 @@ Result: web ☐ android ☐
 - Step 2: The requester's Tracking card shows a "Confirm trip completed" control (and a note that the other party already confirmed).
 - Step 3: On the requester's confirmation the trip becomes `completed` and settlement fires: ServiceCredits move requester → provider (verify the wallet) with a `trust-transport.trip.settlement` audit event; a fiat/crypto priced trip credits the provider's earnings ledger; a Free/Barter trip moves nothing. A member cannot reach `completed` with only one side's confirmation. (Attempting to `POST .../status` with `nextStatus: completed` as a member is refused with `TRUST_TRANSPORT_COMPLETION_REQUIRES_CONFIRMATION`.)
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -222,7 +224,7 @@ Result: web ☐ android ☐
 
 **Expected:** The proof saves ("Proof saved") and is associated with this trip. The value is a redacted reference (no raw image). An empty value is rejected with an inline message. No crash or generic error.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -239,7 +241,7 @@ Result: web ☐ android ☐
 
 **Expected:** The emergency-stop action is sent. A clear, non-technical confirmation or status change is shown. No crash.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -256,7 +258,7 @@ Result: web ☐ android ☐
 
 **Expected:** The order transitions to a cancelled terminal state and disappears from the cancellable list (the "Cancel request" control no longer shows). The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -272,7 +274,7 @@ Result: web ☐ android ☐
 
 **Expected:** A per-currency card shows the total you&apos;ve earned across completed trips (e.g. `24.50 USD`). The tab makes clear this is a **record**, not a withdrawable balance: the copy says ServiceCredits are paid to your wallet, and other payment is arranged directly between you and the other person off-platform (the platform doesn&apos;t hold or pay out that money), and that these amounts count toward community economic activity. There is **no** "Available balance" withdrawable framing, **no** currency selector + amount + "Request a payout" form, and **no** "Payout history" section. (The `POST /api/trust-transport/payouts/requests` and `GET /api/trust-transport/payouts` routes no longer exist — a call to either returns 404.)
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -318,7 +320,7 @@ Result: web ☐
 
 **Expected:** The panel contains community reminders (e.g. "share your trip", "meet in public"). There is no "Background Checked", "Identity Verified", "Real-time Tracking", or "All drivers background-checked" claim. The community label reads "Community", not "Safety-First".
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -335,7 +337,7 @@ Result: web ☐ android ☐
 
 **Expected:** The list never shows a pickup/drop-off location, a title, or the requester's identity — only mode + settlement + age (discovery model B). This is correct behavior, not a missing feature. The offer sends and the card confirms it ("Offer sent..."). Submitting a second offer on the same request updates your existing pending offer rather than creating a duplicate.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -354,7 +356,7 @@ Result: web ☐ android ☐
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), and the admin screen header shows a "Member view" pill opening `/apps/trust-transport`.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -370,7 +372,7 @@ TrustTransport trip message; access to the Stream dashboard for the app behind `
 `trust-transport-<userId>` is hard-deleted with messages marked deleted — no lingering Stream copy. This
 runs via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If
 Stream is down at delete time, the deletion still succeeds and the failure is logged for retry.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -390,7 +392,7 @@ Stream is down at delete time, the deletion still succeeds and the failure is lo
 
 **Expected:** The incident moves to a resolved state and is no longer in the open queue. No crash.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -408,7 +410,7 @@ Result: web ☐ android ☐
 
 **Expected:** The change is saved. On reload the updated value persists. No crash.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -426,7 +428,7 @@ Result: web ☐ android ☐
 
 **Expected:** Both state changes save successfully. The current freeze state is clearly visible after each save.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -445,7 +447,7 @@ Result: web ☐ android ☐
 
 **Expected:** Restrict succeeds and emits a restriction (the platform-wide `account_restrictions` signal is written). Restore succeeds. Both actions require explicit confirmation before sending. The restriction applies platform-wide (not just to TrustTransport).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -461,7 +463,7 @@ Result: web ☐ android ☐
 
 **Expected:** Recent admin actions (resolve, market-config update, restrict/restore) appear as entries. There is no edit or delete control — the list is read-only.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -492,7 +494,7 @@ Result: web ☐
 
 **Expected:** You see an "available to admins only" notice. The incident queue, market controls, and audit trail are not visible.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 

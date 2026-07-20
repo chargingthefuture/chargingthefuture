@@ -166,7 +166,9 @@ default on the ALTER (the `id` default lesson from the announcements fix). Regen
   with RTMP url/key plus desktop screen-share, live chat + moderation, end, history). Public viewer
   at `/apps/beacon` (HLS player, "live and public" indicator, member live chat, idle/replay state).
   Both are mobile-responsive.
-- Android (React Native): viewer built (issue #712). `src/features/beacon/` — `BeaconApi.ts` (the
+- Android (React Native): **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now
+  web-only, served by the installable web app (PWA). Historical detail: a viewer was previously built
+  (issue #712). `src/features/beacon/` — `BeaconApi.ts` (the
   public `GET /api/beacon/current` and the member `POST /api/beacon/[id]/chat-token`) and a `Beacon.tsx`
   viewer screen registered in the mobile navigator (`App.tsx`). Same three states as web: live (HLS
   player via `expo-video` + the "live and public" indicator + member live chat through the reused

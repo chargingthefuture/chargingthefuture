@@ -133,7 +133,7 @@ The canonical entities live in `skills_taxonomy_sectors`, `skills_taxonomy_job_t
 
 ## 7) Web and Android Delivery Status
 
-`web+android complete`. Web admin taxonomy management lives under `/apps/skills-taxonomy`; Android consumes the same read models via `packages/mobile/src/features/skills-taxonomy`. Hierarchy/flattened reads, admin CRUD, dependency-impact preview, and destructive delete safeguards are consistent across platforms.
+Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Web admin taxonomy management lives under `/apps/skills-taxonomy`. Historical parity detail: a former Android surface consumed the same read models via `packages/mobile/src/features/skills-taxonomy` (now removed); hierarchy/flattened reads, admin CRUD, dependency-impact preview, and destructive delete safeguards were consistent across platforms.
 
 Web pixel pass (design `c5d83c0`): the user-facing `/apps/skills-taxonomy` surface is rebuilt to `design/.../survivor-hub/SkillsTaxonomy.tsx` and its Empty/Loading states — the full-height 3-column browser (sectors → job titles → skills) with icon rail, breadcrumb, and in-role skill search. The whole tree loads from the existing `GET /api/skills-taxonomy/hierarchy` route (response `{ items }`); sectors/titles/skills are derived client-side from that nested payload, and sector/title counts use the real `jobTitles.length` / `skills.length`. The mockup's demand/level/category chips and per-sector totals have no backing in the data model and were omitted rather than faked; the browser is read-only — there is no in-app taxonomy editor (taxonomy changes go through the append-only change list, not the UI). Decomposed into modular sub-components within the rule-116 limits.
 
@@ -206,7 +206,7 @@ Android pixel pass (2026-05-31): the `SkillsTaxonomy` mobile screen is rebuilt f
 
 ## Build Checklist
 
-> **Reconciliation (2026-05-26):** the Delivery Status above is `web+android complete` (feature parity).
+> **Reconciliation (2026-05-26):** the Delivery Status above was `web+android complete` (feature parity) at the time; the Android surface was removed 2026-07-20 (rule 105, PR #1742) and this feature is now **web-only**.
 > Unchecked items below are obsolete web-first / Android-deferral planning artifacts and deferred MVP
 > validation/release gates (Rule 118) — not missing implementation. The authoritative production bar
 > (pixel-perfect to `design` + parity + gates + deploy) is tracked in

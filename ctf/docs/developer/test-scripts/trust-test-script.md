@@ -1,4 +1,6 @@
 # Trust — Manual Test Script
+
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
 > Generated from the Trust plugin feature inventory and contracts; this is the runnable checklist for hand-testing the Trust plugin on a real device or browser. Regenerate with:
 > `pnpm --dir ctf test-script:generate -- trust`
 
@@ -34,7 +36,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
    web ☐
 
 3. **Android Trust screen loads.** Open the app as admin. Navigate to the Trust screen. It should reach one of the four states (loading → then populated, empty, or public) without a crash.
-   android ☐
+  
 
 4. **Unauthenticated call blocked.** Call `GET /api/trust/user/self` with no auth header. Expect HTTP 401 or 403, never 200.
    web ☐
@@ -65,7 +67,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - A `trust.summary.read` row is written to `trust_admin_audit_trail` for this read (`policy_status = allow`, reason `self_summary_read`; metadata carries `viewerUserId`/`subjectUserId`/`surface`). A failed audit write is reported but never changes the response.
 - If the recompute had thrown internally the route would still return 200 using the last stored extension (fallback); a crash/500 here is a bug.
 
-**Result:** web ☐ android ☐
+**Result:** web ☐
 
 ---
 
@@ -87,7 +89,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - **Public/unauthenticated state:** marketing/visitor view renders (matches `MobileTrustPublic.tsx` design intent) — no private data shown.
 - In every state: no `MockTrust` data visible; `trustStatus`, `trustVisibility`, and `trustEvidence` fields come from `GET /api/trust/user/self`.
 
-**Result:** android ☐
+**Result:**
 
 ---
 
@@ -395,7 +397,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - The spinner stops when the pull completes, including on a failed request.
 - Newly seeded evidence (e.g. after re-running TR-A8) appears after the pull without leaving the screen.
 
-**Result:** android ☐
+**Result:**
 
 ---
 

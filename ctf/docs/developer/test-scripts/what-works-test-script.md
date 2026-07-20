@@ -1,5 +1,7 @@
 # WhatWorks — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
 > truth, this is the runnable checklist derived from them. Do not edit a step here to match a
@@ -12,7 +14,7 @@
 | **Plugin** | WhatWorks (`what-works`) |
 | **Visibility** | Member-facing |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:what-works` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-what-works-feature-inventory.md` |
 | **Generated** | 2026-07-01 (updated by hand for the admin edit-tool feature; regenerate via CI to stamp the commit) |
@@ -34,14 +36,14 @@ One shared survivor-verified list of tools by problem. Member role unless noted.
 
 1. **List loads.** Open `/apps/what-works` signed in. Active problems render, each with its approved
    tools — emoji, name, a short "why it works" note, a verified count, and a purchase link. No
-   spinner stuck, no error. → web ☐ mobile ☐ android ☐
+   spinner stuck, no error. → web ☐ mobile ☐
 2. **Public teaser is identity-free.** Open `/plugin/what-works` signed out. A readable teaser slice
    shows with a sign-in gate; no survivor name appears anywhere, and the counts shown match the
-   teaser slice only (not the full list). → web ☐ mobile ☐ android ☐
+   teaser slice only (not the full list). → web ☐ mobile ☐
 3. **Helpful toggles.** Mark a tool **Helpful** ("this helped me"); the verified count rises by one.
-   Toggle off; it drops back. → web ☐ mobile ☐ android ☐
+   Toggle off; it drops back. → web ☐ mobile ☐
 4. **Suggested tool is held for review.** Suggest a tool. It does **not** appear in the public list;
-   the screen confirms it was submitted for review. → web ☐ mobile ☐ android ☐
+   the screen confirms it was submitted for review. → web ☐ mobile ☐
 
 ---
 
@@ -56,7 +58,7 @@ One shared survivor-verified list of tools by problem. Member role unless noted.
 **Expected:** Each problem shows its emoji and title; each approved tool shows emoji, name, type,
 the "why it works" note, a "N survivors verified" count, and a direct purchase link. No suggester
 name is shown anywhere.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WW-2 · Mark a tool Helpful and withdraw it
 **Role:** member · **Surfaces:** all
@@ -65,7 +67,7 @@ name is shown anywhere.
 2. Tap it again to withdraw.
 **Expected:** The first tap records one endorsement and the verified count rises by one; a second
 tap removes it and the count drops. The same survivor can only count once (toggling, not stacking).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WW-3 · Suggest a tool
 **Role:** member · **Surfaces:** all
@@ -76,7 +78,7 @@ tap removes it and the count drops. The same survivor can only count once (toggl
 **Expected:** The form accepts the entry and confirms it was submitted for review. The new tool does
 **not** show up in the shared list or the public teaser yet (it lands `pending`). A non-http/https
 link is rejected server-side.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WW-4 · Search and jump-nav
 **Role:** member · **Surfaces:** all
@@ -85,7 +87,7 @@ link is rejected server-side.
 2. Use the sidebar to jump to a chosen problem.
 **Expected:** Search filters tools and problems as you type (client-side). Selecting a problem in the
 sidebar scrolls the list to that problem.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WW-5 · Signed-out gate
 **Role:** signed-out visitor · **Surfaces:** all
@@ -94,7 +96,7 @@ sidebar scrolls the list to that problem.
 2. Try to reach the full list or the suggest action.
 **Expected:** A teaser slice shows with a sign-in/sign-up gate. The full list and the suggest action
 require signing in; no survivor identity is rendered.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WW-6 · Refresh the list
 **Role:** member · **Surfaces:** all
@@ -110,7 +112,7 @@ state.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), admins see the shared Admin pill in the member shell header, and the admin screen
 header shows a "Member view" pill opening `/apps/what-works`.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -126,7 +128,7 @@ header shows a "Member view" pill opening `/apps/what-works`.
 **Expected:** Approving moves the tool into the shared list; rejecting records the reason and keeps
 it off the list. The submitter's identity is never shown to the admin — moderation is of content,
 not of people. A non-admin opening `/admin/what-works` is redirected to `/apps/what-works`.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WW-A2 · Curate problems
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -137,7 +139,7 @@ not of people. A non-admin opening `/admin/what-works` is redirected to `/apps/w
 **Expected:** Each change takes effect in the admin list and on the member list (active problems
 only show to members in their sort order). A deactivated problem disappears from the member list and
 returns when reactivated.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WW-A3 · Delete cascades
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -147,7 +149,7 @@ returns when reactivated.
 **Expected:** Deleting a tool removes it and its endorsements. Deleting a problem removes that
 problem and cascades to its tools and their endorsements. Both deletes use an inline two-step
 confirm.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WW-A4 · Edit an approved tool's details
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -163,7 +165,7 @@ name/note/link **without** unpublishing it — it stays `approved`, keeps its ve
 change shows on the member list. The tool's problem, status, and verified count are unchanged, and no
 submitter identity appears. The non-http(s) link is rejected server-side with an error, and the tool
 keeps its previous link.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 

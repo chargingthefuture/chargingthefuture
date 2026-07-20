@@ -251,9 +251,9 @@ Domain tables:
 
 Web delivery status: **pixel pass delivered** (2026-05-31). The `live-feed-announcements.tsx` component was aligned to the canonical design mockup (`design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/FeedAnnouncements.tsx`): accent color corrected to `#84CC16`, lucide icons (Megaphone, Globe, MessageCircle, Settings, Bell, Pin, AlertCircle, RefreshCw) replace all emoji icons, the "GetStream ⚡" badge (not in mockup) was removed, empty-state matches `FeedAnnouncementsEmpty` mockup, loading state matches `FeedAnnouncementsLoading` mockup. The file was decomposed per rule-116 into sub-components: `feed-item-card.tsx`, `feed-compose-forms.tsx`, `feed-announcements-icon-rail.tsx`, `feed-announcements-sidebar.tsx`, `feed-announcements-header.tsx`, `feed-announcements-right-panel.tsx`, `feed-announcements-constants.ts`. All data bindings use real `FeedTimelineItem`/`FeedConfig` fields only; mockup elements with no backing API field (trending hashtags by count, top-engaged-today user list) are omitted per real-data-only rule.
 
-Android delivery: `packages/mobile/src/features/feed` was not touched in this pass. Android parity tracked separately.
+Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA).
 
-All three feed channels (announcements, questions, community) are shipped on web and Android.
+All three feed channels (announcements, questions, community) are shipped on web (desktop + mobile-responsive).
 
 ---
 

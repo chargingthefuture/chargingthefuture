@@ -9,7 +9,7 @@
 
 ## Intent and Outcome
 
-Directory in CTF provides authenticated users with a deterministic profile-and-discovery experience, unified admin workflows on the same UI surface, server-enforced policy controls (claimed/unclaimed guardrails, privacy filters, anti-scraping), and parity-safe delivery across web and Android.
+Directory in CTF provides authenticated users with a deterministic profile-and-discovery experience, unified admin workflows on the same UI surface, server-enforced policy controls (claimed/unclaimed guardrails, privacy filters, anti-scraping), and delivery on web (desktop + mobile-responsive); the native Android surface was removed 2026-07-20 (rule 105, PR #1742), so this feature is now web-only.
 
 **Scope boundary — Directory lists, it does not transact.** Directory exists only to list members and the skills they hold (drawn from the shared skills taxonomy) and to let people read a member's profile. Directory does **not** include messaging/chat or session booking. Those belong to the **Foundation** plugin. Any "Direct Chat", "Message", "Book Session", or appointment-availability affordance that appeared on the Directory surface came from the retired Replit design mockups, not from this spec, and has been removed (see Change Log, 2026-06-16). When a member wants to reach a provider or book time, that flow lives in Foundation.
 
@@ -168,7 +168,7 @@ Beyond the profile and skills tables above, Directory owns five supporting table
 
 ## Web and Android Delivery Status
 
-Parity status: **web+android complete**.
+Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA).
 
 Web and Android implementations:
 - User authentication and profile management flows reach parity.

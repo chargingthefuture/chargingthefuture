@@ -1,5 +1,7 @@
 # GDP — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
 > truth, this is the runnable checklist derived from them. Do not edit a step here to match a
@@ -12,7 +14,7 @@
 | **Plugin** | GDP (`gdp`) |
 | **Visibility** | Member-facing |
 | **Roles to test** | member (admin has no GDP-specific surface — the GDP admin was retired) |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md` |
 | **Generated** | 2026-07-16 (GDP admin retired + Community Value Index live-by-default; decorative Map tab removed; All Countries panel shows real member distribution and reconciles to the member roster via a "Location not set" bucket — see GDP-3) |
@@ -34,20 +36,20 @@ Transparency-reporting plugin — these confirm the community figure shows and n
 per-wallet money value. Member role unless noted.
 
 1. **Dashboard loads.** Open the GDP report. The headline community figure and total member count
-   render with numbers, not a spinner or error. There is no "active members" stat. → web ☐ mobile ☐ android ☐
+   render with numbers, not a spinner or error. There is no "active members" stat. → web ☐ mobile ☐
 2. **No public view of the data.** Sign out and open GDP. A signed-out visitor does reach a public
    GDP landing shell (a "coming soon" page with locked placeholders and a sign-in prompt), and the
    signed-out home shows the community member count — but NO report **data** is exposed: the live
    Community Value figure, the "Value by Source" breakdown, and the "All Countries" panel are all
-   behind sign-in. Confirm a signed-out visitor never sees a real GDP figure or breakdown. → web ☐ mobile ☐ android ☐
+   behind sign-in. Confirm a signed-out visitor never sees a real GDP figure or breakdown. → web ☐ mobile ☐
 3. **Estimate is labelled.** Where the figure is an estimate, an "Estimate" chip and a short
-   footnote show next to it. → web ☐ mobile ☐ android ☐
+   footnote show next to it. → web ☐ mobile ☐
 4. **Not a price.** Confirm the figure is shown with no currency symbol as a per-wallet value and
-   no "N ServiceCredits = $X" line appears anywhere on the surface. → web ☐ mobile ☐ android ☐
+   no "N ServiceCredits = $X" line appears anywhere on the surface. → web ☐ mobile ☐
 5. **Activity counts live.** The figure is computed live on each load — there is no publish step and
    no admin weight-setting step. If real non-incentive activity exists (ServiceCredits transfers,
    Foundation calls, completed favors, etc.), the figure is greater than zero and the "Value by
-   Source" breakdown lists the contributing plugins. → web ☐ mobile ☐ android ☐
+   Source" breakdown lists the contributing plugins. → web ☐ mobile ☐
 
 ---
 
@@ -61,7 +63,7 @@ per-wallet money value. Member role unless noted.
 **Expected:** Both values render from real data with plain-language labels. No tile is blank, a
 spinner, or a raw metric key. The figure is computed live on each load — there is no publish step. If
 there is no recognized activity yet, an honest empty/zero state shows instead of an invented number.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### GDP-1b · Member count matches Workforce and Directory (active Directory roster)
 **Role:** anonymous (signed out) + admin · **Surfaces:** web + mobile-responsive
@@ -82,7 +84,7 @@ rather than blanking.
 **Expected:** Where the data is flagged an estimate, an understated "Estimate" chip plus a short
 footnote appear; the copy describes a community-wide figure, never a per-member redemption value. The
 chip does not appear on values that are not estimates.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### GDP-3 · All Countries panel (real member distribution, reconciles to the roster)
 **Role:** member · **Surfaces:** web (android omits this panel)
@@ -115,7 +117,7 @@ single bucket row at 100% (never a fabricated country).
 **Expected:** The community figure never reads as money for one wallet, a price, an exchange rate, or
 a redemption value for ServiceCredits or any token. Currencies, where named, appear by label (e.g.
 "ServiceCredits", "United States Dollar"), never a bare code used as a value.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### GDP-5 · Refresh the dashboard
 **Role:** member · **Surfaces:** all
@@ -131,7 +133,7 @@ the change appears without closing and reopening the app. Refreshing never clear
 to the full-screen loading state.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 

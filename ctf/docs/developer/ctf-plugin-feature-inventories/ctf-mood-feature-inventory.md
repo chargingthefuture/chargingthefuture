@@ -91,8 +91,8 @@ Excluded route groups:
 
 ## 6) Web and Android Delivery Status
 
-**Web:** ✅ delivered (design `c5d83c0`, 2026-05-29)
-**Android:** ✅ delivered (design `MobileMood.tsx`, 2026-05-31; "Talk to someone" support links added 2026-07-17, #1600)
+**Web (desktop + mobile-responsive):** ✅ delivered (design `c5d83c0`, 2026-05-29)
+**Android:** ➖ **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). (Historical: it previously shipped against design `MobileMood.tsx`, 2026-05-31, with "Talk to someone" support links added 2026-07-17, #1600.)
 
 Parity points met:
 1. Mood check route/entry, eligibility behavior, and submission outcomes match between web and Android.
