@@ -3,6 +3,15 @@
 ## Intent
 Standardize `packages/mobile` for React Native with Android production focus.
 
+## App Scope — Chyme-only (owner decision, 2026-07-20)
+The native Android app is **narrowed to Chyme (live audio) plus what Chyme needs to run** — see
+`105-web-android-feature-parity-rules.mdc` for the authoritative keep-list. In short, the app carries
+only: Clerk auth, Chyme (and any feature the Chyme plugin links to), bug reporting, and settings /
+account. Everything else is served by the installable web app (PWA). Do **not** build or maintain a
+React Native screen for any feature outside that keep-list. The reason the native app exists at all is
+Chyme's always-on live audio with an Android foreground service (background audio keeps playing);
+the mobile-responsive web app covers the rest of the product on phones.
+
 ## Workflow Alignment
 - Follow cloud-first build/update constraints from `expo-eas-mobile-workflow-rules.mdc`.
 

@@ -48,7 +48,7 @@ export type GatedChatMessage = {
   text: string;
   timeLabel: string;
   sentAtIso: string;
-  quotedMessage: { author: string; snippet: string } | null;
+  quotedMessage: { author: string; snippet: string; postId: string | null } | null;
   reactions: { emoji: string; count: number; reactedByMe: boolean }[];
 };
 

@@ -20,6 +20,9 @@ export type ShellCurrentUser = {
 export type ChatQuotedMessage = {
   author: string;
   snippet: string;
+  // The quoted post's community post id — used to scroll to the original message when the quote
+  // block is tapped. Null when the quoted post can no longer be resolved.
+  postId: string | null;
 };
 
 // An emoji reaction aggregate on a peer message: the emoji, how many members reacted with it,

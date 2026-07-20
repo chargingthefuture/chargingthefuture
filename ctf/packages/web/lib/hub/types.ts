@@ -4,6 +4,9 @@
 export type HubQuotedMessage = {
   author: string;
   snippet: string;
+  // The quoted post's community post id, so the chat can jump to (scroll to) the original message
+  // when a member taps the quote block. Null when the quoted post is no longer resolvable.
+  postId: string | null;
 };
 
 // An emoji reaction aggregate on a Hub peer message (community post): the emoji, the count of

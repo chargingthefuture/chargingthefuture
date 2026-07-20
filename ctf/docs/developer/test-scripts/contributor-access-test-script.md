@@ -203,7 +203,9 @@ server-filtered channel list carries the contributors entry).
    into the composer).
 4. Write a long message (over 1200 characters, under 4000) and send it.
 **Expected:** The channel renders with the Commons look. Posting works; the reply renders with the
-quoted block (thread); the reaction picker offers the twelve-emoji gated set (richer than the
+quoted block (thread), and **tapping that quoted block on web scrolls to the original message and
+briefly highlights it** (the same jump the Commons has; on Android the quoted block is not yet
+tappable — tracked parity gap). The reaction picker offers the twelve-emoji gated set (richer than the
 Commons' six) and toggling works. There is NO image/file affordance anywhere and pasting an image
 does nothing — text only. The long message sends (the gated cap is 4000, higher than the Commons'
 1200). With a second eligible account: a new post appears on the other screen within the poll

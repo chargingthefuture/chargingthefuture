@@ -105,7 +105,7 @@ function ShellHeader({ active, t, isAdmin, onRefresh }: { active: boolean; t: Pe
       <Users size={18} style={{ color: t.ACCENT }} />
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>PeerProgramming</div>
-        <div style={{ fontSize: 12, color: t.MUTED }}>Weekly global masterminds · 12 per cohort · Always-open</div>
+        <div style={{ fontSize: 12, color: t.MUTED }}>Weekly global masterminds · up to 12 people per cohort · Always-open</div>
       </div>
       {active && (
         <span style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
