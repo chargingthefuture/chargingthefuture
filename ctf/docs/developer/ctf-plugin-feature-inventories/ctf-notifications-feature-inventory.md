@@ -109,7 +109,9 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
    with the always-on feed + the per-category opt-ins. No dependencies.
 2. **Commons producer (done):** emit on reply-to-your-post and announcement reply. `@mention` is
    deferred (needs a username→id lookup — see Gaps).
-3. **Everyday producers:** ServiceCredits (credits received), LevelUp, Recurring Activity. Blocked by 1.
+3. **Everyday producers (done):** ServiceCredits (credits received on a completed direct transfer),
+   LevelUp (milestone credits released to the learner), Recurring Activity (invited / confirmed /
+   declined). Emitted from each plugin's route via `notifySafe`, after the underlying write.
 4. **Safety producers:** LightHouse, SocketRelay, TrustTransport, Foundation — with the emergency
    real-time ring called out as its own live path (the feed is the durable record, not the ring).
    Blocked by 1.
@@ -119,6 +121,15 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 
 ## Change Log
 
+- 2026-07-20: Everyday producers. ServiceCredits notifies the recipient of a completed direct
+  member-to-member transfer (`service-credits.received`, emitted from `/api/service-credits/transfers`,
+  not from the ledger function — plugin-origin transfers like rides/calls will notify via their own
+  domain producers). LevelUp notifies the learner when a milestone's credits are released
+  (`level-up.milestone.released`; `releaseMilestoneCredits` now returns `recipientUserId` so the route
+  can address it). Recurring Activity notifies the counterparty on a new activity
+  (`recurring-activity.invited`) and the owner on confirm/decline
+  (`recurring-activity.confirmed` / `.declined`). All best-effort via `notifySafe`, deduped on the
+  underlying row id, never self-notifying.
 - 2026-07-20: Commons producer — `createFeedCommunityPost` now notifies the parent post's author when
   someone replies (`commons.reply`), and `replyToAnnouncement` notifies the announcement's author
   (`commons.announcement_reply`). Both emit after the transaction commits via `notifySafe` (a new

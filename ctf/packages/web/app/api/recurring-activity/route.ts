@@ -23,6 +23,7 @@ import {
   type RecurringActivityVisibility,
 } from 'lib/recurring-activity/types';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
+import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
 
 function badRequest(message: string) {
@@ -156,6 +157,18 @@ export async function POST(request: Request) {
         hasScValue: activity.scValue !== null,
       },
     });
+    // Notify the counterparty they were named in a recurring activity to confirm or decline —
+    // best-effort, deduped on the activity id.
+    await notifySafe({
+      userId: activity.counterpartyUserId,
+      sourcePlugin: 'recurring-activity',
+      notificationType: 'recurring-activity.invited',
+      category: 'activity',
+      summary: 'Someone recorded a recurring activity with you — confirm or decline it.',
+      linkPath: '/apps/recurring-activity',
+      targetRef: activity.id,
+    });
+
     // The creator is always the owner; attach the reader-scoped role so the response matches the
     // client's required `role` field (same shape the list and mutation endpoints return).
     return NextResponse.json({ ok: true, activity: { ...activity, role: 'owner' as const } }, { status: 201 });
