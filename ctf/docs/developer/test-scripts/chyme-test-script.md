@@ -225,3 +225,5 @@ of these, it is already tracked, not a new bug:
   endpoints still work but a designed account-settings surface to call them is not built.
 - Guest listen-only is enforced on the server only when `CHYME_GUEST_STREAM_ROLE` and the matching
   Stream role are configured; until then it is client-only enforcement.
+
+> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

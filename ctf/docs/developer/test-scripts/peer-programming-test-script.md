@@ -460,3 +460,5 @@ These cases must produce the same user-visible outcome on both surfaces. If the 
 3. **Weekly cron requires `CRON_SECRET` to be configured.** The `PeerProgramming — Weekly Cohort Assignment` GitHub Actions workflow skips with a visible warning rather than failing when `CRON_SECRET` or `NEXT_PUBLIC_APP_URL` is not set in repository Actions secrets. Admins form cohorts manually from the admin screen until those secrets are configured. Do not file this as a bug.
 
 4. **Live video on android requires an EAS dev/production build.** The Stream Video SDK needs native code. Live video cases (PP-10, PP-11) cannot be tested in Expo Go — the test will be ⛔ blocked on that runtime. No automated test harness exists for live Stream calls on device; verification is manual only.
+
+> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

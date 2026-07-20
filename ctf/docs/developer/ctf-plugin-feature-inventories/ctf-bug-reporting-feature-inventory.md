@@ -23,7 +23,7 @@ keeping a human in the loop before code is written. Built for a single operator 
 toward millions of users, so the path is automated and the synchronous submit step is fast
 and does no external calls.
 
-## Target User Features
+## User Features
 
 - A "Report a problem" control reached from the global Help control (the "?" item in the
   shell's icon rail on the desktop layout, and the top bar on the phone-width layout). It is
@@ -34,7 +34,7 @@ and does no external calls.
 - Immediate, private storage of the report with a calm confirmation. No technical detail is
   ever asked of the user.
 
-## Target Admin Features
+## Admin Features
 
 - A private in-app admin view of reports that were **held for review** (flagged by the redaction
   gate), so an admin can decide on each. **Built (web):** the admin-gated `/admin/bug-reports`
@@ -141,7 +141,7 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
   no schema, route, or contract change.
 - 2026-07-16: **Form intro copy now scopes the form to problems and points questions to the Commons.** Members were filing general questions through the report form, which is one-way and never sends a reply. The modal's intro line on web (`bug-report-form.tsx`) and android (`BugReportModal.tsx`) — replacing "We read every report." — now states three things in plain words: the form is for something in the app that isn't working; reports are one-way and get no reply; questions belong in the Commons on the home screen, where members can answer. Field labels, placeholders, privacy note, result states, routes, schema, and contracts are unchanged. Test script BUG-1 extended to assert the new copy.
 - 2026-07-16: **Reporter identity on the admin review surface.** The admin list (`GET /api/bug-reports/admin` → `listReportsForAdmin`) now returns who filed each report: `reporterUsername` (nullable, from the legacy `public.users` table via a guarded LEFT JOIN — a fresh database without that table degrades to null) and `reporterHandle` (always set — `@username`, or the stable `user-<first 8 of id>` pseudonym from the shared `feedAuthorHandle` helper when no username exists). `bug-reports-admin-shell.tsx` shows a muted "From: <handle>" line next to each card's timestamp (same card on desktop and phone width). Admin surface only: the reporter's identity is never added to the triage-repo issue, so the privacy posture (rule 129) is unchanged. No schema change (`bug_reports.user_id` already existed); no contract change (the plugin has no contract YAMLs). Motivating case: when a "bug report" is actually a member asking for help, the admin needs to know who to follow up with.
-- 2026-06-25: **Documented the admin review routes** (inventory-debt burn-down — documentation catch-up, no code change). The admin review surface was already built but the inventory still described it as planned. Added `GET /api/bug-reports/admin` (list reports, held first, redacted-only) and `POST /api/bug-reports/admin/:id/resolve` (release/reject, CSRF + admin) to the API Surface table, and updated Target Admin Features to record the built `/admin/bug-reports` page. Both verified against the route handlers and the admin page/shell. Removed these two routes from `ctf/scripts/inventory-drift-allowlist.json`.
+- 2026-06-25: **Documented the admin review routes** (inventory-debt burn-down — documentation catch-up, no code change). The admin review surface was already built but the inventory still described it as planned. Added `GET /api/bug-reports/admin` (list reports, held first, redacted-only) and `POST /api/bug-reports/admin/:id/resolve` (release/reject, CSRF + admin) to the API Surface table, and updated Admin Features to record the built `/admin/bug-reports` page. Both verified against the route handlers and the admin page/shell. Removed these two routes from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-12: Android API client (`api.ts`) now calls the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain fetch against an environment-variable base URL with no auth token. The request-timeout guard is kept. No backend, schema, or contract change.
 - 2026-06-10: Initial backend foundation — `bug_reports` table, submit route, redaction/risk
   gate, repository, create-issues script and (dispatch-only) workflow, plugin registration

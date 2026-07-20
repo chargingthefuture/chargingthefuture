@@ -61,7 +61,7 @@
 
 The Survivor Hub is the primary entry point of CTF for both unauthenticated visitors and authenticated survivors. It provides the home shell, one blended publicly-viewable `community` channel (interleaving admin-only announcements, AI Q&A, and peer-to-peer community posts), the live hero stats, and the plugin grid. Hub is the canonical "home" route at `/`; opening a plugin moves the user into that plugin's own scope. This is deliberately not social media: peer-to-peer posting is the only user-authored surface, kept economy-scoped. Separate channels, direct messages, and system bots are deferred (see Gaps) — the MVP is one channel.
 
-## Target User Features
+## User Features
 
 ### Hub Shell
 
@@ -114,7 +114,7 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 7. Search filters by name and summary.
 8. Cards link to `/apps/[slug]` for each plugin.
 
-## Target Admin Features
+## Admin Features
 
 1. Announcement authoring (admin-only) and channel config (enabled channels, `is_public`) are operated through the Feed admin surface at `/admin/feed-announcements` and the `feed.*` command namespace — the Hub has no separate admin contract surface.
 2. There is no bot or channel-visibility admin surface in the MVP (deferred with channels/DMs/bots).

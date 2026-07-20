@@ -176,3 +176,5 @@ one of these, it is already tracked, not a new bug:
   read-only so the room feels alive.
 - Replay hosting links to Stream's recording URL rather than re-hosting, for now.
 - Android viewer parity shipped; android admin broadcasting is intentionally out of scope.
+
+> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

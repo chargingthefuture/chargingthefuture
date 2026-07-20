@@ -58,7 +58,7 @@ to the env flag, then the default. With no admin setting and no env override, th
 
 ---
 
-## Target User Features
+## User Features
 
 ### Weekly Cohort Assignment
 
@@ -91,7 +91,7 @@ to the env flag, then the default. With no admin setting and no env override, th
 2. Feedback captures release surface, issue type, and suggestion category.
 3. Feedback records are retained for iteration analytics and audit.
 
-## Target Admin Features
+## Admin Features
 
 ### Weekly Topic Guidance Governance
 

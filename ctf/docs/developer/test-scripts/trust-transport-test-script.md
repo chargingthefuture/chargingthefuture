@@ -532,3 +532,5 @@ The following are documented limitations from the inventory's "Gaps and Known Te
 3. **Nearby Drivers list absent** — no backend endpoint exists for available driver discovery; this data is intentionally omitted from both web and android per the real-data-only rule. The missing list is not a bug.
 4. **Driver ratings, ETAs, and vehicle info absent** — none of these fields are returned by any `trust-transport` API endpoint; their absence from the UI is correct behavior. Ratings of people are never shown anywhere in this plugin, by design — reputation is completion history only (completed vs. not), never a score.
 5. **No admin trip-approval queue** — the design mockup shows an "approve/reject trip request queue" but no admin trip-approval route exists; the incident queue is what the API exposes and is what the admin surface renders. The mockup is outdated, not a missing feature.
+
+> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

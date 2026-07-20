@@ -80,7 +80,7 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 - **Commons integration** reuses the existing feed/announcement path: a "🔴 Live now" entry on go-live
   (linking to `/apps/beacon`) and a "▶️ Watch the replay" entry when the recording is ready.
 
-## Target User Features (viewer surface, `/apps/beacon`)
+## User Features (viewer surface, `/apps/beacon`)
 
 1. **Watch publicly.** Anyone with the link watches the live broadcast (HLS), no sign-in.
 2. **Idle state.** When nothing is live, a calm "No live event right now" screen (with the last
@@ -92,7 +92,7 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 6. **"Live and public" indicator.** A clear marker that the broadcast is public so participants know
    their comments are visible.
 
-## Target Admin Features (admin surface, `/admin/beacon`)
+## Admin Features (admin surface, `/admin/beacon`)
 
 1. **Create an event** (title + description).
 2. **Go Live** — for a phone demo, Beacon shows the per-event RTMP URL + stream key to paste into a

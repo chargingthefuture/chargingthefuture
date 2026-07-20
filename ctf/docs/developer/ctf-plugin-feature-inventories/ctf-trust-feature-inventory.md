@@ -13,13 +13,13 @@
 
 Trust gives the community a privacy-respecting, **non-numeric** way to gauge how established and safe a member is — i.e. the likelihood that they are a genuine, contributing participant rather than a bad actor — based on the material value and engagement they have contributed across the platform (for example: how often they log in, the number of SocketRelay trades/fulfillments they have completed, and their overall platform engagement). The signal is surfaced as a trust badge plus a supporting evidence panel and verification status on the user's profile. Admins can review/audit, and users control visibility (public, private, restricted).
 
-## Target User Features
+## User Features
 
 1. View their trust badge (qualitative standing, not a number), evidence panel, and verification status on profile/directory surfaces.
 2. Control trust visibility setting (public, private, restricted) for their own profile.
 3. Inspect their own trust signal snapshot via `GET /api/trust/user/self`.
 
-## Target Admin Features
+## Admin Features
 
 1. Review pending verification requests via `/api/trust/admin/verification`.
 2. Update trust status (verified/unverified/flagged) for a target user.

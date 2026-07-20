@@ -53,8 +53,8 @@ Each inventory must contain, in this order:
 
 1. **Scope and Boundary** — plugin slug, the surfaces it owns, and what it explicitly does not own.
 2. **Intent and Outcome** — one-paragraph plain-English statement of what the plugin is for.
-3. **Target User Features** — the user-facing features the plugin provides. This is the canonical product surface.
-4. **Target Admin Features** — admin-facing surfaces or contract obligations (Retool, internal APIs).
+3. **User Features** — the user-facing features the plugin provides. This is the canonical product surface.
+4. **Admin Features** — admin-facing surfaces or contract obligations (Retool, internal APIs).
 5. **API Surface and Route Map** — every `/api/{plugin-slug}/*` route the plugin owns, with method and one-line purpose.
 6. **Data Model and Storage Contracts** — every table the plugin owns, with columns and constraints. Cross-plugin reads are not permitted ([112-platform-architecture-rules.mdc](112-platform-architecture-rules.mdc)).
 7. **Security, Privacy, and Compliance Controls** — authz/authn gates, consent points, retention rules, audit obligations.

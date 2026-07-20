@@ -276,3 +276,5 @@ of these, it is already tracked, not a new bug:
 - The android Foundation Admin screen has no snapshot counts row (providers/threads/quotes/active
   calls/pending notifications). No admin HTTP route returns those aggregates — the web reads them
   server-side inside the page — so the mobile screen omits the snapshot rather than inventing a route.
+
+> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

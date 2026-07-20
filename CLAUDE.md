@@ -512,7 +512,7 @@ When making code changes, consult this table to identify which inventory section
 | **Modify column constraints/type** | `ctf/schema.sql` | Data Model and Storage Contracts | Update column definition; document breaking changes and migration impact |
 | **Add/modify seed script** | `ctf/scripts/seed{PluginName}Phase0.mjs` | Seed Coverage Status | Update what data is seeded; note any new columns/tables; document deterministic UUIDs |
 | **Add mobile feature** | `ctf/packages/mobile/src/features/{plugin}/**` | Web and Android Delivery Status; Mobile Parity Contracts | Update delivery status; create/update `ctf/config/plugin-parity-contracts.json` entry; update milestone dates |
-| **Remove/deprecate feature** | Web or mobile package | Web and Android Delivery Status; Target User Features | Move feature to changelog section; update milestone dates; document deprecation reason |
+| **Remove/deprecate feature** | Web or mobile package | Web and Android Delivery Status; User Features | Move feature to changelog section; update milestone dates; document deprecation reason |
 | **Create entirely new plugin** | Full stack (see below) | All sections | See new plugin checklist below |
 
 ### New Plugin Lifecycle Checklist
@@ -520,7 +520,7 @@ When making code changes, consult this table to identify which inventory section
 When creating a new plugin from scratch, ALL of the following must be completed before PR approval:
 
 1. **Inventory File** (single combined document — see [120-plugin-feature-inventory-lifecycle-rules.mdc](.claude/rules/120-plugin-feature-inventory-lifecycle-rules.mdc))
-   - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-feature-inventory.md` with all required sections (Scope & Boundary, Intent, Target User Features, Target Admin Features, API Surface and Route Map, Data Model and Storage Contracts, Security/Privacy/Compliance Controls, Web and Android Delivery Status, Seed Coverage Status, Gaps & Known Technical Debt, Change Log)
+   - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-feature-inventory.md` with all required sections (Scope & Boundary, Intent, User Features, Admin Features, API Surface and Route Map, Data Model and Storage Contracts, Security/Privacy/Compliance Controls, Web and Android Delivery Status, Seed Coverage Status, Gaps & Known Technical Debt, Change Log)
    - Include a `## Build Checklist` section in that same file: an ordered, dependency-based task list (no phases). There is no separate checklist file.
 
 2. **Schema & Migrations**
