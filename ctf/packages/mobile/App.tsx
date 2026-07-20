@@ -1,5 +1,5 @@
-import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import {
   AppState,
   SafeAreaView,
@@ -10,33 +10,37 @@ import {
   View,
   type StyleProp,
   type ViewStyle,
-} from 'react-native';
-import { ChymeRoom } from './src/features/chyme';
-import { ComicReviewDashboard } from './src/features/comic';
-import { HubHome } from './src/features/hub';
-import { DirectoryList, AdminDirectory, DirectoryProfileEdit } from './src/features/directory';
-import { Feed } from './src/features/feed';
-import { Announcements } from './src/features/announcements';
-import { WorkforceDashboard, AdminWorkforce } from './src/features/workforce';
-import { SkillsHunt, AdminSkillsHunt } from './src/features/skills-hunt';
-import { Foundation, FoundationInstantCallController, AdminFoundation } from './src/features/foundation';
-import { Lighthouse, AdminLighthouse } from './src/features/lighthouse';
-import { SocketRelay, AdminSocketRelay } from './src/features/socket-relay';
-import { TrustTransport, AdminTrustTransport } from './src/features/trust-transport';
-import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-programming';
-import { Mood, type MoodNavDest } from './src/features/mood';
-import { GentlePulse } from './src/features/gentle-pulse';
-import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly-performance';
-import { Gdp } from './src/features/gdp';
-import { ServiceCredits, AdminServiceCredits } from './src/features/service-credits';
-import { LevelUp, AdminLevelUp } from './src/features/level-up';
-import { Unlock, AdminUnlock } from './src/features/unlock';
-import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
-import { SkillsTaxonomy } from './src/features/skills-taxonomy';
-import { Beacon } from './src/features/beacon';
-import { RecurringActivity } from './src/features/recurring-activity';
-import { AccountData } from './src/features/account-data';
-import { BlockedMembers } from './src/features/blocks';
+} from "react-native";
+import { ChymeRoom } from "./src/features/chyme";
+import { ComicReviewDashboard } from "./src/features/comic";
+import { HubHome } from "./src/features/hub";
+import { DirectoryList, AdminDirectory, DirectoryProfileEdit } from "./src/features/directory";
+import { Feed } from "./src/features/feed";
+import { Announcements } from "./src/features/announcements";
+import { WorkforceDashboard, AdminWorkforce } from "./src/features/workforce";
+import { SkillsHunt, AdminSkillsHunt } from "./src/features/skills-hunt";
+import {
+  Foundation,
+  FoundationInstantCallController,
+  AdminFoundation,
+} from "./src/features/foundation";
+import { Lighthouse, AdminLighthouse } from "./src/features/lighthouse";
+import { SocketRelay, AdminSocketRelay } from "./src/features/socket-relay";
+import { TrustTransport, AdminTrustTransport } from "./src/features/trust-transport";
+import { PeerProgramming, AdminPeerProgramming } from "./src/features/peer-programming";
+import { Mood, type MoodNavDest } from "./src/features/mood";
+import { GentlePulse } from "./src/features/gentle-pulse";
+import { WeeklyPerformance, AdminWeeklyPerformance } from "./src/features/weekly-performance";
+import { Gdp } from "./src/features/gdp";
+import { ServiceCredits, AdminServiceCredits } from "./src/features/service-credits";
+import { LevelUp, AdminLevelUp } from "./src/features/level-up";
+import { Unlock, AdminUnlock } from "./src/features/unlock";
+import { fetchUnlockStatus, type UnlockAccessTier } from "./src/features/unlock/api";
+import { SkillsTaxonomy } from "./src/features/skills-taxonomy";
+import { Beacon } from "./src/features/beacon";
+import { RecurringActivity } from "./src/features/recurring-activity";
+import { AccountData } from "./src/features/account-data";
+import { BlockedMembers } from "./src/features/blocks";
 import {
   useFonts,
   Inter_400Regular,
@@ -45,12 +49,12 @@ import {
   Inter_700Bold,
   Inter_800ExtraBold,
   Inter_900Black,
-} from '@expo-google-fonts/inter';
-import { AuthProvider, useAuth } from './src/features/trust-transport/auth-context';
-import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
-import { LoadingScreen } from './src/components/shared/LoadingScreen';
-import { getPluginEmoji } from './src/theme/plugin-visuals';
-import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
+} from "@expo-google-fonts/inter";
+import { AuthProvider, useAuth } from "./src/features/trust-transport/auth-context";
+import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from "./src/theme";
+import { LoadingScreen } from "./src/components/shared/LoadingScreen";
+import { getPluginEmoji } from "./src/theme/plugin-visuals";
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from "react-native-svg";
 
 // The "SH" brand chip — the mobile counterpart of the web icon-rail logo. Default theme paints the
 // signature purple→cyan gradient (matches web `--ctf-cta-bg`); comic theme flattens to an ink panel
@@ -64,16 +68,16 @@ function BrandMark({ size = 36 }: { size?: number }) {
         width: size,
         height: size,
         borderRadius: radius,
-        overflow: 'hidden',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: tokens.isComic ? tokens.surface : 'transparent',
+        overflow: "hidden",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: tokens.isComic ? tokens.surface : "transparent",
         borderWidth: tokens.isComic ? 1.5 : 0,
         borderColor: tokens.border,
       }}
     >
       {!tokens.isComic ? (
-        <Svg width={size} height={size} style={{ position: 'absolute' }}>
+        <Svg width={size} height={size} style={{ position: "absolute" }}>
           <Defs>
             <SvgLinearGradient id="brandmark" x1="0" y1="0" x2="1" y2="1">
               <Stop offset="0" stopColor="#7C3AED" />
@@ -86,9 +90,9 @@ function BrandMark({ size = 36 }: { size?: number }) {
       <Text
         style={{
           fontSize: size * 0.44,
-          fontWeight: '800',
-          fontFamily: 'Inter_800ExtraBold',
-          color: tokens.isComic ? tokens.border : '#FFFFFF',
+          fontWeight: "800",
+          fontFamily: "Inter_800ExtraBold",
+          color: tokens.isComic ? tokens.border : "#FFFFFF",
           letterSpacing: 0.5,
         }}
       >
@@ -102,100 +106,111 @@ function BrandMark({ size = 36 }: { size?: number }) {
 // plugin's glyph; a few non-plugin keys get their own.
 function keyEmoji(key: FeatureKey): string {
   const special: Partial<Record<FeatureKey, string>> = {
-    home: '⚡',
-    'account-data': '🗄️',
-    'blocked-members': '🚫',
-    'comic-review': '🤖',
+    home: "⚡",
+    "account-data": "🗄️",
+    "blocked-members": "🚫",
+    "comic-review": "🤖",
   };
   if (special[key]) return special[key] as string;
-  const base = key.replace(/-admin$/, '');
+  const base = key.replace(/-admin$/, "");
   return getPluginEmoji(base);
 }
 
 // Accent for a nav pill's active state — the plugin's own accent, so each app keeps its colour
 // identity in the nav (matches web). Non-plugin keys fall back to the neutral accent.
 function keyAccent(key: FeatureKey, theme: ThemeName): string {
-  const base = key.replace(/-admin$/, '');
+  const base = key.replace(/-admin$/, "");
   return getAppAccent(base, theme);
 }
 
 type FeatureKey =
-  | 'home'
-  | 'chyme'
-  | 'beacon'
-  | 'recurring-activity'
-  | 'skills-taxonomy'
-  | 'directory'
-  | 'directory-admin'
-  | 'directory-profile-edit'
-  | 'feed-announcements'
-  | 'workforce'
-  | 'skills-hunt'
-  | 'foundation'
-  | 'lighthouse'
-  | 'socket-relay'
-  | 'trust-transport'
-  | 'trust-transport-admin'
-  | 'peer-programming'
-  | 'mood'
-  | 'gentle-pulse'
-  | 'weekly-performance'
-  | 'weekly-performance-admin'
-  | 'gdp'
-  | 'service-credits'
-  | 'service-credits-admin'
-  | 'level-up'
-  | 'unlock'
-  | 'unlock-admin'
-  | 'account-data'
-  | 'blocked-members'
-  | 'comic-review'
-  | 'peer-programming-admin'
-  | 'socket-relay-admin'
-  | 'foundation-admin'
-  | 'skills-hunt-admin'
-  | 'lighthouse-admin'
-  | 'workforce-admin'
-  | 'level-up-admin';
+  | "home"
+  | "chyme"
+  | "beacon"
+  | "recurring-activity"
+  | "skills-taxonomy"
+  | "directory"
+  | "directory-admin"
+  | "directory-profile-edit"
+  | "feed-announcements"
+  | "workforce"
+  | "skills-hunt"
+  | "foundation"
+  | "lighthouse"
+  | "socket-relay"
+  | "trust-transport"
+  | "trust-transport-admin"
+  | "peer-programming"
+  | "mood"
+  | "gentle-pulse"
+  | "weekly-performance"
+  | "weekly-performance-admin"
+  | "gdp"
+  | "service-credits"
+  | "service-credits-admin"
+  | "level-up"
+  | "unlock"
+  | "unlock-admin"
+  | "account-data"
+  | "blocked-members"
+  | "comic-review"
+  | "peer-programming-admin"
+  | "socket-relay-admin"
+  | "foundation-admin"
+  | "skills-hunt-admin"
+  | "lighthouse-admin"
+  | "workforce-admin"
+  | "level-up-admin";
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
-  { key: 'home', label: 'Home' },
-  { key: 'chyme', label: 'Chyme' },
-  { key: 'beacon', label: 'Beacon' },
-  { key: 'recurring-activity', label: 'Recurring Activity' },
-  { key: 'skills-taxonomy', label: 'Skills Taxonomy' },
-  { key: 'directory', label: 'Directory' },
-  { key: 'directory-admin', label: 'Directory Admin' },
-  { key: 'feed-announcements', label: 'Feed+Announcements' },
-  { key: 'workforce', label: 'Workforce' },
-  { key: 'skills-hunt', label: 'SkillsHunt' },
-  { key: 'foundation', label: 'Foundation' },
-  { key: 'lighthouse', label: 'LightHouse' },
-  { key: 'socket-relay', label: 'SocketRelay' },
-  { key: 'trust-transport', label: 'TrustTransport' },
-  { key: 'trust-transport-admin', label: 'TrustTransport Admin' },
-  { key: 'peer-programming', label: 'PeerProgramming' },
-  { key: 'mood', label: 'Mood' },
-  { key: 'gentle-pulse', label: 'GentlePulse' },
-  { key: 'weekly-performance', label: 'Weekly Performance' },
-  { key: 'weekly-performance-admin', label: 'Weekly Performance Admin' },
-  { key: 'gdp', label: 'GDP' },
-  { key: 'service-credits', label: 'ServiceCredits' },
-  { key: 'service-credits-admin', label: 'ServiceCredits Admin' },
-  { key: 'level-up', label: 'LevelUp' },
-  { key: 'unlock', label: 'Unlock' },
-  { key: 'unlock-admin', label: 'Unlock Admin' },
-  { key: 'account-data', label: 'Account & Data' },
-  { key: 'blocked-members', label: 'Blocked members' },
-  { key: 'comic-review', label: 'AI Review' },
-  { key: 'peer-programming-admin', label: 'PeerProgramming Admin' },
-  { key: 'socket-relay-admin', label: 'SocketRelay Admin' },
-  { key: 'foundation-admin', label: 'Foundation Admin' },
-  { key: 'skills-hunt-admin', label: 'SkillsHunt Admin' },
-  { key: 'lighthouse-admin', label: 'LightHouse Admin' },
-  { key: 'workforce-admin', label: 'Workforce Admin' },
-  { key: 'level-up-admin', label: 'LevelUp Admin' },
+  { key: "home", label: "Home" },
+  { key: "chyme", label: "Chyme" },
+  { key: "beacon", label: "Beacon" },
+  { key: "recurring-activity", label: "Recurring Activity" },
+  { key: "skills-taxonomy", label: "Skills Taxonomy" },
+  { key: "directory", label: "Directory" },
+  { key: "directory-admin", label: "Directory Admin" },
+  { key: "feed-announcements", label: "Feed+Announcements" },
+  { key: "workforce", label: "Workforce" },
+  { key: "skills-hunt", label: "SkillsHunt" },
+  { key: "foundation", label: "Foundation" },
+  { key: "lighthouse", label: "LightHouse" },
+  { key: "socket-relay", label: "SocketRelay" },
+  { key: "trust-transport", label: "TrustTransport" },
+  { key: "trust-transport-admin", label: "TrustTransport Admin" },
+  { key: "peer-programming", label: "PeerProgramming" },
+  { key: "mood", label: "Mood" },
+  { key: "gentle-pulse", label: "GentlePulse" },
+  { key: "weekly-performance", label: "Weekly Performance" },
+  { key: "weekly-performance-admin", label: "Weekly Performance Admin" },
+  { key: "gdp", label: "GDP" },
+  { key: "service-credits", label: "ServiceCredits" },
+  { key: "service-credits-admin", label: "ServiceCredits Admin" },
+  { key: "level-up", label: "LevelUp" },
+  { key: "unlock", label: "Unlock" },
+  { key: "unlock-admin", label: "Unlock Admin" },
+  { key: "account-data", label: "Account & Data" },
+  { key: "blocked-members", label: "Blocked members" },
+  { key: "comic-review", label: "AI Review" },
+  { key: "peer-programming-admin", label: "PeerProgramming Admin" },
+  { key: "socket-relay-admin", label: "SocketRelay Admin" },
+  { key: "foundation-admin", label: "Foundation Admin" },
+  { key: "skills-hunt-admin", label: "SkillsHunt Admin" },
+  { key: "lighthouse-admin", label: "LightHouse Admin" },
+  { key: "workforce-admin", label: "Workforce Admin" },
+  { key: "level-up-admin", label: "LevelUp Admin" },
 ];
+
+// Android is Chyme-only for now (owner decision 2026-07-20). Everything else is served by the
+// installable web app. To resume Android parity for a feature later, add its key here — the
+// screen code all still exists (every screen is still imported and still built by
+// buildFeatureViews; only the menu below is filtered to this set). See the Chyme feature
+// inventory change log for the reversal note.
+const MOBILE_ENABLED_FEATURES = new Set<FeatureKey>(["chyme"]);
+
+// The one feature the Android app lands on and stays within while narrowed to Chyme-only. Used
+// both as the initial screen and as the fallback whenever `selected` is not in the allowlist.
+const DEFAULT_FEATURE: FeatureKey = "chyme";
 
 export default function App() {
   // Load the brand typeface (Inter) so text rendered through the shared type scale uses it at the
@@ -244,60 +259,60 @@ function buildFeatureViews(
     home: () => <HubHome />,
     chyme: () => <ChymeRoom />,
     beacon: () => <Beacon />,
-    'recurring-activity': () => <RecurringActivity />,
-    'skills-taxonomy': () => <SkillsTaxonomy />,
+    "recurring-activity": () => <RecurringActivity />,
+    "skills-taxonomy": () => <SkillsTaxonomy />,
     directory: () => (
       <DirectoryList
-        onNavigateToFoundation={() => setSelected('foundation')}
-        onEditProfile={() => setSelected('directory-profile-edit')}
+        onNavigateToFoundation={() => setSelected("foundation")}
+        onEditProfile={() => setSelected("directory-profile-edit")}
       />
     ),
-    'directory-admin': () => <AdminDirectory />,
-    'directory-profile-edit': () => (
+    "directory-admin": () => <AdminDirectory />,
+    "directory-profile-edit": () => (
       <DirectoryProfileEdit
-        onClose={() => setSelected('directory')}
-        onSaved={() => setSelected('directory')}
+        onClose={() => setSelected("directory")}
+        onSaved={() => setSelected("directory")}
       />
     ),
-    'feed-announcements': () => (
+    "feed-announcements": () => (
       <ScrollView contentContainerStyle={feedStackStyle}>
         <Feed />
         <Announcements />
       </ScrollView>
     ),
     workforce: () => <WorkforceDashboard />,
-    'skills-hunt': () => <SkillsHunt />,
+    "skills-hunt": () => <SkillsHunt />,
     foundation: () => <Foundation />,
     lighthouse: () => <Lighthouse />,
-    'socket-relay': () => <SocketRelay />,
-    'trust-transport': () => <TrustTransport />,
-    'trust-transport-admin': () => <AdminTrustTransport />,
-    'peer-programming': () => <PeerProgramming />,
+    "socket-relay": () => <SocketRelay />,
+    "trust-transport": () => <TrustTransport />,
+    "trust-transport-admin": () => <AdminTrustTransport />,
+    "peer-programming": () => <PeerProgramming />,
     mood: () => (
       // Mood's "Talk to someone" support links route to two other top-level plugin
       // screens; MoodNavDest ('directory' | 'foundation') is a subset of FeatureKey, so
       // the shell's setSelected drives the navigation directly.
       <Mood onNavigate={(dest: MoodNavDest) => setSelected(dest)} />
     ),
-    'gentle-pulse': () => <GentlePulse />,
-    'weekly-performance': () => <WeeklyPerformance />,
-    'weekly-performance-admin': () => <AdminWeeklyPerformance />,
+    "gentle-pulse": () => <GentlePulse />,
+    "weekly-performance": () => <WeeklyPerformance />,
+    "weekly-performance-admin": () => <AdminWeeklyPerformance />,
     gdp: () => <Gdp />,
-    'service-credits': () => <ServiceCredits />,
-    'service-credits-admin': () => <AdminServiceCredits />,
-    'level-up': () => <LevelUp />,
+    "service-credits": () => <ServiceCredits />,
+    "service-credits-admin": () => <AdminServiceCredits />,
+    "level-up": () => <LevelUp />,
     unlock: () => <Unlock />,
-    'unlock-admin': () => <AdminUnlock />,
-    'account-data': () => <AccountData />,
-    'blocked-members': () => <BlockedMembers />,
-    'comic-review': () => <ComicReviewDashboard />,
-    'peer-programming-admin': () => <AdminPeerProgramming />,
-    'socket-relay-admin': () => <AdminSocketRelay />,
-    'foundation-admin': () => <AdminFoundation />,
-    'skills-hunt-admin': () => <AdminSkillsHunt />,
-    'lighthouse-admin': () => <AdminLighthouse />,
-    'workforce-admin': () => <AdminWorkforce />,
-    'level-up-admin': () => <AdminLevelUp />,
+    "unlock-admin": () => <AdminUnlock />,
+    "account-data": () => <AccountData />,
+    "blocked-members": () => <BlockedMembers />,
+    "comic-review": () => <ComicReviewDashboard />,
+    "peer-programming-admin": () => <AdminPeerProgramming />,
+    "socket-relay-admin": () => <AdminSocketRelay />,
+    "foundation-admin": () => <AdminFoundation />,
+    "skills-hunt-admin": () => <AdminSkillsHunt />,
+    "lighthouse-admin": () => <AdminLighthouse />,
+    "workforce-admin": () => <AdminWorkforce />,
+    "level-up-admin": () => <AdminLevelUp />,
   };
 }
 
@@ -309,7 +324,7 @@ type UnlockGate = { loading: boolean; walled: boolean };
 function AppShell() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const { tokens, theme } = useTheme();
-  const [selected, setSelected] = useState<FeatureKey>('home');
+  const [selected, setSelected] = useState<FeatureKey>(DEFAULT_FEATURE);
 
   const isAdmin = Boolean(user?.isAdmin);
 
@@ -338,12 +353,14 @@ function AppShell() {
       // (UnlockVerifyBanner). Without this, a treatment member would be walled to the Unlock screen and
       // never get the early Commons access the experiment grants.
       const passes =
-        tier === 'approved_full' || tier === 'locked_support_only' || status.earlyCommonsAccess === true;
+        tier === "approved_full" ||
+        tier === "locked_support_only" ||
+        status.earlyCommonsAccess === true;
       setUnlockGate({ loading: false, walled: !passes });
     } catch (error) {
       // Fail open: never lock out an approved member because of a flaky status
       // call. The server-side gates still enforce real access.
-      console.error('[unlock] status fetch failed; failing open (not walling)', error);
+      console.error("[unlock] status fetch failed; failing open (not walling)", error);
       if (seq !== fetchSeq.current) return;
       setUnlockGate({ loading: false, walled: false });
     }
@@ -359,17 +376,23 @@ function AppShell() {
   // Re-check when the app returns to the foreground so a member approved while
   // away passes on the next return without a full restart.
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (next) => {
-      if (next === 'active') void refreshUnlockGate();
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") void refreshUnlockGate();
     });
     return () => sub.remove();
   }, [refreshUnlockGate]);
 
   const featureView = useMemo(() => {
     const renderers = buildFeatureViews(setSelected, styles.feedStack);
-    const render = renderers[selected];
-    // Every FeatureKey has an entry; the fallback preserves the previous switch's
-    // default (Chyme) for any unexpected value.
+    // While the Android app is narrowed to Chyme-only, any key outside the allowlist resolves to
+    // Chyme rather than rendering a hidden screen. This also covers an in-app navigation that
+    // targets a now-hidden feature (e.g. Directory's "connect to Foundation" or Mood's support
+    // links, whose menu entries are hidden but whose renderers still exist). Re-enable a feature
+    // by adding its key to MOBILE_ENABLED_FEATURES.
+    const key = MOBILE_ENABLED_FEATURES.has(selected) ? selected : DEFAULT_FEATURE;
+    const render = renderers[key];
+    // Every FeatureKey has an entry; the fallback preserves the previous default (Chyme) for any
+    // unexpected value.
     return render ? render() : <ChymeRoom />;
   }, [selected]);
 
@@ -401,37 +424,47 @@ function AppShell() {
       </View>
 
       <ScrollView horizontal style={styles.pillRow} contentContainerStyle={styles.pillContent}>
-        {featureOrder.map((feature) => {
-          const active = selected === feature.key;
-          const accent = keyAccent(feature.key, theme);
-          return (
-            <TouchableOpacity
-              key={feature.key}
-              style={[
-                styles.pill,
-                {
-                  backgroundColor: active ? `${accent}22` : tokens.surface,
-                  borderColor: active ? accent : tokens.border,
-                  borderRadius: tokens.isComic ? 0 : 999,
-                },
-              ]}
-              onPress={() => setSelected(feature.key)}
-            >
-              <Text
+        {/* The full featureOrder list is kept intact for easy re-enable; only the menu is filtered
+            to MOBILE_ENABLED_FEATURES (Chyme-only for now, owner decision 2026-07-20). */}
+        {featureOrder
+          .filter((feature) => MOBILE_ENABLED_FEATURES.has(feature.key))
+          .map((feature) => {
+            const active = selected === feature.key;
+            const accent = keyAccent(feature.key, theme);
+            return (
+              <TouchableOpacity
+                key={feature.key}
                 style={[
-                  styles.pillText,
-                  { color: active ? tokens.textPrimary : tokens.textSecondary },
+                  styles.pill,
+                  {
+                    backgroundColor: active ? `${accent}22` : tokens.surface,
+                    borderColor: active ? accent : tokens.border,
+                    borderRadius: tokens.isComic ? 0 : 999,
+                  },
                 ]}
+                onPress={() => setSelected(feature.key)}
               >
-                {keyEmoji(feature.key)}  {feature.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+                <Text
+                  style={[
+                    styles.pillText,
+                    { color: active ? tokens.textPrimary : tokens.textSecondary },
+                  ]}
+                >
+                  {keyEmoji(feature.key)} {feature.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
       </ScrollView>
 
       <View style={styles.content}>{featureView}</View>
-      <StatusBar style={tokens.isComic ? 'light' : 'auto'} />
+      {/* One-time pointer: this Android app is narrowed to Chyme live audio; the full app lives on
+          the web (owner decision 2026-07-20). Unobtrusive footer line, no new screen. */}
+      <Text style={[styles.webPointer, { color: tokens.textSecondary }]} numberOfLines={2}>
+        The full app is on the web: app.chargingthefuture.com — this Android app is for Chyme live
+        audio.
+      </Text>
+      <StatusBar style={tokens.isComic ? "light" : "auto"} />
     </SafeAreaView>
   );
 }
@@ -439,54 +472,54 @@ function AppShell() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingTop: 8,
     paddingHorizontal: 12,
   },
   brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     marginBottom: 8,
   },
   wordmark: {
     fontSize: 18,
-    fontWeight: '800',
-    fontFamily: 'Inter_800ExtraBold',
+    fontWeight: "800",
+    fontFamily: "Inter_800ExtraBold",
   },
   subtitle: {
     fontSize: 12,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
+    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
   },
   pillRow: {
     maxHeight: 48,
   },
   pillContent: {
     gap: 8,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 4,
   },
   pill: {
     borderWidth: 1,
-    borderColor: '#d0d0d0',
+    borderColor: "#d0d0d0",
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: "#f8f8f8",
   },
   pillActive: {
-    backgroundColor: '#111',
-    borderColor: '#111',
+    backgroundColor: "#111",
+    borderColor: "#111",
   },
   pillText: {
     fontSize: 12,
-    color: '#222',
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
+    color: "#222",
+    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
   },
   pillTextActive: {
-    color: '#fff',
+    color: "#fff",
   },
   content: {
     flex: 1,
@@ -495,5 +528,12 @@ const styles = StyleSheet.create({
   feedStack: {
     gap: 12,
     paddingBottom: 24,
+  },
+  webPointer: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    textAlign: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
   },
 });

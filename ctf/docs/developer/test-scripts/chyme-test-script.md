@@ -161,6 +161,26 @@ including on a failed request.
 
 ---
 
+### CH-10 · Android is Chyme-only (login + Chyme); background audio survives backgrounding
+**Role:** member · **Surfaces:** android
+**Precondition:** signed in on the device (owner decision 2026-07-20: the Android app is narrowed to
+Chyme-only; every other feature is served by the installable web app).
+**Steps:**
+1. Sign in and reach the app shell. Confirm the app lands on Chyme, not a home/catalog screen.
+2. Look at the top nav pill row. Confirm the only feature pill is Chyme — no other apps are listed.
+3. Confirm the footer line points to the web app ("The full app is on the web:
+   app.chargingthefuture.com — this Android app is for Chyme live audio.").
+4. Join the live audio room, then background the app (press Home / switch apps) without closing it,
+   wait past the 45s presence window, and return.
+**Expected:** Steps 1–3 pass (Chyme-only menu, lands on Chyme, footer pointer shown). Step 4 records
+the **known background-audio gap** (Gaps item 7): today the member drops off the participant list
+after ~45s in the background because the presence timers are suspended and no background-audio mode is
+configured. This is the owner's top follow-up for the Chyme-only app, not a new bug — note what you
+observe (still in the room / dropped) so the fix can be checked against it later.
+**Result:** android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 Chyme has no plugin-specific admin UI in this build. Room/chat/join access is gated by the shared
@@ -206,3 +226,6 @@ of these, it is already tracked, not a new bug:
   endpoints still work but a designed account-settings surface to call them is not built.
 - Guest listen-only is enforced on the server only when `CHYME_GUEST_STREAM_ROLE` and the matching
   Stream role are configured; until then it is client-only enforcement.
+- Background audio is not configured on Android: backgrounding the app drops the member from the live
+  room after the ~45s presence window (presence timers suspend and no background-audio mode is set).
+  This is the owner's top follow-up for the Chyme-only Android app (2026-07-20), not a new bug.
