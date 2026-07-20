@@ -8,6 +8,7 @@ import {
   validateMatchCreateInput,
 } from 'lib/lighthouse/repository';
 import type { LighthouseMatchCreateInput } from 'lib/lighthouse/types';
+import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
 
 type MatchBody = Partial<LighthouseMatchCreateInput> & { idempotencyKey?: string };
@@ -161,6 +162,20 @@ export async function POST(request: Request) {
       targetId: created.match.id,
       metadata: { propertyId: created.match.propertyId },
     });
+
+    // Notify the host that a seeker requested a stay on their listing — best-effort, deduped on the
+    // match id. The repository rejects a request on one's own listing, so the host is never the actor.
+    if (created.match.hostUserId && created.match.hostUserId !== gate.auth.userId) {
+      await notifySafe({
+        userId: created.match.hostUserId,
+        sourcePlugin: 'lighthouse',
+        notificationType: 'lighthouse.match.requested',
+        category: 'safety',
+        summary: 'Someone requested a stay on your LightHouse listing.',
+        linkPath: '/apps/lighthouse',
+        targetRef: created.match.id,
+      });
+    }
 
     return NextResponse.json({ ok: true, ...created }, { status: 201 });
   } catch (error) {

@@ -112,15 +112,24 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 3. **Everyday producers (done):** ServiceCredits (credits received on a completed direct transfer),
    LevelUp (milestone credits released to the learner), Recurring Activity (invited / confirmed /
    declined). Emitted from each plugin's route via `notifySafe`, after the underlying write.
-4. **Safety producers:** LightHouse, SocketRelay, TrustTransport, Foundation — with the emergency
-   real-time ring called out as its own live path (the feed is the durable record, not the ring).
-   Blocked by 1.
+4. **Safety producers (done):** LightHouse (host gets a new stay request), SocketRelay (requester's
+   request was claimed), TrustTransport (provider's offer was accepted), Foundation (someone started a
+   connection). Foundation's live incoming-call **ring stays its own real-time path** — the feed entry
+   is the durable complement, not the ring.
 5. **Device-push delivery:** content-safe/discreet payload, category-gated by preferences, web-push
    with the PWA/native platform caveats. Blocked by 1; benefits from 2–4 existing so there is
    something to ping about.
 
 ## Change Log
 
+- 2026-07-20: Safety producers (category `safety`), each emitted from its route via `notifySafe`,
+  deduped on the underlying row id, never self-notifying: LightHouse notifies the host of a new stay
+  request (`lighthouse.match.requested`); SocketRelay notifies the requester when their request is
+  claimed (`socket-relay.request.claimed`); TrustTransport notifies the provider when their offer is
+  accepted (`trust-transport.offer.accepted`); Foundation notifies the provider when someone starts a
+  connection thread (`foundation.connection.started`, deduped on the thread id so getOrCreate reuse
+  never re-notifies). Foundation's live incoming-call ring is unchanged — this is the durable feed
+  complement, not the ring.
 - 2026-07-20: Everyday producers. ServiceCredits notifies the recipient of a completed direct
   member-to-member transfer (`service-credits.received`, emitted from `/api/service-credits/transfers`,
   not from the ledger function — plugin-origin transfers like rides/calls will notify via their own

@@ -269,3 +269,10 @@ asking price), and there is no settlement step or amount recorded on a match. An
 relationship is recorded by the member in the separate **Recurring Activity** plugin (sector
 `housing`). When testing LightHouse, do not expect a rent amount to be captured on a completed match —
 confirm it is not, and that no settlement table exists here.
+
+---
+
+## Notifications
+
+**1.** As a seeker, request a stay on another member's listing. Sign in as that host, open the 🔔 notifications tab in the Commons, and confirm a "Someone requested a stay on your LightHouse listing." item appears (unread) with an "Open" pill. Requesting on your own listing produces no notification.
+web ☐

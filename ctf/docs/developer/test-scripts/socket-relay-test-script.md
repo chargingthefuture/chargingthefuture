@@ -592,3 +592,10 @@ The following cases must produce the same observable result on both surfaces. Ru
 3. **Approve/reject moderation**: the design mockup (`MobileSocketRelayAdmin.tsx`) shows per-request approve/reject controls. No approve/reject endpoint exists — the only admin request mutation is delete. Do not file the absence of approve/reject buttons as a bug; it is a known missing backend command.
 
 4. **Ownership detection via extra request**: on Android, whether a feed card belongs to the signed-in member is determined by checking `GET /api/socket-relay/my-requests` (one extra request per feed load) rather than a local user-ID comparison. This is a known performance trade-off, not a bug.
+
+---
+
+## Notifications
+
+**1.** As member A, post a request. As member B, claim it. Sign in as member A, open the 🔔 notifications tab in the Commons, and confirm a "Someone offered to help with your SocketRelay request." item appears (unread) with an "Open" pill.
+web ☐

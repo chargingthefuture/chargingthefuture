@@ -550,3 +550,10 @@ The following are documented limitations from the inventory's "Gaps and Known Te
 5. **No admin trip-approval queue** — the design mockup shows an "approve/reject trip request queue" but no admin trip-approval route exists; the incident queue is what the API exposes and is what the admin surface renders. The mockup is outdated, not a missing feature.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+
+---
+
+## Notifications
+
+**1.** As a provider, make an offer on a request. As the requester, accept it. Sign in as the provider, open the 🔔 notifications tab in the Commons, and confirm a "Your TrustTransport offer was accepted." item appears (unread) with an "Open" pill.
+web ☐
