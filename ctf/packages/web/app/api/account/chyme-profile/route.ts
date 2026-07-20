@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { ensureMutationCsrf } from '../_lib';
 import { markServiceDeletion } from 'lib/chyme/repository';
+import { deleteChymeStreamData } from 'lib/chyme/stream';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { reportError } from 'lib/observability/report';
@@ -25,6 +26,18 @@ export async function DELETE(request: Request) {
   try {
     const deletion = await markServiceDeletion(decision.userId);
 
+    // This route uses the bespoke markServiceDeletion (not the shared deletion orchestrator), so the
+    // orchestrator's external-cleanup hook does not run here — clear the member's Stream copy directly.
+    // Best-effort after the DB delete: a Stream outage is logged, never fails the completed deletion.
+    const streamCleared = await deleteChymeStreamData(decision.userId);
+    if (!streamCleared) {
+      reportError(new Error('Chyme Stream data was not cleared on service deletion'), {
+        area: 'account',
+        op: 'chyme_profile_stream_cleanup',
+        extra: { userId: decision.userId },
+      });
+    }
+
     logChymeAudit({
       pluginId: 'chyme',
       command: 'chyme.profile.delete.service',
@@ -33,6 +46,7 @@ export async function DELETE(request: Request) {
       reason: 'service_scope_confirmed',
       target: {
         scope: 'service',
+        streamCleared: streamCleared ? 'yes' : 'no',
       },
       result: 'success',
       errorCategory: null,
