@@ -454,6 +454,19 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
+    slug: 'mutual-time',
+    name: 'Mutual Time',
+    dataSummary: 'Your votes on meeting-time surveys, and any surveys you created as an organizer.',
+    // Votes are scheduling metadata, not money or wellbeing data. A survey you created is your own
+    // content; deleting it cascade-removes its votes (mutual_time_votes FK ON DELETE CASCADE). Order
+    // child-before-parent so a plain delete respects the foreign key.
+    serviceScopeSupported: true,
+    tables: [
+      del('mutual_time_votes', 'voter_user_id', 'Your votes on meeting-time surveys.'),
+      del('mutual_time_events', 'created_by_user_id', 'Meeting-time surveys you created.'),
+    ],
+  },
+  {
     slug: 'contributor-access',
     name: 'Contributor Access',
     dataSummary: 'Your contributor-channel messages, reactions, and earned-eligibility record.',
