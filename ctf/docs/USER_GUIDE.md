@@ -1,6 +1,6 @@
 # How to use Charging the Future
 
-_Last updated: 2026-07-18_
+_Last updated: 2026-07-20_
 
 This guide explains what each part of the app does and how to use it, in plain words.
 The app is made of small apps, each doing one job. Open any of them from the main menu.
@@ -46,22 +46,22 @@ Private chat exists only inside an active connection or quote — there is no op
 
 ## Chyme
 
-_Last updated: 2026-07-18_
+_Last updated: 2026-07-20_
 
-One shared audio room where members can talk and chat.
+Chyme is a shared audio room where members can join live calls, chat, and connect with each other.
 
-Chyme is a single shared audio room. Join the call to talk with other members, or type in the chat panel.
+When you open Chyme, you see a list of other members in the room and a chat panel. You can read messages others have sent and type your own messages, which stay there even after you leave.
 
-You start muted and can mute or unmute your own microphone. You can send a Tip in ServiceCredits to another participant from their tile.
+To join the live audio call, press the join button. You'll connect to the room muted — you control when to unmute your own microphone.
 
-Signed-out visitors get a free listen view and must sign in to speak.
+You can send ServiceCredits as a tip to any other member in the room. The tip transfers right away. Signed-out visitors can listen to the call but cannot speak or chat.
 
 **How to use it**
 
-1. Open Chyme signed in. The room, participant list, and chat panel load.
-2. Press join to enter the audio room. You start muted; mute and unmute yourself as you like.
-3. Type in the chat panel to send a message; it stays after reload.
-4. Use the Tip action on another participant's tile to send them ServiceCredits.
+1. Open Chyme while signed in. The room, participant list, and chat panel load.
+2. Press join to connect to the live audio call. You start muted and can unmute your own microphone.
+3. Type a message in the chat panel and send it. Your message appears in the list and stays there when you reload.
+4. To tip another member, find them in the participant list and select Tip to send ServiceCredits.
 
 ## SocketRelay
 
@@ -84,40 +84,40 @@ Your own posts stay in your feed even after they expire, shown dimmed with a Re-
 
 ## Beacon
 
-_Last updated: 2026-07-18_
+_Last updated: 2026-07-19_
 
-Watch a live broadcast and chat during it if signed in.
+Beacon is a live broadcast space where members can watch, chat, and react together in real time.
 
-Beacon is a one-way live broadcast anyone can watch with the link — no sign-in needed. When nothing is live, a calm "No live event right now" screen shows, with the last replay if there is one.
+When Beacon is live, anyone can watch the broadcast — no sign-in needed. Members who are signed in can post chat messages and send reactions during the event.
 
-Signed-in members can post chat messages and send reactions during the event. Signed-out viewers see a "sign in to chat" prompt.
+All chat and reactions are public, so there is a clear marker on screen to let you know your messages are visible to everyone watching.
 
-The broadcast is marked as live and public so everyone knows their comments are visible. After the event, the recording is watchable.
+After the event ends, the recording stays available to watch. It also gets posted to the Commons so members can find it there.
 
 **How to use it**
 
-1. Open Beacon. If nothing is live, you see the idle screen or the last replay.
-2. During a live event, watch the broadcast — no account needed.
-3. Sign in to post chat messages and send reactions.
+1. Open the Apps launcher and tap the Beacon tile. If nothing is live right now, you'll see a calm notice and the last replay if one exists.
+2. To watch a live broadcast, use the public link — no account needed.
+3. To chat or react during the event, sign in first. You'll see a prompt to do so if you're not logged in.
+4. Check for the 'live and public' marker on screen so you know your chat is visible to all viewers.
 
 ## PeerProgramming
 
-_Last updated: 2026-07-18_
+_Last updated: 2026-07-19_
 
-A weekly small-group room built around a shared topic.
+PeerProgramming is a weekly group space where members discuss a shared topic with others in your cohort.
 
-PeerProgramming places active members into small weekly groups of about five people. When you are assigned, you get an in-app notice with the group and the week's topic.
+Each week, active members are assigned to a cohort of about 12 people. You'll get a notification when you're added to a cohort. Participation is voluntary — in any given week, about 5 members typically take part.
 
-The room is text-first with a topic header and supports threaded replies. The timeline stays and comes back after you reconnect.
+The cohort room shows a weekly topic at the top and a list of who's participating. You can post messages and reply to others in threads. The room stays open as long as you're signed in, and your messages are saved.
 
-Group members can post and reply; everyone else can open a group read-only to listen in, and can never post in it. You can submit feedback from the room.
+You can also submit feedback about the platform from inside the cohort room. Non-cohort members and guests can view the room, though they have limited ability to interact.
 
 **How to use it**
 
-1. Open PeerProgramming. Your group loads, or you see a "not in a group yet" state.
-2. Read the week's topic in the room header.
-3. Post a message or reply in a thread with your group.
-4. Submit feedback from the room when you have a suggestion.
+1. Sign in to your account and open PeerProgramming. You'll see your cohort or a message that you're not in one yet.
+2. If you're assigned to a cohort, read the week's topic at the top of the room and post or reply to messages.
+3. Submit feedback using the feedback form in the cohort room if you want to report an issue or suggest a change.
 
 ## Mood
 
@@ -195,21 +195,21 @@ The leaderboard ranks nominations by accepted points; every number shown comes f
 
 ## Workforce
 
-_Last updated: 2026-07-18_
+_Last updated: 2026-07-19_
 
-A live read-only dashboard of the community's workforce and skill gaps.
+Workforce is a live tracker that shows which job roles need to be filled and how many people have the skills to fill them.
 
-Workforce is a read-only tracker. The dashboard shows population, workforce total, headcount target, recruited count, recruitment progress, sector gaps, skill-level breakdown, and top training gaps, all computed live.
+When you open Workforce, you see a dashboard with numbers: how many people are in the community, how many have signed up to work, and how many gaps exist in each job sector. The numbers update live as members join and add their skills.
 
-Drill down by sector, skill level, or occupation to see where the gaps are.
+You can drill down by sector, skill level, or specific job title to see where the biggest gaps are. You can also browse a list of all job roles, sorted by which ones need the most people.
 
-Your own Workforce profile is read-only and comes from your Directory profile; there is no editor. You can browse occupations, largest gap first.
+Your profile in Workforce is read-only and pulls directly from your Directory profile — it shows your job title and skill level. You cannot edit it here. If you need to change your job title or skills, update your Directory profile instead.
 
 **How to use it**
 
-1. Open the Workforce dashboard. The live numbers load.
-2. Drill down by sector, skill level, or occupation to see the gaps.
-3. Browse the occupations list to see demand and supply per job title.
+1. Open the Workforce dashboard. You will see Population, Workforce Total, and Recruited displayed as numbers.
+2. To see gaps by job role, browse Occupations and pick a role to see its demand and supply side by side.
+3. To view or delete your Workforce profile, open your profile view. The profile is read-only; only deletion is available to you.
 
 ## Skills Taxonomy
 
@@ -230,59 +230,56 @@ The skill choices you see in other apps come from this list.
 
 ## ServiceCredits
 
-_Last updated: 2026-07-18_
+_Last updated: 2026-07-19_
 
-Your wallet of ServiceCredits and where you send them to other members.
+ServiceCredits is where you view and send credits to other members.
 
-ServiceCredits is the app's non-money credit. Your wallet shows your available, held, and total balance, with plain labels for each kind of activity (transfer, escrow, treasury fee, adjustment).
+Your wallet shows how many credits you have available. You can send credits to another member from your wallet.
 
-You can send credits directly to another member. A plain send delivers immediately — the sender's balance drops and the recipient's rises with no pending step.
-
-Credits are never shown as cash and cannot be withdrawn for real money. The Economy tab shows community totals like credits in circulation, total issued, and total burned.
+The Economy tab displays numbers about credits in the system — how many are in circulation, how many have been issued, how many have been burned, and what the treasury holds.
 
 **How to use it**
 
-1. Open ServiceCredits signed in. Your wallet and balance load.
-2. Send a small amount to another member; the transfer completes right away.
-3. Open the Economy tab to see community-wide totals.
+1. Sign in and go to ServiceCredits. Your wallet tab will show your available balance.
+2. To send credits to another member, enter an amount from your balance and confirm. The send is immediate — both your balance and the recipient's balance update right away.
+3. Check the Economy tab to see system-wide credit numbers.
 
 ## Contributions
 
-_Last updated: 2026-07-18_
+_Last updated: 2026-07-20_
 
-Support the current fundraiser and log how you helped.
+Contributions is a way to help support the platform by donating gift cards, sharing Quora comments, or starring on GitHub — and earn thank-you credits in return.
 
-Contributions is a voluntary fundraiser. You can submit a claim of one of three kinds: a gift card (you state the amount and your Signal contact — the code is never entered in the app; you send it to the owner over Signal), a Quora comment (paste the comment link), or a GitHub star (paste your GitHub profile link).
+You can submit one of three kinds of contributions: a gift card (Amazon, Apple, or Denny's) between $1 and $500, a link to a Quora comment you wrote, or a link to your GitHub profile. For gift cards, you'll provide your own Signal contact so the owner can reach you there — the gift card code itself never goes into the app. You send the code to the owner over Signal instead.
 
-See your own claim history and its statuses (pending, confirmed, rejected), and the cycle's collective progress toward the owner-set goals.
+Each contribution earns you ServiceCredits as a thank-you. You can see your own claim history and watch the overall progress of the current fundraiser cycle — how much money has been raised, how many comments and stars have been shared, and how many people have contributed.
 
-Contributing is optional, nothing is locked behind it, and any credits are given in recognition, not as a purchase or real money.
+Contributing is completely voluntary and open to any signed-in member. It doesn't require any special verification and never affects your access to anything else on the platform.
 
 **How to use it**
 
-1. Open Contributions signed in. The current cycle and its progress load.
-2. Choose one of the three cards — gift card, Quora comment, or GitHub star.
-3. Fill the form that opens below and submit your claim.
-4. Check your claim history for its status.
+1. Open the Contributions page. You'll see the current fundraiser cycle and how close it is to its goals.
+2. Pick one of the three contribution types — gift card, Quora comment, or GitHub star. A form will open below the choices.
+3. Fill out the form. For gift cards, write your Signal contact and the amount; the platform will remind you to send the actual code to the owner over Signal, never in the app. For Quora or GitHub, paste the link to your comment or profile.
+4. Submit. You'll see your claim listed in your history as pending until the owner confirms it.
 
 ## LevelUp
 
-_Last updated: 2026-07-18_
+_Last updated: 2026-07-19_
 
-Learning cohorts with milestones, plus a view-only credits wallet.
+LevelUp is where survivors can find learning cohorts, enroll in them with escrow backing, and track their progress and credits.
 
-LevelUp lists learning cohorts you can filter by track, status, and start date. Open a cohort to see its curriculum, milestones, and how to enroll; enrolling may involve an optional deposit held in escrow and released per milestone.
+Open LevelUp to browse learning cohorts. Each cohort shows its track, current status, available seats, and any required deposit. Filter the list by track or status to narrow your search.
 
-Your dashboard shows your wallet balance, escrow totals, active enrollments, and recent transactions. You can browse trainer profiles and see achievement badges you have earned.
+Pick a cohort to see its curriculum, milestones, and enrollment details. If you enroll, a deposit may be held in escrow and split across milestones as you complete them.
 
-The Credits Wallet here is view-only — it shows credits you earned or were granted and has no spend or transfer control. If an action is not allowed for your account, the app explains why in plain words.
+Your dashboard shows your wallet balance, how much escrow is currently held, which cohorts you are enrolled in, and your recent activity. Your Credits Wallet displays your ServiceCredits balance, total earned through LevelUp, and a history of credits earned or granted — you cannot spend or transfer credits.
 
 **How to use it**
 
-1. Open LevelUp. The cohort list loads.
-2. Filter by track and status to narrow it.
-3. Open a cohort to read its curriculum and milestones, then enroll.
-4. Open the Credits Wallet to see credits you have earned (view only).
+1. Open LevelUp. The cohort list loads with track, status, seats, and deposit information.
+2. Use the filters to narrow cohorts by track or status.
+3. Select a cohort to view its curriculum and milestones, then enroll if you want to join.
 
 ## TrustTransport
 
@@ -361,20 +358,20 @@ You control whether an activity is private (the default), restricted, or public.
 
 ## GDP
 
-_Last updated: 2026-07-18_
+_Last updated: 2026-07-19_
 
-A live transparency report of the community's total activity value.
+GDP shows a live count of community activity and value across the platform.
 
-GDP is a read-only report. It shows the headline community figure — total, service, and goods/local value — with plain-language explanations, per-capita indicators, and progress toward the target goals.
+Open the GDP report to see the total community figure and how many members are on the platform. The numbers update live as activity happens.
 
-You can see the breakdown by service category, provider participation and hourly-rate trends, and year-by-year rollout tracking. Freshness and definition cues show how current each figure is, and estimates are labelled.
+Your data is private. If you sign out, you'll see a locked page with no real numbers showing. The live community value and activity breakdown only appear when you're signed in.
 
-The figure is computed live each time you load it. It is a community total, never a per-wallet money value, and no credits-to-cash line appears. Sign-in is required.
+The figure is not a price or currency amount. It's a count of activity — like transfers, calls, and completed work — shown as a per-wallet number with no dollar sign.
 
 **How to use it**
 
-1. Open the GDP report signed in. The headline figure and member count load.
-2. Read the plain-language explanations and per-capita indicators.
-3. Open the "Value by Source" breakdown to see which apps contribute.
+1. Open the GDP report. The headline number and member count load with real data, not a loading spinner.
+2. Look for an "Estimate" label next to any figure that is an estimate, with a note explaining it.
+3. Check the "Value by Source" section to see which activities (like ServiceCredits transfers or Foundation calls) contributed to the total.
 
 The code is open source at https://github.com/chargingthefuture/chargingthefuture.
