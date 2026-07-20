@@ -489,7 +489,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
                   title={msg.announcementTitle ?? null}
                   body={msg.text}
                   time={msg.time}
-                  linkedPlugin={msg.linkedPlugin ?? null}
+                  linkedPlugins={msg.linkedPlugins ?? []}
                   announcementId={msg.announcementId ?? null}
                   reactions={msg.reactions}
                   replyCount={msg.replyCount}

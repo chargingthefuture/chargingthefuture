@@ -1980,7 +1980,12 @@ CREATE TABLE IF NOT EXISTS announcements (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   -- Optional plugin this announcement points at. When set, the published feed item gets an
   -- "Open <Plugin>" link to /apps/<slug> so a reader can jump straight to the referenced app.
-  linked_plugin_slug TEXT
+  -- Legacy single-link column; kept for back-compat and mirrored to the first entry of
+  -- linked_plugin_slugs. New code reads/writes linked_plugin_slugs (up to 3 links).
+  linked_plugin_slug TEXT,
+  -- Ordered list of plugin slugs this announcement links to (0–3). The published feed item and the
+  -- announcement card render one "Open <Plugin>" affordance per entry, in order.
+  linked_plugin_slugs JSONB NOT NULL DEFAULT '[]'::jsonb
 );
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS id UUID;
 -- Repair legacy tables where `id` was added (above) before it had a default. Without a default, an
@@ -2019,6 +2024,14 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_by_user_id 
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS linked_plugin_slug TEXT;
+ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS linked_plugin_slugs JSONB NOT NULL DEFAULT '[]'::jsonb;
+-- Backfill the multi-link array from the legacy single-link column for announcements created before
+-- multi-link support, so their existing "Open <Plugin>" link survives. No-op once the array is set.
+UPDATE announcements
+  SET linked_plugin_slugs = to_jsonb(ARRAY[linked_plugin_slug])
+  WHERE linked_plugin_slug IS NOT NULL
+    AND linked_plugin_slug <> ''
+    AND (linked_plugin_slugs IS NULL OR linked_plugin_slugs = '[]'::jsonb);
 -- Retire announcement priority/mandatory (owner decision 2026-07-16). The Commons is one
 -- time-ordered stream, so there is no manual priority ranking, and every announcement flows through
 -- the Commons with no non-dismissable "mandatory" flag. Guarded drops; no-op on a fresh database.

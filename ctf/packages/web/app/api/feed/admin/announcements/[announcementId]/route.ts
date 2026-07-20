@@ -19,6 +19,9 @@ function parseBody(body: AnnouncementBody): AnnouncementDraftInput {
     scheduleAtIso: typeof body.scheduleAtIso === 'string' ? body.scheduleAtIso : null,
     expiresAtIso: typeof body.expiresAtIso === 'string' ? body.expiresAtIso : null,
     targeting: body.targeting,
+    // Optional linked plugins (0–3). Absent keeps the existing links; an empty array clears them.
+    // The repository validates/dedupes/caps the slugs against the visible plugin registry.
+    linkedPluginSlugs: Array.isArray(body.linkedPluginSlugs) ? body.linkedPluginSlugs : undefined,
   };
 }
 

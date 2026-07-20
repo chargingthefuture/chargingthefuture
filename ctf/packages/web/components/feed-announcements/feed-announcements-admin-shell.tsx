@@ -80,7 +80,7 @@ export function FeedAnnouncementsAdminShell({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [draft, setDraft] = useState({ title: '', body: '', linkedPluginSlug: '' });
+  const [draft, setDraft] = useState<{ title: string; body: string; linkedPluginSlugs: string[] }>({ title: '', body: '', linkedPluginSlugs: [] });
   // When set, the form is editing this existing draft (PUT) instead of creating a new one (POST).
   const [editingId, setEditingId] = useState<string | null>(null);
   // Plugin registry options for the "Link a plugin" picker. Best-effort: a failed load just leaves the
@@ -104,7 +104,21 @@ export function FeedAnnouncementsAdminShell({
     };
   }, []);
 
-  const linkedPluginName = pluginOptions.find((p) => p.slug === draft.linkedPluginSlug)?.name ?? null;
+  // Cap on how many plugins one announcement can link — more than a few chips is information overload
+  // for a reader (owner directive, 2026-07-18). The server enforces the same cap.
+  const MAX_LINKED_PLUGINS = 3;
+  const nameForSlug = (slug: string) => pluginOptions.find((p) => p.slug === slug)?.name ?? slug;
+  const addLinkedPlugin = (slug: string) => {
+    if (!slug) return;
+    setDraft((d) =>
+      d.linkedPluginSlugs.includes(slug) || d.linkedPluginSlugs.length >= MAX_LINKED_PLUGINS
+        ? d
+        : { ...d, linkedPluginSlugs: [...d.linkedPluginSlugs, slug] },
+    );
+  };
+  const removeLinkedPlugin = (slug: string) => {
+    setDraft((d) => ({ ...d, linkedPluginSlugs: d.linkedPluginSlugs.filter((s) => s !== slug) }));
+  };
 
   const publishedCount = announcements.filter((a) => a.status === 'published').length;
   const draftCount = announcements.filter((a) => a.status === 'draft').length;
@@ -128,7 +142,7 @@ export function FeedAnnouncementsAdminShell({
   // Load an existing draft into the form for editing (switches the form to PUT mode).
   function startEdit(a: Announcement) {
     setEditingId(a.id);
-    setDraft({ title: a.title, body: a.body, linkedPluginSlug: a.linkedPluginSlug ?? '' });
+    setDraft({ title: a.title, body: a.body, linkedPluginSlugs: a.linkedPluginSlugs ?? [] });
     setError(null);
     setMessage(null);
     if (typeof window !== 'undefined') {
@@ -138,7 +152,7 @@ export function FeedAnnouncementsAdminShell({
 
   function cancelEdit() {
     setEditingId(null);
-    setDraft({ title: '', body: '', linkedPluginSlug: '' });
+    setDraft({ title: '', body: '', linkedPluginSlugs: [] });
     setError(null);
   }
 
@@ -147,14 +161,14 @@ export function FeedAnnouncementsAdminShell({
       setError('Title and body are required.');
       return;
     }
-    const payload = { title: draft.title.trim(), body: draft.body.trim(), scheduleAtIso: null, expiresAtIso: null, linkedPluginSlug: draft.linkedPluginSlug || null };
+    const payload = { title: draft.title.trim(), body: draft.body.trim(), scheduleAtIso: null, expiresAtIso: null, linkedPluginSlugs: draft.linkedPluginSlugs };
     const res = editingId
       ? await act(() => adminMutate(`/api/feed/admin/announcements/${editingId}`, 'PUT', payload), 'Draft saved.')
       : await act(() => adminMutate('/api/feed/admin/announcements', 'POST', payload), 'Draft created.');
     // Only clear the form on success — a failed submit must keep the typed title and message so the
     // author does not lose their work and can just retry.
     if (res.ok) {
-      setDraft({ title: '', body: '', linkedPluginSlug: '' });
+      setDraft({ title: '', body: '', linkedPluginSlugs: [] });
       setEditingId(null);
     }
   }
@@ -208,26 +222,43 @@ export function FeedAnnouncementsAdminShell({
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>{editingId ? 'Edit announcement' : 'New announcement'}</div>
           <input value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} placeholder="Title" style={{ ...fieldStyle(t), marginBottom: 10 }} />
           <textarea value={draft.body} onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))} placeholder="Message" rows={3} style={{ ...fieldStyle(t), resize: 'none', marginBottom: 10 }} />
-          {/* Optional: link a plugin. When set, the published announcement gets an "Open <Plugin>"
-              link so a reader can jump straight to that app. */}
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+          {/* Optional: link up to 3 plugins. Each linked plugin adds an "Open <Plugin>" link to the
+              published announcement so a reader can jump straight to that app. More than 3 is
+              information overload, so the picker stops at 3 (the server enforces the same cap). */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: t.MUTED }}>
-              <Link2 size={14} /> Link a plugin (optional)
+              <Link2 size={14} /> Link plugins (optional, up to {MAX_LINKED_PLUGINS})
             </span>
-            <select
-              value={draft.linkedPluginSlug}
-              onChange={(e) => setDraft((d) => ({ ...d, linkedPluginSlug: e.target.value }))}
-              style={{ ...fieldStyle(t) }}
-            >
-              <option value="">No linked plugin</option>
-              {pluginOptions.map((p) => (
-                <option key={p.slug} value={p.slug}>{p.name}</option>
-              ))}
-            </select>
-            {linkedPluginName ? (
-              <span style={{ fontSize: 12, color: t.MUTED }}>Readers will see an “Open {linkedPluginName}” link.</span>
+            {draft.linkedPluginSlugs.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {draft.linkedPluginSlugs.map((slug) => (
+                  <span key={slug} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 6px 4px 10px', borderRadius: 999, background: `${t.ACCENT}1f`, border: `1px solid ${t.ACCENT}4d`, color: t.ACCENT, fontSize: 13, fontWeight: 600 }}>
+                    {nameForSlug(slug)}
+                    <button type="button" aria-label={`Remove ${nameForSlug(slug)}`} onClick={() => removeLinkedPlugin(slug)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, borderRadius: 999, background: 'transparent', border: 'none', color: t.ACCENT, cursor: 'pointer', padding: 0 }}>
+                      <X size={13} />
+                    </button>
+                  </span>
+                ))}
+              </div>
             ) : null}
-          </label>
+            {draft.linkedPluginSlugs.length < MAX_LINKED_PLUGINS ? (
+              <select
+                value=""
+                onChange={(e) => { addLinkedPlugin(e.target.value); e.currentTarget.value = ''; }}
+                style={{ ...fieldStyle(t) }}
+              >
+                <option value="">{draft.linkedPluginSlugs.length === 0 ? 'No linked plugin' : 'Add another plugin…'}</option>
+                {pluginOptions.filter((p) => !draft.linkedPluginSlugs.includes(p.slug)).map((p) => (
+                  <option key={p.slug} value={p.slug}>{p.name}</option>
+                ))}
+              </select>
+            ) : (
+              <span style={{ fontSize: 12, color: t.MUTED }}>Maximum of {MAX_LINKED_PLUGINS} linked plugins reached.</span>
+            )}
+            {draft.linkedPluginSlugs.length > 0 ? (
+              <span style={{ fontSize: 12, color: t.MUTED }}>Readers will see an “Open {nameForSlug(draft.linkedPluginSlugs[0])}” link{draft.linkedPluginSlugs.length > 1 ? ` and ${draft.linkedPluginSlugs.length - 1} more` : ''}.</span>
+            ) : null}
+          </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" disabled={busy} onClick={() => void submitDraft()} style={{ padding: '10px 16px', borderRadius: 10, background: busy ? `${t.ACCENT}66` : t.ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 800, cursor: busy ? 'not-allowed' : 'pointer' }}>
               {busy ? 'Working…' : editingId ? 'Save changes' : 'Create draft'}
@@ -249,13 +280,18 @@ export function FeedAnnouncementsAdminShell({
                 <span style={{ fontSize: 14, fontWeight: 600, flex: 1 }}>{a.title}</span>
                 <Pill label={a.status} color={STATUS_COLOR[a.status] ?? t.MUTED} />
               </div>
-              <div style={{ fontSize: 12, color: t.MUTED, marginBottom: a.linkedPluginSlug ? 6 : (a.status === 'archived' ? 0 : 8) }}>{a.body}</div>
-              {a.linkedPluginSlug ? (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: t.ACCENT, marginBottom: a.status === 'archived' ? 0 : 8 }}>
+              <div style={{ fontSize: 12, color: t.MUTED, marginBottom: a.linkedPluginSlugs.length > 0 ? 6 : (a.status === 'archived' ? 0 : 8) }}>{a.body}</div>
+              {a.linkedPluginSlugs.length > 0 ? (
+                <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: 5, fontSize: 12, color: t.ACCENT, marginBottom: a.status === 'archived' ? 0 : 8 }}>
                   <Link2 size={12} /> Links to{' '}
-                  <a href={`/apps/${a.linkedPluginSlug}`} style={{ color: t.ACCENT, textDecoration: 'underline' }}>
-                    {pluginOptions.find((p) => p.slug === a.linkedPluginSlug)?.name ?? a.linkedPluginSlug}
-                  </a>
+                  {a.linkedPluginSlugs.map((slug, index) => (
+                    <span key={slug}>
+                      <a href={`/apps/${slug}`} style={{ color: t.ACCENT, textDecoration: 'underline' }}>
+                        {nameForSlug(slug)}
+                      </a>
+                      {index < a.linkedPluginSlugs.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
                 </div>
               ) : null}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
