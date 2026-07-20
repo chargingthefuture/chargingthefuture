@@ -387,21 +387,23 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - name: Validate parity status in PR description
+      - name: Parity status note (informational)
         uses: actions/github-script@v7
         with:
           script: |
+            // The native Android app is narrowed to Chyme (owner decision, 2026-07-20 — rule 105):
+            // it carries only Clerk auth, Chyme (+ what it links to), bug reporting, and settings.
+            // Web↔Android parity therefore applies ONLY to Chyme surfaces, which the Quality Gates job
+            // enforces directly with check-web-android-parity.mjs. A per-PR "Parity Status:" line in the
+            // description is no longer required for the (near-universal) web-only change, so this gate no
+            // longer fails on its absence — it only surfaces a note. The check name is kept so branch
+            // protection stays satisfied and the job always passes.
             const body = context.payload.pull_request.body || '';
-            // Accept the current canonical form "Parity Status: web + mobile-responsive + android complete"
-            // and the older "Parity Status: web+android complete" (so in-flight PRs don't break). The
-            // mobile-responsive part is optional in the regex for backward compatibility; new PRs should
-            // include it because the web app is responsive (it serves iOS and every mobile browser).
-            const hasComplete = /Parity Status:\s*web\s*\+\s*(mobile[-\s]?responsive\s*\+\s*)?android\s+complete/i.test(body);
-            const hasTicket = /Parity Ticket:\s*https?:\/\//i.test(body) || /Parity Ticket:\s*#\d+/i.test(body);
-
-            if (!hasComplete && !hasTicket) {
-              core.setFailed(
-                'PR description must include either "Parity Status: web + mobile-responsive + android complete" or "Parity Ticket: <link-or-issue>".'
+            const mentionsParity = /Parity (Status|Ticket):/i.test(body);
+            if (!mentionsParity) {
+              core.notice(
+                'No "Parity Status:" line in the description — fine under the Chyme-only Android scope (rule 105). '
+                + 'Only changes to a Chyme keep-list surface need an Android side; everything else is web-only.'
               );
             }
 
