@@ -224,12 +224,8 @@ export function GatedChatPanel({ currentUser, isAdmin = false }: GatedChatPanelP
             setInput(event.target.value);
             notifyTyping();
           }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault();
-              void sendMessage();
-            }
-          }}
+          // Enter inserts a line break, it does not send — matches the main composer (owner request
+          // 2026-07-20). Sending is only via the send button.
         />
         <button
           type="button"
