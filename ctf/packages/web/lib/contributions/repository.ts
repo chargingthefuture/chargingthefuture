@@ -132,7 +132,7 @@ const DEFAULT_CONFIG: ContributionsRuntimeConfig = {
   creditsPerUsd: 10,
   nonMonetaryUnitValueUsd: 1,
   perUserCycleCreditCap: 300,
-  bannerSnoozeMonths: 6,
+  bannerSnoozeMonths: 2,
   bannerEnabled: true,
   signalInstructions: '',
   updatedByUserId: null,

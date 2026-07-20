@@ -33,7 +33,7 @@ and behavior:
   totals.
 - **No shaming, ever.** Not contributing has zero consequences and is never surfaced.
 - **Access is never gated on payment.** Nothing in the product is unlocked by contributing.
-- Dismissing the fundraiser banner silently snoozes it for six months (a config knob, not shown to
+- Dismissing the fundraiser banner silently snoozes it for two months (a config knob, not shown to
   the member). No guilt copy, no countdown.
 
 As a thank-you, confirmed contributions grant ServiceCredits — the platform's internal barter
@@ -57,7 +57,7 @@ flow is one-way, like gas-station reward points.
 - See their own claim history and statuses (pending / confirmed / rejected).
 - See the current fundraiser cycle and collective progress (USD raised, comments, stars,
   contributor count) toward the owner-set goals.
-- Dismiss the fundraiser banner — a silent six-month snooze. On phone width, dismissing does not
+- Dismiss the fundraiser banner — a silent two-month snooze. On phone width, dismissing does not
   remove the reminder entirely: the full banner collapses to a small gift emoji (🎁) in its place that
   still opens the plugin, so it stays a subtle nudge without taking up space; the full banner returns
   on its own when the snooze lapses. On desktop, dismissing hides it until the snooze lapses (no
@@ -158,7 +158,7 @@ additionally require the admin role (`ensureContributionsAdmin`).
   - `non_monetary_unit_value_usd NUMERIC NOT NULL DEFAULT 1` (USD-equivalent of one confirmed
     comment or star)
   - `per_user_cycle_credit_cap NUMERIC NOT NULL DEFAULT 300` (300 credits = 30 USD-equivalent)
-  - `banner_snooze_months INTEGER NOT NULL DEFAULT 6` (internal; never surfaced to members)
+  - `banner_snooze_months INTEGER NOT NULL DEFAULT 2` (internal; never surfaced to members)
   - `banner_enabled BOOLEAN NOT NULL DEFAULT TRUE`
   - `signal_instructions TEXT NOT NULL DEFAULT ''` (owner-authored copy shown after a gift-card
     submission)
@@ -297,6 +297,12 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-07-19: Banner dismiss snooze shortened from six months to **two** (owner request). Changed the
+  `banner_snooze_months` default in `schema.sql` / `schema.demo.sql` (6 → 2), the `DEFAULT_CONFIG`
+  fallback in `repository.ts`, and the demo seed, and added a one-time data migration
+  (`UPDATE contributions_runtime_config SET banner_snooze_months = 2 WHERE banner_snooze_months = 6`)
+  so the already-created production config row moves off the old default too. The value is internal
+  (never surfaced to members). No contract or new-table change.
 - 2026-07-19: **Phone gift reminder moved into the top bar (owner report: the collapsed strip read
   as wasted space).** After dismissing the fundraiser banner on phone width, the 🎁 reminder now
   renders in the top bar between the TSE mark and the section tabs (`ContributionsGiftTrigger` in

@@ -53,7 +53,7 @@ async function upsertRuntimeConfig(client) {
         id, credits_per_usd, non_monetary_unit_value_usd, per_user_cycle_credit_cap,
         banner_snooze_months, banner_enabled, signal_instructions, updated_by_user_id, updated_at
       )
-      VALUES (TRUE, 10, 1, 300, 6, TRUE, $1, $2, NOW())
+      VALUES (TRUE, 10, 1, 300, 2, TRUE, $1, $2, NOW())
       ON CONFLICT (id) DO UPDATE SET
         credits_per_usd = EXCLUDED.credits_per_usd,
         non_monetary_unit_value_usd = EXCLUDED.non_monetary_unit_value_usd,
