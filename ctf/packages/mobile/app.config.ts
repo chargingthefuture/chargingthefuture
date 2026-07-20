@@ -34,7 +34,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     // (ctf://oauth-callback). Must match the redirect URI registered on the
     // Clerk OAuth application.
     scheme: 'ctf',
-    version: '0.1.0',
+    version: '0.1.1',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
