@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "@/hooks/useTheme";
 import { getPeerProgrammingTokens } from "./pp-shared";
 
-const HOW_IT_WORKS = ["12 survivors per cohort", "Weekly 90-min sessions", "Deterministic placement", "Global, always-open"];
+const HOW_IT_WORKS = ["Up to 12 people per cohort", "Weekly 90-min sessions", "Deterministic placement", "Global, always-open"];
 
 export function PeerProgrammingSidebar() {
   const { theme } = useTheme();

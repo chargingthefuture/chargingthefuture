@@ -36,7 +36,7 @@ export function PeerProgrammingAdminAssignments({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <p style={{ fontSize: 12, color: t.MUTED, margin: 0, lineHeight: 1.5 }}>
-        Forms cohorts of up to 5 from this week&rsquo;s active members and records an in-app
+        Forms cohorts of up to 12 people from this week&rsquo;s active members and records an in-app
         notification for each assignment. Running again for the same week is safe — assignments and
         notifications are idempotent.
       </p>

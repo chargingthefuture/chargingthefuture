@@ -208,6 +208,18 @@ that exist today.
 
 ## Change Log
 
+- 2026-07-19: **Corrected the "who earns" copy on the signed-out LevelUp screen (and the Android
+  empty state).** The public marketing copy read "Complete milestones to earn ServiceCredits" /
+  "Earn credits while learning", which implied a learner is paid new credits for each milestone. The
+  code (`releaseMilestoneCredits` in `lib/level-up/repository.ts`) does not work that way: passing a
+  validated milestone **releases the learner's own escrowed deposit back to them** (not new credits),
+  the **trainer** earns the newly minted split (`levelup_trainer_split`) for validating the work, and a
+  learner earns *new* credits only through grant-only **badges** and a **completion bonus** at
+  graduation. Rewrote the desktop and mobile-responsive subheads and the highlight bullet in
+  `components/level-up/level-up-public-shell.tsx` to say this plainly (learners earn via badges and
+  completion bonuses; trainers earn a credit split for validating milestones), and aligned the Android
+  signed-in empty state (`packages/mobile/src/features/level-up/LevelUp.tsx`). Copy-only; no schema,
+  route, or contract change.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
   the previous in-app page and falls back to All Apps when there is no in-app history. The admin
