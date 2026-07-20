@@ -328,6 +328,12 @@ The Survivor Hub ⟵ Feed consolidation (2026-05-31) superseded the prior `hub_*
 
 ### Change Log
 
+- 2026-07-20: Commons now feeds the notifications center. `createFeedCommunityPost` notifies the
+  parent post's author when someone replies to their post, and `replyToAnnouncement` notifies the
+  announcement's author when someone replies — both best-effort (`notifySafe`, after commit), never on
+  a self-reply, with a neutral summary and no content. These land in the member's 🔔 notifications
+  feed (see the Notifications inventory). `@mention` notifications are deferred pending a
+  username→user-id lookup.
 - 2026-07-18: An announcement can now link **up to 3 plugins** (owner directive: more than 3 is information overload). `GET /api/hub/messages` resolves each announcement's linked plugins to an ordered `{ slug, name }[]` (batched `resolveAnnouncementLinkedPlugins(ids)`), carried on `HubMessage.linkedPlugins` (replaces the singular `linkedPlugin`; empty otherwise). The web official card (`announcement-card.tsx`) renders one "Open <Plugin>" chip per entry in a wrapping row; the body still carries one plain `Open <Plugin>: <url>` line per link. Threaded through `ChatMessage.linkedPlugins`. The native Android Hub (`features/hub/*`) was removed upstream (Chyme is now the mobile home surface), so this is a web / mobile-responsive change only. Storage/authoring changes are recorded in the Announcements inventory.
 - 2026-07-18: Made the mentions filter chip icon-only ("@" glyph, dropping the "Mentions" word) on web and Android so it matches the 📣 announcements chip — the two stream filters read as a matched pair of small glyph pills. Behavior unchanged.
 - 2026-07-18: Added an announcements filter chip (📣) next to the "@ Mentions" chip in the Commons stream, on web (`shell-chat-panel.tsx`) and Android (`HubHome.tsx`). "Announcements" is too long for a chip, so it shows the megaphone emoji alone. When on, the stream reads `GET /api/hub/messages?channel=announcements`, which returns only official announcements — including ones that scrolled off the recent page — so a member with limited message history can still surface them. The two filters are mutually exclusive; turning one on clears the other, and the AI (`@comic`) cards are hidden while any filter is active.
