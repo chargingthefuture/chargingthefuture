@@ -28,6 +28,9 @@ export type HubReactionSummary = {
 export type HubQuotedMessage = {
   author: string;
   snippet: string;
+  // The quoted post's id, sent by the server so a tap can jump to the original message. The web
+  // chat uses it today; the Android tap-to-jump is a tracked parity follow-up.
+  postId?: string | null;
 };
 
 // One message in the blended Hub stream. Matches lib/hub/types HubMessage on the web side.

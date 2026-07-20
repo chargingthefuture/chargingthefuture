@@ -332,7 +332,7 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
           <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ position: "relative" }}>
               <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: t.FAINT }} />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search providers…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }} />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, skill, or location…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }} />
             </div>
             {showSectorFilters && (
               <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
@@ -374,7 +374,7 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search providers…"
+              placeholder="Search name, skill, or location…"
               style={{ width: "100%", padding: "7px 10px 7px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }}
             />
           </div>

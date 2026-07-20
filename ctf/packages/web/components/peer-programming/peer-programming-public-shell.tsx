@@ -52,7 +52,7 @@ function DesktopPeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: str
           Deterministic global cohorts
         </span>
         <h1 style={{ margin: 0, fontSize: 34, fontWeight: 800, lineHeight: 1.1 }}>
-          12-person weekly cohorts —<br /><span style={{ color: t.ACCENT }}>you&apos;re always placed, never left out</span>
+          Weekly cohorts of up to 12 people —<br /><span style={{ color: t.ACCENT }}>you&apos;re always placed, never left out</span>
         </h1>
         <p style={{ margin: 0, fontSize: 15, color: t.SUBTLE, maxWidth: 520 }}>
           Every survivor is matched into a cohort of 12. Global peers, weekly sessions, real skill-building. No competitive selection — you&apos;re guaranteed a spot.
@@ -95,7 +95,7 @@ function MobilePeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: stri
           <span style={{ fontSize: 20, fontWeight: 800 }}>PeerProgramming</span>
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Deterministic global cohorts</span>
-        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>12-person weekly cohorts, open worldwide. You&apos;re always placed — no competitive selection, guaranteed spot.</p>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Weekly cohorts of up to 12 people, open worldwide. You&apos;re always placed — no competitive selection, guaranteed spot.</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Globe size={13} color={t.MUTED} />
           <span style={{ fontSize: 12, color: t.MUTED }}>Open to members worldwide</span>
