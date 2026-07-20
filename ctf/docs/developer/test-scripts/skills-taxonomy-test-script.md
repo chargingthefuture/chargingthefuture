@@ -1,5 +1,7 @@
 # Skills Taxonomy — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
 > truth, this is the runnable checklist derived from them. Do not edit a step here to match a
@@ -12,7 +14,7 @@
 | **Plugin** | Skills Taxonomy (`skills-taxonomy`) |
 | **Visibility** | Member-facing |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:skills-taxonomy` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md` |
 | **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed) |
@@ -34,14 +36,14 @@ This plugin owns the shared list of sectors, job titles, and skills the rest of 
 are the can't-ship-broken checks.
 
 1. **Hierarchy loads.** Open the Skills Taxonomy browser as a signed-in member. The three-level tree
-   (sector → job title → skill) renders with real data, not a spinner or an error. → web ☐ mobile ☐ android ☐
+   (sector → job title → skill) renders with real data, not a spinner or an error. → web ☐ mobile ☐
 2. **Counts on the signed-out splash.** Signed out, the splash teaser shows live sector / job-title /
-   skill counts (not zeros). → web ☐ mobile ☐ android ☐
+   skill counts (not zeros). → web ☐ mobile ☐
 3. **Browser is read-only; server-side write gating holds.** The member-facing taxonomy browser shows
    no create/edit/delete controls for anyone (the old `/admin/skills-taxonomy` "add" buttons were
-   removed); a non-admin call to a taxonomy write API is denied server-side. → web ☐ mobile ☐ android ☐
+   removed); a non-admin call to a taxonomy write API is denied server-side. → web ☐ mobile ☐
 4. **Delete asks before it acts.** An admin delete first shows the dependency-impact preview, not an
-   immediate destructive delete. → web ☐ mobile ☐ android ☐
+   immediate destructive delete. → web ☐ mobile ☐
 
 ---
 
@@ -60,7 +62,7 @@ the UI.
 **Expected:** The sector → job title → skill tree loads from the real hierarchy feed. Items are
 ordered by `display_order` then by name within each level. Sector and title counts are the real
 number of children (job titles / skills), derived from the data.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-2 · Search within the tree
 **Role:** member · **Surfaces:** all
@@ -69,7 +71,7 @@ number of children (job titles / skills), derived from the data.
 2. Clear the box.
 **Expected:** The list filters in place to matching entries. Clearing the box restores the whole
 tree. The search is over real taxonomy names, not a faked chip set.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-3 · Signed-out splash counts
 **Role:** member (test signed-out) · **Surfaces:** all
@@ -78,7 +80,7 @@ tree. The search is over real taxonomy names, not a faked chip set.
 **Expected:** It shows live aggregate counts of active sectors, job titles, and skills from
 `skills-taxonomy.summary.get` — counts only, no taxonomy rows or member data. While the counts load,
 or if the fetch fails, the surface shows neutral wording rather than zeros.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-4 · Empty and loading states
 **Role:** member · **Surfaces:** all
@@ -86,7 +88,7 @@ or if the fetch fails, the surface shows neutral wording rather than zeros.
 1. Open the browser against an empty taxonomy (or before data loads).
 **Expected:** Loading shows the skeleton/loading state. A genuinely empty taxonomy shows the empty
 state, not a spinner stuck forever or a raw error.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-5 · Promoted skill appears under its occupation
 **Role:** member · **Surfaces:** all
@@ -135,7 +137,7 @@ High-Tech** lists a new **Web Developers** occupation with five skills — Front
 development, Full-stack development, Web and responsive design, JavaScript / TypeScript. "Web and responsive
 design" appears under both Web Developers and Graphic / Visual Designers on purpose (same skill name under
 several occupations is expected, not a duplicate to clean up — Workforce matches by name).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
 **Role:** member · **Surfaces:** all
@@ -151,7 +153,7 @@ reopening the app. The currently selected sector stays selected, and refreshing 
 to the full-screen loading state — the current columns stay visible until the new data lands.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -166,7 +168,7 @@ directly).
 **Expected:** Each create succeeds, requires a name, and respects the parent-child constraint (a job
 title needs a parent sector; a skill needs a parent job title). Each write records an admin audit
 line.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-A2 · Update keeps the hierarchy valid
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -175,7 +177,7 @@ line.
 2. Try a reparent (move a job title to another sector) if the form allows it.
 **Expected:** Updates persist, ordering still uses display order then name, and parent-child
 integrity is enforced server-side (you cannot orphan a child). Each update records an audit line.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-A3 · Dependency-impact preview before delete
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -186,7 +188,7 @@ integrity is enforced server-side (you cannot orphan a child). Each update recor
 `skills-taxonomy.dependency-impact.preview` with `targetType`, `targetId`, and `operation` (one of
 `delete`/`deactivate`) — all three required and validated — and returns the impacted consumers and a
 risk level. A missing target produces a deny / invalid-target audit decision.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-A4 · Destructive delete is gated and audited
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -198,7 +200,7 @@ risk level. A missing target produces a deny / invalid-target audit decision.
 `reference_count` blocks it). A delete requires a reason; a high-impact path requires the elevated
 admin role and an explicit purpose code. Every allow or deny writes one durable row to
 `skills_taxonomy_change_events`. A CSRF-missing write is rejected.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 

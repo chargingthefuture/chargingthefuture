@@ -1,5 +1,7 @@
 # Contributions — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
 > truth, this is the runnable checklist derived from them. Do not edit a step here to match a
@@ -12,7 +14,7 @@
 | **Plugin** | Contributions (`contributions`) |
 | **Visibility** | Member-facing |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributions-feature-inventory.md` |
 | **Generated** | 2026-07-19 (banner dismiss snooze shortened to two months; regenerate via CI to stamp the commit) |
@@ -34,21 +36,21 @@ Voluntary fundraiser drives; thank-you credits, never money. Member role unless 
 
 1. **Drive loads.** Open `/apps/contributions` signed in. The current cycle and collective progress
    render — USD raised, comments, stars, contributor count — toward the owner-set goals. No spinner
-   stuck, no error. → web ☐ mobile ☐ android ☐
+   stuck, no error. → web ☐ mobile ☐
 2. **Contributing is obvious.** Under "How would you like to help?" each of the three cards (gift
    card, Quora comment, GitHub star) shows a clear "Choose this" cue, and a one-line instruction says
    a form opens underneath. Before any card is chosen, nothing shows under the cards (no placeholder
    box). Click a card: its form opens **directly below the cards** (not at the bottom of the page),
    the card reads "Selected", and there is a working Submit. The gift-card form states the card can be
    physical or digital and that the card details go to the owner in the Signal chat (never in the
-   form). Credit amounts read "10 SC" / "50 SC" with a space. → web ☐ mobile ☐ android ☐
+   form). Credit amounts read "10 SC" / "50 SC" with a space. → web ☐ mobile ☐
 3. **No gift-card code is ever asked for.** Start a gift-card claim. There is **no** field for the
    gift-card code anywhere; the screen instead points the member to send the code to the owner over
-   Signal, outside the app. → web ☐ mobile ☐ android ☐
+   Signal, outside the app. → web ☐ mobile ☐
 4. **No shaming, no gating.** Confirm progress is shown only as shared totals (never a personal
-   bill), and that nothing in the product is locked behind contributing. → web ☐ mobile ☐ android ☐
+   bill), and that nothing in the product is locked behind contributing. → web ☐ mobile ☐
 5. **Credits read as thank-you.** Anywhere credits appear, they are framed as a thank-you, not a
-   purchase, and there is no path to redeem them for real money. → web ☐ mobile ☐ android ☐
+   purchase, and there is no path to redeem them for real money. → web ☐ mobile ☐
 
 ---
 
@@ -68,7 +70,7 @@ Signal contact appears inline when set), plus a prominent warning that posting t
 (the public group chat) means no ServiceCredits and the owner never receives the gift, and a "questions
 → ask in the Commons" line. There is **no** reference to a "#support channel". An amount of 0 or over
 500, or a missing Signal contact, is rejected.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CON-2 · Submit a Quora comment and a GitHub star (link required)
 **Role:** member · **Surfaces:** all
@@ -80,7 +82,7 @@ Signal contact appears inline when set), plus a prominent warning that posting t
 show "Please paste the link so we can find and confirm your contribution." Each form shows a help line:
 if you cannot find the link, ask in the Commons (the group chat). With a link pasted, both submit and
 land `pending`.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CON-3 · GitHub star is creditable at most once
 **Role:** member · **Surfaces:** all
@@ -90,7 +92,7 @@ land `pending`.
 **Expected:** The star path is greyed out (`githubStarAlreadyCredited` is true); a fresh submit is
 rejected with a plain message. A member who only has a rejected or zero-credit star is **not** locked
 out — honest retries still work.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CON-4 · Claim history and statuses
 **Role:** member · **Surfaces:** all
@@ -99,7 +101,7 @@ out — honest retries still work.
 2. Read the status of each past claim.
 **Expected:** The member sees only their own claims, each labelled pending / confirmed / rejected in
 plain language. An empty history shows the empty state, not an error.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CON-5 · Fundraiser banner — Contribute, dismiss, and the phone emoji reminder
 **Role:** member · **Surfaces:** web (desktop) · web (mobile-responsive)
@@ -134,7 +136,7 @@ appears without closing and reopening the app. Refreshing never clears the curre
 full-screen loading state.
 Admins see the shared Admin pill in the member shell header, and the admin screen header shows a
 "Member view" pill opening `/apps/contributions`.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -152,14 +154,14 @@ over Signal). On confirm, credits = confirmed amount × `credits_per_usd`, clamp
 per-user-per-cycle cap; a positive grant goes through the canonical service-credits mint exactly
 once. A grant clamped to 0 still confirms with `credits_granted = 0`. A claim can be reviewed only
 once.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CON-A2 · Review queue (reject)
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
 1. Reject a pending claim with a review note.
 **Expected:** The claim moves to `rejected` and grants nothing. It cannot be reviewed again.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CON-A3 · Duplicate star confirms with zero credits
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -168,7 +170,7 @@ once.
 1. Confirm that duplicate star claim.
 **Expected:** It confirms with `credits_granted = 0`, the reason is recorded in the review note, and
 the mint path is never called.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CON-A4 · Create and edit a cycle
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -177,7 +179,7 @@ the mint path is never called.
 2. Edit the cycle.
 **Expected:** The cycle saves with `ends_at` after `starts_at` and non-negative goals; the current
 cycle is the one whose window contains now. The member drive view reflects the goals.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CON-A5 · Edit runtime config (credits-per-action)
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -190,7 +192,7 @@ stored USD-equivalent on save, so the stored model stays the source of truth. Co
 positive values. After saving, open the member contribute screen (`/apps/contributions`): the cards
 and the credits disclaimer show the **same** SC-per-comment/star and SC-per-dollar as the settings —
 no hardcoded "50 SC" when the config says otherwise.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 

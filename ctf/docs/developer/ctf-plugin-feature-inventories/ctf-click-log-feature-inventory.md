@@ -51,8 +51,8 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 ## 8. Web and Android Delivery Status
 
-- Web: Implemented shell, full parity
-- Android: Implemented shell, full parity
+- Web (desktop + mobile-responsive): Implemented shell, complete
+- Android (React Native): **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA)
 - See [plugin-parity-contracts.json](../../../config/plugin-parity-contracts.json)
 
 Web pixel pass (design `c5d83c0`): `ClickLogShell` is rebuilt to `design/.../survivor-hub/ClickLog.tsx`

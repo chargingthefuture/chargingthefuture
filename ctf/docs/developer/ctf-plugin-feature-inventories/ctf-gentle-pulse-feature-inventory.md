@@ -122,7 +122,7 @@ The shipped schema is leaner than the intended model in §4.1–§4.3: the thumb
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete`. Core library/filter/sort/favorite/rating/play behaviors are consistent across web (`/apps/gentle-pulse`) and Android (`packages/mobile/src/features/gentle-pulse`). App-level settings parity is tracked in the non-plugin inventory.
+Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Historical parity detail: core library/filter/sort/favorite/rating/play behaviors were consistent across web (`/apps/gentle-pulse`) and the former Android surface (`packages/mobile/src/features/gentle-pulse`, now removed). App-level settings parity is tracked in the non-plugin inventory.
 
 Web pixel pass (design `c5d83c0`): the `/apps/gentle-pulse` shell matches `design/.../survivor-hub/GentlePulse.tsx` (sessions grid, player, supportive chat, sidebar categories, right panel) with the mockup's 💚 header glyphs; Loading/Empty states added. Library browse, play tracking, and favorite toggles bind to the real `/api/gentle-pulse/library*` routes; sessions, categories, and counts derive from that data (no dummy session list). The previously oversized shell was decomposed into modular sub-components (`gp-shared`, `gp-loading`, `gp-icon-rail`, `gp-sidebar`, `gp-sessions`, `gp-player`, `gp-chat`, `gp-right-panel`) within the rule-116 limits, and a dead duplicate `components/gentle-pulse/` directory was removed.
 

@@ -111,7 +111,7 @@ The aggregates above are persisted in two tables in `ctf/schema.sql`:
 
 ## 5) Web and Android Delivery Status
 
-`web+android complete`. Week-selector behavior, current-week polling policy, empty/error semantics, metric definitions, formatting, and deny reasons are consistent across web (`/admin/weekly-performance` — the single surface) and Android (`packages/mobile/src/features/weekly-performance`).
+Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Week-selector behavior, current-week polling policy, empty/error semantics, metric definitions, formatting, and deny reasons are served on web (`/admin/weekly-performance` — the single surface). Historical parity detail: these were previously consistent with the former Android surface (`packages/mobile/src/features/weekly-performance`, now removed).
 
 Single admin surface (2026-07-18, owner directive): there is exactly one web surface, the admin page `/admin/weekly-performance`, which serves the full dashboard (`weekly-performance-shell.tsx` — sidebar week history, grouped metric cards, comparison chart). `/apps/weekly-performance` renders nothing: it redirects admins to the admin page and still 404s everyone else (admin-only gate). The thin review shell `wp-admin-shell.tsx` and the admin↔member cross-links ("Member view" pill, "Admin" pill, sidebar "Manage weeks") were deleted.
 

@@ -56,7 +56,7 @@ longer a precondition for browsing, hosting, or matching.
 2. Property detail route parity target (`/apps/lighthouse/property/:id`).
 3. Authenticated property list/detail behavior parity is required.
 4. Detail view includes host reference metadata and listing details.
-5. Seeker "Request to stay" action from the detail view is **implemented on web and Android**
+5. Seeker "Request to stay" action from the detail view is **implemented on web (desktop + mobile-responsive); the native Android surface was removed 2026-07-20 (rule 105, PR #1742)**
    (2026-07-14): it posts `POST /api/lighthouse/matches` with an optional message and preferred
    move-in date. A member with no active profile is routed to the "Your details" screen first;
    duplicate and blocked cases are shown inline. The action is hidden on the member's own listing.
@@ -102,7 +102,7 @@ longer a precondition for browsing, hosting, or matching.
 ### 1.5 Matches Workflow
 
 1. Matches route parity target (`/apps/lighthouse/matches`).
-2. Seeker match request is **implemented on web and Android (2026-07-14)** — the "Request to stay"
+2. Seeker match request is **implemented on web (desktop + mobile-responsive); it shipped 2026-07-14 and also had an Android surface, which was removed 2026-07-20 (rule 105, PR #1742)** — the "Request to stay"
    action on a listing (web `lighthouse-property-detail.tsx`; Android `LighthouseRequestToStay.tsx`)
    posts `POST /api/lighthouse/matches` with an optional message and preferred move-in date, opening
    the private match chat channel on host acceptance. The no-seeker-profile (`policy_denied`),
@@ -241,7 +241,7 @@ Contract expectations:
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete` (feature parity). Core user journeys, admin moderation operations, and safety/privacy/compliance controls behave consistently across web (`/apps/lighthouse`) and Android (`packages/mobile/src/features/lighthouse`). UI conventions differ by platform; functional outcomes match.
+Delivery: **web + mobile-responsive complete** (feature parity). **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Core user journeys, admin moderation operations, and safety/privacy/compliance controls are served on web (`/apps/lighthouse`). Historical parity detail: these behaved consistently with the former Android surface (`packages/mobile/src/features/lighthouse`, now removed).
 
 Member seeker flow wired (2026-07-14, web + mobile-responsive + android): the seeker preference profile and the seeker match request — whose endpoints (`/api/lighthouse/profile`, `POST /api/lighthouse/matches`) existed and worked but had no member UI — are now reachable on both platforms. No schema, route, or contract change (existing endpoints only).
 
@@ -335,7 +335,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## Build Checklist
 
-> **Reconciliation (2026-05-26):** the Delivery Status above is `web+android complete` (feature parity).
+> **Reconciliation (2026-05-26):** the Delivery Status above was `web+android complete` (feature parity) at the time; the Android surface was removed 2026-07-20 (rule 105, PR #1742) and this feature is now **web-only**.
 > Unchecked items below are obsolete web-first / Android-deferral planning artifacts and deferred MVP
 > validation/release gates (Rule 118) — not missing implementation. The authoritative production bar
 > (pixel-perfect to `design` + parity + gates + deploy) is tracked in
@@ -375,7 +375,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
     - Match/interactions behavior under block state is explicitly documented.
 - [ ] Lock web+android parity obligations for critical LightHouse flows.
   - Acceptance criteria:
-    - Critical user/admin/safety flows are marked parity-required across web and Android.
+    - Critical user/admin/safety flows are served on web (desktop + mobile-responsive); the native Android surface was removed 2026-07-20 (rule 105, PR #1742), so this feature is now web-only.
 
 ### �� Data, Migration, and Contract Readiness
 

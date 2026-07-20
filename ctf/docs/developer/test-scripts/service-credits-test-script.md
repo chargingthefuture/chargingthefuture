@@ -1,5 +1,7 @@
 # ServiceCredits — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Generated from the ServiceCredits feature inventory and contracts; this is the runnable checklist for a human tester on a real device. Regenerate with:
 > `pnpm --dir ctf test-script:generate -- service-credits`
 
@@ -40,23 +42,23 @@ These are the checks that must pass before any other case is meaningful.
 
 **1. Wallet loads for a seeded member**
 Sign in as a seeded member account. Navigate to the ServiceCredits section (web: `/service-credits`; android: ServiceCredits screen). The wallet tab must appear showing an available balance figure (a number of credits, not a currency symbol) and no error state.
-web ☐ android ☐
+web ☐
 
 **2. Admin dashboard loads for an admin account**
 Sign in as a seeded admin account. Navigate to the admin surface (web: `/admin/service-credits`; android: AdminServiceCredits screen). The dashboard must load without a 401 or 403 and show at least the treasury panel.
-web ☐ android ☐
+web ☐
 
 **3. A plain send delivers credits immediately**
 From a seeded member wallet with a positive balance, send a small amount (e.g. 5 credits) to a second seeded member. After the send completes, check the sender's balance (should be reduced by 5) and the recipient's balance (should be increased by 5). Both changes must be visible on reload without any pending state.
-web ☐ android ☐
+web ☐
 
 **4. Economy tab shows aggregate numbers — no fiat**
 From the member surface, open the Economy tab. Numbers for credits in circulation, total issued, total burned, and treasury balance must appear. No currency symbol (£, $, €) or fiat equivalent must appear anywhere on the screen.
-web ☐ android ☐
+web ☐
 
 **5. Unauthenticated access is blocked**
 Open the ServiceCredits URL while signed out (web: `/service-credits`; android: force-sign-out then open the screen). The app must show a sign-in prompt or redirect — it must not show a wallet or any balance.
-web ☐ android ☐
+web ☐
 
 ---
 
@@ -76,7 +78,7 @@ web ☐ android ☐
 
 **Expected:** Three balance figures appear (available, held, total), all labeled in credits only. No fiat equivalent or currency symbol is shown anywhere.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -96,7 +98,7 @@ Result: web ☐ android ☐
 
 **Expected:** At least one transaction row is visible. Each row has a label, date, and signed amount in credits only, newest first. A refund and a release are labeled distinctly. If there are truly no transactions the screen shows "No transactions yet" rather than an error.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -120,7 +122,7 @@ Result: web ☐ android ☐
 
 **Expected:** Transfer completes immediately (status `completed`, not pending). Sender's balance drops by 10. Recipient's balance rises by 10. Both ledger entries appear on the correct transaction lists. No pending state remains.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -138,7 +140,7 @@ Result: web ☐ android ☐
 
 **Expected:** On the web send panel the submit button is disabled or an inline error appears before submission ("Insufficient balance" or equivalent). On android the send attempt returns an error message. The transfer does not go through. The balance is unchanged.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -159,7 +161,7 @@ Result: web ☐ android ☐
 
 **Expected:** Transfer completes. Sender's balance is now negative down to (but not past) their credit limit. Recipient receives the credits immediately.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -177,7 +179,7 @@ Result: web ☐ android ☐
 
 **Expected:** The send is rejected with an error message indicating the credit limit would be exceeded (`credit_limit_exceeded` or user-readable equivalent). The balance is unchanged.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -195,7 +197,7 @@ Result: web ☐ android ☐
 
 **Expected:** Real aggregate numbers appear. No fiat label or currency symbol is visible. The "Sent in last 30 days" tile is present.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -213,7 +215,7 @@ Result: web ☐ android ☐
 
 **Expected:** The Earn tab is static platform documentation about credit award opportunities. No per-member aggregate stats appear (no "You've earned X credits this month" or rank).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -250,7 +252,7 @@ Result: web ☐
 
 **Expected:** A user-visible notice states that a 7-day reclaim window applies after a full account deletion request and that any remaining credits will be returned to treasury after that window — not withdrawn externally. The notice does not say credits are burned.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -267,7 +269,7 @@ Result: web ☐ android ☐
 
 **Expected:** The send is rejected with a user-readable error indicating the wallet is restricted or frozen (`account_restricted` or equivalent). No credits leave the wallet.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -285,7 +287,7 @@ Result: web ☐ android ☐
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), and the admin screen header shows a "Member view" pill opening `/apps/service-credits`.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -306,7 +308,7 @@ Result: web ☐ android ☐
 
 **Expected:** Policy loads on open. Edit saves successfully. Reloaded view shows the updated value. No fiat figure appears anywhere in the panel.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -325,7 +327,7 @@ Result: web ☐ android ☐
 
 **Expected:** The confirm step appears before any credit is moved. After confirmation the grant succeeds. The target member's balance increases by exactly the minted amount. No fiat figure appears.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -344,7 +346,7 @@ Result: web ☐ android ☐
 
 **Expected:** Confirm step appears. After confirmation the burn succeeds and the target balance decreases by 10.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -364,7 +366,7 @@ Result: web ☐ android ☐
 
 **Expected:** Fee collection succeeds. The source member's balance decreases. A treasury event ID and transfer ID are returned.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -385,7 +387,7 @@ Result: web ☐ android ☐
 
 **Expected:** Set succeeds. Read-back shows the override value. Setting to 0 revokes the limit. The read-back also shows `frozen` status (true or false depending on the member's state) and confirms no behavioural score is shown.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -406,7 +408,7 @@ Result: web ☐ android ☐
 
 **Expected:** Freeze succeeds and the member's wallet is blocked (verified in SC-11). Unfreeze succeeds and restores spend ability. The reason field is accepted (optional but not rejected when supplied).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -426,7 +428,7 @@ Result: web ☐ android ☐
 
 **Expected:** Adjustment is applied. Both balances change correctly. An adjustment ID and transfer ID are returned. No fiat figure appears.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -444,7 +446,7 @@ Result: web ☐ android ☐
 
 **Expected:** All admin circulation fields appear. The "Sent in last 30 days" tile is visible (matching mobile parity). No currency symbol or fiat equivalent is shown.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -460,7 +462,7 @@ Result: web ☐ android ☐
 
 **Expected:** An amber demo-mode banner appears with the standard warning copy. It does not block use of the admin panels below it.
 
-Result: android ☐
+Result:
 
 ---
 
@@ -495,7 +497,7 @@ Result: web ☐
 
 **Expected:** Web redirects to a sign-in or access-denied page. Android shows an admin-only notice (the server returns 401 or 403 and the screen renders "Admin only" messaging). The API call returns 401 or 403.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 

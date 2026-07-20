@@ -1,5 +1,7 @@
 # Directory — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
 > truth, this is the runnable checklist derived from them. Do not edit a step here to match a
@@ -12,7 +14,7 @@
 | **Plugin** | Directory (`directory`) |
 | **Visibility** | Member-facing |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
 | **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; regenerate via CI to stamp the commit) |
@@ -34,20 +36,20 @@ Directory lists members and the skills they hold — it does not transact. These
 can't-ship-broken checks. Member role unless noted.
 
 1. **List loads.** Open Directory as a signed-in member. Active, non-deleted profiles render — not a
-   spinner or an error — even if you have no profile of your own. → web ☐ mobile ☐ android ☐
-2. **Profile detail reads.** Open a member's profile. Name, job title, sector, and skills render. → web ☐ mobile ☐ android ☐
+   spinner or an error — even if you have no profile of your own. → web ☐ mobile ☐
+2. **Profile detail reads.** Open a member's profile. Name, job title, sector, and skills render. → web ☐ mobile ☐
 3. **No transact controls.** Confirm there is no "Message", "Direct Chat", "Book Session", or
    availability control anywhere on the Directory surface — those belong to Foundation. Also confirm
    the copy frames Directory as "members and the skills they hold" (a list to browse and read), and
    does **not** describe members as "sharing" or "offering" their skills — offering skills is
-   Foundation, and Directory includes unclaimed community-generated profiles. → web ☐ mobile ☐ android ☐
+   Foundation, and Directory includes unclaimed community-generated profiles. → web ☐ mobile ☐
 4. **Not public.** Signed out, the Directory plugin route does not expose member profile data; there
-   is no anonymous projection route. → web ☐ mobile ☐ android ☐
+   is no anonymous projection route. → web ☐ mobile ☐
 5. **No verification over-claim.** Nowhere on the Directory (browse hero, header, or the signed-out
    landing) does copy claim members are "verified" or a "Verified Network" — members are framed as
    fellow community members sharing their skills, consistent with Foundation's "not a formally vetted
    service" note. (The account "Finish verifying" sign-in CTA is a separate thing and is fine.)
-   → web ☐ mobile ☐ android ☐
+   → web ☐ mobile ☐
 
 ---
 
@@ -76,7 +78,7 @@ location…". On desktop, the right rail is headed **"Recent Survivors"**
 (the most recently updated profiles — it is **not** a ranking, so it must not say "Top Providers"),
 and its privacy card reads **"Privacy First — Profiles show only what each member chooses to
 share."** — no "guarantee" / "your identity is protected" wording anywhere on the rail.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-2 · Read a profile (real fields only)
 **Role:** member · **Surfaces:** all
@@ -91,7 +93,7 @@ sections appear (those were removed as out-of-scope mockup elements). Confirm a 
 shows its city/state/country (the data was cloned from v2 and is now read directly). On android, the
 profile detail's privacy note reads **"🔒 Privacy First — Profiles show only what each member chooses
 to share."** — it must not promise a privacy "guarantee" or that "your identity is never exposed".
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-3 · Pending (nominated/self-added) skills show
 **Role:** member · **Surfaces:** all
@@ -99,7 +101,7 @@ to share."** — it must not promise a privacy "guarantee" or that "your identit
 1. Open a profile that has a nominated or self-added skill not yet in the taxonomy.
 **Expected:** The Specializations section is never empty when a skill was nominated: pending skills
 render as muted, dashed-border "· pending review" chips alongside the real accent taxonomy chips.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-4 · Edit my own profile
 **Role:** member · **Surfaces:** all
@@ -134,7 +136,7 @@ prefills every field, uses the searchable Country picker (and the US-state list 
 sector and job-title chips, and the same skills accordion + free-text "pending review" box; Save is
 disabled until both first name and country are set, and a save re-sends the complete field set (so an
 untouched payment address / location is never wiped).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-4b · Create my profile (member without one yet)
 **Role:** member with no directory profile · **Surfaces:** all
@@ -158,7 +160,7 @@ CSRF header. After saving, the header button flips to **"Edit my profile"**, and
 in the list. On android the same "Edit my profile" header button opens the editor titled **"Create my
 profile"** (its submit button reads **"Create profile"**) when the member has none; Save stays disabled
 until both first name and country are set, and after saving the new profile appears in the list.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-5 · Read announcements
 **Role:** member · **Surfaces:** all
@@ -166,7 +168,7 @@ until both first name and country are set, and after saving the new profile appe
 1. Open the announcements view.
 **Expected:** Active announcements render from real data, with loading, error, and empty states — not
 hardcoded rows.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-6 · Share a profile and open the deep link (auth-gated)
 **Role:** member · **Surfaces:** all
@@ -182,7 +184,7 @@ detail already open (it loads by id even if the profile is not on the current fi
 page). While signed out, the link redirects to the directory landing `/apps/directory` — no profile data
 is shown. A bad/inactive id shows the browse view, not the detail (the fetch 404s and is ignored). On
 android, if `APP_URL` is unset the share control is simply absent (no crash).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-7 · Refresh re-pulls the member list without reopening the app
 **Role:** member · **Surfaces:** all
@@ -198,10 +200,10 @@ reopening the app. Refreshing never clears the screen to the full-screen loading
 list stays visible until the new data lands.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), and the admin screen header shows a "Member view" pill opening `/apps/directory`.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-8 · "Weavers of the Commons" contributor badge (positive-only, claimed-only)
-**Role:** member · **Surfaces:** web (desktop), web (mobile-responsive), android
+**Role:** member · **Surfaces:** web (desktop), web (mobile-responsive)
 **Precondition:** at least one claimed profile whose member holds the Contributor Access badge
 (`contributor_access_eligibility`: `eligible = TRUE`, `revoked_for_cause = FALSE`), plus a claimed
 profile without it and a community-generated (unclaimed) profile.
@@ -226,14 +228,14 @@ tapping it opens the dialog with the same title and body plus a condensed "How i
 paragraph inline (the app has no explainer page, so the dialog carries the plain-language
 explanation: earned by steadily delivering real help; automatic; permanent; no application, no way
 to buy it, no score anywhere). Non-holder / unclaimed profiles render nothing badge-related.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
 ## Admin walkthrough
 
 ### DIR-A1 · Admin profile list, create, edit
-**Role:** admin · **Surfaces:** web (`/admin/directory`) · android (Directory Admin)
+**Role:** admin · **Surfaces:** web (`/admin/directory`)
 **Steps:**
 1. Open the dedicated admin page; confirm a non-admin is redirected away.
 2. List every profile, filter All / Claimed / Unclaimed.
@@ -254,10 +256,10 @@ the edited `skillIds` and preserves the sector/job-title classification. The and
 edit screen now uses the same picker (skills editable, no free-text box), also sending only `skillIds`
 (plus the existing fields) with no `proposedSkills`. Each admin mutation sends the CSRF header and records
 an allow/deny audit line.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-A2 · Attach an unclaimed profile (two places)
-**Role:** admin · **Surfaces:** web · android
+**Role:** admin · **Surfaces:** web
 **Steps:**
 1. From the profile detail, use the inline admin-only "Attach to account" control on an unclaimed
    profile.
@@ -267,20 +269,20 @@ an allow/deny audit line.
 attach, the profile reads as claimed and the inline section stops rendering. Reassigning a profile
 that is already claimed by another member is blocked (a `409` / claimed-profile guard, recorded as a
 deny event) — an admin cannot silently overwrite another member's claim.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-A3 · Unclaimed-only delete
-**Role:** admin · **Surfaces:** web · android
+**Role:** admin · **Surfaces:** web
 **Steps:**
 1. Delete an unclaimed profile.
 2. Try to delete a claimed profile.
 **Expected:** Deleting an unclaimed profile works. Deleting a claimed profile is denied
 (unclaimed-only delete is a hard server-side guard). The delete (and its `not_found` deny) records an
 audit line; a CSRF-missing delete is rejected.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-A3b · Takedown at the person's request + Quora-URL suppression
-**Role:** admin · **Surfaces:** web + mobile-responsive (android deferred)
+**Role:** admin · **Surfaces:** web + mobile-responsive
 **Precondition:** a community-generated (unclaimed) profile exists, created from an accepted SkillsHunt
 nomination, so it carries a Quora URL. Note its Quora URL.
 **Steps:**
@@ -308,7 +310,7 @@ admin screen has delete only.
 1. Create an announcement, update it, then deactivate it.
 **Expected:** All three persist and reflect on the member announcements view. Each is admin-gated,
 CSRF-guarded, and records an allow/deny audit line.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-A5 · Admin skills compatibility read (read-only)
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -316,7 +318,7 @@ CSRF-guarded, and records an allow/deny audit line.
 1. Open the admin skills compatibility / selector governance view.
 **Expected:** It returns the full shared taxonomy (sectors, job titles, skills) plus a compatibility
 summary with the count of each. It is read-only and never mutates the taxonomy.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 

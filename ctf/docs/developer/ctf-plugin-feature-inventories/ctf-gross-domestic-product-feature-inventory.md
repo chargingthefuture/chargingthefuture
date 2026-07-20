@@ -22,7 +22,7 @@ The Gross Domestic Product plugin is a trauma-informed, transparency-first econo
 4. understand progress against the 5-year rollout milestones,
 5. trust reported values through auditable canonical metric contracts.
 
-The plugin must provide equivalent core behavior across web and Android, with phased parity tracked and closed before GA.
+The plugin ships on web (desktop + mobile-responsive). The former native Android (React Native) surface was removed 2026-07-20 (rule 105, PR #1742); this feature is now web-only, served by the installable web app (PWA).
 
 ---
 
@@ -279,7 +279,7 @@ Domain tables:
 
 ## 6) Web and Android Delivery Status
 
-`web + mobile-responsive + android complete` (pixel-pass delivered). The GDP transparency report is shipped on web (`/apps/gdp`) and Android (`packages/mobile/src/features/gdp`), computed live from `/api/gdp/report/current`; KPI definitions, semantics, and values are identical across platforms. The former GDP admin (weekly publications + currency-rate factors) was **retired 2026-07-11** — the index runs on built-in weights and needs no admin surface.
+Delivery: **web + mobile-responsive complete** (pixel-pass delivered). **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). The GDP transparency report is shipped on web (`/apps/gdp`), computed live from `/api/gdp/report/current`. Historical parity detail: a former Android surface lived under `packages/mobile/src/features/gdp` (now removed); KPI definitions, semantics, and values were identical across platforms. The former GDP admin (weekly publications + currency-rate factors) was **retired 2026-07-11** — the index runs on built-in weights and needs no admin surface.
 
 Web pixel pass complete: the shell (`gdp-shell.tsx` + `gdp-*` sub-components) is aligned to `design/.../survivor-hub/GDP.tsx` and decomposed within rule-116 limits; per the real-data-only rule it renders sectors/countries/metrics only from `/api/gdp/report/current` and omits the design's mock contribution/live-feed/trend/chat figures.
 
@@ -384,7 +384,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## Build Checklist
 
-> **Reconciliation (2026-05-26):** the Delivery Status above is `web+android complete` (feature parity).
+> **Reconciliation (2026-05-26):** the Delivery Status above was `web+android complete` (feature parity) at the time; the Android surface was removed 2026-07-20 (rule 105, PR #1742) and this feature is now **web-only**.
 > Unchecked items below are obsolete web-first / Android-deferral planning artifacts and deferred MVP
 > validation/release gates (Rule 118) — not missing implementation. The authoritative production bar
 > (pixel-perfect to `design` + parity + gates + deploy) is tracked in
@@ -528,4 +528,4 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 - [ ] Public disclosure policy for sensitive regional breakdowns.
 - [ ] Backfill/late-data correction SLA and approval workflow.
 - [ ] Versioning strategy for canonical metric formula changes.
-- [ ] GA criteria for parity closure across web and Android.
+- [ ] GA criteria for the web (desktop + mobile-responsive) surface. (The native Android surface was removed 2026-07-20 per rule 105, PR #1742; no cross-platform parity closure applies.)
