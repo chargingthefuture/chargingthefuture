@@ -2,7 +2,7 @@ name: Generate — Product Update
 
 on:
   schedule:
-    - cron: "33 0 */2 * *"   # every 48 hours: 00:33 UTC every other day, offset to avoid a top-of-hour stampede. (Cron has no exact "every 48h"; the */2 day-of-month step resets at the start of each month, so one interval per month can be ~24h instead of 48h.)
+    - cron: "33 0 * * 4"   # weekly: 00:33 UTC every Thursday, offset off the top of the hour to avoid a stampede. Thursday keeps it clear of the Monday Community Stats draft (generate-community-stats.yml) so the owner gets at most one Quora draft to review per day.
   workflow_dispatch:
     inputs:
       force:
