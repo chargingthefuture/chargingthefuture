@@ -91,11 +91,17 @@ E5-adoption (incremental screen migration onto the primitives/typeScale) and E6 
   (incremental, non-blocking): migrate existing feature screens off their hand-rolled `StyleSheet`
   font sizes/buttons/cards onto `typeScale` + the primitives so every screen renders Inter at the
   web-matched scale and gets the comic treatments. Do this plugin-by-plugin in follow-up PRs.
-- [ ] **E6 — icon system reconciliation (owner decision).** Web uses lucide; mobile uses Ionicons +
-  emoji. Full unification touches ~220 web files or the whole mobile icon approach — too large to do
-  silently. RECOMMENDATION: standardize on `lucide-react-native` for mobile chrome icons (keep emoji
-  for plugin tiles on both, since those are a deliberate brand device). Flag for owner before a mass
-  migration; until then, at least use the same glyph *concepts* per action.
+- [x] **E6 — icon system reconciliation. DONE (2026-07-20, owner-approved).** Scoped to the Android
+  keep-list (see §3b). Added `lucide-react-native` (renders via the already-present `react-native-svg`)
+  and swapped the emoji *action/chrome* glyphs to the matching lucide vectors web uses — Chyme
+  (Radio, Mic/MicOff, Hand, MessageSquare, Phone, Lock, Coins, Send), account-data (Trash2, Lock,
+  CheckCircle, X, AlertTriangle), blocks (ShieldOff, UserX, Ban, X), bug-reporting (CheckCircle,
+  AlertCircle, Clock, X). Emoji kept for plugin-tile identity (launcher pills) and where web keeps it
+  (Chyme 🎙️ wordmark, ✋ tile, 🔴 Live). Branch `feat/android-lucide-icons`.
+  FOLLOW-UP (small, optional): a handful of emoji are embedded *inside label strings* (e.g. the
+  "⚠️ Danger Zone" tab, "🚫 Block member" trigger) — converting them needs an icon+text row
+  restructure, left as emoji for now to avoid layout changes on sensitive surfaces (account deletion,
+  blocking).
 
 ## 3a. Scope update (2026-07-20) — Android is Chyme-only
 

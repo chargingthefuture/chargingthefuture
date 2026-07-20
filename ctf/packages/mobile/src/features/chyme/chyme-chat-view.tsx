@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Send } from 'lucide-react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { chymeHandle } from './api';
@@ -116,7 +117,7 @@ export const ChymeChatView: React.FC<Props> = ({
           accessibilityRole="button"
           accessibilityLabel="Send message"
         >
-          <Text style={styles.sendBtnIcon}>›</Text>
+          <Send size={18} color="#fff" strokeWidth={2} />
         </TouchableOpacity>
       </View>
     </View>

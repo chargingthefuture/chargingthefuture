@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ShieldOff, UserX } from 'lucide-react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { fetchBlockedMembers, unblockMember, type BlockedMember } from './api';
@@ -107,7 +108,7 @@ export function BlockedMembers() {
       <View style={s.header}>
         <View style={s.headerRow}>
           <View style={s.headerIcon}>
-            <Text style={s.headerIconText}>🛡</Text>
+            <ShieldOff size={16} color={brand} strokeWidth={2} />
           </View>
           <View>
             <Text style={s.headerTitle}>Blocked members</Text>
@@ -129,7 +130,7 @@ export function BlockedMembers() {
         {blocks.length === 0 ? (
           <View style={s.emptyWrap}>
             <View style={s.emptyAnchor}>
-              <Text style={s.emptyAnchorText}>🚫</Text>
+              <UserX size={24} color={brand} strokeWidth={2} />
             </View>
             <Text style={s.emptyTitle}>You haven&apos;t blocked anyone.</Text>
             <Text style={s.emptySub}>
@@ -145,7 +146,7 @@ export function BlockedMembers() {
                 <React.Fragment key={member.blockedUserId}>
                   <View style={[s.row, error ? s.rowError : null, isPending && s.rowPending]}>
                     <View style={s.rowGlyph}>
-                      <Text style={s.rowGlyphText}>🚫</Text>
+                      <UserX size={14} color={brand} strokeWidth={2} />
                     </View>
                     <View style={s.rowBody}>
                       <Text style={s.rowName} numberOfLines={1}>{member.displayName}</Text>

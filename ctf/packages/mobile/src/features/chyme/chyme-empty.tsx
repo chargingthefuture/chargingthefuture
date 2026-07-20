@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Mic, Radio } from 'lucide-react-native';
 import { type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 
@@ -24,8 +25,7 @@ export const ChymeEmpty: React.FC<Props> = ({ onStartRoom, tokens, accent }) => 
 
       <View style={styles.body}>
         <View style={styles.iconRing}>
-          {/* Radio icon placeholder — no backing field for icon asset */}
-          <Text style={styles.iconGlyph}>📻</Text>
+          <Radio size={30} color={accent} strokeWidth={2} />
         </View>
         <Text style={styles.title}>No rooms live yet</Text>
         <Text style={styles.subtitle}>
@@ -42,9 +42,10 @@ export const ChymeEmpty: React.FC<Props> = ({ onStartRoom, tokens, accent }) => 
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          🎤  Rooms are members-only
-        </Text>
+        <View style={styles.footerRow}>
+          <Mic size={12} color={tokens.textSecondary} strokeWidth={2} />
+          <Text style={styles.footerText}>Rooms are members-only</Text>
+        </View>
       </View>
     </View>
   );
@@ -121,6 +122,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       borderTopColor: divider,
       backgroundColor: t.surface,
     },
+    footerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     footerText: { fontSize: 12, color: t.textSecondary, fontFamily: interFamily('400') },
   });
 }

@@ -19,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ban, X } from 'lucide-react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { blockMember } from './api';
@@ -108,7 +109,7 @@ export function BlockMemberButton({ targetUserId, displayName, onBlocked }: Bloc
           <View style={s.dialog}>
             <View style={s.dialogHeader}>
               <View style={s.dialogHeaderIcon}>
-                <Text style={s.dialogHeaderIconText}>🚫</Text>
+                <Ban size={18} color={tokens.danger} strokeWidth={2} />
               </View>
               <Text style={s.dialogTitle} numberOfLines={2}>Block {label}?</Text>
               <TouchableOpacity
@@ -118,7 +119,7 @@ export function BlockMemberButton({ targetUserId, displayName, onBlocked }: Bloc
                 accessibilityRole="button"
                 accessibilityLabel="Cancel"
               >
-                <Text style={s.dialogCloseText}>✕</Text>
+                <X size={14} color={tokens.textSecondary} strokeWidth={2} />
               </TouchableOpacity>
             </View>
 
