@@ -144,6 +144,12 @@
       "mobileFeatureDirs": [],
       "requiresMobileSurface": false,
       "requiresExplicitWebShell": false
+    },
+    {
+      "slug": "mutual-time",
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
+      "requiresExplicitWebShell": false
     }
   ]
 }

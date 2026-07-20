@@ -5660,4 +5660,59 @@ ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NO
 ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- === Mutual Time (one-link meeting-time picker, spec #1780) ============================
+-- An owner/admin creates an event with one shareable link. Approved members open the link and pick
+-- up to 3 one-hour windows (snapped to the half-hour) in their own timezone. When the survey closes
+-- (at closes_at, or manually), the app picks the one-hour window the most members can make (ties go
+-- to the earliest) and shows it in each viewer's own timezone with a link to where the meeting happens.
+-- No credits are involved anywhere. Candidate slots are computed from window_start_date + window_days
+-- (not stored per-slot); only cast votes are stored. A member's votes (and any events they created)
+-- are removed on account deletion — see lib/account/deletion-registry.ts.
+CREATE TABLE IF NOT EXISTS mutual_time_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT NOT NULL UNIQUE,
+  created_by_user_id TEXT NOT NULL,
+  title TEXT NULL,
+  description TEXT NULL,
+  meeting_plugin TEXT NOT NULL CHECK (meeting_plugin IN ('chyme', 'peer-programming')),
+  window_start_date DATE NOT NULL,
+  window_days INTEGER NOT NULL DEFAULT 7 CHECK (window_days BETWEEN 1 AND 14),
+  opens_at TIMESTAMPTZ NULL,
+  closes_at TIMESTAMPTZ NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+  result_slot_start TIMESTAMPTZ NULL,
+  result_can_make_it INTEGER NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  closed_at TIMESTAMPTZ NULL
+);
+-- Column reconciliation (all added nullable / with safe defaults so they never fail on a populated table).
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS meeting_plugin TEXT;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS window_start_date DATE;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS window_days INTEGER NOT NULL DEFAULT 7;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS opens_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS closes_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS result_slot_start TIMESTAMPTZ;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS result_can_make_it INTEGER;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_mutual_time_events_slug ON mutual_time_events(slug);
+CREATE INDEX IF NOT EXISTS idx_mutual_time_events_creator ON mutual_time_events(created_by_user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS mutual_time_votes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES mutual_time_events(id) ON DELETE CASCADE,
+  voter_user_id TEXT NOT NULL,
+  slot_start_utc TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS mutual_time_votes ADD COLUMN IF NOT EXISTS slot_start_utc TIMESTAMPTZ;
+ALTER TABLE IF EXISTS mutual_time_votes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- One row per (event, voter, slot): a voter cannot double-count a slot, and revising picks is a
+-- delete-then-insert of that voter's rows for the event.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_mutual_time_votes_event_voter_slot ON mutual_time_votes(event_id, voter_user_id, slot_start_utc);
+CREATE INDEX IF NOT EXISTS idx_mutual_time_votes_event_slot ON mutual_time_votes(event_id, slot_start_utc);
+CREATE INDEX IF NOT EXISTS idx_mutual_time_votes_voter ON mutual_time_votes(voter_user_id);
 COMMIT;

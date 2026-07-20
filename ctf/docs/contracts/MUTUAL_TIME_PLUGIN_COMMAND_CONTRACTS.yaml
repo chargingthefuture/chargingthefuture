@@ -1,0 +1,99 @@
+pluginId: mutual-time
+version: 1.0.0
+description: >
+  Mutual Time — a one-link meeting-time picker (spec #1780). An admin creates an event; approved
+  members vote on one-hour windows in their own timezone; the app picks the window with the most
+  overlap when the survey closes. No ServiceCredits are involved in any command.
+
+contracts:
+  - pluginId: mutual-time
+    command: mutual-time.event.create
+    version: 1.0.0
+    description: Create a meeting-time event with one shareable link. Admin-only.
+    inputSchema:
+      title:
+        type: string
+        required: false
+      description:
+        type: string
+        required: false
+      meetingPlugin:
+        type: string
+        required: true
+        enum: [chyme, peer-programming]
+      opensAt:
+        type: string
+        required: false
+      closesAt:
+        type: string
+        required: false
+    outputSchema:
+      ok:
+        type: boolean
+      event:
+        type: object
+    dataAccess:
+      - mutual_time_events
+    purpose: scheduling_event_create
+    retentionClass: operational_medium_lived
+    idempotency: false
+
+  - pluginId: mutual-time
+    command: mutual-time.vote.save
+    version: 1.0.0
+    description: Save (replace) the signed-in, Unlock-approved member's picks for an event — up to 3 one-hour windows snapped to the half-hour. Rejected when the event is not open or a pick is not a valid candidate slot.
+    inputSchema:
+      slots:
+        type: array
+        required: true
+        items:
+          type: string
+    outputSchema:
+      ok:
+        type: boolean
+      picks:
+        type: array
+        items:
+          type: string
+    dataAccess:
+      - mutual_time_events
+      - mutual_time_votes
+    purpose: scheduling_vote_save
+    retentionClass: operational_medium_lived
+    idempotency: true
+
+  - pluginId: mutual-time
+    command: mutual-time.event.close
+    version: 1.0.0
+    description: Close a survey now and compute the winning one-hour window (most distinct voters; ties go to the earliest). Admin-only; only the event's creator may close it.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      event:
+        type: object
+    dataAccess:
+      - mutual_time_events
+      - mutual_time_votes
+    purpose: scheduling_event_close
+    retentionClass: operational_medium_lived
+    idempotency: true
+
+  - pluginId: mutual-time
+    command: mutual-time.event.read
+    version: 1.0.0
+    description: Public read of one event by its shareable slug (title, description, status, candidate slots, and result after close). Never returns who voted or their picks; a signed-in approved member's own picks are added for hydration only.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      event:
+        type: object
+      viewer:
+        type: object
+    dataAccess:
+      - mutual_time_events
+      - mutual_time_votes
+    purpose: scheduling_event_read
+    retentionClass: derived_short_lived
+    idempotency: true
