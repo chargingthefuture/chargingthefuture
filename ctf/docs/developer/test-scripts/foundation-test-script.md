@@ -296,3 +296,10 @@ of these, it is already tracked, not a new bug:
   server-side inside the page — so the mobile screen omits the snapshot rather than inventing a route.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+
+---
+
+## Notifications
+
+**1.** As member A, start a connection with a provider (member B). Sign in as member B, open the 🔔 notifications tab in the Commons, and confirm a "Someone started a connection with you on Foundation." item appears (unread) with an "Open" pill. This is the durable feed record — the live incoming-call ring is tested separately and is unchanged.
+web ☐

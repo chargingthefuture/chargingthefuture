@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trust-transport/_lib';
 import { TRUST_TRANSPORT_ERROR_CODE } from 'lib/trust-transport/constants';
 import { acceptOffer, insertTrustTransportAudit } from 'lib/trust-transport/repository';
+import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
@@ -54,6 +55,19 @@ export async function POST(request: Request, { params }: RouteProps) {
       targetId: offerId,
       metadata: { requestId, tripId: result.trip.id },
     });
+    // Notify the provider that their transport offer was accepted — best-effort, deduped on the trip
+    // id. The accepter is the requester, so the provider is never the actor.
+    if (result.trip.providerUserId && result.trip.providerUserId !== gate.auth.userId) {
+      await notifySafe({
+        userId: result.trip.providerUserId,
+        sourcePlugin: 'trust-transport',
+        notificationType: 'trust-transport.offer.accepted',
+        category: 'safety',
+        summary: 'Your TrustTransport offer was accepted.',
+        linkPath: '/apps/trust-transport',
+        targetRef: result.trip.id,
+      });
+    }
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'offers_offerid_accept' });

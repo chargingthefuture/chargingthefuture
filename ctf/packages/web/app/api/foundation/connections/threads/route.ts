@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { createConnectionThread, insertFoundationAudit } from 'lib/foundation/repository';
+import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
 
 export async function POST(request: Request) {
@@ -50,6 +51,22 @@ export async function POST(request: Request) {
       targetId: thread.thread.id,
       metadata: { providerId, streamChannelId: thread.thread.streamChannelId },
     });
+
+    // Notify the provider that someone started a connection with them — a durable record in the
+    // notifications feed, deduped on the thread id so it fires once per connection (the getOrCreate
+    // reuse never re-notifies). The live incoming-call ring stays Foundation's own real-time path;
+    // this feed entry is the durable complement, not the ring.
+    if (thread.thread.providerUserId && thread.thread.providerUserId !== gate.auth.userId) {
+      await notifySafe({
+        userId: thread.thread.providerUserId,
+        sourcePlugin: 'foundation',
+        notificationType: 'foundation.connection.started',
+        category: 'safety',
+        summary: 'Someone started a connection with you on Foundation.',
+        linkPath: '/apps/foundation',
+        targetRef: thread.thread.id,
+      });
+    }
 
     return NextResponse.json(
       {
