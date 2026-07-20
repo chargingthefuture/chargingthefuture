@@ -9,6 +9,7 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
+import { interFamily } from '../../components/ui';
 import { BugReportModal } from './BugReportModal';
 
 type ReportAProblemEntryProps = {
@@ -66,8 +67,8 @@ function makeStyles(t: ThemeTokens) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    iconText: { fontSize: 18, fontWeight: '800', color: accent },
-    label: { flex: 1, fontSize: 14, fontWeight: '700', color: t.isComic ? t.textPrimary : '#C4B5FD' },
-    chevron: { fontSize: 20, color: accent },
+    iconText: { fontSize: 18, fontWeight: '800', fontFamily: interFamily('800'), color: accent },
+    label: { flex: 1, fontSize: 14, fontWeight: '700', fontFamily: interFamily('700'), color: t.isComic ? t.textPrimary : '#C4B5FD' },
+    chevron: { fontSize: 20, color: accent, fontFamily: interFamily('400') },
   });
 }
