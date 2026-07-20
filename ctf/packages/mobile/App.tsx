@@ -51,9 +51,10 @@ StreamVideoRN.updateConfig({
   },
 });
 
-// The "SH" brand chip — the mobile counterpart of the web icon-rail logo. Default theme paints the
-// signature purple→cyan gradient (matches web `--ctf-cta-bg`); comic theme flattens to an ink panel
-// with a hard cream border (matches web's comic CTA treatment). Kept small and self-contained.
+// The "TSE" brand chip — the mobile counterpart of the web icon-rail logo (which reads "TSE" for
+// "TI Skills Economy"). Default theme paints the signature purple→cyan gradient (matches web
+// `--ctf-cta-bg`); comic theme flattens to an ink panel with a hard cream border (matches web's comic
+// CTA treatment). Kept small and self-contained.
 function BrandMark({ size = 36 }: { size?: number }) {
   const { tokens } = useTheme();
   const radius = tokens.radiusControl;
@@ -91,7 +92,7 @@ function BrandMark({ size = 36 }: { size?: number }) {
           letterSpacing: 0.5,
         }}
       >
-        SH
+        TSE
       </Text>
     </View>
   );
@@ -282,7 +283,7 @@ function AppShell() {
       <View style={styles.brandRow}>
         <BrandMark />
         <View>
-          <Text style={[styles.wordmark, { color: tokens.textPrimary }]}>Charging The Future</Text>
+          <Text style={[styles.wordmark, { color: tokens.textPrimary }]}>TI Skills Economy</Text>
           <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>Community</Text>
         </View>
       </View>
