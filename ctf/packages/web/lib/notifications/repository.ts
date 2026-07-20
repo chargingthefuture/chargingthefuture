@@ -1,9 +1,11 @@
 import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
+import { sendWebPushToUser } from './push';
 import {
   isNotificationCategory,
   NOTIFICATIONS_MAX_PAGE_SIZE,
   type Notification,
+  type NotificationCategory,
   type NotificationInput,
   type NotificationPreferences,
 } from './types';
@@ -70,11 +72,47 @@ export async function createNotification(input: NotificationInput): Promise<stri
 // notification write) break the underlying action that triggered it. Every per-plugin emit point
 // should call this — ideally after its own transaction has committed — and ignore the result.
 export async function notifySafe(input: NotificationInput): Promise<void> {
+  let createdId: string | null = null;
   try {
-    await createNotification(input);
+    createdId = await createNotification(input);
   } catch (error) {
     reportError(error, { area: 'notifications', op: `emit_${input.notificationType}` });
+    return;
   }
+  // Only send a device push on a genuinely new notification — createNotification returns null when the
+  // event deduped, so a re-emit of the same event never re-pings. The in-app feed row is already
+  // written above regardless.
+  if (!createdId) {
+    return;
+  }
+  try {
+    await maybeSendDevicePush(input);
+  } catch (error) {
+    reportError(error, { area: 'notifications', op: `push_${input.notificationType}` });
+  }
+}
+
+// Category → the matching device-push opt-in field.
+function isCategoryPushEnabled(category: NotificationCategory, prefs: NotificationPreferences): boolean {
+  if (category === 'safety') return prefs.pushSafety;
+  if (category === 'activity') return prefs.pushActivity;
+  return prefs.pushCommunity;
+}
+
+// Send a device push for a just-created notification when the recipient opted that category in. The
+// in-app feed is never gated by this; only the ping is. Discreet (the default) sends a generic ping
+// with no plugin name or content — safe on a shared or monitored lock screen; the tappable detail
+// lives behind sign-in in the feed. `sendWebPushToUser` is itself best-effort and a no-op when VAPID
+// is unconfigured, so this never throws in a way that matters.
+async function maybeSendDevicePush(input: NotificationInput): Promise<void> {
+  const prefs = await getNotificationPreferences(input.userId);
+  if (!isCategoryPushEnabled(input.category, prefs)) {
+    return;
+  }
+  const payload = prefs.discreetPush
+    ? { title: 'Charging The Future', body: 'You have a new update.', data: { path: input.linkPath ?? '/' } }
+    : { title: 'Charging The Future', body: input.summary, data: { path: input.linkPath ?? '/' } };
+  await sendWebPushToUser(input.userId, payload);
 }
 
 export async function listNotifications(userId: string, limit: number): Promise<Notification[]> {
