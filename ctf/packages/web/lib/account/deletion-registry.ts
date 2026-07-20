@@ -79,6 +79,18 @@ const retain = (table: string, note: string, reviewNote?: string): OwnedTable =>
 
 export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
+    slug: 'notifications',
+    name: 'Notifications',
+    dataSummary: 'Your notifications feed and your device-push preferences.',
+    // Notifications are cross-cutting (they reference other plugins), not a standalone service the
+    // member can join/leave, so there is no per-service deletion scope — they clear with the account.
+    serviceScopeSupported: false,
+    tables: [
+      del('notifications', 'user_id', 'Your notifications.'),
+      del('notification_preferences', 'user_id', 'Your device-push preferences.'),
+    ],
+  },
+  {
     slug: 'chyme',
     name: 'Chyme',
     dataSummary: 'Your Chyme chat messages and room membership.',

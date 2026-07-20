@@ -11,6 +11,7 @@ import type { ChatMessage, ComicStreamItem, ShellCurrentUser, ShellStats } from 
 import { useHomeChat } from './use-home-chat';
 import { ComicAnswerCard, ComicPendingCard } from './comic-cards';
 import { AnnouncementCard } from './announcement-card';
+import { NotificationsPanel } from './notifications-panel';
 import { ChatReactionRow } from './chat-reaction-row';
 import { ComicConsentModal } from './comic-consent-modal';
 import { formatScaledValue } from './shell-format';
@@ -284,6 +285,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
   }, [typingUsers]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // The 🔔 notifications center replaces the message stream + composer when open. It is a separate
+  // feed (not a filter of the chat), so it is local UI state here rather than in the chat hook.
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Tapping a quoted-reply block jumps to the original message (a common chat behavior): find the
@@ -416,6 +420,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         </section>
       ) : null}
 
+      {notificationsOpen ? (
+        <NotificationsPanel />
+      ) : (
       <div className={styles.chatMessages} ref={messagesContainerRef}>
         {(isLoading || isFilterRefreshing) && !hasContent ? (
           <p className={styles.chatFootnote}>
@@ -584,6 +591,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         })}
         <div ref={messagesEndRef} />
       </div>
+      )}
 
       {/* Concierge "ask what you need" chips — persistent (shown whether or not the chat already has
           messages), so a member can always tap one. Unlike the old hidden chips (#471) that merely
@@ -598,9 +606,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
             two stream filters read as a matched pair of small glyph pills. */}
         <button
           type="button"
-          className={mentionsOnly ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterBtnActive}` : styles.mentionsFilterBtn}
-          onClick={toggleMentionsOnly}
-          aria-pressed={mentionsOnly}
+          className={mentionsOnly && !notificationsOpen ? `${styles.mentionsFilterBtn} ${styles.mentionsFilterBtnActive}` : styles.mentionsFilterBtn}
+          onClick={() => { setNotificationsOpen(false); toggleMentionsOnly(); }}
+          aria-pressed={mentionsOnly && !notificationsOpen}
           aria-label={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
           title={mentionsOnly ? 'Show all messages' : 'Show only messages that mention you'}
         >
@@ -611,15 +619,28 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
             official updates that scrolled off the recent page. */}
         <button
           type="button"
-          className={announcementsOnly ? `${styles.announcementsFilterBtn} ${styles.announcementsFilterBtnActive}` : styles.announcementsFilterBtn}
-          onClick={toggleAnnouncementsOnly}
-          aria-pressed={announcementsOnly}
+          className={announcementsOnly && !notificationsOpen ? `${styles.announcementsFilterBtn} ${styles.announcementsFilterBtnActive}` : styles.announcementsFilterBtn}
+          onClick={() => { setNotificationsOpen(false); toggleAnnouncementsOnly(); }}
+          aria-pressed={announcementsOnly && !notificationsOpen}
           aria-label={announcementsOnly ? 'Show all messages' : 'Show only announcements'}
           title={announcementsOnly ? 'Show all messages' : 'Show only announcements'}
         >
           <span aria-hidden="true">📣</span>
         </button>
-        {starterPrompts.map((prompt) => (
+        {/* Notifications center — the 🔔 chip opens the member's cross-plugin notifications feed in
+            place of the chat stream (a separate view, not a filter). Styled like the filter chips so
+            the three read as a row of glyph pills. */}
+        <button
+          type="button"
+          className={notificationsOpen ? `${styles.notificationsFilterBtn} ${styles.notificationsFilterBtnActive}` : styles.notificationsFilterBtn}
+          onClick={() => setNotificationsOpen((open) => !open)}
+          aria-pressed={notificationsOpen}
+          aria-label={notificationsOpen ? 'Back to the conversation' : 'Show your notifications'}
+          title={notificationsOpen ? 'Back to the conversation' : 'Show your notifications'}
+        >
+          <span aria-hidden="true">🔔</span>
+        </button>
+        {notificationsOpen ? null : starterPrompts.map((prompt) => (
           <button
             key={prompt}
             type="button"
@@ -632,6 +653,10 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         ))}
       </div>
 
+      {/* Composer + helpers hide while the notifications center is open — you read notifications
+          there, you don't post into them. The chip row above stays so 🔔 can toggle back. */}
+      {notificationsOpen ? null : (
+      <>
       {/* @comic mention affordance + helper copy (per the locked design / naming rules). On phones
           the standalone "@comic" chip duplicated the "@comic" in the helper text, so the chip is
           dropped and the line is relabeled to name the assistant and its human-in-the-loop review. */}
@@ -719,6 +744,8 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         {isLive ? 'Human-in-the-loop AI support and community support channel.' : 'Support channel keeps syncing as new messages arrive.'}{' '}
         <a href="/guidelines" style={{ color: 'inherit', textDecoration: 'underline' }}>Community guidelines</a>
       </p>
+      </>
+      )}
 
       <ComicConsentModal open={consentModalOpen} onConfirm={() => void confirmConsent()} onDismiss={dismissConsent} />
     </div>

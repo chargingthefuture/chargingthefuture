@@ -1,0 +1,98 @@
+# Notifications center — command contracts.
+# A cross-plugin, member-facing notifications feed plus per-member device-push opt-ins. The in-app
+# feed is always available to a signed-in member; only device push is gated by preferences.
+# Producers (per-plugin emit points) call the internal repository directly and are not HTTP commands.
+
+contracts:
+  - pluginId: notifications
+    command: notifications.list
+    version: 1.0.0
+    description: Read the requesting member's own notifications feed (newest first) and unread count.
+    inputSchema:
+      limit:
+        type: number
+        required: false
+    outputSchema:
+      notifications:
+        type: array
+        items: object
+      unreadCount:
+        type: number
+    dataAccess:
+      - notifications
+    purpose: member_self_service
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: notifications
+    command: notifications.read.mark
+    version: 1.0.0
+    description: Mark one of the requesting member's own notifications read. Idempotent.
+    inputSchema:
+      notificationId:
+        type: string
+        required: true
+    outputSchema:
+      notificationId:
+        type: string
+    dataAccess:
+      - notifications
+    purpose: acknowledgement_tracking
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: notifications
+    command: notifications.read.mark-all
+    version: 1.0.0
+    description: Mark all of the requesting member's unread notifications read.
+    inputSchema: {}
+    outputSchema:
+      marked:
+        type: number
+    dataAccess:
+      - notifications
+    purpose: acknowledgement_tracking
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: notifications
+    command: notifications.preferences.read
+    version: 1.0.0
+    description: Read the requesting member's device-push opt-ins. Defaults are all-off, discreet-on.
+    inputSchema: {}
+    outputSchema:
+      preferences:
+        type: object
+    dataAccess:
+      - notification_preferences
+    purpose: member_self_service
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: notifications
+    command: notifications.preferences.update
+    version: 1.0.0
+    description: >
+      Update the requesting member's device-push opt-ins. Only device push is gated by these; the
+      in-app feed is unaffected. A missing field keeps its current value.
+    inputSchema:
+      pushSafety:
+        type: boolean
+        required: false
+      pushActivity:
+        type: boolean
+        required: false
+      pushCommunity:
+        type: boolean
+        required: false
+      discreetPush:
+        type: boolean
+        required: false
+    outputSchema:
+      preferences:
+        type: object
+    dataAccess:
+      - notification_preferences
+    purpose: member_self_service
+    retentionClass: transactional_long_lived
+    idempotency: true

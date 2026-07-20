@@ -1,0 +1,40 @@
+# Notifications center — access policy contracts.
+# Every command is scoped to the requesting member's own rows. A member can only read and mark their
+# own notifications and can only read/update their own preferences — enforced server-side from the
+# authenticated session, never from a client-supplied user id.
+
+accessPolicies:
+  - command: notifications.list
+    minUnlockTier: support_only
+    requireUsername: false
+    ownershipScope: self
+    csrf: not_required   # read-only GET
+    notes: Returns only rows where notifications.user_id = the authenticated member.
+
+  - command: notifications.read.mark
+    minUnlockTier: support_only
+    requireUsername: false
+    ownershipScope: self
+    csrf: required
+    notes: The update is scoped to (id, user_id = caller); a non-owner match yields 404.
+
+  - command: notifications.read.mark-all
+    minUnlockTier: support_only
+    requireUsername: false
+    ownershipScope: self
+    csrf: required
+
+  - command: notifications.preferences.read
+    minUnlockTier: support_only
+    requireUsername: false
+    ownershipScope: self
+    csrf: not_required
+
+  - command: notifications.preferences.update
+    minUnlockTier: support_only
+    requireUsername: false
+    ownershipScope: self
+    csrf: required
+    notes: >
+      Push opt-ins default off; discreet push defaults on. The in-app feed is never gated by these —
+      this command only affects whether the member's device is pinged and how much the ping reveals.
