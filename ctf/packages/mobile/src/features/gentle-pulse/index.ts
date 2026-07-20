@@ -1,1 +1,0 @@
-export { GentlePulse } from './GentlePulse';

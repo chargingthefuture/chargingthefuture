@@ -2,41 +2,20 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import {
   AppState,
+  BackHandler,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  type StyleProp,
-  type ViewStyle,
 } from 'react-native';
 import { ChymeRoom } from './src/features/chyme';
-import { ComicReviewDashboard } from './src/features/comic';
-import { HubHome } from './src/features/hub';
-import { DirectoryList, AdminDirectory, DirectoryProfileEdit } from './src/features/directory';
-import { Feed } from './src/features/feed';
-import { Announcements } from './src/features/announcements';
-import { WorkforceDashboard, AdminWorkforce } from './src/features/workforce';
-import { SkillsHunt, AdminSkillsHunt } from './src/features/skills-hunt';
-import { Foundation, FoundationInstantCallController, AdminFoundation } from './src/features/foundation';
-import { Lighthouse, AdminLighthouse } from './src/features/lighthouse';
-import { SocketRelay, AdminSocketRelay } from './src/features/socket-relay';
-import { TrustTransport, AdminTrustTransport } from './src/features/trust-transport';
-import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-programming';
-import { Mood, type MoodNavDest } from './src/features/mood';
-import { GentlePulse } from './src/features/gentle-pulse';
-import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly-performance';
-import { Gdp } from './src/features/gdp';
-import { ServiceCredits, AdminServiceCredits } from './src/features/service-credits';
-import { LevelUp, AdminLevelUp } from './src/features/level-up';
-import { Unlock, AdminUnlock } from './src/features/unlock';
+import { Unlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
-import { SkillsTaxonomy } from './src/features/skills-taxonomy';
-import { Beacon } from './src/features/beacon';
-import { RecurringActivity } from './src/features/recurring-activity';
 import { AccountData } from './src/features/account-data';
 import { BlockedMembers } from './src/features/blocks';
+import { ReportAProblemEntry } from './src/features/bug-reporting';
 import {
   useFonts,
   Inter_400Regular,
@@ -46,7 +25,7 @@ import {
   Inter_800ExtraBold,
   Inter_900Black,
 } from '@expo-google-fonts/inter';
-import { AuthProvider, useAuth } from './src/features/trust-transport/auth-context';
+import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
@@ -118,103 +97,33 @@ function BrandMark({ size = 36 }: { size?: number }) {
   );
 }
 
-// Emoji glyph for a nav pill, mirroring web's per-plugin tile emoji. Admin keys reuse their base
-// plugin's glyph; a few non-plugin keys get their own.
+// Emoji glyph for a nav pill, mirroring web's per-plugin tile emoji. Non-plugin keys get their own.
 function keyEmoji(key: FeatureKey): string {
   const special: Partial<Record<FeatureKey, string>> = {
-    home: '⚡',
     'account-data': '🗄️',
     'blocked-members': '🚫',
-    'comic-review': '🤖',
+    'bug-report': '🐞',
   };
   if (special[key]) return special[key] as string;
-  const base = key.replace(/-admin$/, '');
-  return getPluginEmoji(base);
+  return getPluginEmoji(key);
 }
 
 // Accent for a nav pill's active state — the plugin's own accent, so each app keeps its colour
 // identity in the nav (matches web). Non-plugin keys fall back to the neutral accent.
 function keyAccent(key: FeatureKey, theme: ThemeName): string {
-  const base = key.replace(/-admin$/, '');
-  return getAppAccent(base, theme);
+  return getAppAccent(key, theme);
 }
 
-type FeatureKey =
-  | 'home'
-  | 'chyme'
-  | 'beacon'
-  | 'recurring-activity'
-  | 'skills-taxonomy'
-  | 'directory'
-  | 'directory-admin'
-  | 'directory-profile-edit'
-  | 'feed-announcements'
-  | 'workforce'
-  | 'skills-hunt'
-  | 'foundation'
-  | 'lighthouse'
-  | 'socket-relay'
-  | 'trust-transport'
-  | 'trust-transport-admin'
-  | 'peer-programming'
-  | 'mood'
-  | 'gentle-pulse'
-  | 'weekly-performance'
-  | 'weekly-performance-admin'
-  | 'gdp'
-  | 'service-credits'
-  | 'service-credits-admin'
-  | 'level-up'
-  | 'unlock'
-  | 'unlock-admin'
-  | 'account-data'
-  | 'blocked-members'
-  | 'comic-review'
-  | 'peer-programming-admin'
-  | 'socket-relay-admin'
-  | 'foundation-admin'
-  | 'skills-hunt-admin'
-  | 'lighthouse-admin'
-  | 'workforce-admin'
-  | 'level-up-admin';
+// The native Android app carries only the small keep-list (Clerk auth wall, Chyme live audio, bug
+// reporting, and settings/account); everything else is served by the web app. See
+// `.claude/rules/105-web-android-feature-parity-rules.mdc`.
+type FeatureKey = 'chyme' | 'account-data' | 'blocked-members' | 'bug-report';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
-  { key: 'home', label: 'Home' },
   { key: 'chyme', label: 'Chyme' },
-  { key: 'beacon', label: 'Beacon' },
-  { key: 'recurring-activity', label: 'Recurring Activity' },
-  { key: 'skills-taxonomy', label: 'Skills Taxonomy' },
-  { key: 'directory', label: 'Directory' },
-  { key: 'directory-admin', label: 'Directory Admin' },
-  { key: 'feed-announcements', label: 'Feed+Announcements' },
-  { key: 'workforce', label: 'Workforce' },
-  { key: 'skills-hunt', label: 'SkillsHunt' },
-  { key: 'foundation', label: 'Foundation' },
-  { key: 'lighthouse', label: 'LightHouse' },
-  { key: 'socket-relay', label: 'SocketRelay' },
-  { key: 'trust-transport', label: 'TrustTransport' },
-  { key: 'trust-transport-admin', label: 'TrustTransport Admin' },
-  { key: 'peer-programming', label: 'PeerProgramming' },
-  { key: 'mood', label: 'Mood' },
-  { key: 'gentle-pulse', label: 'GentlePulse' },
-  { key: 'weekly-performance', label: 'Weekly Performance' },
-  { key: 'weekly-performance-admin', label: 'Weekly Performance Admin' },
-  { key: 'gdp', label: 'GDP' },
-  { key: 'service-credits', label: 'ServiceCredits' },
-  { key: 'service-credits-admin', label: 'ServiceCredits Admin' },
-  { key: 'level-up', label: 'LevelUp' },
-  { key: 'unlock', label: 'Unlock' },
-  { key: 'unlock-admin', label: 'Unlock Admin' },
   { key: 'account-data', label: 'Account & Data' },
   { key: 'blocked-members', label: 'Blocked members' },
-  { key: 'comic-review', label: 'AI Review' },
-  { key: 'peer-programming-admin', label: 'PeerProgramming Admin' },
-  { key: 'socket-relay-admin', label: 'SocketRelay Admin' },
-  { key: 'foundation-admin', label: 'Foundation Admin' },
-  { key: 'skills-hunt-admin', label: 'SkillsHunt Admin' },
-  { key: 'lighthouse-admin', label: 'LightHouse Admin' },
-  { key: 'workforce-admin', label: 'Workforce Admin' },
-  { key: 'level-up-admin', label: 'LevelUp Admin' },
+  { key: 'bug-report', label: 'Report a problem' },
 ];
 
 export default function App() {
@@ -237,105 +146,44 @@ export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        {/* The instant-call controller is mounted once at the app root, inside
-            AuthProvider (it reads the signed-in member) so it can both place a ring
-            from any provider's "Connect now" and poll the incoming-call inbox so a
-            member being rung sees an in-app answer/decline anywhere in the app
-            (Foundation instant 1:1 call, issue #808). */}
-        <FoundationInstantCallController>
-          <AppShell />
-        </FoundationInstantCallController>
+        <AppShell />
       </ThemeProvider>
     </AuthProvider>
   );
 }
 
 // Maps each navigation key to the screen it renders. A plain lookup table (no
-// branching) keeps the per-render selection trivial; the rendered output is
-// identical to the previous switch. `setSelected` is threaded through only for
-// the directory screen, which navigates to the foundation screen on tap.
+// branching) keeps the per-render selection trivial.
 type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
 
-function buildFeatureViews(
-  setSelected: (_next: FeatureKey) => void,
-  feedStackStyle: StyleProp<ViewStyle>,
-): FeatureRenderers {
+function buildFeatureViews(): FeatureRenderers {
   return {
-    home: () => <HubHome />,
     chyme: () => <ChymeRoom />,
-    beacon: () => <Beacon />,
-    'recurring-activity': () => <RecurringActivity />,
-    'skills-taxonomy': () => <SkillsTaxonomy />,
-    directory: () => (
-      <DirectoryList
-        onNavigateToFoundation={() => setSelected('foundation')}
-        onEditProfile={() => setSelected('directory-profile-edit')}
-      />
-    ),
-    'directory-admin': () => <AdminDirectory />,
-    'directory-profile-edit': () => (
-      <DirectoryProfileEdit
-        onClose={() => setSelected('directory')}
-        onSaved={() => setSelected('directory')}
-      />
-    ),
-    'feed-announcements': () => (
-      <ScrollView contentContainerStyle={feedStackStyle}>
-        <Feed />
-        <Announcements />
-      </ScrollView>
-    ),
-    workforce: () => <WorkforceDashboard />,
-    'skills-hunt': () => <SkillsHunt />,
-    foundation: () => <Foundation />,
-    lighthouse: () => <Lighthouse />,
-    'socket-relay': () => <SocketRelay />,
-    'trust-transport': () => <TrustTransport />,
-    'trust-transport-admin': () => <AdminTrustTransport />,
-    'peer-programming': () => <PeerProgramming />,
-    mood: () => (
-      // Mood's "Talk to someone" support links route to two other top-level plugin
-      // screens; MoodNavDest ('directory' | 'foundation') is a subset of FeatureKey, so
-      // the shell's setSelected drives the navigation directly.
-      <Mood onNavigate={(dest: MoodNavDest) => setSelected(dest)} />
-    ),
-    'gentle-pulse': () => <GentlePulse />,
-    'weekly-performance': () => <WeeklyPerformance />,
-    'weekly-performance-admin': () => <AdminWeeklyPerformance />,
-    gdp: () => <Gdp />,
-    'service-credits': () => <ServiceCredits />,
-    'service-credits-admin': () => <AdminServiceCredits />,
-    'level-up': () => <LevelUp />,
-    unlock: () => <Unlock />,
-    'unlock-admin': () => <AdminUnlock />,
     'account-data': () => <AccountData />,
     'blocked-members': () => <BlockedMembers />,
-    'comic-review': () => <ComicReviewDashboard />,
-    'peer-programming-admin': () => <AdminPeerProgramming />,
-    'socket-relay-admin': () => <AdminSocketRelay />,
-    'foundation-admin': () => <AdminFoundation />,
-    'skills-hunt-admin': () => <AdminSkillsHunt />,
-    'lighthouse-admin': () => <AdminLighthouse />,
-    'workforce-admin': () => <AdminWorkforce />,
-    'level-up-admin': () => <AdminLevelUp />,
+    'bug-report': () => (
+      <ScrollView contentContainerStyle={styles.bugReportStack}>
+        <ReportAProblemEntry />
+      </ScrollView>
+    ),
   };
 }
 
 // Result of the client-side Unlock check. `walled` mirrors the web redirect in
 // app/page.tsx: a signed-in non-admin whose tier is neither approved_full nor
-// locked_support_only cannot reach the plugin navigator.
+// locked_support_only cannot reach the app.
 type UnlockGate = { loading: boolean; walled: boolean };
 
 function AppShell() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const { tokens, theme } = useTheme();
-  const [selected, setSelected] = useState<FeatureKey>('home');
+  const [selected, setSelected] = useState<FeatureKey>('chyme');
 
   const isAdmin = Boolean(user?.isAdmin);
 
   // Client-side Unlock wall. The server 403 gates are the real enforcement; this
   // only mirrors the web redirect so a not-yet-approved member does not see the
-  // plugin navigator. Defaults to not-walled and fails open on any fetch error.
+  // app shell. Defaults to not-walled and fails open on any fetch error.
   const [unlockGate, setUnlockGate] = useState<UnlockGate>({ loading: false, walled: false });
   const fetchSeq = useRef(0);
 
@@ -385,11 +233,30 @@ function AppShell() {
     return () => sub.remove();
   }, [refreshUnlockGate]);
 
+  // Android hardware back. The app is a flat pill navigator with no screen stack, so give back a
+  // predictable meaning: from any secondary pill (settings, blocked members, report a problem) go
+  // back to Chyme, the home surface; from Chyme, let Android do its default (leave the app). This
+  // replaces the old behavior where back exited the app from anywhere. Note: "navigating away
+  // without closing" — the case that must not drop a member from a live room — is pressing HOME or
+  // switching apps (which backgrounds the app; the Chyme foreground service keeps the audio and the
+  // presence timers alive). Back is an explicit "leave", so it does not need to preserve the call.
+  useEffect(() => {
+    const onBack = () => {
+      if (selected !== 'chyme') {
+        setSelected('chyme');
+        return true; // handled — do not exit
+      }
+      return false; // on Chyme: let Android leave the app
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
+    return () => sub.remove();
+  }, [selected]);
+
   const featureView = useMemo(() => {
-    const renderers = buildFeatureViews(setSelected, styles.feedStack);
+    const renderers = buildFeatureViews();
     const render = renderers[selected];
-    // Every FeatureKey has an entry; the fallback preserves the previous switch's
-    // default (Chyme) for any unexpected value.
+    // Every FeatureKey has an entry; the fallback preserves the default (Chyme)
+    // for any unexpected value.
     return render ? render() : <ChymeRoom />;
   }, [selected]);
 
@@ -403,9 +270,9 @@ function AppShell() {
   }
 
   // Unlock wall: a signed-in non-admin whose tier is neither approved_full nor
-  // locked_support_only sees the Unlock screen full-screen instead of the
-  // plugin navigator, matching the web redirect to /plugin/unlock. A successful
-  // submission re-runs the check so an approval mid-session lets them through.
+  // locked_support_only sees the Unlock screen full-screen instead of the app
+  // shell, matching the web redirect to /plugin/unlock. A successful submission
+  // re-runs the check so an approval mid-session lets them through.
   if (unlockGate.walled) {
     return <Unlock onStatusChanged={refreshUnlockGate} />;
   }
@@ -451,6 +318,10 @@ function AppShell() {
       </ScrollView>
 
       <View style={styles.content}>{featureView}</View>
+
+      <Text style={[styles.webHint, { color: tokens.textSecondary }]}>
+        The rest of the app is on the web — app.chargingthefuture.com
+      </Text>
       <StatusBar style={tokens.isComic ? 'light' : 'auto'} />
     </SafeAreaView>
   );
@@ -512,8 +383,15 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 10,
   },
-  feedStack: {
+  bugReportStack: {
     gap: 12,
     paddingBottom: 24,
+  },
+  webHint: {
+    fontSize: 11,
+    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
+    textAlign: 'center',
+    paddingVertical: 8,
   },
 });

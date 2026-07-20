@@ -9,7 +9,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
-import { usePluginAuth } from '../peer-programming/usePluginAuth';
+import { usePluginAuth } from './usePluginAuth';
 import {
   fetchExperimentSplit,
   fetchSubmissions,

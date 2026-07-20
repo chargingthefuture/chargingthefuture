@@ -63,7 +63,16 @@ for (const contract of parityContracts.plugins) {
     process.exit(1);
   }
 
-  if (!Array.isArray(mobileFeatureDirs) || mobileFeatureDirs.length === 0) {
+  if (!Array.isArray(mobileFeatureDirs)) {
+    console.error(`Web/Android parity check failed. ${slug} must declare mobileFeatureDirs as an array.`);
+    process.exit(1);
+  }
+
+  // Under the narrowed-Android-scope policy (rule 105) the native app carries only a small
+  // keep-list; a web-only plugin (requiresMobileSurface: false) is served by the web app and may
+  // therefore declare an empty mobileFeatureDirs. The non-empty requirement applies only when the
+  // plugin still requires a native Android surface.
+  if (contract.requiresMobileSurface === true && mobileFeatureDirs.length === 0) {
     console.error(`Web/Android parity check failed. ${slug} must declare mobileFeatureDirs.`);
     process.exit(1);
   }

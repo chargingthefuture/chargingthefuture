@@ -1,7 +1,0 @@
-export { WorkforceDashboard } from './WorkforceDashboard';
-export { WorkforceLoading } from './WorkforceLoading';
-export { WorkforceEmpty } from './WorkforceEmpty';
-export { WorkforcePublic } from './WorkforcePublic';
-export { WorkforceStatCard } from './WorkforceStatCard';
-export { WorkforceProfileCard } from './WorkforceProfileCard';
-export { AdminWorkforce } from './AdminWorkforce';

@@ -9,26 +9,26 @@
     },
     {
       "slug": "skills-taxonomy",
-      "mobileFeatureDirs": ["skills-taxonomy"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "directory",
-      "mobileFeatureDirs": ["directory", "contributor-access"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "workforce",
-      "mobileFeatureDirs": ["workforce"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "skills-hunt",
-      "mobileFeatureDirs": ["skills-hunt"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
@@ -39,92 +39,92 @@
     },
     {
       "slug": "foundation",
-      "mobileFeatureDirs": ["foundation"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "lighthouse",
-      "mobileFeatureDirs": ["lighthouse"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "socket-relay",
-      "mobileFeatureDirs": ["socket-relay"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "trust-transport",
-      "mobileFeatureDirs": ["trust-transport"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "peer-programming",
-      "mobileFeatureDirs": ["peer-programming"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "mood",
-      "mobileFeatureDirs": ["mood"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "gentle-pulse",
-      "mobileFeatureDirs": ["gentle-pulse"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "weekly-performance",
-      "mobileFeatureDirs": ["weekly-performance"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "gdp",
-      "mobileFeatureDirs": ["gdp"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "service-credits",
-      "mobileFeatureDirs": ["service-credits"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "level-up",
-      "mobileFeatureDirs": ["level-up"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "click-log",
-      "mobileFeatureDirs": ["click-log"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "trust",
-      "mobileFeatureDirs": ["trust"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": false
     },
     {
       "slug": "what-works",
-      "mobileFeatureDirs": ["what-works"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "contributions",
-      "mobileFeatureDirs": ["contributions"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": false
     },
     {
@@ -135,14 +135,14 @@
     },
     {
       "slug": "beacon",
-      "mobileFeatureDirs": ["beacon"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": true
     },
     {
       "slug": "recurring-activity",
-      "mobileFeatureDirs": ["recurring-activity"],
-      "requiresMobileSurface": true,
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
       "requiresExplicitWebShell": false
     }
   ]
