@@ -53,6 +53,24 @@ not be dropped from the room, and the audio must keep playing.
 > This can only be confirmed on a real device build and is a **required release gate**. Source review
 > is not enough.
 
+## AN-BC — Back Channel: free 1:1 audio sidebar (spec #1746)
+
+Back Channel is a casual 1:1 audio call with another member who is in the same room right now. Needs a
+second test member in the same room.
+
+1. In a live Chyme room with member B present, tap **Back Channel** on B's participant tile.
+2. Expect: your tile shows "Invite sent…"; B sees a bottom sheet ("wants a Back Channel") with
+   **Accept** / **Decline** — B is not cold-rung into a live call.
+3. Have B tap **Accept**. Expect: a full-screen 1:1 call opens on both devices and you can hear each
+   other. Confirm the **Foundation note** appears ("For calls with ServiceCredits attached, use
+   Foundation instead") — there is **no** credit/tip control anywhere in the call.
+4. **Background check (required release gate):** with the call live, press **Home**. Expect: the call
+   audio **keeps playing** (it reuses the Chyme foreground service). Return and confirm the call is
+   still live. Same class of check as AN-4 — real EAS build only, not Expo Go.
+5. Tap **Hang up**. Expect: the call ends for both; there is no call history, no re-contact, no chat.
+6. Confirm a Back Channel action never appears on your **own** tile, and is hidden for a **blocked**
+   member (either direction).
+
 ## AN-5 — Back button
 
 1. From Chyme, tap the **Report a problem**, **Account & Data**, or **Blocked members** pill.

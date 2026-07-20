@@ -14,12 +14,25 @@ export const CHYME_MAX_TIP_AMOUNT = 10000;
 // once their last_seen_at falls outside it (so a hard disconnect boots them automatically).
 export const CHYME_PRESENCE_TTL_SECONDS = 45;
 
+// A Back Channel invite only counts while both members are still in the room. An accepted call is
+// separately kept alive by its own heartbeat (below) — leaving the room does not end a live call.
+// A pending invite that is not accepted within this window lapses server-side.
+export const CHYME_BACK_CHANNEL_INVITE_TTL_SECONDS = 45;
+// A live Back Channel call the app stopped heart-beating (both tabs gone) is reaped after this window,
+// so a call whose participants both vanished cannot linger as "active" forever.
+export const CHYME_BACK_CHANNEL_CALL_TTL_SECONDS = 90;
+
 export const CHYME_ERROR_CODE = {
   invalidPayload: 'CHYME_INVALID_PAYLOAD',
   streamUnavailable: 'CHYME_STREAM_UNAVAILABLE',
   persistenceUnavailable: 'CHYME_PERSISTENCE_UNAVAILABLE',
   internalError: 'CHYME_INTERNAL_ERROR',
   csrfDenied: 'CHYME_CSRF_DENIED',
+  // Back Channel specific
+  backChannelBlocked: 'CHYME_BACK_CHANNEL_BLOCKED',
+  backChannelNotInRoom: 'CHYME_BACK_CHANNEL_NOT_IN_ROOM',
+  backChannelNotFound: 'CHYME_BACK_CHANNEL_NOT_FOUND',
+  backChannelInvalidState: 'CHYME_BACK_CHANNEL_INVALID_STATE',
 } as const;
 
 export type ChymeErrorCode = (typeof CHYME_ERROR_CODE)[keyof typeof CHYME_ERROR_CODE];

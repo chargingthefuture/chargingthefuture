@@ -17,6 +17,8 @@ import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, chymeHandle, initials, type CurrentUser } from './chyme-shared';
 import { ChymeControls } from './chyme-controls';
 import { ChymeTipButton } from './chyme-tip-dialog';
+import { useBackChannel, type BackChannelController } from './chyme-back-channel';
+import { ChymeBackChannelLayer, ChymeBackChannelButton } from './chyme-back-channel-layer';
 import { reportError } from 'lib/observability/report';
 import type { ChymeJoinResponse } from 'lib/chyme/types';
 
@@ -77,6 +79,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
+  const backChannel = useBackChannel(currentUser, true);
 
   useEffect(() => {
     // If the browser has no WebRTC (Safari Lockdown Mode, some hardened/older browsers), the Stream
@@ -165,60 +168,77 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
     };
   }, [status]);
 
+  // Back Channel (spec #1746): a free 1:1 audio sidebar with another member in this room. The controller
+  // polls for invites and owns the active call; the layer renders the incoming prompt + active panel as a
+  // fixed overlay, so it stays put even while the room reconnects.
+  const backChannelLayer = (
+    <ChymeBackChannelLayer controller={backChannel} currentUser={currentUser} isMobile={isMobile} />
+  );
+
   if (status === 'unsupported') {
     return (
-      <ChymeAudioFrame
-        showChat={showChat}
-        chatPanel={chatPanel}
-        isMobile={isMobile}
-        onLeave={onLeave}
-        stage={
-          <div style={{ fontSize: 14, lineHeight: 1.6, maxWidth: 460 }}>
-            <div style={{ color: '#FBBF24', fontWeight: 700, marginBottom: 6 }}>
-              Live audio isn’t available in this browser
+      <>
+        <ChymeAudioFrame
+          showChat={showChat}
+          chatPanel={chatPanel}
+          isMobile={isMobile}
+          onLeave={onLeave}
+          stage={
+            <div style={{ fontSize: 14, lineHeight: 1.6, maxWidth: 460 }}>
+              <div style={{ color: '#FBBF24', fontWeight: 700, marginBottom: 6 }}>
+                Live audio isn’t available in this browser
+              </div>
+              <div style={{ color: t.SUBTLE }}>
+                The audio room needs WebRTC, which this browser has turned off. On iPhone or iPad this
+                usually means Safari <strong>Lockdown Mode</strong> is on. You can still read and send chat
+                here. To listen or speak, turn off Lockdown Mode for this site (Safari address bar →{' '}
+                <strong>aA</strong> → Website Settings) or open the room in another browser.
+              </div>
             </div>
-            <div style={{ color: t.SUBTLE }}>
-              The audio room needs WebRTC, which this browser has turned off. On iPhone or iPad this
-              usually means Safari <strong>Lockdown Mode</strong> is on. You can still read and send chat
-              here. To listen or speak, turn off Lockdown Mode for this site (Safari address bar →{' '}
-              <strong>aA</strong> → Website Settings) or open the room in another browser.
-            </div>
-          </div>
-        }
-      />
+          }
+        />
+        {backChannelLayer}
+      </>
     );
   }
 
   if (status !== 'joined' || !client || !call) {
     return (
-      <ChymeAudioFrame
-        showChat={showChat}
-        chatPanel={chatPanel}
-        isMobile={isMobile}
-        onLeave={onLeave}
-        stage={
-          <div style={{ color: status === 'error' ? '#F87171' : t.FAINT, fontSize: 14 }}>
-            {status === 'error'
-              ? (errorMessage ?? 'Could not connect to the audio room.')
-              : 'Connecting to the audio room…'}
-          </div>
-        }
-      />
-    );
-  }
-
-  return (
-    <StreamVideo client={client}>
-      <StreamCall call={call}>
-        <ChymeAudioRoomLive
+      <>
+        <ChymeAudioFrame
           showChat={showChat}
           chatPanel={chatPanel}
           isMobile={isMobile}
           onLeave={onLeave}
-          raisedHandUserIds={raisedHandUserIds}
+          stage={
+            <div style={{ color: status === 'error' ? '#F87171' : t.FAINT, fontSize: 14 }}>
+              {status === 'error'
+                ? (errorMessage ?? 'Could not connect to the audio room.')
+                : 'Connecting to the audio room…'}
+            </div>
+          }
         />
-      </StreamCall>
-    </StreamVideo>
+        {backChannelLayer}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <StreamVideo client={client}>
+        <StreamCall call={call}>
+          <ChymeAudioRoomLive
+            showChat={showChat}
+            chatPanel={chatPanel}
+            isMobile={isMobile}
+            onLeave={onLeave}
+            raisedHandUserIds={raisedHandUserIds}
+            backChannel={backChannel}
+          />
+        </StreamCall>
+      </StreamVideo>
+      {backChannelLayer}
+    </>
   );
 }
 
@@ -267,12 +287,14 @@ function ChymeAudioRoomLive({
   isMobile,
   onLeave,
   raisedHandUserIds,
+  backChannel,
 }: {
   showChat: boolean;
   chatPanel: ReactNode;
   isMobile: boolean;
   onLeave: () => void;
   raisedHandUserIds: ReadonlySet<string>;
+  backChannel: BackChannelController;
 }) {
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
@@ -330,6 +352,7 @@ function ChymeAudioRoomLive({
               participant={participant}
               localHandRaised={handRaised}
               raisedHandUserIds={raisedHandUserIds}
+              backChannel={backChannel}
             />
           ))}
         </div>
@@ -355,10 +378,12 @@ function ChymeSpeakerTile({
   participant,
   localHandRaised = false,
   raisedHandUserIds,
+  backChannel,
 }: {
   participant: StreamVideoParticipant;
   localHandRaised?: boolean;
   raisedHandUserIds: ReadonlySet<string>;
+  backChannel: BackChannelController;
 }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
@@ -436,7 +461,12 @@ function ChymeSpeakerTile({
       >
         {isGuest ? 'listening' : publishingAudio ? 'speaking' : 'muted'}
       </span>
-      {!isSelf && !isGuest ? <ChymeTipButton recipientUserId={clerkUserId} recipientName={name} /> : null}
+      {!isSelf && !isGuest ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <ChymeTipButton recipientUserId={clerkUserId} recipientName={name} />
+          <ChymeBackChannelButton recipientUserId={clerkUserId} controller={backChannel} />
+        </div>
+      ) : null}
     </div>
   );
 }
