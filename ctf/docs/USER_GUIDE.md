@@ -8,22 +8,22 @@ Below, each app has a short summary, a few notes on what a member can do, and si
 
 ## Directory
 
-_Last updated: 2026-07-18_
+_Last updated: 2026-07-20_
 
-A list of people and the skills they hold — members and community-nominated profiles alike.
+A list of members and the skills they hold.
 
-Directory lists people and the skills they hold. Some profiles are made by members themselves. Others are community-generated: a member nominated someone who does not have an account yet, so the profile carries a "Community generated" badge. Signed in, you see every active, listed profile.
+Directory is a list of members and their skills. Open Directory to see their profiles. Each profile shows a member's job title, sector, and skills. You can browse and read profiles even if you don't have one yourself.
 
-Open a profile to read the person's name, job title, sector, and skills. They are fellow community members sharing their skills, not a formal service. If a community-generated profile is yours, you can claim it as your own.
+Some profiles are made by members themselves. Others are community-generated: a member nominated someone who does not have an account yet, so the profile carries a "Community generated" badge. Signed in, you see every active, listed profile. If a community-generated profile is yours, you can claim it as your own.
 
-Directory only shows people. It does not message, book, or transact — those actions live in other apps.
+Directory only lists members and their skills so you can find and read them. It does not message, book, or transact, and it is not where members offer their skills for exchange — offering skills happens in Foundation.
 
 **How to use it**
 
 1. Open Directory while signed in. The list of profiles loads.
-2. Search by name or skill, or filter by sector, to find someone.
+2. Search by name, skill, or location, or filter by sector, to find someone.
 3. Open a profile to read their name, job title, sector, and skills.
-4. Create your own profile, or claim a community-generated one that is yours, so others can find you.
+4. You don't need a profile to browse. Create your own if you want to be listed, or claim a community-generated one that is yours.
 
 ## Foundation
 

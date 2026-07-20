@@ -37,7 +37,10 @@ can't-ship-broken checks. Member role unless noted.
    spinner or an error — even if you have no profile of your own. → web ☐ mobile ☐ android ☐
 2. **Profile detail reads.** Open a member's profile. Name, job title, sector, and skills render. → web ☐ mobile ☐ android ☐
 3. **No transact controls.** Confirm there is no "Message", "Direct Chat", "Book Session", or
-   availability control anywhere on the Directory surface — those belong to Foundation. → web ☐ mobile ☐ android ☐
+   availability control anywhere on the Directory surface — those belong to Foundation. Also confirm
+   the copy frames Directory as "members and the skills they hold" (a list to browse and read), and
+   does **not** describe members as "sharing" or "offering" their skills — offering skills is
+   Foundation, and Directory includes unclaimed community-generated profiles. → web ☐ mobile ☐ android ☐
 4. **Not public.** Signed out, the Directory plugin route does not expose member profile data; there
    is no anonymous projection route. → web ☐ mobile ☐ android ☐
 5. **No verification over-claim.** Nowhere on the Directory (browse hero, header, or the signed-out
