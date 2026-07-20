@@ -333,6 +333,16 @@ React Native app). A user-facing UI change is "complete" only when the phone-wid
 too, not just desktop. (The older `Parity Status: web+android complete` is still accepted by the gate
 so older PRs don't break, but new PRs should use the three-part line.)
 
+**Android app is narrowed to Chyme (owner decision, 2026-07-20 — see rule 105).** The native Android
+app now carries only Clerk auth, Chyme (and any feature the Chyme plugin links to), bug reporting, and
+settings / account; everything else is served by the installable web app (PWA). So for a **web-only**
+change to any feature outside that keep-list — the common case now — the "android" part of the line is
+satisfied because the app intentionally has no Android surface for that feature. Use the same
+`Parity Status: web + mobile-responsive + android complete` line and add a one-liner in the body:
+`Android: out of scope (web-only per rule 105)`. Only a change to a keep-list surface (Clerk, Chyme,
+bug reporting, settings) still needs its Android side built in the same PR. **Do not** add React
+Native screens for non-keep-list features.
+
 ```
 Parity Ticket: <GitHub issue URL or #issue-number>
 ```
