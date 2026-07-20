@@ -124,6 +124,84 @@ export async function postChymeTip(toUserId: string, amount: number, message?: s
   });
 }
 
+// --- Back Channel (free 1:1 audio sidebar inside a live Chyme room, spec #1746) ---------------------
+// Casual 1:1 audio with another member who is in the same room right now. Consent-gated (invite/accept),
+// block-aware, room-bound, no credits, no history. Mirrors the web client exactly.
+
+export type ChymeBackChannelState = {
+  incomingInvite: { callId: string; fromUserId: string; fromUsername: string | null } | null;
+  outgoingInvite: { callId: string; toUserId: string; toUsername: string | null } | null;
+  activeCall: {
+    callId: string;
+    streamCallId: string;
+    role: 'initiator' | 'recipient';
+    otherUserId: string;
+    otherUsername: string | null;
+    startedAtIso: string;
+  } | null;
+};
+
+export type ChymeBackChannelJoinResponse = {
+  ok: true;
+  callId: string;
+  streamCallId: string;
+  streamApiKey: string;
+  streamUserId: string;
+  streamToken: string;
+};
+
+export async function getBackChannelState(): Promise<ChymeBackChannelState> {
+  return authedFetchJson('/api/chyme/back-channel/state');
+}
+
+export async function postBackChannelInvite(recipientUserId: string): Promise<{ ok: true; callId: string }> {
+  return authedFetchJson('/api/chyme/back-channel/invite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify({ recipientUserId }),
+  });
+}
+
+export async function postBackChannelAccept(callId: string): Promise<ChymeBackChannelJoinResponse> {
+  return authedFetchJson('/api/chyme/back-channel/accept', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify({ callId }),
+  });
+}
+
+export async function postBackChannelJoin(callId: string): Promise<ChymeBackChannelJoinResponse> {
+  return authedFetchJson('/api/chyme/back-channel/join', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify({ callId }),
+  });
+}
+
+export async function postBackChannelDecline(callId: string): Promise<{ ok: true }> {
+  return authedFetchJson('/api/chyme/back-channel/decline', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify({ callId }),
+  });
+}
+
+export async function postBackChannelLeave(callId: string): Promise<{ ok: true }> {
+  return authedFetchJson('/api/chyme/back-channel/leave', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify({ callId }),
+  });
+}
+
+export async function postBackChannelHeartbeat(callId: string): Promise<{ ok: true }> {
+  return authedFetchJson('/api/chyme/back-channel/heartbeat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify({ callId }),
+  });
+}
+
 export async function deleteChymeProfile(): Promise<ChymeDeletionResponse> {
   return authedFetchJson('/api/account/chyme-profile', { method: 'DELETE' });
 }
