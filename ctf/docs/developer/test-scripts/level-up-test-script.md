@@ -236,6 +236,23 @@ Result: web ☐
 
 ---
 
+### LU-10b — Dispute open blocked on an enrollment you are not party to
+
+**Role:** member · **Surfaces:** web (API)
+**Precondition:** Signed in as seed trainee 2. Have trainee 1's seed-cohort `enrollmentId` (from LU-3); trainee 2 is not enrolled in and not the trainer of that cohort.
+
+**Steps:**
+1. Call `POST /api/level-up/disputes` with trainee 1's `enrollmentId`, a title, a description, and an idempotency key (include the `x-ctf-csrf: 1` header).
+
+**Expected:**
+- The request is rejected with **403** (`level_up_forbidden`) — trainee 2 is neither the learner nor the assigned trainer on that enrollment.
+- No dispute row is created, and trainee 1's milestone validations are unchanged (none flipped to `disputed`).
+- The same open request succeeds when made by trainee 1 (the learner), the assigned trainer, or an admin.
+
+Result: web ☐
+
+---
+
 ### LU-11 — Public shell copy accuracy (unauthenticated)
 
 **Role:** unauthenticated · **Surfaces:** web, android
@@ -448,9 +465,11 @@ Result: web ☐
 
 **Steps:**
 1. Call `POST /api/level-up/disputes/[disputeId]/resolve` with the dispute ID from LU-10, a resolution comment, and an idempotency key.
+2. If the resolution includes a credit adjustment, replay the exact same request (same idempotency key) once more.
 
 **Expected:**
 - Returns the dispute ID and `status: resolved`.
+- The replay with the same idempotency key returns the same stored response and does **not** apply the credit adjustment a second time (the recipient's balance moves once, not twice).
 - Attempting to resolve the same dispute a second time returns an error indicating the dispute is no longer open (not a second resolution).
 
 Result: web ☐

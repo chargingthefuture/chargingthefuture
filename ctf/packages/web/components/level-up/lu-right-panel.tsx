@@ -62,12 +62,14 @@ export function LevelUpRightPanel({
   enrollments,
   pendingValidations,
   isAdmin,
+  isTrainer = false,
   onBrowse,
   onValidate,
 }: {
   enrollments: Enrollment[];
   pendingValidations: PendingValidation[];
   isAdmin: boolean;
+  isTrainer?: boolean;
   onBrowse: () => void;
   onValidate: (validation: PendingValidation) => void;
 }) {
@@ -96,7 +98,7 @@ export function LevelUpRightPanel({
             enrollments.map((enr) => <EnrollmentRow key={enr.cohortId} enr={enr} />)
           )}
 
-          {isAdmin && pendingValidations.length > 0 && (
+          {(isAdmin || isTrainer) && pendingValidations.length > 0 && (
             <ValidationPanel pending={pendingValidations} onValidate={onValidate} />
           )}
         </div>
