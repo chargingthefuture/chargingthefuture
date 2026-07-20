@@ -69,3 +69,13 @@ self.addEventListener('notificationclick', function (event) {
     }),
   );
 });
+
+/* Fetch pass-through (owner decision, 2026-07-20): a no-op fetch handler so this worker qualifies
+ * the site as an installable PWA on Android (the install prompt wants a service worker that
+ * controls the page). It does NOT cache or rewrite anything — every request goes to the network
+ * unchanged — so it cannot serve out-of-date content or interfere with auth. Offline caching can be
+ * added later behind an explicit policy; for now the app behaves exactly as it does without a
+ * worker, plus it is installable and can receive push. */
+self.addEventListener('fetch', function () {
+  // Intentionally empty: no respondWith(), so the browser handles the request normally.
+});

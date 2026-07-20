@@ -11,7 +11,7 @@ import { getLevelUpTokens } from './lu-shared';
 // served through the shared theme tokens (default theme returns the exact shipped hex).
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-const HIGHLIGHTS = ['Free for all survivors', 'Earn credits while learning', 'Trainer-led cohorts'];
+const HIGHLIGHTS = ['Free for all survivors', 'Earn badges and completion bonuses', 'Trainer-led cohorts'];
 
 // Behind the lock overlay the mockup shows blurred sample cohort cards. A public
 // shell has no session and there is no public cohort feed, so the locked region
@@ -62,7 +62,7 @@ function DesktopLevelUpPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
           Earn skills, earn credits —<br /><span style={{ color: t.ACCENT }}>learn alongside other survivors</span>
         </h1>
         <p style={{ margin: 0, fontSize: 15, color: t.SUBTLE, maxWidth: 520 }}>
-          Cohort-based courses across tech, finance, trades, and life skills. Complete milestones to earn ServiceCredits. Trainers are survivor-advocates themselves.
+          Cohort-based courses across tech, finance, trades, and life skills. Earn ServiceCredits through badges and completion bonuses as you progress. Trainers — survivor-advocates themselves — earn a credit split for validating your milestones.
         </p>
         <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
           {HIGHLIGHTS.map((f) => (
@@ -104,7 +104,7 @@ function MobileLevelUpPublic({ signInUrl, verifyUrl }: { signInUrl: string; veri
           <BookOpen size={20} color={t.ACCENT} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>LevelUp</span>
         </div>
-        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Cohort-based courses across tech, finance, trades, and life skills. Complete milestones to earn ServiceCredits.</p>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Cohort-based courses across tech, finance, trades, and life skills. Earn ServiceCredits through badges and completion bonuses. Trainers earn a credit split for validating your milestones.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {HIGHLIGHTS.map((f) => (
             <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

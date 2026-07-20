@@ -1,7 +1,7 @@
 "use client";
 
 import { Search, CheckCircle, ExternalLink, Send } from "lucide-react";
-import { BIO_MAX, type Tab } from "./sh-shared";
+import { BIO_MAX, type Tab, type SkillsHuntRound } from "./sh-shared";
 import { SkillsPicker } from "./sh-skills-picker";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { useTheme } from '@/hooks/useTheme';
@@ -175,6 +175,35 @@ function NominationFields({ form }: { form: ScoutFormModel }) {
   );
 }
 
+// Shows which round the nomination is for (the Scout tab is the landing screen, so
+// without this the member never sees the round). If more than one round is active,
+// a picker lets them choose which one they're nominating for.
+function RoundHeader({ activeRound, rounds, onSelectRound }: {
+  activeRound: SkillsHuntRound | null;
+  rounds: SkillsHuntRound[];
+  onSelectRound: (id: string) => void;
+}) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
+  if (!activeRound) return null;
+  const roundWindow = `${new Date(activeRound.startsAtIso).toLocaleDateString()} → ${new Date(activeRound.endsAtIso).toLocaleDateString()}`;
+  return (
+    <div style={{ marginBottom: 18, padding: "12px 14px", borderRadius: 12, background: `${t.ACCENT}0C`, border: `1px solid ${t.ACCENT}25`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 11, color: t.FAINT, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Nominating for round</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>{activeRound.name} <span style={{ fontSize: 11, fontWeight: 600, color: t.ACCENT }}>· {activeRound.status}</span></div>
+        <div style={{ fontSize: 12, color: t.MUTED, marginTop: 2 }}>{roundWindow}</div>
+      </div>
+      {rounds.length > 1 && (
+        <select value={activeRound.id} onChange={(e) => onSelectRound(e.target.value)} aria-label="Choose a round"
+          style={{ padding: "8px 12px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", cursor: "pointer", maxWidth: "100%" }}>
+          {rounds.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+        </select>
+      )}
+    </div>
+  );
+}
+
 function NominationForm({ form }: { form: ScoutFormModel }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
@@ -219,12 +248,18 @@ function NominationForm({ form }: { form: ScoutFormModel }) {
 
 export function SkillsHuntScoutTab({
   noActiveRound,
+  activeRound,
+  rounds,
+  onSelectRound,
   submitted,
   form,
   onReset,
   onNavTab,
 }: {
   noActiveRound: boolean;
+  activeRound: SkillsHuntRound | null;
+  rounds: SkillsHuntRound[];
+  onSelectRound: (id: string) => void;
   submitted: boolean;
   form: ScoutFormModel;
   onReset: () => void;
@@ -233,9 +268,12 @@ export function SkillsHuntScoutTab({
   if (noActiveRound) return <NoActiveRound />;
   if (submitted) return <SubmittedState onReset={onReset} onViewLeaderboard={() => onNavTab("leaderboard")} />;
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
-      <NominationForm form={form} />
-      <WhyThisWorks />
+    <div>
+      <RoundHeader activeRound={activeRound} rounds={rounds} onSelectRound={onSelectRound} />
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
+        <NominationForm form={form} />
+        <WhyThisWorks />
+      </div>
     </div>
   );
 }
