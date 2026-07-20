@@ -46,6 +46,7 @@ The following structures are forbidden because they turn the inventory into a TO
 - "Risks and Known Technical Debt" lists used as a holding pen for unimplemented features. The "Gaps and Known Technical Debt" section (see Required Content) is for genuine ambiguity — unanswered design questions, intentional deferrals with stakeholder sign-off, or invariants worth flagging — not for "we haven't built X yet."
 - "Production Readiness Snapshot" or similar audit-style sections that contradict the rest of the document. The whole inventory is the production-readiness picture by definition.
 - "Deferred to Android later" or any framing that treats web↔Android parity as a future state. Per [105-web-android-feature-parity-rules.mdc](105-web-android-feature-parity-rules.mdc), 100% parity is the baseline.
+- **Vague or abstract feature descriptions in the generator-grounding sections** (User Features, Intent and Outcome, Scope and Boundary). Product-speak like "authenticated dashboard/profile experience", "discovery surface", "workflow", or "capabilities" is forbidden as a stand-in for a concrete feature — it makes automated generators invent content (see "Downstream Generators — Write Concretely" below).
 
 ## Required Inventory Content
 
@@ -64,6 +65,41 @@ Each inventory must contain, in this order:
 11. **Change Log** — date-stamped entries summarizing inventory edits and the PRs that drove them.
 12. **Build Checklist** — the ordered, dependency-based task list/tracker for building the plugin to spec (no phases; see [CLAUDE.md](../../CLAUDE.md) "Task Planning — No Phases"). Items may be checked off as work lands.
 
+## Downstream Generators — Write Concretely, Never Vague (Critical)
+
+Some inventory sections are not just documentation — they are the **only** facts fed to automated
+generators, which are instructed to write nothing the source does not say. When the source is vague,
+the generator does not produce vague output; it produces **invented** output — it fills the gap with
+plausible-but-wrong features or framing. A vague inventory is therefore worse than a terse one.
+
+Known generators and their grounding sources (keep this list current as generators are added):
+
+- **User guide** (`ctf/scripts/generate-user-guide.mjs`, workflow `generate-user-guide.yml`) — builds
+  the public `/guide` page from exactly two blocks per plugin: the inventory's **User Features**
+  section and the test script's **Core smoke** steps. Nothing else reaches the model.
+
+Rules for every generator-grounding section (at minimum **User Features**, **Intent and Outcome**,
+**Scope and Boundary**, and the test script's **Core smoke**):
+
+- **Name the concrete thing.** Say exactly what a member can do and what they see, in plain
+  member-facing words. ✅ "Open the Directory to see members' profiles; each shows their job title,
+  sector, and skills; you can browse without a profile of your own." ❌ "Authenticated
+  dashboard/profile experience" / "discovery experience".
+- **No abstract product-speak** ("experience", "workflow", "capabilities", "surface", "solution") as a
+  stand-in for a feature. If a human reader cannot tell precisely what the feature does from the
+  sentence, a generator cannot either — and will guess.
+- **Every line must trace to shipped code** (a real route/screen). Do not imply features that do not
+  exist; the generator will repeat the implication as fact.
+- **State boundaries in the words you want repeated.** If a capability belongs to another plugin, say
+  so plainly and name it (e.g. "Directory lists skills; it does not offer or share them — that is
+  Foundation"), so the generator does not blur the two plugins together.
+- **Prefer the phrasing you would accept in the user guide.** The generator paraphrases, but the safest
+  input is already-correct plain language. Write the section as if a newcomer will read it verbatim.
+
+When you edit a generator-grounding section, re-read it as an outsider: could a reader (or a model)
+only-given these words invent a feature, a claim, or an intent the product does not have? If yes, make
+it concrete before the PR.
+
 ## Lifecycle Requirements
 - On plugin completion (MVP or release-candidate milestone), create the feature inventory before marking work complete.
 - On every accepted feature change (add/remove/behavioral change), update the corresponding feature inventory in the same PR.
@@ -75,6 +111,7 @@ Each inventory must contain, in this order:
   - Inventory is not updated for changed feature scope.
   - Inventory naming does not distinguish active inventories from legacy reference docs.
   - Inventory uses any of the Forbidden Inventory Patterns (phases, planned sections, technical-debt-as-TODO, deferred parity).
+  - A generator-grounding section (User Features, Intent and Outcome, Scope and Boundary) is vague or abstract enough that a downstream generator could invent content — see "Downstream Generators — Write Concretely".
   - Inventory disagrees with the code shipped in the PR.
 
 ## Conflict Resolution
