@@ -474,7 +474,7 @@ export const DirectoryList = ({
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search providers, skills…"
+            placeholder="Search name, skill, or location…"
             placeholderTextColor={tokens.textMuted}
             value={query}
             onChangeText={setQuery}
