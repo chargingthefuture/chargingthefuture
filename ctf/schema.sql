@@ -5035,7 +5035,7 @@ CREATE TABLE IF NOT EXISTS contributions_runtime_config (
   credits_per_usd NUMERIC NOT NULL DEFAULT 10,
   non_monetary_unit_value_usd NUMERIC NOT NULL DEFAULT 1,
   per_user_cycle_credit_cap NUMERIC NOT NULL DEFAULT 300,
-  banner_snooze_months INTEGER NOT NULL DEFAULT 6,
+  banner_snooze_months INTEGER NOT NULL DEFAULT 2,
   banner_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   signal_instructions TEXT NOT NULL DEFAULT '',
   updated_by_user_id TEXT,
@@ -5045,7 +5045,7 @@ ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS id B
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS credits_per_usd NUMERIC NOT NULL DEFAULT 10;
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS non_monetary_unit_value_usd NUMERIC NOT NULL DEFAULT 1;
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS per_user_cycle_credit_cap NUMERIC NOT NULL DEFAULT 300;
-ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS banner_snooze_months INTEGER NOT NULL DEFAULT 6;
+ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS banner_snooze_months INTEGER NOT NULL DEFAULT 2;
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS banner_enabled BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS signal_instructions TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT;
@@ -5067,6 +5067,10 @@ BEGIN
   END IF;
 END
 $contributions_runtime_config_positive_check$;
+-- Migrate the banner snooze from the original 6-month default to 2 months (owner request,
+-- 2026-07-18). Only touches a row still holding the old default; the snooze length is not surfaced
+-- in the admin UI, so any stored 6 is that leftover default, safe to move to the new default.
+UPDATE contributions_runtime_config SET banner_snooze_months = 2, updated_at = NOW() WHERE banner_snooze_months = 6;
 
 -- Per-user fundraiser banner state. Dismissing the banner silently snoozes it for
 -- banner_snooze_months; nothing is shown to the member about the snooze length.

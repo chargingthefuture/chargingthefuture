@@ -4987,7 +4987,7 @@ CREATE TABLE IF NOT EXISTS contributions_runtime_config (
   credits_per_usd NUMERIC NOT NULL DEFAULT 10,
   non_monetary_unit_value_usd NUMERIC NOT NULL DEFAULT 1,
   per_user_cycle_credit_cap NUMERIC NOT NULL DEFAULT 300,
-  banner_snooze_months INTEGER NOT NULL DEFAULT 6,
+  banner_snooze_months INTEGER NOT NULL DEFAULT 2,
   banner_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   signal_instructions TEXT NOT NULL DEFAULT '',
   updated_by_user_id TEXT,
@@ -4997,7 +4997,7 @@ ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS id B
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS credits_per_usd NUMERIC NOT NULL DEFAULT 10;
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS non_monetary_unit_value_usd NUMERIC NOT NULL DEFAULT 1;
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS per_user_cycle_credit_cap NUMERIC NOT NULL DEFAULT 300;
-ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS banner_snooze_months INTEGER NOT NULL DEFAULT 6;
+ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS banner_snooze_months INTEGER NOT NULL DEFAULT 2;
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS banner_enabled BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS signal_instructions TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT;
