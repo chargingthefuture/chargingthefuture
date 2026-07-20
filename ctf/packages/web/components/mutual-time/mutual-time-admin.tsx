@@ -142,14 +142,14 @@ export function MutualTimeAdmin() {
         <section style={card}>
           <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 14px' }}>Create a new event</h2>
 
-          <label style={labelStyle}>Title (optional)</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Weekly check-in — when works for everyone?" style={inputStyle} />
+          <label htmlFor="mt-title" style={labelStyle}>Title (optional)</label>
+          <input id="mt-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Weekly check-in — when works for everyone?" style={inputStyle} />
 
-          <label style={labelStyle}>Description (optional)</label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Add context for voters…" style={{ ...inputStyle, resize: 'vertical' }} />
+          <label htmlFor="mt-description" style={labelStyle}>Description (optional)</label>
+          <textarea id="mt-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Add context for voters…" style={{ ...inputStyle, resize: 'vertical' }} />
 
-          <label style={labelStyle}>Where we&apos;ll meet</label>
-          <select value={meetingPlugin} onChange={(e) => setMeetingPlugin(e.target.value)} style={inputStyle}>
+          <label htmlFor="mt-plugin" style={labelStyle}>Where we&apos;ll meet</label>
+          <select id="mt-plugin" value={meetingPlugin} onChange={(e) => setMeetingPlugin(e.target.value)} style={inputStyle}>
             {MUTUAL_TIME_MEETING_PLUGINS.map((p) => (
               <option key={p} value={p}>{meetingPluginName(p)}</option>
             ))}
@@ -158,13 +158,13 @@ export function MutualTimeAdmin() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={labelStyle}>Survey opens (optional)</label>
-              <input type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} style={inputStyle} />
+              <label htmlFor="mt-opens" style={labelStyle}>Survey opens (optional)</label>
+              <input id="mt-opens" type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} style={inputStyle} />
               <p style={{ fontSize: 11, color: t.SUBTLE, margin: '4px 0 0' }}>Leave blank to open immediately.</p>
             </div>
             <div>
-              <label style={labelStyle}>Survey closes (optional)</label>
-              <input type="datetime-local" value={closesAt} onChange={(e) => setClosesAt(e.target.value)} style={inputStyle} />
+              <label htmlFor="mt-closes" style={labelStyle}>Survey closes (optional)</label>
+              <input id="mt-closes" type="datetime-local" value={closesAt} onChange={(e) => setClosesAt(e.target.value)} style={inputStyle} />
               <p style={{ fontSize: 11, color: t.SUBTLE, margin: '4px 0 0' }}>Leave blank to close manually below.</p>
             </div>
           </div>
