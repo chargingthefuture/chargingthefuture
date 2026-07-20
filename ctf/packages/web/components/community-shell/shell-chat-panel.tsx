@@ -698,16 +698,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
             // Emit a typing event on the live channel (no-op in polling-only mode).
             notifyTyping();
           }}
-          onKeyDown={(event) => {
-            // Enter sends; Shift+Enter inserts a line break so members can write paragraphs.
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault();
-              // While the first-use consent modal is open, Enter belongs to the modal ("turn it
-              // on"), not the composer. Sending here would only re-open the already-open modal.
-              if (consentModalOpen) return;
-              void sendMessage();
-            }
-          }}
+          // Enter never sends — it inserts a line break so members can write spaced-out paragraphs
+          // (owner request 2026-07-20). Sending is only via the ➤ button. There is deliberately no
+          // onKeyDown send handler here; do not restore Enter-to-send.
         />
         <button
           type="button"
