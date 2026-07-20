@@ -6,7 +6,10 @@ import { reportError } from 'lib/observability/report';
 
 const adjustSchema = z.object({
   targetUserId: z.string().min(1),
-  amount: z.number(),
+  // A signed amount is allowed (a positive grant, or a negative correction of a mistaken grant),
+  // but zero is a no-op governance event — reject it here for a clean 400 instead of relying on
+  // the repository guard to throw.
+  amount: z.number().refine((value) => value !== 0, { message: 'Amount must not be zero.' }),
   reason: z.string().min(1),
   governanceTicketId: z.string().min(1),
   idempotencyKey: z.string().min(3),
