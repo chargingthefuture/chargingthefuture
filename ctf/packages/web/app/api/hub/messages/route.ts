@@ -61,9 +61,18 @@ function mapTimelineItemToHubMessage(
       }
     : null;
 
-  // Emoji reactions on the underlying community post, resolved server-side for the requesting
-  // member. Non-community messages carry an empty array.
-  const reactions = isCommunity && item.community ? item.community.reactions : [];
+  // Emoji reactions resolved server-side for the requesting member: from the community post for a
+  // peer message, from the announcement for an official one. Other messages carry an empty array.
+  const reactions = isCommunity && item.community
+    ? item.community.reactions
+    : isAnnouncement && item.announcement
+      ? item.announcement.reactions
+      : [];
+
+  // Announcement-only: the id reactions/replies key on, and the reply count for the "N replies"
+  // affordance on the official card. Peer posts and AI answers carry null / 0.
+  const announcementId = isAnnouncement ? item.sourceAnnouncementId : null;
+  const replyCount = isAnnouncement && item.announcement ? item.announcement.replyCount : 0;
 
   return {
     id: item.id,
@@ -77,8 +86,10 @@ function mapTimelineItemToHubMessage(
     text,
     sentAtIso: item.publishedAtIso,
     communityPostId: isCommunity ? item.sourceCommunityPostId : null,
+    announcementId,
     quotedMessage,
     reactions,
+    replyCount,
   };
 }
 
@@ -238,11 +249,15 @@ export async function POST(request: Request) {
       text,
       sentAtIso: result.createdAtIso,
       communityPostId: result.postId,
+      // A composer message is a peer post, never an announcement.
+      announcementId: null,
       // Echo the quote the sender saw so the optimistic message renders it immediately. The
       // next polled read re-resolves it authoritatively from the stored reply_to_post_id.
       quotedMessage: replyToPostId ? echoedQuote : null,
       // A freshly created post has no reactions yet.
       reactions: [],
+      // Peer posts are not replied to through the announcement thread.
+      replyCount: 0,
     };
 
     return NextResponse.json({ ok: true, message }, { status: 201 });
