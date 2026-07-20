@@ -409,6 +409,7 @@ policies:
       tenancy: same_workspace
       parentPostMustExist: required
       fixedEmojiSet: required
+      actorIsNotAuthor: required
     consentRequirements:
       scopes:
         - feed_consumption
@@ -424,6 +425,7 @@ policies:
       - actor_not_authenticated
       - post_not_found
       - reaction_emoji_invalid
+      - cannot_react_to_own_post
 
   - pluginId: feed
     command: feed.announcement.reaction.toggle
@@ -435,6 +437,7 @@ policies:
       tenancy: same_workspace
       announcementMustBePublished: required
       fixedEmojiSet: required
+      actorIsNotAuthor: required
     consentRequirements:
       scopes:
         - feed_consumption
@@ -450,6 +453,7 @@ policies:
       - actor_not_authenticated
       - announcement_not_found
       - reaction_emoji_invalid
+      - cannot_react_to_own_post
 
   - pluginId: feed
     command: feed.announcement.reply.create

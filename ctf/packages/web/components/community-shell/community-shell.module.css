@@ -1027,6 +1027,12 @@
   color: #38BDF8;
 }
 
+/* Read-only reaction pill on the member's own post: shows the count others left, but is not a
+   button — a member may only react to posts they did not author. Default cursor, no hover state. */
+.chatReactionPillStatic {
+  cursor: default;
+}
+
 .chatReactionCount {
   font-size: 11px;
   font-weight: 700;

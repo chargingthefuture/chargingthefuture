@@ -47,7 +47,10 @@ Approved suggestions incorporated:
 3. Link actions and safe external navigation policies.
 4. **Reactions** — members can react to an official announcement with the same fixed emoji quick
    set as a peer post (`FEED_REACTION_EMOJIS`). One reaction per (announcement, member, emoji);
-   tapping the same emoji again removes it. Rendered as chips under the announcement card.
+   tapping the same emoji again removes it. Rendered as chips under the announcement card. A member
+   may only react to content they did **not** author: reacting to your own announcement/post is
+   rejected server-side (`cannot_react_to_own_post`), and the client hides the affordance on own
+   content (the count of others' reactions still shows, read-only).
 5. **Replies** — members can reply to an official announcement. Replies group under the
    announcement as a thread (loaded on demand when the thread is opened) with a "N replies"
    affordance and an inline composer. Reactions and replies are distinct from the Signal-style
@@ -224,6 +227,7 @@ references them, so they are removed here to match the real data model.
 
 ## 11) Change Log
 
+- 2026-07-20: **Restricted reactions to non-authored content.** A member may no longer react to a post/announcement they authored. Enforced authoritatively in `toggleCommunityPostReaction` and `toggleAnnouncementReaction` (`cannot_react_to_own_post` → HTTP 403); the client also hides the reaction affordance on the member's own content (the `ChatReactionRow` `readOnly` mode still shows others' reaction counts). Contract `denyConditions` / `attributePolicies` updated for `feed.community.post.reaction.toggle` and `feed.announcement.reaction.toggle`.
 - 2026-07-20: **Added reactions and replies to official announcements.** Members can now react to an announcement with the fixed emoji quick set and reply to it (previously announcements were one-way). New tables `announcement_reactions` (mirrors `feed_community_post_reactions`) and `announcement_replies` (mirrors `feed_community_replies`, plus `author_username`), both FK → `announcements(id)` `ON DELETE CASCADE` (§4.2). New routes `POST /api/announcements/:announcementId/reactions` (toggle), `GET`/`POST /api/announcements/:announcementId/replies` (§3.2), backed by `toggleAnnouncementReaction`, `replyToAnnouncement`, and `listAnnouncementReplies` in `lib/feed/repository.ts`. The Commons timeline (`listFeedTimeline`) now attaches a per-announcement reaction + reply-count aggregate, carried on the hub message (`announcementId`, `reactions`, `replyCount`) and rendered on the official card (`announcement-card.tsx`); the reaction row was extracted to `chat-reaction-row.tsx` for reuse. New `feed.announcement.reaction.toggle` / `feed.announcement.reply.create` / `feed.announcement.reply.list` command contracts (§3.1). Android parity deferred (the downloadable app is Chyme-only; Commons is served by the mobile-responsive web app).
 - 2026-06-25: **Documented the membership-events route** (inventory-debt burn-down — documentation catch-up, no code change). Added `POST /api/announcements/membership/events` (admin-gated join/leave membership event for audience recalculation; the announcements-namespaced twin of the feed membership-events handler) to §3.2 Admin routes. Verified against the route handler. Removed it from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-05-18: Replaced "Web and Android Delivery Plan (Approved)" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-follow-up language. Renamed "Gaps, Ambiguities, and Known Technical Debt (Current)" to canonical "Gaps and Known Technical Debt" and condensed deprecation note. Updated seed coverage to reference shipping seed script.

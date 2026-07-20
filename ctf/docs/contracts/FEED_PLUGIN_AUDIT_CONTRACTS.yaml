@@ -350,6 +350,7 @@ auditEvents:
         roleCheck: pass_or_fail
         announcementPublishedCheck: pass_or_fail
         fixedEmojiSetCheck: pass_or_fail
+        actorIsNotAuthorCheck: pass_or_fail
     dataClassesAccessed:
       - announcement_reaction_metadata
       - announcement_metadata

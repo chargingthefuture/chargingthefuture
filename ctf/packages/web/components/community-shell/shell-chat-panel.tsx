@@ -545,6 +545,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
                       postId={msg.communityPostId}
                       reactions={msg.reactions}
                       onToggle={(postId, emoji) => void toggleReaction(postId, emoji)}
+                      // A member may only react to posts they did not author. On the member's own
+                      // post the row is read-only: it shows others' reactions but offers no way to add.
+                      readOnly={msg.from === 'user'}
                     />
                   ) : null}
                 </div>

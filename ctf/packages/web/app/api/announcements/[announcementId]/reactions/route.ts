@@ -73,6 +73,12 @@ export async function POST(request: Request, { params }: RouteParams) {
         { status: 400 },
       );
     }
+    if (code === 'cannot_react_to_own_post') {
+      return NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'You can’t react to your own announcement.' },
+        { status: 403 },
+      );
+    }
 
     reportError(error, { area: 'announcements', op: 'toggle_reaction' });
     return NextResponse.json(

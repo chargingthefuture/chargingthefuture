@@ -1839,12 +1839,17 @@ export async function toggleCommunityPostReaction(
   }
 
   return withDbTransaction(async (client) => {
-    const post = await client.query<{ id: string }>(
-      'SELECT id FROM feed_community_posts WHERE id = $1::uuid LIMIT 1',
+    const post = await client.query<{ author_user_id: string }>(
+      'SELECT author_user_id FROM feed_community_posts WHERE id = $1::uuid LIMIT 1',
       [normalizedPostId],
     );
     if (post.rows.length === 0) {
       throw new Error('post_not_found');
+    }
+    // A member may only react to posts they did not author — reacting to your own post is not
+    // allowed. This is the authoritative guard; the client also hides the affordance on own posts.
+    if (post.rows[0].author_user_id === userId) {
+      throw new Error('cannot_react_to_own_post');
     }
 
     const inserted = await client.query<{ id: string }>(
@@ -1895,12 +1900,17 @@ export async function toggleAnnouncementReaction(
   }
 
   return withDbTransaction(async (client) => {
-    const announcement = await client.query<{ id: string }>(
-      "SELECT id FROM announcements WHERE id = $1::uuid AND status = 'published' LIMIT 1",
+    const announcement = await client.query<{ created_by_user_id: string }>(
+      "SELECT created_by_user_id FROM announcements WHERE id = $1::uuid AND status = 'published' LIMIT 1",
       [normalizedId],
     );
     if (announcement.rows.length === 0) {
       throw new Error('announcement_not_found');
+    }
+    // Same rule as peer posts: you may not react to an announcement you authored. Members are never
+    // the author of a Survivor Hub announcement, so this only guards the owner reacting to their own.
+    if (announcement.rows[0].created_by_user_id === userId) {
+      throw new Error('cannot_react_to_own_post');
     }
 
     const inserted = await client.query<{ id: string }>(
