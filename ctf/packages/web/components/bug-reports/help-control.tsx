@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { HelpCircle, AlertCircle } from 'lucide-react';
+import { Bug, AlertCircle } from 'lucide-react';
 import { BugReportModal } from './bug-report-modal';
 import styles from './bug-report-modal.module.css';
 import railStyles from '../community-shell/community-shell.module.css';
 
-// Global "?" Help control for the authenticated shell's icon rail. Clicking it opens
-// a small popover; the popover's one live item, "Report a problem", opens the modal.
+// Global report-a-bug control for the authenticated shell's icon rail (desktop) and phone top bar.
+// It shows a Bug glyph so it matches the mobile plugin header's bug icon (MobileTopActions) — the
+// same feature, identical across breakpoints. Clicking it opens a small popover; the popover's one
+// live item, "Report a problem", opens the modal.
 //
 // The design's popover also showed a "Help center" link, but no help-center URL
 // exists anywhere in the app or config yet, so that item is omitted rather than
@@ -50,11 +52,13 @@ export function HelpControl() {
             : railStyles.iconRailBtn
         }
         onClick={() => setPopoverOpen((open) => !open)}
-        aria-label="Help"
+        aria-label="Report a bug"
         aria-haspopup="menu"
         aria-expanded={popoverOpen}
       >
-        <HelpCircle size={18} />
+        {/* Bug glyph (not a "?"), so this desktop control matches the mobile top bar's bug icon —
+            the two are the same report-a-bug feature and should read identically across breakpoints. */}
+        <Bug size={18} />
       </button>
 
       {popoverOpen && (
