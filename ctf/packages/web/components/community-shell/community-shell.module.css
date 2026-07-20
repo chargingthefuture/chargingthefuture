@@ -631,6 +631,165 @@
   background: rgba(52, 211, 153, 0.2);
 }
 
+/* Reaction + reply affordances under an official announcement. Announcements sit in their own card
+   (not a .chatRow), so the shared "add reaction" button is revealed by hovering the card here. */
+.announcementEngagement {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(52, 211, 153, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.announcementActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.announcementCard:hover .chatReactionAdd {
+  opacity: 1;
+}
+
+/* "N replies" / "Reply" toggle — emerald to match the card, so it reads as the announcement's own
+   affordance rather than the sky-blue peer-chat reply. */
+.announcementReplyToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.08);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #34D399;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.announcementReplyToggle:hover,
+.announcementReplyToggle:focus-visible {
+  background: rgba(52, 211, 153, 0.16);
+  border-color: rgba(52, 211, 153, 0.55);
+}
+
+.announcementReplyToggleActive {
+  background: rgba(52, 211, 153, 0.18);
+  border-color: rgba(52, 211, 153, 0.6);
+}
+
+/* The reply thread that expands under the announcement. Neutral surface so replies read as member
+   voices distinct from the emerald official body above them. */
+.announcementThread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.announcementThreadNote {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ctf-text-muted);
+}
+
+.announcementThreadError {
+  margin: 0;
+  font-size: 12px;
+  color: #F87171;
+}
+
+.announcementReply {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.announcementReplyMeta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.announcementReplyAuthor {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ctf-text);
+}
+
+.announcementReplyTime {
+  font-size: 11px;
+  color: var(--ctf-text-muted);
+}
+
+.announcementReplyBody {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ctf-text-shell);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Inline reply composer at the bottom of the thread. */
+.announcementReplyComposer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.announcementReplyInput {
+  flex: 1;
+  min-height: 36px;
+  max-height: 120px;
+  resize: none;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--ctf-border, rgba(148, 163, 184, 0.25));
+  background: rgba(15, 23, 42, 0.4);
+  color: var(--ctf-text);
+  font-size: 13px;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.announcementReplyInput:focus-visible {
+  outline: none;
+  border-color: rgba(52, 211, 153, 0.55);
+}
+
+.announcementReplySend {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.1);
+  border-radius: 10px;
+  color: #34D399;
+  cursor: pointer;
+  transition: background 0.1s, opacity 0.1s;
+}
+
+.announcementReplySend:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.announcementReplySendActive {
+  background: rgba(52, 211, 153, 0.2);
+}
+
 /* Concierge "ask what you need" chips. Emerald — deliberately NOT the sky-blue
    (#38BDF8) the @comic AI Assistant uses, so a member can tell "route me to a
    feature" apart from "ask the AI". The rail scrolls horizontally instead of

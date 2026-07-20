@@ -441,6 +441,82 @@ contracts:
     idempotency: false
 
   - pluginId: feed
+    command: feed.announcement.reaction.toggle
+    version: 1.0.0
+    description: >-
+      Toggle the requesting member's emoji reaction on an official announcement. The emoji must be
+      in the fixed quick set (👍 ❤️ 😂 🎉 🙏 😢); a second toggle of the same emoji removes the
+      reaction. The announcement must be published. Reactions are stored in our own database.
+    inputSchema:
+      announcementId:
+        type: string
+        required: true
+      emoji:
+        type: string
+        enum: ["👍", "❤️", "😂", "🎉", "🙏", "😢"]
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      reacted:
+        type: boolean
+    dataAccess:
+      - announcement_reactions
+      - announcements
+    purpose: community_engagement
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: feed
+    command: feed.announcement.reply.create
+    version: 1.0.0
+    description: >-
+      Reply to an official announcement. The announcement must be published; the body passes the
+      same moderation as a community post and a per-member rate limit caps reply spam. Replies group
+      under the announcement as a thread.
+    inputSchema:
+      announcementId:
+        type: string
+        required: true
+      body:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      reply:
+        type: object
+    dataAccess:
+      - announcement_replies
+      - announcements
+    purpose: community_engagement
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: feed
+    command: feed.announcement.reply.list
+    version: 1.0.0
+    description: >-
+      List the accepted replies on an official announcement (oldest-first thread order), each author
+      resolved to a display handle with an isMine flag for the requesting member.
+    inputSchema:
+      announcementId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      announcementId:
+        type: string
+      replies:
+        type: array
+    dataAccess:
+      - announcement_replies
+    purpose: community_engagement
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: feed
     command: feed.community.post.delete
     version: 1.0.0
     description: >-

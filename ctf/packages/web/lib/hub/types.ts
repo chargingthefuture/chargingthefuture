@@ -43,11 +43,35 @@ export type HubMessage = {
   // reply must reference — distinct from `id`, which for a polled message is the feed item id.
   // Null for announcements / AI answers, which cannot be replied to as peer posts.
   communityPostId: string | null;
+  // The underlying announcement id (when this message is an official announcement). This is the id
+  // an announcement reaction/reply keys on — distinct from `id`, which for a polled message is the
+  // feed item id. Null for peer posts and AI answers.
+  announcementId: string | null;
   // The peer post this message quotes (Signal-style reply), or null when it is not a reply.
   quotedMessage: HubQuotedMessage | null;
-  // Emoji reactions on this message's underlying community post, ordered by the fixed reaction
-  // set. Always an array; empty for non-community messages and posts with no reactions.
+  // Emoji reactions on this message, ordered by the fixed reaction set. Populated for peer posts
+  // (their community post) and for announcements; always an array, empty when there are none.
   reactions: HubReactionSummary[];
+  // The number of replies on this announcement (announcements only). 0 for peer posts and AI
+  // answers, which are not replied to through the announcement thread.
+  replyCount: number;
+};
+
+// One reply on an official announcement, returned by the announcement replies endpoint. `author`
+// is the display handle resolved server-side (e.g. "@farah" or a stable pseudonym) so the thread
+// renders without a second lookup. `isMine` marks the requesting member's own replies.
+export type HubAnnouncementReply = {
+  id: string;
+  author: string;
+  isMine: boolean;
+  body: string;
+  sentAtIso: string;
+};
+
+export type HubAnnouncementRepliesResponse = {
+  ok: true;
+  announcementId: string;
+  replies: HubAnnouncementReply[];
 };
 
 export type HubMessagesResponse = {

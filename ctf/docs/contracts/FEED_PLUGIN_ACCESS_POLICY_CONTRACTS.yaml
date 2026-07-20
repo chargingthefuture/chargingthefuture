@@ -426,6 +426,81 @@ policies:
       - reaction_emoji_invalid
 
   - pluginId: feed
+    command: feed.announcement.reaction.toggle
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      announcementMustBePublished: required
+      fixedEmojiSet: required
+    consentRequirements:
+      scopes:
+        - feed_consumption
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - announcement_not_found
+      - reaction_emoji_invalid
+
+  - pluginId: feed
+    command: feed.announcement.reply.create
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      contentModeration: required
+      announcementMustBePublished: required
+    consentRequirements:
+      scopes:
+        - feed_consumption
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - announcement_not_found
+      - content_policy_violation
+      - rate_limit_exceeded
+
+  - pluginId: feed
+    command: feed.announcement.reply.list
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+    consentRequirements:
+      scopes:
+        - feed_consumption
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+
+  - pluginId: feed
     command: feed.community.post.delete
     version: 1.0.0
     requiredRoles:

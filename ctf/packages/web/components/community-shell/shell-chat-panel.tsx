@@ -2,16 +2,16 @@
 
 import Link from 'next/link';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { AtSign, Reply, SmilePlus, Trash2, X } from 'lucide-react';
+import { AtSign, Reply, Trash2, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { PublicCommunityPost } from '../../lib/feed/types';
-import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
 import { feedAuthorHandle } from '../../lib/feed/author-handle';
 import type { ChatMessage, ComicStreamItem, ShellCurrentUser, ShellStats } from './shell-types';
 import { useHomeChat } from './use-home-chat';
 import { ComicAnswerCard, ComicPendingCard } from './comic-cards';
 import { AnnouncementCard } from './announcement-card';
+import { ChatReactionRow } from './chat-reaction-row';
 import { ComicConsentModal } from './comic-consent-modal';
 import { formatScaledValue } from './shell-format';
 import styles from './community-shell.module.css';
@@ -228,73 +228,6 @@ function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats
   );
 }
 
-// Compact reaction row under a peer bubble: each emoji that has at least one reaction shows as a
-// pill (emoji + count, highlighted when the member reacted), plus a small "add reaction"
-// affordance that reveals the fixed quick set to pick from. Tapping a pill or a picker emoji
-// toggles the reaction. Only rendered for peer posts (which carry a communityPostId). Exported so
-// the gated contributor channel panel reuses it with its own (richer) fixed emoji set.
-export function ChatReactionRow({
-  postId,
-  reactions,
-  onToggle,
-  emojis = FEED_REACTION_EMOJIS,
-}: {
-  postId: string;
-  reactions: ChatMessage['reactions'];
-  onToggle: (postId: string, emoji: string) => void;
-  emojis?: readonly string[];
-}) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const summaries = reactions ?? [];
-
-  return (
-    <div className={styles.chatReactionRow}>
-      {summaries.map((reaction) => (
-        <button
-          key={reaction.emoji}
-          type="button"
-          className={reaction.reactedByMe ? `${styles.chatReactionPill} ${styles.chatReactionPillActive}` : styles.chatReactionPill}
-          onClick={() => onToggle(postId, reaction.emoji)}
-          aria-pressed={reaction.reactedByMe}
-          aria-label={`${reaction.emoji} reaction, ${reaction.count}${reaction.reactedByMe ? ', you reacted' : ''}`}
-        >
-          <span aria-hidden="true">{reaction.emoji}</span>
-          <span className={styles.chatReactionCount}>{reaction.count}</span>
-        </button>
-      ))}
-
-      <button
-        type="button"
-        className={styles.chatReactionAdd}
-        onClick={() => setPickerOpen((open) => !open)}
-        aria-expanded={pickerOpen}
-        aria-label="Add a reaction"
-      >
-        <SmilePlus size={14} />
-      </button>
-
-      {pickerOpen ? (
-        <div className={styles.chatReactionPicker} role="menu" aria-label="Pick a reaction">
-          {emojis.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              className={styles.chatReactionPickerBtn}
-              onClick={() => {
-                onToggle(postId, emoji);
-                setPickerOpen(false);
-              }}
-              aria-label={`React with ${emoji}`}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedChatPanelProps) {
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
   const opportunityValue = Math.max(ECONOMY_TARGET_USD - (stats.gdpValueUsd ?? 0), 0);
@@ -323,6 +256,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
     beginReply,
     cancelReply,
     toggleReaction,
+    toggleAnnouncementReaction,
     deleteMessage,
     mentionsOnly,
     toggleMentionsOnly,
@@ -541,6 +475,10 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
                   body={msg.text}
                   time={msg.time}
                   linkedPlugin={msg.linkedPlugin ?? null}
+                  announcementId={msg.announcementId ?? null}
+                  reactions={msg.reactions}
+                  replyCount={msg.replyCount}
+                  onToggleReaction={(id, emoji) => void toggleAnnouncementReaction(id, emoji)}
                 />
               </Fragment>
             );

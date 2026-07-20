@@ -95,8 +95,10 @@ function mapStoredMessage(message: HubMessage, currentUserId: string): ChatMessa
     announcementTitle: message.title,
     linkedPlugin: message.linkedPlugin ?? null,
     communityPostId: message.communityPostId,
+    announcementId: message.announcementId,
     quotedMessage: message.quotedMessage,
     reactions: message.reactions ?? [],
+    replyCount: message.replyCount,
   };
 }
 
@@ -664,6 +666,43 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     [],
   );
 
+  // Toggle the current member's emoji reaction on an official announcement. Mirrors toggleReaction
+  // but keyed on the announcement id: optimistically flips the chip on every message backed by this
+  // announcement, then POSTs; on failure the optimistic change is reverted. The next fresh history
+  // load reconciles to the authoritative server aggregate.
+  const toggleAnnouncementReaction = useCallback(
+    async (announcementId: string, emoji: string) => {
+      setMessages((previous) =>
+        previous.map((message) =>
+          message.announcementId === announcementId ? applyReactionToggle(message, emoji) : message,
+        ),
+      );
+
+      try {
+        await requestJson<{ ok: true; reacted: boolean }>(
+          `/api/announcements/${encodeURIComponent(announcementId)}/reactions`,
+          {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'x-ctf-csrf': '1',
+            },
+            body: JSON.stringify({ emoji }),
+          },
+        );
+      } catch (reactError) {
+        // Revert the optimistic flip (toggling the same emoji again undoes it).
+        setMessages((previous) =>
+          previous.map((message) =>
+            message.announcementId === announcementId ? applyReactionToggle(message, emoji) : message,
+          ),
+        );
+        setError(reactError instanceof Error ? reactError.message : 'Unable to update your reaction right now.');
+      }
+    },
+    [],
+  );
+
   // Delete one of the member's own peer posts. The product has no edit — to change a post you
   // delete and repost — so this removes the post outright. Optimistically drops it from the stream,
   // then DELETEs; on failure the post is restored and an error is shown. Server enforces author-only.
@@ -822,6 +861,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     beginReply,
     cancelReply,
     toggleReaction,
+    toggleAnnouncementReaction,
     deleteMessage,
     mentionsOnly,
     toggleMentionsOnly,
