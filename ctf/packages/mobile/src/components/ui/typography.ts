@@ -23,6 +23,16 @@ const INTER: Record<string, string> = {
   '900': 'Inter_900Black',
 };
 
+// Resolve the bundled Inter family for a React Native `fontWeight`, so a screen can render the brand
+// typeface at its own existing sizes/weights without re-scaling. RN does not synthesise a bold face
+// from a single family, so the weight must be carried by the family name. Unmapped weights (e.g.
+// 'bold', 'normal', numbers) fall back to regular. Pass the string weight used in the style.
+export function interFamily(weight: TextStyle['fontWeight']): string {
+  if (typeof weight === 'string' && INTER[weight]) return INTER[weight];
+  if (weight === 'bold') return INTER['700'];
+  return INTER['400'];
+}
+
 function scale(fontSize: number, fontWeight: TextStyle['fontWeight'], extra?: TextStyle): TextStyle {
   const fontFamily = typeof fontWeight === 'string' ? INTER[fontWeight] : undefined;
   return { fontSize, fontWeight, ...(fontFamily ? { fontFamily } : {}), ...extra };
