@@ -17,6 +17,7 @@
 // user's deletion still completes. It must never assume it can block the deletion.
 
 import { deleteChymeStreamData } from 'lib/chyme/stream';
+import { deleteBeaconStreamData } from 'lib/beacon/stream';
 import { deleteFoundationStreamData } from 'lib/foundation/stream';
 import { deleteLighthouseStreamData } from 'lib/lighthouse/stream';
 import { deleteSocketRelayStreamData } from 'lib/socket-relay/stream';
@@ -39,11 +40,11 @@ function fromBoolean(label: string, cleanup: (userId: string) => Promise<boolean
 export const externalCleanupRegistry: Readonly<Record<string, ExternalCleanup>> = {
   // Keys are the same plugin slugs used in deletion-registry.ts.
   chyme: fromBoolean('Chyme', deleteChymeStreamData),
+  beacon: fromBoolean('Beacon', deleteBeaconStreamData),
   foundation: fromBoolean('Foundation', deleteFoundationStreamData),
   lighthouse: fromBoolean('Lighthouse', deleteLighthouseStreamData),
   'socket-relay': fromBoolean('SocketRelay', deleteSocketRelayStreamData),
   'trust-transport': fromBoolean('TrustTransport', deleteTrustTransportStreamData),
-  // Beacon still to come — it needs a deletion-registry entry added first (it has none today).
 };
 
 export function getExternalCleanup(slug: string): ExternalCleanup | undefined {
