@@ -180,9 +180,10 @@ export function NotificationsPanel() {
                 device also pings you. All are off unless you turn them on.
               </p>
               {PUSH_TOGGLES.map((toggle) => (
-                <label key={toggle.key} className={styles.notificationsPrefRow}>
+                <label key={toggle.key} className={styles.notificationsPrefRow} aria-label={toggle.label}>
                   <input
                     type="checkbox"
+                    aria-label={toggle.label}
                     checked={prefs[toggle.key]}
                     disabled={savingPref === toggle.key}
                     onChange={() => togglePref(toggle.key)}
@@ -193,9 +194,10 @@ export function NotificationsPanel() {
                   </span>
                 </label>
               ))}
-              <label className={styles.notificationsPrefRow}>
+              <label className={styles.notificationsPrefRow} aria-label="Keep device pings discreet">
                 <input
                   type="checkbox"
+                  aria-label="Keep device pings discreet"
                   checked={prefs.discreetPush}
                   disabled={savingPref === 'discreetPush'}
                   onChange={() => togglePref('discreetPush')}
