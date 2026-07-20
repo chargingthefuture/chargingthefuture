@@ -243,7 +243,7 @@ export const AdminPeerProgramming = () => {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Weekly cohort assignment</Text>
         <Text style={styles.cardMeta}>
-          Forms cohorts of up to 5 from active members and records a notification for each. Running
+          Forms cohorts of up to 12 people from active members and records a notification for each. Running
           again for the same week is safe.
         </Text>
 

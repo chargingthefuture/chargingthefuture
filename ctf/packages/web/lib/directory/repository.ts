@@ -792,6 +792,11 @@ export async function listDirectoryForMember(
             OR regexp_replace(lower(COALESCE(p.last_name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
             OR regexp_replace(lower(COALESCE(p.headline, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
             OR regexp_replace(lower(COALESCE(p.bio, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
+            -- Location is searchable too, so typing a city, state/region, or country (e.g. "California",
+            -- "United States") returns the members there — matching the "searchable by location" promise.
+            OR regexp_replace(lower(COALESCE(p.city, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
+            OR regexp_replace(lower(COALESCE(p.state, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
+            OR regexp_replace(lower(COALESCE(p.country, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
             OR EXISTS (
               SELECT 1
               FROM directory_profile_skills dps_q
@@ -884,6 +889,11 @@ export async function listDirectoryForMember(
             OR regexp_replace(lower(COALESCE(p.last_name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
             OR regexp_replace(lower(COALESCE(p.headline, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
             OR regexp_replace(lower(COALESCE(p.bio, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
+            -- Location is searchable too, so typing a city, state/region, or country (e.g. "California",
+            -- "United States") returns the members there — matching the "searchable by location" promise.
+            OR regexp_replace(lower(COALESCE(p.city, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
+            OR regexp_replace(lower(COALESCE(p.state, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
+            OR regexp_replace(lower(COALESCE(p.country, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
             OR EXISTS (
               SELECT 1
               FROM directory_profile_skills dps_q

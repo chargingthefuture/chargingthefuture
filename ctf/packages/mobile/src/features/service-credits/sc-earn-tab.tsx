@@ -7,10 +7,15 @@ import { LEDGER } from './sc-styles';
 // Credit amounts shown here are platform documentation, not user-specific data.
 // No user-specific balances or transactions are displayed.
 
+// Mirrors the web list (service-credits.constants.ts, owner-confirmed model): the platform only
+// funds a few rewards; the main ongoing way to earn is peer-to-peer — another member sends you
+// credits for real help. The earlier list here (GentlePulse +5, LevelUp cohort +15, Refer +50)
+// promised platform payouts that do not exist and was removed.
 const EARN_WAYS = [
-  { title: 'Complete a GentlePulse session', credits: '+5 credits', color: '#34D399' },
-  { title: 'Attend a LevelUp cohort', credits: '+15 credits', color: '#22C55E' },
-  { title: 'Refer a survivor', credits: '+50 credits', color: '#22C55E' },
+  { title: 'Verify your account', credits: '+100', color: '#22C55E' },
+  { title: 'Help another member (they send you credits)', credits: 'Per exchange', color: '#38BDF8' },
+  { title: 'Take part in SkillsHunt', credits: 'Per round', color: '#FBBF24' },
+  { title: 'Contribute during a fundraiser', credits: 'Varies', color: '#A855F7' },
 ] as const;
 
 const SPEND_APPS = [
