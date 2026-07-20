@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AtSign, Reply, Trash2, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
@@ -284,6 +284,21 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
   }, [typingUsers]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Tapping a quoted-reply block jumps to the original message (a common chat behavior): find the
+  // rendered bubble with that community post id, scroll it into view, and flash a highlight so the
+  // eye lands on it. No-op when the quoted post is not in the loaded window (older than the recent
+  // page) — the snippet in the quote block already shows what was said.
+  const jumpToQuotedPost = useCallback((postId: string | null) => {
+    if (!postId) return;
+    const container = messagesContainerRef.current;
+    const target = container?.querySelector<HTMLElement>(`[data-post-id="${postId}"]`);
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add(styles.chatBubbleFlash);
+    window.setTimeout(() => target.classList.remove(styles.chatBubbleFlash), 1600);
+  }, []);
 
   // Auto-grow the composer as the member types multiple lines (capped, then it scrolls). Runs on
   // every input change — including the reset to '' after a send, which shrinks it back to one line.
@@ -401,7 +416,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         </section>
       ) : null}
 
-      <div className={styles.chatMessages}>
+      <div className={styles.chatMessages} ref={messagesContainerRef}>
         {(isLoading || isFilterRefreshing) && !hasContent ? (
           <p className={styles.chatFootnote}>
             {mentionsOnly ? 'Looking for your mentions…' : announcementsOnly ? 'Loading announcements…' : 'Loading live messages…'}
@@ -495,13 +510,25 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
                 className={msg.from === 'user' ? `${styles.chatRow} ${styles.chatRowUser}` : styles.chatRow}
               >
                 {msg.from === 'hub' ? <div className={styles.chatAvatar} aria-hidden="true">{avatarFromSender(senderName)}</div> : null}
-                <div className={styles.chatBubbleGroup}>
+                <div className={styles.chatBubbleGroup} data-post-id={msg.communityPostId ?? undefined}>
                   <span className={msg.from === 'user' ? `${styles.chatSender} ${styles.chatSenderUser}` : styles.chatSender}>{senderName}</span>
                   {msg.quotedMessage ? (
-                    <div className={styles.chatQuotedBlock}>
-                      <span className={styles.chatQuotedAuthor}>{msg.quotedMessage.author}</span>
-                      <span className={styles.chatQuotedSnippet}>{msg.quotedMessage.snippet}</span>
-                    </div>
+                    msg.quotedMessage.postId ? (
+                      <button
+                        type="button"
+                        className={`${styles.chatQuotedBlock} ${styles.chatQuotedBlockClickable}`}
+                        onClick={() => jumpToQuotedPost(msg.quotedMessage?.postId ?? null)}
+                        aria-label={`Go to the message from ${msg.quotedMessage.author} that this replies to`}
+                      >
+                        <span className={styles.chatQuotedAuthor}>{msg.quotedMessage.author}</span>
+                        <span className={styles.chatQuotedSnippet}>{msg.quotedMessage.snippet}</span>
+                      </button>
+                    ) : (
+                      <div className={styles.chatQuotedBlock}>
+                        <span className={styles.chatQuotedAuthor}>{msg.quotedMessage.author}</span>
+                        <span className={styles.chatQuotedSnippet}>{msg.quotedMessage.snippet}</span>
+                      </div>
+                    )
                   ) : null}
                   <div className={msg.from === 'user' ? `${styles.chatBubble} ${styles.chatBubbleUser}` : `${styles.chatBubble} ${styles.chatBubbleHub}`}>
                     {msg.text}

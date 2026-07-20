@@ -622,7 +622,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     if (!message.communityPostId) return;
     const author = message.senderLabel ?? 'Community member';
     const snippet = message.text.trim().slice(0, 120);
-    setReplyTarget({ postId: message.communityPostId, quote: { author, snippet } });
+    setReplyTarget({ postId: message.communityPostId, quote: { author, snippet, postId: message.communityPostId } });
   }, []);
 
   const cancelReply = useCallback(() => {

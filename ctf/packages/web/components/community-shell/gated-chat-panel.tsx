@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Eye, Reply, Trash2, X } from 'lucide-react';
 import {
   GATED_CHANNEL_DISPLAY_NAME,
@@ -46,6 +46,19 @@ export function GatedChatPanel({ currentUser, isAdmin = false }: GatedChatPanelP
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Tapping a quoted-reply block jumps to the original message (same behavior as the Commons):
+  // find the rendered bubble with that post id, scroll it into view, and flash a highlight.
+  const jumpToQuotedPost = useCallback((postId: string | null) => {
+    if (!postId) return;
+    const container = messagesContainerRef.current;
+    const target = container?.querySelector<HTMLElement>(`[data-post-id="${postId}"]`);
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add(styles.chatBubbleFlash);
+    window.setTimeout(() => target.classList.remove(styles.chatBubbleFlash), 1600);
+  }, []);
 
   // Auto-grow the composer as the member types (same behavior as the Commons composer).
   useEffect(() => {
@@ -87,7 +100,7 @@ export function GatedChatPanel({ currentUser, isAdmin = false }: GatedChatPanelP
         </section>
       ) : null}
 
-      <div className={styles.chatMessages}>
+      <div className={styles.chatMessages} ref={messagesContainerRef}>
         {isLoading && messages.length === 0 ? (
           <p className={styles.chatFootnote}>Loading channel messages…</p>
         ) : null}
@@ -108,15 +121,27 @@ export function GatedChatPanel({ currentUser, isAdmin = false }: GatedChatPanelP
                 {msg.senderLabel.replace(/^@/, '').charAt(0).toUpperCase() || 'C'}
               </div>
             ) : null}
-            <div className={styles.chatBubbleGroup}>
+            <div className={styles.chatBubbleGroup} data-post-id={msg.id}>
               <span className={msg.from === 'user' ? `${styles.chatSender} ${styles.chatSenderUser}` : styles.chatSender}>
                 {msg.senderLabel}
               </span>
               {msg.quotedMessage ? (
-                <div className={styles.chatQuotedBlock}>
-                  <span className={styles.chatQuotedAuthor}>{msg.quotedMessage.author}</span>
-                  <span className={styles.chatQuotedSnippet}>{msg.quotedMessage.snippet}</span>
-                </div>
+                msg.quotedMessage.postId ? (
+                  <button
+                    type="button"
+                    className={`${styles.chatQuotedBlock} ${styles.chatQuotedBlockClickable}`}
+                    onClick={() => jumpToQuotedPost(msg.quotedMessage?.postId ?? null)}
+                    aria-label={`Go to the message from ${msg.quotedMessage.author} that this replies to`}
+                  >
+                    <span className={styles.chatQuotedAuthor}>{msg.quotedMessage.author}</span>
+                    <span className={styles.chatQuotedSnippet}>{msg.quotedMessage.snippet}</span>
+                  </button>
+                ) : (
+                  <div className={styles.chatQuotedBlock}>
+                    <span className={styles.chatQuotedAuthor}>{msg.quotedMessage.author}</span>
+                    <span className={styles.chatQuotedSnippet}>{msg.quotedMessage.snippet}</span>
+                  </div>
+                )
               ) : null}
               <div className={msg.from === 'user' ? `${styles.chatBubble} ${styles.chatBubbleUser}` : `${styles.chatBubble} ${styles.chatBubbleHub}`}>
                 {msg.text}

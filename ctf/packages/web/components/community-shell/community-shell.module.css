@@ -973,6 +973,33 @@
   background: rgba(56, 189, 248, 0.08);
 }
 
+/* Clickable variant: the quote block on a reply is a button that jumps to the original message.
+   Reset the button chrome so it looks identical to the static block, add a text-left alignment and
+   a pointer, and a faint hover to signal it is tappable. */
+.chatQuotedBlockClickable {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  appearance: none;
+  transition: background 0.12s ease;
+}
+
+.chatQuotedBlockClickable:hover {
+  background: rgba(56, 189, 248, 0.16);
+}
+
+/* Brief highlight flash on the target message after a jump, so the eye lands on it. */
+@keyframes ctfChatBubbleFlash {
+  0% { background: rgba(56, 189, 248, 0.28); }
+  100% { background: transparent; }
+}
+
+.chatBubbleFlash {
+  animation: ctfChatBubbleFlash 1.6s ease-out;
+  border-radius: 10px;
+}
+
 .chatQuotedAuthor {
   font-size: 11px;
   font-weight: 700;

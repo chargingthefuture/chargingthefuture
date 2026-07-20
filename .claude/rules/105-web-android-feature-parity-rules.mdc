@@ -1,44 +1,94 @@
-# Web and Android Feature Parity Rules
+# Web and Android Feature Scope Rules
 
 ## Intent
-Ensure every user-facing feature implemented in web is also implemented in Android with equivalent core behavior and safety.
+Define which surfaces the native Android (React Native) app carries, and how the web app covers
+everything else. **Owner decision, 2026-07-20: the native Android app is narrowed to Chyme (live
+audio) plus the few things Chyme needs to run. Everything else is served by the installable web app
+(PWA).** This rule replaces the former "100% web↔Android parity" mandate; that mandate no longer
+applies.
 
-## Scope
-- Applies to `packages/web` and `packages/mobile`.
-- There is **no native iOS app** — native iOS delivery remains out of scope. iOS users are served by the **responsive web app** (see "Responsive web" below). "web↔Android parity" in this rule means feature parity between the Next.js web app and the React Native Android app; it does not imply a native iOS build.
+## Why the change
+The web app is now an installable PWA (`packages/web/app/manifest.ts` + `public/sw.js` + web push):
+members "Add to Home screen" on Android or iOS and get a standalone app icon that opens the Commons
+in its own window and receives push. So the mobile-responsive web app already covers the whole
+product on phones. The one thing the web cannot do well is Chyme's always-on live audio with a
+background/foreground service, so **that** is what the native app is for. Maintaining a second full
+implementation of every plugin in React Native is no longer worth the cost.
 
-## Responsive web (serving iOS and every mobile browser)
-- The web app (`packages/web`) must be **responsive**: it renders the **Desktop** design at wide viewports and the **Mobile** design at narrow (phone) viewports, in the **same** web components (responsive layout / CSS — not a separate route, app, or component set). This is how iOS Safari and every mobile-browser user accesses the product.
-- The `Mobile*` design mockups are the **single source of truth for both** the Android native app **and** the web's mobile breakpoint. A phone layout is the same whether React Native or a ~390px browser paints it. **Do not commission a separate "web responsive" mockup series — there is nothing new to design.** The design agent authors Desktop + `Mobile*` mockups only.
-- Building the web's mobile-responsive layout from the existing `Mobile*` design is an **app / front-end (non-design-agent) responsibility**. A phone breakpoint is not a new design surface and is **not** design-gated by rule 127.
-- Therefore every user-facing UI change lands all three together: the desktop-web layout (Desktop mockup), the **mobile-web responsive layout in the same web components** (Mobile mockup), and the Android implementation (Mobile mockup). Shipping a web feature that only works at desktop width — leaving iOS/mobile-web users a broken or desktop-only view — is a parity gap, not "done".
+## Android app scope — the keep-list (authoritative)
+The native Android app carries ONLY:
 
-## Mandatory — 100% Parity Baseline
+1. **Clerk authentication** — sign-in / sign-up / session (`packages/mobile/src/auth/`). Required so a
+   member can be signed in to use Chyme.
+2. **Chyme** (live audio) — `packages/mobile/src/features/chyme/` and everything it links to. **Any
+   feature reachable from the Chyme plugin (its header, its screens, the things it opens) stays in the
+   app.** Chyme's live-audio background behavior (foreground service so audio keeps playing when the
+   app is backgrounded) is the whole reason the native app exists.
+3. **Bug reporting** — `packages/mobile/src/features/bug-reporting/`, so a member on the app can report
+   a problem.
+4. **Settings / account** — the account/settings surface (theme, sign-out, the shared top-actions the
+   Chyme header shows).
 
-100% web↔Android parity is the baseline state for every user-facing plugin and platform feature. Parity is not a goal, a roadmap item, or a future state — it is a precondition for landing user-facing work.
+Nothing else. If a surface is not on this list and is not required to keep Clerk or Chyme running, it
+does **not** belong in the Android app. It lives on the web app only.
 
-- Any new web user-facing feature must ship its Android implementation in the same PR (or in a strictly coordinated PR pair merged together).
-- Any new Android user-facing feature must ship its web implementation in the same PR (or in a strictly coordinated PR pair merged together).
-- Refactors, behavioral changes, and bug fixes on user-facing surfaces must update both platforms in the same change.
-- Parity is required for all user-facing features: plugin messaging, plugin commands, account settings, consent/privacy controls, safety-critical flows, navigation, and shell chrome.
-- Differences in UI layout are allowed when platform conventions require it, but behavior and outcomes must match.
+## What agents must and must not do
+- **Do not build or maintain Android/React Native parity for any feature outside the keep-list.** New
+  plugins, new plugin features, and changes to existing non-keep-list plugins are **web-only** now.
+  Do not add a React Native screen, feature dir, API client, or `plugin-parity-contracts.json` entry
+  for them.
+- **Do** keep the keep-list surfaces working on Android. A change to Clerk auth, Chyme, bug reporting,
+  or settings must still land its Android side, because those are the surfaces the app ships.
+- If a web change to a non-keep-list feature happens to touch shared mobile infra that Chyme depends
+  on (theme, `authedFetch`, `StreamChatView`, the shell), update that shared infra so Chyme keeps
+  working — but do not resurrect the feature's own Android screen.
+- Deprecated React Native feature code outside the keep-list is being **deleted** (owner decision:
+  deleting is more honest than hiding — hidden screens rot, mislead the next agent, and still have to
+  typecheck; git history and the web app preserve them). Do not re-add deleted screens without an
+  explicit owner instruction to resume parity for that feature.
 
-## Delivery Rules
-- PR descriptions must declare `Parity Status: web + mobile-responsive + android complete`. The CI parity gate enforces this. The three parts are the desktop web layout, the same web app at a phone-width (mobile-responsive) breakpoint, and the Android app — a user-facing UI change is only "complete" when the phone-width web layout is done too, not just desktop. (The older `web+android complete` form is still accepted so existing PRs don't break.)
-- The `Parity Ticket: <issue-or-URL>` escape hatch is reserved for explicit, time-boxed exceptions only. It is not a default option and is not appropriate for new feature work.
-- An exception must include: owner, justification, expiry date, and risk acceptance from the platform owner.
-- An exception is invalid for safety, privacy, compliance, or trauma-informed features — those must be delivered at parity, period.
+## Resuming parity later
+The owner may later decide to resume Android parity for specific features ("maybe when there are a lot
+of issues I can resume android parity outside of chyme"). That is an explicit, per-feature owner
+decision — not a default. Until the owner says so for a named feature, treat that feature as web-only.
 
-## No Phased Rollouts
-- Features are either delivered or not delivered. "Phase 0", "Phase 1", and "we will add Android later" framings are prohibited in PRs, inventories, checklists, design artifacts, and code comments.
-- If a feature cannot be delivered on both platforms in the same change, the feature is not ready to land.
-- This is the parity-specific case of the general no-phases rule in `CLAUDE.md` → "Task Planning — No Phases": break work into an ordered, dependency-based task list, never phase buckets.
+## Responsive web (serving iOS, Android-web, and every mobile browser)
+- The web app (`packages/web`) must be **responsive**: it renders the **Desktop** design at wide
+  viewports and the **Mobile** design at narrow (phone) viewports, in the **same** web components
+  (responsive layout / CSS — not a separate route, app, or component set). This is how iOS Safari,
+  Android browsers, and the installed PWA access the product.
+- The `Mobile*` design mockups are the source of truth for the web's mobile breakpoint (and for the
+  Chyme Android screens). A phone layout is the same whether the installed PWA or a ~390px browser
+  paints it. **Do not commission a separate "web responsive" mockup series.**
+- Building the web's mobile-responsive layout is an **app / front-end (non-design-agent)
+  responsibility** and is **not** design-gated by rule 127.
+- A web feature is only "done" when its phone-width layout works too — shipping a desktop-only view
+  that breaks at phone width is still a defect, because phones are now served entirely by the web app.
+
+## Delivery Rules — the CI Parity Status line
+- The CI parity gate (`pr-parity-status` in `ci.yml`) still requires the PR description to contain
+  `Parity Status: web + mobile-responsive + android complete` **or** `Parity Ticket: #<issue>`.
+- For a **web-only** change to a non-keep-list feature (the common case now), use
+  `Parity Status: web + mobile-responsive + android complete`: the desktop and phone-width web layouts
+  are the deliverable, and "android" is complete in the sense that **there is no Android surface for
+  this feature** — the native app intentionally does not carry it. State "Android: out of scope
+  (web-only per rule 105)" in the PR body so the reader knows it was a decision, not a forgotten gap.
+- For a change to a **keep-list** surface (Clerk, Chyme, bug reporting, settings), the Android side
+  is in scope and must land with it, exactly as before.
 
 ## Testing Rules
-- Add parity acceptance criteria for critical paths in test plans.
-- Validate both web and Android for accessibility and trauma-informed constraints when introducing new user workflows.
+- Add acceptance criteria for critical paths in test plans. For Chyme specifically, the background/
+  foreground-audio behavior (audio keeps playing when the app is backgrounded, member is not dropped)
+  must be verified on a real device build — it cannot be verified from source review alone.
+- Validate web accessibility and trauma-informed constraints when introducing new user workflows.
+
+## No Phased Rollouts
+- The narrowed scope is not a "phase 1 / phase 2" rollout. Non-keep-list features are web-only now;
+  they are not "Android later." If the owner resumes parity for a named feature, that is a fresh,
+  explicit decision, not a pre-planned phase. See `CLAUDE.md` → "Task Planning — No Phases".
 
 ## Prohibited
-- Shipping web-only or Android-only experiences for any user-facing flow without an approved exception (see Delivery Rules).
-- Marking parity complete when only UI shell exists and core behavior is missing.
-- Using phase language to justify a parity gap.
+- Building Android/React Native implementations for features outside the keep-list.
+- Re-adding deleted non-keep-list React Native screens without an explicit owner instruction.
+- Marking a keep-list change complete when only the web side landed and the Android side was skipped.
+- Using phase language to describe the narrowed scope.

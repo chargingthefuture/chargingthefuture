@@ -5,6 +5,15 @@ This folder holds one **manual test script** per plugin: the steps to walk on a 
 single change can break something far from where you were working — these scripts let you do a real
 testing sweep instead of only spot-checking what you just touched.
 
+## Native Android is now Chyme-only — see `android-app-test-script.md`
+
+The native Android app is narrowed to Chyme plus a small keep-list (Clerk sign-in, Chyme live audio,
+bug reporting, settings/account) — owner decision 2026-07-20, rule 105. So the per-plugin scripts
+below are now **web** test scripts (those features live on the installable web app, not on Android).
+The whole native app is covered instead by one dedicated script:
+[`android-app-test-script.md`](./android-app-test-script.md). Run that before every Android release —
+its background-audio step (AN-4 / CH-10) can only be confirmed on a real device build.
+
 ## Why manual, and why not a browser-driver tool
 
 The repo deliberately avoids third-party UI test tools (Selenium and the like). They are hard to run

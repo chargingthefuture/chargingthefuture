@@ -53,7 +53,12 @@ function mapTimelineItemToHubMessage(
   // A peer post may quote another peer post (Signal-style reply). The quoted author handle
   // and short snippet are resolved server-side in the feed repository and carried here.
   const quotedMessage = isCommunity && item.community?.quotedPost
-    ? { author: item.community.quotedPost.author, snippet: item.community.quotedPost.snippet }
+    ? {
+        author: item.community.quotedPost.author,
+        snippet: item.community.quotedPost.snippet,
+        // The quoted post's id, so the client can scroll to the original when the quote is tapped.
+        postId: item.community.replyToPostId,
+      }
     : null;
 
   // Emoji reactions resolved server-side for the requesting member: from the community post for a
@@ -168,7 +173,7 @@ function readQuotedMessage(value: unknown): HubMessage['quotedMessage'] {
   if (!value || typeof value !== 'object') {
     return null;
   }
-  const quoted = value as { author?: unknown; snippet?: unknown };
+  const quoted = value as { author?: unknown; snippet?: unknown; postId?: unknown };
   if (typeof quoted.author !== 'string' || typeof quoted.snippet !== 'string') {
     return null;
   }
@@ -177,8 +182,9 @@ function readQuotedMessage(value: unknown): HubMessage['quotedMessage'] {
   if (author.length === 0 || snippet.length === 0) {
     return null;
   }
+  const postId = typeof quoted.postId === 'string' && quoted.postId.trim().length > 0 ? quoted.postId.trim() : null;
   // Cap the echoed snippet so a crafted request cannot inflate the message payload.
-  return { author: author.slice(0, 160), snippet: snippet.slice(0, 160) };
+  return { author: author.slice(0, 160), snippet: snippet.slice(0, 160), postId };
 }
 
 export async function POST(request: Request) {

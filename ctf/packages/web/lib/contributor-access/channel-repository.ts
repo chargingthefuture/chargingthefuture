@@ -26,9 +26,10 @@ export type GatedChannelMessage = {
   displayName: string;
   body: string;
   createdAtIso: string;
-  // Signal-style quoted reply (author handle + short snippet), resolved server-side. Null when
+  // Signal-style quoted reply (author handle + short snippet + the quoted post's id, so the client
+  // can jump to the original message when the quote is tapped), resolved server-side. Null when
   // the message is not a reply.
-  quotedMessage: { author: string; snippet: string } | null;
+  quotedMessage: { author: string; snippet: string; postId: string | null } | null;
   reactions: GatedChannelReactionSummary[];
 };
 
@@ -106,6 +107,7 @@ export async function listGatedChannelMessages(
       ? {
         author: feedAuthorHandle(row.quoted_author_username, row.quoted_author_user_id),
         snippet: row.quoted_body.trim().slice(0, 120),
+        postId: row.reply_to_post_id,
       }
       : null,
     reactions: reactionsByPost.get(row.id) ?? [],

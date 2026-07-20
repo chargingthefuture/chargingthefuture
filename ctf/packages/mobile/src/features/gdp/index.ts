@@ -1,1 +1,0 @@
-export { Gdp } from './Gdp';
