@@ -85,7 +85,7 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
 2. Access gate enforces approved-user or admin eligibility (`403` for non-approved non-admin users).
 3. Identity handle source is the canonical auth-provider username/handle for username/`@mention` semantics, aligned to `ctf/docs/contracts/PLUGIN_IDENTITY_HANDLE_BASELINE.md`.
 4. Message payloads are trimmed server-side and rejected when empty.
-5. Service deletion runs in transaction and records deletion event for audit trail.
+5. Service deletion runs in transaction and records deletion event for audit trail. Because Chyme fans each chat message out to Stream (`sendChymeStreamMessage`), Stream keeps an independent copy; both the service-scope delete (`DELETE /api/account/chyme-profile`) and the full-account delete (`DELETE /api/account/full-account`) now also call `deleteChymeStreamData(userId)` — a hard delete of the member's Stream user (`chyme-<userId>`) with `mark_messages_deleted` — so the Stream copy is removed alongside the Postgres rows. This runs best-effort after the DB delete commits (a Stream outage is logged, never blocks or rolls back the deletion) and the outcome is recorded on the audit event (`streamCleared`).
 6. Full-account endpoint records the Chyme deletion request and queues the downstream ServiceCredits reclaim dependency.
 7. Stream integration is routed through shared wrappers/adapters in `ctf/packages/shared`.
 
@@ -120,6 +120,7 @@ Current status:
 
 ## Change Log
 
+- 2026-07-20: **Deletion now removes the member's Stream copy, not just the Postgres rows (privacy).** Chyme dual-writes every chat message: to `chyme_messages` (the source of truth the app renders) and, via `sendChymeStreamMessage`, to the Stream channel. Deletion only ever purged Postgres (`markServiceDeletion` / the registry-driven `deleteAllAccountData`, which is DB-table-only), so a member's message content lingered on Stream indefinitely after they deleted their Chyme profile or whole account — Stream retains messages with no expiry by default. Added `deleteChymeStreamData(userId)` in `lib/chyme/stream.ts` (hard-deletes the member's Stream user `chyme-<userId>` with `mark_messages_deleted`, returns a boolean, never throws) and call it from both `DELETE /api/account/chyme-profile` and `DELETE /api/account/full-account` — best-effort after the DB delete commits, so a Stream outage is logged (`reportError`) but never blocks or rolls back the deletion; the outcome is stamped on the audit event (`streamCleared`). No schema/route/contract-shape change. Note: the account-deletion registry/orchestrator is DB-table-only and has no external-store hook, so **every Stream-using plugin that stores user content on Stream has the same gap** — a systemic follow-up (a registry external-cleanup hook + per-plugin cleanups) is tracked separately.
 - 2026-07-20: **Android live audio now survives backgrounding (owner hard requirement).** A member who
   navigates away from the Chyme room without closing — or locks the screen — must not be dropped from
   the call. Enabled the Stream Video React Native SDK's documented Android foreground service: (1) added

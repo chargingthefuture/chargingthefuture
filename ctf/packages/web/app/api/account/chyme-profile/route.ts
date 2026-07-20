@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { ensureMutationCsrf } from '../_lib';
 import { markServiceDeletion } from 'lib/chyme/repository';
+import { deleteChymeStreamData } from 'lib/chyme/stream';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { reportError } from 'lib/observability/report';
@@ -25,6 +26,18 @@ export async function DELETE(request: Request) {
   try {
     const deletion = await markServiceDeletion(decision.userId);
 
+    // Also remove the member's copy on Stream (chat messages fan out there). Best-effort and after
+    // the Postgres delete has committed: a Stream outage must not fail or roll back the deletion the
+    // user already completed, so a false result is logged, not thrown.
+    const streamCleared = await deleteChymeStreamData(decision.userId);
+    if (!streamCleared) {
+      reportError(new Error('Chyme Stream data was not cleared on service deletion'), {
+        area: 'account',
+        op: 'chyme_profile_stream_cleanup',
+        extra: { userId: decision.userId },
+      });
+    }
+
     logChymeAudit({
       pluginId: 'chyme',
       command: 'chyme.profile.delete.service',
@@ -33,6 +46,7 @@ export async function DELETE(request: Request) {
       reason: 'service_scope_confirmed',
       target: {
         scope: 'service',
+        streamCleared: streamCleared ? 'yes' : 'no',
       },
       result: 'success',
       errorCategory: null,

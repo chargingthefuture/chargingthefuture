@@ -180,6 +180,24 @@ presence heartbeat and room poll running. Leaving the room clears the notificati
 
 ---
 
+### CH-11 · Deletion also clears the Stream copy (privacy)
+**Role:** member · **Surfaces:** api/data (no in-app button — call the endpoint directly)
+**Precondition:** a test member who has sent at least one chat message (so there is a Stream copy).
+Access to the Stream dashboard for the app behind `STREAM_API_KEY`.
+**Steps:**
+1. As that member, send a chat message, then call `DELETE /api/account/chyme-profile` (service scope)
+   — or `DELETE /api/account/full-account` (whole account).
+2. In the Stream dashboard, look up the member's Stream user `chyme-<userId>` and their messages in the
+   `messaging:chyme-main-room` channel.
+**Expected:** After the delete, the member's rows are gone from Postgres (`chyme_messages`,
+`chyme_room_members`) **and** their Stream user `chyme-<userId>` is hard-deleted with their messages
+marked deleted — the Stream copy no longer lingers. The audit line for the delete records
+`streamCleared: yes`. If Stream is down at delete time, the deletion still succeeds (not blocked) and
+`streamCleared: no` is logged for a retry/backfill — the user's account is still deleted.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 Chyme has no plugin-specific admin UI in this build. Room/chat/join access is gated by the shared

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { markFullAccountDeletionRequested } from 'lib/chyme/repository';
+import { deleteChymeStreamData } from 'lib/chyme/stream';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { deleteAllAccountData } from 'lib/account/deletion-orchestrator';
@@ -33,6 +34,18 @@ export async function DELETE(request: Request) {
     // stamps completion separately.
     const deletion = await deleteAllAccountData(userId, reclaim.requestedAtIso);
 
+    // The registry-driven orchestrator deletes Postgres rows only; it has no hook for external stores.
+    // Chyme fans its chat messages out to Stream, so clear the member's Stream copy too. Best-effort
+    // and after the DB delete: a Stream outage must not fail the account deletion the user completed.
+    const streamCleared = await deleteChymeStreamData(userId);
+    if (!streamCleared) {
+      reportError(new Error('Chyme Stream data was not cleared on full-account deletion'), {
+        area: 'account',
+        op: 'full_account_stream_cleanup',
+        extra: { userId },
+      });
+    }
+
     logChymeAudit({
       pluginId: 'chyme',
       command: 'account.profile.delete.full',
@@ -41,6 +54,7 @@ export async function DELETE(request: Request) {
       reason: 'account_deletion_requested',
       target: {
         scope: 'account',
+        streamCleared: streamCleared ? 'yes' : 'no',
       },
       result: 'success',
       errorCategory: null,
