@@ -21,6 +21,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Radio } from 'lucide-react-native';
 import { type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 
@@ -66,8 +67,7 @@ export const ChymeRoomList: React.FC<Props> = ({
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.iconBox}>
-            {/* Radio icon — no direct RN lucide; using text glyph */}
-            <Text style={styles.iconGlyph}>📻</Text>
+            <Radio size={20} color={accent} strokeWidth={2} />
           </View>
           <View>
             <Text style={styles.headerTitle}>Chyme 🎙️</Text>

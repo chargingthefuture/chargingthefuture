@@ -17,6 +17,7 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Hand, Lock, MessageSquare, Mic, MicOff, Phone } from 'lucide-react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import {
@@ -44,6 +45,7 @@ function useRoomStyles() {
       styles: makeStyles(tokens, accent),
       tileStyles: makeTileStyles(tokens, accent),
       accent,
+      tokens,
     }),
     [tokens, accent],
   );
@@ -246,7 +248,7 @@ const ChymeAudioRoomLive: React.FC<{
   onLeave: () => void;
   raisedHandUserIds: ReadonlySet<string>;
 }> = ({ onOpenChat, onLeave, raisedHandUserIds }) => {
-  const { styles } = useRoomStyles();
+  const { styles, tokens } = useRoomStyles();
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
   const call = useCall();
@@ -278,9 +280,12 @@ const ChymeAudioRoomLive: React.FC<{
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>Live</Text>
           </View>
-          <Text style={styles.roomLabel}>Members Only 🔒</Text>
+          <View style={styles.roomLabelWrap}>
+            <Text style={styles.roomLabel}>Members Only</Text>
+            <Lock size={12} color={tokens.textMuted} strokeWidth={2} />
+          </View>
           <TouchableOpacity style={styles.chatBtn} onPress={onOpenChat} accessibilityRole="button" accessibilityLabel="Open chat">
-            <Text style={styles.chatBtnIcon}>💬</Text>
+            <MessageSquare size={18} color={tokens.textShell} strokeWidth={2} />
           </TouchableOpacity>
         </View>
         <Text style={styles.sectionLabel}>
@@ -350,7 +355,11 @@ const ChymeSpeakerTile: React.FC<{
           <Text style={tileStyles.initials}>{initials(name)}</Text>
         </View>
         <View style={[tileStyles.micBadge, publishingAudio ? tileStyles.micBadgeOn : tileStyles.micBadgeOff]}>
-          <Text style={tileStyles.micIcon}>{publishingAudio ? '🎤' : '🔇'}</Text>
+          {publishingAudio ? (
+            <Mic size={12} color="#fff" strokeWidth={2} />
+          ) : (
+            <MicOff size={12} color="#fff" strokeWidth={2} />
+          )}
         </View>
         {handRaised && (
           <View style={tileStyles.handBadge}>
@@ -377,7 +386,7 @@ const ChymeAudioControls: React.FC<{
   handRaised: boolean;
   onToggleHand: () => void;
 }> = ({ onOpenChat, onLeave, handRaised, onToggleHand }) => {
-  const { styles } = useRoomStyles();
+  const { styles, accent, tokens } = useRoomStyles();
   const { useMicrophoneState } = useCallStateHooks();
   const { microphone, isMute } = useMicrophoneState();
 
@@ -391,7 +400,11 @@ const ChymeAudioControls: React.FC<{
               isMute ? styles.controlCircleMuted : styles.controlCircleActive,
             ]}
           >
-            <Text style={styles.controlIcon}>{isMute ? '🔇' : '🎤'}</Text>
+            {isMute ? (
+              <MicOff size={24} color="#F87171" strokeWidth={2} />
+            ) : (
+              <Mic size={24} color={accent} strokeWidth={2} />
+            )}
           </View>
           <Text style={[styles.controlLabel, isMute && styles.controlLabelMuted]}>
             {isMute ? 'Unmute' : 'Mute'}
@@ -405,7 +418,7 @@ const ChymeAudioControls: React.FC<{
               handRaised ? styles.controlCircleHand : styles.controlCircleNeutral,
             ]}
           >
-            <Text style={styles.controlIcon}>✋</Text>
+            <Hand size={24} color={handRaised ? '#FDE047' : tokens.textSecondary} strokeWidth={2} />
           </View>
           <Text style={[styles.controlLabel, handRaised && styles.controlLabelHand]}>
             {handRaised ? 'Lower' : 'Hand'}
@@ -414,14 +427,17 @@ const ChymeAudioControls: React.FC<{
 
         <TouchableOpacity style={styles.controlBtn} onPress={onOpenChat}>
           <View style={[styles.controlCircle, styles.controlCircleNeutral]}>
-            <Text style={styles.controlIcon}>💬</Text>
+            <MessageSquare size={24} color={tokens.textSecondary} strokeWidth={2} />
           </View>
           <Text style={styles.controlLabel}>Chat</Text>
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.leaveBtn} onPress={onLeave}>
-        <Text style={styles.leaveBtnText}>📞 Leave Room</Text>
+        <View style={styles.leaveBtnRow}>
+          <Phone size={16} color="#F87171" strokeWidth={2} />
+          <Text style={styles.leaveBtnText}>Leave Room</Text>
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -512,7 +528,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
   },
   liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: PRIMARY },
   liveText: { fontSize: 10, color: PRIMARY, fontWeight: '700', fontFamily: interFamily('700') },
-  roomLabel: { fontSize: 11, color: t.textMuted, flex: 1, fontFamily: interFamily('400') },
+  roomLabelWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  roomLabel: { fontSize: 11, color: t.textMuted, fontFamily: interFamily('400') },
   chatBtn: {
     width: 34,
     height: 34,
@@ -570,6 +587,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  leaveBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   leaveBtnText: { color: '#F87171', fontSize: 15, fontWeight: '700', fontFamily: interFamily('700') },
   });
 }

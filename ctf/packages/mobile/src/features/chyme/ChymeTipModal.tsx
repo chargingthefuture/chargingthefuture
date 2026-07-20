@@ -8,6 +8,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Coins } from 'lucide-react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { postChymeTip } from './api';
@@ -18,14 +19,14 @@ function useTipStyles() {
   const { tokens, theme } = useTheme();
   const accent = getAppAccent('chyme', theme);
   const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
-  return { styles, tokens };
+  return { styles, tokens, accent };
 }
 
 export const ChymeTipButton: React.FC<{ recipientUserId: string; recipientName: string }> = ({
   recipientUserId,
   recipientName,
 }) => {
-  const { styles } = useTipStyles();
+  const { styles, accent } = useTipStyles();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -35,7 +36,10 @@ export const ChymeTipButton: React.FC<{ recipientUserId: string; recipientName: 
         accessibilityRole="button"
         accessibilityLabel={`Tip ${recipientName}`}
       >
-        <Text style={styles.tipBtnText}>🪙 Tip</Text>
+        <View style={styles.tipBtnRow}>
+          <Coins size={12} color={accent} strokeWidth={2} />
+          <Text style={styles.tipBtnText}>Tip</Text>
+        </View>
       </TouchableOpacity>
       <ChymeTipModal
         visible={open}
@@ -143,6 +147,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderWidth: 1,
     borderColor: `${PRIMARY}35`,
   },
+  tipBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   tipBtnText: { fontSize: 10, fontWeight: '700', fontFamily: interFamily('700'), color: PRIMARY },
   overlay: {
     flex: 1,
