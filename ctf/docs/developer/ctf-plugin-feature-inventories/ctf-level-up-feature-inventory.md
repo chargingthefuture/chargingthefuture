@@ -213,6 +213,11 @@ that exist today.
 
 ## Change Log
 
+- 2026-07-20: **Notifications producer.** The milestone-release route emits a best-effort
+  notification (`notifySafe`, `level-up.milestone.released`) to the learner when their milestone
+  credits are released — deduped on the transfer id, never to the trainer/admin who released. To
+  address the learner, `releaseMilestoneCredits` now returns `recipientUserId` on its response
+  (additive; it was already computed internally). No schema/route/contract-list change.
 - 2026-07-20: **Resolved the level-up code-review sweep findings (#1756–#1763).** No schema, route
   list, or contract change — behaviour and security hardening only:
   - **dispute.open ownership (#1756, security).** `openDispute` now verifies the actor is the

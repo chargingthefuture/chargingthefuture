@@ -548,3 +548,10 @@ These items are recorded in the inventory's Gaps and Known Technical Debt sectio
 3. **Cross-plugin path attestation is a structured field only.** The `origin_plugin` field on transfers is recorded but has not been promoted to a signed/canonical shared contract. If the field is present and readable but not cryptographically attested, that is expected.
 
 4. **Retention classes for dispute artifacts and treasury evidence follow platform defaults.** A plugin-specific retention contract has not been published. Do not file a bug about retention period values.
+
+---
+
+## Notifications
+
+**1.** As member A, send credits to member B via a direct transfer. Sign in as member B, open the 🔔 notifications tab in the Commons, and confirm a "You received N ServiceCredits." item appears (unread) with an "Open" pill to ServiceCredits. Sending to yourself produces no notification.
+web ☐

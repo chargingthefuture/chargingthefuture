@@ -61,6 +61,8 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   'recurring-activity': { standard: '#2DD4BF', comic: '#0F5C54' },
   // Beacon uses the amber accent as the viewer (BEACON_COLOR = #F59E0B); mirrors the mobile table.
   beacon: { standard: '#F59E0B', comic: '#7A4A05' },
+  // Mutual Time: the rose accent from the design mockups (#F472B6); comic uses a deep ink-pink.
+  'mutual-time': { standard: '#F472B6', comic: '#7A1A4A' },
 };
 
 const FALLBACK_ACCENT: AccentPair = { standard: '#6B7280', comic: '#7A6A50' };

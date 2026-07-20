@@ -159,6 +159,11 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
 
 ## Change Log
 
+- 2026-07-20: **Notifications producer.** Best-effort notifications (`notifySafe`) now fire from the
+  routes: creating an activity notifies the counterparty to confirm/decline
+  (`recurring-activity.invited`); confirming/declining notifies the owner
+  (`recurring-activity.confirmed` / `.declined`). Deduped on the activity id, never self-notifying.
+  No schema/contract change.
 - 2026-07-14: Added refresh controls (app-wide refresh rollout). Web: the shared `RefreshButton` now
   sits next to the "Recurring Activity" heading (the shell renders one header for both the desktop
   and mobile-responsive layouts), wired to a new background mode of `loadData` so the activities and

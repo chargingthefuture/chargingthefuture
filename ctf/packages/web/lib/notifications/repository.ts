@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { reportError } from 'lib/observability/report';
 import {
   isNotificationCategory,
   NOTIFICATIONS_MAX_PAGE_SIZE,
@@ -63,6 +64,17 @@ export async function createNotification(input: NotificationInput): Promise<stri
     ],
   );
   return result.rows[0]?.id ?? null;
+}
+
+// Best-effort producer entry point: record a notification but never let a failure (or a rolled-back
+// notification write) break the underlying action that triggered it. Every per-plugin emit point
+// should call this — ideally after its own transaction has committed — and ignore the result.
+export async function notifySafe(input: NotificationInput): Promise<void> {
+  try {
+    await createNotification(input);
+  } catch (error) {
+    reportError(error, { area: 'notifications', op: `emit_${input.notificationType}` });
+  }
 }
 
 export async function listNotifications(userId: string, limit: number): Promise<Notification[]> {

@@ -356,3 +356,13 @@ These cases must produce identical behavior on both surfaces. Run them on web an
 4. **No admin collusion-review surface** — the bilateral graph is captured in the audit trail but no admin UI to surface collusion patterns is built yet.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+
+---
+
+## Notifications
+
+**1.** As member A, record a new recurring activity with member B. Sign in as member B, open the 🔔 notifications tab in the Commons, and confirm a "Someone recorded a recurring activity with you — confirm or decline it." item appears (unread).
+web ☐
+
+**2.** As member B, confirm the activity. Sign in as member A, open the 🔔 tab, and confirm a "Your recurring activity was confirmed." item appears. (Repeat with decline to confirm the "…was declined." item.)
+web ☐

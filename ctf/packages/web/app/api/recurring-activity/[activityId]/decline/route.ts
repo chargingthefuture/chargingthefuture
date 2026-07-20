@@ -9,6 +9,7 @@ import {
 } from 'lib/recurring-activity/_lib';
 import { declineRecurringActivity } from 'lib/recurring-activity/repository';
 import { logRecurringActivityAuditEvent } from 'lib/recurring-activity/audit';
+import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
 
 // POST /api/recurring-activity/[activityId]/decline — the counterparty declines a pending activity.
@@ -51,6 +52,20 @@ export async function POST(request: Request, context: unknown) {
       requestId,
       traceId,
     });
+    // Notify the owner (proposer) that the other member declined — best-effort, deduped on the
+    // activity id. Only the counterparty can decline, so the owner is never the actor here.
+    if (result.activity.ownerUserId !== userId) {
+      await notifySafe({
+        userId: result.activity.ownerUserId,
+        sourcePlugin: 'recurring-activity',
+        notificationType: 'recurring-activity.declined',
+        category: 'activity',
+        summary: 'A recurring activity you recorded was declined.',
+        linkPath: '/apps/recurring-activity',
+        targetRef: result.activity.id,
+      });
+    }
+
     return NextResponse.json(
       {
         ok: true,
