@@ -709,6 +709,8 @@ export async function releaseMilestoneCredits(input: {
   type MilestoneReleaseResponse = {
     enrollmentId: string;
     milestoneId: string;
+    // The learner the released credits go to — surfaced so the route can notify them.
+    recipientUserId: string;
     userTransferId: string;
     trainerPayoutGovernanceId: string | null;
     completionBonusGovernanceId: string | null;
@@ -888,6 +890,7 @@ export async function releaseMilestoneCredits(input: {
     const output = {
       enrollmentId: input.enrollmentId,
       milestoneId: input.milestoneId,
+      recipientUserId: releaseDraft.recipientUserId,
       userTransferId: userRelease.transferId,
       trainerPayoutGovernanceId,
       completionBonusGovernanceId,

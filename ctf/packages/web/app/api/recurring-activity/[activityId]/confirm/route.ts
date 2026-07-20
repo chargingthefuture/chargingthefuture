@@ -9,6 +9,7 @@ import {
 } from 'lib/recurring-activity/_lib';
 import { confirmRecurringActivity } from 'lib/recurring-activity/repository';
 import { logRecurringActivityAuditEvent } from 'lib/recurring-activity/audit';
+import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
 
 // POST /api/recurring-activity/[activityId]/confirm — the counterparty confirms a pending activity.
@@ -51,6 +52,20 @@ export async function POST(request: Request, context: unknown) {
       requestId,
       traceId,
     });
+    // Notify the owner (proposer) that the other member confirmed — best-effort, deduped on the
+    // activity id. Only the counterparty can confirm, so the owner is never the actor here.
+    if (result.activity.ownerUserId !== userId) {
+      await notifySafe({
+        userId: result.activity.ownerUserId,
+        sourcePlugin: 'recurring-activity',
+        notificationType: 'recurring-activity.confirmed',
+        category: 'activity',
+        summary: 'Your recurring activity was confirmed.',
+        linkPath: '/apps/recurring-activity',
+        targetRef: result.activity.id,
+      });
+    }
+
     return NextResponse.json(
       {
         ok: true,

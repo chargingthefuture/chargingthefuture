@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { insertLevelUpAudit, isTrainerForCohort, releaseMilestoneCredits } from 'lib/level-up/repository';
 import { ensureMutationCsrf, levelUpErrorResponse, requireLevelUpReadAccess } from 'lib/level-up/_lib';
+import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
@@ -67,6 +68,20 @@ export async function POST(request: Request, { params }: RouteProps) {
         completionBonusAmount: release.completionBonusAmount,
       },
     });
+
+    // Notify the learner their milestone was approved and credits released — best-effort, deduped on
+    // the transfer id, never when the learner is the one releasing (trainer/admin self-release).
+    if (release.recipientUserId && release.recipientUserId !== gate.auth.userId) {
+      await notifySafe({
+        userId: release.recipientUserId,
+        sourcePlugin: 'level-up',
+        notificationType: 'level-up.milestone.released',
+        category: 'activity',
+        summary: 'A LevelUp milestone was approved and your credits were released.',
+        linkPath: '/apps/level-up',
+        targetRef: release.userTransferId,
+      });
+    }
 
     return NextResponse.json({ ok: true, release }, { status: 201 });
   } catch (error) {

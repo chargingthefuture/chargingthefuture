@@ -276,6 +276,11 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 
 ## 10) Change Log
 
+- 2026-07-20: **Notifications producer.** `POST /api/service-credits/transfers` now emits a
+  best-effort notification (`notifySafe`, `service-credits.received`) to the recipient of a completed
+  direct member-to-member transfer — never to the sender, deduped on the transfer id. Emitted from the
+  route only (the `createTransfer` ledger function is untouched); plugin-origin transfers (rides,
+  calls) will notify via their own domain producers. No schema/contract/ledger change.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
   the previous in-app page and falls back to All Apps when there is no in-app history. The admin
