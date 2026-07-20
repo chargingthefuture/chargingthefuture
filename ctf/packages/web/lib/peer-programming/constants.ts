@@ -9,7 +9,11 @@ export const PEER_PROGRAMMING_ERROR_CODE = {
 
 export const PEER_PROGRAMMING_MAX_MESSAGE_LENGTH = 2000;
 export const PEER_PROGRAMMING_MAX_FEEDBACK_LENGTH = 1000;
-export const PEER_PROGRAMMING_COHORT_TARGET_SIZE = 5;
+// Target headcount placed into each weekly cohort. Cohorts are formed at 12 members because
+// participation is voluntary and asynchronous — placing ~12 gives a working group even when only
+// about 5 actually show up and take part in a given week. This is the size of the weekly split in
+// runWeeklyAssignment (paused while single standing Cohort 1 mode is on).
+export const PEER_PROGRAMMING_COHORT_TARGET_SIZE = 12;
 
 // Label for the single standing cohort used in low-population mode.
 export const PEER_PROGRAMMING_STANDING_COHORT_LABEL = 'C1';

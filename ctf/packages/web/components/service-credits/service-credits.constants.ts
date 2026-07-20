@@ -21,6 +21,16 @@ export const PLATFORM_EARN_METHODS: {
     href: '/plugin/unlock',
   },
   {
+    // Peer-to-peer receipts are the main ongoing way to earn (owner addition, 2026-07-19): every
+    // exchange where another member sends you credits for real help counts.
+    title: 'Help another member',
+    detail: 'Provide a service or good — housing, transport, skills, requests — and the member sends you credits.',
+    credits: 'Per exchange',
+    note: 'ongoing',
+    color: '#38BDF8',
+    href: '/apps/directory',
+  },
+  {
     title: 'Take part in SkillsHunt',
     detail: 'Earn credits by competing in SkillsHunt rounds.',
     credits: 'Per round',
@@ -42,8 +52,9 @@ export const PLATFORM_EARN_METHODS: {
 // buyer — the same transactions, both directions — so this is both how you earn (beyond the platform
 // rewards above) and where you spend.
 export const PEER_TO_PEER_AREAS: { title: string; role: string; icon: string; color: string }[] = [
-  { title: 'Housing — LightHouse', role: 'Host a place / pay a host', icon: '🏠', color: '#60A5FA' },
-  { title: 'Transport — TrustTransport', role: 'Give rides / pay a driver', icon: '📦', color: '#38BDF8' },
-  { title: 'Services — Directory & Foundation', role: 'Offer your skills / hire help', icon: '🪛', color: '#F59E0B' },
+  // "send credits" phrasing, never "pay" — credits are a non-fiat internal unit (ctf/docs/DISCLAIMER.md).
+  { title: 'Housing — LightHouse', role: 'Host a place / send credits to a host', icon: '🏠', color: '#60A5FA' },
+  { title: 'Transport — TrustTransport', role: 'Give rides / send credits to a driver', icon: '📦', color: '#38BDF8' },
+  { title: 'Services — Directory & Foundation', role: 'Offer your skills / exchange credits for help', icon: '🪛', color: '#F59E0B' },
   { title: 'Requests — SocketRelay', role: 'Fulfill requests / ask for help', icon: '🔂', color: '#FB923C' },
 ];

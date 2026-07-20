@@ -453,7 +453,7 @@ These cases must produce the same user-visible outcome on both surfaces. If the 
 
 ## Known gaps — do not file these as bugs
 
-1. **Partial-cohort packing edge cases.** When the active-user count is not evenly divisible by 5, cohort sizes are filled by best-effort packing. The exact split behavior in edge cases (e.g. 6 users → one cohort of 5 + one of 1, or one of 6?) has not received final product sign-off. Do not file bugs about the specific distribution when the count is awkward.
+1. **Partial-cohort packing edge cases.** Cohorts are formed at a target size of 12 (participation is voluntary, so roughly 5 are expected to actively take part). When the active-user count is not evenly divisible by 12, cohort sizes are filled by best-effort packing. The exact split behavior in edge cases (e.g. 13 users → one cohort of 12 + one of 1, or a more even split?) has not received final product sign-off. Do not file bugs about the specific distribution when the count is awkward.
 
 2. **Fallback-open is roster-based, not presence-based.** The room shows fallback-open when the cohort has fewer than 2 members in its roster, not based on who is actively in the room right now. A richer real-time presence signal is a possible future refinement — do not file bugs about the absence of live presence detection.
 
