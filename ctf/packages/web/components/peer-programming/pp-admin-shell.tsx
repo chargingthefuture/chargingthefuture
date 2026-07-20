@@ -318,7 +318,7 @@ export function PeerProgrammingAdminShell() {
                 Single standing Cohort 1 mode
               </h2>
               <p style={{ fontSize: 12, color: t.MUTED, margin: '0 0 12px', lineHeight: 1.5 }}>
-                While there are too few active members to fill weekly cohorts of five, everyone shares
+                While there are too few active members to fill weekly cohorts of up to 12 people, everyone shares
                 one standing, always-open Cohort 1 instead of being split into tiny rooms. Turn it off
                 to resume the weekly split into C1, C2, C3.
               </p>
