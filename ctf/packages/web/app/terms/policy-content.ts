@@ -348,6 +348,15 @@ export const PRIVACY_DOCUMENT: PolicyDocument = {
             'To meet legal, security, and record-keeping obligations.',
           ],
         },
+        {
+          type: 'p',
+          text:
+            'Automated processing: when you use the Questions feature, the text of your ' +
+            'question is processed by a self-hosted AI model running on our own compute ' +
+            'infrastructure to generate a draft answer. Your content is not used to train any ' +
+            'third-party model, and a draft answer is a suggestion, not a decision that has a ' +
+            'legal or similarly significant effect on you.',
+        },
       ],
     },
     {
