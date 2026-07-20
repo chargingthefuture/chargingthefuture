@@ -38,6 +38,8 @@ import type {
   FeedCommunityDetail,
   FeedCommunityPostInput,
   FeedCommunityReply,
+  FeedAnnouncementReply,
+  FeedAnnouncementDetail,
   FeedQuotedPost,
   FeedReactionSummary,
   FeedConfig,
@@ -161,6 +163,27 @@ type FeedReactionAggregateRow = {
   emoji: string;
   count: string;
   reacted: boolean;
+};
+
+type AnnouncementReactionAggregateRow = {
+  announcement_id: string;
+  emoji: string;
+  count: string;
+  reacted: boolean;
+};
+
+type AnnouncementReplyCountRow = {
+  announcement_id: string;
+  count: string;
+};
+
+type AnnouncementReplyRow = {
+  id: string;
+  announcement_id: string;
+  author_user_id: string;
+  author_username: string | null;
+  body: string;
+  created_at: Date;
 };
 
 // Order a post's reaction summaries by the fixed reaction set so the chips render in a stable,
@@ -351,7 +374,7 @@ async function evaluateFeedRateLimit(
   client: PoolClient,
   input: {
     userId: string;
-    tableName: 'feed_questions' | 'feed_community_posts' | 'feed_community_replies';
+    tableName: 'feed_questions' | 'feed_community_posts' | 'feed_community_replies' | 'announcement_replies';
     limit: number;
     windowMinutes: number;
   },
@@ -864,6 +887,9 @@ export async function listFeedTimeline(
 
     const questionIds = result.rows.flatMap((row) => (row.source_question_id ? [row.source_question_id] : []));
     const communityIds = result.rows.flatMap((row) => (row.source_community_post_id ? [row.source_community_post_id] : []));
+    const announcementIds = result.rows.flatMap((row) =>
+      row.item_type === 'announcement' && row.source_announcement_id ? [row.source_announcement_id] : [],
+    );
 
     const questionDetails = new Map<string, FeedQuestionDetail>();
     if (questionIds.length > 0) {
@@ -1033,6 +1059,58 @@ export async function listFeedTimeline(
       }
     }
 
+    // Reaction + reply aggregates for the announcements on this page, resolved for the requesting
+    // member in two batched queries so each official card can render its reaction chips and a
+    // "N replies" affordance without extra fetches. Keyed on the announcement id.
+    const announcementDetailsById = new Map<string, FeedAnnouncementDetail>();
+    if (announcementIds.length > 0) {
+      const [reactionRows, replyCountRows] = await Promise.all([
+        client.query<AnnouncementReactionAggregateRow>(
+          `
+            SELECT announcement_id, emoji, COUNT(*)::text AS count, BOOL_OR(user_id = $2) AS reacted
+            FROM announcement_reactions
+            WHERE announcement_id = ANY($1::uuid[])
+            GROUP BY announcement_id, emoji
+          `,
+          [announcementIds, userId],
+        ),
+        client.query<AnnouncementReplyCountRow>(
+          `
+            SELECT announcement_id, COUNT(*)::text AS count
+            FROM announcement_replies
+            WHERE announcement_id = ANY($1::uuid[])
+              AND moderation_status = 'accepted'
+            GROUP BY announcement_id
+          `,
+          [announcementIds],
+        ),
+      ]);
+
+      const reactionsByAnnouncement = new Map<string, FeedReactionSummary[]>();
+      for (const row of reactionRows.rows) {
+        const current = reactionsByAnnouncement.get(row.announcement_id) ?? [];
+        current.push({
+          emoji: row.emoji,
+          count: Number.parseInt(row.count, 10),
+          reactedByMe: row.reacted,
+        });
+        reactionsByAnnouncement.set(row.announcement_id, current);
+      }
+
+      const replyCountByAnnouncement = new Map<string, number>();
+      for (const row of replyCountRows.rows) {
+        replyCountByAnnouncement.set(row.announcement_id, Number.parseInt(row.count, 10));
+      }
+
+      for (const announcementId of new Set(announcementIds)) {
+        announcementDetailsById.set(announcementId, {
+          id: announcementId,
+          reactions: orderReactionsByFixedSet(reactionsByAnnouncement.get(announcementId) ?? []),
+          replyCount: replyCountByAnnouncement.get(announcementId) ?? 0,
+        });
+      }
+    }
+
     return {
       items: result.rows.map((row) => ({
         id: row.id,
@@ -1048,6 +1126,9 @@ export async function listFeedTimeline(
         isDismissed: row.is_dismissed,
         question: row.source_question_id ? (questionDetails.get(row.source_question_id) ?? null) : null,
         community: row.source_community_post_id ? (communityDetails.get(row.source_community_post_id) ?? null) : null,
+        announcement: row.item_type === 'announcement' && row.source_announcement_id
+          ? (announcementDetailsById.get(row.source_announcement_id) ?? null)
+          : null,
       })),
       pagination: {
         page: pagination.page,
@@ -1758,12 +1839,17 @@ export async function toggleCommunityPostReaction(
   }
 
   return withDbTransaction(async (client) => {
-    const post = await client.query<{ id: string }>(
-      'SELECT id FROM feed_community_posts WHERE id = $1::uuid LIMIT 1',
+    const post = await client.query<{ author_user_id: string }>(
+      'SELECT author_user_id FROM feed_community_posts WHERE id = $1::uuid LIMIT 1',
       [normalizedPostId],
     );
     if (post.rows.length === 0) {
       throw new Error('post_not_found');
+    }
+    // A member may only react to posts they did not author — reacting to your own post is not
+    // allowed. This is the authoritative guard; the client also hides the affordance on own posts.
+    if (post.rows[0].author_user_id === userId) {
+      throw new Error('cannot_react_to_own_post');
     }
 
     const inserted = await client.query<{ id: string }>(
@@ -1791,6 +1877,152 @@ export async function toggleCommunityPostReaction(
 
     return { reacted: false };
   });
+}
+
+// Toggle a member's emoji reaction on an official announcement. Mirrors
+// toggleCommunityPostReaction but keyed on the announcement: the emoji must be in the fixed quick
+// set and the announcement must exist and be published. INSERT ... ON CONFLICT DO NOTHING adds the
+// reaction; when the row already existed (nothing inserted) the existing one is removed instead —
+// so a second tap of the same emoji clears it. Returns whether the announcement is now reacted
+// with that emoji by this member.
+export async function toggleAnnouncementReaction(
+  userId: string,
+  announcementId: string,
+  emoji: string,
+): Promise<{ reacted: boolean }> {
+  if (!isAllowedFeedReactionEmoji(emoji)) {
+    throw new Error('reaction_emoji_invalid');
+  }
+
+  const normalizedId = normalizeUuid(announcementId);
+  if (normalizedId === null) {
+    throw new Error('announcement_not_found');
+  }
+
+  return withDbTransaction(async (client) => {
+    const announcement = await client.query<{ created_by_user_id: string }>(
+      "SELECT created_by_user_id FROM announcements WHERE id = $1::uuid AND status = 'published' LIMIT 1",
+      [normalizedId],
+    );
+    if (announcement.rows.length === 0) {
+      throw new Error('announcement_not_found');
+    }
+    // Same rule as peer posts: you may not react to an announcement you authored. Members are never
+    // the author of a Survivor Hub announcement, so this only guards the owner reacting to their own.
+    if (announcement.rows[0].created_by_user_id === userId) {
+      throw new Error('cannot_react_to_own_post');
+    }
+
+    const inserted = await client.query<{ id: string }>(
+      `
+        INSERT INTO announcement_reactions (announcement_id, user_id, emoji)
+        VALUES ($1::uuid, $2, $3)
+        ON CONFLICT (announcement_id, user_id, emoji) DO NOTHING
+        RETURNING id
+      `,
+      [normalizedId, userId, emoji],
+    );
+
+    if (inserted.rows.length > 0) {
+      return { reacted: true };
+    }
+
+    // The reaction already existed: a second tap removes it (toggle off).
+    await client.query(
+      `
+        DELETE FROM announcement_reactions
+        WHERE announcement_id = $1::uuid AND user_id = $2 AND emoji = $3
+      `,
+      [normalizedId, userId, emoji],
+    );
+
+    return { reacted: false };
+  });
+}
+
+// Add a member's reply to an official announcement. Mirrors replyToFeedCommunityPost but keyed on
+// the announcement: the announcement must exist and be published, the body passes the same
+// moderation as a community post, and a per-member rate limit caps reply spam. author_username is
+// captured so the thread can render the member's handle. Returns the created reply's id + time.
+export async function replyToAnnouncement(
+  actorId: string,
+  announcementId: string,
+  bodyInput: string,
+  authorUsername: string | null,
+): Promise<{ replyId: string; createdAtIso: string }> {
+  const normalizedId = normalizeUuid(announcementId);
+  if (normalizedId === null) {
+    throw new Error('announcement_not_found');
+  }
+
+  return withDbTransaction(async (client) => {
+    const body = normalizeMultilineText(bodyInput);
+    if (!passesFeedModeration(body)) {
+      throw new Error('content_policy_violation');
+    }
+
+    const announcement = await client.query<{ id: string }>(
+      "SELECT id FROM announcements WHERE id = $1::uuid AND status = 'published' LIMIT 1",
+      [normalizedId],
+    );
+    if (announcement.rows.length === 0) {
+      throw new Error('announcement_not_found');
+    }
+
+    const allowed = await evaluateFeedRateLimit(client, {
+      userId: actorId,
+      tableName: 'announcement_replies',
+      limit: 20,
+      windowMinutes: 30,
+    });
+    if (!allowed) {
+      throw new Error('rate_limit_exceeded');
+    }
+
+    const inserted = await client.query<{ id: string; created_at: Date }>(
+      `
+        INSERT INTO announcement_replies (announcement_id, author_user_id, author_username, body, moderation_status)
+        VALUES ($1::uuid, $2, $3, $4, 'accepted')
+        RETURNING id, created_at
+      `,
+      [normalizedId, actorId, normalizeNullableText(authorUsername), body],
+    );
+
+    return {
+      replyId: inserted.rows[0].id,
+      createdAtIso: toIso(inserted.rows[0].created_at),
+    };
+  });
+}
+
+// List the accepted replies on an official announcement, oldest-first (thread order). Returns an
+// empty array when the announcement has none. The announcement id is normalized so a malformed id
+// simply yields no replies rather than throwing.
+export async function listAnnouncementReplies(announcementId: string): Promise<FeedAnnouncementReply[]> {
+  const normalizedId = normalizeUuid(announcementId);
+  if (normalizedId === null) {
+    return [];
+  }
+
+  const result = await queryDb<AnnouncementReplyRow>(
+    `
+      SELECT id, announcement_id, author_user_id, author_username, body, created_at
+      FROM announcement_replies
+      WHERE announcement_id = $1::uuid
+        AND moderation_status = 'accepted'
+      ORDER BY created_at ASC
+    `,
+    [normalizedId],
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    announcementId: row.announcement_id,
+    body: row.body,
+    authorUserId: row.author_user_id,
+    authorUsername: row.author_username,
+    createdAtIso: toIso(row.created_at),
+  }));
 }
 
 // Read a member's last-seen marker for the Hub home channel. Returns null when the member

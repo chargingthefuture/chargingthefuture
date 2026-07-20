@@ -92,6 +92,29 @@ export type FeedCommunityDetail = {
   reactions: FeedReactionSummary[];
 };
 
+// One reply on an official announcement. Members can reply to a Survivor Hub announcement; the
+// replies group under it as a thread. author_username is captured at reply time so the thread can
+// render the member's handle without a second lookup.
+export type FeedAnnouncementReply = {
+  id: string;
+  announcementId: string;
+  body: string;
+  authorUserId: string;
+  authorUsername: string | null;
+  createdAtIso: string;
+};
+
+// The reaction + reply aggregate carried on an announcement timeline item, so the official card can
+// render its reaction chips and a "N replies" affordance without a second fetch. `id` is the source
+// announcement id (the id reactions/replies key on, distinct from the feed item id). `reactions` is
+// always an array (empty when none), ordered by the fixed reaction set. `replyCount` is the number
+// of replies on the announcement.
+export type FeedAnnouncementDetail = {
+  id: string;
+  reactions: FeedReactionSummary[];
+  replyCount: number;
+};
+
 // The read-only shape shown to signed-out visitors on the public Commons. Community (peer) posts are
 // public the way Quora posts are, so a not-signed-in visitor can read them — but nothing identifying
 // beyond the author's chosen @username, and no replies/compose. Deliberately omits author_user_id.
@@ -123,6 +146,8 @@ export type FeedTimelineItem = {
   isDismissed: boolean;
   question: FeedQuestionDetail | null;
   community: FeedCommunityDetail | null;
+  // Reaction + reply aggregate for an announcement item (null for non-announcement items).
+  announcement: FeedAnnouncementDetail | null;
 };
 
 export type FeedConfig = {

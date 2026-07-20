@@ -45,6 +45,16 @@ Approved suggestions incorporated:
 1. Read/acknowledged status tracking where required.
 2. Dismiss behavior for notices (all notices are dismissable — no mandatory flag).
 3. Link actions and safe external navigation policies.
+4. **Reactions** — members can react to an official announcement with the same fixed emoji quick
+   set as a peer post (`FEED_REACTION_EMOJIS`). One reaction per (announcement, member, emoji);
+   tapping the same emoji again removes it. Rendered as chips under the announcement card. A member
+   may only react to content they did **not** author: reacting to your own announcement/post is
+   rejected server-side (`cannot_react_to_own_post`), and the client hides the affordance on own
+   content (the count of others' reactions still shows, read-only).
+5. **Replies** — members can reply to an official announcement. Replies group under the
+   announcement as a thread (loaded on demand when the thread is opened) with a "N replies"
+   affordance and an inline composer. Reactions and replies are distinct from the Signal-style
+   peer-post quote reply — they are self-contained to the announcement.
 
 ---
 
@@ -90,6 +100,9 @@ Command groups:
 6. `announcements.dismiss`
 7. `announcements.targeting.validate`
 8. `announcements.membership.event.emit`
+9. `feed.announcement.reaction.toggle`
+10. `feed.announcement.reply.create`
+11. `feed.announcement.reply.list`
 
 ### 3.2 HTTP Projection Routes
 
@@ -98,6 +111,9 @@ User routes:
 - `GET /api/announcements`
 - `POST /api/announcements/:announcementId/read`
 - `POST /api/announcements/:announcementId/dismiss`
+- `POST /api/announcements/:announcementId/reactions` — toggles the signed-in member's emoji reaction on an official announcement; feed-read gated (`requireFeedReadAccess`) + CSRF (`x-ctf-csrf: '1'`). Body `{ emoji }` (must be in `FEED_REACTION_EMOJIS`, else 400). Backed by `toggleAnnouncementReaction` against `announcement_reactions`; a second tap of the same emoji removes it. Returns `{ ok, reacted }`. Audit: `feed.announcement.reaction.toggle`.
+- `GET /api/announcements/:announcementId/replies` — lists the accepted replies on an announcement (oldest-first), each author resolved to a display handle with an `isMine` flag; feed-read gated. Returns `{ ok, announcementId, replies }`.
+- `POST /api/announcements/:announcementId/replies` — adds the signed-in member's reply to an announcement; feed-read gated + CSRF. Body `{ body }` (1–`FEED_MAX_COMMUNITY_REPLY_LENGTH` chars, same moderation as a community post, per-member rate limit 20/30min). Backed by `replyToAnnouncement` against `announcement_replies`. Returns `{ ok, reply }`. Audit: `feed.announcement.reply.create`.
 
 Admin routes:
 
@@ -138,6 +154,17 @@ Domain tables (as they exist in `ctf/schema.sql`):
 3. `announcement_delivery_events`
 4. `announcement_user_state`
 5. `announcement_membership_events`
+6. `announcement_reactions` — one row per (announcement, member, emoji); unique index
+   `idx_announcement_reactions_unique(announcement_id, user_id, emoji)` makes a reaction a toggle.
+   `announcement_id` FK → `announcements(id)` `ON DELETE CASCADE`. Mirrors
+   `feed_community_post_reactions`. Columns: `id`, `announcement_id`, `user_id`, `emoji`,
+   `created_at`.
+7. `announcement_replies` — member replies grouped under an announcement as a thread.
+   `announcement_id` FK → `announcements(id)` `ON DELETE CASCADE`; indexed
+   `idx_announcement_replies_announcement(announcement_id, created_at)`. Mirrors
+   `feed_community_replies`, adding `author_username` (captured at reply time for handle display).
+   Columns: `id`, `announcement_id`, `author_user_id`, `author_username`, `body`,
+   `moderation_status`, `created_at`, `updated_at`.
 
 Targeting reuses the shared `feed_item_targets` table (feed and announcements
 are coupled), not a separate `announcement_targets` table. The previously
@@ -200,6 +227,8 @@ references them, so they are removed here to match the real data model.
 
 ## 11) Change Log
 
+- 2026-07-20: **Restricted reactions to non-authored content.** A member may no longer react to a post/announcement they authored. Enforced authoritatively in `toggleCommunityPostReaction` and `toggleAnnouncementReaction` (`cannot_react_to_own_post` → HTTP 403); the client also hides the reaction affordance on the member's own content (the `ChatReactionRow` `readOnly` mode still shows others' reaction counts). Contract `denyConditions` / `attributePolicies` updated for `feed.community.post.reaction.toggle` and `feed.announcement.reaction.toggle`.
+- 2026-07-20: **Added reactions and replies to official announcements.** Members can now react to an announcement with the fixed emoji quick set and reply to it (previously announcements were one-way). New tables `announcement_reactions` (mirrors `feed_community_post_reactions`) and `announcement_replies` (mirrors `feed_community_replies`, plus `author_username`), both FK → `announcements(id)` `ON DELETE CASCADE` (§4.2). New routes `POST /api/announcements/:announcementId/reactions` (toggle), `GET`/`POST /api/announcements/:announcementId/replies` (§3.2), backed by `toggleAnnouncementReaction`, `replyToAnnouncement`, and `listAnnouncementReplies` in `lib/feed/repository.ts`. The Commons timeline (`listFeedTimeline`) now attaches a per-announcement reaction + reply-count aggregate, carried on the hub message (`announcementId`, `reactions`, `replyCount`) and rendered on the official card (`announcement-card.tsx`); the reaction row was extracted to `chat-reaction-row.tsx` for reuse. New `feed.announcement.reaction.toggle` / `feed.announcement.reply.create` / `feed.announcement.reply.list` command contracts (§3.1). Android parity deferred (the downloadable app is Chyme-only; Commons is served by the mobile-responsive web app).
 - 2026-06-25: **Documented the membership-events route** (inventory-debt burn-down — documentation catch-up, no code change). Added `POST /api/announcements/membership/events` (admin-gated join/leave membership event for audience recalculation; the announcements-namespaced twin of the feed membership-events handler) to §3.2 Admin routes. Verified against the route handler. Removed it from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-05-18: Replaced "Web and Android Delivery Plan (Approved)" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-follow-up language. Renamed "Gaps, Ambiguities, and Known Technical Debt (Current)" to canonical "Gaps and Known Technical Debt" and condensed deprecation note. Updated seed coverage to reference shipping seed script.
 - 2026-04-05: Deprecated standalone announcements namespace — all contracts unified under `feed.*`.

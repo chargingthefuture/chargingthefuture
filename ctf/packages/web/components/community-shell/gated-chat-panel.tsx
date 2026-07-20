@@ -9,7 +9,7 @@ import {
   GATED_REACTION_EMOJIS,
 } from '../../lib/contributor-access/gated-channel-shared';
 import type { ShellCurrentUser } from './shell-types';
-import { ChatReactionRow } from './shell-chat-panel';
+import { ChatReactionRow } from './chat-reaction-row';
 import { useGatedChat } from './use-gated-chat';
 import styles from './community-shell.module.css';
 
