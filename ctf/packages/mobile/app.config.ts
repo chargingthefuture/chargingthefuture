@@ -65,6 +65,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     // `expo prebuild` / EAS build:
     //   - @stream-io/video-react-native-sdk: Android Bluetooth/wake-lock
     //     permissions, iOS background audio mode, and the WebRTC build settings.
+    //     `androidKeepCallAlive: true` additionally turns on the Android
+    //     foreground service the SDK runs (via @notifee/react-native) so a Chyme
+    //     audio call keeps playing and the member stays connected when the app is
+    //     backgrounded — the owner's hard requirement that navigating away without
+    //     closing must not drop you from the room (2026-07-20). At prebuild it
+    //     writes the foreground-service permissions (FOREGROUND_SERVICE,
+    //     FOREGROUND_SERVICE_MICROPHONE, FOREGROUND_SERVICE_MEDIA_PLAYBACK,
+    //     POST_NOTIFICATIONS) and the service declaration. iOS background audio is
+    //     unchanged (already handled by this plugin's iOS background mode above).
+    //     The one-time runtime setup for the service lives in App.tsx
+    //     (StreamVideoRN.updateConfig).
     //   - @config-plugins/react-native-webrtc: the microphone/camera permission
     //     text shown to the user (iOS Info.plist usage strings + Android
     //     RECORD_AUDIO). Chyme is audio-only, but the camera string is required
@@ -78,7 +89,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     //     member turns on "Call alerts on this device".
     plugins: [
       ...(config.plugins ?? []),
-      '@stream-io/video-react-native-sdk',
+      ['@stream-io/video-react-native-sdk', { androidKeepCallAlive: true }],
       [
         '@config-plugins/react-native-webrtc',
         {

@@ -161,6 +161,25 @@ including on a failed request.
 
 ---
 
+### CH-10 · Call stays alive when the app is backgrounded (android)
+**Role:** member · **Surfaces:** android · **Needs a real EAS dev/production build — not Expo Go, not
+the mobile-responsive web layout.** The Android foreground service is native code that only exists in
+an EAS build.
+**Precondition:** signed in on an android device running an EAS build; a second member is speaking in
+the room so there is audio to hear.
+**Steps:**
+1. Join the Chyme audio room and confirm you can hear the other member.
+2. Press the device Home button (or switch to another app), leaving Chyme running in the background —
+   do **not** close it. A "Chyme live audio" notification should appear while backgrounded.
+3. Keep the app backgrounded for over a minute, then return to the room.
+**Expected:** Audio from the room keeps playing while the app is backgrounded (you keep hearing the
+other member). When you return, you are still in the call and still shown in the participant roster —
+you were not dropped after the 45-second presence window, because the foreground service kept the
+presence heartbeat and room poll running. Leaving the room clears the notification.
+**Result:** android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 Chyme has no plugin-specific admin UI in this build. Room/chat/join access is gated by the shared

@@ -116,9 +116,37 @@ Current status:
 5. Account/data deletion has no in-app entry point after the Chyme buttons were removed (2026-06-01). The `DELETE /api/account/chyme-profile` and `DELETE /api/account/full-account` endpoints still work; a designed account-settings surface to call them is queued with the design agent.
 6. Resolved (#1599, 2026-07-17): the Android audio room now renders other members' **persistent** raised hands. `ChymeAudioRoom` polls `GET /api/chyme/room` every 15s while joined (matching the web `chyme-live-shell` cadence), builds a `raisedHandUserIds` set from the participants' `handRaised` flag, and threads it through `ChymeAudioRoomLive` → `ChymeSpeakerTile` — each non-self, non-guest tile shows the ✋ while its `chyme-<clerkUserId>` is in the set, keeping the transient Stream reaction as an instant in-call cue. Web and Android are now at parity for the raised-hand indicator.
 7. Guest listen-only server-side enforcement is **opt-in via configuration**. The code assigns a restricted role to guest Stream users only when `CHYME_GUEST_STREAM_ROLE` is set (2026-06-26); the actual publish block depends on the owner creating that role and removing publish capabilities from it on the `default` Video call type (runbook: `ctf/docs/plugins/chyme/guest-listener-stream-role.md`). Until both are done, a guest who extracts their token could still publish (client-only enforcement). This is per the owner's "I do code + you do Stream config" decision (2026-06-26).
+8. Resolved in code (2026-07-20): the Android live audio room now **keeps the call alive when the app is backgrounded**. Previously, once the member navigated away without closing (or locked the screen), Android suspended the JS process, which both cut the presence heartbeat/room-poll timers (dropping the member after the 45s presence window) and could tear the audio down. The Stream Video SDK's documented Android foreground service is now enabled: `@notifee/react-native` is installed, `androidKeepCallAlive: true` is set on the `@stream-io/video-react-native-sdk` Expo config plugin (writes the `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_MICROPHONE` / `FOREGROUND_SERVICE_MEDIA_PLAYBACK` / `POST_NOTIFICATIONS` permissions and the service declaration at prebuild), and `StreamVideoRN.updateConfig({ foregroundService: { android: { channel, notificationTexts } } })` runs once at app startup in `App.tsx` to register the keep-alive channel. With the service running the OS keeps the process alive while in a call, so the audio continues and the presence heartbeat + room poll keep firing — the member stays in the roster. **Verification limit (release gate):** this is the documented config, verified only by typecheck/lint/lockfile here. Whether audio actually continues and the member stays in the roster when backgrounded can be confirmed only on a real device from an EAS dev/production build (not Expo Go) — that on-device check is a required release gate before this is considered proven. iOS is unchanged (its background audio mode was already handled by the config plugin).
 
 ## Change Log
 
+- 2026-07-20: **Android live audio now survives backgrounding (owner hard requirement).** A member who
+  navigates away from the Chyme room without closing — or locks the screen — must not be dropped from
+  the call. Enabled the Stream Video React Native SDK's documented Android foreground service: (1) added
+  `@notifee/react-native@9.1.8` to `ctf/packages/mobile/package.json` (the package the SDK uses to run
+  the service; matches the SDK's own pinned version and its `>=9.0.0` peer requirement), lockfile
+  updated and resolved with no unmet peer error; (2) changed the `@stream-io/video-react-native-sdk`
+  Expo config-plugin entry in `app.config.ts` from the bare string to the array form
+  `['@stream-io/video-react-native-sdk', { androidKeepCallAlive: true }]`, which at prebuild writes the
+  foreground-service permissions (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MICROPHONE`,
+  `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `POST_NOTIFICATIONS`) and the `app.notifee.core.ForegroundService`
+  declaration; (3) added a one-time `StreamVideoRN.updateConfig({ foregroundService: { android: { channel:
+  { id: 'chyme-audio', name: 'Chyme live audio' }, notificationTexts: { title, body } } } })` at module
+  load in `App.tsx` (before any call is joined) to register the keep-alive notification channel — the
+  symbol used is `StreamVideoRN.updateConfig`, exported by the installed SDK 1.32.3. (The channel type in
+  1.32.3 accepts only `id`/`name`; the SDK drops sound/vibration for the keep-alive channel itself, so
+  `lights`/`vibration` are not passed — that keeps the mobile typecheck clean.) `updateConfig` is a plain
+  config setter and a no-op on iOS, so it does not affect app boot; iOS background audio is unchanged
+  (already handled by the config plugin). **Presence side effect (also resolved):** because the foreground
+  service keeps the JS runtime alive while in a call, the existing Chyme presence heartbeat (every 35s) and
+  room poll (every 15s) keep firing when backgrounded, so the member no longer drops off after the 45s
+  presence window while still connected — the earlier "member drops off after the presence window when
+  backgrounded" behavior is resolved by the same change. Updated the two heartbeat/poll comments in
+  `ChymeAudioRoom.tsx` (comment-only) to reflect this. Android-only; web + mobile-responsive unaffected.
+  No schema, route, or contract change. **NOT verifiable here:** typecheck, lint, EOF, parity, and the
+  lockfile all pass, but whether audio continues and the member stays in the roster when the app is
+  backgrounded can only be confirmed on a real device from an EAS dev/production build (not Expo Go). That
+  on-device check is a required release gate before this is considered proven.
 - 2026-07-17: **History-aware back navigation (app-wide sweep).** The member shell's hand-rolled
   back chevron was replaced by the shared `BackChevronButton` — it returns to the previous in-app
   page and falls back to All Apps when there is no in-app history. UI-only; no schema, route, or
