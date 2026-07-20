@@ -322,6 +322,47 @@ CREATE TABLE IF NOT EXISTS chyme_deletion_events (
   metadata JSONB NULL DEFAULT '{}'::jsonb
 );
 CREATE INDEX IF NOT EXISTS idx_chyme_deletion_events_user_scope ON chyme_deletion_events(user_id, scope, requested_at DESC);
+-- Back Channel: a free, casual 1:1 audio call between two members who are both currently in the same
+-- live Chyme room (spec #1746). A single row models the whole lifecycle via `status`:
+--   inviting -> active (recipient accepts)      -> ended (either party hangs up)
+--   inviting -> declined (recipient declines, terminal)
+--   inviting -> lapsed  (a party left the room before it was accepted, terminal)
+--   active   -> ended   (terminal)
+-- There is deliberately no history surfaced anywhere and no credits attached; rows exist only to run
+-- one call and are private (never in Trust evidence / feeds, per rule 132). A member's rows are removed
+-- on Chyme service deletion and account deletion.
+CREATE TABLE IF NOT EXISTS chyme_back_channel_calls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES chyme_rooms(id) ON DELETE CASCADE,
+  initiator_user_id TEXT NOT NULL,
+  recipient_user_id TEXT NOT NULL,
+  initiator_username TEXT NULL,
+  recipient_username TEXT NULL,
+  status TEXT NOT NULL CHECK (status IN ('inviting', 'active', 'declined', 'ended', 'lapsed')),
+  stream_call_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  answered_at TIMESTAMPTZ NULL,
+  ended_at TIMESTAMPTZ NULL,
+  ended_by_user_id TEXT NULL,
+  last_heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chyme_back_channel_no_self CHECK (initiator_user_id <> recipient_user_id)
+);
+-- Column reconciliation so legacy databases converge on the current shape (all added nullable / with
+-- safe defaults so they never fail on a populated table).
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS initiator_username TEXT;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS recipient_username TEXT;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS answered_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS ended_by_user_id TEXT;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS last_heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_chyme_bc_recipient_status ON chyme_back_channel_calls(recipient_user_id, status);
+CREATE INDEX IF NOT EXISTS idx_chyme_bc_initiator_status ON chyme_back_channel_calls(initiator_user_id, status);
+CREATE INDEX IF NOT EXISTS idx_chyme_bc_room ON chyme_back_channel_calls(room_id);
+-- At most one live (inviting or active) call from a given initiator to a given recipient at a time.
+-- Terminal rows (declined/ended/lapsed) are excluded so the pair can start a fresh call later.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_chyme_bc_live_pair
+  ON chyme_back_channel_calls(initiator_user_id, recipient_user_id)
+  WHERE status IN ('inviting', 'active');
 -- Chyme does not maintain its own service_credits_transactions table.
 -- Service credit accounting for Chyme is managed through the service-credits plugin if needed.
 COMMIT;

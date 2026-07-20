@@ -239,3 +239,18 @@ a {
 .ctf-spin {
   animation: ctf-spin 1s linear infinite;
 }
+
+/* Back Channel (Chyme 1:1 audio sidebar, spec #1746): a pulsing "live" dot, the active-call panel
+ * float-in, and the incoming-invite toast slide-in. Scoped `bc-` names so they don't collide. */
+@keyframes bc-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.15); }
+}
+@keyframes bc-float-in {
+  from { transform: translateY(12px) scale(0.97); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes bc-toast-in {
+  from { transform: translateY(-12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

@@ -200,6 +200,69 @@ logged for retry/backfill — the account is still deleted.
 
 ---
 
+## Back Channel walkthrough (free 1:1 audio sidebar, spec #1746)
+
+Back Channel is a casual 1:1 audio call with another member who is in the same live room right now.
+Two test members in the same room are needed for most of these.
+
+### CH-12 · Start a Back Channel (consent, no cold ring)
+**Role:** member · **Surfaces:** all
+**Precondition:** two members (A and B) both joined to the same live room.
+**Steps:**
+1. As A, on B's participant tile, press **Back Channel**.
+2. Watch B's screen.
+3. As B, press **Accept**.
+**Expected:** A's tile action changes to "Invite sent…". B sees an incoming prompt (a toast on web, a
+bottom sheet on Android) reading "wants a Back Channel" with Accept/Decline — B is never cold-rung
+into a live call. On Accept, both A and B land in the live 1:1 audio call (floating panel on web,
+full-screen on Android) and can hear each other. The Back Channel action never shows on your own tile.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### CH-13 · Decline sends nothing back
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. As A, invite B to a Back Channel.
+2. As B, press **Decline**.
+**Expected:** The prompt closes. A gets no message and no error — A's "Invite sent…" simply clears on
+the next poll. The note "Declining sends no message. Back Channels are private." is shown to B.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### CH-14 · Blocked members can't Back Channel
+**Role:** member · **Surfaces:** all
+**Precondition:** A has blocked B (or B has blocked A), and both are in the room.
+**Steps:**
+1. Look at whether the **Back Channel** action appears on the blocked member's tile.
+2. (If you can force the request) call `POST /api/chyme/back-channel/invite` for that member.
+**Expected:** The action is hidden on a blocked member's tile (either direction). A forced invite is
+rejected server-side with `403` (`CHYME_BACK_CHANNEL_BLOCKED`). This is the same symmetric block rule
+used across member-to-member surfaces.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### CH-15 · Invite lapses when a party leaves; call survives; hang up
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. As A, invite B, then — before B accepts — have A leave the room. Watch B's prompt.
+2. Start a fresh Back Channel and accept it. Then have one party leave the *room* (not the call).
+3. Press **Hang up**.
+**Expected:** A pending invite lapses (B's prompt disappears) within ~45s when a party leaves before
+accepting. An already-accepted call is **not** ended by leaving the room — it keeps going until
+someone hangs up. Hang up ends the call for both; no history or record remains anywhere. Every call
+surface shows the Foundation note ("For calls with ServiceCredits attached, use Foundation instead") —
+Back Channel itself never mentions or moves credits.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### CH-16 · Back Channel audio survives backgrounding (android)
+**Role:** member · **Surfaces:** android only (needs a real EAS build, not Expo Go)
+**Steps:**
+1. On an Android device, get into a live Back Channel call (CH-12).
+2. Press **Home** or switch apps. Keep talking on the other end.
+**Expected:** The call audio keeps playing while the app is backgrounded (the Back Channel reuses the
+Chyme foreground service). Returning to the app shows the call still live. This is the same class of
+check as the room's CH-10 and the Android app script's AN-4 — a required release gate.
+**Result:** android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 Chyme has no plugin-specific admin UI in this build. Room/chat/join access is gated by the shared
