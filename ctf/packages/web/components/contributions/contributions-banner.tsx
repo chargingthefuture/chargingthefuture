@@ -222,7 +222,26 @@ export function ContributionsGiftTrigger() {
       onClick={() => router.push('/apps/contributions')}
       aria-label="Contribute to the platform"
       title="Contribute"
-      style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 2, flexShrink: 0 }}
+      // Boxed to match the rest of the phone top bar's icon controls (help, settings,
+      // admin) — the same surface + border + radius the plugin header uses — so the gift
+      // is no longer a bare emoji floating among bordered buttons. Theme tokens carry the
+      // default and comic looks.
+      style={{
+        width: 38,
+        height: 38,
+        borderRadius: 10,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--ctf-surface, rgba(255, 255, 255, 0.06))',
+        border: '1px solid var(--ctf-border, rgba(255, 255, 255, 0.12))',
+        color: 'var(--ctf-text, #E5E7EB)',
+        cursor: 'pointer',
+        fontSize: 16,
+        lineHeight: 1,
+        padding: 0,
+        flexShrink: 0,
+      }}
     >
       🎁
     </button>
