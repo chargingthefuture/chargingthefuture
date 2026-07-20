@@ -65,7 +65,7 @@ function DesktopGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyU
                 <Lock size={18} color={t.ACCENT} />
               </div>
               <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>Economy totals are coming soon</div>
-              <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Live totals appear here as verified members add their skills. Sign in to contribute.</div>
+              <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Live totals build up as members exchange value in the community — credits sent, calls paid, favors completed. Sign in to contribute.</div>
             </div>
 
             {[
@@ -132,7 +132,7 @@ function DesktopGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyU
             <Globe size={32} color={`${t.ACCENT}60`} style={{ marginBottom: 12 }} />
             <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Add your skills to the economy</div>
             <div style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.6, maxWidth: 480, margin: '0 auto 20px' }}>
-              Every verified skill you add increases the collective value of the TI Skills Economy. Create a free account to contribute, earn ServiceCredits, and add your skills to the survivor economy.
+              Create a free account to join the directory, earn ServiceCredits, and take part in the exchanges that build the survivor economy.
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
               {verifyUrl ? (
@@ -164,7 +164,7 @@ function MobileGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUr
           <span style={{ fontSize: 20, fontWeight: 800 }}>GDP</span>
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Survivor economy dashboard</span>
-        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>The gross domestic product of the survivor economy — the total value the community creates, broken down by source and by country.</p>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>The gross domestic product of the survivor economy — the total value the community creates, broken down by where it comes from, plus how many members are in each country.</p>
 
         {/* Live snapshot — locked until sign-in (no fabricated totals) */}
         <div style={{ borderRadius: 16, border: `1px solid ${t.ACCENT}30`, background: t.ACCENT + '06', padding: '20px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
@@ -172,7 +172,7 @@ function MobileGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUr
             <Lock size={18} color={t.ACCENT} />
           </div>
           <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE }}>Economy totals are coming soon</div>
-          <div style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.5 }}>Live totals build up as verified members add their skills. Sign in to contribute.</div>
+          <div style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.5 }}>Live totals build up as members exchange value in the community — credits sent, calls paid, favors completed. Sign in to contribute.</div>
         </div>
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>

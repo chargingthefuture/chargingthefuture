@@ -101,7 +101,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'lighthouse',
     name: 'LightHouse',
-    summary: 'Verified survivor housing listings.',
+    summary: 'Community housing listings from trauma-informed hosts; ServiceCredits accepted.',
     availabilityState: 'implemented_shell',
     navRank: 80,
     isVisible: true,
