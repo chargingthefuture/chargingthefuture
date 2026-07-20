@@ -64,6 +64,12 @@ export async function POST(
         { status: 400 },
       );
     }
+    if (code === 'cannot_react_to_own_post') {
+      return NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'You can’t react to your own post.' },
+        { status: 403 },
+      );
+    }
 
     // Unexpected failure (e.g. a database error): caught errors do not reach Sentry on their
     // own, so report it. The client still gets a generic message.

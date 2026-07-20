@@ -2042,6 +2042,52 @@ BEGIN
 END $$;
 CREATE INDEX IF NOT EXISTS idx_announcements_status ON announcements(status);
 
+-- Emoji reactions on official announcements. Mirrors feed_community_post_reactions: one row per
+-- (announcement, member, emoji), and the unique index makes a reaction a toggle — a second tap of
+-- the same emoji removes the row. The emoji is constrained to the small fixed quick set at the
+-- application layer (FEED_REACTION_EMOJIS). Deleting the announcement cascades its reactions.
+CREATE TABLE IF NOT EXISTS announcement_reactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  announcement_id UUID NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  emoji TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS announcement_reactions ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS announcement_reactions ADD COLUMN IF NOT EXISTS announcement_id UUID;
+ALTER TABLE IF EXISTS announcement_reactions ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_reactions ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS idx_announcement_reactions_unique
+  ON announcement_reactions(announcement_id, user_id, emoji);
+CREATE INDEX IF NOT EXISTS idx_announcement_reactions_announcement
+  ON announcement_reactions(announcement_id);
+
+-- Replies on official announcements. Mirrors feed_community_replies but keyed on the announcement:
+-- a member can reply to an official Survivor Hub announcement, and the replies group under that
+-- announcement as a thread. author_username is captured at reply time so the thread can show the
+-- member's handle without a second lookup. Deleting the announcement cascades its replies.
+CREATE TABLE IF NOT EXISTS announcement_replies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  announcement_id UUID NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+  author_user_id TEXT NOT NULL,
+  author_username TEXT,
+  body TEXT NOT NULL,
+  moderation_status TEXT NOT NULL DEFAULT 'accepted',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS announcement_id UUID;
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS author_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS author_username TEXT;
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_announcement_replies_announcement
+  ON announcement_replies(announcement_id, created_at);
+
 -- === FEED TIMELINE PROJECTION ===
 CREATE TABLE IF NOT EXISTS feed_timeline_projection (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

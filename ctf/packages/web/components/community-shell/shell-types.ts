@@ -60,11 +60,16 @@ export type ChatMessage = {
   // The underlying community post id, when this message is a peer post. This is the id a reply
   // must reference. Absent for AI answers, concierge replies, and the empty-state prompt.
   communityPostId?: string | null;
+  // The underlying announcement id, when this message is an official announcement. The id its
+  // reactions and replies key on. Absent for peer posts, AI answers, and synthetic messages.
+  announcementId?: string | null;
   // The peer message this one quotes (Signal-style reply), or null/absent when not a reply.
   quotedMessage?: ChatQuotedMessage | null;
-  // Emoji reactions on this peer post, ordered by the fixed reaction set. Absent/empty for
-  // messages that are not peer posts or that have no reactions.
+  // Emoji reactions on this message (peer post or announcement), ordered by the fixed reaction
+  // set. Absent/empty for messages with no reactions.
   reactions?: ChatReactionSummary[];
+  // The number of replies on this announcement (announcements only). Absent/0 otherwise.
+  replyCount?: number;
 };
 
 export type ComicAnswerRating = 'helpful' | 'not_helpful' | 'flagged';
