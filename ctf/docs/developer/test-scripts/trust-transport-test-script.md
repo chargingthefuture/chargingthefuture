@@ -358,6 +358,22 @@ Result: web ☐ android ☐
 
 ---
 
+### TT-DEL · Account deletion clears the Stream chat copy (privacy)
+**Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
+TrustTransport trip message; access to the Stream dashboard for the app behind `STREAM_API_KEY`.
+**Steps:**
+1. As that member, send a trip-thread message, then delete the whole account
+   (`DELETE /api/account/full-account`, or delete the user in Clerk to exercise the webhook path).
+2. In the Stream dashboard, look up the member's Stream user `trust-transport-<userId>` and their messages
+   in the `trust-transport-trip-<tripId>` channel.
+**Expected:** After the delete, the member's Postgres rows are gone **and** their Stream user
+`trust-transport-<userId>` is hard-deleted with messages marked deleted — no lingering Stream copy. This
+runs via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If
+Stream is down at delete time, the deletion still succeeds and the failure is logged for retry.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 ### TT-A1 — Incident queue loads and an incident can be resolved
@@ -532,3 +548,5 @@ The following are documented limitations from the inventory's "Gaps and Known Te
 3. **Nearby Drivers list absent** — no backend endpoint exists for available driver discovery; this data is intentionally omitted from both web and android per the real-data-only rule. The missing list is not a bug.
 4. **Driver ratings, ETAs, and vehicle info absent** — none of these fields are returned by any `trust-transport` API endpoint; their absence from the UI is correct behavior. Ratings of people are never shown anywhere in this plugin, by design — reputation is completion history only (completed vs. not), never a score.
 5. **No admin trip-approval queue** — the design mockup shows an "approve/reject trip request queue" but no admin trip-approval route exists; the incident queue is what the API exposes and is what the admin surface renders. The mockup is outdated, not a missing feature.
+
+> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

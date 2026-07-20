@@ -138,3 +138,29 @@ export async function sendChymeStreamMessage(input: {
     await streamClient.disconnectUser();
   }
 }
+
+// Delete a member's Chyme data on the Stream side when they delete their Chyme profile or account.
+// Chyme chat messages are fanned out to Stream (sendChymeStreamMessage), so Stream keeps an
+// independent copy that the Postgres delete alone does not remove — leaving the member's message
+// content on Stream indefinitely. This hard-deletes the member's Stream user (`chyme-<userId>`) and
+// marks their messages deleted. Best-effort: returns `false` (never throws) when Stream is
+// unconfigured or the call fails, so a Stream outage can never block or roll back the user's deletion.
+export async function deleteChymeStreamData(userId: string): Promise<boolean> {
+  const streamConfig = await resolveStreamCredentials();
+  if (!streamConfig) {
+    return false;
+  }
+
+  const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
+  try {
+    await streamClient.deleteUser(toStreamUserId(userId), {
+      mark_messages_deleted: true,
+      hard_delete: true,
+    });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    await streamClient.disconnectUser();
+  }
+}

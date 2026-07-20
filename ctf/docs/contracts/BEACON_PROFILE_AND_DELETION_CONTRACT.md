@@ -26,14 +26,19 @@ Rule 114 baseline: Beacon uses one canonical profile by `user_id`. There is no B
 
 ## 3) Plugin Extension Fields
 
-Beacon has no per-member extension table. It does not store any per-member rows. The live chat and
-reactions are ephemeral and held only by Stream, never in our database.
+Beacon has no per-member extension table. It does not store any per-member rows in our database. The
+live chat is held by Stream — and, correction from an earlier version of this contract, it is **not
+ephemeral**: Stream Chat retains messages with no expiry by default, so a member's Beacon chat persists
+under the Stream user `beacon-<userId>` until deleted. On account deletion the orchestrator's
+external-cleanup hook (`lib/account/external-cleanup-registry.ts` → `deleteBeaconStreamData`) hard-deletes
+that Stream user (with `mark_messages_deleted`), removing the copy.
 
 ## 4) Domain Data Owned by Plugin
 
 - Table/entity: `beacon_events`
   - Contains personal data? minimal — `host_user_id` (an admin) and the saved public recording URL.
-    No viewer or chatter identities are stored (chat is ephemeral in Stream).
+    No viewer or chatter identities are stored in this table (chat lives in Stream, not the DB — and
+    is cleared from Stream on account deletion via the external-cleanup hook).
   - Retention period: long-lived (event history and replay links).
   - Legal/compliance note: the broadcast and its recording are public by design; the replay is posted
     publicly to the Commons. No private member content is stored here.
@@ -48,8 +53,11 @@ Beacon stores no per-member profile or per-member content, so there is no member
 Beacon data" surface. A member who never wants to appear simply never chats — anonymous public
 watching leaves no stored identity, and members are never on camera (the admin is the sole publisher).
 
-- Delete immediately: nothing member-scoped exists to delete.
-- Anonymize/pseudonymize: not applicable — no per-member rows are stored.
+- Delete immediately: nothing member-scoped exists in the DB to delete. The member's Stream chat copy
+  (`beacon-<userId>`) IS deleted, but on the account path via the deletion orchestrator's external
+  cleanup — there is no standalone Beacon service-delete surface (`serviceScopeSupported: false` in the
+  deletion registry).
+- Anonymize/pseudonymize: not applicable — no per-member rows are stored in the DB.
 - Retain for compliance: `beacon_events_admin_audit_trail` (admin actions only).
 - Never touch: canonical profile; other plugins' data; Chyme.
 
@@ -58,10 +66,15 @@ watching leaves no stored identity, and members are never on camera (the admin i
 When a member requests full account deletion:
 
 - No member-scoped Beacon rows exist, so nothing is removed from Beacon tables for an ordinary member.
+- The member's Stream chat copy (`beacon-<userId>`) is hard-deleted via the orchestrator's
+  external-cleanup hook (`deleteBeaconStreamData`), best-effort after the DB transaction commits — so a
+  Beacon registry entry now exists (both tables `retain`) purely so the orchestrator knows Beacon and
+  runs this cleanup on every whole-account path (full-account route, internal delete, Clerk webhook).
 - An admin's `host_user_id` references on past events are retained as event history (the events are
   public broadcasts already posted to the Commons); the orchestrator does not hard-delete public
   broadcast history.
-- Final expected state: no recoverable member-scoped Beacon data (there was none to begin with).
+- Final expected state: no recoverable member-scoped Beacon data — no DB rows (there were none), and the
+  Stream chat copy removed.
 
 ## 7) Rejoin/Re-enable Behavior
 

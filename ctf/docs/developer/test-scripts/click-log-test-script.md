@@ -143,3 +143,5 @@ of these, it is already tracked, not a new bug:
   direct database tooling.
 - There is no rate limiting on incident creation beyond the shared platform defaults.
 - There is no advanced search or filtering on incident history.
+
+> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

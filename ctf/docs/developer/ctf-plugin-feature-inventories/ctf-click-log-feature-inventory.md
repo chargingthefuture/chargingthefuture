@@ -11,14 +11,14 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - Display a running count and history
 - Support deletion and auditability
 
-## 3. Target User Features
+## 3. User Features
 
 - Log incident (with optional location/notes)
 - View incident count and history
 - Delete own incidents
 - Mobile and web parity
 
-## 4. Target Admin Features
+## 4. Admin Features
 
 - View all incidents (future)
 - Delete any incident (future)

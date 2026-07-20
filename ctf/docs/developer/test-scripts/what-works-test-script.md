@@ -192,3 +192,5 @@ one of these, it is already tracked, not a new bug:
   platform defaults.
 - Wiring the profile-deletion scopes into the central deletion orchestrator is a platform-level task
   tracked outside this plugin.
+
+> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

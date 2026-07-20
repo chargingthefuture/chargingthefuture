@@ -15,9 +15,9 @@ function parseBody(body: AnnouncementBody): AnnouncementDraftInput {
     scheduleAtIso: typeof body.scheduleAtIso === 'string' ? body.scheduleAtIso : null,
     expiresAtIso: typeof body.expiresAtIso === 'string' ? body.expiresAtIso : null,
     targeting: body.targeting,
-    // Optional linked plugin. '' clears it; the repository validates the slug against the visible
-    // plugin registry and stores null for anything unknown or admin-only.
-    linkedPluginSlug: typeof body.linkedPluginSlug === 'string' ? body.linkedPluginSlug : null,
+    // Optional linked plugins (0–3). The repository validates each slug against the visible plugin
+    // registry, drops unknown/admin-only/duplicate slugs, and caps the list at 3.
+    linkedPluginSlugs: Array.isArray(body.linkedPluginSlugs) ? body.linkedPluginSlugs : undefined,
   };
 }
 

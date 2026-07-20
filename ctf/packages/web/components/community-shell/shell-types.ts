@@ -48,9 +48,10 @@ export type ChatMessage = {
   kind?: ChatMessageKind;
   // The announcement's heading, shown above the body on the official card. Absent otherwise.
   announcementTitle?: string | null;
-  // The plugin an announcement links to ({ slug, name }), rendered as a clickable "Open <Plugin>"
-  // chip on the official card. Absent/null for peer posts, AI answers, and announcements with no link.
-  linkedPlugin?: { slug: string; name: string } | null;
+  // The plugins an announcement links to (0–3, { slug, name }), each rendered as a clickable
+  // "Open <Plugin>" chip on the official card. Absent/empty for peer posts, AI answers, and
+  // announcements with no link.
+  linkedPlugins?: Array<{ slug: string; name: string }>;
   // Original ISO timestamp (when known) used to time-sort the unified stream; `time` is the
   // display-only formatted label. Optional because optimistic/synthetic messages may lack one.
   sentAtIso?: string;

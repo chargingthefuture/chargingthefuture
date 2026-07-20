@@ -11,7 +11,7 @@
 
 Foundation provides trauma-informed survivors with deterministic access to vetted providers for 1:1 text/voice/video connection, quote requests, and continuity history. Connections are policy-controlled, auditable, and scoped to Stream Maker-tier quotas with quota-aware degradation.
 
-## Target User Features
+## User Features
 
 1. Provider discovery and search. Shipped: a text search over provider name, headline, and bio,
    plus an offered-skill filter (`searchProviders` — providers are claimed directory profiles that
@@ -24,7 +24,7 @@ Foundation provides trauma-informed survivors with deterministic access to vette
 6. In-app notifications for messages, quote state changes, and missed calls.
 7. Notification preferences and quiet-hour controls.
 
-## Target Admin Features
+## Admin Features
 
 1. Capacity policy control under Stream Maker-tier limits with threshold handling (green/yellow/orange/red).
 2. Degrade controls for non-critical behavior under quota pressure.
@@ -164,6 +164,7 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 
 ## Change Log
 
+- 2026-07-20: **Account deletion now clears the member's Stream chat copy (privacy).** Foundation thread chat is sent directly into Stream Chat under the Stream user `foundation-<userId>`, so Stream kept an independent copy that the Postgres-only account-deletion registry never removed (Stream retains messages with no expiry by default). Registered `deleteFoundationStreamData(userId)` (in `lib/foundation/stream.ts` — hard-deletes the Stream user with `mark_messages_deleted`; never throws) into the shared account-deletion external-cleanup hook (`lib/account/external-cleanup-registry.ts`), which the orchestrator runs after the DB transaction commits on every whole-account deletion path (full-account route, internal delete, Clerk webhook), best-effort (a Stream outage is logged, never blocks the deletion). No schema/route/contract change.
 - 2026-07-18: **Corrected the provider-search feature claim (owner report via the user guide).**
   Target-feature item 1 claimed search "by service type, location, language, and trauma-informed
   criteria"; the shipped search is a text match over name/headline/bio plus an offered-skill

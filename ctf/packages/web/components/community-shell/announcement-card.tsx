@@ -19,9 +19,9 @@ type AnnouncementCardProps = {
   body: string;
   // Display-only formatted time label (same one the chat bubbles use).
   time: string;
-  // The plugin this announcement links to, rendered as a clickable "Open <Plugin>" chip below the
-  // body (in addition to the plain "Open <Plugin>: <url>" line already in the body). Null when none.
-  linkedPlugin?: { slug: string; name: string } | null;
+  // The plugins this announcement links to (0–3), each rendered as a clickable "Open <Plugin>" chip
+  // below the body (in addition to the plain "Open <Plugin>: <url>" lines already in the body).
+  linkedPlugins?: Array<{ slug: string; name: string }>;
   // The underlying announcement id — the id reactions and replies key on. Null on a synthetic card
   // (there is none in practice), in which case the reaction/reply affordances are not rendered.
   announcementId?: string | null;
@@ -60,7 +60,7 @@ export function AnnouncementCard({
   title,
   body,
   time,
-  linkedPlugin,
+  linkedPlugins,
   announcementId,
   reactions,
   replyCount,
@@ -147,10 +147,14 @@ export function AnnouncementCard({
       </div>
       {title ? <p className={styles.announcementTitle}>{title}</p> : null}
       <p className={styles.announcementBody}>{body}</p>
-      {linkedPlugin ? (
-        <Link href={`/apps/${linkedPlugin.slug}`} className={styles.announcementChip}>
-          <ArrowUpRight size={13} color="currentColor" /> Open {linkedPlugin.name}
-        </Link>
+      {linkedPlugins && linkedPlugins.length > 0 ? (
+        <div className={styles.announcementChipRow}>
+          {linkedPlugins.map((plugin) => (
+            <Link key={plugin.slug} href={`/apps/${plugin.slug}`} className={styles.announcementChip}>
+              <ArrowUpRight size={13} color="currentColor" /> Open {plugin.name}
+            </Link>
+          ))}
+        </div>
       ) : null}
 
       {announcementId ? (

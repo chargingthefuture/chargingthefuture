@@ -490,10 +490,11 @@ This applies to all development: deploy scripts, CI/CD workflows, seed scripts, 
 
 All code changes to plugin routes, database schema, contracts, or seed scripts MUST be accompanied by corresponding updates to the plugin's feature inventory markdown file. This prevents drift between code state and documentation, ensuring feature inventories remain authoritative sources of truth for plugin capabilities, data models, and delivery status.
 
-**Why this matters — the inventory serves two readers, and an out-of-date inventory fails both:**
+**Why this matters — the inventory serves three readers, and an out-of-date or vague inventory fails them:**
 
 1. **The next agent.** On a later task an agent reads the inventory to understand what already exists, to catch feature drift, and to spot incomplete or half-shipped work. If the inventory does not match the code, the agent acts on a wrong map — re-doing finished work, missing a gap, or "fixing" something that is actually correct.
 2. **The owner's product description.** The inventory is the owner's always-current list of what the product actually does, used to describe the product accurately to users. A wrong inventory means the product gets described wrong.
+3. **Automated generators.** Some sections are the only facts fed to generators (e.g. the public user guide is built from each inventory's **User Features** section plus the test-script **Core smoke** steps, and nothing else). A vague or abstract line there does not produce vague output — it produces **invented** output, because the generator fills the gap with plausible-but-wrong features. Write generator-grounding sections concretely, in plain member-facing words; see [120-plugin-feature-inventory-lifecycle-rules.mdc](.claude/rules/120-plugin-feature-inventory-lifecycle-rules.mdc) "Downstream Generators — Write Concretely".
 
 So the inventory update is **part of the change, not optional follow-up**: a change is not complete until the inventory matches it. This applies to every change that alters a feature, a route, the data model, a contract, or delivery status — not literally every whitespace/refactor edit, but anything that changes what the product does or how its data/contracts are shaped (see the Drift Vectors table below for the exact triggers).
 
@@ -512,7 +513,7 @@ When making code changes, consult this table to identify which inventory section
 | **Modify column constraints/type** | `ctf/schema.sql` | Data Model and Storage Contracts | Update column definition; document breaking changes and migration impact |
 | **Add/modify seed script** | `ctf/scripts/seed{PluginName}Phase0.mjs` | Seed Coverage Status | Update what data is seeded; note any new columns/tables; document deterministic UUIDs |
 | **Add mobile feature** | `ctf/packages/mobile/src/features/{plugin}/**` | Web and Android Delivery Status; Mobile Parity Contracts | Update delivery status; create/update `ctf/config/plugin-parity-contracts.json` entry; update milestone dates |
-| **Remove/deprecate feature** | Web or mobile package | Web and Android Delivery Status; Target User Features | Move feature to changelog section; update milestone dates; document deprecation reason |
+| **Remove/deprecate feature** | Web or mobile package | Web and Android Delivery Status; User Features | Move feature to changelog section; update milestone dates; document deprecation reason |
 | **Create entirely new plugin** | Full stack (see below) | All sections | See new plugin checklist below |
 
 ### New Plugin Lifecycle Checklist
@@ -520,7 +521,7 @@ When making code changes, consult this table to identify which inventory section
 When creating a new plugin from scratch, ALL of the following must be completed before PR approval:
 
 1. **Inventory File** (single combined document — see [120-plugin-feature-inventory-lifecycle-rules.mdc](.claude/rules/120-plugin-feature-inventory-lifecycle-rules.mdc))
-   - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-feature-inventory.md` with all required sections (Scope & Boundary, Intent, Target User Features, Target Admin Features, API Surface and Route Map, Data Model and Storage Contracts, Security/Privacy/Compliance Controls, Web and Android Delivery Status, Seed Coverage Status, Gaps & Known Technical Debt, Change Log)
+   - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-feature-inventory.md` with all required sections (Scope & Boundary, Intent, User Features, Admin Features, API Surface and Route Map, Data Model and Storage Contracts, Security/Privacy/Compliance Controls, Web and Android Delivery Status, Seed Coverage Status, Gaps & Known Technical Debt, Change Log)
    - Include a `## Build Checklist` section in that same file: an ordered, dependency-based task list (no phases). There is no separate checklist file.
 
 2. **Schema & Migrations**

@@ -40,7 +40,7 @@ As a thank-you, confirmed contributions grant ServiceCredits — the platform's 
 token. Credits are a thank-you, **not a purchase**: they are never redeemable for real money. The
 flow is one-way, like gas-station reward points.
 
-## 3. Target User Features
+## 3. User Features
 
 - Submit a contribution claim of one of three kinds:
   - **Gift card** (`amazon`, `apple`, or `dennys`): the member states the amount (over 0, at most
@@ -66,7 +66,7 @@ flow is one-way, like gas-station reward points.
 - Open to any signed-in member: contributing requires no Unlock verification and never changes
   Unlock state.
 
-## 4. Target Admin Features
+## 4. Admin Features
 
 - Review queue of claims, filterable by status. Only the admin projection includes the member's
   Signal contact (to match a gift-card code received over Signal to its claim).

@@ -25,7 +25,7 @@ a direct purchase link, no ads, no affiliates, and no identity attached to the s
 read a teaser; signed-in survivors can suggest tools and mark items "this helped me"; admins curate
 the problem categories and review every suggestion before it joins the shared list.
 
-## 3. Target User Features
+## 3. User Features
 
 - Browse the shared list: active problems, each with its approved tools (emoji, name, type, a short
   "why it works" note, a verified count, and a direct purchase link).
@@ -39,7 +39,7 @@ the problem categories and review every suggestion before it joins the shared li
   list and to suggest.
 - Web and Android parity.
 
-## 4. Target Admin Features
+## 4. Admin Features
 
 - Review queue: approve or reject (with an admin-only reason) each suggested tool; delete tools.
 - Edit a tool's own details (emoji, name, type, note, purchase link) at any status — including after

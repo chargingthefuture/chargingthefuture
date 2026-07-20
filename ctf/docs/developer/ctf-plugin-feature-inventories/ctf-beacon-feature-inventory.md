@@ -80,7 +80,7 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 - **Commons integration** reuses the existing feed/announcement path: a "🔴 Live now" entry on go-live
   (linking to `/apps/beacon`) and a "▶️ Watch the replay" entry when the recording is ready.
 
-## Target User Features (viewer surface, `/apps/beacon`)
+## User Features (viewer surface, `/apps/beacon`)
 
 1. **Watch publicly.** Anyone with the link watches the live broadcast (HLS), no sign-in.
 2. **Idle state.** When nothing is live, a calm "No live event right now" screen (with the last
@@ -92,7 +92,7 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 6. **"Live and public" indicator.** A clear marker that the broadcast is public so participants know
    their comments are visible.
 
-## Target Admin Features (admin surface, `/admin/beacon`)
+## Admin Features (admin surface, `/admin/beacon`)
 
 1. **Create an event** (title + description).
 2. **Go Live** — for a phone demo, Beacon shows the per-event RTMP URL + stream key to paste into a
@@ -232,6 +232,7 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-07-20: **Account deletion now clears the member's Beacon Stream chat copy, and Beacon joined the deletion registry (privacy).** Two gaps: (1) Beacon had **no entry** in the account-deletion registry at all, so the orchestrator did not know about it; (2) a member's per-event live chat is sent into Stream Chat under `beacon-<userId>` and **persists** there (Stream retains chat with no expiry — it is not "ephemeral" as the older deletion contract assumed), yet nothing removed it on account deletion. Added a Beacon `deletion-registry` entry (`beacon_events` and `beacon_events_admin_audit_trail` are **retained** — public broadcast history and the admin audit trail, per the Beacon deletion contract — so Beacon deletes no Postgres rows, matching "no per-member rows"), and registered `deleteBeaconStreamData(userId)` (in `lib/beacon/stream.ts` — hard-deletes the Stream user `beacon-<userId>` with `mark_messages_deleted`; never throws) into the shared external-cleanup hook (`lib/account/external-cleanup-registry.ts`). The orchestrator runs it after the DB transaction commits on every whole-account deletion path (full-account route, internal delete, Clerk webhook), best-effort. Also corrected the deletion contract's "chat is ephemeral in Stream" claim. No schema change.
 - 2026-07-19: **Copy: broadcasts are "from Farah", not "from the team" (owner report).** The
   platform has a single operator, so "the team" was inaccurate. Updated everywhere the phrase
   shipped: the plugin-registry summary (schema seed + in-code fallback), the web viewer intro and

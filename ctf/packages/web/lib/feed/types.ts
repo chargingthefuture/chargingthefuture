@@ -182,9 +182,9 @@ export type Announcement = {
   publishedAtIso: string | null;
   expiresAtIso: string | null;
   targeting: AnnouncementTargeting;
-  // Optional plugin this announcement points at (slug, e.g. "socket-relay"). When set, the published
-  // feed item carries an "Open <Plugin>" link to /apps/<slug> so a reader can jump straight to it.
-  linkedPluginSlug: string | null;
+  // Ordered list of plugin slugs this announcement points at (0–3, e.g. ["socket-relay"]). When set,
+  // the published feed item carries an "Open <Plugin>" link to /apps/<slug> per entry, in order.
+  linkedPluginSlugs: string[];
   createdByUserId: string;
   updatedByUserId: string;
   createdAtIso: string;
@@ -197,9 +197,10 @@ export type AnnouncementDraftInput = {
   scheduleAtIso?: string | null;
   expiresAtIso?: string | null;
   targeting?: AnnouncementTargeting;
-  // Slug of the plugin to link, or null/empty for none. Validated against the visible plugin
-  // registry server-side; an unknown or admin-only slug is stored as null.
-  linkedPluginSlug?: string | null;
+  // Ordered slugs of the plugins to link (0–3). Validated against the visible plugin registry
+  // server-side; unknown, admin-only, or duplicate slugs are dropped and the list is capped at 3.
+  // Absent keeps the existing links on update; an empty array clears them.
+  linkedPluginSlugs?: string[];
 };
 
 export type MembershipEventType = 'join' | 'leave';

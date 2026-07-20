@@ -10,19 +10,20 @@ Below, each app has a short summary, a few notes on what a member can do, and si
 
 _Last updated: 2026-07-20_
 
-Directory is a list of members and the skills they share.
+A list of members and the skills they hold.
 
-Open Directory to see active member profiles. Each profile shows a member's name, job title, sector, and skills. You can browse and read profiles even if you don't have one yourself.
+Directory is a list of members and their skills. Open Directory to see their profiles. Each profile shows a member's job title, sector, and skills. You can browse and read profiles even if you don't have one yourself.
 
-Directory is only for members who are signed in. If you sign out, you won't see any member data.
+Some profiles are made by members themselves. Others are community-generated: a member nominated someone who does not have an account yet, so the profile carries a "Community generated" badge. Signed in, you see every active, listed profile. If a community-generated profile is yours, you can claim it as your own.
 
-A member who holds the Contributor Access badge shows a braid badge next to their name. Click the badge to see how it's earned.
+Directory only lists members and their skills so you can find and read them. It does not message, book, or transact, and it is not where members offer their skills for exchange — offering skills happens in Foundation.
 
 **How to use it**
 
-1. Sign in and open Directory. You'll see a list of active member profiles.
-2. Click any profile to read that member's name, job title, sector, and skills.
-3. If you see a braid badge next to a member's name, click it to learn how they earned it.
+1. Open Directory while signed in. The list of profiles loads.
+2. Search by name, skill, or location, or filter by sector, to find someone.
+3. Open a profile to read their name, job title, sector, and skills.
+4. You don't need a profile to browse. Create your own if you want to be listed, or claim a community-generated one that is yours.
 
 ## Foundation
 

@@ -97,6 +97,24 @@ the member's real account.
 
 ---
 
+### BCN-DEL · Account deletion clears the member's Stream chat copy (privacy)
+**Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
+message in a Beacon event's live chat; access to the Stream dashboard for the app behind `STREAM_API_KEY`.
+**Steps:**
+1. As that member, chat in a live Beacon event, then delete the whole account
+   (`DELETE /api/account/full-account`, or delete the user in Clerk to exercise the webhook path — both
+   run the deletion orchestrator, which now includes a Beacon registry entry).
+2. In the Stream dashboard, look up the member's Stream user `beacon-<userId>` and their messages in the
+   Beacon event chat channel.
+**Expected:** The member's Stream user `beacon-<userId>` is hard-deleted with messages marked deleted —
+their live-chat copy no longer lingers on Stream. Beacon stores no per-member Postgres rows, so nothing
+is removed from Beacon tables; `beacon_events` (public broadcast history) and the admin audit trail are
+retained by design. If Stream is down at delete time, the deletion still succeeds and the failure is
+logged for retry.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 ### BCN-A1 · Create an event
@@ -176,3 +194,5 @@ one of these, it is already tracked, not a new bug:
   read-only so the room feels alive.
 - Replay hosting links to Stream's recording URL rather than re-hosting, for now.
 - Android viewer parity shipped; android admin broadcasting is intentionally out of scope.
+
+> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

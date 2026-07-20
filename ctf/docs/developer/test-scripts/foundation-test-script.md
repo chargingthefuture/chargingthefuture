@@ -189,6 +189,22 @@ directly), and the admin screen header shows a "Member view" pill opening `/apps
 
 ---
 
+### FND-DEL · Account deletion clears the Stream chat copy (privacy)
+**Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
+Foundation thread message; access to the Stream dashboard for the app behind `STREAM_API_KEY`.
+**Steps:**
+1. As that member, send a thread message, then delete the whole account (`DELETE /api/account/full-account`,
+   or delete the user in Clerk to exercise the webhook path — both run the deletion orchestrator).
+2. In the Stream dashboard, look up the member's Stream user `foundation-<userId>` and their messages in
+   the `foundation-thread-<threadId>` channel.
+**Expected:** After the delete, the member's Postgres rows are gone **and** their Stream user
+`foundation-<userId>` is hard-deleted with messages marked deleted — no lingering Stream copy. This runs
+via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If Stream
+is down at delete time, the deletion still succeeds and the failure is logged for retry.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 ### FND-A1 · Capacity policy (role-gated)
@@ -276,3 +292,5 @@ of these, it is already tracked, not a new bug:
 - The android Foundation Admin screen has no snapshot counts row (providers/threads/quotes/active
   calls/pending notifications). No admin HTTP route returns those aggregates — the web reads them
   server-side inside the page — so the mobile screen omits the snapshot rather than inventing a route.
+
+> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

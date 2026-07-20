@@ -23,6 +23,28 @@ import {
   type PluginDeletionEntry,
 } from './deletion-registry';
 import { executeEntry, type DeletionTableResult } from './deletion-engine';
+import { getExternalCleanup } from './external-cleanup-registry';
+import { reportError } from 'lib/observability/report';
+
+/**
+ * Run external-store cleanups (e.g. Stream chat copies) for the given plugin slugs, AFTER the DB
+ * transaction has committed. Best-effort and isolated: each cleanup is awaited in its own try/catch,
+ * so one plugin's failure (or a Stream outage) is logged via `reportError` but never throws, never
+ * blocks the others, and never rolls back the deletion the user already completed in the DB.
+ */
+async function runExternalCleanups(userId: string, slugs: readonly string[]): Promise<void> {
+  for (const slug of slugs) {
+    const cleanup = getExternalCleanup(slug);
+    if (!cleanup) {
+      continue;
+    }
+    try {
+      await cleanup(userId);
+    } catch (error) {
+      reportError(error, { area: 'account', op: 'external_cleanup', extra: { slug, userId } });
+    }
+  }
+}
 
 export type DeletionScope = 'service' | 'account';
 
@@ -134,6 +156,9 @@ export async function deleteServiceScopeData(
       return { result: recorded, tables: tableResults };
     });
 
+    // DB rows are gone; clear this plugin's external-store copy (e.g. Stream chat) too, post-commit.
+    await runExternalCleanups(userId, [entry.slug]);
+
     logAccountAudit({
       command: 'account.data.delete.service',
       actorId: userId,
@@ -192,6 +217,11 @@ export async function deleteAllAccountData(
       const recorded = await recordEvent(client, userId, 'account', 'all-services', allResults, requestedAtIso);
       return { result: recorded, tables: allResults };
     });
+
+    // DB rows for every plugin are gone; clear each plugin's external-store copy (e.g. Stream chat)
+    // too, post-commit. This is the single place that covers all whole-account entry points (the
+    // full-account route, the internal delete route, and the Clerk webhook all call this).
+    await runExternalCleanups(userId, accountDeletionRegistry.map((entry) => entry.slug));
 
     logAccountAudit({
       command: 'account.data.delete.full',
