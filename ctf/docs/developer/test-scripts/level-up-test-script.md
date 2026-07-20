@@ -539,3 +539,10 @@ The following cases must produce the same data and UX outcome on both surfaces. 
 - **Unbacked trainer detail fields absent.** Trainer rating, handle, per-cohort name/status, learners count, milestones validated, SC released, and recent-activity feed are not returned by `GET /api/level-up/trainers`. Their absence from the UI is correct.
 - **Unbacked achievement fields absent.** Achievement emoji, rarity, and an "In Progress" bucket with progress fractions are not backed by the endpoint (earned boolean only). Their absence is correct.
 - **Unbacked wallet fields absent.** "Total Spent", per-row running balance, a "Spent" filter tab, per-cohort escrow breakdown, and an "earn more" suggestion list have no data path (grant-only model). Their absence is correct.
+
+---
+
+## Notifications
+
+**1.** As a trainer or admin, release a milestone's credits for a learner. Sign in as that learner, open the 🔔 notifications tab in the Commons, and confirm a "A LevelUp milestone was approved and your credits were released." item appears (unread) with an "Open" pill to LevelUp.
+web ☐
