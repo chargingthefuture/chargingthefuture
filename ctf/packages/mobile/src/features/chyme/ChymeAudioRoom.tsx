@@ -33,6 +33,9 @@ import {
 import type { ChymeJoinResponse } from './ChymeApi';
 import { postChymeHeartbeat, postChymeHand, getChymeRoom } from './ChymeApi';
 import { ChymeTipButton } from './ChymeTipModal';
+import { useChymeBackChannel, type MobileBackChannelController } from './useChymeBackChannel';
+import { ChymeBackChannelInviteSheet } from './ChymeBackChannelInviteSheet';
+import { ChymeBackChannelCall } from './ChymeBackChannelCall';
 
 // Shared theme wiring for the live audio room. The accent is the Chyme plugin accent for
 // the active theme; both StyleSheets are memoized on the tokens/accent. Each component in
@@ -98,6 +101,8 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   // Drives the persistent raised-hand indicator for everyone except the local member (who is driven
   // by their own instant local toggle). Starts empty until the first poll lands.
   const [raisedHandUserIds, setRaisedHandUserIds] = useState<ReadonlySet<string>>(() => new Set());
+  // Back Channel (spec #1746): free 1:1 audio with another member in this room. Polls only while joined.
+  const backChannel = useChymeBackChannel(status === 'joined');
 
   useEffect(() => {
     let cancelled = false;
@@ -214,32 +219,76 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
     };
   }, [status]);
 
+  // The incoming-invite sheet and the full-screen active call are Modals, so they overlay whatever the
+  // room is showing and persist across a room reconnect. Do not ring while already in a call.
+  const backChannelOverlay = (
+    <>
+      {backChannel.incomingInvite && !backChannel.activeCall ? (
+        <ChymeBackChannelInviteSheet
+          visible
+          fromName={backChannel.incomingInvite.fromUsername ? '@' + backChannel.incomingInvite.fromUsername : 'A member'}
+          busy={backChannel.busy}
+          onAccept={() => {
+            const invite = backChannel.incomingInvite;
+            if (invite) void backChannel.accept(invite.callId);
+          }}
+          onDecline={() => {
+            const invite = backChannel.incomingInvite;
+            if (invite) void backChannel.decline(invite.callId);
+          }}
+        />
+      ) : null}
+      {backChannel.activeCall && backChannel.joinCredentials && backChannel.joinCredentials.callId === backChannel.activeCall.callId ? (
+        <ChymeBackChannelCall
+          credentials={backChannel.joinCredentials}
+          displayName={displayName}
+          otherName={backChannel.activeCall.otherUsername ? '@' + backChannel.activeCall.otherUsername : 'Member'}
+          onHangUp={() => {
+            const active = backChannel.activeCall;
+            if (active) void backChannel.hangUp(active.callId);
+          }}
+        />
+      ) : null}
+    </>
+  );
+
   if (status !== 'joined' || !client || !call) {
     return (
-      <View style={styles.center}>
-        {status === 'error' ? (
-          <>
-            <Text style={styles.errorText}>{errorMessage ?? 'Could not connect to the audio room.'}</Text>
-            <TouchableOpacity style={styles.leaveBtn} onPress={onLeave}>
-              <Text style={styles.leaveBtnText}>Leave</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <ActivityIndicator size="large" color={accent} />
-            <Text style={styles.connectingText}>Connecting to the audio room…</Text>
-          </>
-        )}
-      </View>
+      <>
+        <View style={styles.center}>
+          {status === 'error' ? (
+            <>
+              <Text style={styles.errorText}>{errorMessage ?? 'Could not connect to the audio room.'}</Text>
+              <TouchableOpacity style={styles.leaveBtn} onPress={onLeave}>
+                <Text style={styles.leaveBtnText}>Leave</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <ActivityIndicator size="large" color={accent} />
+              <Text style={styles.connectingText}>Connecting to the audio room…</Text>
+            </>
+          )}
+        </View>
+        {backChannelOverlay}
+      </>
     );
   }
 
   return (
-    <StreamVideo client={client}>
-      <StreamCall call={call}>
-        <ChymeAudioRoomLive onOpenChat={onOpenChat} onLeave={onLeave} raisedHandUserIds={raisedHandUserIds} />
-      </StreamCall>
-    </StreamVideo>
+    <>
+      <StreamVideo client={client}>
+        <StreamCall call={call}>
+          <ChymeAudioRoomLive
+            onOpenChat={onOpenChat}
+            onLeave={onLeave}
+            raisedHandUserIds={raisedHandUserIds}
+            backChannel={backChannel}
+          />
+        </StreamCall>
+      </StreamVideo>
+      {backChannelOverlay}
+    </>
   );
 };
 
@@ -247,7 +296,8 @@ const ChymeAudioRoomLive: React.FC<{
   onOpenChat: () => void;
   onLeave: () => void;
   raisedHandUserIds: ReadonlySet<string>;
-}> = ({ onOpenChat, onLeave, raisedHandUserIds }) => {
+  backChannel: MobileBackChannelController;
+}> = ({ onOpenChat, onLeave, raisedHandUserIds, backChannel }) => {
   const { styles, tokens } = useRoomStyles();
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
@@ -304,6 +354,7 @@ const ChymeAudioRoomLive: React.FC<{
                 participant={participant}
                 localHandRaised={handRaised}
                 raisedHandUserIds={raisedHandUserIds}
+                backChannel={backChannel}
               />
             ))}
           </View>
@@ -319,7 +370,8 @@ const ChymeSpeakerTile: React.FC<{
   participant: StreamVideoParticipant;
   localHandRaised: boolean;
   raisedHandUserIds: ReadonlySet<string>;
-}> = ({ participant, localHandRaised, raisedHandUserIds }) => {
+  backChannel: MobileBackChannelController;
+}> = ({ participant, localHandRaised, raisedHandUserIds, backChannel }) => {
   const { tileStyles } = useRoomStyles();
   const isSelf = participant.isLocalParticipant;
   const speaking = participant.isSpeaking;
@@ -375,9 +427,95 @@ const ChymeSpeakerTile: React.FC<{
           {publishingAudio ? 'speaking' : 'muted'}
         </Text>
       </View>
-      {!isSelf && !isGuest ? <ChymeTipButton recipientUserId={clerkUserId} recipientName={name} /> : null}
+      {!isSelf && !isGuest ? (
+        <View style={tileStyles.actionRow}>
+          <ChymeTipButton recipientUserId={clerkUserId} recipientName={name} />
+          <ChymeBackChannelTileButton recipientUserId={clerkUserId} backChannel={backChannel} />
+        </View>
+      ) : null}
     </View>
   );
+}
+
+// Screen 1 of the handoff, mobile: the per-tile Back Channel affordance. Never on the local tile.
+// Three states: start pill, "Invite sent…" pending, and the "BC" active badge; hidden while in another
+// Back Channel call.
+const ChymeBackChannelTileButton: React.FC<{
+  recipientUserId: string;
+  backChannel: MobileBackChannelController;
+}> = ({ recipientUserId, backChannel }) => {
+  const { theme } = useTheme();
+  const accent = getAppAccent('chyme', theme);
+  const styles = makeBackChannelButtonStyles(accent);
+
+  const isActiveWithThis = backChannel.activeCall?.otherUserId === recipientUserId;
+  const isPendingToThis = backChannel.outgoingInvite?.toUserId === recipientUserId;
+  const inSomeCall = Boolean(backChannel.activeCall);
+
+  if (isActiveWithThis) {
+    return (
+      <View style={styles.badge} accessibilityLabel="Back Channel active">
+        <View style={styles.badgeDot} />
+        <Text style={styles.badgeText}>BC</Text>
+      </View>
+    );
+  }
+  if (isPendingToThis) {
+    return (
+      <View style={styles.pending} accessibilityLabel="Back Channel invite sent">
+        <View style={styles.badgeDot} />
+        <Text style={styles.pendingText}>Invite sent…</Text>
+      </View>
+    );
+  }
+  if (inSomeCall) {
+    return null;
+  }
+  return (
+    <TouchableOpacity
+      style={[styles.pill, backChannel.busy && styles.pillDisabled]}
+      onPress={() => void backChannel.sendInvite(recipientUserId)}
+      disabled={backChannel.busy}
+      accessibilityRole="button"
+      accessibilityLabel="Start a Back Channel"
+    >
+      <Phone size={11} color={accent} strokeWidth={2.5} />
+      <Text style={styles.pillText}>Back Channel</Text>
+    </TouchableOpacity>
+  );
+};
+
+function makeBackChannelButtonStyles(accent: string) {
+  return StyleSheet.create({
+    pill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 20,
+      backgroundColor: `${accent}1F`,
+      borderWidth: 1,
+      borderColor: `${accent}59`,
+    },
+    pillDisabled: { opacity: 0.6 },
+    pillText: { fontSize: 11, fontWeight: '700', fontFamily: interFamily('700'), color: accent },
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 20,
+      backgroundColor: `${accent}29`,
+      borderWidth: 1,
+      borderColor: `${accent}66`,
+    },
+    badgeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: accent },
+    badgeText: { fontSize: 11, fontWeight: '700', fontFamily: interFamily('700'), color: accent },
+    pending: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    pendingText: { fontSize: 11, fontWeight: '600', fontFamily: interFamily('600'), color: '#9ca3af' },
+  });
 }
 
 const ChymeAudioControls: React.FC<{
@@ -491,6 +629,7 @@ function makeTileStyles(t: ThemeTokens, accent: string) {
   statusText: { fontSize: 10, fontFamily: interFamily('400') },
   statusTextOn: { color: PRIMARY },
   statusTextOff: { color: t.textSecondary },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 },
   });
 }
 

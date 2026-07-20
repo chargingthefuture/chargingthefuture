@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { createTransfer } from 'lib/shared/service-credits/createTransfer';
 import type { ChymeServiceCreditsTransaction } from './types';
 import { sendChymeStreamMessage } from './stream';
+import { deleteBackChannelForUser } from './back-channel';
 
 export async function sendServiceCredits(
   fromUserId: string,
@@ -515,6 +516,10 @@ export async function markServiceDeletion(userId: string): Promise<ChymeDeletion
       await client.query(`DELETE FROM chyme_messages WHERE room_id = $1 AND user_id = $2`, [roomId, userId]);
       await client.query(`DELETE FROM chyme_room_members WHERE room_id = $1 AND user_id = $2`, [roomId, userId]);
     }
+
+    // Back Channel calls hold no history worth keeping, so remove every row this member was part of
+    // (as initiator or recipient) — not scoped to the current room. See lib/chyme/back-channel.ts.
+    await deleteBackChannelForUser(client, userId);
 
     const inserted = await client.query<{ requested_at: Date }>(
       `

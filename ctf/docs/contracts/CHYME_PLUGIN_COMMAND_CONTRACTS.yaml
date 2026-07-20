@@ -127,6 +127,118 @@ contracts:
     idempotency: true
 
   - pluginId: chyme
+    command: chyme.back-channel.invite
+    version: 1.0.0
+    description: Invite another member who is in the same live room to a free 1:1 audio Back Channel. Block-aware (rejected either direction) and room-bound (both must be present). No credits.
+    inputSchema:
+      recipientUserId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      callId:
+        type: string
+    dataAccess:
+      - chyme_rooms
+      - chyme_room_members
+      - chyme_back_channel_calls
+      - member_blocks
+    purpose: social_audio_back_channel_invite
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.back-channel.accept
+    version: 1.0.0
+    description: Recipient accepts a Back Channel invite; the call goes live and Stream 1:1 audio join credentials are returned. Consent gate — no cold ringing.
+    inputSchema:
+      callId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      callId:
+        type: string
+      streamCallId:
+        type: string
+      streamApiKey:
+        type: string
+      streamUserId:
+        type: string
+      streamToken:
+        type: string
+    dataAccess:
+      - chyme_back_channel_calls
+      - stream_user_token_metadata
+    purpose: social_audio_back_channel_accept
+    retentionClass: operational_medium_lived
+    idempotency: false
+
+  - pluginId: chyme
+    command: chyme.back-channel.join
+    version: 1.0.0
+    description: Mint Stream 1:1 audio join credentials for a member already part of an active Back Channel call (the initiator, once the invite was accepted).
+    inputSchema:
+      callId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      callId:
+        type: string
+      streamCallId:
+        type: string
+      streamApiKey:
+        type: string
+      streamUserId:
+        type: string
+      streamToken:
+        type: string
+    dataAccess:
+      - chyme_back_channel_calls
+      - stream_user_token_metadata
+    purpose: social_audio_back_channel_join
+    retentionClass: operational_medium_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.back-channel.decline
+    version: 1.0.0
+    description: Recipient declines a Back Channel invite. Returns only ok; no message is sent to the initiator.
+    inputSchema:
+      callId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - chyme_back_channel_calls
+    purpose: social_audio_back_channel_decline
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.back-channel.leave
+    version: 1.0.0
+    description: Either party hangs up (or the initiator cancels a still-pending invite). Terminal; no history is retained.
+    inputSchema:
+      callId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - chyme_back_channel_calls
+    purpose: social_audio_back_channel_leave
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: chyme
     command: chyme.profile.delete.service
     version: 1.0.0
     description: Execute service-scoped Chyme deletion and record compliance event.
@@ -144,6 +256,7 @@ contracts:
       - chyme_service_profiles
       - chyme_room_members
       - chyme_messages
+      - chyme_back_channel_calls
       - chyme_deletion_events
     purpose: service_scoped_deletion
     retentionClass: compliance_long_lived

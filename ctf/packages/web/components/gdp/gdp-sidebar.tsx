@@ -46,7 +46,7 @@ export function GdpSidebar({ metrics }: { metrics: GdpMetrics }) {
       <ScrollArea style={{ flex: 1 }}>
         <div style={{ padding: "0 8px 16px" }}>
           {SIDEBAR_FILTERS.map((f, i) => (
-            <div key={f} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "pointer", background: i === 0 ? `${t.ACCENT}18` : "transparent", borderLeft: i === 0 ? `2px solid ${t.ACCENT}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
+            <div key={f} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "default", background: i === 0 ? `${t.ACCENT}18` : "transparent", borderLeft: i === 0 ? `2px solid ${t.ACCENT}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
               <span style={{ fontSize: 13, color: i === 0 ? t.TEXT : t.SUBTLE, flex: 1 }}>{f}</span>
             </div>
           ))}

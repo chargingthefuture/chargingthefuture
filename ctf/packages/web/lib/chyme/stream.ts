@@ -1,5 +1,6 @@
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
+import { reportError } from 'lib/observability/report';
 
 export const CHYME_STREAM_CHANNEL_ID = 'chyme-main-room';
 
@@ -106,6 +107,39 @@ export async function createChymeGuestListenCredentials(): Promise<StreamJoinCre
     };
   } finally {
     await streamClient.disconnectUser();
+  }
+}
+
+// Mint a Stream Video token for one participant of a Back Channel 1:1 call (spec #1746). Reuses the
+// member's existing Chyme Stream identity (`chyme-<userId>`) so no extra user is created, but the call
+// itself is a distinct 1:1 Video call (id `back-channel-<callId>`, the `default` call type, audio-only)
+// separate from the main room. Both members mint their own token against the same call id and join it.
+// Best-effort/degrade-to-null exactly like the room join path: present-but-bad credentials return null
+// so the route can surface "stream unavailable" instead of throwing.
+export async function createChymeBackChannelCredentials(input: {
+  userId: string;
+  name: string;
+  callId: string;
+}): Promise<{ streamApiKey: string; streamUserId: string; streamToken: string; streamCallId: string } | null> {
+  const streamConfig = await resolveStreamCredentials();
+  if (!streamConfig) {
+    return null;
+  }
+
+  const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
+  try {
+    const streamUserId = await ensureMember(streamClient, input.userId, input.name);
+    return {
+      streamApiKey: streamConfig.apiKey,
+      streamUserId,
+      streamToken: streamClient.createToken(streamUserId),
+      streamCallId: `back-channel-${input.callId}`,
+    };
+  } catch (error) {
+    reportError(error, { area: 'chyme', op: 'back_channel_token' });
+    return null;
+  } finally {
+    await streamClient.disconnectUser().catch(() => {});
   }
 }
 

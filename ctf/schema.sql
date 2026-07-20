@@ -322,6 +322,47 @@ CREATE TABLE IF NOT EXISTS chyme_deletion_events (
   metadata JSONB NULL DEFAULT '{}'::jsonb
 );
 CREATE INDEX IF NOT EXISTS idx_chyme_deletion_events_user_scope ON chyme_deletion_events(user_id, scope, requested_at DESC);
+-- Back Channel: a free, casual 1:1 audio call between two members who are both currently in the same
+-- live Chyme room (spec #1746). A single row models the whole lifecycle via `status`:
+--   inviting -> active (recipient accepts)      -> ended (either party hangs up)
+--   inviting -> declined (recipient declines, terminal)
+--   inviting -> lapsed  (a party left the room before it was accepted, terminal)
+--   active   -> ended   (terminal)
+-- There is deliberately no history surfaced anywhere and no credits attached; rows exist only to run
+-- one call and are private (never in Trust evidence / feeds, per rule 132). A member's rows are removed
+-- on Chyme service deletion and account deletion.
+CREATE TABLE IF NOT EXISTS chyme_back_channel_calls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES chyme_rooms(id) ON DELETE CASCADE,
+  initiator_user_id TEXT NOT NULL,
+  recipient_user_id TEXT NOT NULL,
+  initiator_username TEXT NULL,
+  recipient_username TEXT NULL,
+  status TEXT NOT NULL CHECK (status IN ('inviting', 'active', 'declined', 'ended', 'lapsed')),
+  stream_call_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  answered_at TIMESTAMPTZ NULL,
+  ended_at TIMESTAMPTZ NULL,
+  ended_by_user_id TEXT NULL,
+  last_heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chyme_back_channel_no_self CHECK (initiator_user_id <> recipient_user_id)
+);
+-- Column reconciliation so legacy databases converge on the current shape (all added nullable / with
+-- safe defaults so they never fail on a populated table).
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS initiator_username TEXT;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS recipient_username TEXT;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS answered_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS ended_by_user_id TEXT;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS last_heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_chyme_bc_recipient_status ON chyme_back_channel_calls(recipient_user_id, status);
+CREATE INDEX IF NOT EXISTS idx_chyme_bc_initiator_status ON chyme_back_channel_calls(initiator_user_id, status);
+CREATE INDEX IF NOT EXISTS idx_chyme_bc_room ON chyme_back_channel_calls(room_id);
+-- At most one live (inviting or active) call from a given initiator to a given recipient at a time.
+-- Terminal rows (declined/ended/lapsed) are excluded so the pair can start a fresh call later.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_chyme_bc_live_pair
+  ON chyme_back_channel_calls(initiator_user_id, recipient_user_id)
+  WHERE status IN ('inviting', 'active');
 -- Chyme does not maintain its own service_credits_transactions table.
 -- Service credit accounting for Chyme is managed through the service-credits plugin if needed.
 COMMIT;
@@ -5715,4 +5756,69 @@ ALTER TABLE IF EXISTS mutual_time_votes ADD COLUMN IF NOT EXISTS created_at TIME
 CREATE UNIQUE INDEX IF NOT EXISTS uq_mutual_time_votes_event_voter_slot ON mutual_time_votes(event_id, voter_user_id, slot_start_utc);
 CREATE INDEX IF NOT EXISTS idx_mutual_time_votes_event_slot ON mutual_time_votes(event_id, slot_start_utc);
 CREATE INDEX IF NOT EXISTS idx_mutual_time_votes_voter ON mutual_time_votes(voter_user_id);
+
+-- ============================================================================
+-- Notifications center (cross-plugin, member-facing)
+-- ----------------------------------------------------------------------------
+-- One central feed of notify-worthy events across plugins. A row stores only a
+-- reference (source_plugin, notification_type, target_ref) plus a short, neutral,
+-- pre-rendered summary and an in-app link — never sensitive detail — so a
+-- notification never leaks on a shared/monitored device and never renders content
+-- the member has since lost access to. The in-app feed is always available; only
+-- device push is gated by notification_preferences (opt-out by default).
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- Recipient (Clerk user id).
+  user_id TEXT NOT NULL,
+  -- Originating plugin slug, e.g. 'commons', 'foundation', 'service-credits'.
+  source_plugin TEXT NOT NULL,
+  -- Specific event type, e.g. 'commons.reply', 'foundation.call.incoming'.
+  notification_type TEXT NOT NULL,
+  -- Coarse opt-in bucket: 'safety' | 'activity' | 'community'.
+  category TEXT NOT NULL,
+  -- Short, neutral, member-facing statement of what happened. No sensitive detail.
+  summary TEXT NOT NULL,
+  -- In-app deep link to open (e.g. '/apps/foundation'); null when there is nowhere to go.
+  link_path TEXT,
+  -- Opaque id of the underlying row (for dedupe and optional resolve). Null when not applicable.
+  target_ref TEXT,
+  -- Null = unread; set when the member opens/marks it read.
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS source_plugin TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS notification_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'activity';
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS summary TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS link_path TEXT;
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS target_ref TEXT;
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications (user_id) WHERE read_at IS NULL;
+-- Dedupe guard: the same event is never inserted twice for the same recipient.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_notifications_dedupe
+  ON notifications (user_id, notification_type, target_ref)
+  WHERE target_ref IS NOT NULL;
+
+-- Per-member device-push opt-in. The in-app feed is NOT gated by this — only device push is.
+-- All category opt-ins default FALSE (opt-out by default). discreet_push keeps push text generic
+-- (no plugin name or content) and defaults TRUE, the safest choice for a shared/monitored device.
+CREATE TABLE IF NOT EXISTS notification_preferences (
+  user_id TEXT PRIMARY KEY,
+  push_safety BOOLEAN NOT NULL DEFAULT FALSE,
+  push_activity BOOLEAN NOT NULL DEFAULT FALSE,
+  push_community BOOLEAN NOT NULL DEFAULT FALSE,
+  discreet_push BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS push_safety BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS push_activity BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS push_community BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS discreet_push BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 COMMIT;

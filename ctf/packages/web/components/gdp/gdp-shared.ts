@@ -141,9 +141,10 @@ export function pickGdpMetricValue(
   return row ? row.metricValue : null;
 }
 
-// Matches the design's sidebar filter list (no "By Phase" — that term is banned
-// project-wide and is not present in the design mockup).
-export const SIDEBAR_FILTERS = ["Global Overview", "By Sector", "By Country", "Projections"];
+// Only the single Global Overview view exists. The old "By Sector" / "By Country" /
+// "Projections" entries were removed (owner decision, 2026-07-20): they were never wired to
+// any handler, so they looked clickable but did nothing.
+export const SIDEBAR_FILTERS = ["Global Overview"];
 
 // One registered recognition source's contribution to the live Community Value Index, as returned by
 // GET /api/gdp/report/current. The dashboard renders these as the per-source value breakdown.

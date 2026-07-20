@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
-import { Users, Zap, Shield, SlidersHorizontal } from 'lucide-react';
+import { Users, Zap, Shield, SlidersHorizontal, Gift } from 'lucide-react';
 import type { ShellSection } from './shell-types';
 import { HelpControl } from '../bug-reports/help-control';
 import styles from './community-shell.module.css';
@@ -43,6 +43,21 @@ export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthe
       </button>
 
       <div className={styles.iconRailSpacer} aria-hidden="true" />
+
+      {/* Contribute shortcut: the phone top bar carries a gift trigger, but the desktop rail had no
+          equivalent, so on desktop there was no gift/contribute affordance at all. This restores
+          parity — a persistent entry to the Contributions plugin for signed-in members. Uses the
+          lucide Gift icon to match the rail's other icons (the phone bar keeps its 🎁 emoji). */}
+      {isAuthenticated ? (
+        <Link
+          href="/apps/contributions"
+          className={styles.iconRailBtn}
+          aria-label="Contribute"
+          title="Contribute — support the platform"
+        >
+          <Gift size={18} />
+        </Link>
+      ) : null}
 
       {/* Admin entry: only rendered for users whose Clerk role is "admin". This is the one
           in-app way to reach the admin directory at /admin; the route itself is still
