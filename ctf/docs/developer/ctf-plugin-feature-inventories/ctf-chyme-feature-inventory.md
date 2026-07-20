@@ -17,7 +17,7 @@ Lifecycle/governance references applied:
 2. Profile/deletion boundaries follow Rule 114 and `ctf/docs/contracts/CHYME_PROFILE_AND_DELETION_CONTRACT.md`.
 3. Implementation sequencing must honor baseline phase order: auth integration, Railway deployment baseline, Vercel integration, Expo baseline.
 
-## Target User Features (Implementation Scope)
+## User Features (Implementation Scope)
 
 1. Authenticated room bootstrap via `GET /api/chyme/room` with deterministic room provisioning (`chyme-main-room`) and participant upsert.
 2. Companion text chat read/send via `GET /api/chyme/messages` and `POST /api/chyme/messages`, with DB persistence and Stream message fan-out through shared adapters.
@@ -28,7 +28,7 @@ Lifecycle/governance references applied:
 7. Web UI surface includes participant list, join-call action, chat panel, the per-participant tip action (`chyme-tip-dialog.tsx`), and deletion actions.
 8. Android UI surface includes room summary, participant roster, chat send/read, join action, the per-participant tip action (`ChymeTipModal.tsx`), and deletion actions using runtime-configured provider-neutral identity headers.
 
-## Target Admin Features
+## Admin Features
 
 1. No Chyme-specific admin UI is required for MVP unless called by contracts/checklist updates.
 2. Eligibility gate must enforce shared access approval model (`approved user` or `admin`) for room/chat/join routes.

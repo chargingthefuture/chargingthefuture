@@ -11,7 +11,7 @@
 
 Foundation provides trauma-informed survivors with deterministic access to vetted providers for 1:1 text/voice/video connection, quote requests, and continuity history. Connections are policy-controlled, auditable, and scoped to Stream Maker-tier quotas with quota-aware degradation.
 
-## Target User Features
+## User Features
 
 1. Provider discovery and search. Shipped: a text search over provider name, headline, and bio,
    plus an offered-skill filter (`searchProviders` — providers are claimed directory profiles that
@@ -24,7 +24,7 @@ Foundation provides trauma-informed survivors with deterministic access to vette
 6. In-app notifications for messages, quote state changes, and missed calls.
 7. Notification preferences and quiet-hour controls.
 
-## Target Admin Features
+## Admin Features
 
 1. Capacity policy control under Stream Maker-tier limits with threshold handling (green/yellow/orange/red).
 2. Degrade controls for non-critical behavior under quota pressure.

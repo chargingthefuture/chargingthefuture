@@ -36,7 +36,7 @@ signal in Trust. It is emphatically NOT a ledger, NOT a bill, and carries NO fia
    reporting duty) carries a declared value, and even that is a declared figure, never an executed
    transfer, so it never touches real balances or the SC ledger.
 
-## Target User Features
+## User Features
 
 1. Declare a new recurring activity with another member (owner side): counterparty + sector + currency +
    cadence, plus an optional ServiceCredits value only when the currency is ServiceCredits. Created as
@@ -48,7 +48,7 @@ signal in Trust. It is emphatically NOT a ledger, NOT a bill, and carries NO fia
 5. See your ongoing activities and pending confirmations in the hub, and via a light card in the account
    hub next to Trust.
 
-## Target Admin Features
+## Admin Features
 
 None in v1. There is no admin mutation surface. The append-only `recurring_activity_audit_trail`
 supports later admin review of the bilateral confirmation graph for collusion patterns (a ring that only

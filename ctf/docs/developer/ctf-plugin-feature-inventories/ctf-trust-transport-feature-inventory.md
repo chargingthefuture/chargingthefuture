@@ -22,7 +22,7 @@ The plugin must provide equivalent core behavior across web and Android.
 
 ---
 
-## Target User Features
+## User Features
 
 ### 1.1 Unified Discovery and Booking Surface
 
@@ -92,7 +92,7 @@ The plugin must provide equivalent core behavior across web and Android.
 
 ---
 
-## Target Admin Features
+## Admin Features
 
 ### 2.1 Trust and Safety Operations
 
