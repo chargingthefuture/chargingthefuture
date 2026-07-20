@@ -26,6 +26,30 @@ function beaconStreamUserId(userId: string): string {
   return `beacon-${userId}`.replace(/[^0-9a-zA-Z_@.-]/g, '-');
 }
 
+// Delete a member's Beacon data on Stream when they delete their account. Beacon's per-event live chat
+// is sent into Stream Chat under `beacon-<userId>`, so Stream keeps a copy of the member's messages —
+// this is NOT "ephemeral" as the older deletion contract assumed (Stream retains chat with no expiry by
+// default), and Beacon has no member Postgres rows, so a Postgres-only delete leaves nothing to remove
+// there but the Stream copy lingers. This hard-deletes the member's Stream user with
+// `mark_messages_deleted`. Best-effort: returns `false` (never throws) when Stream is unconfigured or the
+// call fails, so the account-deletion hook that calls this can log and continue without blocking.
+export async function deleteBeaconStreamData(userId: string): Promise<boolean> {
+  const credentials = await resolveStreamCredentials();
+  if (!credentials) {
+    return false;
+  }
+  const chatClient = new StreamChat(credentials.apiKey, credentials.apiSecret);
+  try {
+    await chatClient.deleteUser(beaconStreamUserId(userId), {
+      mark_messages_deleted: true,
+      hard_delete: true,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function base64Url(input: Buffer | string): string {
   return Buffer.from(input).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
