@@ -251,13 +251,12 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
   (rule 105). The banner's "Not now" dismiss button is currently hidden (owner request) behind the
   `SHOW_DISMISS_BUTTON` flag in that component — the button markup and the server-side snooze
   (`/api/contributions/banner/dismiss`) are left intact so it can be re-enabled by flipping the flag.
-- Android: **shipped** at `packages/mobile/src/features/contributions/` (`Contributions.tsx`,
-  `ContributionsAdmin.tsx`, `ContributionsApi.ts`) mirroring the web behavior one-to-one, including
-  the greyed github-star path and the inline Signal URL on confirmation.
-- Parity: `config/plugin-parity-contracts.json` has the `contributions` entry
-  (`mobileFeatureDirs: ["contributions"]`, `requiresMobileSurface: true`,
-  `requiresExplicitWebShell: false`); the mobile dir now exists and the web/android parity check
-  passes.
+- Android: **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served
+  by the installable web app (PWA). Historical detail: it previously shipped at
+  `packages/mobile/src/features/contributions/` (`Contributions.tsx`, `ContributionsAdmin.tsx`,
+  `ContributionsApi.ts`) mirroring the web behavior one-to-one.
+- Parity: `config/plugin-parity-contracts.json` still carries the `contributions` entry; the plugin is
+  now web-only per rule 105.
 
 ## 9. Seed Coverage Status
 

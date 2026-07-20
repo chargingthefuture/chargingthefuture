@@ -31,7 +31,7 @@ Cross-plugin usage is mandatory for any CTF flow that transfers economic value, 
 
 For GDP/accounting semantics, deletion-based treasury reclaim is reserve reallocation and not GDP recognition.
 
-The plugin must provide equivalent core behavior across web and Android, with phased parity tracked and closed before GA.
+The plugin ships on web (desktop + mobile-responsive). The former native Android (React Native) surface was removed 2026-07-20 (rule 105, PR #1742); this feature is now web-only, served by the installable web app (PWA).
 
 ---
 
@@ -242,7 +242,7 @@ Domain tables:
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete` (functional). Wallet creation, balance retrieval, transfer initiation, escrow resolution, governance, and treasury admin surfaces are consistent across web (`/apps/service-credits`) and Android (`packages/mobile/src/features/service-credits`). Error semantics and deny reasons match across platforms.
+Delivery: **web + mobile-responsive complete** (functional). **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Wallet creation, balance retrieval, transfer initiation, escrow resolution, governance, and treasury admin surfaces are served on web (`/apps/service-credits`). Historical parity detail: these were previously consistent with the former Android surface (`packages/mobile/src/features/service-credits`, now removed), with matching error semantics and deny reasons.
 
 Web pixel pass complete: the shell (`service-credits-shell.tsx` + `sc-*` sub-components) is aligned to `design/.../survivor-hub/ServiceCredits.tsx` and decomposed within rule-116 limits. Per brand rules, balances render as "credits" only (never a fiat equivalent); per the real-data-only rule the design's hardcoded platform stats (issued/circulating/avg balance) and per-row "Start"/"chat" actions are omitted.
 

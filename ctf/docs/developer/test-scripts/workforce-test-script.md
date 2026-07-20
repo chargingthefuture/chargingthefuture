@@ -1,5 +1,7 @@
 # Workforce — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
 > truth, this is the runnable checklist derived from them. Do not edit a step here to match a
@@ -12,7 +14,7 @@
 | **Plugin** | Workforce (`workforce`) |
 | **Visibility** | Member-facing |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
 | **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) |
@@ -36,13 +38,13 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
    and Recruited all render as numbers, not a spinner or error. There is NO "Total Headcount
    Target" card on any surface — it duplicated Workforce Total after sector rounding (dropped
    2026-07-19, web and android); per-sector targets live in the Sectors view. On android the
-   screen subtitle reads "{recruited} recruited · {goal} goal". → web ☐ mobile ☐ android ☐
+   screen subtitle reads "{recruited} recruited · {goal} goal". → web ☐ mobile ☐
 2. **Top-line numbers reconcile.** Recruited equals the count of all active Directory members, and
-   the Recruitment Progress shows a percent of target, not a repeated count. → web ☐ mobile ☐ android ☐
+   the Recruitment Progress shows a percent of target, not a repeated count. → web ☐ mobile ☐
 3. **No write controls on the profile.** Open the Workforce profile view. There is no profile editor
-   — it is read-only (the only member write is the service-scoped delete). → web ☐ mobile ☐ android ☐
+   — it is read-only (the only member write is the service-scoped delete). → web ☐ mobile ☐
 4. **Empty state is handled.** If there are no sectors/occupations and no Directory members, the
-   screen shows a clear empty state, not a broken or blank panel. → web ☐ mobile ☐ android ☐
+   screen shows a clear empty state, not a broken or blank panel. → web ☐ mobile ☐
 
 ---
 
@@ -58,7 +60,7 @@ Recruited = the count of all active Directory members. Recruitment Progress read
 the recruitment goal (recruited ÷ min recruitable, the 2,000,000 target) and shows the recruited
 count plus "Remaining to the 2,000,000 goal", which counts down as members are recruited. There is
 no "Remaining capacity" line (the max-recruitable ceiling is config, not progress).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WF-2 · Sector opportunities
 **Role:** member · **Surfaces:** all
@@ -70,7 +72,7 @@ the opening count as "{n} to fill" (or "filled" at zero), where n = max(0, deman
 figure is the brand orange — never a red negative number — and the panel shows no alarm-red (the
 target bar/legend is orange too). Demand is spread across sectors by each sector's share; if no sector
 carries a positive share the breakdown still renders (an even split), never blank.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WF-3 · Skill level breakdown
 **Role:** member · **Surfaces:** all
@@ -80,7 +82,7 @@ carries a positive share the breakdown still renders (an even split), never blan
 job-title names. No bucket shows a raw code. Each bar's height shows the number of people **recruited**
 at that level (not the target), so the level with the most people is the tallest bar; the prominent
 green number is the recruited count, with target and gap shown beneath as secondary context.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WF-4 · Top training opportunities (per occupation)
 **Role:** member · **Surfaces:** all
@@ -89,7 +91,7 @@ green number is the recruited count, with target and gap shown beneath as second
 **Expected:** The panel is titled "Top Training Opportunities". Occupations are listed largest opening
 first, each with its demand/target and the opening shown as "{n} to fill" in the brand orange (no red
 negative number). The list is read-only — there is no create/edit occupation control.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WF-5 · Occupations browse and detail
 **Role:** member · **Surfaces:** all
@@ -100,7 +102,7 @@ negative number). The list is read-only — there is no create/edit occupation c
 level. Each row's opening reads "{n} to fill" (or "filled") in the brand orange, never a red negative.
 The detail shows demand/target, annual training target, members, recruited, the "Roles to fill" count,
 and a plain explanation of the math. No occupation can be created or edited here.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WF-6 · Sector / skill-level member drilldown
 **Role:** member · **Surfaces:** all
@@ -109,7 +111,7 @@ and a plain explanation of the math. No occupation can be created or edited here
 **Expected:** Each opens a list of matched members with name, the matching occupations, and the match
 reason (job title, skill, or sector). Recruited in a bucket can exceed the physical member count
 (the match is aspirational by design).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WF-7 · Read-only profile and service-scoped delete
 **Role:** member · **Surfaces:** all
@@ -123,7 +125,7 @@ reason (job title, skill, or sector). Recruited in a bucket can exceed the physi
 display-only (no editor). The delete is a service-scoped soft delete (it clears the Workforce
 preferences and marks the service deleted), requires sign-in/ownership, and does not delete the
 member's Directory profile.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -157,7 +159,7 @@ the other session appears without closing and reopening the app. Refreshing neve
 the full-screen loading state — the current dashboard stays visible until the new data lands.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), and the admin screen header shows a "Member view" pill opening `/apps/workforce`.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WF-10 · Community Planning team rosters
 **Role:** member · **Surfaces:** all
@@ -185,14 +187,14 @@ reopen. On **web**, each member name is a link that opens that member's Director
 (`/apps/directory/profile/:profileId`); on **android** the names are still plain text (parity ticket
 #1615). Member names appear only for a signed-in member — the view is behind the member read gate,
 never public.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
 ## Admin walkthrough
 
 ### WF-A1 · Population-model config (role-gated)
-**Role:** admin · **Surfaces:** web (admin surface), android (admin screen)
+**Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
 1. As admin, open the Workforce admin surface and read the snapshot counts.
 2. Edit the population model (population, participation rate, min/max recruitable) and save.
@@ -200,7 +202,7 @@ never public.
 **Expected:** Admin save succeeds and the dashboard reflects the new numbers immediately. Validation
 holds: population > 0, participation 0–1, max ≥ min. The save sends the CSRF header. A non-admin gets
 an "admins only" notice (401/403), not a raw error.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WF-A2 · Audit trail visible
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -209,17 +211,17 @@ an "admins only" notice (401/403), not a raw error.
 2. Save a config change (WF-A1), then re-open the list.
 **Expected:** The config update and the config/dashboard reads appear as audit entries with their
 outcome. The list is admin-gated; a non-admin cannot read it.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WF-A3 · No sync / recompute / export / occupation-edit controls
-**Role:** admin · **Surfaces:** web (admin surface), android (admin screen)
+**Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
 1. Scan the whole admin surface for any sync, recompute, export, or occupation create/edit/delete
    control.
 **Expected:** None exist — Workforce is read-only and recruited derives live, so there is nothing to
 recompute, sync, or export, and occupations are read from Skills Taxonomy (no occupation write
 surface). The only admin write is the config save.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 

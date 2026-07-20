@@ -193,7 +193,7 @@ references them, so they are removed here to match the real data model.
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete`. Announcements command namespace lives under `feed.announcement.*` (see Feed inventory); critical compliance and visibility semantics are consistent across web (`/apps/announcements`) and Android (`packages/mobile/src/features/announcements`).
+Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Announcements command namespace lives under `feed.announcement.*` (see Feed inventory); critical compliance and visibility semantics are enforced on web (`/apps/announcements`). Historical parity detail: these semantics were previously consistent with the former Android surface (`packages/mobile/src/features/announcements`, now removed).
 
 ---
 

@@ -1,5 +1,7 @@
 # PeerProgramming — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Generated from the feature inventory and command contracts for `peer-programming`; this is the runnable checklist for a human tester on a real device. Regenerate with: `pnpm --dir ctf test-script:generate -- peer-programming`
 
 | Field | Value |
@@ -30,19 +32,19 @@ These are the checks that must pass before anything else is worth testing.
 
 **1. Room loads for a seeded member**
 Sign in as a seeded member. Navigate to `/apps/peer-programming` (web) or open the PeerProgramming screen (android). The room loads without an error banner. A cohort or the "you're not in a cohort yet" / empty state is visible within a few seconds.
-web ☐ android ☐
+web ☐
 
 **2. Admin page loads for a seeded admin**
 Sign in as a seeded admin. Navigate to `/admin/peer-programming` (web) or open the Admin PeerProgramming screen (android). The admin surface renders — topic form and cohort-assignment controls are visible, not a blank page or access-denied notice.
-web ☐ android ☐
+web ☐
 
 **3. Non-admin is blocked from the admin surface**
 While signed in as a regular member, navigate to `/admin/peer-programming` (web) or open the Admin screen (android). You must not see admin controls. Expect a redirect, access-denied notice, or the screen is not reachable.
-web ☐ android ☐
+web ☐
 
 **4. Seed data is present**
 After the seed, the admin cohort list shows at least one cohort and the topic form shows a topic for the current week (or a recent week).
-web ☐ android ☐
+web ☐
 
 ---
 
@@ -60,7 +62,7 @@ web ☐ android ☐
 
 **Expected:** The weekly topic title and guidance text are displayed. A participation summary (member count or cohort label such as "C1") is also visible. No placeholder or "undefined" text appears. On web, the header back chevron returns to the page you came from (falling back to All Apps when the screen was opened directly), and an admin viewing the member shell sees the "Admin" pill in the header; the admin screen header shows a "Member view" pill opening `/apps/peer-programming`.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -77,7 +79,7 @@ Result: web ☐ android ☐
 
 **Expected:** The message appears in the message list attributed to your username (e.g. `@alice` or a short member label). The composer clears after sending. No error message is shown. In single standing Cohort 1 mode, simply opening the room (or the live session) is what enrolls you in Cohort 1 so you can post — a member who has opened PeerProgramming at least once can post; a pure listen-in / read never enrolls anyone.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -94,7 +96,7 @@ Result: web ☐ android ☐
 
 **Expected:** No message composer is visible. A "you're listening in — read-only" notice or similar is shown instead. You can read existing messages but there is no input field or send button.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -147,7 +149,7 @@ Result: web ☐
 
 **Expected:** Your own cohort is shown once (not duplicated). The member count matches the roster visible elsewhere. Listen-in opens the other cohort read-only. Returning to your own cohort restores the full member view.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -163,7 +165,7 @@ Result: web ☐ android ☐
 
 **Expected:** Each member is shown as `@username` or a short fallback like `Member <short-id>`. No raw UUID strings are displayed as the primary label. "Anonymous" is not used for all entries.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -180,7 +182,7 @@ Result: web ☐ android ☐
 
 **Expected:** A success confirmation is shown. No error banner appears. (You do not need to verify database contents, but the form should reset or close after submission.)
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -213,7 +215,7 @@ Result: web ☐
 
 **Expected:** A video call UI appears with your own camera tile. Controls for mute, camera toggle, and leave are visible. Leaving the call returns to the Session tab without an error.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -228,7 +230,7 @@ Result: web ☐ android ☐
 
 **Expected:** A readable error message is shown — e.g. "live video unavailable" or similar — not a raw error code or blank screen. The room does not crash.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -243,7 +245,7 @@ Result: web ☐ android ☐
 
 **Expected:** An empty state is shown — e.g. "you haven't been assigned to a cohort yet" or a prompt to check back. No crash, no blank white screen, no unhandled error.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -259,7 +261,7 @@ Result: web ☐ android ☐
 
 **Expected:** The room content reloads (messages and cohort data refresh). The full-screen loading spinner does not appear — the refresh happens in the background while the existing content stays visible.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -274,7 +276,7 @@ Result: web ☐ android ☐
 
 **Expected:** The member is placed into Cohort 1 automatically — no "assign me" button needed. The room loads with cohort C1 visible and the member can post.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -294,7 +296,7 @@ Result: web ☐ android ☐
 
 **Expected:** A success indicator is shown. Switching to the member room view (as a member) shows the updated topic title in the room header.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -327,7 +329,7 @@ Result: web ☐
 
 **Expected:** A success message is shown with a count of users selected and cohorts created (or "1 cohort" in single standing Cohort 1 mode). Running the same action a second time does not create duplicate cohorts or duplicate notifications — the run is idempotent.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -359,7 +361,7 @@ Result: web ☐
 
 **Expected:** Cohorts from prior weeks are listed (up to 84 days back, capped at 200). Each row shows a "Week of <date>" label, member count, and fallback-open flag. Cohorts do not disappear after the week rolls over.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -375,7 +377,7 @@ Result: web ☐ android ☐
 
 **Expected:** Each member is listed as `@username` or `Member <short-id>`. No raw UUID is the primary display. "Anonymous" is not used.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 

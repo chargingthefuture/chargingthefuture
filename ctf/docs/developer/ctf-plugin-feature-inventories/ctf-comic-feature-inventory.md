@@ -395,7 +395,7 @@ this counter and export exist so the data is ready the moment the owner chooses 
 
 ## Web and Android Delivery Status
 
-Target: `web+android` parity.
+Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). (Note: the native Commons/Chyme chat that remains on Android is covered by the Chyme inventory; the `@comic` AI-assistant surfaces are web-only.)
 
 - **Web backend: complete (foundation).** Schema (`comic_*` tables), library
   (`lib/comic/{types,constants,audit,rasa,policy,repository}.ts`), server-only API
@@ -433,8 +433,10 @@ Target: `web+android` parity.
     `nlu_confidence`, now Rasa-populated on the user turn when `RASA_BASE_URL` is set, otherwise
     surfaced as "Not yet scored"). Wired to `GET /api/comic/review` and
     `POST /api/comic/review/[turnId]/resolve`.
-- **Android: complete** (design `9a4a1af`). The mobile `@comic` surfaces are delivered in
-  `ctf/packages/mobile/src/features/comic/` and wired into the mobile feed stream
+- **Android: surface removed 2026-07-20 (rule 105, PR #1742)** — the `@comic` AI-assistant surfaces
+  are now web-only, served by the installable web app (PWA). Historical detail (previously complete
+  against design `9a4a1af`): the mobile `@comic` surfaces lived in
+  `ctf/packages/mobile/src/features/comic/` and were wired into the mobile feed stream
   (`ctf/packages/mobile/src/features/feed/FeedStream.tsx`):
   - AI Assistant answer cards (cyan, Sparkles, "AI Assistant" label, 🤖 AI Q&A badge, Q/A layout)
     and the `ai_pending` "Reviewing for safety" card, interleaved with the feed timeline. Wired to

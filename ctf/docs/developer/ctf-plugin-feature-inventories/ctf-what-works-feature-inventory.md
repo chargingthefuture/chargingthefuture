@@ -134,12 +134,10 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
   `WhatWorksEmpty.tsx` (suggest/empty), `WhatWorksLoading.tsx` (loading). Decomposed into modular
   sub-components under `packages/web/components/what-works/` within the rule-116 limits. All data is
   real (`/api/what-works*`); no stub arrays in the production shells.
-- Android: complete. Expo feature at `packages/mobile/src/features/what-works/` (list + Helpful
-  toggle + suggest, against the `MobileWhatWorks*` references), registered in
-  `config/plugin-parity-contracts.json`. A signed-out visitor sees `WhatWorksPublic` — the same
-  public teaser the web shows, fetched from `/api/what-works/public` with no bearer token — instead of
-  an authed list that would 401 (parity with web). Pending on-device QA (no device runtime in the
-  build env).
+- Android: **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served
+  by the installable web app (PWA). Historical detail: an Expo feature previously lived at
+  `packages/mobile/src/features/what-works/` (list + Helpful toggle + suggest, against the
+  `MobileWhatWorks*` references).
 - Parity contract: [plugin-parity-contracts.json](../../../config/plugin-parity-contracts.json).
 
 ## 9. Seed Coverage Status

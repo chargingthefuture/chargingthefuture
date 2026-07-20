@@ -137,7 +137,7 @@ Storage and projection rules:
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete`. Web surface lives under `/apps/socket-relay`; Android surface lives under `packages/mobile/src/features/socket-relay`. Public projection, lifecycle status, and CSRF behaviors are behaviorally consistent across platforms.
+Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Web surface lives under `/apps/socket-relay`. Historical parity detail: a former Android surface lived under `packages/mobile/src/features/socket-relay` (now removed); public projection, lifecycle status, and CSRF behaviors were behaviorally consistent across platforms.
 
 Web pixel pass (design `c5d83c0`): the `/apps/socket-relay` shell is rebuilt to `design/.../survivor-hub/SocketRelay.tsx` (feed / post / chat tabs, sidebar category filters + live stats, right impact panel) and its Loading/Empty states. The prior shell was broken against the real backend — it read `GET /api/socket-relay/requests` as a bare array (the route returns `{ items, page, pageSize, total }`) and POSTed `{ type, description, location, credits, urgency }` with no CSRF header, none of which the backend accepts. The rebuilt shell uses the real `SocketRelayRequest` model (`title`, `details`, `category`, `city`, `isPublic`, `status`), unwraps the paged response, claims via `POST /requests/:id/fulfill`, and lists fulfillment chats via `my-fulfillments` + `fulfillments/:id/chat`, with `x-ctf-csrf` on mutations. The mockup's need/offer/credits/urgency framing is not backed by the data model and was omitted rather than faked. Decomposed into modular sub-components within the rule-116 limits. No schema/API change.
 
@@ -196,7 +196,7 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## Build Checklist
 
-> **Reconciliation (2026-05-26):** the Delivery Status above is `web+android complete` (feature parity).
+> **Reconciliation (2026-05-26):** the Delivery Status above was `web+android complete` (feature parity) at the time; the Android surface was removed 2026-07-20 (rule 105, PR #1742) and this feature is now **web-only**.
 > Unchecked items below are obsolete web-first / Android-deferral planning artifacts and deferred MVP
 > validation/release gates (Rule 118) — not missing implementation. The authoritative production bar
 > (pixel-perfect to `design` + parity + gates + deploy) is tracked in

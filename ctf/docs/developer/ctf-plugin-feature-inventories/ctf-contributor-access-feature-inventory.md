@@ -301,8 +301,10 @@ counts still feed the score internally).
   the gated channel is reachable at phone widths via the channel-pill switch row (the desktop
   channel rail is hidden there) and the panel reuses the Commons' responsive chat layout; the
   badge, dialog, and explainer page are responsive in the Directory shell.
-- **Android (React Native):** **complete (2026-07-19, issues #1680 and #1681)** — both member
-  surfaces ship in `packages/mobile/src/features/contributor-access/`. (1) The gated channel
+- **Android (React Native):** **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is
+  now web-only, served by the installable web app (PWA). Historical detail (it previously shipped
+  2026-07-19, issues #1680 and #1681): both member
+  surfaces lived in `packages/mobile/src/features/contributor-access/`. (1) The gated channel
   (#1681): `HubHome` reads the server-filtered `/api/hub/channels` (new `fetchHubChannels` in the
   hub client) and shows a `#general` / `#contributors` pill row ONLY when the response carries the
   contributors entry — no client-side eligibility logic exists, and a member without the entry

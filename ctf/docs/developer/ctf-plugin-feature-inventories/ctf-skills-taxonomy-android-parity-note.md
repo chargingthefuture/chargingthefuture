@@ -1,5 +1,7 @@
-Android parity: skills-taxonomy
+# Android parity: skills-taxonomy (SUPERSEDED)
 
-In-progress: implement mobile parity items for skills-taxonomy. Refer to checklist: ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md
+**Superseded 2026-07-20 (rule 105, PR #1742).** The native Android app is narrowed to Chyme;
+skills-taxonomy is web-only. The Android-parity plan below no longer applies.
 
-Work started by agent. Will add UI mocks and tests in follow-up commits.
+Historical pointer: this note originally tracked in-progress work to implement mobile parity items
+for skills-taxonomy.

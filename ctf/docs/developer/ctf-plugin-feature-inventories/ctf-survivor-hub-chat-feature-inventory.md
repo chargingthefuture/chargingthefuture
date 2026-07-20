@@ -174,7 +174,7 @@ The previously-specified `hub_channels` / `hub_bots` / `hub_bot_routes` / `hub_d
 ## Web and Android Delivery Status
 
 - Web: the home shell renders at `/` (`CommunityShell`) with the channel backed by the Feed model. Web delivery for the consolidated channel is in place.
-- Android: delivered. The mobile home (`ctf/packages/mobile/src/features/hub/`) reads the blended
+- Android: **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). (Note: the native Commons/Chyme surface that remains on Android is covered by the Chyme inventory, not here.) Historical detail follows. The mobile home (`ctf/packages/mobile/src/features/hub/`) read the blended
   channel from `GET /api/hub/messages` (the same feed-backed timeline the web Hub uses, flattened to
   the `HubMessage` shape) and sends a peer-to-peer community post via `POST /api/hub/messages` with
   the `x-ctf-csrf: 1` header, mirroring the web CSRF handling. `HubHome` is the default surface in
@@ -193,7 +193,7 @@ The previously-specified `hub_channels` / `hub_bots` / `hub_bot_routes` / `hub_d
   Unlock flow. The public unauthenticated read path is a separate, security-sensitive follow-up (see
   Gaps #1).
 
-Parity Status: web+android complete.
+Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA).
 
 ## Seed Coverage Status
 
