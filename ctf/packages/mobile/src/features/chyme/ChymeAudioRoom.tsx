@@ -18,6 +18,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
+import { interFamily } from '../../components/ui';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -443,7 +444,7 @@ function makeTileStyles(t: ThemeTokens, accent: string) {
   avatarSpeaking: { borderColor: PRIMARY },
   avatarSelf: { borderColor: `${PRIMARY}80` },
   avatarIdle: { borderColor: 'transparent' },
-  initials: { fontSize: 20, fontWeight: '800', color: PRIMARY },
+  initials: { fontSize: 20, fontWeight: '800', fontFamily: interFamily('800'), color: PRIMARY },
   micBadge: {
     position: 'absolute',
     bottom: 0,
@@ -458,10 +459,10 @@ function makeTileStyles(t: ThemeTokens, accent: string) {
   },
   micBadgeOn: { backgroundColor: PRIMARY },
   micBadgeOff: { backgroundColor: 'rgba(120,120,120,0.9)' },
-  micIcon: { fontSize: 10 },
+  micIcon: { fontSize: 10, fontFamily: interFamily('400') },
   handBadge: { position: 'absolute', top: -6, right: -6 },
-  handIcon: { fontSize: 16 },
-  name: { fontSize: 12, fontWeight: '600', color: t.textShell, textAlign: 'center', marginTop: 8 },
+  handIcon: { fontSize: 16, fontFamily: interFamily('400') },
+  name: { fontSize: 12, fontWeight: '600', fontFamily: interFamily('600'), color: t.textShell, textAlign: 'center', marginTop: 8 },
   statusBadge: {
     marginTop: 4,
     paddingHorizontal: 8,
@@ -471,7 +472,7 @@ function makeTileStyles(t: ThemeTokens, accent: string) {
   },
   statusBadgeOn: { backgroundColor: `${PRIMARY}20`, borderColor: `${PRIMARY}35` },
   statusBadgeOff: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'transparent' },
-  statusText: { fontSize: 10 },
+  statusText: { fontSize: 10, fontFamily: interFamily('400') },
   statusTextOn: { color: PRIMARY },
   statusTextOff: { color: t.textSecondary },
   });
@@ -488,8 +489,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     backgroundColor: '#04160A',
     paddingHorizontal: 24,
   },
-  connectingText: { color: t.textMuted, fontSize: 14, marginTop: 16 },
-  errorText: { color: '#F87171', fontSize: 14, textAlign: 'center', marginBottom: 20, lineHeight: 22 },
+  connectingText: { color: t.textMuted, fontSize: 14, fontFamily: interFamily('400'), marginTop: 16 },
+  errorText: { color: '#F87171', fontSize: 14, fontFamily: interFamily('400'), textAlign: 'center', marginBottom: 20, lineHeight: 22 },
   header: {
     padding: 16,
     paddingBottom: 12,
@@ -510,8 +511,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     paddingVertical: 1,
   },
   liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: PRIMARY },
-  liveText: { fontSize: 10, color: PRIMARY, fontWeight: '700' },
-  roomLabel: { fontSize: 11, color: t.textMuted, flex: 1 },
+  liveText: { fontSize: 10, color: PRIMARY, fontWeight: '700', fontFamily: interFamily('700') },
+  roomLabel: { fontSize: 11, color: t.textMuted, flex: 1, fontFamily: interFamily('400') },
   chatBtn: {
     width: 34,
     height: 34,
@@ -522,17 +523,18 @@ function makeStyles(t: ThemeTokens, accent: string) {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chatBtnIcon: { fontSize: 15 },
+  chatBtnIcon: { fontSize: 15, fontFamily: interFamily('400') },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
+    fontFamily: interFamily('700'),
     letterSpacing: 1.2,
     color: t.textMuted,
     textTransform: 'uppercase',
   },
   stage: { flex: 1, paddingHorizontal: 16, paddingTop: 20 },
   stageGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  emptyText: { color: t.textMuted, fontSize: 14 },
+  emptyText: { color: t.textMuted, fontSize: 14, fontFamily: interFamily('400') },
   controls: {
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -554,8 +556,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
   controlCircleMuted: { backgroundColor: 'rgba(239,68,68,0.15)', borderColor: 'rgba(239,68,68,0.5)' },
   controlCircleHand: { backgroundColor: 'rgba(234,179,8,0.15)', borderColor: 'rgba(234,179,8,0.5)' },
   controlCircleNeutral: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' },
-  controlIcon: { fontSize: 20 },
-  controlLabel: { fontSize: 11, color: t.textSecondary },
+  controlIcon: { fontSize: 20, fontFamily: interFamily('400') },
+  controlLabel: { fontSize: 11, color: t.textSecondary, fontFamily: interFamily('400') },
   controlLabelMuted: { color: '#F87171' },
   controlLabelHand: { color: '#FDE047' },
   leaveBtn: {
@@ -568,6 +570,6 @@ function makeStyles(t: ThemeTokens, accent: string) {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  leaveBtnText: { color: '#F87171', fontSize: 15, fontWeight: '700' },
+  leaveBtnText: { color: '#F87171', fontSize: 15, fontWeight: '700', fontFamily: interFamily('700') },
   });
 }

@@ -37,6 +37,7 @@ import { ChymeAudioRoom } from './ChymeAudioRoom';
 import { ChymeChatView } from './chyme-chat-view';
 import type { ChatMessage } from './chyme-chat-view';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
+import { interFamily } from '../../components/ui';
 
 type ViewState = 'loading' | 'error' | 'empty' | 'roomList' | 'inRoom' | 'chat';
 
@@ -221,11 +222,13 @@ function makeStyles(t: ThemeTokens) {
     errorTitle: {
       fontSize: 18,
       fontWeight: '700',
+      fontFamily: interFamily('700'),
       color: t.isComic ? t.textPrimary : '#F0FDF4',
       marginBottom: 8,
     },
     errorMsg: {
       fontSize: 14,
+      fontFamily: interFamily('400'),
       color: t.textSecondary,
       textAlign: 'center',
       marginBottom: 20,
@@ -239,7 +242,7 @@ function makeStyles(t: ThemeTokens) {
       borderWidth: t.isComic ? 1.5 : 0,
       borderColor: t.border,
     },
-    retryBtnText: { color: t.isComic ? t.border : '#fff', fontWeight: '700', fontSize: 15 },
+    retryBtnText: { color: t.isComic ? t.border : '#fff', fontWeight: '700', fontSize: 15, fontFamily: interFamily('700') },
     roomListContainer: { flex: 1, backgroundColor: bg },
   });
 }

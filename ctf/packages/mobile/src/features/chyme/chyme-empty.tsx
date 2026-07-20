@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { type ThemeTokens } from '../../theme';
+import { interFamily } from '../../components/ui';
 
 type Props = {
   onStartRoom: () => void;
@@ -63,8 +64,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
       flexDirection: 'row',
       justifyContent: 'space-between',
     },
-    clock: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
-    signal: { fontSize: 11, color: t.textSecondary },
+    clock: { fontSize: 13, fontWeight: '600', fontFamily: interFamily('600'), color: t.textPrimary },
+    signal: { fontSize: 11, color: t.textSecondary, fontFamily: interFamily('400') },
     header: {
       paddingVertical: 14,
       paddingHorizontal: 16,
@@ -74,7 +75,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       alignItems: 'center',
       gap: 8,
     },
-    headerTitle: { fontSize: 15, fontWeight: '700', color: t.textPrimary, letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
+    headerTitle: { fontSize: 15, fontWeight: '700', fontFamily: interFamily('700'), color: t.textPrimary, letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
     body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
     iconRing: {
       width: 72,
@@ -88,9 +89,9 @@ function makeStyles(t: ThemeTokens, accent: string) {
       justifyContent: 'center',
       marginBottom: 20,
     },
-    iconGlyph: { fontSize: 28 },
-    title: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 10, textAlign: 'center' },
-    subtitle: { fontSize: 14, color: t.textSecondary, lineHeight: 22, marginBottom: 28, textAlign: 'center' },
+    iconGlyph: { fontSize: 28, fontFamily: interFamily('400') },
+    title: { fontSize: 18, fontWeight: '800', fontFamily: interFamily('800'), color: t.textPrimary, marginBottom: 10, textAlign: 'center' },
+    subtitle: { fontSize: 14, color: t.textSecondary, lineHeight: 22, marginBottom: 28, textAlign: 'center', fontFamily: interFamily('400') },
     primaryBtn: {
       width: '100%',
       paddingVertical: 14,
@@ -102,7 +103,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       justifyContent: 'center',
       marginBottom: 12,
     },
-    primaryBtnText: { color: t.isComic ? t.border : '#000', fontWeight: t.isComic ? '800' : '700', fontSize: 15, textTransform: t.isComic ? 'uppercase' : 'none', letterSpacing: t.isComic ? 0.6 : 0 },
+    primaryBtnText: { color: t.isComic ? t.border : '#000', fontWeight: t.isComic ? '800' : '700', fontFamily: interFamily(t.isComic ? '800' : '700'), fontSize: 15, textTransform: t.isComic ? 'uppercase' : 'none', letterSpacing: t.isComic ? 0.6 : 0 },
     scheduleBtn: {
       width: '100%',
       paddingVertical: 14,
@@ -113,13 +114,13 @@ function makeStyles(t: ThemeTokens, accent: string) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    scheduleBtnText: { color: t.isComic ? t.textSecondary : t.textPrimary, fontWeight: '600', fontSize: 15 },
+    scheduleBtnText: { color: t.isComic ? t.textSecondary : t.textPrimary, fontWeight: '600', fontFamily: interFamily('600'), fontSize: 15 },
     footer: {
       padding: 16,
       borderTopWidth: t.isComic ? 2 : 1,
       borderTopColor: divider,
       backgroundColor: t.surface,
     },
-    footerText: { fontSize: 12, color: t.textSecondary },
+    footerText: { fontSize: 12, color: t.textSecondary, fontFamily: interFamily('400') },
   });
 }

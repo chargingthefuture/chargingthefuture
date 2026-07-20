@@ -97,6 +97,25 @@ E5-adoption (incremental screen migration onto the primitives/typeScale) and E6 
   for plugin tiles on both, since those are a deliberate brand device). Flag for owner before a mass
   migration; until then, at least use the same glyph *concepts* per action.
 
+## 3a. Scope update (2026-07-20) — Android is Chyme-only
+
+Main has since narrowed the native Android app to a small **keep-list** (rule 105): `FeatureKey` in
+`App.tsx` is now just `chyme | account-data | blocked-members | bug-report`; everything else is served
+by the **web app**, which is now an installable **PWA** covering the whole product on phones. The
+product also rebranded to **"TI Skills Economy (TSE)"** (see `app/layout.tsx` metadata).
+
+Consequences for E5-adoption:
+- **E5 is scoped to the Android keep-list screens** (Chyme + account-data + blocked-members +
+  bug-reporting) — migrating the other, now web-only, mobile feature screens would be wasted.
+- **Approach for these screens:** render **Inter** at their existing, mockup-tuned sizes by adding
+  `fontFamily: interFamily(<weight>)` to each text style (helper in `components/ui/typography.ts`),
+  rather than re-scaling onto `typeScale` or forcing the generic `Card`/gradient-`CtaButton`
+  primitives — Chyme has an intentional deep-green identity and is already fully theme-aware, so a
+  blanket primitive swap would regress it. The brand-font adoption is the concrete "same branding" win.
+- **OPEN — brand-name reconciliation (for owner):** web is now "TI Skills Economy (TSE)"; the mobile
+  launcher still shows the "SH" gradient chip + a "Charging The Future" wordmark. These should be
+  reconciled to one brand name/mark — flagged for the owner (do not silently change shipped brand copy).
+
 ## 4. Progress log
 
 - 2026-07-11: Audit run (3 parallel agents: tokens, typography, brand/components). Findings recorded
@@ -111,3 +130,8 @@ E5-adoption (incremental screen migration onto the primitives/typeScale) and E6 
   primitives (plugin-by-plugin, follow-up PRs) so every screen (not just the launcher/primitives)
   renders Inter at the web-matched scale and picks up the comic treatments. **E6** — icon-system
   unification is an owner decision (see the E6 recommendation above); not done silently.
+- 2026-07-20: Scope narrowed — Android is now a Chyme-only keep-list (§3a). E5-adoption re-scoped to
+  those screens; delivering brand-font (Inter) adoption on the Chyme + keep-list screens via
+  `interFamily` (no re-scaling / no primitive swap, to preserve Chyme's bespoke design). Branch
+  `feat/chyme-primitives-adoption`. Brand-name reconciliation (TSE vs "SH"/"Charging The Future")
+  raised to owner.

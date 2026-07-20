@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
+import { interFamily } from '../../components/ui';
 import { chymeHandle } from './api';
 
 export type ChatMessage = {
@@ -135,8 +136,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  clock: { fontSize: 13, fontWeight: '700', color: t.textShell },
-  signal: { fontSize: 12, color: t.textSecondary },
+  clock: { fontSize: 13, fontWeight: '700', fontFamily: interFamily('700'), color: t.textShell },
+  signal: { fontSize: 12, color: t.textSecondary, fontFamily: interFamily('400') },
   header: {
     height: 52,
     backgroundColor: '#030d05',
@@ -148,12 +149,13 @@ function makeStyles(t: ThemeTokens, accent: string) {
     gap: 12,
   },
   backBtn: { flexDirection: 'row', alignItems: 'center' },
-  backBtnText: { color: PRIMARY, fontSize: 14 },
+  backBtnText: { color: PRIMARY, fontSize: 14, fontFamily: interFamily('400') },
   title: {
     flex: 1,
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '700',
+    fontFamily: interFamily('700'),
     color: '#F0FDF4',
   },
   list: { flex: 1 },
@@ -165,11 +167,11 @@ function makeStyles(t: ThemeTokens, accent: string) {
     gap: 8,
     marginBottom: 3,
   },
-  messageAuthor: { fontSize: 13, fontWeight: '700', color: '#A7F3D0' },
-  messageTime: { fontSize: 11, color: '#374151' },
-  messageText: { fontSize: 14, color: t.textSecondary, lineHeight: 21 },
+  messageAuthor: { fontSize: 13, fontWeight: '700', fontFamily: interFamily('700'), color: '#A7F3D0' },
+  messageTime: { fontSize: 11, color: '#374151', fontFamily: interFamily('400') },
+  messageText: { fontSize: 14, color: t.textSecondary, lineHeight: 21, fontFamily: interFamily('400') },
   empty: { flex: 1, alignItems: 'center', paddingVertical: 24 },
-  emptyText: { fontSize: 14, color: t.textMuted, textAlign: 'center' },
+  emptyText: { fontSize: 14, color: t.textMuted, textAlign: 'center', fontFamily: interFamily('400') },
   inputRow: {
     padding: 12,
     paddingHorizontal: 16,
@@ -186,7 +188,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  input: { flex: 1, fontSize: 14, color: t.textShell },
+  input: { flex: 1, fontSize: 14, color: t.textShell, fontFamily: interFamily('400') },
   sendBtn: {
     width: 32,
     height: 32,
@@ -196,6 +198,6 @@ function makeStyles(t: ThemeTokens, accent: string) {
     justifyContent: 'center',
   },
   sendBtnActive: { backgroundColor: PRIMARY },
-  sendBtnIcon: { color: '#fff', fontSize: 20, fontWeight: '700' },
+  sendBtnIcon: { color: '#fff', fontSize: 20, fontWeight: '700', fontFamily: interFamily('700') },
   });
 }
