@@ -25,7 +25,7 @@ import { ensureMutationCsrf } from '../../feed/_lib';
 
 function mapTimelineItemToHubMessage(
   item: FeedTimelineItem,
-  linkedPluginsByAnnouncementId: Map<string, { slug: string; name: string }>,
+  linkedPluginsByAnnouncementId: Map<string, Array<{ slug: string; name: string }>>,
 ): HubMessage {
   const isCommunity = item.itemType === 'community';
   const authorUserId = isCommunity ? item.community?.authorUserId ?? 'hub-system' : 'hub-system';
@@ -44,11 +44,11 @@ function mapTimelineItemToHubMessage(
   const title = isAnnouncement ? item.title || null : null;
   const text = item.body;
 
-  // The linked plugin (if any) for this announcement, resolved to { slug, name } for the clickable
-  // "Open <Plugin>" chip. Only announcements carry one; keyed by the source announcement id.
-  const linkedPlugin = isAnnouncement && item.sourceAnnouncementId
-    ? linkedPluginsByAnnouncementId.get(item.sourceAnnouncementId) ?? null
-    : null;
+  // The linked plugins (0–3) for this announcement, resolved to { slug, name } for the clickable
+  // "Open <Plugin>" chips. Only announcements carry them; keyed by the source announcement id.
+  const linkedPlugins = isAnnouncement && item.sourceAnnouncementId
+    ? linkedPluginsByAnnouncementId.get(item.sourceAnnouncementId) ?? []
+    : [];
 
   // A peer post may quote another peer post (Signal-style reply). The quoted author handle
   // and short snippet are resolved server-side in the feed repository and carried here.
@@ -82,7 +82,7 @@ function mapTimelineItemToHubMessage(
     avatarUrl: null,
     kind: item.itemType,
     title,
-    linkedPlugin,
+    linkedPlugins,
     text,
     sentAtIso: item.publishedAtIso,
     communityPostId: isCommunity ? item.sourceCommunityPostId : null,
@@ -245,7 +245,7 @@ export async function POST(request: Request) {
       // A message posted from the composer is always a peer community post.
       kind: 'community',
       title: null,
-      linkedPlugin: null,
+      linkedPlugins: [],
       text,
       sentAtIso: result.createdAtIso,
       communityPostId: result.postId,

@@ -608,6 +608,15 @@
   word-break: break-word;
 }
 
+/* Row of "Open <Plugin>" chips below an announcement body — wraps when an announcement links to more
+   than one plugin (up to 3). */
+.announcementChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 /* Clickable "Open <Plugin>" chip on an official announcement card. Emerald to match the card, so it
    reads as the card's own call-to-action; sits below the body (the plain URL line stays in the body). */
 .announcementChip {
@@ -615,7 +624,6 @@
   align-items: center;
   gap: 5px;
   align-self: flex-start;
-  margin-top: 10px;
   padding: 6px 12px;
   border-radius: 8px;
   background: rgba(52, 211, 153, 0.12);

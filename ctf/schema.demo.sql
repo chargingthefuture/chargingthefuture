@@ -1978,7 +1978,12 @@ CREATE TABLE IF NOT EXISTS announcements (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   -- Optional plugin this announcement points at. When set, the published feed item gets an
   -- "Open <Plugin>" link to /apps/<slug> so a reader can jump straight to the referenced app.
-  linked_plugin_slug TEXT
+  -- Legacy single-link column; kept for back-compat and mirrored to the first entry of
+  -- linked_plugin_slugs. New code reads/writes linked_plugin_slugs (up to 3 links).
+  linked_plugin_slug TEXT,
+  -- Ordered list of plugin slugs this announcement links to (0–3). The published feed item and the
+  -- announcement card render one "Open <Plugin>" affordance per entry, in order.
+  linked_plugin_slugs JSONB NOT NULL DEFAULT '[]'::jsonb
 );
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS id UUID;
 -- Repair legacy tables where `id` was added (above) before it had a default. Without a default, an
@@ -2017,6 +2022,14 @@ ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_by_user_id 
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS linked_plugin_slug TEXT;
+ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS linked_plugin_slugs JSONB NOT NULL DEFAULT '[]'::jsonb;
+-- Backfill the multi-link array from the legacy single-link column for announcements created before
+-- multi-link support, so their existing "Open <Plugin>" link survives. No-op once the array is set.
+UPDATE announcements
+  SET linked_plugin_slugs = to_jsonb(ARRAY[linked_plugin_slug])
+  WHERE linked_plugin_slug IS NOT NULL
+    AND linked_plugin_slug <> ''
+    AND (linked_plugin_slugs IS NULL OR linked_plugin_slugs = '[]'::jsonb);
 -- Retire announcement priority/mandatory (owner decision 2026-07-16). The Commons is one
 -- time-ordered stream, so there is no manual priority ranking, and every announcement flows through
 -- the Commons with no non-dismissable "mandatory" flag. Guarded drops; no-op on a fresh database.
@@ -2039,6 +2052,52 @@ BEGIN
   END IF;
 END $$;
 CREATE INDEX IF NOT EXISTS idx_announcements_status ON announcements(status);
+
+-- Emoji reactions on official announcements. Mirrors feed_community_post_reactions: one row per
+-- (announcement, member, emoji), and the unique index makes a reaction a toggle — a second tap of
+-- the same emoji removes the row. The emoji is constrained to the small fixed quick set at the
+-- application layer (FEED_REACTION_EMOJIS). Deleting the announcement cascades its reactions.
+CREATE TABLE IF NOT EXISTS announcement_reactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  announcement_id UUID NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  emoji TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS announcement_reactions ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS announcement_reactions ADD COLUMN IF NOT EXISTS announcement_id UUID;
+ALTER TABLE IF EXISTS announcement_reactions ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_reactions ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS idx_announcement_reactions_unique
+  ON announcement_reactions(announcement_id, user_id, emoji);
+CREATE INDEX IF NOT EXISTS idx_announcement_reactions_announcement
+  ON announcement_reactions(announcement_id);
+
+-- Replies on official announcements. Mirrors feed_community_replies but keyed on the announcement:
+-- a member can reply to an official Survivor Hub announcement, and the replies group under that
+-- announcement as a thread. author_username is captured at reply time so the thread can show the
+-- member's handle without a second lookup. Deleting the announcement cascades its replies.
+CREATE TABLE IF NOT EXISTS announcement_replies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  announcement_id UUID NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+  author_user_id TEXT NOT NULL,
+  author_username TEXT,
+  body TEXT NOT NULL,
+  moderation_status TEXT NOT NULL DEFAULT 'accepted',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS announcement_id UUID;
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS author_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS author_username TEXT;
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_announcement_replies_announcement
+  ON announcement_replies(announcement_id, created_at);
 
 -- === FEED TIMELINE PROJECTION ===
 CREATE TABLE IF NOT EXISTS feed_timeline_projection (
@@ -5019,6 +5078,10 @@ BEGIN
   END IF;
 END
 $contributions_runtime_config_positive_check$;
+-- Migrate the banner snooze from the original 6-month default to 2 months (owner request,
+-- 2026-07-18). Only touches a row still holding the old default; the snooze length is not surfaced
+-- in the admin UI, so any stored 6 is that leftover default, safe to move to the new default.
+UPDATE contributions_runtime_config SET banner_snooze_months = 2, updated_at = NOW() WHERE banner_snooze_months = 6;
 
 -- Per-user fundraiser banner state. Dismissing the banner silently snoozes it for
 -- banner_snooze_months; nothing is shown to the member about the snooze length.
