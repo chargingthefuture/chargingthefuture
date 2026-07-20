@@ -144,8 +144,9 @@ export const TERMS_DOCUMENT: PolicyDocument = {
           text:
             'Some features may separately involve real payments or payouts (for example, ' +
             'earnings for a completed transport trip). Where that is the case, the real-money ' +
-            'part is clearly presented in that feature and is handled through our ledger ' +
-            'provider, Formance. Any tax owed on what you earn is your responsibility.',
+            'part is clearly presented in that feature and is recorded in our own self-hosted ' +
+            'ledger (Formance), which runs inside our infrastructure. Any tax owed on what you ' +
+            'earn is your responsibility.',
         },
       ],
     },
@@ -298,7 +299,7 @@ export const PRIVACY_DOCUMENT: PolicyDocument = {
             'Account identity: your email address, name, and username, handled through our authentication provider (Clerk).',
             'Verification information: the public profile link you submit so we can review and approve your access, and the outcome of that review.',
             'Content you create: posts, submissions, listings, and other content you add in the Platform.',
-            'Transactions: your ServiceCredits balance and ledger, and any real-money earnings or payouts, recorded through our ledger provider (Formance).',
+            'Transactions: your ServiceCredits balance and ledger, and any real-money earnings or payouts, recorded in our own self-hosted ledger (Formance), which runs inside our infrastructure.',
             'Messages: chat, and where used voice or video, tied to a transaction, kept for a limited time for safety and abuse review.',
             'Safety information: members you block and any safety concern you raise. A block is private; a safety concern is shared only with our safety team.',
             'Technical data: session and device information needed to sign you in and keep the Platform secure, and limited error diagnostics used to fix problems.',
@@ -347,6 +348,15 @@ export const PRIVACY_DOCUMENT: PolicyDocument = {
             'To meet legal, security, and record-keeping obligations.',
           ],
         },
+        {
+          type: 'p',
+          text:
+            'Automated processing: when you use the Questions feature, the text of your ' +
+            'question is processed by a self-hosted AI model running on our own compute ' +
+            'infrastructure to generate a draft answer. Your content is not used to train any ' +
+            'third-party model, and a draft answer is a suggestion, not a decision that has a ' +
+            'legal or similarly significant effect on you.',
+        },
       ],
     },
     {
@@ -365,9 +375,8 @@ export const PRIVACY_DOCUMENT: PolicyDocument = {
           items: [
             'Clerk — sign-in and account identity. Receives your email, name, username, and session/device information.',
             'GetStream — chat and video for transaction-tied and group conversations. Receives the messages and the identifiers of the people in a conversation.',
-            'Formance — the financial ledger for ServiceCredits and any real-money earnings or payouts. Receives transaction records.',
             'Sentry — error monitoring so we can find and fix problems. Configured not to receive personal information from you.',
-            'Hosting and infrastructure (our application host) and, if you turn on notifications, the push-delivery service for your device.',
+            'Hosting and infrastructure (our application host, our database, and our self-hosted financial ledger for ServiceCredits and any real-money earnings or payouts) and, if you turn on notifications, the push-delivery service for your device.',
           ],
         },
         {

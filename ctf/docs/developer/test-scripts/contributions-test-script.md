@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributions-feature-inventory.md` |
-| **Generated** | 2026-07-18 (phone banner dismiss + emoji reminder; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-19 (banner dismiss snooze shortened to two months; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -115,7 +115,8 @@ section tabs — no leftover strip where the banner was — and it still opens t
 (the full banner returns on its own after the snooze lapses, in its usual place at the top of the
 content area). After dismissing on **desktop**, the banner is gone until the snooze lapses (no
 emoji). If the admin turns the banner feature off, neither the banner nor the emoji shows. (Android
-app has no fundraiser banner.)
+app has no fundraiser banner.) The dismiss snooze lasts **two months** (internal; not shown to the
+member) — a fresh install and the existing config row both use two.
 **Result:** web ☐ mobile ☐ android n/a — notes:
 
 ### CON-6 · Refresh the drive
