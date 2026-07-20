@@ -51,6 +51,26 @@ import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/the
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
+import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
+
+// Register the Android foreground service once, at module load, before any Chyme call is joined.
+// This is what keeps a backgrounded member hearing the room and staying in the roster: with the
+// service running the OS does not suspend the JS process while in a call, so the Stream audio and
+// the Chyme presence heartbeat/room-poll timers all keep running when the app is backgrounded
+// (owner requirement, 2026-07-20 — navigating away without closing must not drop you from the room).
+// `updateConfig` is a plain config setter that deep-merges into the SDK's global config; it does no
+// native work by itself and is a no-op on iOS (iOS background audio is handled by the config plugin),
+// so it is safe to call at startup and cannot break app boot. The Expo side is wired by
+// `androidKeepCallAlive: true` on the Stream config plugin in app.config.ts. The channel only accepts
+// `id`/`name` in this SDK version (1.32.3); it drops sound/vibration itself for the keep-alive channel.
+StreamVideoRN.updateConfig({
+  foregroundService: {
+    android: {
+      channel: { id: 'chyme-audio', name: 'Chyme live audio' },
+      notificationTexts: { title: 'Chyme live audio', body: 'You are in a live audio room' },
+    },
+  },
+});
 
 // The "SH" brand chip — the mobile counterpart of the web icon-rail logo. Default theme paints the
 // signature purple→cyan gradient (matches web `--ctf-cta-bg`); comic theme flattens to an ink panel

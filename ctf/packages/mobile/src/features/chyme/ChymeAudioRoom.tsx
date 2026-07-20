@@ -161,9 +161,11 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   // keeps the member comfortably inside the 45s presence window (CHYME_PRESENCE_TTL_SECONDS),
   // matching the web room. Without this the mobile participant's presence row goes stale and they
   // drop off the participant list after 45s even though they are still connected to Stream audio.
-  // The OS suspends these timers when the app is backgrounded, so presence lapses on its own then —
-  // no explicit visibility guard is needed (the web equivalent guards on document.visibilityState,
-  // which has no React Native counterpart).
+  // While in a call the Android foreground service (androidKeepCallAlive + StreamVideoRN.updateConfig,
+  // see app.config.ts and App.tsx) keeps the JS runtime alive when the app is backgrounded, so this
+  // heartbeat keeps firing and the member stays present and connected instead of dropping after the
+  // presence window (owner requirement, 2026-07-20). No visibility guard is needed (the web equivalent
+  // guards on document.visibilityState, which has no React Native counterpart).
   useEffect(() => {
     if (status !== 'joined') return;
     const ping = () => {
@@ -183,8 +185,9 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   // GET /api/chyme/room the web room already polls, so it adds no Stream/GetStream quota: it is a
   // database read, not a Stream call. The `cancelled` flag stops any late response from setting state
   // after unmount, and clearing the interval on unmount / when leaving the room prevents a tight loop
-  // and over-polling. The OS suspends these timers when the app is backgrounded, so it goes quiet on
-  // its own then, mirroring the heartbeat above.
+  // and over-polling. While in a call the Android foreground service keeps the JS runtime alive when
+  // backgrounded (see the heartbeat note above), so this poll keeps refreshing other members' raised
+  // hands rather than going quiet when the member navigates away without closing.
   useEffect(() => {
     if (status !== 'joined') return;
     let cancelled = false;
