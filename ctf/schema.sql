@@ -5701,4 +5701,69 @@ ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NO
 ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- ============================================================================
+-- Notifications center (cross-plugin, member-facing)
+-- ----------------------------------------------------------------------------
+-- One central feed of notify-worthy events across plugins. A row stores only a
+-- reference (source_plugin, notification_type, target_ref) plus a short, neutral,
+-- pre-rendered summary and an in-app link — never sensitive detail — so a
+-- notification never leaks on a shared/monitored device and never renders content
+-- the member has since lost access to. The in-app feed is always available; only
+-- device push is gated by notification_preferences (opt-out by default).
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- Recipient (Clerk user id).
+  user_id TEXT NOT NULL,
+  -- Originating plugin slug, e.g. 'commons', 'foundation', 'service-credits'.
+  source_plugin TEXT NOT NULL,
+  -- Specific event type, e.g. 'commons.reply', 'foundation.call.incoming'.
+  notification_type TEXT NOT NULL,
+  -- Coarse opt-in bucket: 'safety' | 'activity' | 'community'.
+  category TEXT NOT NULL,
+  -- Short, neutral, member-facing statement of what happened. No sensitive detail.
+  summary TEXT NOT NULL,
+  -- In-app deep link to open (e.g. '/apps/foundation'); null when there is nowhere to go.
+  link_path TEXT,
+  -- Opaque id of the underlying row (for dedupe and optional resolve). Null when not applicable.
+  target_ref TEXT,
+  -- Null = unread; set when the member opens/marks it read.
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS source_plugin TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS notification_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'activity';
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS summary TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS link_path TEXT;
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS target_ref TEXT;
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications (user_id) WHERE read_at IS NULL;
+-- Dedupe guard: the same event is never inserted twice for the same recipient.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_notifications_dedupe
+  ON notifications (user_id, notification_type, target_ref)
+  WHERE target_ref IS NOT NULL;
+
+-- Per-member device-push opt-in. The in-app feed is NOT gated by this — only device push is.
+-- All category opt-ins default FALSE (opt-out by default). discreet_push keeps push text generic
+-- (no plugin name or content) and defaults TRUE, the safest choice for a shared/monitored device.
+CREATE TABLE IF NOT EXISTS notification_preferences (
+  user_id TEXT PRIMARY KEY,
+  push_safety BOOLEAN NOT NULL DEFAULT FALSE,
+  push_activity BOOLEAN NOT NULL DEFAULT FALSE,
+  push_community BOOLEAN NOT NULL DEFAULT FALSE,
+  discreet_push BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS push_safety BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS push_activity BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS push_community BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS discreet_push BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 COMMIT;
