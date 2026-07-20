@@ -36,10 +36,10 @@ export type MobileBackChannelController = {
   activeCall: ChymeBackChannelState['activeCall'];
   joinCredentials: JoinCredentials | null;
   busy: boolean;
-  sendInvite: (recipientUserId: string) => Promise<void>;
-  accept: (callId: string) => Promise<void>;
-  decline: (callId: string) => Promise<void>;
-  hangUp: (callId: string) => Promise<void>;
+  sendInvite: (_recipientUserId: string) => Promise<void>;
+  accept: (_callId: string) => Promise<void>;
+  decline: (_callId: string) => Promise<void>;
+  hangUp: (_callId: string) => Promise<void>;
 };
 
 function toCreds(resp: ChymeBackChannelJoinResponse): JoinCredentials {
