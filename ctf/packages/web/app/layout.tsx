@@ -11,6 +11,7 @@ import '@fontsource/inter/900.css';
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/hooks/useAuth';
 import { NavHistoryTracker } from '@/lib/nav/back-history';
+import { PwaServiceWorker } from '@/components/shared/pwa-service-worker';
 import { ThemeProvider } from '@/hooks/useTheme';
 import {
   getClerkRuntimeOptions,
@@ -31,6 +32,19 @@ export const metadata: Metadata = {
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
   applicationName: 'TI Skills Economy (TSE)',
+  // Installable PWA (owner decision, 2026-07-20): the manifest + service worker make the web app
+  // installable to the home screen on Android and iOS, so the mobile-responsive web app covers the
+  // whole product on phones. appleWebApp enables the standalone (no browser chrome) mode on iOS.
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'TSE',
+    statusBarStyle: 'black-translucent',
+  },
+  icons: {
+    icon: '/icon-192.png',
+    apple: '/icon-192.png',
+  },
   openGraph: {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
@@ -48,6 +62,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  themeColor: '#0F1117',
 };
 
 export default function RootLayout({
@@ -92,6 +107,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             <ThemeProvider>
+              <PwaServiceWorker />
               <NavHistoryTracker />
               {children}
             </ThemeProvider>
