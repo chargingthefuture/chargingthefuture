@@ -348,6 +348,12 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-07-19 — Gated channel: tapping a quoted reply now jumps to the original message on web (same
+  behavior added to the Commons). `channel-repository`'s quoted-message object gained `postId`
+  (from `reply_to_post_id`), threaded through `GatedChatMessage`; `gated-chat-panel` renders the
+  quote block as a button that scrolls the original into view and flashes a highlight. Web only;
+  the Android quoted block is not yet tappable (tracked parity gap with the Commons one). No
+  schema, route, or contract change.
 - 2026-07-19 — Android parity for both member surfaces (issues #1680 and #1681). New mobile
   feature directory `packages/mobile/src/features/contributor-access/`: `WeaversBadge.tsx`
   (react-native-svg port of the static braid SVG, path data identical to the web mark),
