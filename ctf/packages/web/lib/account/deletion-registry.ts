@@ -91,6 +91,24 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
+    slug: 'beacon',
+    name: 'Beacon',
+    // Beacon stores NO per-member Postgres rows. A member's only Beacon footprint is their live-event
+    // chat, which lives in Stream (not the DB) — removed on deletion by the external-cleanup hook
+    // (`external-cleanup-registry.ts` → `deleteBeaconStreamData`). The two DB tables are host/admin and
+    // accountability records, retained per the Beacon deletion contract.
+    dataSummary: 'Beacon keeps no per-member rows; your live-event chat lives only in Stream and is removed on deletion.',
+    serviceScopeSupported: false,
+    tables: [
+      retain(
+        'beacon_events',
+        'Public broadcast events hosted by an admin (and their recording links) — already posted publicly to the Commons.',
+        'Host-account deletion: the orchestrator does not hard-delete public broadcast history; revisit if a host asks to remove/anonymize their past events.',
+      ),
+      retain('beacon_events_admin_audit_trail', 'Admin-action audit trail (create/go-live/end/moderate/recording-ingest).'),
+    ],
+  },
+  {
     slug: 'directory',
     name: 'Directory',
     dataSummary: 'Your directory profile and its change history.',

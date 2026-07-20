@@ -61,7 +61,7 @@
 
 The Survivor Hub is the primary entry point of CTF for both unauthenticated visitors and authenticated survivors. It provides the home shell, one blended publicly-viewable `community` channel (interleaving admin-only announcements, AI Q&A, and peer-to-peer community posts), the live hero stats, and the plugin grid. Hub is the canonical "home" route at `/`; opening a plugin moves the user into that plugin's own scope. This is deliberately not social media: peer-to-peer posting is the only user-authored surface, kept economy-scoped. Separate channels, direct messages, and system bots are deferred (see Gaps) — the MVP is one channel.
 
-## Target User Features
+## User Features
 
 ### Hub Shell
 
@@ -114,7 +114,7 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 7. Search filters by name and summary.
 8. Cards link to `/apps/[slug]` for each plugin.
 
-## Target Admin Features
+## Admin Features
 
 1. Announcement authoring (admin-only) and channel config (enabled channels, `is_public`) are operated through the Feed admin surface at `/admin/feed-announcements` and the `feed.*` command namespace — the Hub has no separate admin contract surface.
 2. There is no bot or channel-visibility admin surface in the MVP (deferred with channels/DMs/bots).
@@ -328,6 +328,8 @@ The Survivor Hub ⟵ Feed consolidation (2026-05-31) superseded the prior `hub_*
 
 ### Change Log
 
+- 2026-07-18: An announcement can now link **up to 3 plugins** (owner directive: more than 3 is information overload). `GET /api/hub/messages` resolves each announcement's linked plugins to an ordered `{ slug, name }[]` (batched `resolveAnnouncementLinkedPlugins(ids)`), carried on `HubMessage.linkedPlugins` (replaces the singular `linkedPlugin`; empty otherwise). The web official card (`announcement-card.tsx`) renders one "Open <Plugin>" chip per entry in a wrapping row; the body still carries one plain `Open <Plugin>: <url>` line per link. Threaded through `ChatMessage.linkedPlugins`. The native Android Hub (`features/hub/*`) was removed upstream (Chyme is now the mobile home surface), so this is a web / mobile-responsive change only. Storage/authoring changes are recorded in the Announcements inventory.
+- 2026-07-18: Made the mentions filter chip icon-only ("@" glyph, dropping the "Mentions" word) on web and Android so it matches the 📣 announcements chip — the two stream filters read as a matched pair of small glyph pills. Behavior unchanged.
 - 2026-07-18: Added an announcements filter chip (📣) next to the "@ Mentions" chip in the Commons stream, on web (`shell-chat-panel.tsx`) and Android (`HubHome.tsx`). "Announcements" is too long for a chip, so it shows the megaphone emoji alone. When on, the stream reads `GET /api/hub/messages?channel=announcements`, which returns only official announcements — including ones that scrolled off the recent page — so a member with limited message history can still surface them. The two filters are mutually exclusive; turning one on clears the other, and the AI (`@comic`) cards are hidden while any filter is active.
 - 2026-07-18: Made the mentions filter chip icon-only ("@" glyph, dropping the "Mentions" word) on web and Android so it matches the 📣 announcements chip — the two stream filters now read as a matched pair of small glyph pills. Behavior unchanged.
 - 2026-06-02: Hub peer posts now lead with the author's `@username` for signed-in members instead of the pseudonymous "Community member" label (official announcements/AI answers still show "Survivor Hub"). The Hub messages route is gated to signed-in members, so this only changes what authenticated members see; a future public Hub view would still show "Community member". Implemented Chyme-style: the poster's username is captured from their session and stored on `feed_community_posts.author_username` at post time, then surfaced through the Feed timeline. Forward-only — community posts created before this shipped have no stored username and keep showing "Community member".

@@ -29,7 +29,7 @@ anyone as a number: standing is categorical, with no points, tiers, leaderboard,
 surface. Eligibility is additive (the recompute only ever admits) and permanent once earned;
 removal is for-cause only via an admin action.
 
-## Target User Features
+## User Features
 
 The member surfaces are the **single gated `#contributors` channel inside the Commons shell** —
 "Commons for trusted members", one channel, admin-owned (no topic rooms, no user-created rooms,
@@ -75,7 +75,7 @@ no DMs) — and the **"Weavers of the Commons" badge** on Directory.
    indicators when Stream is configured, and the channel keeps working when it is not.
 
 
-## Target Admin Features
+## Admin Features
 
 1. Eligible-members list (user id, username, first-earned date, revoke flag) with for-cause
    revoke (non-empty reason required, confirm before it lands) and reinstate.

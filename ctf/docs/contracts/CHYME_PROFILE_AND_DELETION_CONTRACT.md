@@ -66,8 +66,9 @@ When user deletes Chyme usage only (`DELETE /api/account/chyme-profile`):
 - Delete immediately:
   - `chyme_room_members` row for `(room_id = chyme-main-room, user_id)`
   - `chyme_messages` rows for `(room_id = chyme-main-room, user_id)`
+  - Stream copy: the member's Stream user `chyme-<user_id>` is hard-deleted with `mark_messages_deleted` (`deleteChymeStreamData`), so the chat messages fanned out to Stream are removed too. Called directly by this bespoke route; best-effort after the Postgres delete, a Stream outage is logged and never blocks the deletion.
 - Anonymize/pseudonymize:
-  - none currently (hard delete for user-owned member/message rows)
+  - none currently (hard delete for user-owned member/message rows, on Postgres and Stream)
 - Retain for compliance/fraud/finance:
   - `chyme_deletion_events` service-scope record
 - Never touch (must remain):
@@ -82,6 +83,7 @@ When user requests full account deletion (`DELETE /api/account/full-account`):
 
 - Additional records removed vs service-scoped deletion:
   - currently none immediately; request is recorded and downstream reclaim dependency is queued
+  - Stream copy: the member's Stream user `chyme-<user_id>` is hard-deleted (`deleteChymeStreamData`) via the shared account-deletion orchestrator's external-cleanup hook (`lib/account/external-cleanup-registry.ts`), run best-effort after the registry-driven Postgres delete. Because the hook lives in the orchestrator, it also runs on the internal-delete route and the Clerk webhook, not just this route.
 - Cross-service dependencies:
   - requires global account deletion orchestrator across all plugin domains
   - ServiceCredits reclaim/finalization is required before account deletion can be marked `completed`

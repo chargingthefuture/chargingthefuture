@@ -226,3 +226,5 @@ one of these, it is already tracked, not a new bug:
 - Editing only one end of a cycle window is validated against the supplied value, not the stored
   other end; the owner is the only writer, so this is acceptable for now.
 - Metrics are registered as calculation definitions; no dashboard wiring yet.
+
+> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

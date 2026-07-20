@@ -352,3 +352,5 @@ These cases must produce identical behavior on both surfaces. Run them on web an
 2. **Cadence is not normalized** for the SC value contribution — a weekly 50 SC and a monthly 50 SC both contribute 50 to the GDP index. This is a documented approximation, not a correctness bug.
 3. **Counterparty existence is not verified server-side** against a canonical member table at create time. The UI picker supplies a real user ID; a server-side membership guard is a planned follow-up.
 4. **No admin collusion-review surface** — the bilateral graph is captured in the audit trail but no admin UI to surface collusion patterns is built yet.
+
+> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

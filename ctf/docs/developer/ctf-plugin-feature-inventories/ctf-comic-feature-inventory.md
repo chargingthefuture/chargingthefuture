@@ -166,7 +166,7 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 | Human-in-the-loop | None (answers return directly; `flagged` rating exists, no queue) | Owner review/correction dashboard; CDD loop |
 | Conversation store | None (single-turn `feed_questions`/`feed_answers`) | Multi-turn `comic_*` + Rasa tracker |
 
-## Target User Features
+## User Features
 
 1. Reach the assistant with `@comic <question>`; reply renders inline.
 2. Peer-to-peer messages (no `@`) are never sent to the bot.

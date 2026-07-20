@@ -94,10 +94,11 @@ contracts:
       scheduleAt:
         type: string
         required: false
-      linkedPluginSlug:
-        type: string
+      linkedPluginSlugs:
+        type: array
+        items: string
         required: false
-        description: Optional plugin slug to link. Validated against the visible plugin registry; an unknown or admin-only slug is stored as null. When set, the published feed item carries an "Open <Plugin>" link to /apps/<slug>.
+        description: Optional ordered plugin slugs to link (0–3). Validated against the visible plugin registry; unknown, admin-only, or duplicate slugs are dropped and the list is capped at 3. When set, the published feed item carries one "Open <Plugin>" link to /apps/<slug> per entry.
     outputSchema:
       announcementId:
         type: string
@@ -130,10 +131,11 @@ contracts:
       targeting:
         type: object
         required: false
-      linkedPluginSlug:
-        type: string
+      linkedPluginSlugs:
+        type: array
+        items: string
         required: false
-        description: Optional plugin slug to link (absent keeps the existing value; empty string clears it). Validated against the visible plugin registry.
+        description: Optional ordered plugin slugs to link (0–3; absent keeps the existing links, an empty array clears them). Validated against the visible plugin registry; unknown/admin-only/duplicate slugs dropped, capped at 3.
     outputSchema:
       announcementId:
         type: string
