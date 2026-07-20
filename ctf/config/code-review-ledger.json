@@ -27,9 +27,9 @@
     },
     {
       "name": "announcements",
-      "type": "plugin",
-      "lastReviewedAt": "2026-07-17T19:04:58.791Z",
-      "lastRunIssues": 4,
+      "type": "module",
+      "lastReviewedAt": "2026-07-18T09:46:21.009Z",
+      "lastRunIssues": 6,
       "cursor": 0,
       "partial": false,
       "paths": [
@@ -116,14 +116,6 @@
       "partial": false
     },
     {
-      "name": "community",
-      "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
-      "cursor": 0,
-      "partial": false
-    },
-    {
       "name": "community-shell",
       "type": "module",
       "lastReviewedAt": null,
@@ -148,6 +140,14 @@
       "partial": false
     },
     {
+      "name": "contributor-access",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
       "name": "currencies",
       "type": "module",
       "lastReviewedAt": null,
@@ -157,7 +157,7 @@
     },
     {
       "name": "currency",
-      "type": "plugin",
+      "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
       "cursor": 0,
@@ -292,10 +292,15 @@
     {
       "name": "level-up",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-20T09:40:20.540Z",
+      "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/level-up",
+        "ctf/packages/web/components/level-up",
+        "ctf/packages/web/lib/level-up"
+      ]
     },
     {
       "name": "lighthouse",
@@ -328,26 +333,35 @@
     {
       "name": "nav",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-07-20T04:22:57.270Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/nav"
+      ]
     },
     {
       "name": "notifications",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-20T01:46:02.477Z",
+      "lastRunIssues": 5,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/notifications"
+      ]
     },
     {
       "name": "observability",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-19T08:39:00.553Z",
+      "lastRunIssues": 3,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/observability"
+      ]
     },
     {
       "name": "peer-programming",
@@ -401,7 +415,7 @@
     },
     {
       "name": "questions",
-      "type": "plugin",
+      "type": "module",
       "lastReviewedAt": "2026-07-14T14:58:05.350Z",
       "lastRunIssues": 5,
       "cursor": 0,
@@ -585,10 +599,13 @@
     {
       "name": "webhooks",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-07-18T09:44:46.490Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/webhooks"
+      ]
     },
     {
       "name": "weekly-performance",

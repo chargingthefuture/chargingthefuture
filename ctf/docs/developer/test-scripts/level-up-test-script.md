@@ -1,236 +1,522 @@
 # LevelUp — Manual Test Script
 
-> Walk these steps on a real device to confirm the plugin works end to end. This script is
-> generated from the plugin's feature inventory and contracts — those files are the source of
-> truth, this is the runnable checklist derived from them. Do not edit a step here to match a
-> bug; fix the code (or the inventory) and regenerate.
->
-> **How to regenerate:** `pnpm --dir ctf test-script:generate -- level-up`
+> Generated from the LevelUp feature inventory and declared contracts; this is the runnable hand-test checklist for the `level-up` plugin. Regenerate with:
+> `pnpm --dir ctf test-script:generate -- level-up`
 
-| | |
+| Field | Value |
 |---|---|
 | **Plugin** | LevelUp (`level-up`) |
-| **Visibility** | Member-facing |
-| **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Visibility** | Member |
+| **Roles to test** | member, admin (trainer role tested via admin walkthrough) |
+| **Surfaces** | web (`/apps/level-up`, `/admin/level-up`) · android (LevelUp screen, Admin LevelUp screen) |
 | **Seed first** | `pnpm --dir ctf seed:level-up` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-level-up-feature-inventory.md` |
-| **Generated** | 2026-06-29 (auto-cohort creation + economic policy/milestone skeleton + trainer-assignment wiring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-20 (commit eca128e5) |
+
+---
 
 ## How to run this
 
-- Each case is **precondition → steps → expected**. Do it on each surface listed for the case.
-- Mark each surface box: ✅ pass · ❌ fail · ⛔ blocked/can't reach.
-- A ❌ becomes a row in the **Bug Reporting** plugin. Put the bug link in the notes line so the
-  next run knows it's already filed.
-- Run the **Core smoke** block every session. Run the full walkthrough when you changed this
-  plugin or on a pre-release sweep.
+- Mark each surface checkbox as you go: ✅ pass · ❌ fail · ⛔ blocked
+- A ❌ on any checkbox becomes a row in the Bug Reporting plugin — note the case ID, surface, and what you actually saw
+- Run **Core smoke** at the start of every test session before anything else
 
 ---
 
 ## Core smoke (every session)
 
-Learning cohorts with escrow-backed milestones — these are the can't-ship-broken checks. Member role
-unless noted.
+**Seed before starting:** `pnpm --dir ctf seed:level-up`
 
-1. **Cohort list loads.** Open LevelUp. Cohorts render with track, status, seats, and required
-   deposit — not a spinner or error. → web ☐ mobile ☐ android ☐
-2. **Wallet is grant-only.** Open the Credits Wallet. Balance and earned/granted history show and
-   there is **no** spend or transfer control anywhere on it. → web ☐ mobile ☐ android ☐
-3. **Filters work.** Filter the cohort list by track and status; the list narrows to match. →
-   web ☐ mobile ☐ android ☐
-4. **Denied action is readable.** Trigger a denied action (e.g. a trainer-only account tries to
-   enroll). The message is plain-language, not a raw error code. → web ☐ mobile ☐ android ☐
+1. Sign in as the seed **member** (trainee 1). Open the LevelUp app. The cohort browse screen loads without error and shows at least one cohort card.
+   web ☐ android ☐
+
+2. Sign in as the seed **admin**. Open `/admin/level-up`. The admin panel loads and shows KPI cards and a cohort overview table.
+   web ☐
+
+3. Sign in as the seed **member** (trainee 1). Open the Wallet tab. The balance shown is **500 ServiceCredits** (the seeded starting balance).
+   web ☐ android ☐
+
+4. Sign out. Open the LevelUp public/marketing page (`/apps/level-up` unauthenticated). The page loads and does **not** display a cohort enroll button or any balance figure.
+   web ☐ android ☐
 
 ---
 
 ## Member walkthrough
 
-### LVL-1 · Cohort browse and detail
-**Role:** member · **Surfaces:** all · **Seed:** `seed:level-up`
-**Steps:**
-1. Open the cohort list and filter by `track`, `status`, and `startDate`.
-2. Open a cohort's detail view.
-**Expected:** Filters narrow the list. Detail shows curriculum, milestones, and an enrollment
-affordance. Seeded open cohort shows required credits 300 and its milestone split (30/70).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+### LU-1 — Cohort browse and filters
 
-### LVL-2 · Enrollment with escrow split
-**Role:** member · **Surfaces:** all
-**Precondition:** a trainee seed account with 500 ServiceCredits; an open cohort.
-**Steps:**
-1. Enroll in the open cohort.
-2. Re-open the user dashboard.
-**Expected:** Enrollment succeeds; the dashboard shows the active enrollment, the LevelUp escrow
-total rises by the deposit, the wallet balance drops accordingly, and the deposit is split per
-milestone. A trainer-only account is blocked from enrolling.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Role:** member · **Surfaces:** web, android
+**Precondition:** Signed in as seed trainee 1. Seed cohort is visible.
 
-### LVL-3 · Credits Wallet is grant-only
-**Role:** member · **Surfaces:** all
 **Steps:**
-1. Open the Credits Wallet.
-**Expected:** Shows balance, total earned through LevelUp, escrow held, and a read-only
-earned/granted history. There is no spend, send, or transfer action of any kind.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+1. Open the LevelUp app.
+2. Note how many cohort cards are shown with no filter applied.
+3. Apply the `track` filter that matches the seed cohort's track (check seed script for the value).
+4. Apply the `status` filter set to `open`.
+5. Clear all filters.
 
-### LVL-4 · Achievements (earned vs locked)
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Open Achievements.
-**Expected:** Badges split into honest Earned and Locked buckets with a stats row. Seeded trainee 1
-shows First Milestone as earned. Badges are awarded only — there is no buy or spend control.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Expected:**
+- Without filters, at least the seed cohort card appears.
+- Filtering by matching track narrows the list to include the seed cohort; filtering by a track that matches nothing shows an empty state (no error).
+- Filtering by `status: open` shows the seed cohort (seeded as open).
+- Clearing filters restores the original count.
+- No network error banners appear at any step.
 
-### LVL-5 · Trainers directory
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Open the Trainers directory, optionally filter by `track`.
-**Expected:** Read-only trainer cards show headline, bio, tracks, and active-cohort count. The seed
-trainer appears with tracks Tech and Finance. No action mutates a trainer.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
-
-### LVL-6 · Open a dispute
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Open a dispute on an enrollment, adding a comment and attachment metadata.
-**Expected:** The dispute is created with the comment and attachment metadata recorded.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
-
-### LVL-7 · Refresh the cohort list
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open LevelUp
-   and tap the refresh icon in the header.
-2. On android, open the Browse tab and pull down on the cohort list.
-3. In another session, change the data (e.g. an admin creates or closes a cohort), then refresh as
-   above.
-**Expected:** The refresh icon spins while loading (web) or the pull-to-refresh spinner shows
-(android), cohorts and the wallet balance re-pull from the server, and after step 3 the change
-appears without closing and reopening the app. Refreshing never clears the current screen to the
-full-screen loading state.
-The header back chevron returns to the page you came from (falling back to All Apps when opened
-directly), and the admin screen header shows a "Member view" pill opening `/apps/level-up`.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
-
-### LVL-8 · Signed-out screen frames "who earns" honestly
-**Role:** signed-out visitor · **Surfaces:** web (desktop), web (mobile-responsive)
-**Steps:**
-1. Open `/apps/level-up` while signed out and read the marketing copy.
-**Expected:** The copy does **not** claim a learner is paid new credits for completing each
-milestone. It states that learners earn ServiceCredits through **badges and completion bonuses**,
-and that **trainers** earn a **credit split** for validating milestones. (This matches the code:
-passing a milestone releases the learner's own escrow back to them; the trainer earns the minted
-split; a learner's only new-credit paths are grant-only badges and a graduation completion bonus.)
-The highlight bullets read "Free for all survivors", "Earn badges and completion bonuses", and
-"Trainer-led cohorts". On android the signed-in empty state uses the same badges/completion-bonus
-wording.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+Result: web ☐ android ☐
 
 ---
 
-## Trainer walkthrough
+### LU-2 — Cohort detail view
 
-### LVL-T1 · Validate and release a milestone
-**Role:** trainer · **Surfaces:** web (trainer dashboard)
-**Precondition:** a cohort the trainer owns with a pending validation.
-**Steps:**
-1. Open the trainer dashboard and read pending validations, trainees, and the payout ledger.
-2. Validate a milestone for an enrollment.
-3. Release the validated milestone.
-**Expected:** Validation records against the right enrollment and cohort. Release settles the
-learner's escrow and pays the trainer split; both show in the payout ledger.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Role:** member · **Surfaces:** web, android
+**Precondition:** Signed in as seed trainee 1. Seed cohort visible in browse.
 
-### LVL-T2 · Claim an auto cohort and get paid on it
-**Role:** trainer · **Surfaces:** backend (API)
-**Precondition:** an auto-created cohort that still shows `needs trainer`, with a deposit set
-(`default_required_credits` > 0) so there is escrow to release.
 **Steps:**
-1. As a trainer, claim the cohort (`POST /api/level-up/cohorts/[cohortId]/claim-trainer`).
-2. Have a member enroll, then validate and release a milestone for that enrollment.
-3. Separately, confirm an enrollment that was made **before** the claim also pays out.
-**Expected:** After the claim, new enrollments carry the trainer as `assigned_trainer_id`, and
-enrollments made before the claim are backfilled with it. Releasing a milestone pays the claiming
-trainer their split (it no longer silently skips the payout for want of an assigned trainer).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+1. Tap or click the seed cohort card.
+2. Inspect the detail view.
+
+**Expected:**
+- The detail view shows the cohort title, track, and at least the two seeded milestones.
+- A deposit or enrollment affordance is visible (the seed cohort requires 300 credits).
+- No fields labeled `trainerName`, `tags`, or `milestoneCount` appear with placeholder/mock data; if they are absent entirely that is correct.
+
+Result: web ☐ android ☐
+
+---
+
+### LU-3 — Enrollment with deposit and escrow
+
+**Role:** member · **Surfaces:** web, android
+**Precondition:** Signed in as seed trainee 1 (500 SC balance). Seed cohort is open with required deposit 300. Trainee 1 is **not** yet enrolled.
+
+**Steps:**
+1. Open the seed cohort detail.
+2. Initiate enrollment.
+3. Confirm the deposit of 300 credits when prompted.
+4. Check the wallet balance after the enrollment completes.
+
+**Expected:**
+- Enrollment succeeds; a confirmation is shown (enrollment ID or success message).
+- Wallet balance decreases by 300 (now shows 200 SC spendable) and the LevelUp escrow total reflects 300 held.
+- The cohort card or dashboard shows the trainee as enrolled.
+
+Result: web ☐ android ☐
+
+---
+
+### LU-4 — Enrollment blocked for trainer-only account
+
+**Role:** trainer · **Surfaces:** web
+**Precondition:** Signed in as the seed trainer account. Seed cohort is open.
+
+**Steps:**
+1. Open the seed cohort detail.
+2. Attempt to initiate enrollment.
+
+**Expected:**
+- Enrollment is blocked. The UI either hides the enroll button or returns an error after attempting it.
+- The trainer is not enrolled in the cohort.
+
+Result: web ☐
+
+---
+
+### LU-5 — Enrollment idempotency (duplicate attempt)
+
+**Role:** member · **Surfaces:** web
+**Precondition:** Signed in as seed trainee 1, already enrolled in the seed cohort (complete LU-3 first).
+
+**Steps:**
+1. Attempt to enroll in the same cohort a second time using the same idempotency key (re-submit the enrollment form immediately or replay the request with the same key).
+
+**Expected:**
+- The second attempt does not create a second enrollment or deduct credits a second time.
+- The response is consistent (returns the existing enrollment ID or a "already enrolled" notice).
+
+Result: web ☐
+
+---
+
+### LU-6 — Dashboard wallet view
+
+**Role:** member · **Surfaces:** web, android
+**Precondition:** Signed in as seed trainee 1, enrolled in seed cohort (LU-3 done). Wallet tab open.
+
+**Steps:**
+1. Open the Wallet tab/section.
+2. Inspect the balance overview cards.
+3. Inspect the transaction history list.
+4. Switch through the All / Earned / Escrow filter tabs.
+
+**Expected:**
+- Balance overview shows: current spendable balance, total earned through LevelUp, and escrow held.
+- Transaction history includes the enrollment deposit entry (grant or escrow hold visible).
+- Escrow filter tab shows the 300 SC held for the seed cohort enrollment.
+- No "Spend", "Transfer", or "Send credits" button appears anywhere on this screen — the wallet is read-only.
+- No "Total Spent" or "running balance per row" columns appear (known real-data deviation; absence is correct).
+
+Result: web ☐ android ☐
+
+---
+
+### LU-7 — Achievements — earned and locked buckets
+
+**Role:** member · **Surfaces:** web, android
+**Precondition:** Signed in as seed trainee 1 (has "First Milestone" badge earned). Achievements tab open.
+
+**Steps:**
+1. Open the Achievements tab/section.
+2. Inspect the Earned bucket.
+3. Inspect the Locked bucket.
+
+**Expected:**
+- "First Milestone" badge appears in the **Earned** bucket with its name and icon visible.
+- "Cohort Graduate" and "Peer Mentor" badges appear in the **Locked** bucket.
+- Stats row shows at least 1 earned badge and 3 total badge definitions.
+- There is no "buy badge" or "spend credits" affordance anywhere on the screen.
+- No "In Progress" bucket with progress fractions appears (not backed; absence is correct).
+
+Result: web ☐ android ☐
+
+---
+
+### LU-8 — Achievements — unearned user sees all locked
+
+**Role:** member · **Surfaces:** web, android
+**Precondition:** Signed in as seed trainee 2 (no earned badges).
+
+**Steps:**
+1. Open the Achievements tab/section.
+
+**Expected:**
+- Earned bucket is empty or shows a meaningful empty state (no badges earned yet).
+- All 3 seeded badge definitions appear in the Locked bucket.
+
+Result: web ☐ android ☐
+
+---
+
+### LU-9 — Trainers directory browse
+
+**Role:** member · **Surfaces:** web, android
+**Precondition:** Signed in as seed trainee 1.
+
+**Steps:**
+1. Open the Trainers tab/section.
+2. Inspect the trainer cards shown.
+3. On web, check the stats row at the top.
+4. Apply a `track` filter for `Tech`.
+
+**Expected:**
+- The seed trainer profile appears with display name, headline, bio, and tracks (`Tech`, `Finance`).
+- Stats row (web) shows trainer count, tracks covered, and active-cohort count.
+- Filtering by `Tech` keeps the seed trainer visible.
+- Filtering by a track with no trainers shows an empty state.
+- No rating, handle, learners count, or SC-released figure appears (not backed; absence is correct).
+
+Result: web ☐ android ☐
+
+---
+
+### LU-10 — Dispute open flow
+
+**Role:** member · **Surfaces:** web
+**Precondition:** Signed in as seed trainee 1, enrolled in seed cohort (LU-3 done).
+
+**Steps:**
+1. Navigate to the dispute open flow (from the enrollment or milestone view).
+2. Fill in a title and description.
+3. Submit the dispute.
+
+**Expected:**
+- Dispute is created; a dispute ID or success message is returned.
+- The form accepts optional attachment metadata without error (entering a URL in an attachment field should not cause a failure; not entering one should also be fine).
+
+Result: web ☐
+
+---
+
+### LU-11 — Public shell copy accuracy (unauthenticated)
+
+**Role:** unauthenticated · **Surfaces:** web, android
+**Precondition:** Signed out.
+
+**Steps:**
+1. Open the LevelUp marketing/public page.
+2. Read the subheading and any bullet points describing how credits are earned.
+
+**Expected:**
+- Copy says that **learners** earn credits via **badges and completion bonuses** (not "complete milestones to earn credits").
+- Copy says **trainers** earn a credit split for validating milestones.
+- There is no implication that passing a milestone mints new credits for the learner.
+
+Result: web ☐ android ☐
+
+---
+
+### LU-12 — Pull-to-refresh (Android) and refresh button (web)
+
+**Role:** member · **Surfaces:** web, android
+**Precondition:** Signed in as seed trainee 1. Cohort browse visible.
+
+**Steps:**
+1. **Android:** Pull down on the cohort list to trigger a refresh.
+2. **Web:** Click the refresh button in the section header.
+
+**Expected:**
+- The list reloads without a full-screen loading flash (background refresh).
+- Data shown after refresh is consistent with what was shown before (no errors, no blank screen).
+
+Result: web ☐ android ☐
+
+---
+
+### LU-13 — Self-transfer rejected
+
+**Role:** member · **Surfaces:** web
+**Precondition:** Signed in as seed trainee 1. Access to the transfers endpoint.
+
+**Steps:**
+1. Attempt `POST /api/level-up/transfers` with `recipientUserId` equal to the signed-in user's own ID, amount 10, and a valid idempotency key.
+
+**Expected:**
+- The server returns HTTP 400.
+- No transfer record is created.
+
+Result: web ☐
 
 ---
 
 ## Admin walkthrough
 
-### LVL-A1 · Grant credits (grant-only, confirm-gated)
-**Role:** admin · **Surfaces:** web (`/admin/level-up`), android (admin screen)
-**Steps:**
-1. Open the admin surface. Enter a member user ID, an amount greater than zero, a reason, and a
-   governance ticket ID.
-2. Read the confirm step, then submit.
-3. Try to enter zero or a negative amount.
-**Expected:** The action is labelled "Grant"; the confirm step restates "add N credits to member X".
-The grant succeeds and is written to the audit log with the member and governance ticket recorded.
-There is no remove/negative path — submit is disabled for non-positive amounts.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+### LU-A1 — Admin KPI cards and cohort overview
 
-### LVL-A2 · Admin panel KPIs and cohort overview
-**Role:** admin · **Surfaces:** web (`/admin/level-up`)
-**Steps:**
-1. Read the KPI cards (enrollments, completions, average days to first trainer payout).
-2. Read the read-only cohort overview.
-**Expected:** KPI cards render real values. The cohort overview lists title, track, status, seats
-open, required deposit, trainer split, and completion bonus. It is read-only.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Role:** admin · **Surfaces:** web
+**Precondition:** Signed in as seed admin. At least one cohort exists (from seed).
 
-### LVL-A3 · Resolve a dispute
-**Role:** admin (or the assigned trainer) · **Surfaces:** web
 **Steps:**
-1. Resolve an open dispute, with an optional adjustment transfer.
-2. As an unrelated trainer, attempt to resolve the same dispute.
-**Expected:** Admin (or the trainer assigned to the dispute's cohort) resolves it; the optional
-adjustment transfer applies. An unrelated trainer is denied with a readable message.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+1. Open `/admin/level-up`.
+2. Inspect the KPI cards at the top.
+3. Inspect the cohort overview table below.
 
-### LVL-A4 · Auto-cohort run from Workforce gaps
-**Role:** admin · **Surfaces:** web (`/admin/level-up`), android (admin screen)
-**Precondition:** Skills Taxonomy has at least one sector with a positive `workforce_share` and at
-least one Foundational-level occupation whose gap is at or above the configured minimum.
+**Expected:**
+- KPI cards show enrollments, completions, and avg days to first trainer payout (values may be 0 for a fresh seed; they must not be blank or "undefined").
+- Cohort overview table shows title, track, status, seats open, required deposit, trainer split, and completion bonus for the seed cohort.
+- The page uses the shared dark admin design system (dark tokens, icon header with ADMIN badge).
+
+Result: web ☐
+
+---
+
+### LU-A2 — Admin credit grant — confirm step and grant-only constraint
+
+**Role:** admin · **Surfaces:** web, android
+**Precondition:** Signed in as seed admin. Have seed trainee 1's user ID ready.
+
 **Steps:**
-1. In the "Auto cohorts from Workforce gaps" panel, press **Run now**.
-2. Re-read the cohort overview.
-3. Press **Run now** a second time.
-**Expected:** The first run reports how many cohorts were created/closed and the overview gains
-open cohorts tagged `auto` and `needs trainer` (one per largest Foundational gap, up to the
-concurrency and per-sector caps). The second run creates **no** duplicates for the same occupations.
-If no sector carries a workforce share, the run reports it was skipped rather than creating cohorts.
-Each created cohort carries the configured economic policy (deposit from `default_required_credits`,
-default 0 = free to join; trainer split `default_trainer_split_percent`, default 25%; completion bonus
-`default_completion_bonus_credits`, default 0) and the standard 3-milestone skeleton (40/30/30) — open
-a created cohort's detail and confirm the milestones are present. On android, the same "Run now" action
-and the `auto` / `needs trainer` badges on the cohort overview must behave the same (#1200).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+1. Open the credit adjustment form on the admin panel.
+2. Enter trainee 1's user ID, amount `100`, a reason string, and a governance ticket ID.
+3. Proceed to the confirm step.
+4. Read the confirm copy before submitting.
+5. Submit the grant.
+6. Attempt to enter `-50` or `0` in the amount field.
+
+**Expected:**
+- The confirm step shows text of the form "add 100 credits to member [trainee 1 name/ID]" — no mention of "remove".
+- Submitting succeeds and returns a governance event ID or success message.
+- Entering `-50` or `0`: the amount field rejects negative values and the submit button is disabled for non-positive amounts (client-side constraint).
+- No "remove credits" or negative-amount path is exposed in the UI anywhere.
+
+Result: web ☐ android ☐
+
+---
+
+### LU-A3 — Admin credit grant requires all fields
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** Signed in as seed admin.
+
+**Steps:**
+1. Open the credit grant form.
+2. Submit with the governance ticket ID field left blank (all other fields valid).
+3. Then submit with a valid governance ticket but user ID blank.
+
+**Expected:**
+- Both submissions are blocked before reaching the server (form validation error shown inline).
+- No governance event is created.
+
+Result: web ☐
+
+---
+
+### LU-A4 — Auto-cohorts "Run now" button
+
+**Role:** admin · **Surfaces:** web, android
+**Precondition:** Signed in as seed admin. Workforce gap data available (seeded or present in dev DB).
+
+**Steps:**
+1. Open the admin panel (`/admin/level-up` on web; Admin LevelUp screen on Android).
+2. Locate the "Auto cohorts from Workforce gaps" card.
+3. Click/tap "Run now".
+4. Wait for the result.
+
+**Expected:**
+- The button triggers `POST /api/level-up/admin/auto-cohorts/run`.
+- A result banner appears showing created, closed, and/or skipped summary.
+- If the pre-flight guard fires (no positive `workforce_share`), the banner shows `skipped: no_workforce_share` — not a blank screen or error.
+- After a successful run, the cohort overview refreshes and any newly created cohorts carry an `auto` badge; auto-created cohorts with no trainer yet carry a `needs trainer` badge.
+
+Result: web ☐ android ☐
+
+---
+
+### LU-A5 — Auto-cohort idempotency
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** LU-A4 completed and at least one auto cohort was created.
+
+**Steps:**
+1. Click "Run now" a second time immediately.
+
+**Expected:**
+- No duplicate cohort is created for the same occupation.
+- The result banner reports 0 created (or the existing cohort is counted as already covered).
+
+Result: web ☐
+
+---
+
+### LU-A6 — Trainer claims an auto-created cohort
+
+**Role:** trainer (or admin acting as trainer) · **Surfaces:** web
+**Precondition:** At least one auto-created cohort exists with `needsTrainer` flag set (from LU-A4). Signed in as seed trainer.
+
+**Steps:**
+1. Find the auto-created cohort with the `needs trainer` badge in the cohort list.
+2. Call `POST /api/level-up/cohorts/[cohortId]/claim-trainer` for that cohort.
+3. Reload the cohort list.
+
+**Expected:**
+- The request succeeds and returns the cohort ID.
+- The `needs trainer` badge disappears from that cohort in the list.
+- If trainee 2 was enrolled in that cohort before the claim, their enrollment's `assigned_trainer_id` is now set to the claiming trainer (check via milestone release in LU-A8).
+
+Result: web ☐
+
+---
+
+### LU-A7 — Milestone validation (trainer/admin)
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** Trainee 1 is enrolled in the seed cohort (LU-3 done). Signed in as seed admin.
+
+**Steps:**
+1. Call `POST /api/level-up/milestones/[milestoneId]/validate` with the seed cohort's first milestone ID, trainee 1's enrollment ID, and a unique idempotency key.
+
+**Expected:**
+- Returns a validation ID and status.
+- A second identical request with the same idempotency key returns the same validation ID without creating a duplicate record.
+
+Result: web ☐
+
+---
+
+### LU-A8 — Milestone release and escrow settlement
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** Milestone 1 validated (LU-A7 done). Trainee 1 enrolled in seed cohort.
+
+**Steps:**
+1. Call `POST /api/level-up/milestones/[milestoneId]/release` for the validated milestone.
+2. Check trainee 1's wallet balance.
+3. Check the trainer's wallet (if accessible).
+
+**Expected:**
+- Release succeeds and returns a user transfer ID and trainer payout governance ID.
+- Trainee 1's escrowed portion for milestone 1 (30% of 300 = 90 SC) is released back to their spendable balance.
+- The trainer receives the configured split of the milestone's escrow (seeded split applies).
+- The escrow total for trainee 1 decreases by the released milestone amount.
+
+Result: web ☐
+
+---
+
+### LU-A9 — Dispute resolution (admin)
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** A dispute exists (LU-10 done). Signed in as seed admin.
+
+**Steps:**
+1. Call `POST /api/level-up/disputes/[disputeId]/resolve` with the dispute ID from LU-10, a resolution comment, and an idempotency key.
+
+**Expected:**
+- Returns the dispute ID and `status: resolved`.
+- Attempting to resolve the same dispute a second time returns an error indicating the dispute is no longer open (not a second resolution).
+
+Result: web ☐
+
+---
+
+### LU-A10 — Non-admin cannot access admin grant endpoint
+
+**Role:** member · **Surfaces:** web
+**Precondition:** Signed in as seed trainee 1.
+
+**Steps:**
+1. Attempt `POST /api/level-up/admin/adjust-credits` directly with a valid-looking body.
+
+**Expected:**
+- Server returns HTTP 401 or 403.
+- No governance event is created.
+
+Result: web ☐
+
+---
+
+### LU-A11 — Admin ↔ Member navigation
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** Signed in as seed admin. On the `/admin/level-up` page.
+
+**Steps:**
+1. Click the "Member view" pill/button in the admin panel header.
+2. Confirm you land on `/apps/level-up`.
+3. Navigate back.
+
+**Expected:**
+- "Member view" pill is present in the admin header.
+- Clicking it navigates to the member-facing LevelUp app without error.
+- The back control returns to the admin panel (or to the previous in-app page).
+
+Result: web ☐
 
 ---
 
 ## Parity check (web ↔ android)
 
-For LVL-1, LVL-3, LVL-4, and LVL-5, the android app and the mobile-responsive web layout must behave
-the same: same cohort list, same grant-only wallet, same earned badges, same trainer directory. The
-Android admin screen mirrors the cohort overview, the grant action, and (since #1200) the auto-cohort
-**Run now** action plus the `auto` / `needs trainer` badges (it has no KPI cards — see Known gaps).
-Note any drift here rather than filing separate bugs.
+The following cases must produce the same data and UX outcome on both surfaces. Run them back-to-back on web and Android with the same seed account.
 
-**Result:** matches ☐ — drift notes:
+| Case | What must match |
+|---|---|
+| LU-1 | Cohort list loads; same cohorts visible; filter by `open` status works |
+| LU-2 | Cohort detail shows same milestones and deposit requirement |
+| LU-3 | Enrollment succeeds; balance decreases by 300; escrow reflects hold |
+| LU-6 | Wallet shows same balance, escrow total, and earned history; no spend action present |
+| LU-7 | "First Milestone" badge in Earned; other two in Locked; no buy affordance |
+| LU-9 | Seed trainer profile visible with same headline and tracks |
+| LU-11 | Public/signed-out copy accurately describes learner and trainer earning mechanics |
+| LU-12 | Refresh reloads data without full-screen flash |
+| LU-A2 | Grant-only form: confirm copy says "add N credits"; negative amount blocked |
+| LU-A4 | "Run now" button present; result banner shows created/closed/skipped summary; `auto`/`needs trainer` badges shown |
 
 ---
 
 ## Known gaps — do not file these as bugs
 
-Carried from the inventory's "Gaps and Known Technical Debt" section at generation time. If you hit one
-of these, it is already tracked, not a new bug:
-
-- Dispute attachments store URL metadata only; there is no secure file-storage backend yet.
-- No admin KPI read route exists, so the Android admin screen has no KPI cards (web renders them
-  server-side).
-- No admin-gated read route exists for the admin screens, so the Android admin screen cannot pre-gate
-  by role before render; it relies on the server-side admin gate on the grant action.
-- The track/badge management mockup has no backing endpoints, so that surface is not built (tracks are
-  a free-text field and there is no badge-editing model).
+- **No admin KPI endpoint on Android.** The mobile admin screen has no KPI cards. The web admin page renders KPIs via server-side `getAdminPanelData()`; no `GET /api/level-up/admin/kpis` route exists. The Android screen skipping KPIs is expected.
+- **No admin-gated GET route for mobile.** The Android admin screen cannot pre-gate by role before render; it relies on the server-side gate on `POST /adjust-credits`. A dedicated admin-gated read route is deferred.
+- **Dispute attachment storage is URL-metadata-only.** There is no secure file storage backend. Entering a URL in an attachment field is the only supported path; actual file upload will not work.
+- **Track/badge management admin UI not built.** The design mockup `MobileLevelUpAdmin.tsx` shows a track and badge editor. No backing endpoints exist for this. The admin screen shows only cohort overview and credit grant.
+- **Unbacked trainer detail fields absent.** Trainer rating, handle, per-cohort name/status, learners count, milestones validated, SC released, and recent-activity feed are not returned by `GET /api/level-up/trainers`. Their absence from the UI is correct.
+- **Unbacked achievement fields absent.** Achievement emoji, rarity, and an "In Progress" bucket with progress fractions are not backed by the endpoint (earned boolean only). Their absence is correct.
+- **Unbacked wallet fields absent.** "Total Spent", per-row running balance, a "Spent" filter tab, per-cohort escrow breakdown, and an "earn more" suggestion list have no data path (grant-only model). Their absence is correct.
