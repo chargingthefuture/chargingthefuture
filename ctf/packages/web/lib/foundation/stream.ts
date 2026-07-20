@@ -12,6 +12,28 @@ function toStreamUserId(userId: string): string {
   return `foundation-${userId}`;
 }
 
+// Delete a member's Foundation data on Stream when they delete their account. Foundation thread chat is
+// sent directly into Stream Chat under `foundation-<userId>`, so Stream keeps a copy a Postgres delete
+// does not remove. Hard-deletes the member's Stream user with `mark_messages_deleted`. Best-effort:
+// returns `false` (never throws) when Stream is unconfigured or the call fails, so the account-deletion
+// hook that calls this can log and continue without blocking the deletion.
+export async function deleteFoundationStreamData(userId: string): Promise<boolean> {
+  const config = await resolveStreamCredentials();
+  if (!config) {
+    return false;
+  }
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
+  try {
+    await streamClient.deleteUser(toStreamUserId(userId), {
+      mark_messages_deleted: true,
+      hard_delete: true,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function upsertStreamUser(streamClient: StreamChat, userId: string, displayName: string): Promise<string> {
   const streamUserId = toStreamUserId(userId);
   await streamClient.upsertUser({

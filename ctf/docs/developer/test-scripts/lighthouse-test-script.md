@@ -184,6 +184,22 @@ directly), and the admin screen header shows a "Member view" pill opening `/apps
 
 ---
 
+### LH-DEL · Account deletion clears the Stream chat copy (privacy)
+**Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
+Lighthouse match message; access to the Stream dashboard for the app behind `STREAM_API_KEY`.
+**Steps:**
+1. As that member, send a match-thread message, then delete the whole account
+   (`DELETE /api/account/full-account`, or delete the user in Clerk to exercise the webhook path).
+2. In the Stream dashboard, look up the member's Stream user `lighthouse-<userId>` and their messages in
+   the `lighthouse-match-<matchId>` channel.
+**Expected:** After the delete, the member's Postgres rows are gone **and** their Stream user
+`lighthouse-<userId>` is hard-deleted with messages marked deleted — no lingering Stream copy. This runs
+via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If Stream
+is down at delete time, the deletion still succeeds and the failure is logged for retry.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 ### LH-A1 · Admin stats and tables
