@@ -1806,9 +1806,13 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* One unified icon-control chrome across the whole phone top bar: the same
+     surface fill + border + radius that the plugin header's MobileTopActions uses,
+     so admin, gift, help, settings, and the tabs all read as one system (both
+     default and comic themes derive from the theme tokens). */
+  border-radius: 10px;
+  background: var(--ctf-surface);
+  border: 1px solid var(--ctf-border);
   color: var(--ctf-text-secondary);
   font-size: 13px;
   font-weight: 600;
@@ -1862,9 +1866,12 @@
 
 .mobileBarSectionBtn {
   padding: 6px 9px;
-  border-radius: 8px;
-  background: transparent;
-  border: 1px solid transparent;
+  /* Both section tabs carry the same boxed chrome as the other top-bar controls so
+     the pair reads as one segmented control; the active state (below) only changes
+     the tint, not the presence of the box. */
+  border-radius: 10px;
+  background: var(--ctf-surface);
+  border: 1px solid var(--ctf-border);
   color: var(--ctf-text-subtle);
   font-size: 13px;
   font-weight: 600;
@@ -1892,11 +1899,26 @@
   width: 38px;
   height: 38px;
   border-radius: 10px;
+  /* Give the phone-bar help + settings buttons the same visible box as the plugin
+     header controls. The base .iconRailBtn is intentionally borderless on the desktop
+     rail; this scoped override only borders the phone bar's copies. */
+  background: var(--ctf-surface);
+  border-color: var(--ctf-border);
+  color: var(--ctf-text-secondary);
 }
 
 @media (max-width: 600px) {
   .mobileBarAdminLabel {
     display: none;
+  }
+
+  /* Label-less at phone width → collapse the admin control to the same 38px square as
+     the other icon buttons so the whole cluster is uniform. */
+  .mobileBarAdminBtn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
   }
 }
 
