@@ -1,40 +1,129 @@
 # Notifications center — access policy contracts.
-# Every command is scoped to the requesting member's own rows. A member can only read and mark their
-# own notifications and can only read/update their own preferences — enforced server-side from the
-# authenticated session, never from a client-supplied user id.
+# Every command is scoped to the requesting member's own rows, derived from the authenticated session
+# (never a client-supplied user id). A member can only read/mark their own notifications and
+# read/update their own preferences. The in-app feed is never gated by push preferences; only device
+# push is (a later delivery step).
 
-accessPolicies:
-  - command: notifications.list
-    minUnlockTier: support_only
-    requireUsername: false
-    ownershipScope: self
-    csrf: not_required   # read-only GET
-    notes: Returns only rows where notifications.user_id = the authenticated member.
+policies:
+  - pluginId: notifications
+    command: notifications.list
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustOwnRows: true
+    consentRequirements:
+      scopes:
+        - notifications_self_service
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_row_owner
 
-  - command: notifications.read.mark
-    minUnlockTier: support_only
-    requireUsername: false
-    ownershipScope: self
-    csrf: required
-    notes: The update is scoped to (id, user_id = caller); a non-owner match yields 404.
+  - pluginId: notifications
+    command: notifications.read.mark
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustOwnRows: true
+      csrfRequired: true
+    consentRequirements:
+      scopes:
+        - notifications_self_service
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_row_owner
 
-  - command: notifications.read.mark-all
-    minUnlockTier: support_only
-    requireUsername: false
-    ownershipScope: self
-    csrf: required
+  - pluginId: notifications
+    command: notifications.read.mark-all
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustOwnRows: true
+      csrfRequired: true
+    consentRequirements:
+      scopes:
+        - notifications_self_service
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_row_owner
 
-  - command: notifications.preferences.read
-    minUnlockTier: support_only
-    requireUsername: false
-    ownershipScope: self
-    csrf: not_required
+  - pluginId: notifications
+    command: notifications.preferences.read
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustOwnRows: true
+    consentRequirements:
+      scopes:
+        - notifications_self_service
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_row_owner
 
-  - command: notifications.preferences.update
-    minUnlockTier: support_only
-    requireUsername: false
-    ownershipScope: self
-    csrf: required
-    notes: >
-      Push opt-ins default off; discreet push defaults on. The in-app feed is never gated by these —
-      this command only affects whether the member's device is pinged and how much the ping reveals.
+  - pluginId: notifications
+    command: notifications.preferences.update
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustOwnRows: true
+      csrfRequired: true
+    consentRequirements:
+      scopes:
+        - notifications_self_service
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_row_owner
