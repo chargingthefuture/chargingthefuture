@@ -17,20 +17,33 @@
 // user's deletion still completes. It must never assume it can block the deletion.
 
 import { deleteChymeStreamData } from 'lib/chyme/stream';
+import { deleteFoundationStreamData } from 'lib/foundation/stream';
+import { deleteLighthouseStreamData } from 'lib/lighthouse/stream';
+import { deleteSocketRelayStreamData } from 'lib/socket-relay/stream';
+import { deleteTrustTransportStreamData } from 'lib/trust-transport/stream';
 
 export type ExternalCleanup = (userId: string) => Promise<void>;
 
-export const externalCleanupRegistry: Readonly<Record<string, ExternalCleanup>> = {
-  chyme: async (userId) => {
-    const ok = await deleteChymeStreamData(userId);
-    // deleteChymeStreamData already swallows its own errors and returns false; surface that as a throw
-    // so the orchestrator logs it (and the deletion still succeeds).
+// Each plugin's Stream cleanup returns a boolean (true = deleted; false = Stream unconfigured or the
+// call failed) and never throws. Wrap it so a `false` surfaces as a throw — the orchestrator logs that
+// via reportError, and the user's deletion still completes.
+function fromBoolean(label: string, cleanup: (userId: string) => Promise<boolean>): ExternalCleanup {
+  return async (userId) => {
+    const ok = await cleanup(userId);
     if (!ok) {
-      throw new Error('Chyme Stream cleanup did not complete (Stream unconfigured or delete failed)');
+      throw new Error(`${label} Stream cleanup did not complete (Stream unconfigured or delete failed)`);
     }
-  },
-  // Follow-ups wire the other chat plugins here: foundation, lighthouse, socket-relay, trust-transport
-  // (each hard-deletes its own `<prefix>-<userId>` Stream user), and Beacon once it has a registry entry.
+  };
+}
+
+export const externalCleanupRegistry: Readonly<Record<string, ExternalCleanup>> = {
+  // Keys are the same plugin slugs used in deletion-registry.ts.
+  chyme: fromBoolean('Chyme', deleteChymeStreamData),
+  foundation: fromBoolean('Foundation', deleteFoundationStreamData),
+  lighthouse: fromBoolean('Lighthouse', deleteLighthouseStreamData),
+  'socket-relay': fromBoolean('SocketRelay', deleteSocketRelayStreamData),
+  'trust-transport': fromBoolean('TrustTransport', deleteTrustTransportStreamData),
+  // Beacon still to come — it needs a deletion-registry entry added first (it has none today).
 };
 
 export function getExternalCleanup(slug: string): ExternalCleanup | undefined {
