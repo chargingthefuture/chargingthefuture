@@ -1,40 +1,18 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
-
-const MOBILE_BREAKPOINT = 768;
-// Same query the CSS uses to switch to the phone layout. Reading the breakpoint
-// through matchMedia (rather than window.innerWidth) keeps the JS check and the
-// CSS in lock-step — on some browsers innerWidth reported a desktop width even at
-// phone size, which left every plugin stuck on its desktop layout.
-const MOBILE_QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`;
-
-function subscribe(callback: () => void): () => void {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return () => {};
-  }
-  const query = window.matchMedia(MOBILE_QUERY);
-  query.addEventListener('change', callback);
-  return () => query.removeEventListener('change', callback);
-}
-
-function getSnapshot(): boolean {
-  return window.matchMedia(MOBILE_QUERY).matches;
-}
-
-// The server has no viewport, so it always renders the desktop layout; the client
-// takes over with the real media-query result after hydration.
-function getServerSnapshot(): boolean {
-  return false;
-}
-
 /**
- * Returns true when the viewport matches the phone breakpoint (max-width: 767px).
+ * Mobile-first shell (owner decision, 2026-07-20): the app ships a single
+ * phone-width layout at every viewport. On wide screens that layout renders
+ * inside a centered phone-proportioned column (`.ctf-phone-frame` in
+ * globals.css) instead of a separate desktop layout, so there is no second
+ * layout to build or keep in step.
  *
- * Backed by `useSyncExternalStore` + `matchMedia` so the client uses the correct
- * value from its first render after hydration (no desktop-to-mobile flash) and
- * stays exactly in sync with the CSS breakpoint.
+ * This hook is therefore pinned to `true` on the server and the client alike:
+ * every shell that branches on it renders its phone layout everywhere, and
+ * server-rendered HTML matches the client with no post-hydration flip. The
+ * hook is kept (rather than deleting its 70+ call sites) so a later owner
+ * decision to revive per-viewport layouts only has to change this one file.
  */
 export function useIsMobile(): boolean {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return true;
 }

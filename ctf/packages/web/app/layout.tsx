@@ -109,7 +109,12 @@ export default function RootLayout({
             <ThemeProvider>
               <PwaServiceWorker />
               <NavHistoryTracker />
-              {children}
+              {/*
+                Mobile-first shell: every route renders inside the phone frame.
+                Invisible at phone width; a centered phone-proportioned column
+                on wide screens (see .ctf-phone-frame in globals.css).
+              */}
+              <div className="ctf-phone-frame">{children}</div>
             </ThemeProvider>
           </AuthProvider>
         </ClerkProvider>
