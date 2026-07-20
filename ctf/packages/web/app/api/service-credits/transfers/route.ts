@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createTransfer, insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { ensureMutationCsrf, requireServiceCreditsReadAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
 import { isRegisteredPluginSlug } from 'lib/plugins/repository';
+import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
 
 // A transfer with no originPlugin is a direct member-to-member send from the ServiceCredits app
@@ -82,6 +83,21 @@ export async function POST(request: Request) {
         escrowHoldId: transfer.escrowHoldId,
       },
     });
+
+    // Notify the recipient that credits landed — best-effort, only for a completed transfer to
+    // someone other than the sender. Deduped on the transfer id, so an idempotent retry never
+    // double-notifies. Neutral summary; ServiceCredits are a non-fiat internal unit, not money.
+    if (transfer.status === 'completed' && transfer.recipientUserId !== gate.auth.userId) {
+      await notifySafe({
+        userId: transfer.recipientUserId,
+        sourcePlugin: 'service-credits',
+        notificationType: 'service-credits.received',
+        category: 'activity',
+        summary: `You received ${transfer.amount} ServiceCredits.`,
+        linkPath: '/apps/service-credits',
+        targetRef: transfer.id,
+      });
+    }
 
     return NextResponse.json({ ok: true, transfer }, { status: 201 });
   } catch (error) {

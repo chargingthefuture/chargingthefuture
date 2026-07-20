@@ -23,6 +23,7 @@ import { feedAuthorHandle, feedMentionTokens } from './author-handle';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
 import { emitFeedMembershipEventToStream } from './stream';
 import { getPluginBySlug, getPluginRoute, isAdminOnlyPlugin } from 'lib/plugins/repository';
+import { notifySafe } from 'lib/notifications/repository';
 
 // Re-exported so existing server callers can keep importing them from the feed
 // repository; the implementations live in the client-safe ./author-handle module.
@@ -1743,7 +1744,10 @@ export async function createFeedCommunityPost(
   // blocked as spam. Members keep the low cap. The `<>`-tag block still applies to everyone.
   isPrivileged: boolean = false,
 ): Promise<{ postId: string; createdAtIso: string }> {
-  return withDbTransaction(async (client) => {
+  // When this post is a reply, the parent post's author (captured inside the transaction) is notified
+  // after commit — best-effort, and never for a self-reply.
+  let replyParentAuthorId: string | null = null;
+  const result = await withDbTransaction(async (client) => {
     const body = normalizeMultilineText(input.body);
     const category = normalizeCommunityCategory(input.category);
 
@@ -1760,13 +1764,14 @@ export async function createFeedCommunityPost(
       throw new Error('reply_target_invalid');
     }
     if (replyToPostId !== null) {
-      const target = await client.query<{ id: string }>(
-        'SELECT id FROM feed_community_posts WHERE id = $1::uuid LIMIT 1',
+      const target = await client.query<{ id: string; author_user_id: string }>(
+        'SELECT id, author_user_id FROM feed_community_posts WHERE id = $1::uuid LIMIT 1',
         [replyToPostId],
       );
       if (target.rows.length === 0) {
         throw new Error('reply_target_not_found');
       }
+      replyParentAuthorId = target.rows[0].author_user_id;
     }
 
     const allowed = await evaluateFeedRateLimit(client, {
@@ -1796,6 +1801,22 @@ export async function createFeedCommunityPost(
       createdAtIso: toIso(inserted.rows[0].created_at),
     };
   });
+
+  // Notify the parent post's author that someone replied — after commit, best-effort, never for a
+  // self-reply. Neutral summary (no author name or content) so it is safe wherever it surfaces.
+  if (replyParentAuthorId && replyParentAuthorId !== actorId) {
+    await notifySafe({
+      userId: replyParentAuthorId,
+      sourcePlugin: 'commons',
+      notificationType: 'commons.reply',
+      category: 'community',
+      summary: 'Someone replied to your post in the Commons.',
+      linkPath: '/',
+      targetRef: result.postId,
+    });
+  }
+
+  return result;
 }
 
 // Delete a member's own community (peer) post from the Commons. Author-only: the caller must own
@@ -2024,19 +2045,23 @@ export async function replyToAnnouncement(
     throw new Error('announcement_not_found');
   }
 
-  return withDbTransaction(async (client) => {
+  // The announcement's author (captured inside the transaction) is notified after commit that a reply
+  // landed — best-effort, and never when the author is the one replying.
+  let announcementAuthorId: string | null = null;
+  const result = await withDbTransaction(async (client) => {
     const body = normalizeMultilineText(bodyInput);
     if (!passesFeedModeration(body)) {
       throw new Error('content_policy_violation');
     }
 
-    const announcement = await client.query<{ id: string }>(
-      "SELECT id FROM announcements WHERE id = $1::uuid AND status = 'published' LIMIT 1",
+    const announcement = await client.query<{ id: string; created_by_user_id: string }>(
+      "SELECT id, created_by_user_id FROM announcements WHERE id = $1::uuid AND status = 'published' LIMIT 1",
       [normalizedId],
     );
     if (announcement.rows.length === 0) {
       throw new Error('announcement_not_found');
     }
+    announcementAuthorId = announcement.rows[0].created_by_user_id;
 
     const allowed = await evaluateFeedRateLimit(client, {
       userId: actorId,
@@ -2062,6 +2087,20 @@ export async function replyToAnnouncement(
       createdAtIso: toIso(inserted.rows[0].created_at),
     };
   });
+
+  if (announcementAuthorId && announcementAuthorId !== actorId) {
+    await notifySafe({
+      userId: announcementAuthorId,
+      sourcePlugin: 'commons',
+      notificationType: 'commons.announcement_reply',
+      category: 'community',
+      summary: 'Someone replied to your announcement.',
+      linkPath: '/',
+      targetRef: result.replyId,
+    });
+  }
+
+  return result;
 }
 
 // List the accepted replies on an official announcement, oldest-first (thread order). Returns an
