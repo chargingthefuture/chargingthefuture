@@ -22,7 +22,9 @@ type ShellSidebarProps = {
 // Title-cased version of the slug ("general-announcements" → "General Announcements") so the rail
 // never shows a raw database slug.
 function channelLabel(channel: HubChannelInfo): string {
-  const name = channel.displayName?.trim();
+  // Strip any leading "#" the stored display name may carry (e.g. "#general") — the sidebar row
+  // already renders its own "#" prefix, so keeping it here produced a double hash ("# #general").
+  const name = channel.displayName?.trim().replace(/^#+\s*/, '');
   if (name) return name;
   return channel.slug
     .split('-')
