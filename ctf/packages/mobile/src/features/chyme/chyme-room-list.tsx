@@ -22,6 +22,7 @@ import {
   View,
 } from 'react-native';
 import { type ThemeTokens } from '../../theme';
+import { interFamily } from '../../components/ui';
 
 export type RoomSummary = {
   roomId: string;
@@ -157,8 +158,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
       justifyContent: 'space-between',
       paddingHorizontal: 16,
     },
-    clock: { fontSize: 13, fontWeight: '700', color: t.isComic ? t.border : t.textShell },
-    signal: { fontSize: 12, color: t.textSecondary },
+    clock: { fontSize: 13, fontWeight: '700', fontFamily: interFamily('700'), color: t.isComic ? t.border : t.textShell },
+    signal: { fontSize: 12, color: t.textSecondary, fontFamily: interFamily('400') },
     header: {
       paddingHorizontal: 16,
       paddingVertical: 14,
@@ -180,9 +181,9 @@ function makeStyles(t: ThemeTokens, accent: string) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    iconGlyph: { fontSize: 18 },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: t.isComic ? t.textPrimary : '#F0FDF4', letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
-    headerSubtitle: { fontSize: 11, color: t.isComic ? t.textSecondary : accent },
+    iconGlyph: { fontSize: 18, fontFamily: interFamily('400') },
+    headerTitle: { fontSize: 18, fontWeight: '800', fontFamily: interFamily('800'), color: t.isComic ? t.textPrimary : '#F0FDF4', letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
+    headerSubtitle: { fontSize: 11, color: t.isComic ? t.textSecondary : accent, fontFamily: interFamily('400') },
     statsRow: {
       flexDirection: 'row',
       gap: 8,
@@ -205,9 +206,9 @@ function makeStyles(t: ThemeTokens, accent: string) {
       backgroundColor: t.isComic ? `${t.border}10` : `${accent}10`,
       borderColor: t.isComic ? t.border : `${accent}20`,
     },
-    statValue: { fontSize: 16, fontWeight: '800', color: t.isComic ? t.textPrimary : t.textShell },
-    statValuePrimary: { fontSize: 16, fontWeight: '800', color: t.isComic ? t.border : accent },
-    statLabel: { fontSize: 11, color: t.textSecondary, marginTop: 2 },
+    statValue: { fontSize: 16, fontWeight: '800', fontFamily: interFamily('800'), color: t.isComic ? t.textPrimary : t.textShell },
+    statValuePrimary: { fontSize: 16, fontWeight: '800', fontFamily: interFamily('800'), color: t.isComic ? t.border : accent },
+    statLabel: { fontSize: 11, color: t.textSecondary, marginTop: 2, fontFamily: interFamily('400') },
     tabRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
     tab: {
       flex: 1,
@@ -221,7 +222,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       backgroundColor: t.isComic ? `${t.border}14` : `${accent}18`,
       borderColor: t.isComic ? t.border : `${accent}40`,
     },
-    tabText: { fontSize: 13, color: t.textSecondary, fontWeight: '400', textTransform: t.isComic ? 'uppercase' : 'none', letterSpacing: t.isComic ? 0.6 : 0 },
+    tabText: { fontSize: 13, color: t.textSecondary, fontWeight: '400', fontFamily: interFamily('400'), textTransform: t.isComic ? 'uppercase' : 'none', letterSpacing: t.isComic ? 0.6 : 0 },
     tabTextActive: { color: t.isComic ? t.textPrimary : accent, fontWeight: '700' },
     ctaWrapper: { paddingHorizontal: 16, paddingBottom: 10 },
     startBtn: {
@@ -234,7 +235,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    startBtnText: { color: t.isComic ? t.border : '#fff', fontSize: 14, fontWeight: t.isComic ? '800' : '700', textTransform: t.isComic ? 'uppercase' : 'none', letterSpacing: t.isComic ? 0.6 : 0 },
+    startBtnText: { color: t.isComic ? t.border : '#fff', fontSize: 14, fontWeight: t.isComic ? '800' : '700', fontFamily: interFamily(t.isComic ? '800' : '700'), textTransform: t.isComic ? 'uppercase' : 'none', letterSpacing: t.isComic ? 0.6 : 0 },
     list: { flex: 1 },
     listContent: { paddingHorizontal: 16, paddingBottom: 16 },
     roomCard: {
@@ -247,10 +248,10 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     roomCardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
     liveDot: { width: 8, height: 8, borderRadius: t.isComic ? 0 : 4, backgroundColor: t.success, marginTop: 5 },
-    roomName: { fontSize: 14, fontWeight: '600', color: t.isComic ? t.textPrimary : '#F0FDF4', flex: 1, lineHeight: 20 },
+    roomName: { fontSize: 14, fontWeight: '600', fontFamily: interFamily('600'), color: t.isComic ? t.textPrimary : '#F0FDF4', flex: 1, lineHeight: 20 },
     roomMeta: { flexDirection: 'row', alignItems: 'center' },
-    roomMetaText: { fontSize: 12, color: t.isComic ? t.textSecondary : '#16A34A' },
+    roomMetaText: { fontSize: 12, color: t.isComic ? t.textSecondary : '#16A34A', fontFamily: interFamily('400') },
     upcomingPlaceholder: { paddingVertical: 24, alignItems: 'center' },
-    upcomingText: { fontSize: 14, color: t.textSecondary, textAlign: 'center', lineHeight: 22 },
+    upcomingText: { fontSize: 14, color: t.textSecondary, textAlign: 'center', lineHeight: 22, fontFamily: interFamily('400') },
   });
 }

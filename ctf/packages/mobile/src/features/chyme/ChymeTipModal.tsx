@@ -9,6 +9,7 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
+import { interFamily } from '../../components/ui';
 import { postChymeTip } from './api';
 
 // Shared theme wiring for the Chyme tip button/modal — the accent is the Chyme plugin
@@ -142,7 +143,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderWidth: 1,
     borderColor: `${PRIMARY}35`,
   },
-  tipBtnText: { fontSize: 10, fontWeight: '700', color: PRIMARY },
+  tipBtnText: { fontSize: 10, fontWeight: '700', fontFamily: interFamily('700'), color: PRIMARY },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -159,8 +160,8 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderRadius: 16,
     padding: 20,
   },
-  title: { fontSize: 16, fontWeight: '800', color: '#F0FDF4', marginBottom: 14 },
-  label: { fontSize: 12, color: t.textSecondary, marginBottom: 6 },
+  title: { fontSize: 16, fontWeight: '800', fontFamily: interFamily('800'), color: '#F0FDF4', marginBottom: 14 },
+  label: { fontSize: 12, color: t.textSecondary, marginBottom: 6, fontFamily: interFamily('400') },
   input: {
     width: '100%',
     paddingHorizontal: 12,
@@ -170,11 +171,12 @@ function makeStyles(t: ThemeTokens, accent: string) {
     borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 8,
     fontSize: 14,
+    fontFamily: interFamily('400'),
     color: t.textShell,
     marginBottom: 12,
   },
-  error: { fontSize: 12, color: '#F87171', marginBottom: 10 },
-  success: { fontSize: 12, color: PRIMARY, marginBottom: 10 },
+  error: { fontSize: 12, color: '#F87171', marginBottom: 10, fontFamily: interFamily('400') },
+  success: { fontSize: 12, color: PRIMARY, marginBottom: 10, fontFamily: interFamily('400') },
   sendBtn: {
     width: '100%',
     paddingVertical: 12,
@@ -183,9 +185,9 @@ function makeStyles(t: ThemeTokens, accent: string) {
     alignItems: 'center',
   },
   sendBtnDisabled: { backgroundColor: `${PRIMARY}66` },
-  sendBtnText: { fontSize: 14, fontWeight: '800', color: '#021006' },
+  sendBtnText: { fontSize: 14, fontWeight: '800', fontFamily: interFamily('800'), color: '#021006' },
   cancelBtn: { width: '100%', paddingVertical: 10, alignItems: 'center', marginTop: 4 },
-  cancelBtnText: { fontSize: 13, color: t.textSecondary, fontWeight: '600' },
-  note: { fontSize: 10, color: t.textMuted, marginTop: 8, lineHeight: 15 },
+  cancelBtnText: { fontSize: 13, color: t.textSecondary, fontWeight: '600', fontFamily: interFamily('600') },
+  note: { fontSize: 10, color: t.textMuted, marginTop: 8, lineHeight: 15, fontFamily: interFamily('400') },
   });
 }

@@ -22,6 +22,8 @@
 // reported as a warning, not a failure — Stream-backed features degrade by design when unconfigured).
 // Non-zero when a pair is set but fails to authenticate, or is only half-set (key without secret).
 
+import { randomUUID } from 'node:crypto';
+
 const PAIRS = [
   {
     label: 'production',
@@ -44,9 +46,14 @@ function readTrimmed(name) {
 
 // One lightweight authenticated server call. upsertUser hits the Stream API and requires a valid
 // key+secret pair, so a bad pair rejects here. The throwaway user is hard-deleted best-effort after.
+//
+// The probe user id MUST be unique per run. Stream keeps a tombstone for a hard-deleted user id and
+// rejects re-creating it ("user ... was deleted", error code 16), so reusing a fixed id makes every
+// run after the first fail even when the credentials are perfectly valid. A fresh UUID each run never
+// collides with a previously-deleted id.
 async function verifyPair(StreamChat, apiKey, apiSecret) {
   const client = new StreamChat(apiKey, apiSecret);
-  const probeUserId = 'ctf-stream-env-check';
+  const probeUserId = `ctf-stream-env-check-${randomUUID()}`;
   try {
     await client.upsertUser({ id: probeUserId, name: 'CTF Stream env check' });
     try {
