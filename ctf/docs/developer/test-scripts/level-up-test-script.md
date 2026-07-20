@@ -113,6 +113,20 @@ The header back chevron returns to the page you came from (falling back to All A
 directly), and the admin screen header shows a "Member view" pill opening `/apps/level-up`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### LVL-8 · Signed-out screen frames "who earns" honestly
+**Role:** signed-out visitor · **Surfaces:** web (desktop), web (mobile-responsive)
+**Steps:**
+1. Open `/apps/level-up` while signed out and read the marketing copy.
+**Expected:** The copy does **not** claim a learner is paid new credits for completing each
+milestone. It states that learners earn ServiceCredits through **badges and completion bonuses**,
+and that **trainers** earn a **credit split** for validating milestones. (This matches the code:
+passing a milestone releases the learner's own escrow back to them; the trainer earns the minted
+split; a learner's only new-credit paths are grant-only badges and a graduation completion bonus.)
+The highlight bullets read "Free for all survivors", "Earn badges and completion bonuses", and
+"Trainer-led cohorts". On android the signed-in empty state uses the same badges/completion-bonus
+wording.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Trainer walkthrough

@@ -35,8 +35,11 @@ per-wallet money value. Member role unless noted.
 
 1. **Dashboard loads.** Open the GDP report. The headline community figure and total member count
    render with numbers, not a spinner or error. There is no "active members" stat. → web ☐ mobile ☐ android ☐
-2. **Sign-in required.** Sign out and try to reach the GDP report. Access is denied — there is no
-   unauthenticated public view. → web ☐ mobile ☐ android ☐
+2. **No public view of the data.** Sign out and open GDP. A signed-out visitor does reach a public
+   GDP landing shell (a "coming soon" page with locked placeholders and a sign-in prompt), and the
+   signed-out home shows the community member count — but NO report **data** is exposed: the live
+   Community Value figure, the "Value by Source" breakdown, and the "All Countries" panel are all
+   behind sign-in. Confirm a signed-out visitor never sees a real GDP figure or breakdown. → web ☐ mobile ☐ android ☐
 3. **Estimate is labelled.** Where the figure is an estimate, an "Estimate" chip and a short
    footnote show next to it. → web ☐ mobile ☐ android ☐
 4. **Not a price.** Confirm the figure is shown with no currency symbol as a per-wallet value and
