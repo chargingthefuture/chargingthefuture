@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
+import { interFamily } from '../../components/ui';
 import { blockMember } from './api';
 
 // Matches the web's SAFETY_REPORT_DETAIL_MAX_LENGTH (lib/safety/constants). Kept as a local const so
@@ -209,13 +210,13 @@ function makeStyles(t: ThemeTokens) {
       backgroundColor: t.isComic ? t.surface : 'rgba(239,68,68,0.06)',
       borderWidth: t.isComic ? 1.5 : 1, borderColor: t.isComic ? danger : 'rgba(239,68,68,0.25)',
     },
-    triggerText: { color: danger, fontSize: 13, fontWeight: '700' },
+    triggerText: { color: danger, fontSize: 13, fontWeight: '700', fontFamily: interFamily('700') },
     doneChip: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
       paddingVertical: 9, paddingHorizontal: 14, borderRadius: r,
       backgroundColor: t.surface, borderWidth: 1, borderColor: t.border,
     },
-    doneChipText: { color: t.textSecondary, fontSize: 13, fontWeight: '600' },
+    doneChipText: { color: t.textSecondary, fontSize: 13, fontWeight: '600', fontFamily: interFamily('600') },
     backdrop: { flex: 1, backgroundColor: 'rgba(9,11,15,0.78)', alignItems: 'center', justifyContent: 'center', padding: 16 },
     dialog: {
       width: '100%', maxWidth: 460, borderRadius: t.isComic ? 0 : 22,
@@ -233,15 +234,15 @@ function makeStyles(t: ThemeTokens) {
       borderWidth: t.isComic ? 2 : 1, borderColor: t.isComic ? danger : 'rgba(239,68,68,0.25)',
       alignItems: 'center', justifyContent: 'center',
     },
-    dialogHeaderIconText: { fontSize: 18 },
-    dialogTitle: { flex: 1, fontSize: 17, fontWeight: '800', color: t.textPrimary },
+    dialogHeaderIconText: { fontSize: 18, fontFamily: interFamily('400') },
+    dialogTitle: { flex: 1, fontSize: 17, fontWeight: '800', fontFamily: interFamily('800'), color: t.textPrimary },
     dialogClose: {
       width: 30, height: 30, borderRadius: rChip, backgroundColor: t.isComic ? t.bg : 'rgba(255,255,255,0.04)',
       borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center',
     },
-    dialogCloseText: { color: t.textSecondary, fontSize: 14 },
+    dialogCloseText: { color: t.textSecondary, fontSize: 14, fontFamily: interFamily('400') },
     dialogBody: { padding: 18 },
-    bodyText: { fontSize: 14, color: t.textSecondary, lineHeight: 21, marginBottom: 16 },
+    bodyText: { fontSize: 14, color: t.textSecondary, lineHeight: 21, marginBottom: 16, fontFamily: interFamily('400') },
     safetyCard: {
       borderRadius: r, backgroundColor: t.isComic ? `${t.gold}10` : 'rgba(245,158,11,0.05)',
       borderWidth: t.isComic ? 1.5 : 1, borderColor: t.isComic ? t.gold : 'rgba(245,158,11,0.22)',
@@ -249,32 +250,32 @@ function makeStyles(t: ThemeTokens) {
     },
     safetyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
     safetyCopy: { flex: 1 },
-    safetyTitle: { fontSize: 13, fontWeight: '700', color: t.isComic ? t.gold : '#F59E0B', marginBottom: 4 },
-    safetyHelp: { fontSize: 12.5, color: t.textSecondary, lineHeight: 18 },
+    safetyTitle: { fontSize: 13, fontWeight: '700', fontFamily: interFamily('700'), color: t.isComic ? t.gold : '#F59E0B', marginBottom: 4 },
+    safetyHelp: { fontSize: 12.5, color: t.textSecondary, lineHeight: 18, fontFamily: interFamily('400') },
     detailWrap: { marginTop: 12 },
-    detailLabel: { fontSize: 12.5, color: t.textSecondary, marginBottom: 6 },
+    detailLabel: { fontSize: 12.5, color: t.textSecondary, marginBottom: 6, fontFamily: interFamily('400') },
     detailInput: {
       minHeight: 64, padding: 10, borderRadius: r, textAlignVertical: 'top',
       backgroundColor: t.isComic ? t.bg : 'rgba(255,255,255,0.03)',
-      borderWidth: 1, borderColor: t.border, color: t.textPrimary, fontSize: 13, lineHeight: 19,
+      borderWidth: 1, borderColor: t.border, color: t.textPrimary, fontSize: 13, lineHeight: 19, fontFamily: interFamily('400'),
     },
     errorBox: {
       padding: 11, borderRadius: r, marginBottom: 14,
       backgroundColor: t.isComic ? `${danger}12` : 'rgba(239,68,68,0.08)',
       borderWidth: 1, borderColor: t.isComic ? danger : 'rgba(239,68,68,0.3)',
     },
-    errorText: { color: t.isComic ? danger : '#F87171', fontSize: 13, lineHeight: 18 },
+    errorText: { color: t.isComic ? danger : '#F87171', fontSize: 13, lineHeight: 18, fontFamily: interFamily('400') },
     confirmBtn: {
       paddingVertical: 13, borderRadius: r, alignItems: 'center', marginBottom: 10,
       backgroundColor: t.isComic ? `${danger}14` : 'rgba(239,68,68,0.14)',
       borderWidth: t.isComic ? 2 : 1, borderColor: t.isComic ? danger : 'rgba(239,68,68,0.45)',
     },
-    confirmText: { color: danger, fontSize: 14, fontWeight: '700' },
+    confirmText: { color: danger, fontSize: 14, fontWeight: '700', fontFamily: interFamily('700') },
     cancelBtn: {
       paddingVertical: 13, borderRadius: r, alignItems: 'center',
       backgroundColor: t.isComic ? t.bg : 'rgba(255,255,255,0.04)',
       borderWidth: 1, borderColor: t.border,
     },
-    cancelText: { color: t.textSecondary, fontSize: 14, fontWeight: '600' },
+    cancelText: { color: t.textSecondary, fontSize: 14, fontWeight: '600', fontFamily: interFamily('600') },
   });
 }
