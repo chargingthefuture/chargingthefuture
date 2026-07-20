@@ -355,7 +355,10 @@ export async function claimAutoCohortTrainer(input: { cohortId: string; trainerU
     reason: 'ok',
     targetType: 'cohort',
     targetId: input.cohortId,
-    metadata: { claimedFrom: LEVEL_UP_AUTO_COHORT_ACTOR_ID },
+    // Structured target context per the cohort.claim_trainer audit contract, which requires
+    // cohortId in targetContext. (workspaceId is a contract placeholder with no value in this
+    // single-tenant codebase, so it is omitted, consistent with the admin.adjust_credits audit.)
+    metadata: { claimedFrom: LEVEL_UP_AUTO_COHORT_ACTOR_ID, targetContext: { cohortId: input.cohortId } },
   });
 
   return 'claimed';

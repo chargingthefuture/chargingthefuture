@@ -923,6 +923,7 @@ export async function transferCreditsForLevelUp(input: {
 
 export async function openDispute(input: {
   actorId: string;
+  isAdmin?: boolean;
   enrollmentId: string;
   milestoneId?: string;
   title: string;
@@ -934,6 +935,27 @@ export async function openDispute(input: {
     const existing = await readCommandIdempotency<{ disputeId: string }>(client, input.actorId, 'level-up.dispute.open', input.idempotencyKey);
     if (existing) {
       return existing;
+    }
+
+    // Ownership guard (per the dispute.open access policy: `enrollment_not_visible` is a deny
+    // condition). Only the enrollment's learner, its assigned trainer, or an admin may open a
+    // dispute on it — otherwise any authenticated member who guessed an enrollment UUID could
+    // file a dispute against someone else's enrollment and flip its milestone validations to
+    // 'disputed'. Enforced here at the repository so every caller is covered.
+    const enrollment = await client.query<{ user_id: string; assigned_trainer_id: string | null }>(
+      `SELECT user_id, assigned_trainer_id
+       FROM level_up_enrollments
+       WHERE id = $1::uuid`,
+      [input.enrollmentId],
+    );
+    if (!enrollment.rows[0]) {
+      throw new Error('not_found');
+    }
+    const isParty =
+      enrollment.rows[0].user_id === input.actorId ||
+      enrollment.rows[0].assigned_trainer_id === input.actorId;
+    if (!input.isAdmin && !isParty) {
+      throw new Error('forbidden');
     }
 
     const disputeId = randomUUID();
@@ -977,6 +999,28 @@ export async function resolveDispute(input: {
   };
   idempotencyKey: string;
 }) {
+  type ResolveDisputeResponse = {
+    disputeId: string;
+    adjustmentId: string | null;
+    transferId: string | null;
+    status: 'resolved';
+  };
+
+  // Idempotency-first: if this command already ran under the same key, return the stored response
+  // WITHOUT re-running applyDisputeAdjustment. Previously the adjustment (a real credit transfer)
+  // ran before the in-transaction idempotency check, so a retry re-invoked it — relying solely on
+  // the credits layer's sub-key to avoid a double transfer. Mirrors releaseMilestoneCredits.
+  const existingResolve = await queryDb<{ response_payload: ResolveDisputeResponse }>(
+    `SELECT response_payload
+     FROM level_up_command_idempotency
+     WHERE actor_id = $1 AND command_name = 'level-up.dispute.resolve' AND idempotency_key = $2
+     LIMIT 1`,
+    [input.actorId, input.idempotencyKey],
+  );
+  if (existingResolve.rows[0]?.response_payload) {
+    return existingResolve.rows[0].response_payload;
+  }
+
   let adjustmentResult: Awaited<ReturnType<typeof applyDisputeAdjustment>> | null = null;
 
   if (input.adjustment && input.adjustment.amount > 0) {

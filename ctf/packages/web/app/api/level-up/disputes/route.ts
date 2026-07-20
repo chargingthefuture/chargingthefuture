@@ -39,6 +39,7 @@ export async function POST(request: Request) {
   try {
     const dispute = await openDispute({
       actorId: gate.auth.userId,
+      isAdmin: gate.auth.isAdmin,
       ...parsed.data,
     });
 

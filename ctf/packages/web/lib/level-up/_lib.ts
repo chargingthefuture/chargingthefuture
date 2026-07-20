@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from '../auth/server-authz';
 import { checkMutationOrigin } from '../auth/csrf';
 import { ensureLevelUpAdmin } from './policy';
+import { reportError } from '../observability/report';
 
 export async function requireLevelUpReadAccess() {
   const decision = await evaluatePluginAccess({ requireUsername: false });
@@ -52,8 +53,35 @@ export function levelUpErrorResponse(error: unknown, fallbackMessage: string): N
   }
 
   if (error instanceof Error && error.message === 'invalid_payload') {
-    return NextResponse.json({ ok: false, code: 'level_up_invalid_payload', message: 'Invalid request payload.' }, { status: 400 });
+    return NextResponse.json({ ok: false, code: 'level_up_invalid_payload', message: 'Invalid LevelUp payload.' }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: false, code: 'level_up_error', message: fallbackMessage }, { status: 500 });
+  if (error instanceof Error && error.message === 'forbidden') {
+    return NextResponse.json({ ok: false, code: 'level_up_forbidden', message: 'You do not have access to this resource.' }, { status: 403 });
+  }
+
+  if (error instanceof Error && error.message === 'not_found') {
+    return NextResponse.json({ ok: false, code: 'level_up_not_found', message: 'Requested resource was not found.' }, { status: 404 });
+  }
+
+  if (error instanceof Error && error.message === 'invalid_state') {
+    return NextResponse.json({ ok: false, code: 'level_up_invalid_state', message: 'Resource is not in a valid state for this command.' }, { status: 409 });
+  }
+
+  if (error instanceof Error && error.message === 'rate_limit_exceeded') {
+    return NextResponse.json({ ok: false, code: 'level_up_rate_limit_exceeded', message: 'Command rate limit exceeded.' }, { status: 429 });
+  }
+
+  if (error instanceof Error && error.message === 'external_ledger_not_configured') {
+    reportError(error, { area: 'level-up', op: 'unknown' });
+    return NextResponse.json({ ok: false, code: 'level_up_external_ledger_not_configured', message: 'External ledger is not configured.' }, { status: 503 });
+  }
+
+  if (error instanceof Error && error.message === 'external_ledger_unavailable') {
+    reportError(error, { area: 'level-up', op: 'unknown' });
+    return NextResponse.json({ ok: false, code: 'level_up_external_ledger_unavailable', message: 'External ledger rejected or failed the command.' }, { status: 503 });
+  }
+
+  reportError(error, { area: 'level-up', op: 'unknown' });
+  return NextResponse.json({ ok: false, code: 'level_up_unavailable', message: fallbackMessage }, { status: 503 });
 }

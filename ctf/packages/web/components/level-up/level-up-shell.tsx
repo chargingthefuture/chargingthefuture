@@ -138,7 +138,7 @@ function ShellContent({
   return <CenteredNote color={t.TEXT_SUBTLE}>{HEADINGS[nav]} — coming soon</CenteredNote>;
 }
 
-export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: boolean; query?: { track?: string; status?: string; startDate?: string; cohortId?: string } }) {
+export function LevelUpShell({ isAdmin = false, isTrainer = false }: { userId?: string; isAdmin?: boolean; isTrainer?: boolean; query?: { track?: string; status?: string; startDate?: string; cohortId?: string } }) {
   const [nav, setNav] = useState<NavKey>("browse");
   // Track filtering is pinned to "All Tracks" — the preset track chips were hidden because they were a
   // hardcoded list that did not reflect real cohorts (deferred to #1197). The track-filter plumbing
@@ -148,6 +148,10 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  // NOTE: when a pending-validations feed is wired up here, it MUST be scoped server-side to the
+  // cohorts this trainer is assigned to (mirroring getTrainerDashboardData's
+  // `created_by_user_id = actorId` filter). Passing an unscoped list to the panel would disclose
+  // other trainers' learners. It is a static empty list today, so there is no exposure yet.
   const [pendingValidations, setPendingValidations] = useState<PendingValidation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -336,6 +340,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
           enrollments={enrollments}
           pendingValidations={pendingValidations}
           isAdmin={isAdmin}
+          isTrainer={isTrainer}
           onBrowse={() => setNav("browse")}
           onValidate={(validation) => void handleValidate(validation)}
         />
