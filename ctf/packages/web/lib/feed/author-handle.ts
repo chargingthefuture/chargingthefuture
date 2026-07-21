@@ -45,3 +45,31 @@ export function feedMentionTokens(username: string | null, userId: string | null
   }
   return tokens;
 }
+
+// Pull the @-mention handles out of a Commons post body — the inverse of the
+// filter above, used to work out who a new post addresses so they can be
+// notified. Matches an `@` that starts a handle (at the start of the text or
+// after a non-handle character, so an email like `a@b` is not treated as a
+// mention) followed by a username/pseudonym token. Handles are returned in the
+// case they were typed, de-duplicated case-insensitively (the first spelling
+// wins). `@comic` is dropped — that routes to the AI Assistant, not a member.
+// Pure and dependency-free like the rest of this file; resolving a handle to a
+// user id is a separate server-only step.
+export function extractMentionHandles(body: string): string[] {
+  if (!body) {
+    return [];
+  }
+  const seen = new Set<string>();
+  const handles: string[] = [];
+  const pattern = /(?:^|[^A-Za-z0-9_@/-])@([A-Za-z0-9][A-Za-z0-9_-]{0,63})/g;
+  for (const match of body.matchAll(pattern)) {
+    const handle = match[1];
+    const lower = handle.toLowerCase();
+    if (lower === 'comic' || seen.has(lower)) {
+      continue;
+    }
+    seen.add(lower);
+    handles.push(handle);
+  }
+  return handles;
+}
