@@ -1,7 +1,6 @@
 'use client';
 
 import { Mic, RefreshCw, Users } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
 import type { ChymeRoomResponse } from 'lib/chyme/types';
@@ -23,13 +22,12 @@ export function ChymeSidebar({
   onRefresh: () => void;
   refreshing?: boolean;
 }) {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   const joinLabel = joinState === 'joining' ? 'Joining…' : joinState === 'ready' ? '✓ Joined' : 'Join Room';
 
   return (
-    <aside style={{ width: isMobile ? '100%' : 300, borderRight: isMobile ? 'none' : `1px solid ${t.BORDER}`, borderBottom: isMobile ? `1px solid ${t.BORDER}` : undefined, display: 'flex', flexDirection: 'column', flexShrink: 0, background: t.RAIL }}>
+    <aside style={{ width: '100%', borderRight: 'none', borderBottom: `1px solid ${t.BORDER}`, display: 'flex', flexDirection: 'column', flexShrink: 0, background: t.RAIL }}>
       {/* On mobile the refresh control sits on this same row, to the right of Join Room (the header
           row is dropped on phones). On desktop the button fills the row and refresh lives in the header. */}
       <div style={{ padding: '16px 16px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -41,17 +39,15 @@ export function ChymeSidebar({
           <Mic size={16} />
           {joinLabel}
         </button>
-        {isMobile && (
-          <button
-            onClick={onRefresh}
-            disabled={refreshing}
-            aria-label="Refresh the room and chat"
-            title="Refresh the room and chat"
-            style={{ width: 44, height: 44, borderRadius: 12, background: t.INPUT_BG, border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: refreshing ? 'wait' : 'pointer', color: t.MUTED, flexShrink: 0 }}
-          >
-            <RefreshCw size={16} className={refreshing ? 'ctf-spin' : undefined} />
-          </button>
-        )}
+        <button
+          onClick={onRefresh}
+          disabled={refreshing}
+          aria-label="Refresh the room and chat"
+          title="Refresh the room and chat"
+          style={{ width: 44, height: 44, borderRadius: 12, background: t.INPUT_BG, border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: refreshing ? 'wait' : 'pointer', color: t.MUTED, flexShrink: 0 }}
+        >
+          <RefreshCw size={16} className={refreshing ? 'ctf-spin' : undefined} />
+        </button>
       </div>
 
       {loading ? (

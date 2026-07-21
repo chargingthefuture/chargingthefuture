@@ -1,7 +1,6 @@
 "use client";
 
 import { CheckCircle, ExternalLink, Send, Shield, Unlock as UnlockIcon } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { getUnlockTokens, UNLOCK_BENEFITS } from "./unlock-shared";
@@ -32,7 +31,6 @@ export function UnlockSubmissionView({
   isAdmin?: boolean;
 }) {
   const canSubmit = url.trim().length > 0 && !submitting;
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const tok = getUnlockTokens(theme);
   return (
@@ -46,8 +44,8 @@ export function UnlockSubmissionView({
         <PluginAdminButton href="/admin/unlock" isAdmin={isAdmin} accent={tok.ACCENT} />
       </div>
 
-      <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: isMobile ? "24px 16px" : "48px 64px", gap: isMobile ? 24 : 40, flexWrap: "wrap" }}>
-        <div style={{ flex: 1, maxWidth: 520, minWidth: isMobile ? 0 : 320 }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 16px", gap: 24, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, maxWidth: 520, minWidth: 0 }}>
           <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 26, fontWeight: 800, color: tok.TITLE, marginBottom: 10 }}>Submit your Quora profile URL</div>
             <div style={{ fontSize: 14, color: tok.MUTED, lineHeight: 1.7 }}>
@@ -89,7 +87,7 @@ export function UnlockSubmissionView({
           </div>
         </div>
 
-        <div style={{ width: isMobile ? "100%" : 300, flexShrink: 0 }}>
+        <div style={{ width: "100%", flexShrink: 0 }}>
           <div style={{ padding: "20px", borderRadius: 16, background: tok.SURFACE_CARD, border: `1px solid ${tok.BORDER_SOLID}`, marginBottom: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: tok.ACCENT, marginBottom: 14 }}>Why we verify via Quora</div>
             {WHY.map(({ icon, t, d }) => (

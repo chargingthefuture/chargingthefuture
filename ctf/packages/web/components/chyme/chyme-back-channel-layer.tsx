@@ -11,7 +11,6 @@ import { ChymeBackChannelPanel } from './chyme-back-channel-panel';
 export function ChymeBackChannelLayer({
   controller,
   currentUser,
-  isMobile,
 }: {
   controller: BackChannelController;
   currentUser: CurrentUser;
@@ -24,7 +23,7 @@ export function ChymeBackChannelLayer({
       {incomingInvite && !activeCall ? (
         <ChymeBackChannelInvite
           fromName={incomingInvite.fromUsername ? `@${incomingInvite.fromUsername}` : 'A member'}
-          isMobile={isMobile}
+          isMobile={true}
           busy={controller.busy}
           onAccept={() => void controller.accept(incomingInvite.callId)}
           onDecline={() => void controller.decline(incomingInvite.callId)}
@@ -36,7 +35,7 @@ export function ChymeBackChannelLayer({
           credentials={joinCredentials}
           currentUser={currentUser}
           otherName={activeCall.otherUsername ? `@${activeCall.otherUsername}` : 'Member'}
-          isMobile={isMobile}
+          isMobile={true}
           onHangUp={() => void controller.hangUp(activeCall.callId)}
         />
       ) : null}

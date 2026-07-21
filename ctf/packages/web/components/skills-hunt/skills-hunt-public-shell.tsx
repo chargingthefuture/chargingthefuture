@@ -1,7 +1,6 @@
 'use client';
 
 import { Search, Lock } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
@@ -12,141 +11,7 @@ import { getSkillsHuntTokens } from './sh-shared';
 // title #F9FAFB).
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-// Static description of how SkillsHunt works (marketing copy, not user data).
-const HOW_IT_WORKS = [
-  {
-    step: '1',
-    icon: '👤',
-    title: 'Someone you believe may be a survivor',
-    desc: "You don't need to be 100% certain — your best judgment is enough.",
-  },
-  {
-    step: '2',
-    icon: '🔗',
-    title: 'Enter their info',
-    desc: 'First name, bio, Quora profile for social proof, skills, and claimed professions.',
-  },
-  {
-    step: '3',
-    icon: '⚡',
-    title: 'They join our economy',
-    desc: 'Their skills become tradeable in the network. We build self-sufficient pathways.',
-  },
-  {
-    step: '4',
-    icon: '🏆',
-    title: 'You earn points',
-    desc: 'Climb the leaderboard. Earn badges. Find hidden gems.',
-  },
-];
-
 const NOMINATE_FIELDS = ['First Name', 'Bio', 'Quora Profile URL', 'Skills', 'Claimed Professions'];
-
-function DesktopSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
-  const { theme } = useTheme();
-  const t = getSkillsHuntTokens(theme);
-  return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
-      {/* Top bar */}
-      <div style={{ height: 52, borderBottom: `1px solid ${t.BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
-        <PublicShellBackLink />
-        <Search size={18} color={t.ACCENT} />
-        <span style={{ fontSize: 16, fontWeight: 700 }}>SkillsHunt</span>
-        <div style={{ marginLeft: 'auto' }}>
-          {verifyUrl ? (
-            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-              Finish verifying
-            </a>
-          ) : (
-            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: t.BORDER_STRONG, border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-              Sign In
-            </a>
-          )}
-        </div>
-      </div>
-
-      {/* Hero */}
-      <div style={{ padding: '48px 64px 32px', display: 'flex', gap: 48, alignItems: 'flex-start' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <span style={{ padding: '4px 14px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 12, color: t.ACCENT, fontWeight: 600, display: 'inline-block', width: 'fit-content' }}>
-            Gamified talent scouting
-          </span>
-          <h1 style={{ margin: 0, fontSize: 34, fontWeight: 800, lineHeight: 1.15 }}>
-            Help find 5 million survivors<br />
-            <span style={{ color: t.ACCENT }}>and map their hidden talents</span>
-          </h1>
-          <p style={{ margin: 0, fontSize: 15, color: t.SUBTLE, maxWidth: 520, lineHeight: 1.7 }}>
-            This is not a referral button. You nominate someone you believe may be a survivor — entering their first name, bio, Quora profile, skills, and claimed professions. Their profile seeds the Directory so we can trade and stop depending on traffickers for basic needs.
-          </p>
-          <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-            <a href={verifyUrl ?? signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-              {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
-            </a>
-          </div>
-        </div>
-
-        {/* How it works */}
-        <div style={{ width: 300, flexShrink: 0 }}>
-          <div style={{ padding: '20px', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: `1px solid ${t.ACCENT}20` }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT, marginBottom: 14 }}>How SkillsHunt works</div>
-            {HOW_IT_WORKS.map((item) => (
-              <div key={item.step} style={{ display: 'flex', gap: 12, marginBottom: 14, alignItems: 'flex-start' }}>
-                <span style={{ fontSize: 20, flexShrink: 0 }}>{item.icon}</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: t.TEXT, marginBottom: 2 }}>{item.title}</div>
-                  <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>{item.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Blurred form + leaderboard preview behind a sign-in lock (neutral placeholders, no fabricated scouts) */}
-      <div style={{ padding: '0 64px 48px', position: 'relative' }}>
-        <div style={{ display: 'flex', gap: 16, filter: 'blur(4px)', pointerEvents: 'none', opacity: 0.5 }} aria-hidden="true">
-          {/* Blurred form */}
-          <div style={{ flex: 1, maxWidth: 420, padding: '20px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>Nominate a Survivor</div>
-            {NOMINATE_FIELDS.map((f) => (
-              <div key={f} style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 4 }}>{f}</div>
-                <div style={{ height: 40, borderRadius: 8, background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}` }} />
-              </div>
-            ))}
-            <div style={{ height: 46, borderRadius: 10, background: t.ACCENT + '50' }} />
-          </div>
-          {/* Blurred leaderboard (neutral placeholder rows) */}
-          <div style={{ flex: 1, padding: '20px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>Scout Leaderboard</div>
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                <div style={{ width: 24, fontSize: 16 }}>{['🥇', '🥈', '🥉', '#4'][i]}</div>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: t.ACCENT + '30' }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ height: 12, width: '55%', borderRadius: 6, background: t.BORDER_HI, marginBottom: 6 }} />
-                  <div style={{ height: 9, width: '40%', borderRadius: 5, background: 'rgba(255,255,255,0.05)' }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', border: `2px solid ${t.ACCENT}50`, background: t.ACCENT + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Lock size={22} color={t.ACCENT} />
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 700, textAlign: 'center' }}>Join to start scouting</div>
-          <div style={{ fontSize: 13, color: t.MUTED, textAlign: 'center', maxWidth: 320 }}>
-            Survivors only. Sign in to nominate people you believe may be survivors and help grow our self-sustaining economy.
-          </div>
-          <a href={verifyUrl ?? signInUrl} style={{ padding: '12px 28px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-            {verifyUrl ? 'Finish verifying' : 'Sign in to scout'}
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function MobileSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   const { theme } = useTheme();
@@ -215,6 +80,5 @@ function MobileSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
  * dropped because the real app renders inside the browser chrome.
  */
 export function SkillsHuntPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
-  const isMobile = useIsMobile();
-  return isMobile ? <MobileSkillsHuntPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopSkillsHuntPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
+  return <MobileSkillsHuntPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

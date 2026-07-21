@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AtSign, Reply, Trash2, X } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { PublicCommunityPost } from '../../lib/feed/types';
 import { feedAuthorHandle } from '../../lib/feed/author-handle';
@@ -14,10 +13,7 @@ import { AnnouncementCard } from './announcement-card';
 import { NotificationsPanel } from './notifications-panel';
 import { ChatReactionRow } from './chat-reaction-row';
 import { ComicConsentModal } from './comic-consent-modal';
-import { formatScaledValue } from './shell-format';
 import styles from './community-shell.module.css';
-
-const ECONOMY_TARGET_USD = 300_000_000_000;
 
 // Avatar glyph for a chat sender: "SH" for the Survivor Hub system/AI, otherwise the first letter of
 // the member's handle. Keeps each post attributable instead of every row reading as the same "SH".
@@ -102,10 +98,8 @@ function publicRowBackground(authorUsername: string | null): string {
 // composer). Posts come from the public, unauthenticated endpoint, which itself only returns posts
 // when an admin has turned public viewing on. When public viewing is off (or the read fails), we fall
 // back to the plain sign-in prompt. A single sign-in call-to-action lets a visitor join to take part.
-function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats; plugins: PluginRegistryItem[]; signInUrl: string }) {
+function PublicCommunityPanel({ plugins, signInUrl }: { stats: ShellStats; plugins: PluginRegistryItem[]; signInUrl: string }) {
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
-  const opportunityValue = Math.max(ECONOMY_TARGET_USD - (stats.gdpValueUsd ?? 0), 0);
-  const isMobile = useIsMobile();
 
   const [posts, setPosts] = useState<PublicCommunityPost[]>([]);
   const [isPublic, setIsPublic] = useState(false);
@@ -147,28 +141,6 @@ function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats
         {/* Stats are hidden on phones, where the three blocks filled a quarter of the first screen
             before any community posts were visible (the authenticated panel already hides its whole
             hero on mobile). The title + description above stay. */}
-        {!isMobile ? (
-          <div className={styles.heroStats}>
-            <div className={styles.heroStatBlock}>
-              <span className={`${styles.heroStatValue} ${styles.heroStatMembers}`}>
-                {formatScaledValue(stats.memberCount)}
-              </span>
-              <span className={styles.heroStatLabel}>Members</span>
-            </div>
-            <div className={styles.heroStatBlock}>
-              <span className={`${styles.heroStatValue} ${styles.heroStatGdp}`}>
-                {formatScaledValue(stats.gdpValueUsd, '$')}
-              </span>
-              <span className={styles.heroStatLabel}>GDP</span>
-            </div>
-            <div className={styles.heroStatBlock}>
-              <span className={`${styles.heroStatValue} ${styles.heroStatOpport}`}>
-                {formatScaledValue(opportunityValue, '$')}
-              </span>
-              <span className={styles.heroStatLabel}>Opportunity</span>
-            </div>
-          </div>
-        ) : null}
       </div>
 
       <div className={styles.chatMessages}>
@@ -229,9 +201,7 @@ function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats
   );
 }
 
-function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedChatPanelProps) {
-  const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
-  const opportunityValue = Math.max(ECONOMY_TARGET_USD - (stats.gdpValueUsd ?? 0), 0);
+function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
   // A member who hasn't set a username posts under a stable per-user handle
   // (matching the server's feedAuthorHandle and Chyme), so they stay recognizable
   // and accountable across posts instead of blending into a shared label. We nudge
@@ -274,7 +244,6 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
   // The @-form other members type to mention this member — shown in the mentions empty state.
   // feedAuthorHandle already prefixes a set username with '@'; the id pseudonym needs it added.
   const ownMentionLabel = ownHandle.startsWith('@') ? ownHandle : `@${ownHandle}`;
-  const supportStatus = isLive ? 'live support connected' : isLoading ? 'connecting live support…' : 'community support syncing';
   // "X is typing…" line shown above the composer when the live connection is up and someone else is
   // typing. One name reads "X is typing…", two read "X and Y are typing…", more collapse to a count.
   const typingLabel = useMemo<string | null>(() => {
@@ -312,7 +281,6 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [input]);
-  const isMobile = useIsMobile();
 
   // Build the interleaved, time-ordered stream: tag hub messages and comic items with a numeric
   // epoch, then sort once so AI cards weave chronologically among community posts. `order` (source
@@ -376,38 +344,6 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
 
   return (
     <div className={styles.chatPanelWrap}>
-      {/* The "From Survivor to Thriver" hero + stats are hidden on mobile, where they ate most of the
-          first screen before any chat was visible. Desktop keeps it. */}
-      {!isMobile ? (
-      <div className={styles.heroBanner}>
-        <div className={styles.heroBannerContent}>
-          <p className={styles.heroBannerTag}>✦ From Survivor to Thriver</p>
-          <h1 className={styles.heroBannerTitle}>Welcome back, {currentUser.displayName} — your network is active.</h1>
-          <p className={styles.heroBannerSub}>{implementedCount} live plugins · one economy · {supportStatus}.</p>
-        </div>
-        <div className={styles.heroStats}>
-          <div className={styles.heroStatBlock}>
-            <span className={`${styles.heroStatValue} ${styles.heroStatMembers}`}>
-              {formatScaledValue(stats.memberCount)}
-            </span>
-            <span className={styles.heroStatLabel}>Members</span>
-          </div>
-          <div className={styles.heroStatBlock}>
-            <span className={`${styles.heroStatValue} ${styles.heroStatGdp}`}>
-              {formatScaledValue(stats.gdpValueUsd, '$')}
-            </span>
-            <span className={styles.heroStatLabel}>GDP</span>
-          </div>
-          <div className={styles.heroStatBlock}>
-            <span className={`${styles.heroStatValue} ${styles.heroStatOpport}`}>
-              {formatScaledValue(opportunityValue, '$')}
-            </span>
-            <span className={styles.heroStatLabel}>Opportunity</span>
-          </div>
-        </div>
-      </div>
-      ) : null}
-
       {error ? (
         <section className={styles.usernameAlert} role="status">
           {error}
@@ -661,20 +597,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           the standalone "@comic" chip duplicated the "@comic" in the helper text, so the chip is
           dropped and the line is relabeled to name the assistant and its human-in-the-loop review. */}
       <div className={styles.comicComposerHelper}>
-        {isMobile ? (
-          <span className={styles.comicComposerHelperText}>
-            AI Assistant (human in the loop) — type <span className={styles.comicComposerHelperToken}>@comic</span> to ask
-          </span>
-        ) : (
-          <>
-            <span className={composerMentionsComic ? `${styles.comicMentionChip} ${styles.comicMentionChipActive}` : styles.comicMentionChip}>
-              <AtSign size={12} /> comic
-            </span>
-            <span className={styles.comicComposerHelperText}>
-              Type <span className={styles.comicComposerHelperToken}>@comic</span> to ask the AI Assistant
-            </span>
-          </>
-        )}
+        <span className={styles.comicComposerHelperText}>
+          AI Assistant (human in the loop) — type <span className={styles.comicComposerHelperToken}>@comic</span> to ask
+        </span>
       </div>
 
       {/* "Replying to …" banner: shows a one-line quote preview and a cancel (X). Sending while

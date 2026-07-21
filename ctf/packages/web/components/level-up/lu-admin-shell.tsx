@@ -20,7 +20,6 @@ import {
 } from './lu-admin-shared';
 import { getLevelUpTokens, type LevelUpTokens } from './lu-shared';
 import { useTheme } from '@/hooks/useTheme';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 
@@ -61,7 +60,6 @@ const inputStyle = (t: LevelUpTokens): React.CSSProperties => ({
 export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
   const { theme } = useTheme();
   const t = getLevelUpTokens(theme);
-  const isMobile = useIsMobile();
   const [cohorts, setCohorts] = useState<AdminCohort[] | null>(null);
   const [cohortsError, setCohortsError] = useState<string | null>(null);
 
@@ -178,10 +176,9 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
   return (
     <div
       style={{
-        // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
-        // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
-        // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
-        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        // The document scrolls, so set a min-height on the shell. Matches the unlock / skills-hunt
+        // admin shells.
+        minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",

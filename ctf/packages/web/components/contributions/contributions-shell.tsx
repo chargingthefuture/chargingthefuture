@@ -1,9 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Gift, ArrowLeft } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { Gift } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import type { ContributionSubmission } from '@/lib/contributions/types';
 import {
@@ -18,7 +16,6 @@ import { AppLoading } from '@/components/shared/app-loading';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { RefreshButton } from '@/components/shared/refresh-button';
-import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
 import { goalsFromFundraiser, GoalRow } from './contributions-drive-progress';
 import { ContributionPaths, type SubmitGiftCardInput } from './contributions-paths';
 import { ContributionsHistoryList, ContributionsEmptyHistory } from './contributions-history';
@@ -31,7 +28,6 @@ type MobileTab = 'drive' | 'contribute' | 'history';
 const CSRF_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' } as const;
 
 export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getContributionsTokens(theme);
 
@@ -134,7 +130,7 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   }
 
   if (error || !fundraiser) {
-    return <ErrorState t={t} message={error ?? 'Drive unavailable.'} onRetry={() => void loadData()} isMobile={isMobile} />;
+    return <ErrorState t={t} message={error ?? 'Drive unavailable.'} onRetry={() => void loadData()} isMobile={true} />;
   }
 
   const goals = goalsFromFundraiser(fundraiser.fundraiser);
@@ -144,7 +140,7 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     const confirmation = (
       <ContributionsConfirmation
         t={t}
-        isMobile={isMobile}
+        isMobile={true}
         ownerSignalUrl={fundraiser.ownerSignalUrl}
         signalInstructions={fundraiser.signalInstructions}
         onViewHistory={() => {
@@ -154,14 +150,7 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         onBackToHub={() => setView('main')}
       />
     );
-    return isMobile ? (
-      <MobileFrame t={t} isAdmin={isAdmin}>{confirmation}</MobileFrame>
-    ) : (
-      <DesktopFrame t={t}>
-        <ContributionsSidebar t={t} active="contribute" />
-        {confirmation}
-      </DesktopFrame>
-    );
+    return <MobileFrame t={t} isAdmin={isAdmin}>{confirmation}</MobileFrame>;
   }
 
   const pathsProps = {
@@ -207,112 +196,6 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
 }
 
 // --- frames + chrome ---------------------------------------------------------------------------
-
-function DesktopFrame({ t, children }: { t: ContributionsTokens; children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, overflow: 'hidden' }}>
-      <ContributionsIconRail t={t} />
-      {children}
-    </div>
-  );
-}
-
-// The uniform left icon rail every plugin carries: the plugin's brand mark on top, and the shared
-// footer (back to all apps, account and settings, account menu) at the bottom. Contributions was
-// missing it, so this screen had no account controls or the standard way back that sibling apps show.
-function ContributionsIconRail({ t }: { t: ContributionsTokens }) {
-  return (
-    <aside
-      style={{
-        width: 72,
-        background: t.BG,
-        borderRight: `1px solid ${t.BORDER_SOLID}`,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        paddingTop: 16,
-        paddingBottom: 16,
-        gap: 8,
-        flexShrink: 0,
-      }}
-    >
-      <div
-        style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}25`, border: `1px solid ${t.ACCENT}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}
-        aria-hidden="true"
-      >
-        <Gift size={20} color={t.ACCENT} />
-      </div>
-      <PluginRailFooter />
-    </aside>
-  );
-}
-
-function ContributionsSidebar({
-  t,
-  active,
-  onNavigate,
-}: {
-  t: ContributionsTokens;
-  active: 'drive' | 'contribute' | 'history';
-  onNavigate?: (key: 'drive' | 'contribute' | 'history') => void;
-}) {
-  // Desktop shows the member's contributions permanently in the right rail ("My Contributions"), so a
-  // "My contributions" nav item would only scroll to something already on screen — omit it here. The
-  // mobile layout keeps a real "My history" tab (its history is a separate tab, not a rail).
-  const items: { key: 'drive' | 'contribute' | 'history'; label: string }[] = [
-    { key: 'drive', label: 'Drive progress' },
-    { key: 'contribute', label: 'Contribute' },
-  ];
-  return (
-    <div style={{ width: 200, background: t.SURFACE, borderRight: `1px solid ${t.BORDER_SOLID}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-      <div style={{ padding: '18px 14px 14px', borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Gift size={14} color="#fff" />
-          </div>
-          <span style={{ fontWeight: 700, fontSize: 14, color: t.TITLE }}>Contributions</span>
-        </div>
-        <div style={{ fontSize: 11, color: t.MUTED }}>Community support drive</div>
-      </div>
-      <nav style={{ padding: '10px 8px', flex: 1 }}>
-        {items.map(({ key, label }) => {
-          const isActive = key === active;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={onNavigate ? () => onNavigate(key) : undefined}
-              aria-current={isActive ? 'true' : undefined}
-              style={{
-                display: 'block',
-                width: '100%',
-                textAlign: 'left',
-                padding: '8px 10px',
-                borderRadius: 7,
-                marginBottom: 2,
-                fontSize: 13,
-                background: isActive ? `${t.ACCENT}18` : 'transparent',
-                color: isActive ? t.ACCENT : t.MUTED,
-                fontWeight: isActive ? 600 : 400,
-                border: 'none',
-                borderLeft: isActive ? `3px solid ${t.ACCENT}` : '3px solid transparent',
-                cursor: onNavigate ? 'pointer' : 'default',
-                fontFamily: 'inherit',
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </nav>
-      <div style={{ padding: '0 10px 16px' }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', borderRadius: 7, fontSize: 12, color: t.MUTED, textDecoration: 'none' }}>
-          <ArrowLeft size={13} /> Back to Hub
-        </Link>
-      </div>
-    </div>
-  );
-}
 
 function MobileFrame({ t, children, tab, onTab, onRefresh, isAdmin }: { t: ContributionsTokens; children: React.ReactNode; tab?: MobileTab; onTab?: (tab: MobileTab) => void; onRefresh?: () => Promise<void>; isAdmin?: boolean }) {
   const tabs: { key: MobileTab; label: string }[] = [
@@ -361,7 +244,7 @@ function MobileFrame({ t, children, tab, onTab, onRefresh, isAdmin }: { t: Contr
   );
 }
 
-function ErrorState({ t, message, onRetry, isMobile }: { t: ContributionsTokens; message: string; onRetry: () => void; isMobile: boolean }) {
+function ErrorState({ t, message, onRetry }: { t: ContributionsTokens; message: string; onRetry: () => void; isMobile: boolean }) {
   const body = (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, textAlign: 'center', gap: 14 }}>
       <Gift size={28} color={t.ACCENT} />
@@ -371,9 +254,5 @@ function ErrorState({ t, message, onRetry, isMobile }: { t: ContributionsTokens;
       </button>
     </div>
   );
-  return isMobile ? (
-    <MobileFrame t={t}>{body}</MobileFrame>
-  ) : (
-    <DesktopFrame t={t}>{body}</DesktopFrame>
-  );
+  return <MobileFrame t={t}>{body}</MobileFrame>;
 }

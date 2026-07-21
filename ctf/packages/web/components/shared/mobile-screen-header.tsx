@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react';
 import { ChevronLeft } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useSmartBack } from '@/lib/nav/back-history';
 import { MobileTopActions } from './mobile-top-actions';
 
@@ -23,7 +22,6 @@ export function MobileScreenHeader({
   icon,
   accent,
   backHref = '/apps',
-  desktopBack = true,
   actions,
 }: {
   title: string;
@@ -35,8 +33,6 @@ export function MobileScreenHeader({
   // both the mobile bar and the desktop slim bar.
   actions?: ReactNode;
 }) {
-  const isMobile = useIsMobile();
-
   // History-aware back (owner decision, 2026-07-17): return to the previous in-app page when one
   // exists; otherwise fall back to the shared one-level-up destination (resolveBackTarget via
   // useSmartBack) so a deep-linked or freshly-opened screen still has a sensible way back.
@@ -47,55 +43,6 @@ export function MobileScreenHeader({
   const chevronBg = accent ? `${accent}1A` : 'var(--ctf-surface, rgba(255, 255, 255, 0.06))';
   const chevronBorder = accent ? `${accent}4D` : 'var(--ctf-border, rgba(255, 255, 255, 0.12))';
   const chevronColor = accent ?? 'var(--ctf-text, #E5E7EB)';
-
-  // Desktop: a slim sticky bar carrying just the uniform back control. The shell renders its own
-  // title/header below, so we deliberately do not repeat the title/icon here.
-  if (!isMobile) {
-    if (!desktopBack) {
-      return null;
-    }
-    return (
-      <div
-        className="ctf-self-responsive"
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 40,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '10px 16px',
-          background: 'var(--ctf-bg, rgba(8, 8, 10, 0.96))',
-          borderBottom: '1px solid var(--ctf-border, rgba(255, 255, 255, 0.08))',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-        }}
-      >
-        <button
-          type="button"
-          onClick={back.goBack}
-          aria-label={back.label}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            height: 36,
-            padding: '0 12px 0 9px',
-            borderRadius: 10,
-            background: chevronBg,
-            border: `1px solid ${chevronBorder}`,
-            color: chevronColor,
-            cursor: 'pointer',
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          <ChevronLeft size={18} aria-hidden="true" /> {back.label}
-        </button>
-        {actions ? <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 8 }}>{actions}</span> : null}
-      </div>
-    );
-  }
 
   return (
     <div

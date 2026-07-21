@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Briefcase } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
@@ -94,7 +93,6 @@ export function WorkforceAdminShell({
   dashboard: WorkforceDashboard;
   config: WorkforceConfig;
 }) {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
   const router = useRouter();
@@ -138,7 +136,7 @@ export function WorkforceAdminShell({
   return (
     <div
       style={{
-        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",

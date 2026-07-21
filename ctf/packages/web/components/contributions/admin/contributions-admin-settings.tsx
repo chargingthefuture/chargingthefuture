@@ -41,7 +41,7 @@ function numInput(t: ContributionsTokens, id: string, value: string, onChange: (
  * stored non_monetary_unit_value_usd (USD-equivalent) on save so the stored model stays
  * authoritative. A helper shows the resulting SC live.
  */
-export function ContributionsAdminSettings({ t, config, saving, error, onSave, isMobile }: SettingsProps) {
+export function ContributionsAdminSettings({ t, config, saving, error, onSave }: SettingsProps) {
   const [creditsPerUsd, setCreditsPerUsd] = useState(String(config.creditsPerUsd));
   const [creditsPerAction, setCreditsPerAction] = useState(String(creditsPerActionFromConfig(config)));
   const [cap, setCap] = useState(String(config.perUserCycleCreditCap));
@@ -61,16 +61,14 @@ export function ContributionsAdminSettings({ t, config, saving, error, onSave, i
   const cardStyle: React.CSSProperties = {
     background: t.SURFACE,
     borderRadius: 12,
-    padding: isMobile ? 16 : '22px 24px',
+    padding: 16,
     border: `1px solid ${t.BORDER_SOLID}`,
     maxWidth: 520,
     marginBottom: 18,
   };
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 14px' : '24px 32px' }}>
-      {!isMobile && <h1 style={{ margin: '0 0 22px', fontSize: 16, fontWeight: 700, color: t.TITLE }}>Settings</h1>}
-
+    <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px' }}>
       <div style={cardStyle}>
         <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 16 }}>ServiceCredits</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>

@@ -1,7 +1,6 @@
 'use client';
 
-import { AlertTriangle, Lock, ShieldCheck, Clock, FileText, UserPlus, Eye, EyeOff, Pointer, MapPin } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { AlertTriangle, Lock, ShieldCheck, Clock, FileText, UserPlus, Pointer, MapPin } from 'lucide-react';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { useTheme } from '@/hooks/useTheme';
@@ -11,100 +10,6 @@ import { getClickLogTokens } from './click-log-shared';
 // theme-aware ClickLog tokens (default theme keeps the shipped hex values).
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
-
-function DesktopClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
-  const { theme } = useTheme();
-  const t = getClickLogTokens(theme);
-  return (
-    // ctf-self-responsive opts this flex column out of the global small-screen "un-row" fallback
-    // (.ctf-app-viewport > * → display:block on phones), which would otherwise collapse the column
-    // and stop flex:1 from pushing the bottom nav to the bottom.
-    <div className="ctf-self-responsive" style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
-      {/* Top bar */}
-      <div style={{ height: 52, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
-        <PublicShellBackLink />
-        <AlertTriangle size={18} color={t.ACCENT} />
-        <span style={{ fontSize: 16, fontWeight: 700 }}>ClickLog</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          {verifyUrl ? (
-            <a href={verifyUrl} style={{ padding: '7px 16px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-              Finish verifying
-            </a>
-          ) : (
-            <>
-              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: t.BORDER, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-                Sign In
-              </a>
-              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-                <UserPlus size={13} /> Join Free
-              </a>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Hero */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 64px' }}>
-        <div style={{ maxWidth: 600, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, textAlign: 'center' }}>
-          {/* Locked button */}
-          <div style={{ position: 'relative' }}>
-            <div style={{ width: 160, height: 160, borderRadius: '50%', background: 'rgba(233,30,140,0.1)', border: '4px solid rgba(233,30,140,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, filter: 'blur(2px)', opacity: 0.5 }}>
-              <AlertTriangle size={40} style={{ color: t.ACCENT }} />
-              <span style={{ fontSize: 15, fontWeight: 800, color: t.ACCENT }}>Log Incident</span>
-            </div>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(233,30,140,0.15)', border: `2px solid ${t.ACCENT}50`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Lock size={22} color={t.ACCENT} />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h1 style={{ margin: 0, fontSize: 30, fontWeight: 800, lineHeight: 1.2, marginBottom: 12 }}>
-              Track incidents privately.<br />
-              <span style={{ color: t.ACCENT }}>Sign in to start.</span>
-            </h1>
-            <p style={{ margin: 0, fontSize: 15, color: t.MUTED, lineHeight: 1.7, maxWidth: 440 }}>
-              One tap to log a personal safety incident. Add notes, attach location, and keep a private history — only visible to you.
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: 12 }}>
-            {verifyUrl ? (
-              <a href={verifyUrl} style={{ padding: '14px 32px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-                Finish verifying
-              </a>
-            ) : (
-              <>
-                <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-                  Create free account
-                </a>
-                <a href={signInUrl} style={{ padding: '14px 24px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: `1px solid ${t.BORDER_SOLID}`, color: t.SUBTLE, fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-                  Sign In
-                </a>
-              </>
-            )}
-          </div>
-
-          {/* Features */}
-          <div style={{ display: 'flex', gap: 12, width: '100%' }}>
-            {[
-              { Icon: Eye, label: 'Private by default', desc: 'No one else can see your logs — ever.' },
-              { Icon: ShieldCheck, label: 'Private', desc: 'Only you can see your incidents.' },
-              { Icon: EyeOff, label: 'Discreet logging', desc: 'One tap — no visible confirmation needed.' },
-            ].map(({ Icon, label, desc }) => (
-              <div key={label} style={{ flex: 1, padding: '14px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, textAlign: 'center' }}>
-                <Icon size={20} color={t.ACCENT} style={{ marginBottom: 8, opacity: 0.7 }} />
-                <div style={{ fontSize: 12, fontWeight: 700, color: t.TITLE, marginBottom: 4 }}>{label}</div>
-                <div style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>{desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   const { theme } = useTheme();
@@ -198,6 +103,5 @@ function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
  * because the real app renders inside the browser chrome.
  */
 export function ClickLogPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
-  const isMobile = useIsMobile();
-  return isMobile ? <MobileClickLogPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopClickLogPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
+  return <MobileClickLogPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

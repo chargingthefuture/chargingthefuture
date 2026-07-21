@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Radio } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, type CurrentUser, requestJson } from './chyme-shared';
 import { ChymeHeader } from './chyme-header';
@@ -26,7 +25,6 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
   const [showChat, setShowChat] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
 
@@ -168,7 +166,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
         refreshing={refreshing}
       />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
         <ChymeSidebar
           loading={loading}
           room={room}
@@ -178,7 +176,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
           refreshing={refreshing}
         />
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: isMobile ? 'visible' : 'hidden' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
           {error && (
             <div style={{ padding: '12px 24px', background: '#2b0b0b', border: `1px solid #7f1d1d`, color: '#fecaca', fontSize: 13, margin: 16, borderRadius: 12 }}>
               {error}

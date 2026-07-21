@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { BackChevronButton } from "@/lib/nav/back-history";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { getLevelUpTokens, type LevelUpTokens, type Cohort, type Enrollment, type NavKey, type Wallet, type Trainer, type Achievement, type WalletView, idempotencyKey } from "./lu-shared";
 import { LevelUpBrowse } from "./lu-browse";
@@ -155,7 +154,6 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [walletView, setWalletView] = useState<WalletView | null>(null);
   const [sectionLoaded, setSectionLoaded] = useState<Record<string, boolean>>({});
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getLevelUpTokens(theme);
 
@@ -246,7 +244,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
 
   const content = (
     <>
-      <ShellHeader nav={nav} isAdmin={isAdmin} t={t} showAdminButton={!isMobile} onRefresh={isMobile ? undefined : handleRefresh} />
+      <ShellHeader nav={nav} isAdmin={isAdmin} t={t} showAdminButton={false} onRefresh={undefined} />
       <ShellContent
         nav={nav}
         loading={loading}
