@@ -64,11 +64,14 @@ jobs:
         # The root workspace lockfile is not CI-gated and has drifted before (issue #1229).
         run: pnpm install --frozen-lockfile --dir ctf
 
-      - name: Install PostgreSQL client 17
-        # Match the newest target server (Postgres 16/17). The runner's bundled
-        # client may be missing or too old, and pg_restore must be at least the
-        # server version. Install from the official PostgreSQL apt repository and
-        # put it first on PATH.
+      - name: Install PostgreSQL client 18
+        # Must match (or exceed) the client that produced the backup. The backup
+        # workflow now dumps with pg_dump 18, and pg_restore refuses to read a
+        # custom-format archive written by a newer pg_dump — so a client older
+        # than 18 fails at the archive header before touching the target DB. The
+        # runner's bundled client may also be missing or too old. Install client
+        # 18 from the official PostgreSQL apt repository and put it first on PATH.
+        # Keep this in lockstep with the client version in backup-formance.yml.
         run: |
           set -e
           sudo install -d /usr/share/postgresql-common/pgdg
@@ -77,8 +80,8 @@ jobs:
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
             | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
-          sudo apt-get install -y postgresql-client-17
-          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+          sudo apt-get install -y postgresql-client-18
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
 
       - name: Run Formance restore script
         id: restore
