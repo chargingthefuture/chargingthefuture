@@ -1,7 +1,6 @@
 'use client';
 
 import { Home, Lock } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
@@ -42,80 +41,6 @@ function LockedListingCard({ orientation }: { orientation: 'row' | 'stacked' }) 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
           <div style={{ height: 12, width: 52, borderRadius: 6, background: t.BORDER_STRONG }} />
           <div style={{ height: 10, width: 48, borderRadius: 6, background: 'rgba(34,197,94,0.18)' }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DesktopLightHousePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
-  const { theme } = useTheme();
-  const t = getLighthouseTokens(theme);
-  return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ height: 52, borderBottom: `1px solid ${t.BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
-        <PublicShellBackLink />
-        <Home size={18} color={t.ACCENT} />
-        <span style={{ fontSize: 16, fontWeight: 700 }}>LightHouse</span>
-        <div style={{ marginLeft: 'auto' }}>
-          {verifyUrl ? (
-            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-              Finish verifying
-            </a>
-          ) : (
-            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: t.BORDER_STRONG, border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-              Sign In
-            </a>
-          )}
-        </div>
-      </div>
-
-      <div style={{ padding: '48px 64px 32px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <span style={{ padding: '4px 14px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 12, color: t.ACCENT, fontWeight: 600, display: 'inline-block', width: 'fit-content' }}>
-          Community housing
-        </span>
-        <h1 style={{ margin: 0, fontSize: 34, fontWeight: 800, lineHeight: 1.1 }}>
-          Housing listings<br />
-          <span style={{ color: t.ACCENT }}>for the survivor community</span>
-        </h1>
-        <p style={{ margin: 0, fontSize: 15, color: t.SUBTLE, maxWidth: 520 }}>
-          Trauma-informed hosts. ServiceCredits accepted.
-        </p>
-        <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-          {verifyUrl ? (
-            <a href={verifyUrl} style={{ padding: '14px 32px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-              Finish verifying
-            </a>
-          ) : (
-            <>
-              <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-                Join the Hub — Free
-              </a>
-              <a href={signInUrl} style={{ padding: '14px 24px', borderRadius: 10, background: t.BORDER_STRONG, border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-                How it works
-              </a>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div style={{ padding: '0 64px 48px', position: 'relative' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, filter: 'blur(4px)', pointerEvents: 'none', opacity: 0.55 }} aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
-            <LockedListingCard key={i} orientation="row" />
-          ))}
-        </div>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', border: `2px solid ${t.ACCENT}50`, background: t.ACCENT + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Lock size={22} color={t.ACCENT} />
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 700, textAlign: 'center' }}>Sign in to view listings</div>
-          <div style={{ fontSize: 13, color: t.MUTED, textAlign: 'center', maxWidth: 300 }}>
-            Filter by price, location, availability, and Service Credit acceptance.
-          </div>
-          <a href={verifyUrl ?? signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#000', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-            {verifyUrl ? 'Finish verifying' : 'Sign in to browse listings'}
-          </a>
         </div>
       </div>
     </div>
@@ -163,6 +88,5 @@ function MobileLightHousePublic({ signInUrl, verifyUrl }: { signInUrl: string; v
  * placeholder cards rather than the mockup's fabricated sample listings.
  */
 export function LighthousePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
-  const isMobile = useIsMobile();
-  return isMobile ? <MobileLightHousePublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopLightHousePublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
+  return <MobileLightHousePublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

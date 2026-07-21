@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Home, EyeOff, Eye, XCircle } from 'lucide-react';
 import type { LighthouseMatch, LighthouseProperty, LighthousePropertyInput } from 'lib/lighthouse/types';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
@@ -98,7 +97,6 @@ export function LighthouseAdminShell({
 }) {
   const { theme } = useTheme();
   const t = getLighthouseTokens(theme);
-  const isMobile = useIsMobile();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('properties');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -158,10 +156,9 @@ export function LighthouseAdminShell({
   return (
     <div
       style={{
-        // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
-        // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
-        // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
-        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        // The document scrolls, so set a min-height on the shell. Matches the unlock / skills-hunt
+        // admin shells.
+        minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",

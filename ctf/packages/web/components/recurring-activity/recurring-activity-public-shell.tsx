@@ -1,7 +1,6 @@
 'use client';
 
 import { HeartHandshake, Lock, UserPlus, Repeat, EyeOff, Users } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
@@ -68,24 +67,23 @@ function CtaButtons({
   );
 }
 
-function Header({ signInUrl, verifyUrl, t, isMobile }: { signInUrl: string; verifyUrl?: string; t: RecurringActivityTokens; isMobile: boolean }) {
+function Header({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUrl?: string; t: RecurringActivityTokens; isMobile: boolean }) {
   return (
     <div
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 10,
-        padding: isMobile ? '12px 16px' : '0 28px',
-        height: isMobile ? undefined : 52,
-        background: isMobile ? `${t.ACCENT}10` : undefined,
-        borderBottom: `1px solid ${isMobile ? `${t.ACCENT}25` : t.BORDER}`,
+        padding: '12px 16px',
+        background: `${t.ACCENT}10`,
+        borderBottom: `1px solid ${t.ACCENT}25`,
         flexShrink: 0,
       }}
     >
       <PublicShellBackLink />
       <HeartHandshake size={18} color={t.ACCENT} />
       <span style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>Recurring Activity</span>
-      <div style={{ marginLeft: 'auto', display: 'flex', gap: isMobile ? 6 : 8 }}>
+      <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
         <CtaButtons signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} size="sm" />
       </div>
     </div>
@@ -138,31 +136,6 @@ function LockedMark({ t, size }: { t: RecurringActivityTokens; size: number }) {
   );
 }
 
-function DesktopPublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUrl?: string; t: RecurringActivityTokens }) {
-  return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
-      <Header signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} isMobile={false} />
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 64px' }}>
-        <div style={{ maxWidth: 600, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, textAlign: 'center' }}>
-          <LockedMark t={t} size={160} />
-          <div>
-            <h1 style={{ margin: '0 0 12px', fontSize: 30, fontWeight: 800, lineHeight: 1.2, color: t.TITLE }}>
-              Recognize the ties you keep.<br />
-              <span style={{ color: t.ACCENT }}>Sign in to start.</span>
-            </h1>
-            <p style={{ margin: 0, fontSize: 15, color: t.MUTED, lineHeight: 1.7, maxWidth: 460 }}>{INTRO}</p>
-          </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <CtaButtons signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} size="lg" />
-          </div>
-          <FeatureTiles t={t} />
-          <p style={{ margin: 0, fontSize: 12, color: t.MUTED }}>{COMMUNITY_LINE}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function MobilePublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUrl?: string; t: RecurringActivityTokens }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
@@ -187,10 +160,7 @@ function MobilePublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUr
 }
 
 export function RecurringActivityPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getRecurringActivityTokens(theme);
-  return isMobile
-    ? <MobilePublic signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} />
-    : <DesktopPublic signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} />;
+  return <MobilePublic signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} />;
 }

@@ -95,7 +95,7 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
           </div>
         </div>
         {content}
-        <ServiceCreditsSendPanel wallet={wallet} onSent={refreshWallet} isMobile />
+        <ServiceCreditsSendPanel wallet={wallet} onSent={refreshWallet} />
       </div>
     );
 }

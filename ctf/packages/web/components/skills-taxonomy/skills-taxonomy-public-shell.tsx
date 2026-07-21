@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BookOpen, Lock, ChevronRight, UserPlus, LogIn } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { BookOpen, Lock, ChevronRight, UserPlus } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
@@ -11,14 +10,6 @@ import { getSkillsTaxonomyTokens } from './st-shared';
 // Palette from the SkillsTaxonomyPublic / MobileSkillsTaxonomyPublic mockups, resolved through the
 // theme-aware Skills Taxonomy tokens (default theme keeps the shipped hex values).
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
-
-// Static marketing copy describing why the taxonomy matters (not user data).
-const WHY_JOIN = [
-  { icon: '⚡', t: 'Trade with anyone', d: 'Skills map to real services you can buy or sell.' },
-  { icon: '🎓', t: 'Find learning cohorts', d: 'LevelUp matches you with peers based on shared skills.' },
-  { icon: '🔍', t: 'SkillsHunt discovery', d: 'Scouts use this database to nominate and verify survivors.' },
-  { icon: '🗺️', t: 'GDP contribution', d: 'Each skill added grows the survivor-economy estimate.' },
-];
 
 type TaxonomyCounts = { skills: number; jobTitles: number; sectors: number };
 
@@ -54,12 +45,6 @@ function useTaxonomySummary(): TaxonomyCounts | null {
   return counts;
 }
 
-function heroPillText(counts: TaxonomyCounts | null): string {
-  return counts
-    ? `${counts.skills.toLocaleString()} skills · ${counts.sectors.toLocaleString()} sectors · ${counts.jobTitles.toLocaleString()} job titles`
-    : 'Skills · sectors · job titles';
-}
-
 function StatTriplet({ counts, fontSize }: { counts: TaxonomyCounts; fontSize: number }) {
   const { theme } = useTheme();
   const t = getSkillsTaxonomyTokens(theme);
@@ -76,109 +61,6 @@ function StatTriplet({ counts, fontSize }: { counts: TaxonomyCounts; fontSize: n
           <div style={{ fontSize: 12, color: t.MUTED }}>{label}</div>
         </div>
       ))}
-    </div>
-  );
-}
-
-function DesktopSkillsTaxonomyPublic({ signInUrl, verifyUrl, counts }: { signInUrl: string; verifyUrl?: string; counts: TaxonomyCounts | null }) {
-  const { theme } = useTheme();
-  const t = getSkillsTaxonomyTokens(theme);
-  return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
-      {/* Top bar */}
-      <div style={{ height: 52, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
-        <PublicShellBackLink />
-        <BookOpen size={18} color={t.ACCENT} />
-        <span style={{ fontSize: 16, fontWeight: 700 }}>Skills Taxonomy</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          {verifyUrl ? (
-            <a href={verifyUrl} style={{ padding: '7px 16px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-              Finish verifying
-            </a>
-          ) : (
-            <>
-              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: t.BORDER, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-                <LogIn size={13} /> Sign In
-              </a>
-              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-                <UserPlus size={13} /> Join Free
-              </a>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Hero */}
-      <div style={{ padding: '48px 64px 32px', display: 'flex', gap: 48, alignItems: 'flex-start' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <span style={{ padding: '4px 14px', borderRadius: 20, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, fontSize: 12, color: t.ACCENT, fontWeight: 600, display: 'inline-block', width: 'fit-content' }}>
-            {heroPillText(counts)}
-          </span>
-          <h1 style={{ margin: 0, fontSize: 34, fontWeight: 800, lineHeight: 1.15 }}>
-            The survivor skills database<br />
-            <span style={{ color: t.ACCENT }}>is yours to explore</span>
-          </h1>
-          <p style={{ margin: 0, fontSize: 15, color: t.SUBTLE, maxWidth: 500, lineHeight: 1.7 }}>
-            Browse every skill, job title, and sector represented by survivors worldwide. Sign in to search, filter, and match skills to real opportunities.
-          </p>
-          {counts ? <StatTriplet counts={counts} fontSize={26} /> : null}
-          <a href={verifyUrl ?? signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-            {verifyUrl ? 'Finish verifying' : <>Sign in to explore <ChevronRight size={16} /></>}
-          </a>
-        </div>
-
-        {/* Why join */}
-        <div style={{ width: 280, flexShrink: 0 }}>
-          <div style={{ padding: '20px', borderRadius: 16, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT, marginBottom: 14 }}>Why the taxonomy matters</div>
-            {WHY_JOIN.map((item) => (
-              <div key={item.t} style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 2 }}>{item.t}</div>
-                  <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>{item.d}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Blurred taxonomy preview + lock overlay (neutral placeholders, no fabricated sector data) */}
-      <div style={{ padding: '0 64px 48px', position: 'relative' }}>
-        <div style={{ display: 'flex', gap: 16, filter: 'blur(5px)', pointerEvents: 'none', opacity: 0.45 }} aria-hidden="true">
-          {[0, 1, 2].map((col) => (
-            <div key={col} style={{ flex: 1, padding: '16px', borderRadius: 14, border: `1px solid ${t.ACCENT}25`, background: t.SURFACE }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.ACCENT }} />
-                <div style={{ height: 12, width: 90, borderRadius: 6, background: t.BORDER_HI }} />
-              </div>
-              {[0, 1, 2].map((row) => (
-                <div key={row} style={{ padding: '9px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 6 }}>
-                  <div style={{ height: 11, width: '70%', borderRadius: 5, background: t.BORDER_STRONG }} />
-                  <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                    {[0, 1, 2].map((s) => (
-                      <span key={s} style={{ height: 16, width: 42, borderRadius: 10, background: `${t.ACCENT}15`, display: 'inline-block' }} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', border: `2px solid ${t.ACCENT}50`, background: `${t.ACCENT}10`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Lock size={22} color={t.ACCENT} />
-          </div>
-          <div style={{ fontSize: 18, fontWeight: 700, textAlign: 'center' }}>Sign in to explore the full skills database</div>
-          <div style={{ fontSize: 13, color: t.MUTED, textAlign: 'center', maxWidth: 340 }}>
-            Browse every skill and sector, search by job title, and see which survivors you can trade with.
-          </div>
-          <a href={verifyUrl ?? signInUrl} style={{ padding: '12px 28px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-            {verifyUrl ? 'Finish verifying' : 'Create free account'}
-          </a>
-        </div>
-      </div>
     </div>
   );
 }
@@ -268,9 +150,6 @@ function MobileSkillsTaxonomyPublic({ signInUrl, verifyUrl, counts }: { signInUr
  * because the real app renders inside the browser chrome.
  */
 export function SkillsTaxonomyPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
-  const isMobile = useIsMobile();
   const counts = useTaxonomySummary();
-  return isMobile
-    ? <MobileSkillsTaxonomyPublic signInUrl={signInUrl} verifyUrl={verifyUrl} counts={counts} />
-    : <DesktopSkillsTaxonomyPublic signInUrl={signInUrl} verifyUrl={verifyUrl} counts={counts} />;
+  return <MobileSkillsTaxonomyPublic signInUrl={signInUrl} verifyUrl={verifyUrl} counts={counts} />;
 }

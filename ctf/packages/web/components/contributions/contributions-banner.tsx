@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DollarSign, MessageSquare, Star } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import {
   FONT_FAMILY,
@@ -136,7 +135,6 @@ export function ContributionsBanner() {
  * desktop a dismissed banner shows nothing until the snooze lapses, unchanged.
  */
 export function ContributionsGiftTrigger() {
-  const isMobile = useIsMobile();
   const router = useRouter();
 
   const [fundraiser, setFundraiser] = useState<FundraiserResponse['fundraiser'] | null>(null);
@@ -165,7 +163,7 @@ export function ContributionsGiftTrigger() {
     return () => window.removeEventListener(BANNER_DISMISSED_EVENT, onDismissed);
   }, []);
 
-  if (!isMobile || !fundraiser || !fundraiser.cycle || !fundraiser.bannerEnabled) {
+  if (!fundraiser || !fundraiser.cycle || !fundraiser.bannerEnabled) {
     return null;
   }
   // While the full banner is visible (and not just dismissed), the top-bar reminder is redundant.

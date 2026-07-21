@@ -1,7 +1,6 @@
 'use client';
 
 import { Car, Lock, Package, Utensils } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
@@ -19,93 +18,6 @@ function serviceTypes(t: TrustTransportTokens) {
     { icon: Package, label: 'Packages', desc: 'Item delivery', color: '#3B82F6' },
     { icon: Utensils, label: 'Food', desc: 'Meal delivery', color: '#22C55E' },
   ];
-}
-
-function DesktopTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
-  const { theme } = useTheme();
-  const t = getTrustTransportTokens(theme);
-  return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
-      {/* Top bar */}
-      <div style={{ height: 52, borderBottom: `1px solid ${t.BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
-        <PublicShellBackLink />
-        <Car size={18} color={t.ACCENT} />
-        <span style={{ fontSize: 16, fontWeight: 700 }}>TrustTransport</span>
-        <div style={{ marginLeft: 'auto' }}>
-          {verifyUrl ? (
-            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-              Finish verifying
-            </a>
-          ) : (
-            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: t.BORDER_STRONG, border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-              Sign In
-            </a>
-          )}
-        </div>
-      </div>
-
-      {/* Hero */}
-      <div style={{ padding: '48px 64px 32px', display: 'flex', gap: 80 }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <span style={{ padding: '4px 14px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 12, color: t.ACCENT, fontWeight: 600, display: 'inline-block', width: 'fit-content' }}>
-            Community transport
-          </span>
-          <h1 style={{ margin: 0, fontSize: 34, fontWeight: 800, lineHeight: 1.1 }}>
-            Rides, deliveries, and food —<br />
-            <span style={{ color: t.ACCENT }}>from the community</span>
-          </h1>
-          <p style={{ margin: 0, fontSize: 15, color: t.SUBTLE, maxWidth: 480 }}>
-            Drivers are fellow community members offering mutual aid. Your pickup location is never stored permanently. Pay with ServiceCredits.
-          </p>
-          <a href={verifyUrl ?? signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none' }}>
-            {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
-          </a>
-        </div>
-
-        {/* Service type preview */}
-        <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-          {serviceTypes(t).map(({ icon: Icon, label, desc, color }, i) => (
-            <div key={label} style={{ borderRadius: 14, border: `1px solid ${i === 0 ? color + '40' : 'rgba(255,255,255,0.07)'}`, padding: '20px 20px', background: i === 0 ? color + '08' : 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', minWidth: 110 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 20, background: color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icon size={18} color={color} />
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>{label}</span>
-              <span style={{ fontSize: 11, color: t.SUBTLE, textAlign: 'center' }}>{desc}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Blurred driver preview + lock (neutral placeholders, no fabricated drivers) */}
-      <div style={{ padding: '0 64px 48px', position: 'relative' }}>
-        <div style={{ borderRadius: 16, border: '1px solid rgba(255,255,255,0.07)', padding: '20px 24px', background: 'rgba(255,255,255,0.02)', filter: 'blur(4px)', pointerEvents: 'none', opacity: 0.5 }} aria-hidden="true">
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14, color: t.SUBTLE }}>Available drivers near you</div>
-          {[0, 1, 2].map((i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: `1px solid ${t.INPUT_BG}` }}>
-              <div style={{ width: 40, height: 40, borderRadius: 20, background: t.ACCENT + '25' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ height: 13, width: 130, borderRadius: 6, background: t.BORDER_HI, marginBottom: 6 }} />
-                <div style={{ height: 10, width: 90, borderRadius: 5, background: 'rgba(255,255,255,0.05)' }} />
-              </div>
-              <div style={{ height: 13, width: 44, borderRadius: 6, background: 'rgba(34,197,94,0.25)' }} />
-            </div>
-          ))}
-        </div>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', border: `2px solid ${t.ACCENT}50`, background: t.ACCENT + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Lock size={22} color={t.ACCENT} />
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 700, textAlign: 'center' }}>Sign in to book a safe ride</div>
-          <div style={{ fontSize: 13, color: t.MUTED, textAlign: 'center', maxWidth: 300 }}>
-            Schedule rides, track packages, and order food — all with trauma-informed drivers.
-          </div>
-          <a href={verifyUrl ?? signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-            {verifyUrl ? 'Finish verifying' : 'Sign in to book transport'}
-          </a>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function MobileTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
@@ -172,6 +84,5 @@ function MobileTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: strin
  * renders inside the browser chrome.
  */
 export function TrustTransportPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
-  const isMobile = useIsMobile();
-  return isMobile ? <MobileTrustTransportPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopTrustTransportPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
+  return <MobileTrustTransportPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

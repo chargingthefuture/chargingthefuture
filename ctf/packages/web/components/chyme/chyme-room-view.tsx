@@ -3,7 +3,6 @@
 import { useMemo, type RefObject } from 'react';
 import dynamic from 'next/dynamic';
 import { Lock, MessageSquare } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, chymeHandle, type CurrentUser } from './chyme-shared';
 import { ChymeStage } from './chyme-stage';
@@ -34,7 +33,6 @@ export type ChymeRoomViewProps = {
 
 export function ChymeRoomView(props: ChymeRoomViewProps) {
   const { room, currentUser, showChat, onToggleChat, joinInfo, joinReady } = props;
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
 
@@ -91,12 +89,12 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           currentUser={currentUser}
           showChat={showChat}
           chatPanel={chatPanel}
-          isMobile={isMobile}
+          isMobile={true}
           onLeave={props.onLeave}
           raisedHandUserIds={raisedHandUserIds}
         />
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
           <ChymeStage room={room} currentUserId={currentUser.userId} />
           {showChat && chatPanel}
         </div>

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Search } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { MobileScreenHeader } from "@/components/shared/mobile-screen-header";
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import type { SkillsHuntRound } from "lib/skills-hunt/types";
@@ -27,7 +26,6 @@ const TABS: Array<{ key: Tab; label: string }> = [
 type Props = { rounds: SkillsHuntRound[] };
 
 export function SkillsHuntAdminShell({ rounds }: Props) {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
   const [tab, setTab] = useState<Tab>("moderation");
@@ -35,7 +33,7 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
   const [activeRoundId, setActiveRoundId] = useState<string | null>(rounds[0]?.id ?? null);
 
   return (
-    <div style={{ ...(isMobile ? { minHeight: "100vh" } : { height: "100dvh", overflowY: "auto" }), background: t.BG, color: t.TEXT, fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
+    <div style={{ minHeight: "100vh", background: t.BG, color: t.TEXT, fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
       <MobileScreenHeader title="SkillsHunt Admin" accent={t.ACCENT} icon={<Search size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/skills-hunt" accent={t.ACCENT} />} />
       <header style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>

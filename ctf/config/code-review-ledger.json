@@ -331,6 +331,19 @@
       ]
     },
     {
+      "name": "mutual-time",
+      "type": "plugin",
+      "lastReviewedAt": "2026-07-21T09:07:33.219Z",
+      "lastRunIssues": 8,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/mutual-time",
+        "ctf/packages/web/components/mutual-time",
+        "ctf/packages/web/lib/mutual-time"
+      ]
+    },
+    {
       "name": "nav",
       "type": "module",
       "lastReviewedAt": "2026-07-20T04:22:57.270Z",
@@ -343,7 +356,7 @@
     },
     {
       "name": "notifications",
-      "type": "module",
+      "type": "plugin",
       "lastReviewedAt": "2026-07-20T01:46:02.477Z",
       "lastRunIssues": 5,
       "cursor": 0,

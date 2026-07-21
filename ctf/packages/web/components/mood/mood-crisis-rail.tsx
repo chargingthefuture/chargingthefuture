@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useTheme } from "@/hooks/useTheme";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { getMoodTokens } from "./mood-shared";
 
 // Owner decision: instead of external crisis-hotline numbers, point a struggling member to the
@@ -24,19 +23,12 @@ const SUPPORT_LINKS = [
 
 export function MoodCrisisRail() {
   const { theme } = useTheme();
-  const isMobile = useIsMobile();
   const t = getMoodTokens(theme);
-  // Desktop: a fixed 280px right rail with a left divider. Mobile: it stacks
-  // below the content, so span the width and center it (capped so it does not
-  // stretch too wide on large phones/tablets) with a top divider instead — the
-  // fixed 280px width otherwise left-aligns the box with dead space on the right.
+  // The rail stacks below the content, so span the width and center it (capped so
+  // it does not stretch too wide on large phones/tablets) with a top divider.
   return (
     <aside
-      style={
-        isMobile
-          ? { width: "100%", maxWidth: 480, margin: "0 auto", borderTop: `1px solid ${t.BORDER}`, background: t.HEADER, padding: "20px 16px", boxSizing: "border-box" }
-          : { width: 280, borderLeft: `1px solid ${t.BORDER}`, background: t.HEADER, padding: "20px 16px", flexShrink: 0 }
-      }
+      style={{ width: "100%", maxWidth: 480, margin: "0 auto", borderTop: `1px solid ${t.BORDER}`, background: t.HEADER, padding: "20px 16px", boxSizing: "border-box" }}
     >
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.MUTED, textTransform: "uppercase", marginBottom: 6 }}>Talk to someone</div>
       <div style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.6, marginBottom: 12 }}>If you&apos;re struggling, reach a community member with mental-health expertise.</div>

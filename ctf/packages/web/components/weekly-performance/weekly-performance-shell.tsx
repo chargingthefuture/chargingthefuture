@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { BackChevronButton } from "@/lib/nav/back-history";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import {
   getWeeklyPerformanceTokens,
@@ -62,7 +61,6 @@ export function WeeklyPerformanceShell() {
   const [metrics, setMetrics] = useState<WpMetric[]>([]);
   const [comparison, setComparison] = useState<WpComparison | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getWeeklyPerformanceTokens(theme);
 
@@ -147,7 +145,6 @@ export function WeeklyPerformanceShell() {
       metrics={metrics}
       comparison={comparison}
       onRefresh={refreshSelectedWeek}
-      isMobile={isMobile}
       isCurrent={selectedIsCurrent}
     />
   );

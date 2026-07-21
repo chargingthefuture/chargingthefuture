@@ -3,7 +3,6 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MapPin, Shield } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { FONT, getFoundationTokens, initials, type ProviderView } from "./foundation-ui";
 import { ConnectNowButton, InstantCallAvailabilityBadge, canOfferConnectNow, acceptsInstantCalls, isOwnProfile } from "./foundation-connect-now";
 import { ShareLink } from "@/components/shared/share-link";
@@ -21,7 +20,6 @@ export function ProviderProfile({
 }) {
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
-  const isMobile = useIsMobile();
   const ownProfile = isOwnProfile(provider, viewerUserId);
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: t.BG, fontFamily: FONT, color: t.TEXT, display: "flex", flexDirection: "column" }}>
@@ -37,13 +35,13 @@ export function ProviderProfile({
           <ShareLink url={`/apps/foundation/provider/${provider.profileId}`} title="Share this provider" />
         </div>
       </div>
-      <div style={{ flex: 1, padding: isMobile ? "24px 16px" : "32px 40px", overflowY: "auto", display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 20 : 32, flexWrap: "wrap" }}>
-        <div style={{ flex: isMobile ? "0 0 auto" : 2, width: isMobile ? "100%" : undefined, minWidth: isMobile ? 0 : 320 }}>
+      <div style={{ flex: 1, padding: "24px 16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, flexWrap: "wrap" }}>
+        <div style={{ flex: "0 0 auto", width: "100%", minWidth: 0 }}>
           {/* Header: on desktop a single row (avatar + identity fill the left, actions sit at the right).
               On phone width the actions drop to their own full-width block below the identity so nothing
               runs off-screen. */}
-          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "flex-start", gap: isMobile ? 20 : 24, marginBottom: 28 }}>
-            <div style={{ display: "flex", gap: isMobile ? 16 : 24, alignItems: isMobile ? "center" : "flex-start", flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: 20, marginBottom: 28 }}>
+            <div style={{ display: "flex", gap: 16, alignItems: "center", flex: 1, minWidth: 0 }}>
               <Avatar style={{ width: 80, height: 80, flexShrink: 0 }}>
                 <AvatarFallback style={{ background: `${t.ACCENT}25`, color: t.ACCENT, fontSize: 28, fontWeight: 800 }}>{initials(provider.displayName)}</AvatarFallback>
               </Avatar>
@@ -72,7 +70,7 @@ export function ProviderProfile({
                 {submitting ? "Requesting…" : "Request Quote"}
               </button>
               {ownProfile && (
-                <div style={{ fontSize: 12, color: t.MUTED, maxWidth: isMobile ? "100%" : 180, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 12, color: t.MUTED, maxWidth: "100%", lineHeight: 1.5 }}>
                   This is your own profile — you can&apos;t request a quote from yourself.
                 </div>
               )}
@@ -105,7 +103,7 @@ export function ProviderProfile({
         {/* On phone width the two columns stack (flex-direction: column), so this "Good to know" panel
             renders full-width at the very bottom, beneath the skills and About. On desktop it stays the
             right-hand sidebar column. */}
-        <div style={{ flex: isMobile ? "0 0 auto" : 1, width: isMobile ? "100%" : undefined, minWidth: isMobile ? 0 : 240 }}>
+        <div style={{ flex: "0 0 auto", width: "100%", minWidth: 0 }}>
           <div style={{ padding: "16px", borderRadius: 12, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
               <Shield size={14} style={{ color: t.ACCENT }} />

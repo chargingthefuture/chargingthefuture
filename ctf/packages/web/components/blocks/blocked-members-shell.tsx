@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Loader2, ShieldOff, UserX } from 'lucide-react';
 import { BackChevronButton } from '@/lib/nav/back-history';
 import { useTheme } from '@/hooks/useTheme';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { getAccountDataTokens } from '@/components/account-data/account-data-shared';
 import { deleteBlock, type BlockedMember, type BlocksListResponse } from './blocks-shared';
 
@@ -21,7 +20,6 @@ type LoadState = 'loading' | 'ready' | 'error';
 // at /account/blocks, reached from the account hub's "Data & privacy" section.
 export function BlockedMembersShell() {
   const { theme } = useTheme();
-  const isMobile = useIsMobile();
   const tokens = getAccountDataTokens(theme);
   const { BG, SURFACE, BORDER, TEXT, SUBTLE, BRAND } = tokens;
 
@@ -100,7 +98,7 @@ export function BlockedMembersShell() {
         </div>
       </header>
 
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: isMobile ? '20px 16px 64px' : '32px 24px 64px' }}>
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '20px 16px 64px' }}>
         <p style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.6, margin: '0 0 24px' }}>
           People you&apos;ve blocked can&apos;t see or contact you, and they&apos;re never told. Unblock
           someone here to let them see and reach you again.

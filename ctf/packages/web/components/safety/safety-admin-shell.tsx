@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 import type { SafetyReportStatus } from 'lib/safety/constants';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
@@ -92,7 +91,6 @@ function StatBlock({ label, value, accent }: { label: string; value: number; acc
 // offender. Covers loading, error, empty, and populated states and is mobile-responsive (rows reflow
 // at phone width). Ordinary blocks never appear here.
 export function SafetyAdminShell() {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getSafetyTokens(theme);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -152,7 +150,7 @@ export function SafetyAdminShell() {
         // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
         // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
         // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
-        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",

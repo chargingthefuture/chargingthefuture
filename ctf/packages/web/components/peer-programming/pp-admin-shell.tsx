@@ -12,7 +12,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Code2 } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
@@ -48,7 +47,6 @@ function currentWeekStartDate(now = new Date()): string {
 export function PeerProgrammingAdminShell() {
   const { theme } = useTheme();
   const t = getPeerProgrammingTokens(theme);
-  const isMobile = useIsMobile();
   const defaultWeekStart = useMemo(() => currentWeekStartDate(), []);
 
   const [topic, setTopic] = useState<PeerProgrammingTopic | null>(null);
@@ -207,10 +205,9 @@ export function PeerProgrammingAdminShell() {
   return (
     <div
       style={{
-        // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
-        // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
-        // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
-        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        // The document scrolls, so set a min-height on the shell. Matches the unlock / skills-hunt
+        // admin shells.
+        minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",
@@ -366,7 +363,7 @@ export function PeerProgrammingAdminShell() {
                       disabled={savingMode || (mode.source === 'admin_setting' && mode.adminSetting === true)}
                       onClick={() => void setSingleOpenCohort(true)}
                       style={{
-                        flex: isMobile ? '1 1 100%' : '0 1 auto',
+                        flex: '1 1 100%',
                         padding: '9px 16px',
                         borderRadius: 9,
                         fontSize: 13,
@@ -385,7 +382,7 @@ export function PeerProgrammingAdminShell() {
                       disabled={savingMode || (mode.source === 'admin_setting' && mode.adminSetting === false)}
                       onClick={() => void setSingleOpenCohort(false)}
                       style={{
-                        flex: isMobile ? '1 1 100%' : '0 1 auto',
+                        flex: '1 1 100%',
                         padding: '9px 16px',
                         borderRadius: 9,
                         fontSize: 13,
@@ -405,7 +402,7 @@ export function PeerProgrammingAdminShell() {
                         disabled={savingMode}
                         onClick={() => void setSingleOpenCohort(null)}
                         style={{
-                          flex: isMobile ? '1 1 100%' : '0 1 auto',
+                          flex: '1 1 100%',
                           padding: '9px 16px',
                           borderRadius: 9,
                           fontSize: 13,
@@ -456,7 +453,7 @@ export function PeerProgrammingAdminShell() {
                 topic={topic}
                 defaultWeekStart={defaultWeekStart}
                 busy={savingTopic}
-                isMobile={isMobile}
+                isMobile={true}
                 onSubmit={submitTopic}
               />
             </section>

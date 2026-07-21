@@ -1,6 +1,5 @@
 "use client";
 
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { countLabel, getSkillsTaxonomyTokens, sectorColor, type StSector } from "./st-shared";
 
@@ -13,11 +12,10 @@ export function SkillsTaxonomySectorsColumn({
   selectedSectorId: string | null;
   onSelect: (sectorId: string) => void;
 }) {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getSkillsTaxonomyTokens(theme);
   return (
-    <aside style={{ width: isMobile ? "100%" : 240, background: t.HEADER, borderRight: isMobile ? "none" : `1px solid ${t.BORDER_SOLID}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+    <aside style={{ width: "100%", background: t.HEADER, borderRight: "none", display: "flex", flexDirection: "column", flexShrink: 0 }}>
       <div style={{ padding: "20px 16px 12px" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.MUTED, textTransform: "uppercase", marginBottom: 4 }}>📚 Skills Taxonomy</div>
         <div style={{ fontSize: 12, color: t.FAINT, lineHeight: 1.5 }}>3-level hierarchy browser</div>

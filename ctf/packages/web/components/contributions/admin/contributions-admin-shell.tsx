@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Gift } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import type {
   ContributionSubmissionAdminView,
@@ -35,7 +34,6 @@ const TABS: { key: AdminTab; label: string }[] = [
 ];
 
 export function ContributionsAdminShell() {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getContributionsTokens(theme);
 
@@ -181,15 +179,15 @@ export function ContributionsAdminShell() {
           onSearch={setSearch}
           reviewing={reviewing}
           onReview={onReview}
-          isMobile={isMobile}
+          isMobile={true}
         />
       )}
       {tab === 'drive' && (
-        <ContributionsAdminDrive t={t} cycle={currentCycle} saving={savingDrive} error={driveError} onSave={onSaveDrive} isMobile={isMobile} />
+        <ContributionsAdminDrive t={t} cycle={currentCycle} saving={savingDrive} error={driveError} onSave={onSaveDrive} isMobile={true} />
       )}
       {tab === 'settings' &&
         (config ? (
-          <ContributionsAdminSettings t={t} config={config} saving={savingSettings} error={settingsError} onSave={onSaveSettings} isMobile={isMobile} />
+          <ContributionsAdminSettings t={t} config={config} saving={savingSettings} error={settingsError} onSave={onSaveSettings} isMobile={true} />
         ) : (
           <div style={{ flex: 1, padding: 24, fontSize: 13, color: t.MUTED }}>Loading settings…</div>
         ))}

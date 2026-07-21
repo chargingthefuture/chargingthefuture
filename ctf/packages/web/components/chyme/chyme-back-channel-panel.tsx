@@ -33,7 +33,6 @@ export function ChymeBackChannelPanel({
   credentials,
   currentUser,
   otherName,
-  isMobile,
   onHangUp,
 }: {
   credentials: ChymeBackChannelJoinCredentials;
@@ -86,8 +85,8 @@ export function ChymeBackChannelPanel({
       style={{
         position: 'fixed',
         zIndex: 55,
-        bottom: isMobile ? 16 : 96,
-        left: isMobile ? 12 : 'auto',
+        bottom: 16,
+        left: 12,
         right: 16,
         width: 288,
         maxWidth: 'calc(100vw - 24px)',

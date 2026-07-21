@@ -1,125 +1,457 @@
 # Mutual Time — Manual Test Script
 
-Mutual Time is a one-link meeting-time picker (spec #1780): an admin creates an event, approved members
-vote on one-hour windows in their own timezone, and the app picks the window with the most overlap.
+> Generated from the feature inventory and declared contracts; this is the runnable checklist for the Mutual Time plugin.
+> Regenerate: `pnpm --dir ctf test-script:generate -- mutual-time`
 
-**Android: not applicable.** Mutual Time is web-only (rule 105). Test on web at desktop width **and** at
-the mobile-responsive (~390px) breakpoint — those are the two surfaces.
+| Field | Value |
+|---|---|
+| **Plugin** | Mutual Time (`mutual-time`) |
+| **Visibility** | Member |
+| **Roles to test** | Member, Admin |
+| **Surfaces** | Web (`/apps/mutual-time`, `/mutual-time/[slug]`); mobile-responsive web (same URLs at phone width). No Android surface — out of scope per rule 105. |
+| **Seed first** | `pnpm --dir ctf seed:mutual-time` |
+| **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-mutual-time-feature-inventory.md` |
+| **Generated** | 2026-07-21 (commit be96b48f) |
+
+---
 
 ## How to run this
 
-- Each case is **precondition → steps → expected**. Do it on each surface listed.
-- Mark each surface box: ✅ pass · ❌ fail · ⛔ blocked/can't reach.
-- Run the **Core smoke** block every session; run the full walkthrough when you changed this plugin.
-- You need an **admin** account (to create/close) and at least one **approved member** account (to vote).
+- Mark each check ✅ pass / ❌ fail / ⛔ blocked.
+- A ❌ becomes a row in the Bug Reporting plugin — include the case ID, surface, and what you saw.
+- Run **Core smoke** at the start of every session before the walkthroughs.
+- "Web" means a desktop browser. "Mobile" means the same URL loaded in a phone-width browser or device browser — there is no separate Android app for this plugin.
+
+---
 
 ## Core smoke (every session)
 
-1. As an admin, open `/apps/mutual-time`. The dashboard loads with a "Create a new event" form and a
-   "Your events" list (or an empty state). → web ☐ mobile ☐
-2. Create an event with a title and "Where we'll meet" = Chyme, no close date. A success notice shows
-   the shareable link, and the event appears in the list as **open**. → web ☐ mobile ☐
-3. Open that event's link (`/mutual-time/<slug>`) as an approved member. You can pick up to 3 one-hour
-   windows in your own timezone and save them. → web ☐ mobile ☐
-4. Back in the admin dashboard, press "Close and choose the time". The event flips to **closed** and
-   shows the chosen time. Re-open the link — it now shows the winning time in your timezone. → web ☐ mobile ☐
+Run the seed first: `pnpm --dir ctf seed:mutual-time`
+
+1. **Admin dashboard loads.** Sign in as an admin, navigate to `/apps/mutual-time`. The page renders without error and shows at least two events — "Weekly check-in" (open) and "Q3 onboarding" (closed). web ☐ mobile ☐
+
+2. **Public event link loads unauthenticated.** Sign out entirely. Open the shareable link for the seeded open event (copy it from the dashboard or use the known fixed slug). The page renders the event title, a set of time slots, and a sign-in prompt — no error, no blank screen. web ☐ mobile ☐
+
+3. **Closed event shows a result.** Open the shareable link for "Q3 onboarding" (seeded closed event) while signed out. The page shows the winning time and how many members can make it — no vote controls visible. web ☐ mobile ☐
+
+4. **Approved member can reach the vote surface.** Sign in as an approved member, open the shareable link for the open event. Slot chips are visible and at least one is selectable. web ☐ mobile ☐
+
+---
 
 ## Member walkthrough
 
-### MT-1 · Vote in your own timezone
-**Role:** approved member · **Surfaces:** web, mobile
-**Precondition:** an open event link.
-**Steps:**
-1. Open the event link. Read the timezone line ("Times shown in …").
-2. Press it and change the timezone from the picker.
-3. Pick up to 3 one-hour windows across the date chips, then Save.
-**Expected:** The auto-detected timezone shows on load. Changing it re-renders every slot time and date
-chip in the new timezone (the underlying instants don't change). You can select at most 3 windows (a 4th
-is disabled). Save persists; re-opening the link shows your picks still selected.
-**Result:** web ☐ mobile ☐ — notes:
+### MT-1 — Sign-out / listen-in gate
 
-### MT-2 · Revise and clear picks
-**Role:** approved member · **Surfaces:** web, mobile
-**Steps:**
-1. With picks saved, remove one via the "Your picks" list and add a different one; Save.
-2. Remove all picks and Save (the button reads "Clear my picks").
-**Expected:** Your latest picks replace the earlier ones — there's no history. Saving zero picks clears
-your vote. The voter count reflects whether you currently have any picks.
-**Result:** web ☐ mobile ☐ — notes:
+**Role:** None (signed out)
+**Surfaces:** Web, Mobile
+**Precondition:** Seed run. Open event slug known.
 
-### MT-3 · Half-hour snapping and overlap
-**Role:** two approved members · **Surfaces:** web
 **Steps:**
-1. Have member A and member B both pick the **same** one-hour window (same absolute time, even from
-   different timezones).
-2. Have each also pick one window the other did not.
-**Expected:** The shared window is stored as the same `slot_start_utc` for both, so it counts as overlap.
-All windows start on the hour or half-hour. (Verified fully in MT-A2 when the admin closes.)
-**Result:** web ☐ — notes:
+1. Sign out of the app completely.
+2. Navigate to `/mutual-time/<open-event-slug>`.
+3. Read the page.
 
-### MT-4 · Signed-out / not-approved gate (listen-in)
-**Role:** signed-out visitor, and a signed-in not-yet-approved member · **Surfaces:** web, mobile
-**Steps:**
-1. Open an open event link while signed out.
-2. Open it as a signed-in but not-Unlock-approved member.
-**Expected:** Both see the event and a gate: signed-out sees "Sign in and get approved to vote" with a
-sign-in link; the locked member sees "Approved members can vote" with a link to verification. Both see
-the message that they can still come listen in at whatever time is chosen. Neither can vote.
-**Result:** web ☐ mobile ☐ — notes:
+**Expected:** The event title and description are visible. The page says something to the effect that the visitor can come listen in at whatever time is chosen. A sign-in prompt is shown. No slot-picking controls are present.
 
-### MT-5 · Result view
-**Role:** any viewer · **Surfaces:** web, mobile
-**Precondition:** a closed event with a chosen time.
+Result: web ☐ mobile ☐
+
+---
+
+### MT-2 — Not-yet-approved (locked) member gate
+
+**Role:** Member (signed in, Unlock tier below `approved_full`)
+**Surfaces:** Web, Mobile
+**Precondition:** A locked/pending member account exists.
+
 **Steps:**
-1. Open the link. 2. As a non-voter (or signed out), read the listen-in note.
-**Expected:** The winning time shows in the viewer's own timezone, with "N members can make it" and a
-"Go to <plugin>" link. A non-voter/signed-out viewer also sees the listen-in message. Individual votes
-are never shown.
-**Result:** web ☐ mobile ☐ — notes:
+1. Sign in as a member whose Unlock tier is not yet `approved_full`.
+2. Navigate to `/mutual-time/<open-event-slug>`.
+
+**Expected:** The event is visible. The page shows a listen-in message and a prompt to complete approval, not a slot picker. The member cannot vote.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-3 — Approved member votes (up to 3 slots)
+
+**Role:** Member (`approved_full`)
+**Surfaces:** Web, Mobile
+**Precondition:** Seed run. Signed in as an approved member. Open event available.
+
+**Steps:**
+1. Navigate to `/mutual-time/<open-event-slug>`.
+2. Note your detected timezone label on the page.
+3. Select one slot chip.
+4. Select a second slot chip.
+5. Select a third slot chip.
+6. Attempt to select a fourth slot chip.
+7. Save / submit the picks.
+
+**Expected:**
+- Slots are displayed as date chips grouped by Morning / Afternoon / Evening (or similar time-of-day groupings) in the detected local timezone.
+- The fourth pick is rejected — the UI prevents selecting more than 3.
+- After saving, the three selected chips appear highlighted / confirmed.
+- No other member's picks are visible anywhere on the page.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-4 — Member revises picks
+
+**Role:** Member (`approved_full`)
+**Surfaces:** Web, Mobile
+**Precondition:** MT-3 completed (member already has 3 picks saved for the open event).
+
+**Steps:**
+1. Navigate to `/mutual-time/<open-event-slug>` (or reload).
+2. Confirm the 3 previously chosen slots are highlighted.
+3. Deselect one slot.
+4. Select a different slot.
+5. Save.
+
+**Expected:** The page reloads or updates to reflect the new set of 2–3 picks. The old pick that was deselected is no longer highlighted. The change is persisted — reloading the page shows the updated picks.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-5 — Member clears all picks
+
+**Role:** Member (`approved_full`)
+**Surfaces:** Web, Mobile
+**Precondition:** Member has at least one pick saved for the open event.
+
+**Steps:**
+1. Navigate to `/mutual-time/<open-event-slug>`.
+2. Deselect all highlighted slots (or use a clear button if present).
+3. Save with zero picks.
+
+**Expected:** The save succeeds (no error). Reloading the page shows no picks selected for this member.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-6 — Vote rejected when event is closed
+
+**Role:** Member (`approved_full`)
+**Surfaces:** Web, Mobile
+**Precondition:** Seed run. "Q3 onboarding" event is in closed status.
+
+**Steps:**
+1. Navigate to `/mutual-time/<closed-event-slug>`.
+2. Observe the page.
+
+**Expected:** The result view is shown (winning time, how many can make it, meeting link). No slot-picking controls are present. There is no way to submit a vote.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-7 — Result shown in viewer's timezone
+
+**Role:** Member (`approved_full`) and signed-out visitor
+**Surfaces:** Web, Mobile
+**Precondition:** "Q3 onboarding" closed event with a known winning UTC slot.
+
+**Steps:**
+1. As a signed-out visitor, open `/mutual-time/<closed-event-slug>`.
+2. Note the displayed winning time and the timezone label shown.
+3. Sign in as an approved member whose timezone is different (or change the timezone selector if available).
+4. Open the same link.
+5. Compare the displayed winning time.
+
+**Expected:** Both views show the same moment in time expressed in each viewer's own timezone. The UTC instant is the same; only the local rendering differs.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-8 — Timezone selector changes displayed slots
+
+**Role:** Member (`approved_full`)
+**Surfaces:** Web, Mobile
+**Precondition:** Open event loaded. Member is on the vote surface.
+
+**Steps:**
+1. Navigate to `/mutual-time/<open-event-slug>`.
+2. Note the auto-detected timezone label.
+3. Change the timezone using the timezone selector (for VPN/travel use case).
+4. Observe the slot chips.
+
+**Expected:** The slot chips re-render with times expressed in the newly selected timezone. The set of underlying candidate UTC instants is unchanged — only the local display shifts.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-9 — Copy-link button
+
+**Role:** Any (signed out, member, admin)
+**Surfaces:** Web, Mobile
+**Precondition:** Any event page loaded (`/mutual-time/<slug>` or the admin dashboard row).
+
+**Steps:**
+1. On the public event page, tap/click the Copy-link button.
+2. Paste into a text field and verify the URL.
+3. Repeat from the admin dashboard for the same event's Copy-link button.
+
+**Expected:** Both copy operations place the correct `/mutual-time/<slug>` URL on the clipboard. The URL is the same in both places.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-10 — Meeting link shown after close
+
+**Role:** Member (`approved_full`) and signed-out visitor
+**Surfaces:** Web, Mobile
+**Precondition:** "Q3 onboarding" closed event. Meeting plugin is Chyme or Peer Programming.
+
+**Steps:**
+1. Open `/mutual-time/<closed-event-slug>`.
+2. Find the link to the meeting surface.
+3. Confirm the link target.
+
+**Expected:** A "Go to Chyme" or "Go to Peer Programming" link (matching whichever plugin was configured) is visible. The winning time and the count of members who can make it are shown alongside it.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-11 — Vote endpoint rejects invalid slot
+
+**Role:** Member (`approved_full`)
+**Surfaces:** Web (API layer; can be tested via browser dev-tools or a REST client)
+**Precondition:** Open event slug known. Member auth cookie in hand.
+
+**Steps:**
+1. Construct a POST to `/api/mutual-time/event/<slug>/vote` with the `x-ctf-csrf: '1'` header and a body containing a `slots` array with one entry set to an arbitrary timestamp that is not in the event's candidate window (e.g., a date outside the 7-day window).
+2. Send the request.
+
+**Expected:** The server returns HTTP 400. No vote is stored.
+
+Result: web ☐
+
+---
 
 ## Admin walkthrough
 
-### MT-A1 · Create with open/close times
-**Role:** admin · **Surfaces:** web, mobile
+### MT-A1 — Create an event (Chyme, no close date)
+
+**Role:** Admin
+**Surfaces:** Web, Mobile
+**Precondition:** Signed in as admin. On `/apps/mutual-time`.
+
 **Steps:**
-1. Create an event with a **future** "Survey opens" time.
-2. Create another with a "Survey closes" time a few minutes out.
-**Expected:** The first shows as **scheduled**; its link shows "Voting hasn't opened yet" and no grid.
-The second is **open**; after its close time passes and you reload the dashboard (or open its link), it
-auto-closes and a winner is computed.
-**Result:** web ☐ mobile ☐ — notes:
+1. Click/tap the button to create a new event.
+2. Leave title blank.
+3. Enter a description: "Admin test event".
+4. Choose "Chyme" as the meeting plugin.
+5. Leave open/close date-times blank.
+6. Submit.
 
-### MT-A2 · Close and choose (most overlap, earliest tie)
-**Role:** admin · **Surfaces:** web
-**Precondition:** an open event with votes from MT-3 (a shared window plus singles).
+**Expected:** The new event appears in the dashboard list with status "open" (or "scheduled" if opens_at defaults to now). A shareable link / slug is shown. The Copy-link button is present. Voter count is 0.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-A2 — Create an event with a title and scheduled close time
+
+**Role:** Admin
+**Surfaces:** Web, Mobile
+**Precondition:** Signed in as admin. On `/apps/mutual-time`.
+
 **Steps:**
-1. Press "Close and choose the time".
-**Expected:** The chosen time is the window the most distinct members picked; if two windows tie on
-count, the **earlier** one wins. The dashboard shows the time + "N can make it". A survey with **zero**
-votes closes with "No time chosen (no votes)".
-**Result:** web ☐ — notes:
+1. Click to create a new event.
+2. Enter title: "Test with close time".
+3. Choose "Peer Programming" as the meeting plugin.
+4. Set a close date-time roughly 5 minutes in the future.
+5. Submit.
 
-### MT-A3 · Access enforcement
-**Role:** admin, member, signed-out · **Surfaces:** web
+**Expected:** Event appears in the dashboard with the title, status, and the configured close time visible. Status is "open" or "scheduled" (not "closed").
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-A3 — Dashboard shows voter counts and status pills
+
+**Role:** Admin
+**Surfaces:** Web, Mobile
+**Precondition:** Seed run. Admin dashboard open.
+
 **Steps:**
-1. As a non-admin, call `POST /api/mutual-time/events` (create) and `POST /api/mutual-time/events/<id>/close`.
-2. As a signed-out caller, `POST /api/mutual-time/event/<slug>/vote`.
-3. As an approved member, try to close an event you didn't create.
-**Expected:** Create/close are admin-only (403 for non-admins). Vote requires a signed-in approved member
-(403 otherwise). Closing is limited to the event's creator (404/again admin-gated). All mutations require
-the CSRF header.
-**Result:** web ☐ — notes:
+1. Navigate to `/apps/mutual-time`.
+2. Find "Weekly check-in" (open, seeded votes).
+3. Find "Q3 onboarding" (closed).
+4. Note the status pill and voter count for each.
 
-## Parity check (desktop web ↔ mobile-responsive web)
+**Expected:**
+- "Weekly check-in" shows a status pill labeled "open" and a voter count greater than 0 (from seed).
+- "Q3 onboarding" shows a status pill labeled "closed", the winning time, and the count of members who can make it.
+- Each row has Copy-link and View buttons.
+- "Weekly check-in" has a "Close and choose the time" button; "Q3 onboarding" does not (already closed).
 
-For MT-1, MT-4, and MT-5, the ~390px mobile-responsive layout must behave the same as desktop: single
-column, horizontally scrollable date chips, wrapping slot grid, readable result. Note any drift here.
+Result: web ☐ mobile ☐
 
-**Result:** matches ☐ — drift notes:
+---
+
+### MT-A4 — Manual close runs the algorithm and shows the winner
+
+**Role:** Admin
+**Surfaces:** Web, Mobile
+**Precondition:** MT-A1 event exists and has at least two members' votes (cast manually via MT-3/MT-4 with different member accounts, or use the seeded open event with existing votes).
+
+**Steps:**
+1. On the dashboard, find an open event with votes.
+2. Click "Close and choose the time".
+3. Confirm any confirmation dialog.
+4. Observe the dashboard row after close.
+5. Open the public link for that event.
+
+**Expected:**
+- The dashboard row now shows status "closed", the winning time slot, and the count of members who can make it.
+- The public link shows the result view: winning time in the viewer's timezone, count, and the meeting link.
+- The "Close and choose the time" button is gone from the dashboard row.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-A5 — Close with no votes produces a graceful result
+
+**Role:** Admin
+**Surfaces:** Web, Mobile
+**Precondition:** Create a fresh event (MT-A1 steps). Do not cast any votes for it.
+
+**Steps:**
+1. On the dashboard, click "Close and choose the time" for the new event with 0 votes.
+2. Confirm.
+
+**Expected:** The event closes without an error. The dashboard and public link show a graceful "no time could be chosen" or equivalent message — no unhandled exception, no blank result slot.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-A6 — Auto-close at the configured close time
+
+**Role:** Admin (observing); approved member (verifying the result link)
+**Surfaces:** Web, Mobile
+**Precondition:** MT-A2 event exists with close time set ~5 minutes in the future. At least one member vote cast.
+
+**Steps:**
+1. Wait until the configured close time passes.
+2. As admin, navigate to `/apps/mutual-time` (the GET triggers auto-close of due events).
+3. Check the status of the MT-A2 event.
+4. Open the public link for that event.
+
+**Expected:** The event status has changed to "closed". The public link shows the result view with the winning time. No manual close action was needed.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-A7 — Non-creator admin cannot close another admin's event
+
+**Role:** Admin (different account from the event creator)
+**Surfaces:** Web (API layer)
+**Precondition:** An event exists created by Admin A. Signed in as Admin B.
+
+**Steps:**
+1. As Admin B, send a POST to `/api/mutual-time/events/<eventId>/close` with the `x-ctf-csrf: '1'` header.
+
+**Expected:** The server returns HTTP 404 (ownership check). The event remains open.
+
+Result: web ☐
+
+---
+
+### MT-A8 — Non-admin member cannot create an event
+
+**Role:** Member (`approved_full`)
+**Surfaces:** Web (API layer)
+**Precondition:** Signed in as a non-admin approved member.
+
+**Steps:**
+1. Send a POST to `/api/mutual-time/events` with the `x-ctf-csrf: '1'` header and a valid event body (meetingPlugin: "chyme").
+
+**Expected:** The server returns HTTP 403 (`forbiddenRole`). No event is created. The admin dashboard does not list a new event.
+
+Result: web ☐
+
+---
+
+### MT-A9 — CSRF guard blocks mutations without the required header
+
+**Role:** Admin
+**Surfaces:** Web (API layer)
+**Precondition:** Signed in as admin.
+
+**Steps:**
+1. Send a POST to `/api/mutual-time/events` **without** the `x-ctf-csrf: '1'` header.
+2. Send a POST to `/api/mutual-time/event/<slug>/vote` **without** the header (use an approved member session).
+
+**Expected:** Both requests return HTTP 403. No data is written in either case.
+
+Result: web ☐
+
+---
+
+### MT-A10 — Public read is rate-limited per IP
+
+**Role:** None (anonymous)
+**Surfaces:** Web (API layer)
+**Precondition:** Open event slug known.
+
+**Steps:**
+1. In rapid succession (script or manual repeated reload), send more GET requests to `/api/mutual-time/event/<slug>` from the same IP than the rate limit allows.
+
+**Expected:** After the threshold is crossed, the server returns HTTP 429. Earlier requests below the threshold returned 200.
+
+Result: web ☐
+
+---
+
+### MT-A11 — Individual votes are never exposed in the public read
+
+**Role:** None (anonymous) and Admin
+**Surfaces:** Web (API layer)
+**Precondition:** Open event with at least one vote cast.
+
+**Steps:**
+1. As a signed-out visitor, call `GET /api/mutual-time/event/<slug>`.
+2. Inspect the full JSON response.
+3. Sign in as admin and repeat the request.
+
+**Expected:** Neither response contains a list of who voted or which slots individual members chose. The response includes only the voter count (aggregate), the candidate slots, and — for the closed case — the winning slot. A signed-in approved member's own picks may appear in a `viewer` field, but no other member's picks are present.
+
+Result: web ☐
+
+---
+
+## Parity check (web ↔ mobile)
+
+The following cases must behave identically in a desktop browser and a phone-width browser. Layout may reflow (single column, scrollable date chips) but all controls and data must be present and functional.
+
+| Case | What to verify is the same |
+|---|---|
+| MT-1 | Listen-in gate and sign-in prompt render correctly at phone width |
+| MT-3 | Slot chips are horizontally scrollable; selecting up to 3 and saving works |
+| MT-6 | Result view is readable; winning time and meeting link are accessible |
+| MT-9 | Copy-link button is tappable and copies the correct URL |
+| MT-A1 | Event creation form is usable at phone width; all fields reachable |
+| MT-A3 | Dashboard rows readable; status pills, voter counts, and action buttons all visible without horizontal overflow |
+| MT-A4 | "Close and choose" flow completes on mobile without layout breakage |
+
+---
 
 ## Known gaps — do not file these as bugs
 
-- The candidate meeting week is a fixed 7 days from when voting opens (target week is not separately
-  configurable yet).
-- No notification is sent when a time is chosen; members re-open the link to see the result.
-- No native Android surface (web-only per rule 105).
+1. **Target meeting week is derived, not configured.** The candidate window is always 7 days from when voting opens. There is no admin control to pick a specific target week separately from the survey open/close times. This is a documented follow-up item.
+2. **Full 24-hour candidate grid.** All 48 half-hour starts per day are candidates. The admin cannot restrict the daily hour range. A future refinement may add daily hour bounds.
+3. **No reminder or notification when a time is chosen.** Members must re-open the link themselves to see the result. A push/notification tie-in is a possible follow-up, not a current feature.

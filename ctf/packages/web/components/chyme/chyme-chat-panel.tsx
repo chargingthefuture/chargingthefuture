@@ -2,7 +2,6 @@
 
 import type { RefObject } from 'react';
 import { Hash, Send } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, chymeHandle } from './chyme-shared';
 import type { ChymeMessage } from 'lib/chyme/types';
@@ -24,16 +23,15 @@ export function ChymeChatPanel({
   sending: boolean;
   messagesEndRef: RefObject<HTMLDivElement | null>;
 }) {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
-    <div style={{ width: isMobile ? '100%' : 300, borderLeft: isMobile ? 'none' : `1px solid ${t.BORDER}`, borderTop: isMobile ? `1px solid ${t.BORDER}` : undefined, display: 'flex', flexDirection: 'column', background: t.HEADER, flexShrink: 0 }}>
+    <div style={{ width: '100%', borderLeft: 'none', borderTop: `1px solid ${t.BORDER}`, display: 'flex', flexDirection: 'column', background: t.HEADER, flexShrink: 0 }}>
       <div style={{ padding: '14px 16px', borderBottom: `1px solid ${t.BORDER}`, display: 'flex', alignItems: 'center', gap: 8 }}>
         <Hash size={14} style={{ color: t.ACCENT }} />
         <span style={{ fontSize: 14, fontWeight: 600, color: t.TITLE }}>Room Chat</span>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', minHeight: isMobile ? 220 : undefined }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', minHeight: 220 }}>
         {messages.length === 0 ? (
           <div style={{ color: t.FAINT, fontSize: 13 }}>No messages yet.</div>
         ) : (

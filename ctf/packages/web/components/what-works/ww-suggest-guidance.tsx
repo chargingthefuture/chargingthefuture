@@ -2,7 +2,6 @@
 
 // Static "what makes a good entry" guidance from design/.../survivor-hub/WhatWorksEmpty.tsx.
 import { ShieldCheck } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { getWhatWorksTokens } from './ww-shared';
 
@@ -14,11 +13,10 @@ const ENTRY_TIPS = [
 ];
 
 export function WhatWorksSuggestGuidance() {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getWhatWorksTokens(theme);
   return (
-    <div style={{ width: isMobile ? '100%' : 300, maxWidth: isMobile ? 540 : undefined, flexShrink: 0 }}>
+    <div style={{ width: '100%', maxWidth: 540, flexShrink: 0 }}>
       <div style={{ padding: '20px', borderRadius: 16, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT, marginBottom: 14 }}>What makes a good entry</div>
         {ENTRY_TIPS.map((tip) => (
