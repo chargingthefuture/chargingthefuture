@@ -1907,19 +1907,18 @@
   color: var(--ctf-text-secondary);
 }
 
-@media (max-width: 600px) {
-  .mobileBarAdminLabel {
-    display: none;
-  }
+/* Mobile-first: formerly @media (max-width: 600px); applies at every width now. */
+.mobileBarAdminLabel {
+  display: none;
+}
 
-  /* Label-less at phone width → collapse the admin control to the same 38px square as
-     the other icon buttons so the whole cluster is uniform. */
-  .mobileBarAdminBtn {
-    width: 38px;
-    height: 38px;
-    padding: 0;
-    justify-content: center;
-  }
+/* Label-less at phone width → collapse the admin control to the same 38px square as
+   the other icon buttons so the whole cluster is uniform. */
+.mobileBarAdminBtn {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  justify-content: center;
 }
 
 .mobileBarAvatar {
@@ -1947,63 +1946,61 @@
 }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
-@media (max-width: 1280px) {
-  .frame {
-    grid-template-columns: 72px 220px minmax(420px, 1fr);
-  }
-
-  .rightRail {
-    display: none;
-  }
-
-  .appsGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+/* Mobile-first: formerly @media (max-width: 1280px); applies at every width now. */
+.frame {
+  grid-template-columns: 72px 220px minmax(420px, 1fr);
 }
 
-@media (max-width: 900px) {
-  .shell {
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-  }
+.rightRail {
+  display: none;
+}
 
-  .mobileBar {
-    display: flex;
-  }
+.appsGrid {
+  grid-template-columns: repeat(2, 1fr);
+}
 
-  .frame {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    height: auto;
-  }
+/* Mobile-first: formerly @media (max-width: 900px); applies at every width now. */
+.shell {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
 
-  .iconRail,
-  .leftNav {
-    display: none;
-  }
+.mobileBar {
+  display: flex;
+}
 
-  .content {
-    border-right: none;
-    flex: 1;
-    min-height: 0;
-  }
+.frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
 
-  .heroBanner {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+.iconRail,
+.leftNav {
+  display: none;
+}
 
-  .heroStats {
-    width: 100%;
-    justify-content: space-between;
-  }
+.content {
+  border-right: none;
+  flex: 1;
+  min-height: 0;
+}
 
-  .appsGrid {
-    grid-template-columns: 1fr;
-  }
+.heroBanner {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.heroStats {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.appsGrid {
+  grid-template-columns: 1fr;
 }
 
 /* ─── AI Assistant (@comic) — answered card ──────────────────────────────── */
@@ -2757,62 +2754,61 @@
  * "I understand — turn it on" label cramped against the confirm button's edges.
  * Stack them full-width instead so each button has even padding and room.
  */
-@media (max-width: 767px) {
-  /* On a phone the 70% cap wastes horizontal space and forces more wrapping than needed; give the
-     bubble more of the frame, and trim the message padding so long posts read comfortably. */
-  .chatBubbleGroup {
-    max-width: 85%;
-  }
+/* Mobile-first: formerly @media (max-width: 767px); applies at every width now. */
+/* On a phone the 70% cap wastes horizontal space and forces more wrapping than needed; give the
+   bubble more of the frame, and trim the message padding so long posts read comfortably. */
+.chatBubbleGroup {
+  max-width: 85%;
+}
 
-  .chatMessages {
-    padding: 16px 14px;
-  }
+.chatMessages {
+  padding: 16px 14px;
+}
 
-  /* Compact the hero on phones so it doesn't dominate the screen and crowd out
-     the chat / AI Assistant area below it. */
-  .heroBanner {
-    margin: 12px 12px 0;
-    padding: 14px 16px;
-    gap: 12px;
-  }
+/* Compact the hero on phones so it doesn't dominate the screen and crowd out
+   the chat / AI Assistant area below it. */
+.heroBanner {
+  margin: 12px 12px 0;
+  padding: 14px 16px;
+  gap: 12px;
+}
 
-  .heroBannerTitle {
-    font-size: 18px;
-  }
+.heroBannerTitle {
+  font-size: 18px;
+}
 
-  .heroBannerSub {
-    font-size: 12px;
-  }
+.heroBannerSub {
+  font-size: 12px;
+}
 
-  .heroStats {
-    gap: 8px;
-  }
+.heroStats {
+  gap: 8px;
+}
 
-  .heroStatBlock {
-    flex: 1;
-    padding: 8px 10px;
-  }
+.heroStatBlock {
+  flex: 1;
+  padding: 8px 10px;
+}
 
-  .heroStatValue {
-    font-size: 16px;
-  }
+.heroStatValue {
+  font-size: 16px;
+}
 
-  .heroStatLabel {
-    font-size: 10px;
-  }
+.heroStatLabel {
+  font-size: 10px;
+}
 
-  .comicConsentActions {
-    flex-direction: column;
-  }
+.comicConsentActions {
+  flex-direction: column;
+}
 
-  .comicConsentConfirm {
-    flex: none;
-    width: 100%;
-  }
+.comicConsentConfirm {
+  flex: none;
+  width: 100%;
+}
 
-  .comicConsentDismiss {
-    width: 100%;
-  }
+.comicConsentDismiss {
+  width: 100%;
 }
 
 /* ─── Comic theme overrides ──────────────────────────────────────────────────
@@ -3158,29 +3154,28 @@
   display: none;
 }
 
-@media (max-width: 900px) {
-  .channelSwitchRow {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-    padding: 10px 16px 0;
-  }
+/* Mobile-first: formerly @media (max-width: 900px); applies at every width now. */
+.channelSwitchRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding: 10px 16px 0;
+}
 
-  .channelSwitchBtn {
-    padding: 6px 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    background: rgba(30, 41, 59, 0.6);
-    color: #94A3B8;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-  }
+.channelSwitchBtn {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(30, 41, 59, 0.6);
+  color: #94A3B8;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
 
-  .channelSwitchBtnActive {
-    border-color: rgba(99, 102, 241, 0.55);
-    background: rgba(99, 102, 241, 0.18);
-    color: #C7D2FE;
-  }
+.channelSwitchBtnActive {
+  border-color: rgba(99, 102, 241, 0.55);
+  background: rgba(99, 102, 241, 0.18);
+  color: #C7D2FE;
 }

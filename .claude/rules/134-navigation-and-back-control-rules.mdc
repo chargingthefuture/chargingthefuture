@@ -14,6 +14,11 @@ one-level-up destination when there is no in-app history (e.g. the installed web
 onto a deep link). The earlier "always one-level-up, never history" rule is superseded. The shared
 pieces implement this — nothing changes for callers, and the ban on hand-rolled back controls stands.
 
+**Mobile-first update (owner decision, 2026-07-20 — see rule 105):** the web app now renders the
+phone-width layout at every viewport, so the phone-width behavior described below is what every web
+visitor sees. Mentions of "desktop" below describe the now-hidden desktop branches (`useIsMobile` is
+pinned to mobile); they are kept for context. Do not add new desktop-only navigation or rails.
+
 ## The one shared way (mandatory)
 
 There are exactly three shared pieces. Use them; never hand-roll a back control.

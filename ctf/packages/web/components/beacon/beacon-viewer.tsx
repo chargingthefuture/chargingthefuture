@@ -250,11 +250,6 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
         </div>
       )}
 
-      <style>{`
-        @media (min-width: 860px) {
-          .beacon-live-grid { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr) !important; }
-        }
-      `}</style>
     </main>
   );
 }

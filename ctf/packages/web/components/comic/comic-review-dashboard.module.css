@@ -773,80 +773,78 @@
 }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
-@media (max-width: 1280px) {
-  .dashboard {
-    grid-template-columns: 72px 280px minmax(380px, 1fr);
-  }
-
-  .rightRail {
-    display: none;
-  }
+/* Mobile-first: formerly @media (max-width: 1280px); applies at every width now. */
+.dashboard {
+  grid-template-columns: 72px 280px minmax(380px, 1fr);
 }
 
-@media (max-width: 900px) {
-  /* The wrapper becomes a full-height flex column: the shared mobile header on top, then the
-     collapsed dashboard filling the rest. The queue/detail panes size to that remaining space
-     (height: 100% of a flex:1 parent) instead of a raw 100vh, so the sticky header never pushes
-     the content past the viewport. */
-  .mobileFrame {
-    display: flex;
-    flex-direction: column;
-    height: 100dvh;
-  }
+.rightRail {
+  display: none;
+}
 
-  .mobileFrame > .dashboard {
-    flex: 1;
-    min-height: 0;
-    /* Override the desktop height: 100vh so the grid fills only the space left below the
-       sticky header, not the whole viewport (which would overflow by the header's height). */
-    height: auto;
-  }
+/* Mobile-first: formerly @media (max-width: 900px); applies at every width now. */
+/* The wrapper becomes a full-height flex column: the shared mobile header on top, then the
+   collapsed dashboard filling the rest. The queue/detail panes size to that remaining space
+   (height: 100% of a flex:1 parent) instead of a raw 100vh, so the sticky header never pushes
+   the content past the viewport. */
+.mobileFrame {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
 
-  /* Single-column master/detail. The four-column desktop layout collapses to one
-     column on a phone; the queue list and the detail pane each take the full screen and
-     we swap between them based on whether an item is selected. Previously the queue
-     sidebar was hidden outright at this width, so the owner saw only the detail pane's
-     "Select an answer to review" prompt with no list to select from — pending items were
-     unreachable on mobile. */
-  .dashboard {
-    grid-template-columns: 1fr;
-  }
+.mobileFrame > .dashboard {
+  flex: 1;
+  min-height: 0;
+  /* Override the desktop height: 100vh so the grid fills only the space left below the
+     sticky header, not the whole viewport (which would overflow by the header's height). */
+  height: auto;
+}
 
-  .iconRail {
-    display: none;
-  }
+/* Single-column master/detail. The four-column desktop layout collapses to one
+   column on a phone; the queue list and the detail pane each take the full screen and
+   we swap between them based on whether an item is selected. Previously the queue
+   sidebar was hidden outright at this width, so the owner saw only the detail pane's
+   "Select an answer to review" prompt with no list to select from — pending items were
+   unreachable on mobile. */
+.dashboard {
+  grid-template-columns: 1fr;
+}
 
-  /* No item selected → show the queue list full-screen, hide the detail pane. */
-  .dashboardList .queueSidebar {
-    display: flex;
-    height: 100%;
-  }
+.iconRail {
+  display: none;
+}
 
-  .dashboardList .main {
-    display: none;
-  }
+/* No item selected → show the queue list full-screen, hide the detail pane. */
+.dashboardList .queueSidebar {
+  display: flex;
+  height: 100%;
+}
 
-  /* Item selected → hide the queue list, show the detail pane full-screen. */
-  .dashboardDetail .queueSidebar {
-    display: none;
-  }
+.dashboardList .main {
+  display: none;
+}
 
-  .dashboardDetail .main {
-    display: flex;
-    height: 100%;
-  }
+/* Item selected → hide the queue list, show the detail pane full-screen. */
+.dashboardDetail .queueSidebar {
+  display: none;
+}
 
-  .mobileQueueBack {
-    display: inline-flex;
-  }
+.dashboardDetail .main {
+  display: flex;
+  height: 100%;
+}
 
-  .memberViewPill {
-    display: none;
-  }
+.mobileQueueBack {
+  display: inline-flex;
+}
 
-  .confCol {
-    width: 100%;
-  }
+.memberViewPill {
+  display: none;
+}
+
+.confCol {
+  width: 100%;
 }
 
 /* ─── Comic theme overrides ──────────────────────────────────────────────────
