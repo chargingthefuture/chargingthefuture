@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, CheckCircle, X, ChevronRight } from 'lucide-react';
+import { CheckCircle, X, ChevronRight } from 'lucide-react';
 import type { ContributionSubmissionAdminView, ContributionsRuntimeConfig } from '@/lib/contributions/types';
 import {
   shortDate,
@@ -148,7 +148,7 @@ function claimedValueLabel(row: ContributionSubmissionAdminView): string {
 }
 
 export function ContributionsAdminQueue(props: QueueProps) {
-  const { t, config, submissions, filter, onFilter, search, onSearch, reviewing, onReview, isMobile } = props;
+  const { t, config, submissions, filter, onFilter, search, reviewing, onReview } = props;
   const [expandId, setExpandId] = useState<string | null>(null);
 
   const searched = search.trim().toLowerCase();
@@ -157,13 +157,13 @@ export function ContributionsAdminQueue(props: QueueProps) {
     : submissions;
 
   const filterBar = (
-    <div style={{ display: 'flex', gap: 8, padding: isMobile ? '10px 14px' : '12px 24px', borderBottom: `1px solid ${t.BORDER_SOLID}`, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 8, padding: '10px 14px', borderBottom: `1px solid ${t.BORDER_SOLID}`, flexWrap: 'wrap' }}>
       {FILTERS.map((f) => (
         <button
           key={f.key}
           type="button"
           onClick={() => onFilter(f.key)}
-          style={{ padding: isMobile ? '4px 10px' : '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: isMobile ? 11 : 12, fontWeight: 500, background: filter === f.key ? t.ACCENT : t.BORDER_SOLID, color: filter === f.key ? '#fff' : t.MUTED, whiteSpace: 'nowrap' }}
+          style={{ padding: '4px 10px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 500, background: filter === f.key ? t.ACCENT : t.BORDER_SOLID, color: filter === f.key ? '#fff' : t.MUTED, whiteSpace: 'nowrap' }}
         >
           {f.label}
         </button>
@@ -173,16 +173,6 @@ export function ContributionsAdminQueue(props: QueueProps) {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {!isMobile && (
-        <div style={{ padding: '18px 24px 14px', borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h1 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: t.TITLE }}>Submission queue</h1>
-          <div style={{ flex: 1 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 7, padding: '6px 12px' }}>
-            <Search size={13} color={t.MUTED} />
-            <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Search…" style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: 12, color: t.TEXT, width: 140 }} />
-          </div>
-        </div>
-      )}
       {filterBar}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {visible.length === 0 && <div style={{ padding: 24, fontSize: 13, color: t.MUTED }}>No submissions match this view.</div>}
@@ -201,7 +191,7 @@ export function ContributionsAdminQueue(props: QueueProps) {
                     setExpandId(expanded ? null : row.id);
                   }
                 }}
-                style={{ padding: isMobile ? '12px 14px' : '11px 24px', cursor: 'pointer', background: expanded ? `${t.ACCENT}06` : 'transparent' }}
+                style={{ padding: '12px 14px', cursor: 'pointer', background: expanded ? `${t.ACCENT}06` : 'transparent' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                   <div style={{ minWidth: 0 }}>

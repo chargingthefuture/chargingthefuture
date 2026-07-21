@@ -63,7 +63,6 @@ export function PeerProgrammingAdminTopicForm({
   topic,
   defaultWeekStart,
   busy,
-  isMobile,
   onSubmit,
 }: {
   topic: PeerProgrammingTopic | null;
@@ -100,7 +99,7 @@ export function PeerProgrammingAdminTopicForm({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+          gridTemplateColumns: '1fr',
           gap: 16,
           minWidth: 0,
         }}

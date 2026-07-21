@@ -2,7 +2,6 @@
 
 import { Gift, DollarSign, MessageSquare, Star, Lock, ChevronRight } from 'lucide-react';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import {
@@ -132,47 +131,6 @@ function AuthCtas({ signInUrl, verifyUrl, t, full }: { signInUrl: string; verify
   );
 }
 
-function DesktopPublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUrl?: string; t: ContributionsTokens }) {
-  return (
-    <div style={{ display: 'flex', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ maxWidth: 580, width: '100%', padding: '48px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-          <PublicShellBackLink />
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Gift size={18} color="#fff" />
-          </div>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: t.TITLE }}>Contributions</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Community support drive</div>
-          </div>
-        </div>
-
-        <p style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.8, marginBottom: 28 }}>{INTRO}</p>
-
-        <div style={{ background: t.SURFACE, borderRadius: 12, padding: 18, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 28 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 14 }}>Three ways to help</div>
-          {WAYS_TO_HELP.map((w) => (
-            <WayRow key={w.label} {...w} t={t} />
-          ))}
-        </div>
-
-        <div style={{ background: `${t.ACCENT}0C`, borderRadius: 12, padding: '20px 24px', border: `1px solid ${t.ACCENT}30`, display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: `${t.ACCENT}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Lock size={18} color={t.ACCENT} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>
-              {verifyUrl ? 'Finish verifying to contribute' : 'Join or sign in to contribute'}
-            </div>
-            <div style={{ fontSize: 13, color: t.MUTED }}>Contributions are available to signed-in members.</div>
-          </div>
-          <AuthCtas signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function MobilePublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUrl?: string; t: ContributionsTokens }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
@@ -223,12 +181,7 @@ function MobilePublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUr
  * after sign-in.
  */
 export function ContributionsPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getContributionsTokens(theme);
-  return isMobile ? (
-    <MobilePublic signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} />
-  ) : (
-    <DesktopPublic signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} />
-  );
+  return <MobilePublic signInUrl={signInUrl} verifyUrl={verifyUrl} t={t} />;
 }

@@ -2,12 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { HeartHandshake } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { AppLoading } from '@/components/shared/app-loading';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { RefreshButton } from '@/components/shared/refresh-button';
-import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
 import {
   COMMUNITY_LINE,
   CSRF_HEADERS,
@@ -26,7 +24,6 @@ import { RecurringActivityCreateForm, type CreateActivityInput } from './recurri
 type ActionKind = 'confirm' | 'decline' | 'end' | 'visibility';
 
 export function RecurringActivityShell() {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getRecurringActivityTokens(theme);
 
@@ -142,7 +139,7 @@ export function RecurringActivityShell() {
   }
 
   if (error && activities.length === 0) {
-    return <ErrorState t={t} message={error} onRetry={() => void loadData()} isMobile={isMobile} />;
+    return <ErrorState t={t} message={error} onRetry={() => void loadData()} isMobile={true} />;
   }
 
   const content = (
@@ -207,38 +204,10 @@ export function RecurringActivityShell() {
   );
 }
 
-function RecurringActivityIconRail({ t }: { t: RecurringActivityTokens }) {
-  return (
-    <aside
-      style={{
-        width: 72,
-        background: t.BG,
-        borderRight: `1px solid ${t.BORDER_SOLID}`,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        paddingTop: 16,
-        paddingBottom: 16,
-        gap: 8,
-        flexShrink: 0,
-      }}
-    >
-      <div
-        style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}25`, border: `1px solid ${t.ACCENT}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}
-        aria-hidden="true"
-      >
-        <HeartHandshake size={20} color={t.ACCENT} />
-      </div>
-      <PluginRailFooter />
-    </aside>
-  );
-}
-
 function ErrorState({
   t,
   message,
   onRetry,
-  isMobile,
 }: {
   t: RecurringActivityTokens;
   message: string;
@@ -254,17 +223,9 @@ function ErrorState({
       </button>
     </div>
   );
-  if (isMobile) {
-    return (
-      <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
-        <MobileScreenHeader title="Recurring Activity" accent={t.ACCENT} icon={<HeartHandshake size={18} color={t.ACCENT} />} />
-        {body}
-      </div>
-    );
-  }
   return (
-    <div style={{ display: 'flex', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT }}>
-      <RecurringActivityIconRail t={t} />
+    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
+      <MobileScreenHeader title="Recurring Activity" accent={t.ACCENT} icon={<HeartHandshake size={18} color={t.ACCENT} />} />
       {body}
     </div>
   );

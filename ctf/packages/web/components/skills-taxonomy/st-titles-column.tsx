@@ -1,7 +1,6 @@
 "use client";
 
 import { Briefcase } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { countLabel, getSkillsTaxonomyTokens, type StJobTitle, type StSector } from "./st-shared";
 
@@ -15,11 +14,10 @@ export function SkillsTaxonomyTitlesColumn({
   onSelect: (jobTitleId: string) => void;
 }) {
   const jobTitles: StJobTitle[] = sector?.jobTitles ?? [];
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getSkillsTaxonomyTokens(theme);
   return (
-    <aside style={{ width: isMobile ? "100%" : 260, background: t.HEADER, borderRight: isMobile ? "none" : `1px solid ${t.BORDER_SOLID}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+    <aside style={{ width: "100%", background: t.HEADER, borderRight: "none", display: "flex", flexDirection: "column", flexShrink: 0 }}>
       <div style={{ padding: "20px 16px 12px" }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>Job Titles</div>
         <div style={{ fontSize: 11, color: t.MUTED }}>{sector ? `${sector.name} sector` : "Select a sector"}</div>

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { BackChevronButton } from "@/lib/nav/back-history";
 import { BookOpen, Pencil, Search, UserPlus } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { BG, getDirectoryTokens, type Member, type Sector, type SkillsHuntRewardCard } from "./shared";
 import { DirectoryProfileDetail } from "./directory-profile-detail";
@@ -66,7 +65,6 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
   // browse + detail views reflect the saved values.
   const [refreshKey, setRefreshKey] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getDirectoryTokens(theme);
 
@@ -290,7 +288,6 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
       members={members}
       filtered={isFiltered}
       hasOwnProfile={hasOwnProfile === true}
-      isMobile={isMobile}
       onSelect={setSelected}
       onClearFilters={clearFilters}
       onCreateProfile={() => setShowProfileEditor(true)}

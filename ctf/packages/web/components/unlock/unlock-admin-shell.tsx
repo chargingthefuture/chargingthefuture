@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { Unlock, Key, CheckCircle, XCircle, Ban, RefreshCw, Pencil } from 'lucide-react';
@@ -73,7 +72,6 @@ export function UnlockAdminShell({
   experimentSplit?: UnlockExperimentBucketStat[];
 }) {
   const router = useRouter();
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getUnlockTokens(theme);
   const [tab, setTab] = useState<Tab>('pending');
@@ -293,7 +291,7 @@ export function UnlockAdminShell({
         // its vertical scroll — otherwise a long queue is clipped and unreachable. On mobile the
         // document scrolls, so only set a min-height there. Matches the skills-hunt / weekly-performance
         // admin shells.
-        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Bug, ExternalLink } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getBugReportsTokens } from './bug-reports-shared';
@@ -98,7 +97,6 @@ function StatBlock({ label, value, accent }: { label: string; value: number; acc
 }
 
 export function BugReportsAdminShell() {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getBugReportsTokens(theme);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -158,7 +156,7 @@ export function BugReportsAdminShell() {
         // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
         // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
         // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
-        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",

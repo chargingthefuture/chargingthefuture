@@ -2,7 +2,6 @@
 
 import type { CSSProperties } from 'react';
 import { Hand, Mic, MicOff, Phone, Volume2 } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, type ChymeTokens } from './chyme-shared';
 
@@ -43,10 +42,9 @@ export function ChymeControls({
     ? toggleButtonStyle(t, true, 'rgba(239,68,68,0.15)', 'rgba(239,68,68,0.4)', '#F87171')
     : toggleButtonStyle(t, true, `${t.ACCENT}18`, `${t.ACCENT}40`, t.ACCENT);
   const handStyle = toggleButtonStyle(t, handRaised, 'rgba(234,179,8,0.15)', 'rgba(234,179,8,0.4)', '#FDE047');
-  const isMobile = useIsMobile();
 
   return (
-    <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, flexWrap: isMobile ? 'wrap' : undefined }}>
+    <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, flexWrap: 'wrap' }}>
       <button onClick={onToggleMute} style={muteStyle}>
         {muted ? <MicOff size={16} /> : <Mic size={16} />}
         {muted ? 'Unmute' : 'Mute'}

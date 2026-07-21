@@ -5,9 +5,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { UserButton } from '@clerk/nextjs';
 import { ChevronRight, Database, HeartHandshake, ShieldCheck, ShieldOff, Sparkles, UserCircle } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { getAccountDataTokens } from '@/components/account-data/account-data-shared';
-import { AccountIconRail } from '@/components/account/account-icon-rail';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { TrustRightRailCard } from '@/components/shared/trust/TrustRightRailCard';
 import type { TrustUserExtension } from 'lib/trust/types';
@@ -17,7 +15,6 @@ import type { TrustUserExtension } from 'lib/trust/types';
 export function AccountHubShell({ username, trust }: { username: string | null; trust: TrustUserExtension }) {
   const { theme } = useTheme();
   const tok = getAccountDataTokens(theme);
-  const isMobile = useIsMobile();
   const handle = username ? `@${username}` : 'Member';
   const initial = username ? username.charAt(0).toUpperCase() : 'S';
 
@@ -39,13 +36,9 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
 
   return (
     <div style={{ display: 'flex', height: '100dvh', background: tok.BG, color: tok.TEXT, fontFamily: "'Inter',system-ui,-apple-system,sans-serif" }}>
-      {/* Uniform left icon rail on desktop; on mobile the shared header carries the back + account
-          controls instead (the rail is hidden at phone width, matching every plugin shell). */}
-      {!isMobile ? <AccountIconRail brand={tok.BRAND} bg={tok.BG} border={tok.BORDER} /> : null}
+      {/* The shared header carries the back + account controls at phone width, matching every plugin shell. */}
       <div style={{ flex: 1, minWidth: 0, height: '100dvh', overflowY: 'auto' }}>
-        {isMobile ? (
-          <MobileScreenHeader title="Your account" accent={tok.BRAND} icon={<UserCircle size={18} color={tok.BRAND} />} />
-        ) : null}
+        <MobileScreenHeader title="Your account" accent={tok.BRAND} icon={<UserCircle size={18} color={tok.BRAND} />} />
         <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 20px 64px' }}>
           <header style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 6px' }}>Your account</h1>

@@ -1,7 +1,6 @@
 'use client';
 
-import { Zap, Lock } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { Zap } from 'lucide-react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { PLATFORM_EARN_METHODS, PEER_TO_PEER_AREAS } from './service-credits.constants';
@@ -23,70 +22,6 @@ const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 const EARN_WAYS = PLATFORM_EARN_METHODS.map((m) => ({ action: m.title, credits: m.credits }));
 
 const SPEND_WAYS = PEER_TO_PEER_AREAS.map((a) => ({ action: a.title, credits: 'Variable' }));
-
-function DesktopServiceCreditsPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
-  const { theme } = useTheme();
-  const t = getServiceCreditsTokens(theme);
-  return (
-    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TITLE, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ height: 52, borderBottom: `1px solid ${t.BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
-        <PublicShellBackLink />
-        <Zap size={18} color={t.ACCENT} />
-        <span style={{ fontSize: 16, fontWeight: 700 }}>ServiceCredits</span>
-        <div style={{ marginLeft: 'auto' }}>
-          {verifyUrl ? (
-            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Finish verifying</a>
-          ) : (
-            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign In</a>
-          )}
-        </div>
-      </div>
-
-      <div style={{ padding: '48px 64px 32px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <span style={{ padding: '4px 14px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 12, color: t.ACCENT, fontWeight: 600, display: 'inline-block', width: 'fit-content' }}>
-          The Survivor Hub economy
-        </span>
-        <h1 style={{ margin: 0, fontSize: 34, fontWeight: 800, lineHeight: 1.1 }}>
-          Earn credits. Spend them<br /><span style={{ color: t.ACCENT }}>on real services, for free.</span>
-        </h1>
-        <p style={{ margin: 0, fontSize: 15, color: t.SUBTLE, maxWidth: 520 }}>
-          ServiceCredits are earned from a few platform rewards and by trading with other members, and spent on housing, transport, services, and trades. They are usable across the plugins in the network.
-        </p>
-        <a href={verifyUrl ?? signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none', display: 'inline-block' }}>
-          {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
-        </a>
-      </div>
-
-      <div style={{ padding: '0 64px 48px', position: 'relative' }}>
-        <div style={{ display: 'flex', gap: 24, filter: 'blur(3px)', pointerEvents: 'none', opacity: 0.55 }} aria-hidden="true">
-          <div style={{ flex: 1, borderRadius: 16, border: '1px solid rgba(255,255,255,0.07)', padding: '20px 24px', background: 'rgba(255,255,255,0.02)' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: EARN_GREEN, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>Ways to Earn</div>
-            {EARN_WAYS.map((e) => (
-              <div key={e.action} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                <span style={{ fontSize: 13 }}>{e.action}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: EARN_GREEN }}>{e.credits}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ flex: 1, borderRadius: 16, border: '1px solid rgba(255,255,255,0.07)', padding: '20px 24px', background: 'rgba(255,255,255,0.02)' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: t.ACCENT, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>Ways to Spend</div>
-            {SPEND_WAYS.map((s) => (
-              <div key={s.action} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                <span style={{ fontSize: 13 }}>{s.action}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT }}>{s.credits}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', border: `2px solid ${t.ACCENT}50`, background: t.ACCENT + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={22} color={t.ACCENT} /></div>
-          <div style={{ fontSize: 16, fontWeight: 700, textAlign: 'center' }}>Sign in to start earning credits</div>
-          <a href={verifyUrl ?? signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#000', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>{verifyUrl ? 'Finish verifying' : 'Sign in to earn credits'}</a>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function MobileServiceCreditsPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   const { theme } = useTheme();
@@ -139,6 +74,5 @@ function MobileServiceCreditsPublic({ signInUrl, verifyUrl }: { signInUrl: strin
  * rules, not any per-user balance or transaction history.
  */
 export function ServiceCreditsPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
-  const isMobile = useIsMobile();
-  return isMobile ? <MobileServiceCreditsPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopServiceCreditsPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
+  return <MobileServiceCreditsPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

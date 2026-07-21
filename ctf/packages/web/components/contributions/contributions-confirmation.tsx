@@ -73,34 +73,6 @@ function CreditsPending({ t, compact }: { t: ContributionsTokens; compact?: bool
   );
 }
 
-function DesktopConfirmation({ t, ownerSignalUrl, signalInstructions, onViewHistory, onBackToHub }: ConfirmationProps) {
-  return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-      <div style={{ maxWidth: 540, width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: `${t.ACCENT}18`, border: `1px solid ${t.ACCENT}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <CheckCircle size={26} color={t.ACCENT} />
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: t.TITLE }}>Submission received</h1>
-            <p style={{ margin: '4px 0 0', fontSize: 14, color: t.MUTED }}>Your gift card submission is being reviewed.</p>
-          </div>
-        </div>
-        <SignalBox ownerSignalUrl={ownerSignalUrl} signalInstructions={signalInstructions} t={t} />
-        <CreditsPending t={t} />
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button type="button" onClick={onViewHistory} style={{ flex: 1, padding: 10, borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, cursor: 'pointer' }}>
-            View my contributions
-          </button>
-          <button type="button" onClick={onBackToHub} style={{ flex: 1, padding: 10, borderRadius: 8, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            Back to Hub
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function MobileConfirmation({ t, ownerSignalUrl, signalInstructions, onViewHistory, onBackToHub }: ConfirmationProps) {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '28px 18px' }}>
@@ -126,6 +98,5 @@ function MobileConfirmation({ t, ownerSignalUrl, signalInstructions, onViewHisto
 }
 
 export function ContributionsConfirmation(props: ConfirmationProps & { isMobile: boolean }) {
-  const { isMobile, ...rest } = props;
-  return isMobile ? <MobileConfirmation {...rest} /> : <DesktopConfirmation {...rest} />;
+  return <MobileConfirmation {...props} />;
 }

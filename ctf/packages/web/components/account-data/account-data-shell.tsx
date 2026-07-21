@@ -1,14 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { getAccountDataTokens } from './account-data-shared';
 import type { AccountService, AccountServicesResponse } from './account-data-shared';
 
 // Loading and error states are intentionally NOT theme-aware: per COMIC_THEME_TOKENS.md §11 loading
 // screens never adopt the comic theme, and the error state matches that default-dark treatment.
 const { BG, TEXT } = getAccountDataTokens('default');
-import { AccountDataDesktop, type AccountDataView } from './account-data-desktop';
+import { type AccountDataView } from './account-data-desktop';
 import { AccountDataMobile } from './account-data-mobile';
 import { AccountDataConfirmDelete } from './account-data-confirm-delete';
 
@@ -19,7 +18,6 @@ type LoadState = 'loading' | 'ready' | 'error';
 // DELETE /api/account/services/:slug, and delete the whole account via DELETE /api/account/full-account.
 // Desktop and mobile share this state; the layout switches on useIsMobile().
 export function AccountDataShell() {
-  const isMobile = useIsMobile();
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [deletable, setDeletable] = useState<AccountService[]>([]);
   const [retained, setRetained] = useState<AccountService[]>([]);
@@ -112,20 +110,8 @@ export function AccountDataShell() {
     return <AccountDataErrorState />;
   }
 
-  const layout = isMobile ? (
+  const layout = (
     <AccountDataMobile
-      view={view}
-      onViewChange={setView}
-      deletable={deletable}
-      retained={retained}
-      deletedSlugs={deletedSlugs}
-      pendingSlug={pendingSlug}
-      rowError={rowError}
-      onDeleteService={handleDeleteService}
-      onOpenAccountDelete={() => setConfirmOpen(true)}
-    />
-  ) : (
-    <AccountDataDesktop
       view={view}
       onViewChange={setView}
       deletable={deletable}
@@ -145,7 +131,7 @@ export function AccountDataShell() {
       {confirmOpen ? (
         <AccountDataConfirmDelete
           serviceCount={deletable.length + retained.length}
-          isMobile={isMobile}
+          isMobile={true}
           onCancel={() => setConfirmOpen(false)}
           onConfirm={handleConfirmFullAccount}
         />

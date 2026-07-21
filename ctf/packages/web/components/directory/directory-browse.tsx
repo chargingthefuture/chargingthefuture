@@ -14,7 +14,6 @@ export function DirectoryBrowse({
   members,
   filtered,
   hasOwnProfile,
-  isMobile = false,
   onSelect,
   onClearFilters,
   onCreateProfile,
@@ -44,11 +43,11 @@ export function DirectoryBrowse({
 
   return (
     <ScrollArea style={{ flex: 1, minHeight: 0 }}>
-      <div style={{ padding: isMobile ? "16px" : "24px" }}>
+      <div style={{ padding: "16px" }}>
         {rewardCard && rewardCard.isActive && (
           <a href={rewardCard.ctaUrl} style={{ display: "block", marginBottom: 16, padding: "18px 22px", borderRadius: 14, background: `${SKILLS_HUNT_COLOR}10`, border: `1px solid ${SKILLS_HUNT_COLOR}30`, textDecoration: "none", color: "inherit" }}>
-            <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: isMobile ? 12 : 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: isMobile ? undefined : 1 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: undefined }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: `${SKILLS_HUNT_COLOR}25`, border: `1px solid ${SKILLS_HUNT_COLOR}50`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Search size={20} style={{ color: SKILLS_HUNT_COLOR }} />
                 </div>
@@ -71,7 +70,7 @@ export function DirectoryBrowse({
         {loadingMembers ? (
           <div style={{ padding: "48px", textAlign: "center", color: t.MUTED, fontSize: 14 }}>Loading providers…</div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
             {members.map((p) => (
               <div key={p.id} role="button" tabIndex={0} onClick={() => onSelect(p)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(p); } }} style={{ padding: "20px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}20`, cursor: "pointer" }}>
                 <div style={{ display: "flex", gap: 14, marginBottom: 14, alignItems: "flex-start" }}>

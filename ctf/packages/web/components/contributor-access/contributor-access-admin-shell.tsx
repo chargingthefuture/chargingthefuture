@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { KeyRound } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getContributorAccessTokens } from './contributor-access-shared';
@@ -80,7 +79,6 @@ function StatusCard({
 }
 
 export function ContributorAccessAdminShell() {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getContributorAccessTokens(theme);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -187,7 +185,7 @@ export function ContributorAccessAdminShell() {
         // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
         // own its vertical scroll or its lower rows are clipped. On mobile the document scrolls, so
         // only set a min-height there. Matches the bug-reports / unlock admin shells.
-        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",

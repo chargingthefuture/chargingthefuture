@@ -6,7 +6,6 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { ListChecks, Plus, ExternalLink, Send, CheckCircle, Tag, ChevronDown, ChevronLeft } from 'lucide-react';
 import { BackChevronButton } from '@/lib/nav/back-history';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { getWhatWorksTokens, type SuggestDraft, type WhatWorksProblemOption, type WhatWorksTokens } from './ww-shared';
 import { WhatWorksSuggestGuidance } from './ww-suggest-guidance';
@@ -46,7 +45,6 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
   const [submitting, setSubmitting] = useState(false);
   const [added, setAdded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isMobile = useIsMobile();
 
   const ready = problemId.trim() && name.trim() && link.trim();
 
@@ -107,7 +105,7 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
         ) : null}
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'flex-start', justifyContent: isMobile ? 'flex-start' : 'center', padding: isMobile ? '24px 16px' : '44px 64px', gap: isMobile ? 24 : 44 }}>
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', padding: '24px 16px', gap: 24 }}>
         <div style={{ flex: 1, maxWidth: 540 }}>
           <div style={{ marginBottom: 26 }}>
             <div style={{ width: 56, height: 56, borderRadius: 16, background: `${t.ACCENT}12`, border: `1px solid ${t.ACCENT}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>

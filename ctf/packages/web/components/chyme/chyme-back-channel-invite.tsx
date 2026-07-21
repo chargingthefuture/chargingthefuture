@@ -9,7 +9,6 @@ import { PRIMARY, initials } from './chyme-shared';
 // message back. Invite/accept consent, never a cold ring.
 export function ChymeBackChannelInvite({
   fromName,
-  isMobile,
   busy,
   onAccept,
   onDecline,
@@ -27,12 +26,12 @@ export function ChymeBackChannelInvite({
       style={{
         position: 'fixed',
         zIndex: 60,
-        left: isMobile ? 12 : '50%',
-        right: isMobile ? 12 : 'auto',
-        transform: isMobile ? 'none' : 'translateX(-50%)',
-        top: isMobile ? 'auto' : 64,
-        bottom: isMobile ? 20 : 'auto',
-        width: isMobile ? 'auto' : 360,
+        left: 12,
+        right: 12,
+        transform: 'none',
+        top: 'auto',
+        bottom: 20,
+        width: 'auto',
         maxWidth: 'calc(100vw - 24px)',
         borderRadius: 16,
         overflow: 'hidden',

@@ -45,7 +45,7 @@ function fieldStyle(t: ContributionsTokens, width?: number | string): React.CSSP
  * backing field in the cycle model, so it is intentionally omitted (rule 126 — no UI for data the
  * backend does not store).
  */
-export function ContributionsAdminDrive({ t, cycle, saving, error, onSave, isMobile }: DriveProps) {
+export function ContributionsAdminDrive({ t, cycle, saving, error, onSave }: DriveProps) {
   const [startsAt, setStartsAt] = useState(toDateInput(cycle?.startsAt ?? null));
   const [endsAt, setEndsAt] = useState(toDateInput(cycle?.endsAt ?? null));
   const [fiatGoal, setFiatGoal] = useState(String(cycle?.fiatGoalUsd ?? ''));
@@ -70,9 +70,8 @@ export function ContributionsAdminDrive({ t, cycle, saving, error, onSave, isMob
   ];
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 14px' : '24px 32px' }}>
-      {!isMobile && <h1 style={{ margin: '0 0 22px', fontSize: 16, fontWeight: 700, color: t.TITLE }}>Drive management</h1>}
-      <div style={{ background: t.SURFACE, borderRadius: 12, padding: isMobile ? 16 : '22px 24px', border: `1px solid ${t.BORDER_SOLID}`, maxWidth: 560 }}>
+    <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px' }}>
+      <div style={{ background: t.SURFACE, borderRadius: 12, padding: 16, border: `1px solid ${t.BORDER_SOLID}`, maxWidth: 560 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 18 }}>
           <Calendar size={14} color={t.ACCENT} />
           <span style={{ fontSize: 14, fontWeight: 600, color: t.TITLE }}>{cycle ? 'Active drive' : 'Start a drive'}</span>
@@ -90,12 +89,12 @@ export function ContributionsAdminDrive({ t, cycle, saving, error, onSave, isMob
           {goals.map(({ Icon, label, value, set }) => (
             // On mobile the label + fixed-width input overflowed the card (the 180px label could not
             // shrink), so stack the label over a full-width input on phones; desktop keeps the inline row.
-            <div key={label} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 5 : 10, marginBottom: isMobile ? 14 : 10 }}>
-              <label htmlFor={`contrib-goal-${label.replace(/\s+/g, '-')}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: t.MUTED, width: isMobile ? 'auto' : 180, flexShrink: 0 }}>
+            <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 5, marginBottom: 14 }}>
+              <label htmlFor={`contrib-goal-${label.replace(/\s+/g, '-')}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: t.MUTED, width: 'auto', flexShrink: 0 }}>
                 <Icon size={13} color={t.MUTED} style={{ flexShrink: 0 }} />
                 {label}
               </label>
-              <input id={`contrib-goal-${label.replace(/\s+/g, '-')}`} value={value} onChange={(e) => set(e.target.value)} inputMode="numeric" style={fieldStyle(t, isMobile ? '100%' : 100)} />
+              <input id={`contrib-goal-${label.replace(/\s+/g, '-')}`} value={value} onChange={(e) => set(e.target.value)} inputMode="numeric" style={fieldStyle(t, '100%')} />
             </div>
           ))}
         </div>

@@ -72,7 +72,7 @@ type ChymeAudioRoomProps = {
   raisedHandUserIds: ReadonlySet<string>;
 };
 
-export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isMobile, onLeave, raisedHandUserIds }: ChymeAudioRoomProps) {
+export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onLeave, raisedHandUserIds }: ChymeAudioRoomProps) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error' | 'unsupported'>('connecting');
@@ -172,7 +172,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
   // polls for invites and owns the active call; the layer renders the incoming prompt + active panel as a
   // fixed overlay, so it stays put even while the room reconnects.
   const backChannelLayer = (
-    <ChymeBackChannelLayer controller={backChannel} currentUser={currentUser} isMobile={isMobile} />
+    <ChymeBackChannelLayer controller={backChannel} currentUser={currentUser} isMobile={true} />
   );
 
   if (status === 'unsupported') {
@@ -181,7 +181,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
         <ChymeAudioFrame
           showChat={showChat}
           chatPanel={chatPanel}
-          isMobile={isMobile}
+          isMobile={true}
           onLeave={onLeave}
           stage={
             <div style={{ fontSize: 14, lineHeight: 1.6, maxWidth: 460 }}>
@@ -208,7 +208,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
         <ChymeAudioFrame
           showChat={showChat}
           chatPanel={chatPanel}
-          isMobile={isMobile}
+          isMobile={true}
           onLeave={onLeave}
           stage={
             <div style={{ color: status === 'error' ? '#F87171' : t.FAINT, fontSize: 14 }}>
@@ -230,7 +230,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
           <ChymeAudioRoomLive
             showChat={showChat}
             chatPanel={chatPanel}
-            isMobile={isMobile}
+            isMobile={true}
             onLeave={onLeave}
             raisedHandUserIds={raisedHandUserIds}
             backChannel={backChannel}
@@ -249,7 +249,6 @@ function ChymeAudioFrame({
   showChat,
   chatPanel,
   controls,
-  isMobile,
   onLeave,
 }: {
   stage: ReactNode;
@@ -263,7 +262,7 @@ function ChymeAudioFrame({
   const t = getChymeTokens(theme);
   return (
     <>
-      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>{stage}</div>
         {showChat && chatPanel}
       </div>
@@ -284,7 +283,6 @@ function ChymeAudioFrame({
 function ChymeAudioRoomLive({
   showChat,
   chatPanel,
-  isMobile,
   onLeave,
   raisedHandUserIds,
   backChannel,
@@ -366,7 +364,7 @@ function ChymeAudioRoomLive({
     <ChymeAudioFrame
       showChat={showChat}
       chatPanel={chatPanel}
-      isMobile={isMobile}
+      isMobile={true}
       onLeave={onLeave}
       stage={stage}
       controls={<ChymeAudioControls onLeave={onLeave} handRaised={handRaised} onToggleHand={onToggleHand} />}

@@ -13,14 +13,12 @@ import { ServiceCreditsCirculationPanel } from './sca-circulation-panel';
 import { ServiceCreditsCreditLimitsPanel } from './sca-credit-limits-panel';
 import { ServiceCreditsWalletStatusPanel } from './sca-wallet-status-panel';
 import { ServiceCreditsLedgerStatus } from './sca-ledger-status';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { useTheme } from '@/hooks/useTheme';
 import { getServiceCreditsTokens } from './sc-shared';
 
 export function ServiceCreditsAdminShell() {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getServiceCreditsTokens(theme);
   return (
@@ -29,7 +27,7 @@ export function ServiceCreditsAdminShell() {
         // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
         // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
         // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
-        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
         fontFamily: "'Inter',system-ui,sans-serif",
