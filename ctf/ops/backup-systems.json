@@ -1,0 +1,20 @@
+{
+  "$comment": "Single source of truth for systems that hold data needing backup. The 'Monthly — Backup & Restore Test Reminder' workflow reads this file and opens a checklist issue on the 1st of each month. When you introduce a new backup system, add an entry here (backup workflow + restore workflow + concrete test steps). See .claude/rules/136-backup-and-restore-testing-rules.mdc.",
+  "systems": [
+    {
+      "name": "Formance ledger (Postgres)",
+      "whatItProtects": "The Formance double-entry ledger database — ServiceCredits balances, transactions, and postings. If this is lost, the ledger cannot be rebuilt from anywhere else.",
+      "backupWorkflow": "backup-formance.yml",
+      "backupWorkflowName": "Formance — Nightly Backup to Private Repo",
+      "restoreWorkflow": "restore-formance.yml",
+      "restoreWorkflowName": "Formance — Restore from Private Repo",
+      "notes": "Backups land as GitHub Release assets (one release per night, one .dump asset) on the private backups repo, not as files in that repo's tree. The restore workflow restores only into the FORMANCE_RESTORE_TARGET_DATABASE_URL secret, which must point at a NON-production Postgres 18+ database.",
+      "testSteps": [
+        "Backup is current: Actions -> 'Formance — Nightly Backup to Private Repo' -> the latest scheduled run is green, and a new release exists in the private backups repo for last night.",
+        "Point the restore at a safe target: set the Actions secret FORMANCE_RESTORE_TARGET_DATABASE_URL to a NON-production Postgres 18+ connection string (never the production ledger).",
+        "Run the restore: Actions -> 'Formance — Restore from Private Repo' -> Run workflow, leave inputs blank to restore the latest backup.",
+        "Verify the result: the restore run is green AND the target database contains the expected ledger tables with real rows (check a row count, or pg_restore --list on the downloaded dump), proving the backup actually captured the data."
+      ]
+    }
+  ]
+}
