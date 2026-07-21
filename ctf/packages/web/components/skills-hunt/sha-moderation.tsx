@@ -173,22 +173,18 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
       ) : submissions.length === 0 ? (
         <div style={{ color: t.MUTED, fontSize: 13 }}>No submissions matching this filter.</div>
       ) : (
-        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-          <div style={{ minWidth: 760 }}>
-            <SkillsHuntAdminTable
-              submissions={submissions}
-              selected={selected}
-              acting={acting}
-              allPendingSelected={allPendingSelected}
-              onToggleAll={toggleAllVisible}
-              onToggle={toggleOne}
-              onAccept={(id) => void reviewAndRefresh(id, "accept", null)}
-              onReject={onReject}
-              onFlag={(id) => void reviewAndRefresh(id, "flag", null)}
-              onRemove={(id) => void onRemove(id)}
-            />
-          </div>
-        </div>
+        <SkillsHuntAdminTable
+          submissions={submissions}
+          selected={selected}
+          acting={acting}
+          allPendingSelected={allPendingSelected}
+          onToggleAll={toggleAllVisible}
+          onToggle={toggleOne}
+          onAccept={(id) => void reviewAndRefresh(id, "accept", null)}
+          onReject={onReject}
+          onFlag={(id) => void reviewAndRefresh(id, "flag", null)}
+          onRemove={(id) => void onRemove(id)}
+        />
       )}
     </>
   );
