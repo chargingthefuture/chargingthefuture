@@ -191,20 +191,19 @@
   color: var(--ctf-text-subtle);
 }
 
-@media (max-width: 767px) {
-  .page {
-    padding: 32px 16px 72px;
-  }
+/* Mobile-first: formerly @media (max-width: 767px); applies at every width now. */
+.page {
+  padding: 32px 16px 72px;
+}
 
-  .title {
-    font-size: 26px;
-  }
+.title {
+  font-size: 26px;
+}
 
-  .sectionTitle {
-    font-size: 21px;
-  }
+.sectionTitle {
+  font-size: 21px;
+}
 
-  .tocList {
-    grid-template-columns: 1fr;
-  }
+.tocList {
+  grid-template-columns: 1fr;
 }

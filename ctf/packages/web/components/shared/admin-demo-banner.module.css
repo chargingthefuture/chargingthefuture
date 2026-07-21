@@ -23,8 +23,7 @@
    sits in normal flow (sticky) and RESERVES its own height instead of overlaying.
    A fixed overlay here covered the shell's header and its back button — and an
    app saved to the Home Screen has no browser back, so there was no way out. */
-@media (max-width: 767px) {
-  .banner {
-    position: sticky;
-  }
+/* Mobile-first: formerly @media (max-width: 767px); applies at every width now. */
+.banner {
+  position: sticky;
 }

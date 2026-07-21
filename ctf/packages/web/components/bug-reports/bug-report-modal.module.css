@@ -374,24 +374,29 @@
 
 /* Phone-width: present the modal as a bottom sheet to match the mobile mockups,
    and anchor the help popover below the top-bar button so it stays on screen. */
-@media (max-width: 900px) {
-  .overlay {
-    align-items: flex-end;
-    padding: 0;
-  }
+/* Mobile-first: formerly @media (max-width: 900px); applies at every width now. */
+.overlay {
+  align-items: flex-end;
+  padding: 0;
+}
 
-  .modal,
-  .modalNarrow {
-    max-width: 100%;
-    border-radius: 20px 20px 0 0;
-    border-bottom: none;
-    max-height: 85vh;
-  }
+.modal,
+.modalNarrow {
+  /* Bottom sheet, capped to the dialog width (the base .modal/.modalNarrow max-width) and centered,
+     so it does not stretch edge-to-edge on wider viewports — the app is mobile-first and its content
+     sits in a narrow column at every width. On a true phone the cap exceeds the viewport, so it
+     still fills the screen as a full-width sheet. (Formerly max-width:100%, which spanned the whole
+     desktop window.) */
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 20px 20px 0 0;
+  border-bottom: none;
+  max-height: 85vh;
+}
 
-  .helpPopover {
-    bottom: auto;
-    left: auto;
-    right: 0;
-    top: calc(100% + 8px);
-  }
+.helpPopover {
+  bottom: auto;
+  left: auto;
+  right: 0;
+  top: calc(100% + 8px);
 }

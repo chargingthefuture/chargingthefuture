@@ -1,5 +1,6 @@
 "use client";
 
+import { type CSSProperties } from "react";
 import { type SkillsHuntNotification } from "./sh-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getSkillsHuntTokens } from './sh-shared';
@@ -8,15 +9,25 @@ export function SkillsHuntNotifications({
   notifications,
   onClose,
   onMarkRead,
+  placement = "desktop",
 }: {
   notifications: SkillsHuntNotification[];
   onClose: () => void;
   onMarkRead: (id: string) => void;
+  // "desktop" anchors the panel absolutely beside the icon rail (left:80, inside the shell's
+  // relative root). "mobile" drops it as a fixed dropdown under the header bell, capped to the
+  // viewport width — the absolute left:80/top:60 coordinates are meaningless without the rail and
+  // left the panel stranded at the bottom-left on the phone / "desktop mobile" layout.
+  placement?: "desktop" | "mobile";
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
+  const positionStyle: CSSProperties =
+    placement === "mobile"
+      ? { position: "fixed", top: 64, right: 12, left: "auto", width: "min(360px, calc(100vw - 24px))", maxHeight: "70vh", zIndex: 60 }
+      : { position: "absolute", left: 80, top: 60, width: 360, maxHeight: 480, zIndex: 50 };
   return (
-    <div style={{ position: "absolute", left: 80, top: 60, width: 360, maxHeight: 480, overflowY: "auto", background: t.HEADER, border: `1px solid ${t.ACCENT}40`, borderRadius: 14, zIndex: 50, boxShadow: "0 12px 32px rgba(0,0,0,0.4)" }}>
+    <div style={{ ...positionStyle, overflowY: "auto", background: t.HEADER, border: `1px solid ${t.ACCENT}40`, borderRadius: 14, boxShadow: "0 12px 32px rgba(0,0,0,0.4)" }}>
       <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>Status</span>
         <button type="button" aria-label="Close status" onClick={onClose} style={{ background: "none", border: "none", color: t.MUTED, cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>

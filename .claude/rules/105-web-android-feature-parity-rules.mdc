@@ -52,26 +52,43 @@ The owner may later decide to resume Android parity for specific features ("mayb
 of issues I can resume android parity outside of chyme"). That is an explicit, per-feature owner
 decision — not a default. Until the owner says so for a named feature, treat that feature as web-only.
 
-## Responsive web (serving iOS, Android-web, and every mobile browser)
-- The web app (`packages/web`) must be **responsive**: it renders the **Desktop** design at wide
-  viewports and the **Mobile** design at narrow (phone) viewports, in the **same** web components
-  (responsive layout / CSS — not a separate route, app, or component set). This is how iOS Safari,
-  Android browsers, and the installed PWA access the product.
-- The `Mobile*` design mockups are the source of truth for the web's mobile breakpoint (and for the
-  Chyme Android screens). A phone layout is the same whether the installed PWA or a ~390px browser
-  paints it. **Do not commission a separate "web responsive" mockup series.**
-- Building the web's mobile-responsive layout is an **app / front-end (non-design-agent)
-  responsibility** and is **not** design-gated by rule 127.
-- A web feature is only "done" when its phone-width layout works too — shipping a desktop-only view
-  that breaks at phone width is still a defect, because phones are now served entirely by the web app.
+## Mobile-first web (owner decision, 2026-07-20): one phone-width layout at every viewport
+- The web app (`packages/web`) ships a **single phone-width layout**. There is no separate desktop
+  layout anymore, and **no agent builds, restores, or maintains one** — that maintenance burden is
+  exactly what this decision removes.
+- Desktop access remains: a wide viewport renders the **same** phone layout inside a centered
+  phone-proportioned column (`.ctf-phone-frame` in `packages/web/app/globals.css`) — the mobile
+  view, larger, with the root background filling the sides. Do not "fix" a desktop page back to a
+  multi-column desktop layout; that is intentional, not a defect.
+- The mechanism, so it is not accidentally undone:
+  - `packages/web/hooks/use-is-mobile.ts` is **pinned to `true`** (server and client). Every shell
+    that branches on it renders its phone branch everywhere.
+  - The `.ctf-bp-mobile` / `.ctf-bp-desktop` helpers in `globals.css` always show the mobile
+    wrapper and always hide the desktop wrapper.
+  - The formerly phone-only `@media (max-width: …)` rules in the CSS modules were unwrapped to
+    apply at every width (marked with a `Mobile-first:` comment where each block was).
+- **New screens get one layout: the phone layout.** Do not add new `useIsMobile` desktop branches,
+  new `.ctf-bp-desktop` markup, or new desktop-only media queries. Existing hidden desktop branches
+  are dead code; deleting one when touching a shell is a welcome, non-gated refactor.
+- The `Mobile*` design mockups remain the reference for the phone layout (and for the Chyme Android
+  screens). A phone layout is the same whether the installed PWA, a ~390px browser, or the desktop
+  phone frame paints it.
+- Building the phone layout is an **app / front-end (non-design-agent) responsibility** and is
+  **not** design-gated by rule 127.
+- A web feature is "done" when its phone-width layout works — that single layout now serves every
+  surface.
 
 ## Delivery Rules — the CI Parity Status line
 - The CI parity gate (`pr-parity-status` in `ci.yml`) still requires the PR description to contain
   `Parity Status: web + mobile-responsive + android complete` **or** `Parity Ticket: #<issue>`.
+- Under the mobile-first policy the "web" and "mobile-responsive" parts of that line are **one and
+  the same deliverable**: the single phone-width layout. Shipping it satisfies both words. The line
+  keeps its three-part wording only so the CI gate and older PRs stay stable — do not read it as a
+  requirement to build a desktop layout.
 - For a **web-only** change to a non-keep-list feature (the common case now), use
-  `Parity Status: web + mobile-responsive + android complete`: the desktop and phone-width web layouts
-  are the deliverable, and "android" is complete in the sense that **there is no Android surface for
-  this feature** — the native app intentionally does not carry it. State "Android: out of scope
+  `Parity Status: web + mobile-responsive + android complete`: the phone-width layout is the
+  deliverable, and "android" is complete in the sense that **there is no Android surface for this
+  feature** — the native app intentionally does not carry it. State "Android: out of scope
   (web-only per rule 105)" in the PR body so the reader knows it was a decision, not a forgotten gap.
 - For a change to a **keep-list** surface (Clerk, Chyme, bug reporting, settings), the Android side
   is in scope and must land with it, exactly as before.

@@ -150,38 +150,55 @@ option {
 }
 
 /*
- * On desktop the viewport is locked so each shell manages its own internal
- * scrolling (sidebars, chat panes, and so on). On small screens we let the
- * whole document scroll instead — otherwise anything taller or wider than the
- * screen gets clipped by `overflow: hidden` and becomes unreachable on a phone.
+ * Mobile-first shell (owner decision, 2026-07-20): the app ships ONE phone-width
+ * layout at every viewport. The former desktop layouts are no longer rendered —
+ * `useIsMobile` is pinned to true and the phone-only CSS below now applies at
+ * every width. On wide screens the phone layout renders inside the centered
+ * `.ctf-phone-frame` column (see below) so a desktop visitor sees the mobile
+ * view, larger, instead of a separate desktop design.
+ *
+ * The whole document scrolls at every width, exactly as it does on a phone —
+ * the old desktop viewport lock (height: 100vh; overflow: hidden) is gone.
  */
-@media (min-width: 768px) {
-  html,
-  body {
-    height: 100vh;
-    overflow: hidden;
-  }
+html,
+body {
+  min-height: 100%;
+  overflow-x: hidden;
 }
 
-@media (max-width: 767px) {
-  html,
-  body {
-    min-height: 100%;
-    overflow-x: hidden;
-  }
+/*
+ * Stop iOS/WebKit from auto-zooming the whole page when a text field is focused. Mobile Safari
+ * (and the installed web app) zooms in whenever the focused input's font-size is below 16px, and
+ * the zoom sticks — leaving the page magnified and clipped. Pinning form controls to at least 16px
+ * prevents that jump while keeping pinch-to-zoom intact (so it stays WCAG-friendly, unlike a
+ * viewport maximum-scale lock). `!important` is required because many fields set a smaller
+ * font-size inline. Applied at every width so wide screens match the phone rendering.
+ */
+input,
+textarea,
+select {
+  font-size: 16px !important;
+}
 
-  /*
-   * Stop iOS/WebKit from auto-zooming the whole page when a text field is focused. Mobile Safari
-   * (and the installed web app) zooms in whenever the focused input's font-size is below 16px, and
-   * the zoom sticks — leaving the page magnified and clipped. Pinning form controls to at least 16px
-   * on phones prevents that jump while keeping pinch-to-zoom intact (so it stays WCAG-friendly,
-   * unlike a viewport maximum-scale lock). `!important` is required because many fields set a
-   * smaller font-size inline.
-   */
-  input,
-  textarea,
-  select {
-    font-size: 16px !important;
+/*
+ * The phone frame. Wraps the routed app (see app/layout.tsx). At phone width it
+ * is invisible — the layout fills the screen edge to edge as before. On wider
+ * viewports it becomes a centered phone-proportioned column, a bit wider than a
+ * real phone so the view reads "bigger", with the root background filling the
+ * sides. Overlays and modals that portal to <body> still cover the full
+ * viewport, which is the intended behavior.
+ */
+.ctf-phone-frame {
+  width: 100%;
+  min-height: 100dvh;
+}
+
+@media (min-width: 768px) {
+  .ctf-phone-frame {
+    max-width: 560px;
+    margin: 0 auto;
+    border-left: 1px solid var(--ctf-border-dim);
+    border-right: 1px solid var(--ctf-border-dim);
   }
 }
 
@@ -191,62 +208,49 @@ a {
 }
 
 /*
- * Small-screen fallback for routed plugin/app screens.
+ * Un-row fallback for routed plugin/app screens.
  *
- * Most plugin shells are built as a fixed desktop row — a 72px icon rail, a
- * fixed-width sidebar, the main column, and a right rail — using inline styles
- * that media queries can't reach. On a phone that row runs off the side of the
- * screen and, because the inline widths also set `flex-shrink: 0`, nothing
- * reflows. Wrapping the routed screen lets us, on small screens only, drop the
- * top-level row back to a normal vertical block so each section stacks and the
- * page scrolls. A stylesheet rule marked `!important` overrides a plain inline
+ * Some plugin shells still carry a fixed desktop row — a 72px icon rail, a
+ * fixed-width sidebar, the main column, and a right rail — as inline styles
+ * that stylesheets can't reach directly. That row runs off the side of a
+ * phone-width column and, because the inline widths also set
+ * `flex-shrink: 0`, nothing reflows. This wrapper drops the top-level row
+ * back to a normal vertical block so each section stacks and the page
+ * scrolls. A stylesheet rule marked `!important` overrides a plain inline
  * style, so this reaches those inline layouts without editing every shell.
- * Desktop rendering is left exactly as-is.
+ * Mobile-first: this applies at every width now, since every viewport gets
+ * the phone layout.
  *
- * A screen that already handles its own small-screen layout (the community
- * shell) opts out with the `ctf-self-responsive` marker class so we don't
- * fight its own flex layout.
+ * A screen that handles its own phone layout (the community shell) opts out
+ * with the `ctf-self-responsive` marker class so we don't fight its own flex
+ * layout.
  */
 .ctf-app-viewport {
   width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
-@media (max-width: 767px) {
-  .ctf-app-viewport {
-    max-width: 100vw;
-    overflow-x: hidden;
-  }
-
-  .ctf-app-viewport > *:not(.ctf-self-responsive) {
-    display: block !important;
-    height: auto !important;
-    overflow: visible !important;
-    min-width: 0 !important;
-  }
+.ctf-app-viewport > *:not(.ctf-self-responsive) {
+  display: block !important;
+  height: auto !important;
+  overflow: visible !important;
+  min-width: 0 !important;
 }
 
 /*
- * Breakpoint switch helpers. Render a desktop layout and a phone layout side by
- * side in the markup and wrap each in `.ctf-bp-desktop` / `.ctf-bp-mobile`; CSS
- * then shows exactly one at the same 768px breakpoint the rest of the app uses.
- * This is for shells that nest their desktop multi-column row below their root
- * (so the small-screen un-row fallback above can't reach it) — choosing the
- * layout in CSS keeps it correct without depending on a client `matchMedia`
- * hook that only flips after hydration. Pair the wrapper with
- * `ctf-self-responsive` so the un-row fallback leaves it alone.
+ * Breakpoint switch helpers. Shells that render a desktop layout and a phone
+ * layout side by side wrap each in `.ctf-bp-desktop` / `.ctf-bp-mobile`.
+ * Mobile-first: the phone layout is now the only one shown, at every width.
+ * The desktop markup keeps rendering (hidden) until those branches are
+ * removed from the shells.
  */
 .ctf-bp-mobile {
-  display: none;
+  display: block;
 }
 
-@media (max-width: 767px) {
-  .ctf-bp-desktop {
-    display: none;
-  }
-
-  .ctf-bp-mobile {
-    display: block;
-  }
+.ctf-bp-desktop {
+  display: none;
 }
 
 /* First-party spinner. The app's Tailwind utilities never compile (v3 directives with the v4

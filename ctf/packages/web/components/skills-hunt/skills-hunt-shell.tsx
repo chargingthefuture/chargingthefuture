@@ -285,7 +285,7 @@ export function SkillsHuntShell({
           </div>
         </div>
         {notifOpen && (
-          <SkillsHuntNotifications notifications={notifications} onClose={() => setNotifOpen(false)} onMarkRead={(id) => void markRead(id)} />
+          <SkillsHuntNotifications placement="mobile" notifications={notifications} onClose={() => setNotifOpen(false)} onMarkRead={(id) => void markRead(id)} />
         )}
         <div style={{ padding: 16 }}>{content}</div>
       </div>

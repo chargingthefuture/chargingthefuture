@@ -17,6 +17,11 @@ review cannot see runtime breakage — a control off-screen at phone width, a 50
 plugin has a **manual test script**: the steps to confirm it works, tagged by role (member/admin) and
 surface (web desktop / web mobile-responsive ~390px / android), with a pass/fail box per surface.
 
+Mobile-first note (owner decision, 2026-07-20 — see rule 105): the web app now renders the same
+phone-width layout at every viewport; on a wide screen it sits in a centered phone-proportioned
+column. A "web desktop" check therefore verifies that same phone layout in its frame — "desktop
+shows the mobile view" is the intended behavior, not a failure to report.
+
 These scripts are the runtime counterpart of the **code-review sweep** (Rule 119,
 `.github/workflows/code-review-sweep.yml`). Same source of truth — each plugin's feature inventory and
 contracts — but a different artifact and a different reader:

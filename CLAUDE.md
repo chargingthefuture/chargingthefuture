@@ -326,12 +326,15 @@ Every PR description must include one of:
 ```
 Parity Status: web + mobile-responsive + android complete
 ```
-Use when the change is backend-only/infrastructure, or when all three are implemented in this PR. The
-three are: **web** (the desktop layout), **mobile-responsive** (the same web app at a phone-width
-breakpoint — this is how iOS and every mobile browser is served, per rule 105), and **android** (the
-React Native app). A user-facing UI change is "complete" only when the phone-width web layout is done
-too, not just desktop. (The older `Parity Status: web+android complete` is still accepted by the gate
-so older PRs don't break, but new PRs should use the three-part line.)
+Use when the change is backend-only/infrastructure, or when everything in scope is implemented in
+this PR. **Mobile-first web (owner decision, 2026-07-20 — see rule 105): the web app ships a single
+phone-width layout at every viewport.** A desktop visitor sees that same layout in a centered
+phone-proportioned column (`.ctf-phone-frame`); there is no separate desktop layout to build or
+maintain, and no agent should build one. So the "web" and "mobile-responsive" words in the line are
+one deliverable — the phone-width layout — and "android" is the React Native app (keep-list only,
+below). The line keeps its three-part wording only so the CI gate and older PRs stay stable. (The
+older `Parity Status: web+android complete` is still accepted by the gate so older PRs don't break,
+but new PRs should use the three-part line.)
 
 **Android app is narrowed to Chyme (owner decision, 2026-07-20 — see rule 105).** The native Android
 app now carries only Clerk auth, Chyme (and any feature the Chyme plugin links to), bug reporting, and
