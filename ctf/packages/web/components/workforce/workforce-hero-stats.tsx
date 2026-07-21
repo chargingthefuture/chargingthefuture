@@ -61,21 +61,24 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
               // Let the grid track shrink instead of being forced wide by the big number, which was
               // overflowing the card (and the page) on phone-width 2-column layouts.
               minWidth: 0,
+              // Size the figure below relative to THIS card, not the viewport. The app renders in a
+              // narrow centered column on desktop, so a viewport-relative (vw) figure hit its cap and
+              // overflowed the narrow card, truncating the number to "5,000…". A container makes the
+              // figure track the card width, so it fits at every width.
+              containerType: 'inline-size',
             }}
           >
             <div
               style={{
-                // Scale the figure down on narrow screens so 7-digit numbers stay inside the card
-                // (caps at 28px on desktop). overflow guards against any residual horizontal bleed.
-                fontSize: 'clamp(16px, 4.8vw, 28px)',
+                // Figure scales with the card (cqi = 1% of the container's inline size), capped at
+                // 28px, so the full number always shows — never truncated, never overflowing.
+                fontSize: 'clamp(15px, 11cqi, 28px)',
                 fontWeight: 800,
                 color,
                 marginBottom: 4,
                 lineHeight: 1.15,
                 letterSpacing: '-0.01em',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                overflowWrap: 'anywhere',
               }}
             >
               {value}
