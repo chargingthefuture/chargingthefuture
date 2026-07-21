@@ -53,6 +53,10 @@ None. Notifications are member self-service; there are no admin governance actio
 - `POST /api/notifications/read-all` — mark all unread read. CSRF-guarded.
 - `GET /api/notifications/preferences` — the member's device-push opt-ins.
 - `PUT /api/notifications/preferences` — update opt-ins (missing field keeps its value). CSRF-guarded.
+- `GET /api/notifications/push/vapid-public-key` — the public VAPID key the browser needs to create a
+  Web Push subscription (not secret; empty string when push is unconfigured).
+- `POST /api/notifications/push/subscribe` — save this device's Web Push subscription. CSRF-guarded.
+- `POST /api/notifications/push/unsubscribe` — remove this device's subscription. CSRF-guarded.
 
 Producers do not use HTTP — each plugin calls `createNotification` in
 `lib/notifications/repository.ts` at its own emit point.
@@ -96,9 +100,11 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
   `@username` → user id lookup, which does not exist centrally (`lib/identity/resolve-usernames`
   only goes id → name). Reply-to-your-post and announcement-reply notifications ship now; add mention
   notifications once a username→id index exists.
-- No device-push delivery yet — preferences are recorded but nothing sends a ping. Web push has
-  platform limits (Android/Chrome and installed iOS web apps only), to be handled in the delivery
-  step.
+- Device push is delivered via Web Push (`lib/notifications/push.ts`, shared with Foundation call
+  alerts), gated by the member's per-category opt-in and discreet setting. It requires the VAPID
+  server keys (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`) in the environment; when they
+  are unset every send is a logged no-op, so the in-app feed still works. Platform limits apply:
+  Web Push reaches Android/Chrome and installed iOS web apps, not a plain iOS browser tab.
 - Emergency real-time (an incoming Foundation call ring) is a separate live mechanism from this
   durable feed and is tracked with the Safety producers.
 
@@ -116,12 +122,24 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
    request was claimed), TrustTransport (provider's offer was accepted), Foundation (someone started a
    connection). Foundation's live incoming-call **ring stays its own real-time path** — the feed entry
    is the durable complement, not the ring.
-5. **Device-push delivery:** content-safe/discreet payload, category-gated by preferences, web-push
-   with the PWA/native platform caveats. Blocked by 1; benefits from 2–4 existing so there is
-   something to ping about.
+5. **Device-push delivery (done):** `notifySafe` sends a Web Push on a genuinely new notification when
+   the recipient opted that category in — discreet by default (generic ping, no plugin name or
+   content). Notifications-owned subscribe/unsubscribe/vapid-public-key endpoints, and the 🔔 tab
+   subscribes this device when a member turns a category on. Reuses the shared push sender + the
+   user-global `push_subscriptions` table; no-op until VAPID keys are set.
 
 ## Change Log
 
+- 2026-07-20: Device-push delivery. `notifySafe` now sends a Web Push (via the shared
+  `sendWebPushToUser`) on a genuinely new notification when the recipient has opted that category in —
+  discreet by default (a generic "You have a new update" ping with the in-app path in `data`, no
+  plugin name or content on the lock screen); detailed mode sends the neutral summary. Deduped events
+  never re-ping. Added notifications-owned `push/subscribe`, `push/unsubscribe`, and
+  `push/vapid-public-key` routes (thin wrappers over `lib/notifications/push.ts`, reusing the
+  user-global `push_subscriptions` table shared with Foundation), and the 🔔 tab now registers the
+  service worker and subscribes this device when a member turns a category on (best-effort; a note
+  shows if the browser can't, and the in-app feed is unaffected). Requires the VAPID env keys; a no-op
+  without them.
 - 2026-07-20: Safety producers (category `safety`), each emitted from its route via `notifySafe`,
   deduped on the underlying row id, never self-notifying: LightHouse notifies the host of a new stay
   request (`lighthouse.match.requested`); SocketRelay notifies the requester when their request is
