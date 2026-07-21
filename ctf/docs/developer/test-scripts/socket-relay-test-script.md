@@ -1,5 +1,7 @@
 # SocketRelay — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Generated from `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socket-relay-feature-inventory.md` and the declared contracts; this is the runnable checklist for the SocketRelay plugin. Regenerate with: `pnpm --dir ctf test-script:generate -- socket-relay`
 
 | Field | Value |
@@ -26,13 +28,13 @@
 ## Core smoke (every session)
 
 **1.** Sign in as a member. Navigate to the SocketRelay feed on web and open the SocketRelay screen on Android. The feed loads without a JS error, shows a list of seeded requests (not a blank page and not a raw `{ items, page, pageSize, total }` JSON dump), and each card shows a title and at least one tag.
-web ☐ android ☐
+web ☐
 
 **2.** While signed out (or in a fresh incognito window on web / signed-out state on Android), open the SocketRelay feed. The app shows a public or sign-in-gated state rather than crashing or exposing authenticated data.
-web ☐ android ☐
+web ☐
 
 **3.** Sign in as an admin. Navigate to `/admin/socket-relay` on web and the `socket-relay-admin` screen on Android. Four stat cards (total requests, open requests, fulfillments, active fulfillments) are visible without errors.
-web ☐ android ☐
+web ☐
 
 ---
 
@@ -40,7 +42,7 @@ web ☐ android ☐
 
 ### SR-1 — Browse the feed and read a request
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a member. Seed has run.
 
@@ -55,13 +57,13 @@ web ☐ android ☐
 - If no price was set, the settlement label reads "Free" or shows no amount — never "$0".
 - If `price_amount` + `price_currency` are set, a settlement badge appears with the label.
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-2 — Tag filter chips are derived from live data
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a member. Seed has run (seed writes requests with `tags`).
 
@@ -76,13 +78,13 @@ web ☐ android ☐
 - Tapping/clicking a chip filters the visible cards to those carrying that tag (case-insensitive match).
 - Tapping the active chip again (or an "All" chip) clears the filter.
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-3 — Post a new request with tags
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a member.
 
@@ -107,13 +109,13 @@ web ☐ android ☐
   its "City, State, Country" location (only the parts that were set).
 - The request shows no price / "Free" — not "$0".
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-4 — Post a request with a settlement value (ServiceCredits)
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a member.
 
@@ -127,13 +129,13 @@ web ☐ android ☐
 - The created request card shows a settlement badge that names ServiceCredits (e.g. "SC" or "ServiceCredits") — never a fiat equivalent.
 - "Accepts ServiceCredits" is true only because the `socket_relay_request_accepted_currencies` record was written; this is not derived from `price_currency` alone.
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-5 — Edit your own open request
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a member who owns an open, non-expired request (use a request created in SR-3 or pick one from the seed).
 
@@ -149,13 +151,13 @@ web ☐ android ☐
 - A `request_updated` lifecycle event is written to `socket_relay_request_events` for the edit.
 - A different member's request does not show an Edit control.
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-6 — Expired request: owner sees Re-post, others do not see the card
 
-**Role:** member (owner) + second member account · **Surfaces:** web, android
+**Role:** member (owner) + second member account · **Surfaces:** web
 
 **Precondition:** Seed has a request whose `expires_at` is in the past (or manually set one in the DB).
 
@@ -171,13 +173,13 @@ web ☐ android ☐
 - The other member does **not** see the expired request in their feed (expired posts are hidden from everyone except the owner).
 - Tapping "Re-post" (owner) makes the request live again: the Expired pill disappears, the 28-day clock resets, and the card becomes visible to other members.
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-7 — Claim a request (fulfillment)
 
-**Role:** member (claimer) · **Surfaces:** web, android
+**Role:** member (claimer) · **Surfaces:** web
 
 **Precondition:** Signed in as a member who does **not** own the target request. The request is open and not expired.
 
@@ -190,13 +192,13 @@ web ☐ android ☐
 - The request no longer shows the claim button for this member.
 - The claimer can see the new fulfillment in their Direct Line / "my fulfillments" list.
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-8 — Cannot claim your own request
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a member who owns an open request.
 
@@ -208,13 +210,13 @@ web ☐ android ☐
 - No claim button appears on your own request.
 - If the API is called directly it returns an error (actor is request owner — `actorCannotOwnRequest` policy).
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-9 — Direct Line list: pending requests and active fulfillments
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Member has at least one open non-expired request with no claimer, and at least one active fulfillment (as either the requester or the helper). Use SR-3 + SR-7 to set up both.
 
@@ -230,13 +232,13 @@ web ☐ android ☐
 - On Android, each pending-request card shows a "No helper yet" note (not a chat), explaining the request is still open on the feed.
 - Tapping an active-fulfillment row opens the chat thread (web); on Android, each active-fulfillment card shows an "Open chat" button that opens the chat (see SR-10a).
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-10 — Fulfillment chat: send a message
 
-**Role:** member (participant) · **Surfaces:** web, android
+**Role:** member (participant) · **Surfaces:** web
 
 **Precondition:** An active fulfillment exists between Member A (requester) and Member B (helper). Both are signed in on separate sessions or devices.
 
@@ -250,13 +252,13 @@ web ☐ android ☐
 - The chat panel shows the request title and each participant's role ("Your request" / "You're helping").
 - When the message list is empty a branded empty state appears ("No messages yet" or similar) — not Stream's default "No chats here yet…".
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-10a — Android Direct Line live chat (issue #1596)
 
-**Role:** member (participant) · **Surfaces:** android
+**Role:** member (participant) · **Surfaces:** web
 
 **Precondition:** On Android, the member has at least one active fulfillment (as requester or helper). Use SR-3 + SR-7 to set one up.
 
@@ -417,7 +419,7 @@ web ☐
 
 ### SR-18 — SocketRelayPublic (Android unauthenticated state)
 
-**Role:** none (unauthenticated) · **Surfaces:** android
+**Role:** none (unauthenticated) · **Surfaces:** web
 
 **Precondition:** Sign out of the Android app.
 
@@ -434,7 +436,7 @@ android ☐
 
 ### SR-19 — Refresh the feed (header button / pull-to-refresh)
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a member, with a second session available to make a change.
 
@@ -450,7 +452,7 @@ android ☐
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), and the admin screen header shows a "Member view" pill opening `/apps/socket-relay`.
 
-web ☐ android ☐
+web ☐
 
 ---
 
@@ -466,7 +468,7 @@ SocketRelay fulfillment message; access to the Stream dashboard for the app behi
 `socket-relay-<userId>` is hard-deleted with messages marked deleted — no lingering Stream copy. This runs
 via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If Stream
 is down at delete time, the deletion still succeeds and the failure is logged for retry.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -474,7 +476,7 @@ is down at delete time, the deletion still succeeds and the failure is logged fo
 
 ### SR-A1 — Admin stat cards
 
-**Role:** admin · **Surfaces:** web, android
+**Role:** admin · **Surfaces:** web
 
 **Precondition:** Signed in as an admin. Seed has run.
 
@@ -486,13 +488,13 @@ is down at delete time, the deletion still succeeds and the failure is logged fo
 - All four cards (total requests, open requests, fulfillments, active fulfillments) show numeric values — not errors, not zero if seed data exists.
 - On web, at the 768 px viewport width the stat grid collapses to a single stacked column (responsive).
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-A2 — Admin requests and fulfillments lists
 
-**Role:** admin · **Surfaces:** web, android
+**Role:** admin · **Surfaces:** web
 
 **Precondition:** Signed in as an admin. Seed has run.
 
@@ -504,13 +506,13 @@ web ☐ android ☐
 - The fulfillments list is read-only (no mutate buttons).
 - The requests list shows each request's status and owner.
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-A3 — Admin removes a request (confirm dialog required)
 
-**Role:** admin · **Surfaces:** web, android
+**Role:** admin · **Surfaces:** web
 
 **Precondition:** Signed in as an admin. At least one request exists.
 
@@ -525,13 +527,13 @@ web ☐ android ☐
 - Dismissing the dialog without confirming leaves the request untouched.
 - The removal is transactional: the request's fulfillments, participants, and lifecycle events are cleared too (no orphaned rows), while fulfillment chat messages are retained server-side as moderation evidence. The removal writes a `socket-relay.admin.request.delete` audit row.
 
-web ☐ android ☐
+web ☐
 
 ---
 
 ### SR-A4 — Admin routes reject non-admin members
 
-**Role:** member (non-admin) · **Surfaces:** web (API), android
+**Role:** member (non-admin) · **Surfaces:** web (API)
 
 **Precondition:** Signed in as a regular member (not admin).
 
@@ -543,7 +545,7 @@ web ☐ android ☐
 - Both API routes return 401 or 403.
 - The Android admin screen renders an "admins only" notice rather than showing data.
 
-web ☐ android ☐
+web ☐
 
 ---
 
@@ -592,3 +594,10 @@ The following cases must produce the same observable result on both surfaces. Ru
 3. **Approve/reject moderation**: the design mockup (`MobileSocketRelayAdmin.tsx`) shows per-request approve/reject controls. No approve/reject endpoint exists — the only admin request mutation is delete. Do not file the absence of approve/reject buttons as a bug; it is a known missing backend command.
 
 4. **Ownership detection via extra request**: on Android, whether a feed card belongs to the signed-in member is determined by checking `GET /api/socket-relay/my-requests` (one extra request per feed load) rather than a local user-ID comparison. This is a known performance trade-off, not a bug.
+
+---
+
+## Notifications
+
+**1.** As member A, post a request. As member B, claim it. Sign in as member A, open the 🔔 notifications tab in the Commons, and confirm a "Someone offered to help with your SocketRelay request." item appears (unread) with an "Open" pill.
+web ☐

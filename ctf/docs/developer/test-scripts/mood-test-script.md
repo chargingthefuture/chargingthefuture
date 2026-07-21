@@ -1,5 +1,7 @@
 # Mood — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
 > truth, this is the runnable checklist derived from them. Do not edit a step here to match a
@@ -12,7 +14,7 @@
 | **Plugin** | Mood (`mood`) |
 | **Visibility** | Member-facing |
 | **Roles to test** | member |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-mood-feature-inventory.md` |
 | **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
@@ -37,13 +39,13 @@ not test for, or expect, any screen that surfaces one member's check-in to anoth
 Member role unless noted.
 
 1. **Check-in screen loads.** Open Mood. The check-in form (mood picker + optional note) renders, not a
-   spinner or error. → web ☐ mobile ☐ android ☐
+   spinner or error. → web ☐ mobile ☐
 2. **Submit a mood check.** Pick a mood value (1–5), submit. The submission is accepted and the screen
-   moves to the cooldown state. → web ☐ mobile ☐ android ☐
+   moves to the cooldown state. → web ☐ mobile ☐
 3. **Cooldown blocks a second check.** Right after submitting, try again. The 7-day cooldown blocks it
-   with a readable message, not a raw error. → web ☐ mobile ☐ android ☐
+   with a readable message, not a raw error. → web ☐ mobile ☐
 4. **Aggregate stays anonymous.** Open the community pulse / trends. It shows only an aggregate chart —
-   no individual check-in, note, or identifier is ever shown. → web ☐ mobile ☐ android ☐
+   no individual check-in, note, or identifier is ever shown. → web ☐ mobile ☐
 
 ---
 
@@ -58,7 +60,7 @@ Member role unless noted.
 **Expected:** A member with no prior record (or a parse failure) is treated as eligible, and the form is
 available. The eligibility check is keyed on the server-controlled pseudonym, so it reflects this
 member's own cooldown.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### MD-2 · Submit a check-in
 **Role:** member · **Surfaces:** all
@@ -68,7 +70,7 @@ member's own cooldown.
 **Expected:** The submission is accepted. The check-in is stored pseudonymously (no `user_id` on the
 row). Member-facing copy describes the check-in as private and pseudonymous — never shown to anyone,
 only anonymous aggregate trends are displayed.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### MD-3 · Out-of-range value is refused
 **Role:** member · **Surfaces:** all
@@ -76,7 +78,7 @@ only anonymous aggregate trends are displayed.
 1. Attempt a submission with a mood value outside 1–5 (e.g. via a crafted request).
 **Expected:** The boundary is enforced — the request is refused with a readable invalid-payload message
 (400), not a server error (500).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### MD-4 · Seven-day cooldown
 **Role:** member · **Surfaces:** all
@@ -86,7 +88,7 @@ only anonymous aggregate trends are displayed.
 **Expected:** The 7-day cooldown blocks the second check with a readable cooldown message. The cooldown
 is keyed on the pseudonym, so a second device for the same member shares the one cooldown — it cannot
 be bypassed by switching devices.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### MD-5 · Anonymous community pulse
 **Role:** member · **Surfaces:** all
@@ -95,7 +97,7 @@ be bypassed by switching devices.
 **Expected:** It shows a 7-day average-mood chart plus check-in counts, computed in aggregate. No
 per-user row, note, or identifier appears. When fewer than the minimum sample (5 check-ins in the
 window) exist, the surface withholds data and shows the not-enough-data state with a zeroed series.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### MD-6 · "Talk to someone" support links (no crisis hotlines)
 **Role:** member · **Surfaces:** all
@@ -113,7 +115,7 @@ removed). The Directory link's description says "Search community members by spe
 unverifiable claim). The Privacy First card still appears (below the links on web; on the Private tab
 on android). On android, if the Mood screen is ever shown without navigation wired, the link cards are
 non-interactive rather than crashing.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -129,7 +131,7 @@ shows. Eligibility re-pulls and the cooldown state from the other session appear
 reopening the app. Refreshing never clears the current screen to the full-screen loading state.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 

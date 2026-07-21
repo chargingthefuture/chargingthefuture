@@ -1,0 +1,66 @@
+pluginId: mutual-time
+commandVersion: 1.0.0
+description: >
+  Audit events emitted by Mutual Time commands (spec #1780). Reads (mutual-time.event.read) and the
+  poll-driven state are high-frequency and not audited. Emitted as structured log lines
+  ([mutual-time.audit]); the platform log pipeline is the sink.
+
+auditEvents:
+  - eventId: <uuid>
+    timestamp: <iso8601>
+    actorId: <admin user id>
+    pluginId: mutual-time
+    command: mutual-time.event.create
+    commandVersion: 1.0.0
+    purpose: scheduling_event_create
+    policyDecision:
+      status: allow
+      reason: admin
+      evidence: role=admin
+    dataClassesAccessed: [mutual_time_events]
+    targetContext:
+      eventId: <event id>
+      slug: <event slug>
+      meetingPlugin: <chyme|peer-programming>
+    requestId: <request id>
+    traceId: <trace id>
+    result: success
+
+  - eventId: <uuid>
+    timestamp: <iso8601>
+    actorId: <admin user id>
+    pluginId: mutual-time
+    command: mutual-time.event.close
+    commandVersion: 1.0.0
+    purpose: scheduling_event_close
+    policyDecision:
+      status: allow
+      reason: admin
+      evidence: role=admin;owner=true
+    dataClassesAccessed: [mutual_time_events, mutual_time_votes]
+    targetContext:
+      eventId: <event id>
+      slug: <event slug>
+      resultSlotStart: <iso8601 winning slot, or empty when no votes>
+    requestId: <request id>
+    traceId: <trace id>
+    result: success
+
+  - eventId: <uuid>
+    timestamp: <iso8601>
+    actorId: <approved member user id>
+    pluginId: mutual-time
+    command: mutual-time.vote.save
+    commandVersion: 1.0.0
+    purpose: scheduling_vote_save
+    policyDecision:
+      status: allow
+      reason: approved_member
+      evidence: unlockTier=approved_full
+    dataClassesAccessed: [mutual_time_events, mutual_time_votes]
+    targetContext:
+      slug: <event slug>
+      pickCount: <0-3>
+    requestId: <request id>
+    traceId: <trace id>
+    result: success

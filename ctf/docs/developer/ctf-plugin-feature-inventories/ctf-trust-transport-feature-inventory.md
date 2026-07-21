@@ -18,7 +18,7 @@ TrustTransport is a trauma-informed, safety-first logistics marketplace plugin f
 4. earn income by helping fulfill requests,
 5. build reputation and trust through transparent completion history.
 
-The plugin must provide equivalent core behavior across web and Android.
+The plugin ships on web (desktop + mobile-responsive). The former native Android (React Native) surface was removed 2026-07-20 (rule 105, PR #1742); this feature is now web-only, served by the installable web app (PWA).
 
 ---
 
@@ -237,7 +237,7 @@ at a fiat equivalent.
 
 ## Web and Android Delivery Status
 
-`web+android complete` (functional). Web surface lives under `/apps/trust-transport`; Android surface lives under `packages/mobile/src/features/trust-transport`. Booking, tracking, completion, safety controls, and deletion behave consistently across platforms. Web pixel pass complete: the shell (`trust-transport-shell.tsx` + `tt-*` sub-components) is aligned to `design/.../survivor-hub/TrustTransport.tsx` and decomposed within rule-116 limits; per the real-data-only rule it binds real `/api/trust-transport/modes` + `requests` + per-trip Stream chat and omits the design's mock driver/stat figures. Android pixel pass complete (2026-05-31): `TrustTransport.tsx` rewritten to align with `design/.../survivor-hub/MobileTrustTransport*.tsx` mockups for all four states (loading, public/unauthenticated, empty, main). Binds real `/api/trust-transport/requests` (list + create) via the existing `api.ts`. Omissions per real-data-only rule: "Nearby Drivers" list (no backend endpoint for available driver discovery), driver ratings/ETAs/vehicle info, and online driver count stat — none of these fields are returned by any `trust-transport` API endpoint. Mock file (`MockTrustTransport.tsx`) retired (content cleared). `AuthProvider` export preserved via `auth-context.tsx` re-export; `TrustTransport` export maintained in `index.ts`.
+Delivery: **web + mobile-responsive complete** (functional). **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Web surface lives under `/apps/trust-transport`. Historical parity detail: a former Android surface lived under `packages/mobile/src/features/trust-transport` (now removed); booking, tracking, completion, safety controls, and deletion behaved consistently across platforms. Web pixel pass complete: the shell (`trust-transport-shell.tsx` + `tt-*` sub-components) is aligned to `design/.../survivor-hub/TrustTransport.tsx` and decomposed within rule-116 limits; per the real-data-only rule it binds real `/api/trust-transport/modes` + `requests` + per-trip Stream chat and omits the design's mock driver/stat figures. Android pixel pass complete (2026-05-31): `TrustTransport.tsx` rewritten to align with `design/.../survivor-hub/MobileTrustTransport*.tsx` mockups for all four states (loading, public/unauthenticated, empty, main). Binds real `/api/trust-transport/requests` (list + create) via the existing `api.ts`. Omissions per real-data-only rule: "Nearby Drivers" list (no backend endpoint for available driver discovery), driver ratings/ETAs/vehicle info, and online driver count stat — none of these fields are returned by any `trust-transport` API endpoint. Mock file (`MockTrustTransport.tsx`) retired (content cleared). `AuthProvider` export preserved via `auth-context.tsx` re-export; `TrustTransport` export maintained in `index.ts`.
 
 Provider/marketplace parity (2026-07-01 through 2026-07-02, issue #1250 — complete): the Android app
 gained a "Help" tab (`TrustTransportHelpTab.tsx`) mirroring the web "Help out" tab's discovery model B —
@@ -292,6 +292,7 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+- 2026-07-20: **Notifications producer.** Accepting an offer now emits a best-effort notification (`notifySafe`, `trust-transport.offer.accepted`, category `safety`) to the provider — deduped on the trip id, never to the accepting requester. Emitted from the accept-offer route. No schema/contract change.
 - 2026-07-20: **Account deletion now clears the member's Stream chat copy (privacy).** TrustTransport trip-thread chat is sent directly into Stream Chat under the Stream user `trust-transport-<userId>`, so Stream kept an independent copy that the Postgres-only account-deletion registry never removed (Stream retains messages with no expiry by default). Registered `deleteTrustTransportStreamData(userId)` (in `lib/trust-transport/stream.ts` — hard-deletes the Stream user with `mark_messages_deleted`; never throws) into the shared account-deletion external-cleanup hook (`lib/account/external-cleanup-registry.ts`), which the orchestrator runs after the DB transaction commits on every whole-account deletion path (full-account route, internal delete, Clerk webhook), best-effort (a Stream outage is logged, never blocks the deletion). No schema/route/contract change.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to

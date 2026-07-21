@@ -1,5 +1,7 @@
 # Beacon — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
 > truth, this is the runnable checklist derived from them. Do not edit a step here to match a
@@ -12,7 +14,7 @@
 | **Plugin** | Beacon (`beacon`) |
 | **Visibility** | Member-facing |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-beacon-feature-inventory.md` |
 | **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
@@ -39,13 +41,13 @@ One-way admin broadcast; public watch, sign-in to chat. Member role unless noted
    Beacon tile (database registry row, nav rank 230) that opens `/apps/beacon`. Broadcast copy
    says "from Farah" (single operator), never "from the team". When nothing is live, a calm "No
    live event right now" screen renders ("When Farah goes live, it will appear here"), with the
-   last replay if one exists. No spinner stuck, no error. → web ☐ mobile ☐ android ☐
+   last replay if one exists. No spinner stuck, no error. → web ☐ mobile ☐
 2. **Anyone can watch, no sign-in.** Sign out and open `/apps/beacon`. The viewer surface still loads
-   over the public path (HLS); there is no phone-number or account wall to watch. → web ☐ mobile ☐ android ☐
+   over the public path (HLS); there is no phone-number or account wall to watch. → web ☐ mobile ☐
 3. **Chat is gated to members.** As a signed-out viewer, confirm chat is read-only / shows a "sign in
-   to chat" prompt — you cannot post. → web ☐ mobile ☐ android ☐
+   to chat" prompt — you cannot post. → web ☐ mobile ☐
 4. **"Live and public" indicator.** During (or simulating) a live event, an unmistakable on-screen
-   marker states the broadcast and chat are public. → web ☐ mobile ☐ android ☐
+   marker states the broadcast and chat are public. → web ☐ mobile ☐
 
 ---
 
@@ -62,7 +64,7 @@ recording URL.
 plays the recording. On android the HLS player runs only in an EAS dev/production build (not Expo Go).
 Admins see the shared Admin pill in the member shell header, and the admin screen header shows a
 "Member view" pill opening `/apps/beacon`.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-2 · Watch a live broadcast (public)
 **Role:** signed-out viewer · **Surfaces:** all
@@ -72,7 +74,7 @@ Admins see the shared Admin pill in the member shell header, and the admin scree
 **Expected:** The live broadcast plays over HLS with no sign-in (native HLS on Safari/iOS, `hls.js`
 elsewhere). The "live and public" indicator is visible. You can watch but the chat shows a
 "sign in to chat" prompt.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-3 · Member live chat and reactions
 **Role:** member · **Surfaces:** all
@@ -83,7 +85,7 @@ elsewhere). The "live and public" indicator is visible. You can watch but the ch
 **Expected:** A signed-in member requests a chat token and can post messages and reactions in real
 time. The live chat is ephemeral (Stream only, not stored in our database). Every message is tied to
 the member's real account.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-4 · Replay appears in the Commons
 **Role:** member · **Surfaces:** all
@@ -93,7 +95,7 @@ the member's real account.
 **Expected:** A "🔴 Live now" entry appeared on go-live (linking to `/apps/beacon`), and a
 "▶️ Watch the replay" entry appears once the recording is ready. The replay is posted only once
 (never double-posted).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -111,7 +113,7 @@ their live-chat copy no longer lingers on Stream. Beacon stores no per-member Po
 is removed from Beacon tables; `beacon_events` (public broadcast history) and the admin audit trail are
 retained by design. If Stream is down at delete time, the deletion still succeeds and the failure is
 logged for retry.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -124,7 +126,7 @@ logged for retry.
 2. Create an event with a title and description.
 **Expected:** The event is created as a `draft`. A non-admin cannot reach the admin controls (admin
 commands are deny-by-default).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A2 · Go Live (both input paths)
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -137,7 +139,7 @@ commands are deny-by-default).
 to the Commons. The host stage mounts after go-live; HLS + recording start once a host is actually
 publishing (the in-browser screen-share triggers `start-broadcast`). Only the host can publish —
 viewers never can. On error, the underlying Stream message is surfaced, not a generic text.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A3 · Moderate the chat
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -148,7 +150,7 @@ viewers never can. On error, the underlying Stream message is surfaced, not a ge
 3. Enable slow-mode.
 **Expected:** Each action takes effect in the live chat and is recorded in the admin audit trail. The
 admin is the channel moderator.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A4 · End the event
 **Role:** admin · **Surfaces:** web (admin surface)
@@ -156,14 +158,14 @@ admin is the channel moderator.
 1. Press End on the live event.
 **Expected:** The broadcast stops and the call ends reliably (so Stream billing stops); status flips
 to `ended`. When the recording is ready, the replay auto-posts to the Commons (idempotent).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A5 · Event history
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
 1. Open the event history list.
 **Expected:** Past events and their recordings are listed, including the seeded past event.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 

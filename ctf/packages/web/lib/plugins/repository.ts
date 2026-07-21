@@ -234,6 +234,14 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     navRank: 240,
     isVisible: true,
   },
+  {
+    slug: 'mutual-time',
+    name: 'Mutual Time',
+    summary: 'Find a meeting time everyone can make. Share one link; members pick times in their own timezone and the app chooses the slot with the most overlap.',
+    availabilityState: 'implemented_shell',
+    navRank: 250,
+    isVisible: true,
+  },
 ];
 
 const pluginAliasMap: Record<string, string> = {

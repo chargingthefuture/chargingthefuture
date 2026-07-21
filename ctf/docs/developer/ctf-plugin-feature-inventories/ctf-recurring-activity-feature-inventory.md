@@ -123,9 +123,9 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
 
 ## Web and Android Delivery Status
 
-`web + mobile-responsive + android` — see the change log for the delivery pass. Web hub at
-`/apps/recurring-activity`; Android feature at `packages/mobile/src/features/recurring-activity`. Both
-bind to the same API and enforce the no-amount-for-fiat rule.
+Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Web hub at
+`/apps/recurring-activity`. Historical detail: a former Android feature lived at
+`packages/mobile/src/features/recurring-activity` (now removed). The web surface enforces the no-amount-for-fiat rule.
 
 A signed-out visitor (or a signed-in member not verified yet) now sees the marketing landing shell
 (`recurring-activity-public-shell.tsx`) at `/apps/recurring-activity` instead of being redirected to
@@ -159,6 +159,11 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
 
 ## Change Log
 
+- 2026-07-20: **Notifications producer.** Best-effort notifications (`notifySafe`) now fire from the
+  routes: creating an activity notifies the counterparty to confirm/decline
+  (`recurring-activity.invited`); confirming/declining notifies the owner
+  (`recurring-activity.confirmed` / `.declined`). Deduped on the activity id, never self-notifying.
+  No schema/contract change.
 - 2026-07-14: Added refresh controls (app-wide refresh rollout). Web: the shared `RefreshButton` now
   sits next to the "Recurring Activity" heading (the shell renders one header for both the desktop
   and mobile-responsive layouts), wired to a new background mode of `loadData` so the activities and

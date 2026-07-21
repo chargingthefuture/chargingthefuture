@@ -1,5 +1,7 @@
 # LevelUp — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Generated from the LevelUp feature inventory and declared contracts; this is the runnable hand-test checklist for the `level-up` plugin. Regenerate with:
 > `pnpm --dir ctf test-script:generate -- level-up`
 
@@ -28,16 +30,16 @@
 **Seed before starting:** `pnpm --dir ctf seed:level-up`
 
 1. Sign in as the seed **member** (trainee 1). Open the LevelUp app. The cohort browse screen loads without error and shows at least one cohort card.
-   web ☐ android ☐
+   web ☐
 
 2. Sign in as the seed **admin**. Open `/admin/level-up`. The admin panel loads and shows KPI cards and a cohort overview table.
    web ☐
 
 3. Sign in as the seed **member** (trainee 1). Open the Wallet tab. The balance shown is **500 ServiceCredits** (the seeded starting balance).
-   web ☐ android ☐
+   web ☐
 
 4. Sign out. Open the LevelUp public/marketing page (`/apps/level-up` unauthenticated). The page loads and does **not** display a cohort enroll button or any balance figure.
-   web ☐ android ☐
+   web ☐
 
 ---
 
@@ -62,7 +64,7 @@
 - Clearing filters restores the original count.
 - No network error banners appear at any step.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -80,7 +82,7 @@ Result: web ☐ android ☐
 - A deposit or enrollment affordance is visible (the seed cohort requires 300 credits).
 - No fields labeled `trainerName`, `tags`, or `milestoneCount` appear with placeholder/mock data; if they are absent entirely that is correct.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -100,7 +102,7 @@ Result: web ☐ android ☐
 - Wallet balance decreases by 300 (now shows 200 SC spendable) and the LevelUp escrow total reflects 300 held.
 - The cohort card or dashboard shows the trainee as enrolled.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -155,7 +157,7 @@ Result: web ☐
 - No "Spend", "Transfer", or "Send credits" button appears anywhere on this screen — the wallet is read-only.
 - No "Total Spent" or "running balance per row" columns appear (known real-data deviation; absence is correct).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -176,7 +178,7 @@ Result: web ☐ android ☐
 - There is no "buy badge" or "spend credits" affordance anywhere on the screen.
 - No "In Progress" bucket with progress fractions appears (not backed; absence is correct).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -192,7 +194,7 @@ Result: web ☐ android ☐
 - Earned bucket is empty or shows a meaningful empty state (no badges earned yet).
 - All 3 seeded badge definitions appear in the Locked bucket.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -214,7 +216,7 @@ Result: web ☐ android ☐
 - Filtering by a track with no trainers shows an empty state.
 - No rating, handle, learners count, or SC-released figure appears (not backed; absence is correct).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -267,7 +269,7 @@ Result: web ☐
 - Copy says **trainers** earn a credit split for validating milestones.
 - There is no implication that passing a milestone mints new credits for the learner.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -284,7 +286,7 @@ Result: web ☐ android ☐
 - The list reloads without a full-screen loading flash (background refresh).
 - Data shown after refresh is consistent with what was shown before (no errors, no blank screen).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -344,7 +346,7 @@ Result: web ☐
 - Entering `-50` or `0`: the amount field rejects negative values and the submit button is disabled for non-positive amounts (client-side constraint).
 - No "remove credits" or negative-amount path is exposed in the UI anywhere.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -383,7 +385,7 @@ Result: web ☐
 - If the pre-flight guard fires (no positive `workforce_share`), the banner shows `skipped: no_workforce_share` — not a blank screen or error.
 - After a successful run, the cohort overview refreshes and any newly created cohorts carry an `auto` badge; auto-created cohorts with no trainer yet carry a `needs trainer` badge.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -539,3 +541,10 @@ The following cases must produce the same data and UX outcome on both surfaces. 
 - **Unbacked trainer detail fields absent.** Trainer rating, handle, per-cohort name/status, learners count, milestones validated, SC released, and recent-activity feed are not returned by `GET /api/level-up/trainers`. Their absence from the UI is correct.
 - **Unbacked achievement fields absent.** Achievement emoji, rarity, and an "In Progress" bucket with progress fractions are not backed by the endpoint (earned boolean only). Their absence is correct.
 - **Unbacked wallet fields absent.** "Total Spent", per-row running balance, a "Spent" filter tab, per-cohort escrow breakdown, and an "earn more" suggestion list have no data path (grant-only model). Their absence is correct.
+
+---
+
+## Notifications
+
+**1.** As a trainer or admin, release a milestone's credits for a learner. Sign in as that learner, open the 🔔 notifications tab in the Commons, and confirm a "A LevelUp milestone was approved and your credits were released." item appears (unread) with an "Open" pill to LevelUp.
+web ☐

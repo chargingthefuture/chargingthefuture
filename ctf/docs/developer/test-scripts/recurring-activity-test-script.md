@@ -1,5 +1,7 @@
 # Recurring Activity — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Generated from the feature inventory and declared contracts for `recurring-activity`; this is the runnable checklist a tester works through by hand on a real device. Regenerate with:
 > `pnpm --dir ctf test-script:generate -- recurring-activity`
 
@@ -27,10 +29,10 @@
 ## Core smoke (every session)
 
 **1.** Sign in as a seeded member and navigate to `/apps/recurring-activity` (web) or open Recurring Activity on Android. The hub loads and shows at least the two confirmed seeded activities (one fiat housing tie, one ServiceCredits service tie).
-web ☐ android ☐
+web ☐
 
 **2.** The seeded ServiceCredits service activity shows `50 SC / month` — a declared value is visible. The seeded fiat housing activity shows a currency label and cadence but **no fiat amount anywhere on the row**.
-web ☐ android ☐
+web ☐
 
 **3.** Sign out completely. Visit `/apps/recurring-activity` without signing in. The public landing shell loads with static marketing copy and a sign-in call-to-action. No per-user data appears.
 web ☐
@@ -51,7 +53,7 @@ web ☐
 
 **Expected:** The pending fiat favor activity appears in the list even though this member is the counterparty, not the owner. Activities are ordered newest first. The other party's display name is shown (e.g. "with Alice"), never a raw user ID.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -88,7 +90,7 @@ Result: web ☐
 
 **Expected:** There is no amount input field anywhere for a fiat currency selection. The form submits successfully. The new activity appears in the hub list with status **pending**. Visibility defaults to **private**.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -109,7 +111,7 @@ Result: web ☐ android ☐
 
 **Expected:** An SC value input appears only after selecting ServiceCredits. The activity is created with status **pending** and the declared value `25` is visible on its row. A declared value must be **positive**: entering `0` (or a negative) is rejected by the server — the activity is not created. Leaving the field blank is allowed (no declared value).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -128,7 +130,7 @@ Result: web ☐ android ☐
 
 **Expected:** Sector offers exactly: `housing`, `service`, `favor`, `general`. Cadence offers exactly: `weekly`, `biweekly`, `monthly`, `quarterly`. No text box of any kind exists on the form.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -144,7 +146,7 @@ Result: web ☐ android ☐
 
 **Expected:** The picker does not list the signed-in member as a selectable counterparty, or if the form is submitted with a self-counterparty the server returns an error. No self-activity row is created.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -161,7 +163,7 @@ Result: web ☐ android ☐
 
 **Expected:** The activity status changes to **active**. It remains visible in both parties' hub lists. (Only active activities count toward Trust and GDP — the status label changing to "active" is the observable signal.)
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -178,7 +180,7 @@ Result: web ☐ android ☐
 
 **Expected:** The activity status changes to **declined**. It no longer appears in the pending section. Member B is not labeled or penalized anywhere visible.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -195,7 +197,7 @@ Result: web ☐ android ☐
 
 **Expected:** No Confirm or Decline action is available to the owner. Only the counterparty can confirm or decline.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -213,7 +215,7 @@ Result: web ☐ android ☐
 
 **Expected:** The activity status changes to **ended**. Repeat the test with a fresh active activity, this time signing in as the counterparty and ending it — the same result is expected. A **pending** activity can also be ended by either party (the End action is present on pending rows on both web and android), which transitions it to **ended**.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -230,7 +232,7 @@ Result: web ☐ android ☐
 
 **Expected:** No End action is available on an already-ended activity. If the action is attempted via any other means, the server returns an error.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -250,7 +252,7 @@ Result: web ☐ android ☐
 
 **Expected:** Each save succeeds and the displayed visibility label updates to match: first `public`, then `restricted`. No fiat amount or counterparty identity is shown on any public-facing surface as a result of this change. The visibility control is shown only while the activity is **active** — it is absent on ended and declined activities on both web and android, and a visibility change attempted on an ended/declined activity via the API is rejected.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -267,7 +269,7 @@ Result: web ☐ android ☐
 
 **Expected:** No visibility selector is available to the counterparty on an activity they did not declare. If attempted via API, the server returns an error.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -284,7 +286,7 @@ Result: web ☐ android ☐
 
 **Expected:** The row shows sector, currency label (e.g. "USD"), cadence, status, and counterparty name. No numeric dollar amount appears anywhere. The SC value field is absent (only shown for ServiceCredits lines).
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -302,7 +304,7 @@ Result: web ☐ android ☐
 
 **Expected:** `50 SC / monthly` is visible on the seeded row. In the create form, the SC value field is shown only while ServiceCredits is selected and hidden for any fiat selection.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -318,7 +320,7 @@ Result: web ☐ android ☐
 
 **Expected:** The refresh icon spins while loading (web) or the pull-to-refresh spinner shows (android), the activities re-pull from the server, and after step 3 the change appears without closing and reopening the app. Refreshing never clears the current screen to the full-screen loading state.
 
-Result: web ☐ android ☐
+Result: web ☐
 
 ---
 
@@ -354,3 +356,13 @@ These cases must produce identical behavior on both surfaces. Run them on web an
 4. **No admin collusion-review surface** — the bilateral graph is captured in the audit trail but no admin UI to surface collusion patterns is built yet.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+
+---
+
+## Notifications
+
+**1.** As member A, record a new recurring activity with member B. Sign in as member B, open the 🔔 notifications tab in the Commons, and confirm a "Someone recorded a recurring activity with you — confirm or decline it." item appears (unread).
+web ☐
+
+**2.** As member B, confirm the activity. Sign in as member A, open the 🔔 tab, and confirm a "Your recurring activity was confirmed." item appears. (Repeat with decline to confirm the "…was declined." item.)
+web ☐

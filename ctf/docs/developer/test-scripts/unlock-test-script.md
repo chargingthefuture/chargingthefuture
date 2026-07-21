@@ -1,5 +1,11 @@
 # Unlock — Manual Test Script
 
+> **Android split (rule 105 / PR #1742, 2026-07-20).** Only the member Unlock access-wall screen (submit
+> a Quora URL, see pending/approved/rejected status) remains on the native Android app; test that on web
+> and Android. The Unlock **admin** surface (verification queue review, duplicate-identity determination,
+> grant/revoke, badges) is **web-only** — test it on web (desktop + mobile-responsive) only; it has no
+> Android surface. This script's steps below are the internal admin surface, so run them on web only.
+
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
 > truth, this is the runnable checklist derived from them. Do not edit a step here to match a
@@ -167,7 +173,7 @@ admin-gated, CSRF-guarded (`x-ctf-csrf: '1'`), and audited.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A6 · Search the submissions list
-**Role:** admin / reviewer · **Surfaces:** web (admin surface), android (Unlock Admin)
+**Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
 **Precondition:** the All view has several submissions (the demo seed / a real queue with 30+ rows).
 **Steps:**
 1. Open the admin submissions list (web `/admin/unlock`; android Unlock Admin) and switch to the All
@@ -184,7 +190,7 @@ Clearing the box restores the full list. Search filters the already-loaded page.
 ---
 
 ### UNLOCK-A7 · Android pull-to-refresh (member screen + admin queue)
-**Role:** member, then admin / reviewer · **Surfaces:** android (Unlock + Unlock Admin)
+**Role:** member, then admin / reviewer · **Surfaces:** web (member Unlock screen + admin) · android (member Unlock screen only — the admin surface is web-only, rule 105 / #1742)
 **Precondition:** signed in on the device; the member has a submission (any status), and the admin
 queue has at least one row.
 **Steps:**
@@ -201,7 +207,7 @@ completes, including on a failed request.
 ---
 
 ### UNLOCK-A8 · A/B experiment readout parity (web ↔ android)
-**Role:** admin / reviewer · **Surfaces:** web (admin surface), android (Unlock Admin)
+**Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
 **Precondition:** signed in as an admin on both surfaces.
 **Steps:**
 1. Open the web admin (`/admin/unlock`) and find the "Early Commons access — A/B experiment" panel.

@@ -1,5 +1,7 @@
 # ClickLog — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
 > truth, this is the runnable checklist derived from them. Do not edit a step here to match a
@@ -12,7 +14,7 @@
 | **Plugin** | ClickLog (`click-log`) |
 | **Visibility** | Member-facing |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-click-log-feature-inventory.md` |
 | **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
@@ -34,13 +36,13 @@ A private, sign-in-only incident counter — these confirm logging works and sta
 member. Member role unless noted.
 
 1. **Counter loads.** Open ClickLog. The total count and recent-incident list render with real
-   numbers, not a spinner or error. → web ☐ mobile ☐ android ☐
+   numbers, not a spinner or error. → web ☐ mobile ☐
 2. **One-tap log works.** Press the large "Log Incident" button. A new incident is recorded and the
-   total rises by one. → web ☐ mobile ☐ android ☐
+   total rises by one. → web ☐ mobile ☐
 3. **Private to the member.** Confirm the list shows only the signed-in member's own incidents — no
-   other member's rows appear. → web ☐ mobile ☐ android ☐
+   other member's rows appear. → web ☐ mobile ☐
 4. **Sign-in required.** Sign out and try to reach ClickLog. Access is denied; there is no public
-   view. → web ☐ mobile ☐ android ☐
+   view. → web ☐ mobile ☐
 
 ---
 
@@ -54,7 +56,7 @@ member. Member role unless noted.
 **Expected:** The incident is created and appears at the top of the recent list. The interaction is
 logged (the new row is the member-visible result of that log). Notes and location are stored as
 optional metadata; logging still works when location is declined.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CL-2 · Count and history are real
 **Role:** member · **Surfaces:** all
@@ -63,7 +65,7 @@ optional metadata; logging still works when location is declined.
 2. Read the derived stats (this week, this month, with notes, with location).
 **Expected:** The headline total is the true database count, not the capped length of the visible
 list. Every stat is derived from real `/api/click-log` data — none are placeholders.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CL-3 · Delete an own incident
 **Role:** member · **Surfaces:** all
@@ -72,7 +74,7 @@ list. Every stat is derived from real `/api/click-log` data — none are placeho
 2. Re-read the count and list.
 **Expected:** The row is removed, the total drops by one, and the delete is logged. A member cannot
 delete another member's incident.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CL-4 · Readable error on a failed action
 **Role:** member · **Surfaces:** all
@@ -80,7 +82,7 @@ delete another member's incident.
 1. Trigger a failed log or delete (e.g. a note longer than the allowed length).
 **Expected:** The surface shows the server's specific message from the response, not a generic
 string. Trailing whitespace on a note is trimmed before the length check.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -97,7 +99,7 @@ incident, updated total) appears without closing and reopening the app. Refreshi
 current screen to the full-screen loading state.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
@@ -109,7 +111,7 @@ directly).
 1. As admin, delete an incident that belongs to another member.
 **Expected:** The delete succeeds (admins are not limited to their own rows). The authorized request
 is logged; deleting a row that is already gone is logged as a failure result, not a server error.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CL-A2 · Left icon-rail chrome has no dead controls
 **Role:** member · **Surfaces:** web (desktop)

@@ -161,7 +161,7 @@ Seed content:
 
 ## Web and Android Delivery Status
 
-Parity status: **web+android complete** (pixel pass delivered). Web pixel pass complete: the web shell
+Delivery: **web + mobile-responsive complete** (pixel pass delivered). **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Web pixel pass complete: the web shell
 (`components/level-up/level-up-shell.tsx` + `lu-*` sub-components) is aligned to the design mockup and
 decomposed within rule-116 limits. Android pixel pass complete (2026-05-31): `LevelUp.tsx` rewritten to
 the design mockup (`MobileLevelUp.tsx` / `MobileLevelUpEmpty.tsx` / `MobileLevelUpLoading.tsx` /
@@ -213,6 +213,11 @@ that exist today.
 
 ## Change Log
 
+- 2026-07-20: **Notifications producer.** The milestone-release route emits a best-effort
+  notification (`notifySafe`, `level-up.milestone.released`) to the learner when their milestone
+  credits are released — deduped on the transfer id, never to the trainer/admin who released. To
+  address the learner, `releaseMilestoneCredits` now returns `recipientUserId` on its response
+  (additive; it was already computed internally). No schema/route/contract-list change.
 - 2026-07-20: **Resolved the level-up code-review sweep findings (#1756–#1763).** No schema, route
   list, or contract change — behaviour and security hardening only:
   - **dispute.open ownership (#1756, security).** `openDispute` now verifies the actor is the

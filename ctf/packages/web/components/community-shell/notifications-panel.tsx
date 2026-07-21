@@ -34,6 +34,77 @@ const PUSH_TOGGLES: Array<{ key: keyof Pick<NotificationPreferences, 'pushSafety
   { key: 'pushCommunity', label: 'Community', detail: 'Commons, PeerProgramming' },
 ];
 
+function pushSupported(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    'serviceWorker' in navigator &&
+    'PushManager' in window &&
+    'Notification' in window
+  );
+}
+
+// A VAPID public key is base64url; pushManager.subscribe needs it as bytes (a plain ArrayBuffer so it
+// satisfies BufferSource). Mirrors the Foundation call-alerts helper.
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const buffer = new ArrayBuffer(raw.length);
+  const output = new Uint8Array(buffer);
+  for (let i = 0; i < raw.length; i += 1) {
+    output[i] = raw.charCodeAt(i);
+  }
+  return output;
+}
+
+// Ensure this device has a Web Push subscription so opted-in categories can ping it. Best-effort:
+// returns a short note when it can't (unsupported browser, permission denied, push not configured on
+// the server). The in-app feed works regardless; this only governs the device ping. Reuses the
+// user-global push subscription (shared with Foundation), so a device subscribed once needs no repeat.
+async function ensureDeviceSubscribed(): Promise<string | null> {
+  if (!pushSupported()) {
+    return 'This browser can’t show device alerts — the list above still updates in the app.';
+  }
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    const existing = registration ? await registration.pushManager.getSubscription() : null;
+    if (existing) {
+      return null; // already subscribed on this device
+    }
+    if (Notification.permission === 'denied') {
+      return 'Device alerts are blocked in your browser settings — the list above still updates in the app.';
+    }
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      return 'Device alerts are off for now — the list above still updates in the app.';
+    }
+    const keyRes = await fetch('/api/notifications/push/vapid-public-key', { cache: 'no-store' });
+    const keyData = (await keyRes.json().catch(() => ({}))) as { ok?: boolean; publicKey?: string };
+    if (!keyRes.ok || !keyData.publicKey) {
+      return 'Device alerts aren’t available yet — the list above still updates in the app.';
+    }
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(keyData.publicKey),
+    });
+    const json = subscription.toJSON();
+    await fetch('/api/notifications/push/subscribe', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
+      body: JSON.stringify({
+        endpoint: json.endpoint,
+        keys: json.keys,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      }),
+    });
+    return null;
+  } catch {
+    return 'Couldn’t turn on device alerts on this device — the list above still updates in the app.';
+  }
+}
+
 // The notifications center: the member's own feed of updates across plugins, plus the device-push
 // opt-ins. The in-app feed is always shown; the opt-ins only control the device ping and default off.
 // Opt-in lives here (not buried in account settings) so it sits with the feed it governs.
@@ -44,6 +115,9 @@ export function NotificationsPanel() {
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
   const [savingPref, setSavingPref] = useState<string | null>(null);
+  // A short note shown when turning on a push category couldn't subscribe this device (unsupported
+  // browser, blocked permission, or push not configured). The opt-in is still saved either way.
+  const [pushNote, setPushNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -95,6 +169,14 @@ export function NotificationsPanel() {
       const next = { ...prefs, [key]: !prefs[key] };
       setPrefs(next);
       setSavingPref(key);
+      setPushNote(null);
+      // Turning ON any of the three push categories needs a device subscription for the ping to land;
+      // make sure this device is subscribed (best-effort — the opt-in still saves either way).
+      const turningOnPush =
+        (key === 'pushSafety' || key === 'pushActivity' || key === 'pushCommunity') && next[key] === true;
+      if (turningOnPush) {
+        void ensureDeviceSubscribed().then((note) => setPushNote(note));
+      }
       void requestJson<NotificationPreferencesResponse>('/api/notifications/preferences', {
         method: 'PUT',
         headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
@@ -179,6 +261,9 @@ export function NotificationsPanel() {
                 Everything shows in this list either way. These switches only control whether your
                 device also pings you. All are off unless you turn them on.
               </p>
+              {pushNote ? (
+                <p className={styles.notificationsManageNote} role="status">{pushNote}</p>
+              ) : null}
               {PUSH_TOGGLES.map((toggle) => (
                 <label key={toggle.key} className={styles.notificationsPrefRow} aria-label={toggle.label}>
                   <input

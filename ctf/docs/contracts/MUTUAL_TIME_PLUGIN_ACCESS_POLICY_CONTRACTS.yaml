@@ -1,0 +1,64 @@
+pluginId: mutual-time
+version: 1.0.0
+description: >
+  Access policy for Mutual Time (spec #1780). Three tiers: admins create/close events; approved members
+  (signed in AND Unlock-approved) vote; anyone (including signed-out or not-yet-approved visitors) may
+  read an event and its result. No command moves ServiceCredits.
+
+policies:
+  - pluginId: mutual-time
+    command: mutual-time.event.create
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies:
+      - Owner/admin only. Enforced by evaluatePluginAccess({ requiredRoles: ['admin'] }).
+    consentRequirements: []
+    regionRestrictions: []
+    highRiskFlags: []
+    denyConditions:
+      - Non-admin caller (403 forbiddenRole).
+      - Missing or cross-origin CSRF confirmation (403).
+
+  - pluginId: mutual-time
+    command: mutual-time.event.close
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies:
+      - Owner/admin only, and the repository additionally requires the actor to be the event's creator.
+    consentRequirements: []
+    regionRestrictions: []
+    highRiskFlags: []
+    denyConditions:
+      - Non-admin caller (403).
+      - Actor is not the event creator (404, ownership check).
+      - Missing or cross-origin CSRF confirmation (403).
+
+  - pluginId: mutual-time
+    command: mutual-time.vote.save
+    version: 1.0.0
+    requiredRoles: [member, admin]
+    attributePolicies:
+      - Signed in AND Unlock tier approved_full (or admin). Enforced by evaluatePluginAccess({ minUnlockTier: 'approved_full' }).
+      - At most 3 picks; each pick must be a valid candidate slot; the event must be currently open.
+    consentRequirements: []
+    regionRestrictions: []
+    highRiskFlags: []
+    denyConditions:
+      - Signed-out or not-yet-approved (locked) caller (403 unlock_required).
+      - Event not open — scheduled or closed (409).
+      - More than 3 picks, or a pick that is not a valid candidate slot (400).
+      - Missing or cross-origin CSRF confirmation (403).
+
+  - pluginId: mutual-time
+    command: mutual-time.event.read
+    version: 1.0.0
+    requiredRoles: [public]
+    attributePolicies:
+      - Public/anonymous read; no authentication required. Rate-limited per IP (enforcePublicReadRateLimit).
+      - Returns only public event fields + the result; never who voted. A signed-in approved member's own picks are added for hydration.
+    consentRequirements: []
+    regionRestrictions: []
+    highRiskFlags: []
+    denyConditions:
+      - Over the public read rate limit (429).
+      - Unknown slug (404).

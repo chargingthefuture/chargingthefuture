@@ -124,7 +124,7 @@ to the env flag, then the default. With no admin setting and no env override, th
 - `GET /api/peer-programming/admin/single-open-cohort` — Admin-only: read the effective single standing, always-open Cohort 1 mode and where it resolves from. Returns `{ enabled, source, adminSetting, envFlagEnabled }` where `source` is `admin_setting` | `env_flag` | `default`. Resolution precedence: the persisted admin setting (`peer_programming_settings.single_open_cohort_enabled`) if set, then the env flag `PEER_PROGRAMMING_SINGLE_OPEN_COHORT`, then the built-in default (ON). Backs the admin "Single standing Cohort 1 mode" control.
 - `POST /api/peer-programming/admin/single-open-cohort` — Admin-only, CSRF-guarded: set or clear the persisted toggle. Body `{ enabled }` where `true`/`false` is the admin's explicit choice (supersedes the env flag) and `null` clears the admin setting (revert to the env flag, then default). Upserts the one-row `peer_programming_settings` singleton and writes an admin audit row (`peer-programming.settings.single-open-cohort.set`). Returns the re-resolved `{ enabled, source, adminSetting, envFlagEnabled }`.
 
-These admin routes are now surfaced by a real admin UI on both web and Android (see Web and Android Delivery Status). The web admin page (`/admin/peer-programming`) is admin-gated; it binds the topic and assignment routes, the `admin/cohorts` list, and the `admin/single-open-cohort` read/write toggle, and links each cohort to the room via `/apps/peer-programming?cohortId=<id>`.
+These admin routes are now surfaced by a real admin UI on web (the former Android admin surface was removed 2026-07-20 per rule 105, PR #1742; see Web and Android Delivery Status). The web admin page (`/admin/peer-programming`) is admin-gated; it binds the topic and assignment routes, the `admin/cohorts` list, and the `admin/single-open-cohort` read/write toggle, and links each cohort to the room via `/apps/peer-programming?cohortId=<id>`.
 
 ### Internal Routes (scheduler-only)
 
@@ -177,7 +177,7 @@ form a cohort immediately with the manual user-id override.
 
 ## Web and Android Delivery Status
 
-`web+android complete` (pixel-pass delivered). The web surface lives under `/apps/peer-programming` and the Android surface lives under `packages/mobile/src/features/peer-programming`.
+Delivery: **web + mobile-responsive complete** (pixel-pass delivered). **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). The web surface lives under `/apps/peer-programming`. Historical parity detail: a former Android surface lived under `packages/mobile/src/features/peer-programming` (now removed).
 
 **Send a cohort message on Android (2026-07-17, issue #1597):** the Android Session tab now has a message composer for cohort members, matching web. `pp-session-tab.tsx` renders a bottom-pinned text input + send button (hidden when the viewer is only listening in / read-only) that calls the existing `postMessage(cohortId, body)` in `api.ts` (`POST /api/peer-programming/messages` with `Content-Type: application/json` and `x-ctf-csrf: '1'`; the author is derived server-side from the Clerk bearer, never sent in the body). It enforces the same constraints as the web composer — non-empty and at most `PEER_PROGRAMMING_MAX_MESSAGE_LENGTH` (2000) characters — clears on success, disables while sending, shows a readable inline error on failure, and asks the parent (`PeerProgramming.tsx`) to re-pull the room (`load(true)`) so the new message appears. Previously the mobile Session tab rendered messages read-only with no way to post.
 
@@ -258,7 +258,7 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 
 ## Build Checklist
 
-> **Reconciliation (2026-05-26):** the Delivery Status above is `web+android complete` (feature parity).
+> **Reconciliation (2026-05-26):** the Delivery Status above was `web+android complete` (feature parity) at the time; the Android surface was removed 2026-07-20 (rule 105, PR #1742) and this feature is now **web-only**.
 > Unchecked items below are obsolete web-first / Android-deferral planning artifacts and deferred MVP
 > validation/release gates (Rule 118) — not missing implementation. The authoritative production bar
 > (pixel-perfect to `design` + parity + gates + deploy) is tracked in

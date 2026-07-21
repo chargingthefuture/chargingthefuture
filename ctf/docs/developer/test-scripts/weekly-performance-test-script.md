@@ -1,5 +1,7 @@
 # Weekly Performance — Manual Test Script
 
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
 > truth, this is the runnable checklist derived from them. Do not edit a step here to match a
@@ -12,7 +14,7 @@
 | **Plugin** | Weekly Performance (`weekly-performance`) |
 | **Visibility** | Admin-only — shown in navigation only to admins (in `ADMIN_ONLY_PLUGIN_SLUGS`) |
 | **Roles to test** | admin (and the `operations` role) |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-weekly-performance-feature-inventory.md` |
 | **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
@@ -38,7 +40,7 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    page `/admin/weekly-performance` redirects to `/apps` (there is no member shell to land on); the
    admin-or-operations routes deny with a stable reason. A non-admin or signed-out visitor opening
    `/apps/weekly-performance` gets a plain 404 — never a public landing/marketing page (the plugin
-   has no public visitor shell; the unreachable one was deleted 2026-07-15). → web ☐ mobile ☐ android ☐
+   has no public visitor shell; the unreachable one was deleted 2026-07-15). → web ☐ mobile ☐
 2. **Numbers are always live — no "closed" week.** Open the dashboard. Every week shows live numbers
    computed from that week's activity — there is no "metrics appear when the week closes" placeholder
    and no week status to wait on. The current week is marked **Live**; past weeks are plain historical
@@ -47,7 +49,7 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    upstream tables for any window, so past weeks recalculate when data changes. (Exception: the two
    Goal rows are state totals snapshotted weekly — captured daily by the scheduled
    goal-snapshot workflow, so a week has its reading even if nobody opened the dashboard; a week from
-   before the capture workflow existed reads 0.) → web ☐ mobile ☐ android ☐
+   before the capture workflow existed reads 0.) → web ☐ mobile ☐
 3. **One surface only — the admin page serves the full dashboard.** Open `/admin/weekly-performance`
    as an admin: it renders the full dashboard (desktop: week-history sidebar + grouped metric cards +
    comparison chart; phone: week selector in the sticky header). There is no Export control anywhere
@@ -55,16 +57,16 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    `/apps/weekly-performance` as an admin redirects straight to `/admin/weekly-performance` — there
    is no separate member view, no "Member view" pill, and no "Admin" pill anywhere in the plugin.
    There is **no** "Active week / Set as active week" control and no open/locked/published
-   status. → web ☐ mobile ☐ android ☐
+   status. → web ☐ mobile ☐
 4. **Numbers, not a spinner.** Metric cards and the this-week-vs-last-week comparison render real
-   values, not a stuck loading state. → web ☐ mobile ☐ android ☐
+   values, not a stuck loading state. → web ☐ mobile ☐
 
 ---
 
 ## Admin walkthrough
 
 ### WP-A1 · Access gate — admin/operations only
-**Role:** admin (and a plain member to confirm denial) · **Surfaces:** web (desktop), web (mobile-responsive), android
+**Role:** admin (and a plain member to confirm denial) · **Surfaces:** web (desktop), web (mobile-responsive)
 **Seed:** `seed:demo`
 **Steps:**
 1. As a plain member, look for the plugin in navigation and try `/admin/weekly-performance`.
@@ -74,10 +76,10 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
 and the read routes deny with a stable reason (`insufficient_role`). The admin sees the full
 dashboard on the admin page (the only surface). The admin gate (`ensureWeeklyPerformanceAdmin`)
 admits `admin` or the `operations` role, matching `requiredRoles: [admin, operations]`.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WP-A2 · Week navigation and review picker
-**Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive), android
+**Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive)
 **Steps:**
 1. Read the week history (current week back through prior weeks) and the current week.
 2. Pick a week to review (web admin picker, or the History tab on Android).
@@ -87,10 +89,10 @@ appears, newest first, even for weeks with no activity (they read zero). Labels 
 (e.g. "Jul 13–19, 2026") on desktop **and** the mobile-responsive week selector — never a raw ISO
 date. Picking a week shows that week's live metrics; the current week is marked **Live**. There is no
 "set active week" action and no per-week status.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WP-A3 · Metrics and week-over-week comparison
-**Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive), android
+**Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive)
 **Steps:**
 1. Open a week's metric cards. The set is the owner-locked value-metric table
    (`ctf/docs/developer/PLUGIN_VALUE_METRICS.md`), grouped on web under three headings:
@@ -117,7 +119,7 @@ deltas (this week vs last week); a declining metric shows a downward-trend indic
 `weekly-performance.metrics.get` or `…comparison.get` per branch. Loading, empty, and error states
 are all distinct. Android renders the same metric list with humanized labels (goal progress bars are
 web-only for now — a tracked gap, not a bug).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### WP-A5 · Left icon-rail chrome has no dead controls
 **Role:** admin / operations · **Surfaces:** web (desktop)
@@ -147,7 +149,7 @@ flashes the metric cards to the empty state.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly). There is no "Member view" pill and no "Admin" pill anywhere in the header — the admin
 page is the plugin's only surface.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 
