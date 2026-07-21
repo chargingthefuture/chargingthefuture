@@ -150,7 +150,7 @@ async function computeWinner(
 ): Promise<{ slotStart: Date; canMakeIt: number } | null> {
   const result = await client.query<{ slot_start_utc: Date; c: number }>(
     `
-      SELECT slot_start_utc, COUNT(*)::int AS c
+      SELECT slot_start_utc, COUNT(DISTINCT voter_user_id)::int AS c
       FROM mutual_time_votes
       WHERE event_id = $1
       GROUP BY slot_start_utc
