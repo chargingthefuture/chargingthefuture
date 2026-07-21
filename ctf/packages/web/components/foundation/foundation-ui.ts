@@ -46,8 +46,16 @@ export interface ProviderView {
 export interface QuoteView {
   id: string;
   threadId: string;
+  // The provider on this quote. Compared against the signed-in viewer so only the provider sees the
+  // price inputs on a 'requested' quote (the survivor never sets the price).
+  providerUserId: string;
   serviceType: string;
   lifecycleState: FoundationQuoteState;
+  // Priced one-off quote. quotedAmount/quotedCurrency are set by the provider when they respond;
+  // settledAtIso is stamped on close when the quote carried a value. All null until then.
+  quotedAmount: number | null;
+  quotedCurrency: string | null;
+  settledAtIso: string | null;
   createdAtIso: string;
 }
 
