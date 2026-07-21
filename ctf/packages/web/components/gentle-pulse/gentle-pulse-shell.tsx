@@ -2,17 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { BackChevronButton } from "@/lib/nav/back-history";
-import { Badge } from "@/components/ui/badge";
 import { Heart } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { getGentlePulseTokens, type Session, type Tab } from "./gp-shared";
 import { GentlePulseLoading } from "./gp-loading";
-import { GentlePulseIconRail } from "./gp-icon-rail";
-import { GentlePulseSidebar } from "./gp-sidebar";
 import { GentlePulseSessions } from "./gp-sessions";
 import { GentlePulsePlayer } from "./gp-player";
-import { GentlePulseRightPanel } from "./gp-right-panel";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 
@@ -28,7 +23,6 @@ export function GentlePulseShell() {
   const [progress] = useState(40);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getGentlePulseTokens(theme);
 
@@ -128,7 +122,6 @@ export function GentlePulseShell() {
     </>
   );
 
-  if (isMobile) {
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
@@ -151,36 +144,4 @@ export function GentlePulseShell() {
         {content}
       </div>
     );
-  }
-
-  return (
-    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      <GentlePulseIconRail tab={tab} onTab={setTab} />
-      <GentlePulseSidebar
-        categories={categories}
-        category={category}
-        onCategory={setCategory}
-        sessionCount={sessions.length}
-        favoriteCount={favorites.size}
-      />
-
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
-          <Heart size={18} style={{ color: t.ACCENT }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>💚 GentlePulse — Guided Meditation</div>
-            <div style={{ fontSize: 12, color: t.FAINT }}>Trauma-informed · Expert-designed</div>
-          </div>
-          <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
-            ✓ Trauma-Informed
-          </Badge>
-          <RefreshButton onRefresh={() => fetchLibrary()} title="Refresh" />
-        </header>
-
-        {content}
-      </div>
-
-      <GentlePulseRightPanel sessions={sessions} onPlay={(id) => void handlePlay(id)} />
-    </div>
-  );
 }

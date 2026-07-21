@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, Search } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { AppLoading } from "@/components/shared/app-loading";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
@@ -14,14 +13,11 @@ import {
   type SkillsHuntRound, type SkillsHuntLeaderboardItem, type SkillsHuntAchievement,
   type SkillsHuntNotification, type SkillsHuntSubmission, type SkillsHuntMissionWithProgress,
 } from "./sh-shared";
-import { SkillsHuntIconRail } from "./sh-icon-rail";
 import { SkillsHuntNotifications } from "./sh-notifications";
-import { SkillsHuntSidebar } from "./sh-sidebar";
 import { SkillsHuntScoutTab, type ScoutFormModel } from "./sh-scout-tab";
 import { SkillsHuntLeaderboardTab } from "./sh-leaderboard-tab";
 import { SkillsHuntMissionsTab } from "./sh-missions-tab";
 import { SkillsHuntMyFindsTab } from "./sh-my-finds-tab";
-import { SkillsHuntRightPanel } from "./sh-right-panel";
 import { useNominationForm } from "./sh-use-nomination-form";
 
 function CenteredNote({ t, color, children }: { t: SkillsHuntTokens; color: string; children: React.ReactNode }) {
@@ -29,24 +25,6 @@ function CenteredNote({ t, color, children }: { t: SkillsHuntTokens; color: stri
     <div style={{ width: "100%", minHeight: "100vh", background: t.BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ fontSize: 14, color }}>{children}</div>
     </div>
-  );
-}
-
-function ShellHeader({ t, activeRound, onRefresh }: { t: SkillsHuntTokens; activeRound: SkillsHuntRound | null; onRefresh: () => void }) {
-  return (
-    <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
-      <Search size={18} style={{ color: t.ACCENT }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>SkillsHunt</div>
-        <div style={{ fontSize: 12, color: t.MUTED }}>
-          {activeRound ? activeRound.name : "Nominate survivors · build the Directory · grow the economy"}
-        </div>
-      </div>
-      {activeRound && (
-        <span style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>Round active</span>
-      )}
-      <RefreshButton onRefresh={onRefresh} title="Refresh" />
-    </header>
   );
 }
 
@@ -112,7 +90,7 @@ export function SkillsHuntShell({
   const [loadingMissions, setLoadingMissions] = useState(false);
   const [notifications, setNotifications] = useState<SkillsHuntNotification[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [achievements, setAchievements] = useState<SkillsHuntAchievement[]>([]);
+  const [, setAchievements] = useState<SkillsHuntAchievement[]>([]);
   const [myFinds, setMyFinds] = useState<SkillsHuntSubmission[]>([]);
   const [loadingRounds, setLoadingRounds] = useState(true);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
@@ -121,7 +99,6 @@ export function SkillsHuntShell({
   // Bumped by the header refresh button; the data effects below re-run without the full-screen
   // loading state (only the initial load, refreshKey 0, shows AppLoading).
   const [refreshKey, setRefreshKey] = useState(0);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
 
@@ -248,7 +225,7 @@ export function SkillsHuntShell({
   if (loadingRounds) return <AppLoading />;
   if (globalError) return <CenteredNote t={t} color="#EF4444">{globalError}</CenteredNote>;
 
-  const { currentUserEntry, noActiveRound } = deriveShellState({ leaderboard, serverCurrentUserEntry, userId, rounds });
+  const { noActiveRound } = deriveShellState({ leaderboard, serverCurrentUserEntry, userId, rounds });
   const showModeratorTools = isAdmin || isModerator;
 
   const content = (
@@ -262,7 +239,6 @@ export function SkillsHuntShell({
     />
   );
 
-  if (isMobile) {
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
@@ -290,22 +266,4 @@ export function SkillsHuntShell({
         <div style={{ padding: 16 }}>{content}</div>
       </div>
     );
-  }
-
-  return (
-    <div style={{ position: "relative", width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      <SkillsHuntIconRail tab={tab} onTab={setTab} notifOpen={notifOpen} onToggleNotif={() => setNotifOpen((o) => !o)} />
-      {notifOpen && (
-        <SkillsHuntNotifications notifications={notifications} onClose={() => setNotifOpen(false)} onMarkRead={(id) => void markRead(id)} />
-      )}
-      <SkillsHuntSidebar tab={tab} onTab={setTab} achievements={achievements} currentUserEntry={currentUserEntry} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader t={t} activeRound={activeRound} onRefresh={() => setRefreshKey((k) => k + 1)} />
-        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "24px" }}>
-          {content}
-        </div>
-      </div>
-      <SkillsHuntRightPanel currentUserEntry={currentUserEntry} achievements={achievements} showModeratorTools={showModeratorTools} />
-    </div>
-  );
 }

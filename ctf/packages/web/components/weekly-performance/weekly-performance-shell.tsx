@@ -17,10 +17,7 @@ import {
   isCurrentWeek,
 } from "./wp-shared";
 import { WeeklyPerformanceLoading } from "./wp-loading";
-import { WeeklyPerformanceIconRail } from "./wp-icon-rail";
-import { WeeklyPerformanceSidebar } from "./wp-sidebar";
 import { WeeklyPerformanceDashboardMain } from "./wp-dashboard-main";
-import { WeeklyPerformanceRightRail } from "./wp-right-rail";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 
@@ -61,7 +58,7 @@ export function WeeklyPerformanceShell() {
   const [weeks, setWeeks] = useState<WpWeek[]>([]);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
   const [currentWeekStart, setCurrentWeekStart] = useState<string | null>(null);
-  const [activeUsers, setActiveUsers] = useState<number | null>(null);
+  const [, setActiveUsers] = useState<number | null>(null);
   const [metrics, setMetrics] = useState<WpMetric[]>([]);
   const [comparison, setComparison] = useState<WpComparison | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -155,7 +152,6 @@ export function WeeklyPerformanceShell() {
     />
   );
 
-  if (isMobile) {
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
@@ -177,24 +173,5 @@ export function WeeklyPerformanceShell() {
         {content}
       </div>
     );
-  }
 
-  return (
-    <div style={{ display: "flex", height: "100dvh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
-      <WeeklyPerformanceIconRail />
-      <WeeklyPerformanceSidebar
-        weeks={weeks}
-        selectedWeekStart={selectedWeekStart}
-        currentWeekStart={currentWeekStart}
-        onSelect={setSelectedWeekStart}
-      />
-      {content}
-      <WeeklyPerformanceRightRail
-        week={selectedWeek}
-        metricCount={metrics.length}
-        activeUsersLast7Days={activeUsers}
-        isCurrent={selectedIsCurrent}
-      />
-    </div>
-  );
 }

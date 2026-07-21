@@ -196,8 +196,7 @@ export function ContributionsAdminShell() {
     </>
   );
 
-  if (isMobile) {
-    return (
+  return (
       <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
         <MobileScreenHeader title="Contributions Admin" accent={t.ACCENT} icon={<Gift size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/contributions" accent={t.ACCENT} />} />
         <div style={{ padding: '12px 16px 10px', background: t.SURFACE, borderBottom: `1px solid ${t.BORDER_SOLID}`, flexShrink: 0 }}>
@@ -225,44 +224,4 @@ export function ContributionsAdminShell() {
         {content}
       </div>
     );
-  }
-
-  return (
-    // Desktop locks html/body to 100vh + overflow:hidden (globals.css). Use a fixed viewport height
-    // (not min-height) so this row is bounded and the main column's content (flex:1, overflowY:auto)
-    // scrolls internally instead of being clipped and unreachable.
-    <div style={{ display: 'flex', height: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, overflow: 'hidden' }}>
-      <div style={{ width: 200, background: t.SURFACE, borderRight: `1px solid ${t.BORDER_SOLID}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ padding: '18px 14px 14px', borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Gift size={14} color="#fff" />
-            </div>
-            <span style={{ fontWeight: 700, fontSize: 14, color: t.TITLE }}>Contributions</span>
-          </div>
-          <div style={{ fontSize: 11, color: t.MUTED }}>Admin dashboard</div>
-        </div>
-        <nav style={{ padding: '10px 8px', flex: 1 }}>
-          {TABS.map(({ key, label }) => {
-            const isActive = tab === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setTab(key)}
-                style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 7, marginBottom: 2, fontSize: 13, cursor: 'pointer', background: isActive ? `${t.ACCENT}18` : 'transparent', color: isActive ? t.ACCENT : t.MUTED, fontWeight: isActive ? 600 : 400, border: 'none', borderLeft: isActive ? `3px solid ${t.ACCENT}` : '3px solid transparent' }}
-              >
-                {label}
-                {key === 'queue' && pendingCount > 0 && <span style={{ background: '#F59E0B', color: '#000', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99 }}>{pendingCount}</span>}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
-        {loadError && <div style={{ padding: '10px 24px', fontSize: 12, color: '#EF4444' }}>{loadError}</div>}
-        {content}
-      </div>
-    </div>
-  );
 }

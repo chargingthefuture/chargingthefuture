@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Gift, Clock, ArrowLeft } from 'lucide-react';
+import { Gift, ArrowLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import type { ContributionSubmission } from '@/lib/contributions/types';
@@ -19,7 +19,7 @@ import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { RefreshButton } from '@/components/shared/refresh-button';
 import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
-import { goalsFromFundraiser, GoalCard, GoalRow } from './contributions-drive-progress';
+import { goalsFromFundraiser, GoalRow } from './contributions-drive-progress';
 import { ContributionPaths, type SubmitGiftCardInput } from './contributions-paths';
 import { ContributionsHistoryList, ContributionsEmptyHistory } from './contributions-history';
 import { ContributionsConfirmation } from './contributions-confirmation';
@@ -44,20 +44,6 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [mobileTab, setMobileTab] = useState<MobileTab>('drive');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-
-  // Desktop shows every section on one scrolling page, so the left nav items scroll to their
-  // section (and light up as the active one) rather than swapping the whole view. This makes
-  // "Contribute" and "My contributions" actually do something when clicked on desktop.
-  const [activeSection, setActiveSection] = useState<MobileTab>('drive');
-  const driveRef = useRef<HTMLDivElement>(null);
-  const contributeRef = useRef<HTMLDivElement>(null);
-  const historyRef = useRef<HTMLDivElement>(null);
-  const scrollToSection = useCallback((key: MobileTab) => {
-    setActiveSection(key);
-    const target =
-      key === 'drive' ? driveRef.current : key === 'contribute' ? contributeRef.current : historyRef.current;
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
 
   const loadData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -152,7 +138,6 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   }
 
   const goals = goalsFromFundraiser(fundraiser.fundraiser);
-  const driveTitle = fundraiser.fundraiser.cycle ? 'Current drive' : 'No active drive';
   const githubStarAlreadyCredited = fundraiser.fundraiser.githubStarAlreadyCredited;
 
   if (view === 'confirmation') {
@@ -191,7 +176,6 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     onSubmitGithub,
   };
 
-  if (isMobile) {
     return (
       <MobileFrame t={t} tab={mobileTab} onTab={setMobileTab} onRefresh={() => loadData()} isAdmin={isAdmin}>
         {mobileTab === 'drive' && (
@@ -220,48 +204,6 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         )}
       </MobileFrame>
     );
-  }
-
-  return (
-    <DesktopFrame t={t}>
-      <ContributionsSidebar t={t} active={activeSection} onNavigate={scrollToSection} />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
-        <div ref={driveRef} style={{ marginBottom: 28, scrollMarginTop: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 6 }}>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: t.TITLE }}>{driveTitle}</h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <PluginAdminButton href="/admin/contributions" isAdmin={isAdmin} accent={t.ACCENT} />
-              <RefreshButton onRefresh={() => loadData()} title="Refresh" />
-            </div>
-          </div>
-          <p style={{ margin: '0 0 18px', fontSize: 13, color: t.MUTED, lineHeight: 1.7, maxWidth: 620 }}>
-            If every member who can give a little does, the platform&apos;s costs are covered — and it stays free for everyone.
-          </p>
-          <div style={{ display: 'flex', gap: 14 }}>
-            {goals.map((g) => (
-              <GoalCard key={g.key} goal={g} t={t} />
-            ))}
-          </div>
-        </div>
-        <div ref={contributeRef} style={{ scrollMarginTop: 24 }}>
-          <ContributionPaths {...pathsProps} />
-        </div>
-      </div>
-      <div ref={historyRef} style={{ width: 280, background: t.SURFACE, borderLeft: `1px solid ${t.BORDER_SOLID}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ padding: '18px 16px 12px', borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Clock size={14} color={t.ACCENT} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: t.TITLE }}>My Contributions</span>
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
-          {submissions.length === 0 ? (
-            <ContributionsEmptyHistory t={t} />
-          ) : (
-            <ContributionsHistoryList submissions={submissions} t={t} />
-          )}
-        </div>
-      </div>
-    </DesktopFrame>
-  );
 }
 
 // --- frames + chrome ---------------------------------------------------------------------------

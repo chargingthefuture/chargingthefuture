@@ -3,39 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Car } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
-import { Badge } from "@/components/ui/badge";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { AppLoading } from "@/components/shared/app-loading";
 import { useTheme } from "@/hooks/useTheme";
-import { BG, deriveRideTypes, getTrustTransportTokens, type ChatCreds, type Mode, type Tab, type TripRequest, type TrustTransportTokens } from "./tt-shared";
-import { TrustTransportIconRail } from "./tt-icon-rail";
-import { TrustTransportSidebar } from "./tt-sidebar";
+import { BG, deriveRideTypes, getTrustTransportTokens, type ChatCreds, type Mode, type Tab, type TripRequest } from "./tt-shared";
 import { TrustTransportBookTab } from "./tt-book-tab";
 import { TrustTransportTrackingTab } from "./tt-tracking-tab";
 import { TrustTransportHelpTab } from "./tt-help-tab";
 import { TrustTransportEarningsTab } from "./tt-earnings-tab";
 import { TrustTransportChatTab } from "./tt-chat-tab";
-import { TrustTransportRightPanel } from "./tt-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
-
-function ShellHeader({ t, isAdmin, onRefresh }: { t: TrustTransportTokens; isAdmin?: boolean; onRefresh: () => Promise<void> }) {
-  return (
-    <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
-      <Car size={18} style={{ color: t.ACCENT }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>TrustTransport</div>
-        <div style={{ fontSize: 12, color: t.MUTED }}>Rides · Packages · Food · Community mutual aid</div>
-      </div>
-      <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
-        Community
-      </Badge>
-      <PluginAdminButton href="/admin/trust-transport" isAdmin={isAdmin} accent={t.ACCENT} />
-      <RefreshButton onRefresh={onRefresh} title="Refresh" />
-    </header>
-  );
-}
 
 export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
@@ -61,7 +39,6 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   // Tracks the most recently requested chat trip so a slower earlier response
   // can't overwrite the credentials for a trip the user has since switched to.
   const activeChatReqRef = useRef<string | null>(null);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getTrustTransportTokens(theme);
 
@@ -235,7 +212,6 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     </>
   );
 
-  if (isMobile) {
     const tabs: { key: Tab; label: string }[] = [
       { key: "book", label: "Book" },
       { key: "tracking", label: "Tracking" },
@@ -263,17 +239,4 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         {content}
       </div>
     );
-  }
-
-  return (
-    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      <TrustTransportIconRail tab={tab} onTab={setTab} />
-      <TrustTransportSidebar rideTypes={rideTypes} rideType={rideType} onRideType={setRideType} requests={requests} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader t={t} isAdmin={isAdmin} onRefresh={() => fetchRequests()} />
-        {content}
-      </div>
-      <TrustTransportRightPanel requestCount={requests.length} modeCount={modes.length || rideTypes.length} onBook={() => setTab("book")} />
-    </div>
-  );
 }

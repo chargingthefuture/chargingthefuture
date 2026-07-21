@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Share2 } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import {
   BG,
@@ -23,12 +22,9 @@ import {
   type Tab,
 } from "./sr-shared";
 import { SocketRelayLoading } from "./sr-loading";
-import { SocketRelayIconRail } from "./sr-icon-rail";
-import { SocketRelaySidebar } from "./sr-sidebar";
 import { SocketRelayFeed } from "./sr-feed";
 import { SocketRelayPost, type PostDraft } from "./sr-post";
 import { SocketRelayChat } from "./sr-chat";
-import { SocketRelayRightPanel } from "./sr-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
@@ -79,7 +75,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   const [error, setError] = useState<string | null>(null);
   const [requests, setRequests] = useState<SrRequest[]>([]);
   const [myRequests, setMyRequests] = useState<SrRequest[]>([]);
-  const [myRequestCount, setMyRequestCount] = useState(0);
+  const [, setMyRequestCount] = useState(0);
   const [fulfillments, setFulfillments] = useState<SrFulfillment[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [tab, setTab] = useState<Tab>("feed");
@@ -96,7 +92,6 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getSocketRelayTokens(theme);
 
@@ -398,7 +393,6 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     </>
   );
 
-  if (isMobile) {
     const tabs: { key: Tab; label: string }[] = [
       { key: "feed", label: "Feed" },
       { key: "post", label: "Post" },
@@ -435,46 +429,4 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
         {content}
       </div>
     );
-  }
-
-  return (
-    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      <SocketRelayIconRail tab={tab} onTab={setTab} />
-      <SocketRelaySidebar
-        categories={categories}
-        category={category}
-        onCategory={setCategory}
-        search={search}
-        onSearch={setSearch}
-        openCount={openCount}
-        myRequestCount={myRequestCount}
-        fulfillmentCount={fulfillments.length}
-      />
-
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
-          <Share2 size={18} style={{ color: t.ACCENT }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>🔂 SocketRelay — Mutual Aid</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Real-time requests · Privacy-minimized</div>
-          </div>
-          <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
-            {openCount} open
-          </Badge>
-          <PluginAdminButton href="/admin/socket-relay" isAdmin={isAdmin} accent={t.ACCENT} />
-          <RefreshButton onRefresh={() => fetchData(false)} title="Refresh" />
-        </header>
-
-        {content}
-      </div>
-
-      <SocketRelayRightPanel
-        openCount={openCount}
-        myRequestCount={myRequestCount}
-        fulfillmentCount={fulfillments.length}
-        totalCount={requests.length}
-        onPost={() => setTab("post")}
-      />
-    </div>
-  );
 }

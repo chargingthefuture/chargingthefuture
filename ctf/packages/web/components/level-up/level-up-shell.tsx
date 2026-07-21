@@ -4,11 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { BackChevronButton } from "@/lib/nav/back-history";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
-import { getLevelUpTokens, type LevelUpTokens, type Cohort, type Enrollment, type PendingValidation, type NavKey, type Wallet, type Trainer, type Achievement, type WalletView, idempotencyKey } from "./lu-shared";
-import { LevelUpSidebar } from "./lu-sidebar";
+import { getLevelUpTokens, type LevelUpTokens, type Cohort, type Enrollment, type NavKey, type Wallet, type Trainer, type Achievement, type WalletView, idempotencyKey } from "./lu-shared";
 import { LevelUpBrowse } from "./lu-browse";
 import { LevelUpProgress } from "./lu-progress";
-import { LevelUpRightPanel } from "./lu-right-panel";
 import { LevelUpLoading } from "./lu-loading";
 import { LevelUpTrainers } from "./lu-trainers";
 import { LevelUpAchievements } from "./lu-achievements";
@@ -138,7 +136,7 @@ function ShellContent({
   return <CenteredNote color={t.TEXT_SUBTLE}>{HEADINGS[nav]} — coming soon</CenteredNote>;
 }
 
-export function LevelUpShell({ isAdmin = false, isTrainer = false }: { userId?: string; isAdmin?: boolean; isTrainer?: boolean; query?: { track?: string; status?: string; startDate?: string; cohortId?: string } }) {
+export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: boolean; isTrainer?: boolean; query?: { track?: string; status?: string; startDate?: string; cohortId?: string } }) {
   const [nav, setNav] = useState<NavKey>("browse");
   // Track filtering is pinned to "All Tracks" — the preset track chips were hidden because they were a
   // hardcoded list that did not reflect real cohorts (deferred to #1197). The track-filter plumbing
@@ -148,11 +146,6 @@ export function LevelUpShell({ isAdmin = false, isTrainer = false }: { userId?: 
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  // NOTE: when a pending-validations feed is wired up here, it MUST be scoped server-side to the
-  // cohorts this trainer is assigned to (mirroring getTrainerDashboardData's
-  // `created_by_user_id = actorId` filter). Passing an unscoped list to the panel would disclose
-  // other trainers' learners. It is a static empty list today, so there is no exposure yet.
-  const [pendingValidations, setPendingValidations] = useState<PendingValidation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
@@ -247,25 +240,7 @@ export function LevelUpShell({ isAdmin = false, isTrainer = false }: { userId?: 
     }
   }
 
-  async function handleValidate(validation: PendingValidation) {
-    try {
-      const res = await fetch(`/api/level-up/milestones/${validation.milestoneId}/validate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({
-          enrollmentId: validation.enrollmentId,
-          cohortId: validation.cohortId,
-          idempotencyKey: idempotencyKey(),
-        }),
-      });
-      if (!res.ok) return;
-      setPendingValidations((prev) => prev.filter((v) => v.milestoneId !== validation.milestoneId));
-    } catch {
-      // optimistic remove already applied on success path only
-    }
-  }
-
-  const { filtered, balance, escrow, openCount } = deriveView(cohorts, wallet, track, search);
+  const { filtered, escrow, openCount } = deriveView(cohorts, wallet, track, search);
 
   if (loading && cohorts.length === 0 && !error) return <LevelUpLoading />;
 
@@ -299,7 +274,6 @@ export function LevelUpShell({ isAdmin = false, isTrainer = false }: { userId?: 
     </>
   );
 
-  if (isMobile) {
     const navItems: { key: NavKey; label: string }[] = [
       { key: "browse", label: "Browse" },
       { key: "progress", label: "Progress" },
@@ -327,24 +301,4 @@ export function LevelUpShell({ isAdmin = false, isTrainer = false }: { userId?: 
         <div style={{ padding: 16 }}>{content}</div>
       </div>
     );
-  }
-
-  return (
-    <div style={{ display: "flex", height: "100vh", background: t.BG, fontFamily: "Inter, system-ui, sans-serif", color: t.TEXT_BODY, overflow: "hidden" }}>
-      <LevelUpSidebar nav={nav} onNav={setNav} isAdmin={isAdmin} balance={balance} escrow={escrow} />
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
-          {content}
-        </div>
-        <LevelUpRightPanel
-          enrollments={enrollments}
-          pendingValidations={pendingValidations}
-          isAdmin={isAdmin}
-          isTrainer={isTrainer}
-          onBrowse={() => setNav("browse")}
-          onValidate={(validation) => void handleValidate(validation)}
-        />
-      </div>
-    </div>
-  );
 }
