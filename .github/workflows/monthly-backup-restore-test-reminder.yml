@@ -1,0 +1,122 @@
+name: Monthly — Backup & Restore Test Reminder
+
+# Opens a GitHub issue on the 1st of each month reminding the owner to MANUALLY
+# test every backup system — both its backup path and its restore path. A backup
+# is only trustworthy once a restore from it has been proven to work, so this is
+# a recurring manual check, not an automated pass/fail.
+#
+# The list of systems to test lives in ctf/ops/backup-systems.json. When a new
+# backup system is introduced, add an entry there and it appears in the next
+# monthly issue automatically. See
+# .claude/rules/136-backup-and-restore-testing-rules.mdc.
+#
+# Optional: set the repository Actions variable BACKUP_TEST_ASSIGNEE to a GitHub
+# username to auto-assign each month's issue to that person. If unset, the issue
+# is opened unassigned and carries the `backup-restore-test` label.
+
+on:
+  schedule:
+    - cron: '0 9 1 * *' # 09:00 UTC on the 1st of each month
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: monthly-backup-restore-test-reminder
+  cancel-in-progress: false
+
+jobs:
+  open-issue:
+    name: Open the monthly backup/restore test issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Open the reminder issue
+        uses: actions/github-script@v7
+        env:
+          BACKUP_TEST_ASSIGNEE: ${{ vars.BACKUP_TEST_ASSIGNEE }}
+        with:
+          script: |
+            const fs = require('fs');
+
+            const manifest = JSON.parse(fs.readFileSync('ctf/ops/backup-systems.json', 'utf8'));
+            const systems = Array.isArray(manifest.systems) ? manifest.systems : [];
+
+            const now = new Date();
+            const month = now.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' });
+            const year = now.getUTCFullYear();
+            const label = 'backup-restore-test';
+            const title = `Monthly backup & restore test — ${month} ${year}`;
+
+            // Idempotent: if this month's issue already exists (e.g. a manual
+            // re-run), do not open a duplicate.
+            const existing = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${context.repo.owner}/${context.repo.repo} is:issue in:title "${title}"`,
+            });
+            const already = existing.data.items.find((i) => i.title === title);
+            if (already) {
+              core.info(`Issue already exists for ${month} ${year}: #${already.number}. Nothing to do.`);
+              return;
+            }
+
+            const lines = [];
+            lines.push(`Monthly reminder to confirm every backup can actually be restored. A backup is only real once a restore from it has been proven to work.`);
+            lines.push('');
+            lines.push(`Work through each system below. Tick every box once you have run **and verified** it. If anything fails, open a separate bug issue and link it here.`);
+            lines.push('');
+
+            if (systems.length === 0) {
+              lines.push('_No backup systems are listed in `ctf/ops/backup-systems.json`. If that is wrong, add them there._');
+            }
+
+            for (const s of systems) {
+              lines.push(`## ${s.name}`);
+              if (s.whatItProtects) {
+                lines.push('');
+                lines.push(`**Protects:** ${s.whatItProtects}`);
+              }
+              const wf = [];
+              if (s.backupWorkflowName || s.backupWorkflow) {
+                wf.push(`backup — \`${s.backupWorkflowName || s.backupWorkflow}\``);
+              }
+              if (s.restoreWorkflowName || s.restoreWorkflow) {
+                wf.push(`restore — \`${s.restoreWorkflowName || s.restoreWorkflow}\``);
+              }
+              if (wf.length) {
+                lines.push('');
+                lines.push(`**Workflows:** ${wf.join(' · ')}`);
+              }
+              if (s.notes) {
+                lines.push('');
+                lines.push(`**Notes:** ${s.notes}`);
+              }
+              lines.push('');
+              const steps = Array.isArray(s.testSteps) ? s.testSteps : [];
+              for (const step of steps) {
+                lines.push(`- [ ] ${step}`);
+              }
+              lines.push('');
+            }
+
+            lines.push('---');
+            lines.push('');
+            lines.push('Opened automatically by `.github/workflows/monthly-backup-restore-test-reminder.yml`. The system list is `ctf/ops/backup-systems.json`. When a new backup system is added, it appears here next month — see `.claude/rules/136-backup-and-restore-testing-rules.mdc`.');
+
+            const body = lines.join('\n');
+
+            const assignee = (process.env.BACKUP_TEST_ASSIGNEE || '').trim();
+            const assignees = assignee ? [assignee] : [];
+
+            const created = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: [label],
+              assignees,
+            });
+            core.info(`Opened issue #${created.data.number}: ${title}`);
