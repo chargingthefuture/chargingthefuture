@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { BackChevronButton } from "@/lib/nav/back-history";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { BookOpen, Pencil, Search, UserPlus } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
@@ -11,10 +10,8 @@ import { DirectoryProfileDetail } from "./directory-profile-detail";
 import { DirectoryProfileEdit } from "./directory-profile-edit";
 import { DirectoryLoadingSkeleton } from "./directory-loading-skeleton";
 import { DirectoryBrowse } from "./directory-browse";
-import { DirectoryRightPanel } from "./directory-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
-import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { RefreshButton } from "@/components/shared/refresh-button";
 
 const DEFAULT_REWARD_CARD: SkillsHuntRewardCard = {
@@ -316,8 +313,7 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
   // Shared button that opens the editor; label depends on whether the member already has a profile.
   const profileButtonLabel = hasOwnProfile ? "Edit my profile" : "Add my profile";
 
-  if (isMobile) {
-    return (
+  return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
@@ -350,87 +346,4 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
         {profileEditor}
       </div>
     );
-  }
-
-  return (
-    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      {/* Icon rail — the BookOpen brand mark at the top, then the shared PluginRailFooter at the
-          bottom. The footer carries the same three controls every plugin rail has (back to all apps,
-          account & settings, and the signed-in avatar), so the Directory rail no longer drops the
-          standard bottom options. */}
-      <aside style={{ width: 72, background: t.RAIL, borderRight: `1px solid ${t.BORDER}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}30`, border: `1px solid ${t.ACCENT}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, color: t.ACCENT }}>
-          <BookOpen size={20} />
-        </div>
-        <PluginRailFooter />
-      </aside>
-
-      {/* Sidebar */}
-      <aside style={{ width: 240, background: t.HEADER, borderRight: `1px solid ${t.BORDER}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
-        <div style={{ padding: "20px 16px 12px" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.MUTED, textTransform: "uppercase", marginBottom: 12 }}>📇 Directory</div>
-          <div style={{ position: "relative", marginBottom: 12 }}>
-            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: t.FAINT }} />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name, skill, or location…"
-              style={{ width: "100%", padding: "7px 10px 7px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }}
-            />
-          </div>
-        </div>
-        <ScrollArea style={{ flex: 1 }}>
-          <div style={{ padding: "0 8px 16px" }}>
-            {showSectorFilters && sectorFilters.map((f) => (
-              <div key={f} role="button" tabIndex={0} onClick={() => setActiveFilter(f)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveFilter(f); } }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "pointer", background: activeFilter === f ? `${t.ACCENT}18` : "transparent", borderLeft: activeFilter === f ? `2px solid ${t.ACCENT}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
-                <span style={{ fontSize: 13, color: activeFilter === f ? t.TEXT : t.SUBTLE, flex: 1 }}>{f}</span>
-              </div>
-            ))}
-            <div style={{ margin: "16px 0 8px", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.FAINT, textTransform: "uppercase", padding: "0 10px" }}>Community Stats</div>
-            {[{ l: "Sectors", v: String(sectors.length) }, { l: "Active Listings", v: String(members.length) }].map(({ l, v }) => (
-              <div key={l} style={{ padding: "6px 10px", fontSize: 12, color: t.MUTED }}>
-                {l}: <span style={{ color: t.ACCENT, fontWeight: 600 }}>{v}</span>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-        <div style={{ padding: 12, borderTop: `1px solid ${t.BORDER}` }}>
-          <div style={{ padding: "10px 12px", borderRadius: 10, background: `${t.ACCENT}10`, border: `1px solid ${t.ACCENT}25` }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: t.ACCENT, marginBottom: 2 }}>Become a Provider</div>
-            <div style={{ fontSize: 11, color: t.MUTED }}>Claim your profile today</div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
-          <BookOpen size={18} style={{ color: t.ACCENT }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>📇 Directory</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Fellow community members · Trauma-informed · Safe</div>
-          </div>
-          <button onClick={() => setShowProfileEditor(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 9, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
-            {hasOwnProfile ? <Pencil size={14} /> : <UserPlus size={14} />} {profileButtonLabel}
-          </button>
-          <RefreshButton onRefresh={() => setRefreshKey((k) => k + 1)} title="Refresh" />
-          <PluginAdminButton href="/admin/directory" isAdmin={isAdmin} accent={t.ACCENT} />
-        </header>
-
-        {content}
-      </div>
-
-      {/* Right panel */}
-      <DirectoryRightPanel
-        members={members}
-        sectors={sectors}
-        activeFilter={activeFilter}
-        loadingMembers={loadingMembers}
-        onSelect={setSelected}
-        onFilter={setActiveFilter}
-      />
-
-      {profileEditor}
-    </div>
-  );
 }
