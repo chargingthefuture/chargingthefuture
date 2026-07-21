@@ -145,6 +145,14 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   four contracts, seed, this inventory, and the test script. No credits; Trust N/A; web +
   mobile-responsive only. Built from the Replit design mockups as intent, recreated with the app's
   existing plugin-shell tokens per the production-era design policy.
+- 2026-07-21: **Fix — plugin missing from the launcher.** The initial build registered Mutual Time in
+  the code fallback registry (`lib/plugins/repository.ts`) but not in the inline `ctf_plugin_registry`
+  seed in `schema.sql`. Because the launcher list (`listPluginRegistry`) reads the DB registry and only
+  falls back when the DB is empty, Mutual Time was absent from the app launcher on any DB that already
+  had the other plugins seeded — the `/apps/mutual-time` page worked by direct URL (via `getPluginBySlug`
+  fallback), but there was no link to it, so admins could not reach the create/manage dashboard ("not
+  linked anywhere; cannot create a poll"). Added the `mutual-time` row (nav_rank 250, visible) to the
+  `schema.sql` registry seed. Takes effect when `schema.sql` is applied to the database on deploy.
 
 ## Build Checklist
 
