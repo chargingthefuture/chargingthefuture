@@ -3,12 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import { getSkillsTaxonomyTokens, type StSector } from "./st-shared";
-import { SkillsTaxonomyIconRail } from "./st-icon-rail";
 import { SkillsTaxonomySectorsColumn } from "./st-sectors-column";
 import { SkillsTaxonomyTitlesColumn } from "./st-titles-column";
 import { SkillsTaxonomySkillsDetail } from "./st-skills-detail";
@@ -22,7 +20,6 @@ export function SkillsTaxonomyBrowser() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getSkillsTaxonomyTokens(theme);
   const [mobileView, setMobileView] = useState<"sectors" | "titles" | "skills">("sectors");
@@ -63,7 +60,6 @@ export function SkillsTaxonomyBrowser() {
   // Phones can't fit three columns side by side, so the hierarchy becomes a
   // drill-down: sectors → job titles → skills, one level at a time with a
   // back button. The column components go full-width on small screens.
-  if (isMobile) {
     const backTarget = mobileView === "skills" ? "titles" : "sectors";
     const backLabel = mobileView === "skills" ? "Job titles" : "Sectors";
     return (
@@ -109,32 +105,4 @@ export function SkillsTaxonomyBrowser() {
         )}
       </div>
     );
-  }
-
-  return (
-    <div style={{ display: "flex", height: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
-      <SkillsTaxonomyIconRail onRefresh={() => load()} />
-      <SkillsTaxonomySectorsColumn
-        sectors={sectors}
-        selectedSectorId={selectedSectorId}
-        onSelect={(id) => { setSelectedSectorId(id); setSelectedJobTitleId(null); setSearch(""); }}
-      />
-      <SkillsTaxonomyTitlesColumn
-        sector={selectedSector}
-        selectedJobTitleId={selectedJobTitleId}
-        onSelect={(id) => { setSelectedJobTitleId(id); setSearch(""); }}
-      />
-      {error ? (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#F87171", fontSize: 14 }}>{error}</div>
-      ) : (
-        <SkillsTaxonomySkillsDetail
-          sector={selectedSector}
-          jobTitle={selectedJobTitle}
-          skills={visibleSkills}
-          search={search}
-          onSearch={setSearch}
-        />
-      )}
-    </div>
-  );
 }

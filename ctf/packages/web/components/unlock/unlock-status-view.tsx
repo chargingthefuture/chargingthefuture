@@ -3,13 +3,9 @@
 import { Unlock as UnlockIcon } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { STATUS_CONFIG, getUnlockTokens, type DisplayStatus } from "./unlock-shared";
-import { UnlockIconRail } from "./unlock-icon-rail";
-import { UnlockSidebar } from "./unlock-sidebar";
 import { UnlockStatusCard } from "./unlock-status-card";
-import { UnlockRightRail } from "./unlock-right-rail";
 import { UnlockQuoraHelp } from "./unlock-quora-help";
 
 export function UnlockStatusView({
@@ -31,7 +27,6 @@ export function UnlockStatusView({
 }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getUnlockTokens(theme);
 
@@ -51,7 +46,6 @@ export function UnlockStatusView({
     </>
   );
 
-  if (isMobile) {
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
@@ -68,32 +62,5 @@ export function UnlockStatusView({
         <div style={{ padding: "16px" }}>{content}</div>
       </div>
     );
-  }
 
-  return (
-    <div style={{ display: "flex", height: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
-      <UnlockIconRail />
-      <UnlockSidebar status={status} />
-
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
-          <UnlockIcon size={18} color={cfg.color} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE }}>Verification Status</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Quora profile · account unlock</div>
-          </div>
-          <PluginAdminButton href="/admin/unlock" isAdmin={isAdmin} accent={cfg.color} />
-          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 20, background: cfg.bg, border: `1px solid ${cfg.color}30`, fontSize: 11, fontWeight: 600, color: cfg.color }}>
-            <Icon size={11} /> {cfg.label}
-          </div>
-        </header>
-
-        <div style={{ flex: 1, overflowY: "auto", padding: "40px 64px" }}>
-          {content}
-        </div>
-      </div>
-
-      <UnlockRightRail status={status} />
-    </div>
-  );
 }

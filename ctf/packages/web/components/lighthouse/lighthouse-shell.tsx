@@ -3,13 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Home, Search } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import type { Currency } from "@/lib/currency/types";
 import { BG, getLighthouseTokens, listingAcceptsCredits, type ChatCredentials, type CurrencyMap, type Match, type Property, type Tab } from "./shared";
-import { LighthouseIconRail } from "./lighthouse-icon-rail";
-import { LighthouseFilterSidebar, type ListingFilter, filterProperties } from "./lighthouse-filter-sidebar";
-import { LighthouseRightPanel } from "./lighthouse-right-panel";
+import { type ListingFilter, filterProperties } from "./lighthouse-filter-sidebar";
 import { LighthouseBrowse } from "./lighthouse-browse";
 import { LighthouseMatches } from "./lighthouse-matches";
 import { LighthouseChat } from "./lighthouse-chat";
@@ -37,7 +34,6 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getLighthouseTokens(theme);
 
@@ -185,7 +181,6 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
     </>
   );
 
-  if (isMobile) {
     const tabs: { key: Tab; label: string }[] = [
       { key: "browse", label: "Browse" },
       { key: "matches", label: "Matches" },
@@ -232,29 +227,4 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
         {content}
       </div>
     );
-  }
-
-  return (
-    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      <LighthouseIconRail tab={tab} onTab={setTab} />
-      <LighthouseFilterSidebar properties={properties} search={search} onSearch={setSearch} filter={filter} onFilter={setFilter} />
-
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT, display: "flex", alignItems: "center", gap: 8 }}><Home size={16} strokeWidth={1.75} style={{ color: t.ACCENT }} /> LightHouse</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Trauma-informed hosts · ServiceCredits accepted</div>
-          </div>
-          <RefreshButton onRefresh={() => fetchAll()} title="Refresh" />
-          <PluginAdminButton href="/admin/lighthouse" isAdmin={isAdmin} accent={t.ACCENT} />
-        </header>
-
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto", minHeight: 0 }}>
-          {content}
-        </div>
-      </div>
-
-      <LighthouseRightPanel />
-    </div>
-  );
 }

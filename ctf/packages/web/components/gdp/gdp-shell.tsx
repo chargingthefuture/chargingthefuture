@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Globe } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
 import { Badge } from "@/components/ui/badge";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import {
   getGdpTokens,
@@ -19,27 +18,9 @@ import {
   type GdpTokens,
 } from "./gdp-shared";
 import { GdpLoading } from "./gdp-loading";
-import { GdpIconRail } from "./gdp-icon-rail";
-import { GdpSidebar } from "./gdp-sidebar";
 import { GdpDashboard } from "./gdp-dashboard";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
-
-function ShellHeader({ t, metrics, onRefresh }: { t: GdpTokens; metrics: GdpMetrics; onRefresh: () => Promise<void> }) {
-  return (
-    <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
-      <Globe size={18} style={{ color: t.ACCENT }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>Gross Domestic Product — TI Skills Economy</div>
-        <div style={{ fontSize: 12, color: t.MUTED }}>
-          {metrics.countries ? `${metrics.countries} countries · ` : ""}{metrics.members ? `${metrics.members} survivors` : "Loading…"}
-        </div>
-      </div>
-      <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>↑ Live</Badge>
-      <RefreshButton onRefresh={onRefresh} title="Refresh" />
-    </header>
-  );
-}
 
 function EmptyReport({ t }: { t: GdpTokens }) {
   return (
@@ -94,7 +75,6 @@ export default function GdpShell() {
   const [metricRows, setMetricRows] = useState<GdpMetricRow[]>([]);
   // Real per-country member distribution (location tied to people), fetched from /api/gdp/countries.
   const [countries, setCountries] = useState<GdpCountry[]>([]);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getGdpTokens(theme);
 
@@ -171,7 +151,6 @@ export default function GdpShell() {
     metrics.countries = String(distinctCountryCount);
   }
 
-  if (isMobile) {
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "Inter, system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column" }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
@@ -188,16 +167,4 @@ export default function GdpShell() {
         <GdpContent t={t} error={error} report={report} sectors={sectors} countries={countries} metrics={metrics} />
       </div>
     );
-  }
-
-  return (
-    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "Inter, system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      <GdpIconRail />
-      <GdpSidebar metrics={metrics} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader t={t} metrics={metrics} onRefresh={handleRefresh} />
-        <GdpContent t={t} error={error} report={report} sectors={sectors} countries={countries} metrics={metrics} />
-      </div>
-    </div>
-  );
 }

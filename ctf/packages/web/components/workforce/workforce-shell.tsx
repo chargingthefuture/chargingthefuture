@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { BarChart2, Target } from 'lucide-react';
 import { BackChevronButton } from '@/lib/nav/back-history';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { AppLoading } from '@/components/shared/app-loading';
 import { getWorkforceTokens, type WorkforceTokens } from './workforce-shared';
@@ -14,8 +13,6 @@ import type {
   WorkforceOccupationGapItem,
   WorkforceProfile,
 } from '../../lib/workforce/types';
-import { WorkforceIconRail } from './workforce-icon-rail';
-import { WorkforceSidebar } from './workforce-sidebar';
 import { WorkforceHeroStats } from './workforce-hero-stats';
 import { WorkforceSkillDistribution } from './workforce-skill-distribution';
 import { WorkforceSectorGaps } from './workforce-sector-gaps';
@@ -23,12 +20,10 @@ import { WorkforceTrainingGaps } from './workforce-training-gaps';
 import { WorkforceBucketDrilldown } from './workforce-bucket-drilldown';
 import { WorkforceOccupations } from './workforce-occupations';
 import { WorkforceCommunityPlanning } from './workforce-community-planning';
-import { WorkforceProfilePanel } from './workforce-profile-panel';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { MobileTopActions } from '@/components/shared/mobile-top-actions';
 import { RefreshButton } from '@/components/shared/refresh-button';
 
-type Tab = 'dashboard';
 type SidebarView = 'overview' | 'sector' | 'skill-level' | 'occupations' | 'community-planning';
 
 interface WorkforceData {
@@ -222,7 +217,6 @@ function WorkforceDashboardContent({
 }
 
 export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
-  const [tab] = useState<Tab>('dashboard');
   const [view, setView] = useState<SidebarView>('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -234,7 +228,6 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     occupationItems: [],
     profile: null,
   });
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
 
@@ -319,7 +312,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     };
   }, [fetchAll]);
 
-  const { dashboard, sectorItems, skillItems, occupationItems, profile } = data;
+  const { dashboard, sectorItems, skillItems, occupationItems } = data;
 
   if (loading) {
     return <WorkforceLoadingState />;
@@ -361,7 +354,6 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     />
   );
 
-  if (isMobile) {
     const views: { key: SidebarView; label: string }[] = [
       { key: 'overview', label: 'Overview' },
       { key: 'sector', label: 'Sectors' },
@@ -394,61 +386,5 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
         </div>
       </div>
     );
-  }
 
-  return (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        minHeight: '100dvh',
-        background: t.BG,
-        fontFamily: "'Inter', system-ui, sans-serif",
-        color: t.TEXT,
-        display: 'flex',
-      }}
-    >
-      <WorkforceIconRail activeTab={tab} onTabChange={() => undefined} />
-
-      <WorkforceSidebar
-        activeView={view}
-        onViewChange={setView}
-        dashboard={dashboard}
-        sectorItems={sectorItems}
-      />
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <header
-          style={{
-            height: 56,
-            borderBottom: `1px solid ${t.BORDER}`,
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 24px',
-            gap: 16,
-            background: t.HEADER,
-            flexShrink: 0,
-          }}
-        >
-          <BarChart2 size={18} style={{ color: t.ACCENT }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>
-              Workforce Dashboard
-            </div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>
-              {dashboard
-                ? `${dashboard.totalMembers.toLocaleString()} members · ${dashboard.recruitedTotal.toLocaleString()} recruited`
-                : 'Live workforce tracker'}
-            </div>
-          </div>
-          <RefreshButton onRefresh={() => fetchAll(false)} title="Refresh" />
-          <PluginAdminButton href="/admin/workforce" isAdmin={isAdmin} accent={t.ACCENT} />
-        </header>
-
-        {content}
-      </div>
-
-      <WorkforceProfilePanel profile={profile} loading={loading} />
-    </div>
-  );
 }

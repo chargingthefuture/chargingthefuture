@@ -199,19 +199,10 @@ export function RecurringActivityShell() {
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
-        <MobileScreenHeader title="Recurring Activity" accent={t.ACCENT} icon={<HeartHandshake size={18} color={t.ACCENT} />} />
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px 32px' }}>{content}</div>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ display: 'flex', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT }}>
-      <RecurringActivityIconRail t={t} />
-      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '32px 28px 64px' }}>{content}</div>
+    <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
+      <MobileScreenHeader title="Recurring Activity" accent={t.ACCENT} icon={<HeartHandshake size={18} color={t.ACCENT} />} />
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px 32px' }}>{content}</div>
     </div>
   );
 }

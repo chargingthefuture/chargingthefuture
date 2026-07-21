@@ -3,16 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Users } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
-import { BG, getPeerProgrammingTokens, type CohortSummary, type Message, type PeerProgrammingTokens, type Room, type RoomAccess, type Tab } from "./pp-shared";
+import { BG, getPeerProgrammingTokens, type CohortSummary, type Message, type Room, type RoomAccess, type Tab } from "./pp-shared";
 import { PeerProgrammingLoading } from "./pp-loading";
-import { PeerProgrammingIconRail } from "./pp-icon-rail";
-import { PeerProgrammingSidebar } from "./pp-sidebar";
 import { PeerProgrammingCohortsTab } from "./pp-cohorts-tab";
 import { PeerProgrammingSessionTab } from "./pp-session-tab";
 import { PeerProgrammingChatTab } from "./pp-chat-tab";
-import { PeerProgrammingRightPanel } from "./pp-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
@@ -99,25 +95,6 @@ function initialCohortIdFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get("cohortId");
 }
 
-function ShellHeader({ active, t, isAdmin, onRefresh }: { active: boolean; t: PeerProgrammingTokens; isAdmin?: boolean; onRefresh: () => Promise<void> }) {
-  return (
-    <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
-      <Users size={18} style={{ color: t.ACCENT }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>PeerProgramming</div>
-        <div style={{ fontSize: 12, color: t.MUTED }}>Weekly global masterminds · up to 12 people per cohort · Always-open</div>
-      </div>
-      {active && (
-        <span style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
-          Cohort Active
-        </span>
-      )}
-      <PluginAdminButton href="/admin/peer-programming" isAdmin={isAdmin} accent={t.ACCENT} />
-      <RefreshButton onRefresh={onRefresh} title="Refresh" />
-    </header>
-  );
-}
-
 export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -136,7 +113,6 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [feedbackInput, setFeedbackInput] = useState("");
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getPeerProgrammingTokens(theme);
 
@@ -331,7 +307,6 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     </>
   );
 
-  if (isMobile) {
     const tabs: { key: Tab; label: string }[] = [
       { key: "cohorts", label: "Cohorts" },
       { key: "session", label: "Session" },
@@ -358,17 +333,4 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         {content}
       </div>
     );
-  }
-
-  return (
-    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      <PeerProgrammingIconRail tab={tab} onTab={setTab} />
-      <PeerProgrammingSidebar />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader active={Boolean(room?.cohortId)} t={t} isAdmin={isAdmin} onRefresh={reloadRoom} />
-        {content}
-      </div>
-      <PeerProgrammingRightPanel room={room} participants={participants} onJoinSession={() => setTab("session")} />
-    </div>
-  );
 }

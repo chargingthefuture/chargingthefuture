@@ -23,14 +23,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import {
-  BookOpen,
   Search,
   Shield,
   Bell,
   CheckCircle,
   Edit2,
   Trash2,
-  Users,
   X,
   Save,
   UserCheck,
@@ -39,10 +37,8 @@ import {
   ShieldOff,
   RotateCcw,
 } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
-import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { getDirectoryTokens } from "./shared";
 import { DirectorySkillsPicker } from "./directory-skills-picker";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
@@ -148,7 +144,6 @@ function toForm(p: AdminDirectoryProfile): EditForm {
 }
 
 export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }) {
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const pickerTokens = getDirectoryTokens(theme);
   const [profiles, setProfiles] = useState<AdminDirectoryProfile[]>([]);
@@ -522,7 +517,6 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
   }
 
   // ── Mobile layout ──────────────────────────────────────────────────────────
-  if (isMobile) {
     if (editing) {
       const p = editing;
       return (
@@ -634,149 +628,6 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
         </div>
       </div>
     );
-  }
-
-  // ── Desktop layout ───────────────────────────────────────────────────────
-  return (
-    <div style={{ display: "flex", height: "100dvh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: "hidden" }}>
-      {/* Icon rail */}
-      <aside style={{ width: 72, background: "#090B0F", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
-        <Link href="/apps/directory" aria-label="Back to Directory" style={{ width: 40, height: 40, borderRadius: 12, background: `${COLOR}25`, border: `1px solid ${COLOR}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, color: COLOR }}>
-          <BookOpen size={20} />
-        </Link>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: `${COLOR}20`, border: `1px solid ${COLOR}40`, display: "flex", alignItems: "center", justifyContent: "center", color: COLOR }}>
-          <Users size={20} />
-        </div>
-        <PluginRailFooter />
-      </aside>
-
-      {/* Left sidebar */}
-      <aside style={{ width: 240, background: "#0D0F14", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
-        <div style={{ padding: "20px 16px 12px" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: SUBTLE, textTransform: "uppercase", marginBottom: 4 }}>📇 Directory Admin</div>
-          <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5 }}>Claim, edit, and attach provider records</div>
-        </div>
-        <div style={{ padding: "0 12px", flex: 1 }}>
-          {FILTERS.map((f) => (
-            <button key={f} onClick={() => setFilter(f)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, marginBottom: 2, cursor: "pointer", background: filter === f ? `${COLOR}15` : "transparent", borderLeft: filter === f ? `2px solid ${COLOR}` : "2px solid transparent", color: filter === f ? TEXT : SUBTLE, fontSize: 13, border: "none", textAlign: "left" }}>
-              {f}
-              {f === "Unclaimed" && unclaimedCount > 0 && (
-                <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, background: `${COMMUNITY}20`, color: COMMUNITY, border: `1px solid ${COMMUNITY}30`, borderRadius: 4, padding: "1px 5px" }}>{unclaimedCount}</span>
-              )}
-            </button>
-          ))}
-          <div style={{ margin: "16px 0 8px", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#4B5563", textTransform: "uppercase" }}>Stats</div>
-          {[
-            { l: "Total profiles", v: String(profiles.length), c: COLOR },
-            { l: "Unclaimed", v: String(unclaimedCount), c: COMMUNITY },
-            { l: "Claimed", v: String(profiles.length - unclaimedCount), c: "#22C55E" },
-          ].map(({ l, v, c }) => (
-            <div key={l} style={{ padding: "5px 2px", fontSize: 12, color: SUBTLE }}>
-              {l}: <span style={{ color: c, fontWeight: 600 }}>{v}</span>
-            </div>
-          ))}
-        </div>
-      </aside>
-
-      {/* Main */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <header style={{ height: 56, borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14", flexShrink: 0 }}>
-          <Shield size={18} color={COLOR} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>Directory — Admin</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>Profile management · Showing {filtered.length} of {profiles.length}</div>
-          </div>
-          <div style={{ position: "relative" }}>
-            <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: SUBTLE, pointerEvents: "none" }} />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search profiles…" style={{ padding: "6px 10px 6px 30px", background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12, color: TEXT, outline: "none", width: 200 }} />
-          </div>
-          <PluginUserShellButton href="/apps/directory" accent={COLOR} />
-        </header>
-
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 0.9fr 1.2fr 160px", gap: 12, padding: "9px 24px", borderBottom: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.01)", flexShrink: 0 }}>
-          {["Provider", "Source", "Status", "Handle", "Actions"].map((h) => (
-            <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.07em", minWidth: 0, textAlign: h === "Actions" ? "right" : "left" }}>{h}</div>
-          ))}
-        </div>
-
-        <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-          {loading ? (
-            <div style={{ padding: 48, textAlign: "center", color: SUBTLE, fontSize: 14 }}>Loading profiles…</div>
-          ) : error ? (
-            <div style={{ padding: 48, textAlign: "center", color: "#EF4444", fontSize: 14 }}>{error}</div>
-          ) : filtered.length === 0 ? (
-            <div style={{ padding: 48, textAlign: "center", color: SUBTLE, fontSize: 14 }}>No profiles match this view.</div>
-          ) : (
-            filtered.map((p) => {
-              const b = sourceBadge(p);
-              const isEditing = editId === p.id;
-              return (
-                <div key={p.id} style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 0.9fr 1.2fr 160px", gap: 12, padding: "13px 24px", borderBottom: `1px solid ${BORDER}`, background: isEditing ? `${COLOR}05` : "transparent", alignItems: "center", borderLeft: isEditing ? `3px solid ${COLOR}` : "3px solid transparent" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: 10, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: COLOR, flexShrink: 0 }}>{initials(fullName(p))}</div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fullName(p) || "Unnamed"}</div>
-                      <div style={{ fontSize: 11, color: SUBTLE, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.headline ?? p.jobTitleName ?? ""}</div>
-                    </div>
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: `${b.color}18`, color: b.color, border: `1px solid ${b.color}30`, display: "inline-block", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", boxSizing: "border-box" }}>{b.label}</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: p.claimedByUserId ? "#22C55E" : SUBTLE, minWidth: 0 }}>
-                    <CheckCircle size={13} style={{ flexShrink: 0 }} /> {p.claimedByUserId ? "Claimed" : "Unclaimed"}
-                  </div>
-                  <div style={{ fontSize: 11, fontFamily: "monospace", color: p.unclaimedHandle ? COMMUNITY : SUBTLE, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{handleText(p)}</div>
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0, justifyContent: "flex-end" }}>
-                    <button onClick={() => (isEditing ? closeDrawer() : startEdit(p))} style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 7, background: isEditing ? `${COLOR}20` : "rgba(255,255,255,0.04)", border: `1px solid ${isEditing ? COLOR + "50" : BORDER}`, color: isEditing ? COLOR : SUBTLE, fontSize: 12, cursor: "pointer" }}>
-                      {isEditing ? <><X size={11} /> Close</> : <><Edit2 size={11} /> Edit</>}
-                    </button>
-                    {p.claimedByUserId == null && p.source === "community-generated" && (
-                      <button onClick={() => void handleTakedown(p)} disabled={saving} aria-label="Remove at person's request" title="Remove at the person's request (blocks the Quora URL from being re-added)" style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", color: "#F59E0B", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Ban size={12} />
-                      </button>
-                    )}
-                    {p.claimedByUserId == null && (
-                      <button onClick={() => void handleDelete(p)} disabled={saving} aria-label="Delete profile" style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "#EF4444", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Trash2 size={12} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
-          <SuppressionPanel />
-        </div>
-      </div>
-
-      {/* Edit drawer */}
-      {editing && (
-        <aside style={{ width: 340, borderLeft: `1px solid ${BORDER}`, background: "#0D0F14", display: "flex", flexDirection: "column", flexShrink: 0 }}>
-          <div style={{ padding: "14px 18px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 10 }}>
-            <Edit2 size={14} color={COLOR} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>Edit Profile</div>
-              <div style={{ fontSize: 11, color: SUBTLE }}>{editing.claimedByUserId == null ? "Unclaimed" : "Claimed"} · {sourceBadge(editing).label}</div>
-            </div>
-            <button onClick={closeDrawer} aria-label="Close" style={{ width: 26, height: 26, borderRadius: 6, background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: SUBTLE }}>
-              <X size={12} />
-            </button>
-          </div>
-          <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 14 }}>
-            {renderDrawerBody(editing)}
-          </div>
-          <div style={{ padding: "13px 18px", borderTop: `1px solid ${BORDER}`, display: "flex", gap: 8 }}>
-            <button onClick={() => void handleSave()} disabled={saving} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: 10, borderRadius: 9, background: COLOR, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>
-              <Save size={13} /> {saving ? "Saving…" : "Save"}
-            </button>
-            <button onClick={closeDrawer} style={{ padding: "10px 14px", borderRadius: 9, background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, cursor: "pointer" }}>
-              Discard
-            </button>
-          </div>
-        </aside>
-      )}
-    </div>
-  );
 }
 
 // One row of the Quora-URL suppression list (GET /api/directory/admin/suppressed-urls).

@@ -3,11 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Hammer, Search } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { AppLoading } from "@/components/shared/app-loading";
 import { useTheme } from "@/hooks/useTheme";
 import { FONT, getFoundationTokens, type FoundationTab, type ProviderView, type QuoteView } from "./foundation-ui";
-import { IconRail, FilterSidebar, RightRail } from "./foundation-rails";
 import { BrowsePanel, QuotesPanel } from "./foundation-panels";
 import { OfferSkillsPanel } from "./foundation-offer-skills";
 import { ProviderProfile } from "./foundation-profile";
@@ -66,7 +64,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<QuoteView[]>([]);
   const [tab, setTab] = useState<FoundationTab>("browse");
-  const [trade, setTrade] = useState("All Trades");
+  const [trade] = useState("All Trades");
   const [query, setQuery] = useState("");
   const [skillId, setSkillId] = useState<string | null>(null);
   const [skillName, setSkillName] = useState<string | null>(null);
@@ -79,7 +77,6 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
   const [activeDirectLine, setActiveDirectLine] = useState<{ credentials: DirectLineCredentials; subtitle: string | null } | null>(null);
   // The Direct Line re-opened from a Quotes row — only the thread id; credentials are fetched fresh.
   const [quoteDirectLine, setQuoteDirectLine] = useState<{ threadId: string; subtitle: string | null } | null>(null);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
   // Bumped by the header refresh button; the load effect re-runs without the full-screen loading
@@ -152,17 +149,6 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
     })();
     return () => controller.abort();
   }, [initialProviderId]);
-
-  // "Browse All Providers" in the right rail: return to the full, unfiltered list. Just switching to
-  // the browse tab was a no-op whenever browse was already open (the default), so also clear the trade,
-  // search text, and skill filters so the button always lands the member on every provider.
-  const browseAllProviders = useCallback(() => {
-    setTab("browse");
-    setTrade("All Trades");
-    setQuery("");
-    setSkillId(null);
-    setSkillName(null);
-  }, []);
 
   // Real quote creation is two steps: open a connection thread, then request a quote on it.
   const requestQuote = useCallback(async (provider: ProviderView) => {
@@ -291,7 +277,6 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
     </>
   );
 
-  if (isMobile) {
     const tabs: { key: FoundationTab; label: string }[] = [
       { key: "browse", label: "Browse" },
       { key: "offer", label: "Offer" },
@@ -326,25 +311,4 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
         {content}
       </div>,
     );
-  }
-
-  return withInstantCall(
-    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: FONT, color: t.TEXT, display: "flex" }}>
-      <IconRail tab={tab} onTab={setTab} />
-      <FilterSidebar query={query} onQuery={setQuery} trade={trade} onTrade={setTrade} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
-          <Hammer size={18} style={{ color: t.ACCENT }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>Foundation — Trade Services</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Community trade providers · Trauma-informed</div>
-          </div>
-          <RefreshButton onRefresh={() => setRefreshKey((k) => k + 1)} title="Refresh" />
-          <PluginAdminButton href="/admin/foundation" isAdmin={isAdmin} accent={t.ACCENT} />
-        </header>
-        {content}
-      </div>
-      <RightRail providers={providers} quoteCount={quotes.length} onBrowse={browseAllProviders} onSelect={setSelected} />
-    </div>,
-  );
 }

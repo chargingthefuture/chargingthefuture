@@ -4,12 +4,9 @@ import { useEffect, useState } from "react";
 import { Coins } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
 import { Badge } from "@/components/ui/badge";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { AppLoading } from "@/components/shared/app-loading";
-import { BG, fmtCredits, getServiceCreditsTokens, type ServiceCreditsTokens, type Tab, type WalletData } from "./sc-shared";
-import { ServiceCreditsIconRail } from "./sc-icon-rail";
-import { ServiceCreditsSidebar } from "./sc-sidebar";
+import { BG, fmtCredits, getServiceCreditsTokens, type Tab, type WalletData } from "./sc-shared";
 import { ServiceCreditsWalletTab } from "./sc-wallet-tab";
 import { ServiceCreditsEarnTab } from "./sc-earn-tab";
 import { ServiceCreditsCirculationTab } from "./sc-circulation-tab";
@@ -26,29 +23,11 @@ function CenteredNote({ color, children }: { color: string; children: React.Reac
   );
 }
 
-function ShellHeader({ balance, t, isAdmin, onRefresh }: { balance: number; t: ServiceCreditsTokens; isAdmin?: boolean; onRefresh: () => Promise<void> }) {
-  return (
-    <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
-      <Coins size={18} style={{ color: t.ACCENT }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>ServiceCredits — Utility Tokens</div>
-        <div style={{ fontSize: 12, color: t.MUTED }}>Earn · Spend · Trade · Across all apps</div>
-      </div>
-      <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
-        {fmtCredits(balance)} credits
-      </Badge>
-      <RefreshButton onRefresh={onRefresh} title="Refresh" />
-      <PluginAdminButton href="/admin/service-credits" isAdmin={isAdmin} accent={t.ACCENT} />
-    </header>
-  );
-}
-
 export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [tab, setTab] = useState<Tab>("wallet");
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getServiceCreditsTokens(theme);
 
@@ -91,7 +70,6 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     </>
   );
 
-  if (isMobile) {
     const tabs: { key: Tab; label: string }[] = [
       { key: "wallet", label: "Wallet" },
       { key: "earn", label: "Earn" },
@@ -120,17 +98,4 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         <ServiceCreditsSendPanel wallet={wallet} onSent={refreshWallet} isMobile />
       </div>
     );
-  }
-
-  return (
-    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      <ServiceCreditsIconRail tab={tab} onTab={setTab} />
-      <ServiceCreditsSidebar tab={tab} onTab={setTab} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader balance={balance} t={t} isAdmin={isAdmin} onRefresh={handleRefresh} />
-        {content}
-      </div>
-      <ServiceCreditsSendPanel wallet={wallet} onSent={refreshWallet} />
-    </div>
-  );
 }

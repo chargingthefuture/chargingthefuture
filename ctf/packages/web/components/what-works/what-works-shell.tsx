@@ -7,7 +7,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ListChecks, Plus, Search } from 'lucide-react';
 import { BackChevronButton } from '@/lib/nav/back-history';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import {
   BG, BRAND, TEXT, getWhatWorksTokens,
@@ -15,10 +14,7 @@ import {
   type WhatWorksProblemOption, type WhatWorksProduct, type WhatWorksStats,
 } from './ww-shared';
 import { WhatWorksLoading } from './ww-loading';
-import { WhatWorksIconRail } from './ww-icon-rail';
-import { WhatWorksSidebar } from './ww-sidebar';
 import { WhatWorksHero } from './ww-hero';
-import { WhatWorksRightRail } from './ww-right-rail';
 import { WhatWorksProblemSection } from './ww-problem-section';
 import { WhatWorksSuggestPanel } from './ww-suggest-panel';
 import { MobileTopActions } from '@/components/shared/mobile-top-actions';
@@ -56,11 +52,9 @@ export function WhatWorksShell() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [problemOptions, setProblemOptions] = useState<WhatWorksProblemOption[]>([]);
   const [query, setQuery] = useState('');
-  const [activeIndex, setActiveIndex] = useState(0);
   const [showSuggest, setShowSuggest] = useState(false);
   const [busyProductId, setBusyProductId] = useState<string | null>(null);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getWhatWorksTokens(theme);
 
@@ -144,14 +138,6 @@ export function WhatWorksShell() {
     }
   }
 
-  function selectProblem(index: number, list: WhatWorksProblem[]): void {
-    setActiveIndex(index);
-    const target = list[index];
-    if (target) {
-      sectionRefs.current[target.id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }
-
   const visibleProblems = useMemo(() => filterProblems(problems, query), [problems, query]);
 
   if (loading) {
@@ -212,7 +198,6 @@ export function WhatWorksShell() {
     </>
   );
 
-  if (isMobile) {
     return (
       <div style={{ minHeight: '100dvh', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
         <div style={{ position: 'sticky', top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
@@ -254,47 +239,5 @@ export function WhatWorksShell() {
         </div>
       </div>
     );
-  }
 
-  return (
-    <div style={{ display: 'flex', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: 'hidden' }}>
-      <WhatWorksIconRail />
-      <WhatWorksSidebar
-        problems={visibleProblems}
-        activeIndex={activeIndex}
-        onSelectProblem={(index) => selectProblem(index, visibleProblems)}
-        onSuggest={() => setShowSuggest(true)}
-      />
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, background: t.HEADER, flexShrink: 0 }}>
-          <ListChecks size={18} color={t.ACCENT} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE }}>What Works</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Survivor-verified tools · by problem</div>
-          </div>
-          <PluginAdminButton href="/admin/what-works" isAdmin={isAdmin} accent={t.ACCENT} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderRadius: 9, background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}`, width: 220 }}>
-            <Search size={14} color={t.MUTED} />
-            <input
-              aria-label="Search tools or problems"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search tools or problems…"
-              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 12.5, color: t.TITLE, fontFamily: 'inherit' }}
-            />
-          </div>
-          <RefreshButton onRefresh={refreshAll} title="Refresh" />
-        </header>
-
-        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '28px 40px 48px' }}>
-          <div style={{ maxWidth: 760, margin: '0 auto' }}>
-            {content}
-          </div>
-        </div>
-      </div>
-
-      <WhatWorksRightRail stats={stats} />
-    </div>
-  );
 }

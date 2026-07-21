@@ -3,12 +3,8 @@
 import { useEffect, useState } from "react";
 import { BackChevronButton } from "@/lib/nav/back-history";
 import type { ClickLogIncident } from "../../lib/click-log/types";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { deriveClickLogStats, getClickLogTokens } from "./click-log-shared";
-import { ClickLogIconRail } from "./click-log-icon-rail";
-import { ClickLogSidebar } from "./click-log-sidebar";
-import { ClickLogRightRail } from "./click-log-right-rail";
 import { ClickLogLogPanel } from "./click-log-log-panel";
 import { ClickLogIncidentList } from "./click-log-incident-list";
 import { ClickLogEmptyState } from "./click-log-empty-state";
@@ -31,7 +27,6 @@ export function ClickLogShell() {
   const [geoStatus, setGeoStatus] = useState<"idle" | "locating" | "error">("idle");
   const [geoError, setGeoError] = useState<string | null>(null);
   const [logged, setLogged] = useState(false);
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getClickLogTokens(theme);
 
@@ -180,8 +175,7 @@ export function ClickLogShell() {
     </>
   );
 
-  if (isMobile) {
-    return (
+  return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
@@ -199,29 +193,4 @@ export function ClickLogShell() {
         <div style={{ padding: 16 }}>{content}</div>
       </div>
     );
-  }
-
-  return (
-    <div style={{ display: "flex", height: "100dvh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
-      <ClickLogIconRail />
-      <ClickLogSidebar total={displayTotal} weekdayCounts={stats.weekdayCounts} />
-
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
-          <AlertTriangle size={18} color={t.ACCENT} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE }}>Incident Log</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Personal safety tracking — {displayTotal} incidents total</div>
-          </div>
-          <RefreshButton onRefresh={() => fetchIncidents()} title="Refresh incidents" />
-        </header>
-
-        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "32px 48px" }}>
-          {content}
-        </div>
-      </div>
-
-      <ClickLogRightRail stats={stats} loading={busy} onQuickLog={() => void postIncident({})} />
-    </div>
-  );
 }
