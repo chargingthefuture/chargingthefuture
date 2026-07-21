@@ -3196,12 +3196,12 @@
   }
 }
 
-/* Comic theme — the channel pills follow the newsprint look (near-square corners, cream border,
-   ink surface, warm-gold active) instead of the default purple/rounded pills. The row itself is
-   still phone-only, so these overrides live outside the media query but only bite at that width
-   because the row is otherwise display:none. */
+/* Comic theme — the channel pills follow the newsprint look (cream border, ink surface, warm-gold
+   active) instead of the default purple/rounded pills. Corners are squared globally by the comic
+   geometry rule in globals.css, so radius is not repeated here. The row itself is still phone-only,
+   so these overrides live outside the media query but only bite at that width because the row is
+   otherwise display:none. */
 :global([data-theme='comic']) .channelSwitchBtn {
-  border-radius: 2px;
   border-color: var(--ctf-border-dim, #7a6a50);
   background: var(--ctf-surface, #141414);
   color: var(--ctf-text-secondary, #7a6a50);
@@ -3219,19 +3219,15 @@
   color: var(--ctf-text, #ede3cb);
 }
 
-/* Comic theme — icon rail: sharp corners, ink chips, cream border, warm-gold active, and the
-   hand-drawn offset shadow, replacing the default purple gradient/tint that looked out of place on
-   the warm newsprint surface. Visual only — no geometry/size changes. */
+/* Comic theme — icon rail: ink chips, cream border, warm-gold active, and the hand-drawn offset
+   shadow, replacing the default purple gradient/tint that looked out of place on the warm newsprint
+   surface. Corners are squared globally by the comic geometry rule in globals.css. Visual only —
+   no size changes. */
 :global([data-theme='comic']) .iconRailLogo {
-  border-radius: 0;
   background: var(--ctf-surface-raised, #1c1c1c);
   border: 1px solid var(--ctf-border, #d4c49a);
   color: var(--ctf-brand, #c8a84b);
   box-shadow: 3px 3px 0 var(--ctf-border, #d4c49a);
-}
-
-:global([data-theme='comic']) .iconRailBtn {
-  border-radius: 0;
 }
 
 :global([data-theme='comic']) .iconRailBtnActive {
@@ -3242,22 +3238,17 @@
 }
 
 :global([data-theme='comic']) .iconRailAvatar {
-  border-radius: 0;
   background: var(--ctf-surface-raised, #1c1c1c);
   border: 1px solid var(--ctf-border, #d4c49a);
 }
 
-/* Comic theme — phone bottom bar mirrors the rail (sharp corners, ink, cream border, gold active).
-   Visual only: no width/height/gap changes, so the owner's 2026-07-19 clipping fix stays intact. */
+/* Comic theme — phone bottom bar mirrors the rail (ink, cream border, gold active). Corners squared
+   globally by the comic geometry rule. Visual only: no width/height/gap changes, so the owner's
+   2026-07-19 clipping fix stays intact. */
 :global([data-theme='comic']) .mobileBarLogo {
-  border-radius: 0;
   background: var(--ctf-surface-raised, #1c1c1c);
   border: 1px solid var(--ctf-border, #d4c49a);
   color: var(--ctf-brand, #c8a84b);
-}
-
-:global([data-theme='comic']) .mobileBarSectionBtn {
-  border-radius: 2px;
 }
 
 :global([data-theme='comic']) .mobileBarSectionBtnActive {
@@ -3267,7 +3258,6 @@
 }
 
 :global([data-theme='comic']) .mobileBarAvatar {
-  border-radius: 0;
   background: var(--ctf-surface-raised, #1c1c1c);
   border: 1px solid var(--ctf-border, #d4c49a);
 }
@@ -3305,7 +3295,6 @@
 }
 
 :global([data-theme='comic']) .explainerCard {
-  border-radius: 0;
   border-color: var(--ctf-border, #d4c49a);
   box-shadow: 4px 4px 0 var(--ctf-border, #d4c49a);
 }
@@ -3353,8 +3342,4 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-}
-
-:global([data-theme='comic']) .explainerClose {
-  border-radius: 0;
 }

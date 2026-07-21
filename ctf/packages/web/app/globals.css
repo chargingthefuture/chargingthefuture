@@ -94,6 +94,26 @@
   --ctf-dot-size: 8px 8px;
 }
 
+/*
+ * Comic theme geometry — uniform sharp edges, app-wide.
+ *
+ * The token layer above sets comic card/control radius to 0 and chip radius to 2, but the app
+ * predates those tokens: nearly every surface hardcodes its own border-radius (~1500 inline
+ * `borderRadius` styles in TSX, ~150 declarations in CSS modules) rather than reading the token.
+ * Left alone, comic renders round in most places while the nav is square — a patchwork look. This
+ * one rule flattens the whole theme so every surface matches the nav and the theme is uniform.
+ *
+ * Scoped to comic only, so the default theme is byte-for-byte unchanged. border-radius is purely
+ * cosmetic (never affects layout or behavior). `!important` is required because most radii are
+ * inline styles, which otherwise win on specificity; a stylesheet `!important` still overrides a
+ * non-important inline style. Pseudo-elements are included so decorative/indicator dots square too.
+ */
+:root[data-theme='comic'] *,
+:root[data-theme='comic'] *::before,
+:root[data-theme='comic'] *::after {
+  border-radius: 0 !important;
+}
+
 * {
   box-sizing: border-box;
 }
