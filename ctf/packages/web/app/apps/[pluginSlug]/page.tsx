@@ -279,7 +279,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'level-up') {
-    return <LevelUpShell userId={decision.userId} isAdmin={decision.isAdmin} isTrainer={decision.role === 'trainer'} query={resolvedSearchParams} />;
+    return <LevelUpShell userId={decision.userId} isAdmin={decision.isAdmin} query={resolvedSearchParams} />;
   }
 
   return (

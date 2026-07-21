@@ -22,7 +22,11 @@
 
 1. Milestone validation endpoint for trainer/admin.
 2. Milestone release endpoint that settles learner escrow and trainer payout split.
-3. Trainer dashboard with cohorts, pending validations, trainees, and payout ledger summary.
+3. Trainer dashboard data layer (`getTrainerDashboardData`: cohorts, pending validations, trainees,
+   payout ledger summary). Note: this is a repository function with no member-shell surface today —
+   the inline "pending validations" approve panel was removed with the member-shell right panel
+   (see the 2026-07-21 change-log entry). Trainers validate via
+   `POST /api/level-up/milestones/[milestoneId]/validate` (server-scoped by `isTrainerForCohort`).
 
 ## Implemented Admin Features
 
@@ -213,6 +217,17 @@ that exist today.
 
 ## Change Log
 
+- 2026-07-21: **Removed the orphaned member-shell right panel (resolves #1761).** The
+  desktop-branch-collapse refactor (commit `279831a`) had already dropped the member shell's
+  right-side panel from render — the enrollments summary now lives in the Progress tab — leaving
+  `components/level-up/lu-right-panel.tsx` (which held the enrollments summary and the trainer
+  "pending validations" approve panel) with no importers, plus a dangling `isTrainer` prop on
+  `LevelUpShell` and its page call site. Deleted the dead component, removed the unused
+  `PendingValidation` type from `lu-shared.ts`, and dropped the `isTrainer` prop/pass-through. This
+  closes the #1761 concern at the source: there is no member-shell pending-validations feed to scope,
+  and none can be reintroduced by re-wiring the removed panel. Trainers still validate milestones
+  through `POST /api/level-up/milestones/[milestoneId]/validate` (server-scoped by `isTrainerForCohort`).
+  UI/dead-code cleanup only — no schema, route, or contract change.
 - 2026-07-20: **Notifications producer.** The milestone-release route emits a best-effort
   notification (`notifySafe`, `level-up.milestone.released`) to the learner when their milestone
   credits are released — deduped on the transfer id, never to the trainer/admin who released. To
