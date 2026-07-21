@@ -111,14 +111,6 @@ export interface Wallet {
   levelUpEscrowedBalance?: number;
 }
 
-export interface PendingValidation {
-  milestoneId: string;
-  enrollmentId: string;
-  cohortId: string;
-  learnerName?: string;
-  task?: string;
-}
-
 export interface Trainer {
   id: string;
   userId: string;

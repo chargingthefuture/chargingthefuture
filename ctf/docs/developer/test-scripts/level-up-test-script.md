@@ -435,6 +435,7 @@ Result: web ☐
 **Expected:**
 - Returns a validation ID and status.
 - A second identical request with the same idempotency key returns the same validation ID without creating a duplicate record.
+- Note: the member LevelUp shell has **no** inline "pending validations" approve panel (the member-shell right panel was removed; enrollments now show under the Progress tab). Validation is performed via this endpoint, which is server-scoped to the cohort's trainer or an admin — a trainer must not see or act on another trainer's cohort validations.
 
 Result: web ☐
 
