@@ -96,10 +96,12 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 
 ## 8) Gaps and Known Technical Debt
 
-- @mention notifications are deferred: notifying a mentioned member needs a reliable
-  `@username` → user id lookup, which does not exist centrally (`lib/identity/resolve-usernames`
-  only goes id → name). Reply-to-your-post and announcement-reply notifications ship now; add mention
-  notifications once a username→id index exists.
+- @mention notifications ship now. There is still no central username store, so a handle is resolved
+  at post time (`lib/identity/resolve-mention-user-ids.ts`): a `@username` is looked up against Clerk
+  (the authoritative account store) in one batched call, and the `@user-<token>` pseudonym is reversed
+  against our own community-post authors — accepted only when the short token matches exactly one
+  author, so an ambiguous prefix never pings a bystander. Any handle that cannot be resolved is
+  dropped; resolution is best-effort and never blocks the post.
 - Device push is delivered via Web Push (`lib/notifications/push.ts`, shared with Foundation call
   alerts), gated by the member's per-category opt-in and discreet setting. It requires the VAPID
   server keys (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`) in the environment; when they
@@ -113,8 +115,9 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 1. **Backbone (this PR):** schema (`notifications`, `notification_preferences`), repository,
    command + access-policy contracts, deletion-registry entry, the five API routes, and the 🔔 tab
    with the always-on feed + the per-category opt-ins. No dependencies.
-2. **Commons producer (done):** emit on reply-to-your-post and announcement reply. `@mention` is
-   deferred (needs a username→id lookup — see Gaps).
+2. **Commons producer (done):** emit on reply-to-your-post, announcement reply, and `@mention` (each
+   member a new community post addresses; resolved at post time — see Gaps for how a handle maps to a
+   user id).
 3. **Everyday producers (done):** ServiceCredits (credits received on a completed direct transfer),
    LevelUp (milestone credits released to the learner), Recurring Activity (invited / confirmed /
    declined). Emitted from each plugin's route via `notifySafe`, after the underlying write.
@@ -130,6 +133,15 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 
 ## Change Log
 
+- 2026-07-21: @mention notifications. A new Commons community post now notifies each member it
+  @-mentions (`commons.mention`, category `community`), deduped per post via `target_ref` so a member
+  mentioned twice in one post is notified once, never self-notifying, and skipping the parent author
+  on a reply (they already get the reply notification). Handles are pulled from the body by the pure
+  `extractMentionHandles` (an email is not a mention; `@comic` is the AI Assistant, not a member) and
+  resolved by `lib/identity/resolve-mention-user-ids.ts`: `@username` via a batched Clerk lookup, the
+  `@user-<token>` pseudonym reversed against our own community-post authors and accepted only when the
+  token is unambiguous. Best-effort throughout — a handle that will not resolve is dropped and the post
+  is never blocked.
 - 2026-07-20: Device-push delivery. `notifySafe` now sends a Web Push (via the shared
   `sendWebPushToUser`) on a genuinely new notification when the recipient has opted that category in —
   discreet by default (a generic "You have a new update" ping with the in-app path in `data`, no

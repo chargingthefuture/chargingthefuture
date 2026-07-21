@@ -19,11 +19,13 @@ import {
   FEED_REACTION_EMOJIS,
   isAllowedFeedReactionEmoji,
 } from './constants';
-import { feedAuthorHandle, feedMentionTokens } from './author-handle';
+import { extractMentionHandles, feedAuthorHandle, feedMentionTokens } from './author-handle';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
 import { emitFeedMembershipEventToStream } from './stream';
 import { getPluginBySlug, getPluginRoute, isAdminOnlyPlugin } from 'lib/plugins/repository';
 import { notifySafe } from 'lib/notifications/repository';
+import { resolveMentionUserIds } from 'lib/identity/resolve-mention-user-ids';
+import { reportError } from 'lib/observability/report';
 
 // Re-exported so existing server callers can keep importing them from the feed
 // repository; the implementations live in the client-safe ./author-handle module.
@@ -1745,10 +1747,13 @@ export async function createFeedCommunityPost(
   isPrivileged: boolean = false,
 ): Promise<{ postId: string; createdAtIso: string }> {
   // When this post is a reply, the parent post's author (captured inside the transaction) is notified
-  // after commit — best-effort, and never for a self-reply.
+  // after commit — best-effort, and never for a self-reply. The committed body is captured too so the
+  // @-mentions it addresses can be notified after commit.
   let replyParentAuthorId: string | null = null;
+  let committedBody = '';
   const result = await withDbTransaction(async (client) => {
     const body = normalizeMultilineText(input.body);
+    committedBody = body;
     const category = normalizeCommunityCategory(input.category);
 
     const urlCap = isPrivileged ? FEED_ADMIN_MAX_COMMUNITY_POST_URLS : FEED_MAX_COMMUNITY_POST_URLS;
@@ -1816,7 +1821,47 @@ export async function createFeedCommunityPost(
     });
   }
 
+  // Notify each member this post @-mentions — after commit, best-effort. Resolving a handle to a user
+  // id (Clerk for usernames, our own post authors for the pseudonym) can miss, so it never blocks the
+  // post. Skip the author (no self-mention) and skip the parent author when this is a reply (they
+  // already got the reply notification above, so a reply that also @-mentions them is not doubled).
+  await notifyMentionedMembers(committedBody, actorId, replyParentAuthorId, result.postId);
+
   return result;
+}
+
+// Resolve the @-mentions in a just-posted body and notify each addressed member. Best-effort and
+// self-contained: any failure is swallowed so it can never break the post that triggered it. Deduped
+// per post via target_ref, so a member mentioned twice in one post is notified once.
+async function notifyMentionedMembers(
+  body: string,
+  actorId: string,
+  replyParentAuthorId: string | null,
+  postId: string,
+): Promise<void> {
+  try {
+    const handles = extractMentionHandles(body);
+    if (handles.length === 0) {
+      return;
+    }
+    const mentionedIds = await resolveMentionUserIds(handles);
+    for (const userId of mentionedIds) {
+      if (userId === actorId || userId === replyParentAuthorId) {
+        continue;
+      }
+      await notifySafe({
+        userId,
+        sourcePlugin: 'commons',
+        notificationType: 'commons.mention',
+        category: 'community',
+        summary: 'Someone mentioned you in the Commons.',
+        linkPath: '/',
+        targetRef: postId,
+      });
+    }
+  } catch (error) {
+    reportError(error, { area: 'notifications', op: 'emit_commons.mention' });
+  }
 }
 
 // Delete a member's own community (peer) post from the Commons. Author-only: the caller must own
