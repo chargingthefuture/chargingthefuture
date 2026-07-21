@@ -3147,14 +3147,15 @@
   color: #C7D2FE;
 }
 
-/* Channel switch pills — phone widths only. The desktop channel rail (.leftNav) is hidden below
-   900px, so when a member has more than one channel (Commons + the gated contributor channel)
-   these pills restore the switch. Hidden on desktop, where the rail already does this. */
+/* Channel switch pills. Default hidden; the mobile-first rule below turns them on at every width
+   (the app renders a single mobile column, so the pills are how a member switches between the
+   Commons and the gated contributor channel). */
 .channelSwitchRow {
   display: none;
 }
 
-/* Mobile-first: formerly @media (max-width: 900px); applies at every width now. */
+/* Mobile-first: formerly @media (max-width: 900px); the switch pills now apply at every width
+   (the app renders a single mobile column). */
 .channelSwitchRow {
   display: flex;
   gap: 8px;
@@ -3164,6 +3165,9 @@
 }
 
 .channelSwitchBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.3);
@@ -3171,6 +3175,7 @@
   color: #94A3B8;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -3178,4 +3183,157 @@
   border-color: rgba(99, 102, 241, 0.55);
   background: rgba(99, 102, 241, 0.18);
   color: #C7D2FE;
+}
+
+/* Locked contributor chip — visible to everyone, opens the explainer. Slightly dimmer than an
+   active channel and carries the braided badge, so it reads as "earnable", not "yours yet". */
+.channelSwitchBtnLocked {
+  border-style: dashed;
+  opacity: 0.9;
+}
+
+/* Comic theme — the channel pills follow the newsprint look (cream border, ink surface, warm-gold
+   active) instead of the default purple/rounded pills. Corners are squared globally by the comic
+   geometry rule in globals.css, so radius is not repeated here. */
+:global([data-theme='comic']) .channelSwitchBtn {
+  border-color: var(--ctf-border-dim, #7a6a50);
+  background: var(--ctf-surface, #141414);
+  color: var(--ctf-text-secondary, #7a6a50);
+}
+
+:global([data-theme='comic']) .channelSwitchBtnActive {
+  border-color: var(--ctf-border, #d4c49a);
+  background: var(--ctf-surface-raised, #1c1c1c);
+  color: var(--ctf-brand, #c8a84b);
+  box-shadow: 2px 2px 0 var(--ctf-border, #d4c49a);
+}
+
+:global([data-theme='comic']) .channelSwitchBtnLocked {
+  border-color: var(--ctf-border, #d4c49a);
+  color: var(--ctf-text, #ede3cb);
+}
+
+/* Comic theme — icon rail: ink chips, cream border, warm-gold active, and the hand-drawn offset
+   shadow, replacing the default purple gradient/tint that looked out of place on the warm newsprint
+   surface. Corners are squared globally by the comic geometry rule in globals.css. Visual only —
+   no size changes. */
+:global([data-theme='comic']) .iconRailLogo {
+  background: var(--ctf-surface-raised, #1c1c1c);
+  border: 1px solid var(--ctf-border, #d4c49a);
+  color: var(--ctf-brand, #c8a84b);
+  box-shadow: 3px 3px 0 var(--ctf-border, #d4c49a);
+}
+
+:global([data-theme='comic']) .iconRailBtnActive {
+  background: var(--ctf-surface-raised, #1c1c1c);
+  border-color: var(--ctf-border, #d4c49a);
+  color: var(--ctf-brand, #c8a84b);
+  box-shadow: 3px 3px 0 var(--ctf-border, #d4c49a);
+}
+
+:global([data-theme='comic']) .iconRailAvatar {
+  background: var(--ctf-surface-raised, #1c1c1c);
+  border: 1px solid var(--ctf-border, #d4c49a);
+}
+
+/* Comic theme — phone bottom bar mirrors the rail (ink, cream border, gold active). Corners squared
+   globally by the comic geometry rule. Visual only: no width/height/gap changes, so the owner's
+   2026-07-19 clipping fix stays intact. */
+:global([data-theme='comic']) .mobileBarLogo {
+  background: var(--ctf-surface-raised, #1c1c1c);
+  border: 1px solid var(--ctf-border, #d4c49a);
+  color: var(--ctf-brand, #c8a84b);
+}
+
+:global([data-theme='comic']) .mobileBarSectionBtnActive {
+  background: var(--ctf-surface-raised, #1c1c1c);
+  border-color: var(--ctf-border, #d4c49a);
+  color: var(--ctf-brand, #c8a84b);
+}
+
+:global([data-theme='comic']) .mobileBarAvatar {
+  background: var(--ctf-surface-raised, #1c1c1c);
+  border: 1px solid var(--ctf-border, #d4c49a);
+}
+
+/* Contributor-channel explainer dialog — centered modal over a dimmed backdrop, mirroring the
+   Directory's Weavers badge dialog. Themed via CSS variables so it reads correctly in both the
+   default and comic palettes; comic gets sharp corners and the offset shadow. */
+.explainerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.explainerBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  padding: 0;
+  cursor: default;
+}
+
+.explainerCard {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: var(--ctf-surface-raised, #1e293b);
+  border: 1px solid var(--ctf-border, #1e2a3a);
+  border-radius: 16px;
+  padding: 22px 22px 18px;
+}
+
+:global([data-theme='comic']) .explainerCard {
+  border-color: var(--ctf-border, #d4c49a);
+  box-shadow: 4px 4px 0 var(--ctf-border, #d4c49a);
+}
+
+.explainerHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.explainerTitle {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ctf-text, #f9fafb);
+}
+
+.explainerBody {
+  font-size: 13px;
+  color: var(--ctf-text-secondary, #9ca3af);
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.explainerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.explainerLink {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ctf-brand, #A78BFA);
+  text-decoration: none;
+}
+
+.explainerClose {
+  margin-left: auto;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--ctf-border, #1e2a3a);
+  color: var(--ctf-text-secondary, #9ca3af);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
 }

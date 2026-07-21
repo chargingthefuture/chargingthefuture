@@ -11,6 +11,7 @@ import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { HubChannelInfo } from '../../lib/hub/types';
 import type { PluginSortMode, ShellCurrentUser, ShellSection, ShellStats } from './shell-types';
 import { GATED_CHANNEL_SLUG } from '../../lib/contributor-access/gated-channel-shared';
+import { WeaversBadge } from '../contributor-access/weavers-badge';
 import { ShellIconRail } from './shell-icon-rail';
 import { ShellSidebar } from './shell-sidebar';
 import { ShellChatPanel } from './shell-chat-panel';
@@ -141,6 +142,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
   const [sortMode, setSortMode] = useState<PluginSortMode>('recent');
   const [recentPluginSlugs, setRecentPluginSlugs] = useState<string[]>([]);
   const [pluginUsageCounts, setPluginUsageCounts] = useState<Record<string, number>>({});
+  const [contributorExplainerOpen, setContributorExplainerOpen] = useState(false);
 
   // Self-heal an out-of-date signed-out render. A back/forward navigation can restore a
   // cached "guest" version of this route (the server resolved the visitor before
@@ -256,6 +258,14 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
     });
   };
 
+  // Escape closes the contributor-channel explainer; listener attached only while open.
+  useEffect(() => {
+    if (!contributorExplainerOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setContributorExplainerOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [contributorExplainerOpen]);
+
   // Channels live inside the chat panel of this single-page shell, so selecting
   // one just keeps the user in the chat section and marks it active — it must not
   // navigate to a separate route (there is no per-channel page; doing so 404s).
@@ -366,10 +376,12 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
             <section className={styles.usernameAlert} role="alert">{loadError}</section>
           ) : null}
           {/* Channel switch pills — phone widths only (the desktop channel rail is hidden there).
-              Rendered only when there is genuinely more than one channel to pick from, i.e. when
-              the server-filtered list includes the gated contributor channel for this member.
-              Non-eligible members never receive that entry, so they never see this row change. */}
-          {section === 'chat' && channels.length > 1 ? (
+              The general channel is always shown. The contributor channel is shown to everyone:
+              eligible members get it as a real, selectable chip (the server includes it in their
+              channel list); everyone else gets a locked chip that opens the same "Weavers of the
+              Commons" explainer the Directory braided badge shows — so the space is visible and
+              its bar is public, never a hidden back-room. */}
+          {section === 'chat' && isAuthenticated ? (
             <div className={styles.channelSwitchRow} role="tablist" aria-label="Channels">
               {channels.map((ch) => {
                 const isActive = (activeChannel ?? channels[0]?.slug) === ch.slug;
@@ -386,6 +398,18 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
                   </button>
                 );
               })}
+              {!channels.some((ch) => ch.slug === GATED_CHANNEL_SLUG) ? (
+                <button
+                  type="button"
+                  className={`${styles.channelSwitchBtn} ${styles.channelSwitchBtnLocked}`}
+                  onClick={() => setContributorExplainerOpen(true)}
+                  aria-haspopup="dialog"
+                  title="Weavers of the Commons"
+                >
+                  <WeaversBadge size={13} />
+                  <span>#{GATED_CHANNEL_SLUG}</span>
+                </button>
+              ) : null}
             </div>
           ) : null}
           {section === 'chat' ? (
@@ -413,6 +437,46 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           signInUrl={signInUrl}
         />
       </div>
+      {/* Contributor-channel explainer — shown when a non-eligible member taps the locked
+          contributor chip. Same honest copy the Directory braided badge shows (proposal
+          section 3: no "verified", no "vetted"). "Anyone can earn this." */}
+      {contributorExplainerOpen ? (
+        <div
+          className={styles.explainerOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Weavers of the Commons"
+        >
+          <button
+            type="button"
+            aria-label="Close"
+            className={styles.explainerBackdrop}
+            onClick={() => setContributorExplainerOpen(false)}
+          />
+          <div className={styles.explainerCard}>
+            <div className={styles.explainerHead}>
+              <WeaversBadge size={30} />
+              <div className={styles.explainerTitle}>Weavers of the Commons</div>
+            </div>
+            <div className={styles.explainerBody}>
+              The contributor channel is for consistent, broad contributors to the community — real
+              help, delivered over time. Anyone can earn it; when you do, the channel opens here.
+            </div>
+            <div className={styles.explainerActions}>
+              <Link href="/apps/directory/weavers-of-the-commons" className={styles.explainerLink}>
+                How it&rsquo;s earned
+              </Link>
+              <button
+                type="button"
+                className={styles.explainerClose}
+                onClick={() => setContributorExplainerOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
