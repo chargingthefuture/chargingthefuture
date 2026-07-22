@@ -17,9 +17,27 @@ type NotificationRow = {
   category: string;
   summary: string;
   link_path: string | null;
+  target_ref: string | null;
   read_at: Date | null;
   created_at: Date;
 };
+
+// Deep link for a notification. Producers set link_path directly, but the earliest Commons rows were
+// written before deep links existed and stored the bare '/'. Those rows still carry the post id in
+// target_ref, so a reply/mention is upgraded to its per-message deep link on read — no backfill
+// migration needed. Newer rows already carry the right link and pass through unchanged.
+function resolveLinkPath(row: NotificationRow): string | null {
+  const stored = row.link_path ?? null;
+  const isBare = stored === null || stored === '' || stored === '/';
+  if (
+    isBare &&
+    row.target_ref &&
+    (row.notification_type === 'commons.reply' || row.notification_type === 'commons.mention')
+  ) {
+    return `/?post=${encodeURIComponent(row.target_ref)}`;
+  }
+  return stored;
+}
 
 function mapNotification(row: NotificationRow): Notification {
   return {
@@ -29,7 +47,7 @@ function mapNotification(row: NotificationRow): Notification {
     // The column is constrained by producers, but fall back to 'activity' if an unknown value slips in.
     category: isNotificationCategory(row.category) ? row.category : 'activity',
     summary: row.summary,
-    linkPath: row.link_path ?? null,
+    linkPath: resolveLinkPath(row),
     isRead: row.read_at !== null,
     createdAtIso: row.created_at.toISOString(),
   };
@@ -119,7 +137,7 @@ export async function listNotifications(userId: string, limit: number): Promise<
   const pageSize = Math.min(Math.max(1, limit), NOTIFICATIONS_MAX_PAGE_SIZE);
   const result = await queryDb<NotificationRow>(
     `
-      SELECT id, source_plugin, notification_type, category, summary, link_path, read_at, created_at
+      SELECT id, source_plugin, notification_type, category, summary, link_path, target_ref, read_at, created_at
       FROM notifications
       WHERE user_id = $1
       ORDER BY created_at DESC, id DESC

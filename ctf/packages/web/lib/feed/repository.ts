@@ -1816,7 +1816,8 @@ export async function createFeedCommunityPost(
       notificationType: 'commons.reply',
       category: 'community',
       summary: 'Someone replied to your post in the Commons.',
-      linkPath: '/',
+      // Deep link to the reply itself so "Open" lands on the new message, not the top of the Commons.
+      linkPath: `/?post=${encodeURIComponent(result.postId)}`,
       targetRef: result.postId,
     });
   }
@@ -1855,7 +1856,8 @@ async function notifyMentionedMembers(
         notificationType: 'commons.mention',
         category: 'community',
         summary: 'Someone mentioned you in the Commons.',
-        linkPath: '/',
+        // Deep link to the post that mentions them so "Open" lands on that exact message.
+        linkPath: `/?post=${encodeURIComponent(postId)}`,
         targetRef: postId,
       });
     }
@@ -2140,7 +2142,9 @@ export async function replyToAnnouncement(
       notificationType: 'commons.announcement_reply',
       category: 'community',
       summary: 'Someone replied to your announcement.',
-      linkPath: '/',
+      // Deep link to the announcement so "Open" lands on it (the reply thread opens from there),
+      // rather than the top of the Commons.
+      linkPath: `/?announcement=${encodeURIComponent(normalizedId)}`,
       targetRef: result.replyId,
     });
   }
