@@ -132,7 +132,11 @@ export function AnnouncementCard({
   const replyLabel = localCount > 0 ? `${localCount} ${localCount === 1 ? 'reply' : 'replies'}` : 'Reply';
 
   return (
-    <article className={styles.announcementCard} aria-label="Official announcement">
+    <article
+      className={styles.announcementCard}
+      aria-label="Official announcement"
+      data-announcement-id={announcementId ?? undefined}
+    >
       <div className={styles.announcementHead}>
         <div className={styles.announcementAvatar} aria-hidden="true">SH</div>
         <div className={styles.announcementHeadText}>
