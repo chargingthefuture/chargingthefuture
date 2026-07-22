@@ -122,6 +122,25 @@ the actor's own connections/quotes. When a connection/quote reaches a terminal s
 to new messages but stays read-only for a limited window.
 **Result:** web ☐ mobile ☐ — notes:
 
+### FND-4b · Priced one-off quote (provider sets a price; survivor cannot)
+**Role:** member (provider and survivor) · **Surfaces:** web
+**Precondition:** a `requested` quote exists between a survivor and a provider (use FND-3 to create one).
+**Steps:**
+1. As the **provider**, open the Quotes tab and find the still-`requested` quote. Enter an amount, pick a
+   currency from the shared currency selector (ServiceCredits appears first), and tap "Send quote".
+2. Confirm the row now shows the quoted amount + currency and the status reads "Responded".
+3. Move the quote to `closed` (end the engagement).
+4. As the **survivor**, open the same quote in your Quotes tab.
+**Expected:** Only the provider sees the amount input + currency selector, and only while the quote is
+`requested`; the survivor never sees the price inputs. Sending the price posts the state transition with
+the `x-ctf-csrf: '1'` header and `transitionTo: 'provider_responded'`, `quotedAmount`, `quotedCurrency`;
+a missing/negative amount or empty currency is rejected (the Send button stays disabled, and the server
+returns 400 `FOUNDATION_INVALID_PAYLOAD` if a bad payload is forced). After close, the row shows a
+"Settled" indicator (the quote carried a value, so `settled_at` is stamped) and its settled value is
+picked up by the GDP Community Value Index per currency. A ServiceCredits-priced quote shows the amount
+with the "ServiceCredits" label, never a fiat symbol.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### FND-5 · Instant 1:1 paid call (Connect now)
 **Role:** member · **Surfaces:** all · **Precondition:** native build (Stream video); a provider with instant calls on and a valid rate; the caller has enough credits.
 **Steps:**

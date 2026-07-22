@@ -4225,6 +4225,16 @@ ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS service
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS thread_id UUID REFERENCES foundation_connection_threads(id);
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS lifecycle_state TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS last_transitioned_at TIMESTAMPTZ;
+-- Priced quote (issue #420/#425). This is the one-off engagement path only: when a provider responds
+-- they attach an amount + currency, and on close that value is the settled value (settled_at stamped),
+-- which the GDP recognition layer reads per currency. Foundation 1:1 instant calls are
+-- ServiceCredits-only and settle elsewhere (foundation_call_sessions). Recurring engagements are not
+-- quoted here at all — their ongoing value is recognized through the Recurring Activity plugin (owner
+-- decision, legal), so there is no recurring flag on the quote. quoted_currency is an FK to the shared
+-- currencies catalog (the same catalog LightHouse/TrustTransport use).
+ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS quoted_amount NUMERIC;
+ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS quoted_currency TEXT REFERENCES currencies(code);
+ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS settled_at TIMESTAMPTZ;
 
 -- level_up_enrollments (1 missing)
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS progress_percent NUMERIC NOT NULL DEFAULT 0;

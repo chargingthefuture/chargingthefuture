@@ -963,6 +963,9 @@ type FoundationQuoteRow = {
   provider_user_id: string;
   service_type: string;
   lifecycle_state: FoundationQuoteState;
+  quoted_amount: string | null;
+  quoted_currency: string | null;
+  settled_at: Date | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -975,6 +978,9 @@ function mapQuoteRow(row: FoundationQuoteRow): FoundationQuoteRequest {
     providerUserId: row.provider_user_id,
     serviceType: row.service_type,
     lifecycleState: row.lifecycle_state,
+    quotedAmount: row.quoted_amount === null ? null : Number(row.quoted_amount),
+    quotedCurrency: row.quoted_currency,
+    settledAtIso: row.settled_at ? toIso(row.settled_at) : null,
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
   };
@@ -1037,6 +1043,9 @@ export async function createQuoteRequest(input: {
           provider_user_id,
           service_type,
           lifecycle_state,
+          quoted_amount,
+          quoted_currency,
+          settled_at,
           created_at,
           updated_at
       `,
@@ -1088,6 +1097,8 @@ export async function updateQuoteRequestState(input: {
   actorUserId: string;
   targetState: FoundationQuoteState;
   transitionReason?: string;
+  quotedAmount?: number | null;
+  quotedCurrency?: string | null;
   idempotencyKey: string;
 }): Promise<{ quote: FoundationQuoteRequest; previousState: FoundationQuoteState }> {
   return withDbTransaction(async (client) => {
@@ -1100,6 +1111,9 @@ export async function updateQuoteRequestState(input: {
           provider_user_id,
           service_type,
           lifecycle_state,
+          quoted_amount,
+          quoted_currency,
+          settled_at,
           created_at,
           updated_at
         FROM foundation_quote_requests
@@ -1117,16 +1131,36 @@ export async function updateQuoteRequestState(input: {
       throw new Error('policy_denied');
     }
 
+    // Only the provider attaches a price, and only on the 'provider_responded' transition. The survivor
+    // may move the quote through its lifecycle but can never set the quoted amount/currency.
+    if (input.targetState === 'provider_responded') {
+      if (input.actorUserId !== quote.provider_user_id) {
+        throw new Error('policy_denied');
+      }
+      const amountOk = typeof input.quotedAmount === 'number'
+        && Number.isFinite(input.quotedAmount)
+        && input.quotedAmount >= 0;
+      const currencyOk = typeof input.quotedCurrency === 'string' && input.quotedCurrency.trim().length > 0;
+      if (!amountOk || !currencyOk) {
+        throw new Error('invalid_payload');
+      }
+    }
+
     if (!canTransitionQuote(quote.lifecycle_state, input.targetState)) {
       throw new Error('invalid_quote_transition');
     }
 
+    // Persist the price only on 'provider_responded'; stamp settled_at on 'closed' when the quote carries
+    // a value (the CASE reads the pre-update quoted_amount, which is what we want). settled_at feeds GDP.
     const updated = await client.query<FoundationQuoteRow>(
       `
         UPDATE foundation_quote_requests
         SET lifecycle_state = $2,
             last_transitioned_at = NOW(),
-            updated_at = NOW()
+            updated_at = NOW(),
+            quoted_amount = CASE WHEN $2 = 'provider_responded' THEN $5::numeric ELSE quoted_amount END,
+            quoted_currency = CASE WHEN $2 = 'provider_responded' THEN $6 ELSE quoted_currency END,
+            settled_at = CASE WHEN $2 = 'closed' AND quoted_amount IS NOT NULL THEN NOW() ELSE settled_at END
         WHERE id = $1::uuid
         RETURNING
           id::text,
@@ -1135,10 +1169,20 @@ export async function updateQuoteRequestState(input: {
           provider_user_id,
           service_type,
           lifecycle_state,
+          quoted_amount,
+          quoted_currency,
+          settled_at,
           created_at,
           updated_at
       `,
-      [input.quoteRequestId, input.targetState],
+      [
+        input.quoteRequestId,
+        input.targetState,
+        quote.lifecycle_state,
+        input.transitionReason ?? null,
+        input.quotedAmount ?? null,
+        input.quotedCurrency ?? null,
+      ],
     );
 
     await client.query(
@@ -1205,6 +1249,9 @@ export async function listQuoteHistory(input: {
           provider_user_id,
           service_type,
           lifecycle_state,
+          quoted_amount,
+          quoted_currency,
+          settled_at,
           created_at,
           updated_at
         FROM foundation_quote_requests

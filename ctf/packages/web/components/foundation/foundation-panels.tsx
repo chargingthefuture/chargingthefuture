@@ -1,15 +1,93 @@
 "use client";
 
+import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Hammer, FileText, Wrench, MessageSquare } from "lucide-react";
+import { Hammer, FileText, Wrench, MessageSquare, CheckCircle2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { CurrencySelect } from "@/components/shared/currency-select";
+import { SERVICE_CREDITS_CODE, SERVICE_CREDITS_LABEL } from "lib/currency/types";
 import {
   getFoundationTokens, initials, quoteStatus, formatQuoteDate,
   type ProviderView, type QuoteView,
 } from "./foundation-ui";
 import { ConnectNowButton, InstantCallAvailabilityBadge, canOfferConnectNow, acceptsInstantCalls } from "./foundation-connect-now";
+
+// Render a quoted price in its own currency. ServiceCredits always renders by its label (never a
+// fiat symbol, never a fiat equivalent); every other currency shows the amount then the code.
+function formatQuotedPrice(amount: number, currencyCode: string): string {
+  if (currencyCode === SERVICE_CREDITS_CODE) {
+    return `${amount} ${SERVICE_CREDITS_LABEL}`;
+  }
+  return `${amount} ${currencyCode}`;
+}
+
+// Provider-only inline form to respond to a 'requested' quote with a price. Holds its own amount and
+// currency state; on submit it calls onRespond and clears the amount on success. The survivor never
+// sees this — the parent only renders it when the viewer is the quote's provider.
+function QuoteRespondForm({
+  onRespond, accent, subtle, inputBg,
+}: {
+  onRespond: (amount: number, currency: string) => Promise<boolean>;
+  accent: string;
+  subtle: string;
+  inputBg: string;
+}) {
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState(SERVICE_CREDITS_CODE);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const parsed = Number(amount);
+  const valid = amount.trim().length > 0 && Number.isFinite(parsed) && parsed >= 0 && currency.trim().length > 0;
+
+  const submit = async () => {
+    if (!valid || busy) return;
+    setBusy(true);
+    setError(null);
+    const ok = await onRespond(parsed, currency);
+    setBusy(false);
+    if (ok) {
+      setAmount("");
+    } else {
+      setError("Could not send the quote. Try again.");
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", marginTop: 4 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: subtle }}>Respond with a price</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+        <input
+          type="number"
+          min={0}
+          step="any"
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          aria-label="Quoted amount"
+          placeholder="Amount"
+          style={{ flex: "1 1 100px", minWidth: 90, padding: "8px 10px", borderRadius: 8, background: inputBg, border: `1px solid ${accent}30`, color: "inherit", fontSize: 13 }}
+        />
+        <CurrencySelect
+          value={currency}
+          onChange={(code) => setCurrency(code)}
+          ariaLabel="Quoted currency"
+          className="foundation-quote-currency"
+        />
+        <button
+          onClick={() => void submit()}
+          disabled={!valid || busy}
+          style={{ padding: "8px 14px", borderRadius: 8, background: accent, border: "none", color: "#fff", fontSize: 12, fontWeight: 700, cursor: valid && !busy ? "pointer" : "not-allowed", opacity: valid && !busy ? 1 : 0.6, flexShrink: 0 }}
+        >
+          {busy ? "Sending…" : "Send quote"}
+        </button>
+      </div>
+      {error ? <div style={{ fontSize: 12, color: "#EF4444" }}>{error}</div> : null}
+    </div>
+  );
+}
 
 const EMPTY_STEPS = [
   "Request an electrician, plumber, or other trade",
@@ -163,11 +241,15 @@ export function BrowsePanel({
 }
 
 export function QuotesPanel({
-  quotes, onBrowse, onOpenDirectLine,
+  quotes, viewerUserId = null, onBrowse, onOpenDirectLine, onRespond,
 }: {
   quotes: QuoteView[];
+  // The signed-in member's id, so the price-response form is shown only to the quote's provider.
+  viewerUserId?: string | null;
   onBrowse: () => void;
   onOpenDirectLine: (quote: QuoteView) => void;
+  // Provider responds to a 'requested' quote with a price; returns whether the POST succeeded.
+  onRespond?: (quote: QuoteView, quotedAmount: number, quotedCurrency: string) => Promise<boolean>;
 }) {
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
@@ -201,22 +283,54 @@ export function QuotesPanel({
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {quotes.map((q) => {
               const status = quoteStatus(q.lifecycleState);
+              const isProvider = Boolean(viewerUserId) && q.providerUserId === viewerUserId;
+              // The provider may attach a price only while the quote is still 'requested'.
+              const canRespond = isProvider && q.lifecycleState === "requested" && Boolean(onRespond);
+              const hasPrice = q.quotedAmount !== null && Boolean(q.quotedCurrency);
               return (
-                <div key={q.id} style={{ padding: "18px 20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}20`, display: "flex", gap: 14, alignItems: "center" }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <FileText size={18} style={{ color: t.ACCENT }} />
+                <div key={q.id} style={{ padding: "18px 20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}20`, display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <FileText size={18} style={{ color: t.ACCENT }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE, marginBottom: 2 }}>{q.serviceType}</div>
+                      <div style={{ fontSize: 12, color: t.MUTED }}>Requested {formatQuoteDate(q.createdAtIso)}</div>
+                    </div>
+                    <Badge style={{ background: status.bg, color: status.fg, border: `1px solid ${status.bd}`, fontSize: 11 }}>{status.label}</Badge>
+                    <button
+                      onClick={() => onOpenDirectLine(q)}
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
+                    >
+                      <MessageSquare size={14} /> Direct Line
+                    </button>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE, marginBottom: 2 }}>{q.serviceType}</div>
-                    <div style={{ fontSize: 12, color: t.MUTED }}>Requested {formatQuoteDate(q.createdAtIso)}</div>
-                  </div>
-                  <Badge style={{ background: status.bg, color: status.fg, border: `1px solid ${status.bd}`, fontSize: 11 }}>{status.label}</Badge>
-                  <button
-                    onClick={() => onOpenDirectLine(q)}
-                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
-                  >
-                    <MessageSquare size={14} /> Direct Line
-                  </button>
+
+                  {/* Quoted price on a responded/closed quote, with a settled indicator once close stamps it. */}
+                  {hasPrice ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", paddingLeft: 54 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>
+                        Quoted {formatQuotedPrice(q.quotedAmount as number, q.quotedCurrency as string)}
+                      </span>
+                      {q.settledAtIso ? (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: "#22C55E" }}>
+                          <CheckCircle2 size={14} /> Settled
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {/* Provider-only price-response form while the quote is still awaiting a response. */}
+                  {canRespond && onRespond ? (
+                    <div style={{ paddingLeft: 54 }}>
+                      <QuoteRespondForm
+                        onRespond={(amount, currency) => onRespond(q, amount, currency)}
+                        accent={t.ACCENT}
+                        subtle={t.SUBTLE}
+                        inputBg={t.INPUT_BG}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               );
             })}

@@ -130,6 +130,14 @@ export type FoundationQuoteRequest = {
   providerUserId: string;
   serviceType: string;
   lifecycleState: FoundationQuoteState;
+  // Priced one-off quote (issue: Foundation priced quotes). When a provider moves the quote to
+  // 'provider_responded' they attach a price: quotedAmount in quotedCurrency (a code from the shared
+  // currency catalog). Both are null until the provider responds. settledAtIso is stamped on 'closed'
+  // when the quote carries a value — that settled value feeds GDP recognition per currency. Recurring
+  // engagements are out of scope here (handled by the Recurring Activity plugin).
+  quotedAmount: number | null;
+  quotedCurrency: string | null;
+  settledAtIso: string | null;
   createdAtIso: string;
   updatedAtIso: string;
 };

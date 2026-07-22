@@ -180,6 +180,34 @@ export const foundationCallSource: RecognitionSource = {
 };
 
 /**
+ * Foundation completed priced quotes: a survivor pays a provider a real fiat/crypto (or ServiceCredits)
+ * amount for a one-off engagement quoted through a Foundation connection thread. When a provider responds
+ * they attach `quoted_amount` in `quoted_currency`; on close, if the quote carried a value, `settled_at`
+ * is stamped and the settled value is recognized per currency. We read only closed, settled rows and group
+ * by currency so each value type folds into the index with its own contribution weight. This does NOT
+ * overlap with `foundationCallSource`: that source reads a different table (`foundation_call_sessions`,
+ * the metered ServiceCredits "Connect now" calls), while this reads `foundation_quote_requests` (one-off
+ * priced quotes) — two distinct settled-value streams, so nothing is double-counted. Recurring
+ * engagements are out of scope here and captured instead by the Recurring Activity source.
+ */
+export const foundationQuoteSource: RecognitionSource = {
+  pluginSlug: 'foundation',
+  label: 'Foundation completed quotes',
+  async loadVolumes() {
+    const result = await queryDb<{ currency_code: string | null; total: string | null }>(
+      `SELECT quoted_currency AS currency_code, SUM(quoted_amount)::text AS total
+         FROM foundation_quote_requests
+         WHERE lifecycle_state = 'closed' AND settled_at IS NOT NULL
+           AND quoted_amount IS NOT NULL AND quoted_currency IS NOT NULL
+         GROUP BY quoted_currency`,
+    );
+    return result.rows
+      .filter((r) => Boolean(r.currency_code) && Number(r.total) > 0)
+      .map((r) => ({ amount: Number(r.total), currencyCode: r.currency_code as string }));
+  },
+};
+
+/**
  * Direct ServiceCredits transfers: a member sending another member credits from the ServiceCredits
  * "Send Credits" form — genuine peer-to-peer economic activity that is NOT tied to any plugin
  * transaction. We read the curated `service_credits_transfers` record (one row per transfer, an `amount`
@@ -326,6 +354,9 @@ export const RECOGNITION_SOURCES: RecognitionSource[] = [
   trustTransportSource,
   levelUpTrainerPayoutSource,
   foundationCallSource,
+  // Distinct from foundationCallSource above: reads foundation_quote_requests (one-off priced quotes),
+  // not foundation_call_sessions (metered ServiceCredits calls) — no overlap, no double count.
+  foundationQuoteSource,
   serviceCreditsDirectTransferSource,
   chymeTipSource,
   socketRelayFavorSource,
