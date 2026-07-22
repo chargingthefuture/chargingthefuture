@@ -302,16 +302,12 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     setMessages((previous) => mergeMessages(previous, nextMessages));
   }, [currentUser.userId]);
 
-  // Deep-link "load around": when the entry URL carries /?post=<id> or /?announcement=<id> (a
-  // notification's "Open"), pull a page centered on that message from the server and merge it in, so a
-  // target older than the recent page is present for the stream to scroll to. Best-effort and additive
-  // — the recent page still loads alongside, so the member sees both the old message and current
-  // activity. Only applies to the unfiltered stream (a deep link is not a mentions/announcements view).
-  const loadAroundDeepLink = useCallback(async () => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const postId = params.get('post');
-    const announcementId = params.get('announcement');
+  // Deep-link "load around": pull a page centered on a specific message/announcement from the server
+  // and merge it in, so a target older than the recent page is present for the stream to scroll to.
+  // Best-effort and additive — the recent page still loads alongside, so the member sees both the old
+  // message and current activity. Only applies to the unfiltered stream (a deep link is not a
+  // mentions/announcements view), so it no-ops while a filter is active.
+  const loadAround = useCallback(async (postId: string | null, announcementId: string | null) => {
     const aroundParam = postId
       ? `&aroundPost=${encodeURIComponent(postId)}`
       : announcementId
@@ -324,6 +320,13 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     setMessages((previous) => mergeMessages(previous, nextMessages));
     // currentFilterKey reads refs, so it is intentionally not a dependency.
   }, [currentUser.userId]);
+
+  // Bootstrap variant: read the deep link from the entry URL once on cold load and pull its window.
+  const loadAroundDeepLink = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    await loadAround(params.get('post'), params.get('announcement'));
+  }, [loadAround]);
 
   // The live Stream event handler must always call the freshest refreshHistory without resubscribing
   // each time the callback identity changes, so keep the latest reference in a ref.
@@ -404,6 +407,17 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
       mentionsOnlyRef.current = false;
       setMentionsOnly(false);
     }
+    refreshForFilterChange();
+  }, [refreshForFilterChange]);
+
+  // Force the unfiltered blended stream (used when a deep link must land but a filter is active). Clears
+  // both filters and re-fetches; a no-op when neither filter is on.
+  const showAllStream = useCallback(() => {
+    if (!mentionsOnlyRef.current && !announcementsOnlyRef.current) return;
+    mentionsOnlyRef.current = false;
+    announcementsOnlyRef.current = false;
+    setMentionsOnly(false);
+    setAnnouncementsOnly(false);
     refreshForFilterChange();
   }, [refreshForFilterChange]);
 
@@ -892,6 +906,8 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     toggleMentionsOnly,
     announcementsOnly,
     toggleAnnouncementsOnly,
+    loadAround,
+    showAllStream,
     isFilterRefreshing,
     lastSeenAtIso,
     markSeen,
