@@ -108,7 +108,12 @@ async function ensureDeviceSubscribed(): Promise<string | null> {
 // The notifications center: the member's own feed of updates across plugins, plus the device-push
 // opt-ins. The in-app feed is always shown; the opt-ins only control the device ping and default off.
 // Opt-in lives here (not buried in account settings) so it sits with the feed it governs.
-export function NotificationsPanel() {
+// onOpenDeepLink lets the parent Commons shell intercept an in-app "Open" tap for a Commons deep link
+// (/?post= or /?announcement=): the shell leaves this panel and scrolls to the message in place, since
+// a client-side navigation to the same route would not remount the shell. It returns true when it
+// handled the link (this component then blocks the Link's own navigation), false for a link that
+// should navigate normally (e.g. /apps/<plugin>).
+export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkPath: string) => boolean }) {
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -233,7 +238,14 @@ export function NotificationsPanel() {
               <Link
                 href={item.linkPath}
                 className={styles.announcementChip}
-                onClick={() => markRead(item.id)}
+                onClick={(event) => {
+                  markRead(item.id);
+                  // Let the shell handle an in-Commons deep link in place (it can't rely on a remount);
+                  // if it did, block the Link's own navigation. A plugin link falls through and navigates.
+                  if (item.linkPath && onOpenDeepLink?.(item.linkPath)) {
+                    event.preventDefault();
+                  }
+                }}
               >
                 <ArrowUpRight size={13} color="currentColor" /> Open
               </Link>
