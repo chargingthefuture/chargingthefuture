@@ -1,0 +1,63 @@
+# Backup and Restore Testing
+
+## Intent
+
+Every system that holds data we cannot afford to lose must have a **backup** path and a **restore**
+path, both runnable as GitHub Actions workflows, and both **tested by hand once a month**. A backup
+nobody has ever restored is not a backup — it is an untested assumption. This rule makes the restore
+test a standing, scheduled obligation instead of something remembered only after data is already
+gone.
+
+## The rule (owner-directed, 2026-07-21)
+
+When you introduce — or discover we are missing — any system that stores data needing backup, all of
+the following must be true before the work is considered done:
+
+1. **A backup workflow exists.** A GitHub Actions workflow under `.github/workflows/` that produces a
+   restorable backup on a schedule (and on manual dispatch). It must fail loudly (job goes red) if it
+   cannot produce a backup — never succeed silently with nothing saved.
+2. **A restore workflow exists.** A separate GitHub Actions workflow that restores a chosen backup
+   into a **target that is never production** — guarded so a misconfiguration cannot overwrite live
+   data. The backup and restore must use matching tool versions (e.g. the same PostgreSQL client
+   major version) so a restore can actually read what the backup wrote.
+3. **It is registered for monthly testing.** Add an entry for the system to
+   `ctf/ops/backup-systems.json` with its backup workflow, its restore workflow, and concrete,
+   member-of-staff-can-follow **test steps** that verify both the backup ran and a restore from it
+   works. That file is the single source of truth; the monthly reminder issue is built from it.
+
+Do not consider a new data-storing system shippable until all three are in place. If you build a
+backup but genuinely cannot yet build the restore, say so plainly and record it as a gap — do not
+quietly ship a backup with no proven way back.
+
+## How the monthly test works
+
+- `.github/workflows/monthly-backup-restore-test-reminder.yml` runs on the 1st of each month (and on
+  manual dispatch). It reads `ctf/ops/backup-systems.json` and opens one GitHub issue titled
+  `Monthly backup & restore test — <Month> <Year>`, labelled `backup-restore-test`, with a checklist
+  of every system's test steps.
+- The owner works through the checklist by hand: run each backup/restore, verify the restored data is
+  real, tick the boxes. If a restore fails, that is a real incident — open a bug issue and link it.
+- Optional: set the repository Actions variable `BACKUP_TEST_ASSIGNEE` to a GitHub username to
+  auto-assign each month's issue to that person.
+
+## Adding a new system to the monthly issue
+
+Edit `ctf/ops/backup-systems.json` and add an object to `systems` with:
+
+- `name` — short human name (e.g. `Formance ledger (Postgres)`).
+- `whatItProtects` — one plain sentence on what data is lost if this backup is missing.
+- `backupWorkflow` / `backupWorkflowName` — the backup workflow's filename and its `name:`.
+- `restoreWorkflow` / `restoreWorkflowName` — the restore workflow's filename and its `name:`.
+- `notes` — anything the tester must know (where backups land, what the restore target must be).
+- `testSteps` — an ordered list of concrete actions that prove the backup exists AND a restore from
+  it works. Write them so someone who has never seen the system can follow them.
+
+No code change to the reminder workflow is needed — it picks up the new entry on the next run.
+
+## Current systems
+
+As of 2026-07-21 the only system needing backup is the **Formance ledger (Postgres)** — backup
+`backup-formance.yml`, restore `restore-formance.yml`. Its full disaster-recovery notes are in
+`ctf/ops/formance/DISASTER_RECOVERY.md`. The `weekly-performance-goal-snapshot.yml` workflow is a
+product data-capture job (it records weekly metric readings into a table), not a database backup, and
+is out of scope for this rule.

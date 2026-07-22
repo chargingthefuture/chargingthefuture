@@ -33,8 +33,11 @@ received. The trauma-informed answer (owner decision, 2026-07-20):
    replaces the message stream while open; the composer hides (you read notifications, you don't post
    into them).
 2. Each row: a calm unread dot (never a red count), a short neutral statement of what happened, a
-   relative time, and — when there is somewhere to go — an "Open" pill that deep-links into the
-   plugin (same pill pattern as linked announcements). Opening or hovering a row marks it read.
+   relative time, and — when there is somewhere to go — an "Open" pill that deep-links to the exact
+   thing (same pill pattern as linked announcements). A Commons reply or @mention opens the Commons and
+   scrolls to that message, flashing it briefly (`/?post=<id>`); an announcement reply opens that
+   announcement (`/?announcement=<id>`); a plugin event opens that plugin's surface. Opening or
+   hovering a row marks it read.
 3. "Mark all read".
 4. "Manage what pings your device": three plain opt-in switches — Safety/rides/calls,
    Your activity and credits, Community — plus a "keep device pings discreet" switch. All push
@@ -133,6 +136,14 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 
 ## Change Log
 
+- 2026-07-21: Deep links on "Open". Commons notifications now link to the exact message instead of the
+  Commons home. A reply or @mention links to `/?post=<postId>` and an announcement reply to
+  `/?announcement=<announcementId>`; the Commons shell reads that query param on load, scrolls the
+  message (or announcement card) into view and flashes it, then clears the param so a refresh does not
+  re-jump (it retries briefly while the recent page streams in, then gives up quietly for a post older
+  than the loaded window). The earliest Commons rows were written before deep links and stored the
+  bare `/`; a reply/mention row is upgraded to its `/?post=<id>` link on read from its `target_ref`, so
+  no backfill migration is needed. Plugin-event notifications keep their existing `/apps/<plugin>` link.
 - 2026-07-21: @mention notifications. A new Commons community post now notifies each member it
   @-mentions (`commons.mention`, category `community`), deduped per post via `target_ref` so a member
   mentioned twice in one post is notified once, never self-notifying, and skipping the parent author
