@@ -397,7 +397,7 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
 
       {needsUsername ? (
         <section className={styles.usernameAlert} role="status">
-          You&apos;re posting as <strong>{ownHandle}</strong>. Open your account menu (your profile picture) and set a username so members recognize you.
+          You&apos;re posting as <strong>{ownHandle}</strong>. To pick a username members recognize, click the person icon at the top right, then <strong>Manage account</strong> — you can edit your username there.
         </section>
       ) : null}
 
