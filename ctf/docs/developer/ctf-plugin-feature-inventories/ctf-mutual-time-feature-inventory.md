@@ -166,6 +166,14 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   (correlated subquery) instead of one round-trip per event (#1809). (6) Comments added explaining why
   `createEvent` always stores `status='open'` (scheduled is derived by `effectiveState`) (#1803) and the
   deliberate slug-vs-id route split (public slug surface vs admin id surface) (#1808).
+- 2026-07-22: **Admin-only surfacing + admin-form overflow fix.** (1) Mutual Time is now in
+  `ADMIN_ONLY_PLUGIN_SLUGS` (`lib/plugins/repository.ts`), so it no longer appears as a tile in a
+  non-admin member's apps launcher — creation is admin-only and members only ever reach an event via its
+  shared link, so a member-facing launcher tile was misleading. Admins still reach it from the admin area
+  grid (`/admin`, added in #1829) and their own launcher; `/apps/mutual-time` stays reachable (page
+  visibility unchanged). (2) The create-event form's "Survey opens / Survey closes" `datetime-local`
+  fields were a two-column grid that overflowed the phone-width column ("falling off the page"); they now
+  stack in a single column.
 
 ## Build Checklist
 

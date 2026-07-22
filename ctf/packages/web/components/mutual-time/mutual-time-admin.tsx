@@ -156,7 +156,9 @@ export function MutualTimeAdmin() {
           </select>
           <p style={{ fontSize: 12, color: t.SUBTLE, margin: '4px 0 10px' }}>After the time is chosen, voters see a link directly to this plugin.</p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {/* Stack the two datetime-local fields: side by side they overflowed the phone-width column
+              (each datetime picker has a wide intrinsic min-width). Mobile-first = one column. */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
             <div>
               <label htmlFor="mt-opens" style={labelStyle}>Survey opens (optional)</label>
               <input id="mt-opens" type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} style={inputStyle} />
