@@ -18,7 +18,13 @@ export async function POST(request: Request, context: { params: Promise<{ quoteR
 
   const { quoteRequestId } = await context.params;
 
-  let payload: { transitionTo?: string; transitionReason?: string; idempotencyKey?: string } = {};
+  let payload: {
+    transitionTo?: string;
+    transitionReason?: string;
+    idempotencyKey?: string;
+    quotedAmount?: unknown;
+    quotedCurrency?: unknown;
+  } = {};
   try {
     payload = await request.json();
   } catch {
@@ -36,12 +42,28 @@ export async function POST(request: Request, context: { params: Promise<{ quoteR
     );
   }
 
+  // On the 'provider_responded' transition the provider attaches a price: a finite quotedAmount >= 0 and
+  // a non-empty quotedCurrency (a code from the shared currency catalog). Only the provider may do this;
+  // that ownership check is enforced in the repository. Validate the shape here before persisting.
+  const quotedAmount = typeof payload.quotedAmount === 'number' ? payload.quotedAmount : NaN;
+  const quotedCurrency = typeof payload.quotedCurrency === 'string' ? payload.quotedCurrency.trim() : '';
+  if (transitionTo === 'provider_responded') {
+    if (!Number.isFinite(quotedAmount) || quotedAmount < 0 || quotedCurrency.length === 0) {
+      return NextResponse.json(
+        { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'A valid quotedAmount and quotedCurrency are required to respond with a price.' },
+        { status: 400 },
+      );
+    }
+  }
+
   try {
     const result = await updateQuoteRequestState({
       quoteRequestId,
       actorUserId: gate.auth.userId,
       targetState: transitionTo as FoundationQuoteState,
       transitionReason: payload.transitionReason,
+      quotedAmount: transitionTo === 'provider_responded' ? quotedAmount : null,
+      quotedCurrency: transitionTo === 'provider_responded' ? quotedCurrency : null,
       idempotencyKey: payload.idempotencyKey?.trim() ?? `${quoteRequestId}:${transitionTo}`,
     });
 
@@ -63,6 +85,13 @@ export async function POST(request: Request, context: { params: Promise<{ quoteR
       return NextResponse.json(
         { ok: false, code: FOUNDATION_ERROR_CODE.quoteNotFound, message: 'Quote request not found.' },
         { status: 404 },
+      );
+    }
+
+    if (code === 'invalid_payload') {
+      return NextResponse.json(
+        { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'A valid quotedAmount and quotedCurrency are required to respond with a price.' },
+        { status: 400 },
       );
     }
 
