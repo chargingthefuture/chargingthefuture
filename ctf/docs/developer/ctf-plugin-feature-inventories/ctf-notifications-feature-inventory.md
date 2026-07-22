@@ -136,6 +136,11 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 
 ## Change Log
 
+- 2026-07-22: Deep links now reach messages older than the recent page. The Commons only loaded the
+  recent page, so an "Open" to an older message landed without the flash. `GET /api/hub/messages` gained
+  `aroundPost` / `aroundAnnouncement` params that return a page centered on the target, and the Commons
+  merges that window in alongside the recent page before scrolling to it. See the Survivor Hub / Commons
+  inventory for the mechanism.
 - 2026-07-21: Deep links on "Open". Commons notifications now link to the exact message instead of the
   Commons home. A reply or @mention links to `/?post=<postId>` and an announcement reply to
   `/?announcement=<announcementId>`; the Commons shell reads that query param on load, scrolls the
