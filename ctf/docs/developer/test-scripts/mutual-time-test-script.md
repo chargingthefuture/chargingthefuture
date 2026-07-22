@@ -28,7 +28,7 @@
 
 Run the seed first: `pnpm --dir ctf seed:mutual-time`
 
-1. **Admin can reach it; members can't see a tile.** Mutual Time is **admin-only** (`ADMIN_ONLY_PLUGIN_SLUGS`): an admin finds it in the **admin area grid** (`/admin`) and in their own apps launcher, and tapping opens `/apps/mutual-time`. A signed-in **non-admin member does NOT see a Mutual Time tile** in their apps launcher — members only reach an event via its shared link (`/mutual-time/<slug>`), never a launcher tile. web ☐ mobile ☐
+1. **Admin can reach it; members can't (tile or route).** Mutual Time is **admin-only** (`ADMIN_ONLY_PLUGIN_SLUGS`): an admin finds it in the **admin area grid** (`/admin`) and their own apps launcher, and tapping opens `/apps/mutual-time`, which shows the **standard top nav** (back chevron + brand icon + title + bug/settings/avatar). A signed-in **non-admin member does NOT see a tile** and, if they open `/apps/mutual-time` directly, gets a **404** — members only reach an event via its shared link (`/mutual-time/<slug>`), never `/apps/mutual-time`. web ☐ mobile ☐
 
 2. **Admin dashboard loads.** Sign in as an admin, navigate to `/apps/mutual-time`. The page renders without error and shows at least two events — "Weekly check-in" (open) and "Q3 onboarding" (closed). web ☐ mobile ☐
 

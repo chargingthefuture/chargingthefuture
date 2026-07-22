@@ -174,8 +174,12 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   visibility unchanged). (2) The create-event form's "Survey opens / Survey closes" `datetime-local`
   fields were a two-column grid that overflowed the phone-width column ("falling off the page"); they now
   stack in a single column.
-
-## Build Checklist
+- 2026-07-22: **Admin-only route + shared top nav.** `/apps/mutual-time` is now admin-only: the page
+  gates with `evaluatePluginAccess({ requiredRoles: ['admin'] })` and a non-admin gets a 404. The
+  member-facing explainer (`mutual-time-member-info.tsx`) is deleted — there was no use for it, since
+  members only ever reach an event through its shared link (`/mutual-time/<slug>`), never
+  `/apps/mutual-time`. The admin dashboard now renders the shared `MobileScreenHeader` top nav (accent
+  back chevron + brand icon + title + the bug/settings/avatar actions), matching every other page.
 
 Ordered, dependency-based (no phases). Each item done in this initial build.
 
