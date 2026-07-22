@@ -305,7 +305,9 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
         return;
       }
       attempts += 1;
-      if (attempts < 20) {
+      // ~12s of retries: enough for the initial page plus the deep-link "load around" fetch to land,
+      // then give up quietly (the target is genuinely gone or outside what the server returned).
+      if (attempts < 40) {
         timer = window.setTimeout(tryScroll, 300);
       }
     };

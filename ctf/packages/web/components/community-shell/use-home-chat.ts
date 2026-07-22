@@ -302,6 +302,29 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     setMessages((previous) => mergeMessages(previous, nextMessages));
   }, [currentUser.userId]);
 
+  // Deep-link "load around": when the entry URL carries /?post=<id> or /?announcement=<id> (a
+  // notification's "Open"), pull a page centered on that message from the server and merge it in, so a
+  // target older than the recent page is present for the stream to scroll to. Best-effort and additive
+  // — the recent page still loads alongside, so the member sees both the old message and current
+  // activity. Only applies to the unfiltered stream (a deep link is not a mentions/announcements view).
+  const loadAroundDeepLink = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const postId = params.get('post');
+    const announcementId = params.get('announcement');
+    const aroundParam = postId
+      ? `&aroundPost=${encodeURIComponent(postId)}`
+      : announcementId
+        ? `&aroundAnnouncement=${encodeURIComponent(announcementId)}`
+        : '';
+    if (!aroundParam || currentFilterKey() !== 'all') return;
+    const payload = await requestJson<HubMessagesResponse>(`/api/hub/messages?limit=50${aroundParam}`);
+    if (currentFilterKey() !== 'all') return;
+    const nextMessages = payload.messages.map((message) => mapStoredMessage(message, currentUser.userId));
+    setMessages((previous) => mergeMessages(previous, nextMessages));
+    // currentFilterKey reads refs, so it is intentionally not a dependency.
+  }, [currentUser.userId]);
+
   // The live Stream event handler must always call the freshest refreshHistory without resubscribing
   // each time the callback identity changes, so keep the latest reference in a ref.
   const refreshHistoryRef = useRef(refreshHistory);
@@ -420,6 +443,8 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
       void refreshLastSeen();
       try {
         await Promise.all([refreshHistory(), refreshComic().catch(() => undefined)]);
+        // After the recent page loads, pull the deep-link target's window (if any) and merge it in.
+        void loadAroundDeepLink().catch(() => undefined);
       } catch (loadError) {
         if (active) {
           setError(loadError instanceof Error ? loadError.message : 'Unable to load live chat history.');
@@ -509,7 +534,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
         void live.disconnect();
       }
     };
-  }, [currentUser.displayName, currentUser.userId, refreshHistory, refreshComic, refreshLastSeen]);
+  }, [currentUser.displayName, currentUser.userId, refreshHistory, refreshComic, refreshLastSeen, loadAroundDeepLink]);
 
   // Route an @comic question to the assistant. The server returns ONLY a holding response (202) —
   // never the unreviewed draft — so we optimistically render the pending "Reviewing for safety"

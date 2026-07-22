@@ -116,6 +116,13 @@ export async function GET(request: Request) {
     // history can still surface them. Only this value is honored; anything else falls back to 'all'.
     // Mentions takes precedence when both are present.
     const announcementsOnly = !mentionsMe && params.get('channel') === 'announcements';
+    // Deep-link "load around" (`?aroundPost=<id>` / `?aroundAnnouncement=<id>`, from a notification's
+    // "Open"): return a page centered on that message so it lands even when it is older than the recent
+    // page. It reads the unfiltered stream (a deep link is not a mentions/announcements view) and only
+    // applies when no filter is active. An unknown/deleted id falls back to the normal recent page.
+    const aroundCommunityPostId = !mentionsMe && !announcementsOnly ? params.get('aroundPost') : null;
+    const aroundAnnouncementId =
+      !mentionsMe && !announcementsOnly && !aroundCommunityPostId ? params.get('aroundAnnouncement') : null;
     const timeline = await listFeedTimeline(
       gate.auth.userId,
       gate.auth.role,
@@ -124,7 +131,7 @@ export async function GET(request: Request) {
         ? { channel: 'community', mentionHandles }
         : announcementsOnly
           ? { channel: 'announcements' }
-          : { channel: 'all' },
+          : { channel: 'all', aroundCommunityPostId, aroundAnnouncementId },
     );
 
     // Resolve the linked plugin (if any) for the announcements on this page, so each official card

@@ -787,6 +787,12 @@ export async function listFeedTimeline(
     // contain (case-insensitive, any one of them). Derived server-side from the
     // authenticated user — never from client input. Null/empty means no filter.
     mentionHandles?: string[] | null;
+    // Deep-link "load around": when set, the returned page is centered on the feed item that projects
+    // this community post / announcement, so a notification can land on a message older than the recent
+    // page. Ignored when the item is not found (falls back to the normal page). One or the other, not
+    // both — the community post form wins if both are somehow set.
+    aroundCommunityPostId?: string | null;
+    aroundAnnouncementId?: string | null;
   },
 ): Promise<{ items: FeedTimelineItem[]; pagination: FeedPagination }> {
   return withDbTransaction(async (client) => {
@@ -852,6 +858,59 @@ export async function listFeedTimeline(
 
     const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
 
+    // Deep-link "load around": center the page on the target item so a notification's "Open" lands on a
+    // message older than the recent page. Resolve the target feed item, count how many items are newer
+    // than it under the same visibility filters (its 0-indexed rank in the DESC ordering), then offset
+    // back by half a page so the target sits mid-window. Falls back to the normal page when the target
+    // is not found (deleted, expired, or outside this member's visibility).
+    const aroundCommunityPostId = normalizeUuid(filters.aroundCommunityPostId ?? null);
+    const aroundAnnouncementId = aroundCommunityPostId
+      ? null
+      : normalizeUuid(filters.aroundAnnouncementId ?? null);
+    let effectiveOffset = offset;
+    if (aroundCommunityPostId || aroundAnnouncementId) {
+      const targetColumn = aroundCommunityPostId ? 'source_community_post_id' : 'source_announcement_id';
+      const targetValue = aroundCommunityPostId ?? aroundAnnouncementId;
+      const targetRes = await client.query<{ id: string; published_at: Date }>(
+        `
+          SELECT id, published_at
+          FROM feed_items
+          WHERE is_active = TRUE
+            AND published_at <= NOW()
+            AND (expires_at IS NULL OR expires_at > NOW())
+            AND ${targetColumn} = $1::uuid
+          ORDER BY published_at DESC, id DESC
+          LIMIT 1
+        `,
+        [targetValue],
+      );
+      const target = targetRes.rows[0];
+      if (target) {
+        const rankRes = await client.query<{ rank: string }>(
+          `
+            SELECT COUNT(*)::text AS rank
+            FROM feed_items f
+            WHERE f.is_active = TRUE
+              AND f.published_at <= NOW()
+              AND (f.expires_at IS NULL OR f.expires_at > NOW())
+              AND f.item_type = ANY($3::text[])
+              AND ($4::text[] IS NULL OR f.body ILIKE ANY($4::text[]))
+              AND EXISTS (
+                SELECT 1
+                FROM feed_item_targets t
+                WHERE t.item_id = f.id
+                  AND t.target_role IN ($1, 'member', 'admin', 'all')
+                  AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
+              )
+              AND (f.published_at > $5 OR (f.published_at = $5 AND f.id > $6::uuid))
+          `,
+          [actorRole, pluginFilter, allowedItemTypes, mentionPatterns, target.published_at, target.id],
+        );
+        const rank = Number.parseInt(rankRes.rows[0]?.rank ?? '0', 10);
+        effectiveOffset = Math.max(0, rank - Math.floor(pagination.pageSize / 2));
+      }
+    }
+
     const result = await client.query<FeedTimelineRow>(
       `
         SELECT
@@ -886,7 +945,7 @@ export async function listFeedTimeline(
         ORDER BY f.published_at DESC, f.id DESC
         OFFSET $5 LIMIT $6
       `,
-      [actorRole, pluginFilter, allowedItemTypes, userId, offset, pagination.pageSize, mentionPatterns],
+      [actorRole, pluginFilter, allowedItemTypes, userId, effectiveOffset, pagination.pageSize, mentionPatterns],
     );
 
     const questionIds = result.rows.flatMap((row) => (row.source_question_id ? [row.source_question_id] : []));
