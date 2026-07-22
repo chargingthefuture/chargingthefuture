@@ -421,8 +421,13 @@ contracts:
 
   - pluginId: foundation
     command: foundation.quote.request.state.update
-    version: 1.0.0
-    description: Move quote request lifecycle between requested, provider_responded, and closed with policy and audit enforcement.
+    version: 1.1.0
+    description: >-
+      Move quote request lifecycle between requested, provider_responded, and closed with policy and
+      audit enforcement. On the provider_responded transition the provider attaches a one-off price
+      (quotedAmount + quotedCurrency); on close, a quote that carries a value stamps settled_at and its
+      settled value feeds GDP recognition per currency. Recurring engagements are out of scope (handled
+      by the Recurring Activity plugin).
     inputSchema:
       quoteRequestId:
         type: string
@@ -437,6 +442,19 @@ contracts:
       transitionReason:
         type: string
         required: false
+      quotedAmount:
+        type: number
+        required: false
+        description: >-
+          Provider-only, and required only on the provider_responded transition. Must be a finite
+          number >= 0. Ignored (not persisted) on any other transition. Only the quote's provider may
+          set it; a survivor attempting to set a price is denied.
+      quotedCurrency:
+        type: string
+        required: false
+        description: >-
+          Provider-only, and required only on the provider_responded transition. A non-empty currency
+          code from the shared currency catalog. Ignored on any other transition.
       idempotencyKey:
         type: string
         required: true

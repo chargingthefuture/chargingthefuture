@@ -28,13 +28,15 @@
 
 Run the seed first: `pnpm --dir ctf seed:mutual-time`
 
-1. **Admin dashboard loads.** Sign in as an admin, navigate to `/apps/mutual-time`. The page renders without error and shows at least two events — "Weekly check-in" (open) and "Q3 onboarding" (closed). web ☐ mobile ☐
+1. **Plugin is listed in the launcher.** Sign in, open the Commons apps launcher, and confirm a **Mutual Time** tile appears (it must be reachable from the launcher, not only by typing the URL — this is the regression fixed 2026-07-21, where the plugin was missing from the `ctf_plugin_registry` seed). Tapping the tile opens `/apps/mutual-time`. web ☐ mobile ☐
 
-2. **Public event link loads unauthenticated.** Sign out entirely. Open the shareable link for the seeded open event (copy it from the dashboard or use the known fixed slug). The page renders the event title, a set of time slots, and a sign-in prompt — no error, no blank screen. web ☐ mobile ☐
+2. **Admin dashboard loads.** Sign in as an admin, navigate to `/apps/mutual-time`. The page renders without error and shows at least two events — "Weekly check-in" (open) and "Q3 onboarding" (closed). web ☐ mobile ☐
 
-3. **Closed event shows a result.** Open the shareable link for "Q3 onboarding" (seeded closed event) while signed out. The page shows the winning time and how many members can make it — no vote controls visible. web ☐ mobile ☐
+3. **Public event link loads unauthenticated.** Sign out entirely. Open the shareable link for the seeded open event (copy it from the dashboard or use the known fixed slug). The page renders the event title, a set of time slots, and a sign-in prompt — no error, no blank screen. web ☐ mobile ☐
 
-4. **Approved member can reach the vote surface.** Sign in as an approved member, open the shareable link for the open event. Slot chips are visible and at least one is selectable. web ☐ mobile ☐
+4. **Closed event shows a result.** Open the shareable link for "Q3 onboarding" (seeded closed event) while signed out. The page shows the winning time and how many members can make it — no vote controls visible. web ☐ mobile ☐
+
+5. **Approved member can reach the vote surface.** Sign in as an approved member, open the shareable link for the open event. Slot chips are visible and at least one is selectable. web ☐ mobile ☐
 
 ---
 

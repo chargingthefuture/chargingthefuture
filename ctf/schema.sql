@@ -2231,7 +2231,8 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'implemented_shell', 210, TRUE),
   ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE),
   ('beacon',             'Beacon',               'Live one-way broadcasts from Farah. Watch publicly with just a link; sign in to chat and react.','implemented_shell', 230, TRUE),
-  ('recurring-activity', 'Recurring Activity',   'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.','implemented_shell', 240, TRUE)
+  ('recurring-activity', 'Recurring Activity',   'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.','implemented_shell', 240, TRUE),
+  ('mutual-time',        'Mutual Time',          'Find a meeting time everyone can make. Share one link; members pick times in their own timezone and the app chooses the slot with the most overlap.','implemented_shell', 250, TRUE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,
@@ -4224,6 +4225,16 @@ ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS service
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS thread_id UUID REFERENCES foundation_connection_threads(id);
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS lifecycle_state TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS last_transitioned_at TIMESTAMPTZ;
+-- Priced quote (issue #420/#425). This is the one-off engagement path only: when a provider responds
+-- they attach an amount + currency, and on close that value is the settled value (settled_at stamped),
+-- which the GDP recognition layer reads per currency. Foundation 1:1 instant calls are
+-- ServiceCredits-only and settle elsewhere (foundation_call_sessions). Recurring engagements are not
+-- quoted here at all — their ongoing value is recognized through the Recurring Activity plugin (owner
+-- decision, legal), so there is no recurring flag on the quote. quoted_currency is an FK to the shared
+-- currencies catalog (the same catalog LightHouse/TrustTransport use).
+ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS quoted_amount NUMERIC;
+ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS quoted_currency TEXT REFERENCES currencies(code);
+ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS settled_at TIMESTAMPTZ;
 
 -- level_up_enrollments (1 missing)
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS progress_percent NUMERIC NOT NULL DEFAULT 0;

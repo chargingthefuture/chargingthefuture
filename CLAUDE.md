@@ -273,6 +273,7 @@ and hides meaning.
 - [133-manual-test-script-sweep-rules.mdc](.claude/rules/133-manual-test-script-sweep-rules.mdc)
 - [134-navigation-and-back-control-rules.mdc](.claude/rules/134-navigation-and-back-control-rules.mdc)
 - [135-ai-behavior-change-log-and-user-preferences.mdc](.claude/rules/135-ai-behavior-change-log-and-user-preferences.mdc)
+- [136-backup-and-restore-testing-rules.mdc](.claude/rules/136-backup-and-restore-testing-rules.mdc)
 - [200-plugin-command-contract-templates.mdc](.claude/rules/200-plugin-command-contract-templates.mdc)
 - [201-plugin-command-schema-template.mdc](.claude/rules/201-plugin-command-schema-template.mdc)
 - [202-plugin-access-policy-schema-template.mdc](.claude/rules/202-plugin-access-policy-schema-template.mdc)

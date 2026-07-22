@@ -273,6 +273,49 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
     window.setTimeout(() => target.classList.remove(styles.chatBubbleFlash), 1600);
   }, []);
 
+  // Deep link from a notification's "Open": /?post=<id> (a reply or @mention) or /?announcement=<id>
+  // (an announcement reply) lands the member on that exact message and flashes it — the same jump a
+  // quoted-reply tap gives, instead of dumping them at the top of the Commons. The target streams in
+  // asynchronously, so this retries briefly while the recent page loads, then gives up quietly (a post
+  // older than the loaded window is not fetched — the notification already summarized it). The query
+  // param is cleared once handled so a refresh or Back does not re-jump. Runs once on mount.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const postId = params.get('post');
+    const announcementId = params.get('announcement');
+    const selector = postId
+      ? `[data-post-id="${postId}"]`
+      : announcementId
+        ? `[data-announcement-id="${announcementId}"]`
+        : null;
+    if (!selector) return;
+    // Show the message stream, not the notifications panel, so the target is in the DOM to scroll to.
+    setNotificationsOpen(false);
+    let attempts = 0;
+    let timer = 0;
+    const tryScroll = () => {
+      const container = messagesContainerRef.current;
+      const target = container?.querySelector<HTMLElement>(selector);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.classList.add(styles.chatBubbleFlash);
+        window.setTimeout(() => target.classList.remove(styles.chatBubbleFlash), 1600);
+        window.history.replaceState(null, '', window.location.pathname);
+        return;
+      }
+      attempts += 1;
+      if (attempts < 20) {
+        timer = window.setTimeout(tryScroll, 300);
+      }
+    };
+    tryScroll();
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+    // Mount-only: the deep link is read from the entry URL once.
+  }, []);
+
   // Auto-grow the composer as the member types multiple lines (capped, then it scrolls). Runs on
   // every input change — including the reset to '' after a send, which shrinks it back to one line.
   useEffect(() => {
