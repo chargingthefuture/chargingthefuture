@@ -11,7 +11,7 @@
 | **Surfaces** | Web (`/apps/mutual-time`, `/mutual-time/[slug]`); mobile-responsive web (same URLs at phone width). No Android surface — out of scope per rule 105. |
 | **Seed first** | `pnpm --dir ctf seed:mutual-time` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-mutual-time-feature-inventory.md` |
-| **Generated** | 2026-07-21 (commit be96b48f) |
+| **Generated** | 2026-07-21 (commit be96b48f); hand-edited 2026-07-22 for the code-review fixes (#1803–#1809): added MT-A12 (admin-list same-origin read guard) and clarified MT-11 (non-string pick → 400). |
 
 ---
 
@@ -232,8 +232,9 @@ Result: web ☐ mobile ☐
 **Steps:**
 1. Construct a POST to `/api/mutual-time/event/<slug>/vote` with the `x-ctf-csrf: '1'` header and a body containing a `slots` array with one entry set to an arbitrary timestamp that is not in the event's candidate window (e.g., a date outside the 7-day window).
 2. Send the request.
+3. Send a second request whose `slots` array contains a non-string element (e.g. `[null]` or `[123]`).
 
-**Expected:** The server returns HTTP 400. No vote is stored.
+**Expected:** Step 2 returns HTTP 400 with code `invalidSlot` (well-formed but unknown slot). Step 3 returns HTTP 400 with code `invalidPayload` (malformed list — element is not a string). No vote is stored in either case.
 
 Result: web ☐
 
@@ -431,6 +432,22 @@ Result: web ☐
 3. Sign in as admin and repeat the request.
 
 **Expected:** Neither response contains a list of who voted or which slots individual members chose. The response includes only the voter count (aggregate), the candidate slots, and — for the closed case — the winning slot. A signed-in approved member's own picks may appear in a `viewer` field, but no other member's picks are present.
+
+Result: web ☐
+
+---
+
+### MT-A12 — Admin event-list read rejects a cross-origin request
+
+**Role:** Admin
+**Surfaces:** Web (API layer)
+**Precondition:** Signed in as admin (valid session cookie).
+
+**Steps:**
+1. Send a `GET /api/mutual-time/events` from the app itself (same-origin, or with no `Origin` header) — the normal dashboard load.
+2. Send a `GET /api/mutual-time/events` with an `Origin` header set to a different host (e.g. `https://evil.example`) while carrying the admin session cookie.
+
+**Expected:** Step 1 returns HTTP 200 with the admin's event list (a missing or same-origin `Origin` passes). Step 2 returns HTTP 403 with code `csrfDenied` — the admin's slugs and voter counts are not returned to a cross-origin caller.
 
 Result: web ☐
 
