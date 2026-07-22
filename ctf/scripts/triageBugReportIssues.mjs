@@ -197,6 +197,18 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('triageBugReportIssues failed:', error?.message || error);
+  const message = error?.message || String(error);
+  // A transient GitHub API rate limit is not something to act on — the token's hourly budget was
+  // spent (often by other automation or interactive use on the same shared token), and the next
+  // scheduled run picks up the same needs-triage issue. Skip cleanly (exit 0) so a rate limit does
+  // not red this scheduled maintenance workflow and spawn a CI-health issue. A genuine error still
+  // fails the run (exit 1).
+  if (/rate limit/i.test(message)) {
+    console.log(
+      'triageBugReportIssues: GitHub API rate limit hit; skipping this run. The next scheduled run will retry.',
+    );
+    process.exit(0);
+  }
+  console.error('triageBugReportIssues failed:', message);
   process.exit(1);
 });
