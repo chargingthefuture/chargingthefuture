@@ -350,6 +350,7 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-07-22 — Gated #contributors channel: added an **Edit** action on a member's own message (edit = delete + repost, matching the Commons home channel). It loads the message text into the composer and deletes the original (existing author-only delete), so the member fixes it and sends a fresh message — no in-place edit, a new row with a new timestamp. Edit shows on your own messages only (admins keep delete-any as moderation, but cannot "edit" someone else's). `gated-chat-panel.tsx` + `use-gated-chat.ts`; reuses the existing delete + send, no schema/route/contract change. Verified: `@ctf/web` typecheck + eslint clean.
 - 2026-07-19 — Gated channel: tapping a quoted reply now jumps to the original message on web (same
   behavior added to the Commons). `channel-repository`'s quoted-message object gained `postId`
   (from `reply_to_post_id`), threaded through `GatedChatMessage`; `gated-chat-panel` renders the
