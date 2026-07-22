@@ -32,10 +32,13 @@ export async function POST(request: Request) {
   // them out before forming cohorts.
   const activeCandidates = await getActiveUserIdsLastDays(7);
   const unlocked = await listUnlockedUserIds(activeCandidates);
-  const activeUserIds = activeCandidates.filter((value) => unlocked.has(value.trim()));
-  const membersSelected = new Set(
-    activeUserIds.map((value) => value.trim()).filter((value) => value.length > 0),
-  ).size;
+  const filteredActiveUserIds = activeCandidates.filter((value) => unlocked.has(value.trim()));
+  // Deduplicate (and trim/drop blanks) before forming cohorts: getActiveUserIdsLastDays may return
+  // duplicate ids, and cohort formation must receive the same unique set that membersSelected counts.
+  const activeUserIds = [
+    ...new Set(filteredActiveUserIds.map((value) => value.trim()).filter((value) => value.length > 0)),
+  ];
+  const membersSelected = activeUserIds.length;
 
   try {
     const result = await runWeeklyAssignment({ actorId: SCHEDULER_ACTOR_ID, activeUserIds });
