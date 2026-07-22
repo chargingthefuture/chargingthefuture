@@ -48,7 +48,7 @@ export function MutualTimePublic({ initialEvent, initialViewer, isSignedIn, sign
     setTz(detectTimeZone());
   }, []);
 
-  const canVote = initialViewer.canVote;
+  const [canVote, setCanVote] = useState(initialViewer.canVote);
 
   const onCopy = useCallback(async () => {
     const ok = await copyToClipboard(eventShareUrl(event.slug));
@@ -93,6 +93,7 @@ export function MutualTimePublic({ initialEvent, initialViewer, isSignedIn, sign
             picks={picks}
             setPicks={setPicks}
             setEvent={setEvent}
+            setCanVote={setCanVote}
             showTz={showTz}
             setShowTz={setShowTz}
             setTz={setTz}
@@ -191,6 +192,7 @@ function VoteView({
   picks,
   setPicks,
   setEvent,
+  setCanVote,
   showTz,
   setShowTz,
   setTz,
@@ -202,6 +204,7 @@ function VoteView({
   picks: string[];
   setPicks: (next: string[]) => void;
   setEvent: (next: MutualTimePublicEvent) => void;
+  setCanVote: (v: boolean) => void;
   showTz: boolean;
   setShowTz: (v: boolean) => void;
   setTz: (v: string) => void;
@@ -265,10 +268,18 @@ function VoteView({
       });
       setPicks(data.picks);
       setSaved(true);
-      // Refresh the voter count shown in the status area.
+      // Refresh the voter count shown in the status area, and reconcile the viewer's own state
+      // (canVote, picks) from the same fresh read so the UI never renders off a load-time snapshot —
+      // e.g. if the event closed or the viewer's approval changed between load and save.
       try {
-        const refreshed = await requestJson<{ ok: true; event: MutualTimePublicEvent }>(`/api/mutual-time/event/${event.slug}`);
+        const refreshed = await requestJson<{ ok: true; event: MutualTimePublicEvent; viewer: MutualTimeViewerState }>(
+          `/api/mutual-time/event/${event.slug}`,
+        );
         setEvent(refreshed.event);
+        if (refreshed.viewer) {
+          setCanVote(refreshed.viewer.canVote);
+          setPicks(refreshed.viewer.picks);
+        }
       } catch {
         /* count refresh is best-effort */
       }

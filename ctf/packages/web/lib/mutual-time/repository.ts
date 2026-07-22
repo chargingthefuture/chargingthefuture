@@ -210,6 +210,11 @@ export async function createEvent(createdByUserId: string, input: CreateEventInp
   const windowStartDate = anchor.toISOString().slice(0, 10);
 
   return withDbTransaction(async (client) => {
+    // We always store status='open' at creation, even when opensAt is in the future. The stored
+    // status is only ever 'open' or 'closed'; the not-yet-open 'scheduled' state is derived at read
+    // time by effectiveState() from opens_at, which every read and the vote guard go through — so a
+    // future-dated event is never votable early. Keeping one lazy source of truth (opens_at) avoids a
+    // second background transition writing 'scheduled'→'open'.
     // Retry slug generation on the rare unique collision.
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const slug = generateEventSlug(title);
@@ -262,16 +267,18 @@ export async function listEventsForAdmin(createdByUserId: string): Promise<Mutua
       await closeAndComputeTx(client, row);
     }
 
-    const result = await client.query<EventRow>(
-      `SELECT ${EVENT_COLUMNS} FROM mutual_time_events WHERE created_by_user_id = $1 ORDER BY created_at DESC`,
+    // One query, no N+1: the distinct voter count is a correlated subquery per row so the whole list
+    // returns in a single round-trip. (The close loop above stays sequential — it holds FOR UPDATE.)
+    const result = await client.query<EventRow & { voter_count: number }>(
+      `SELECT ${EVENT_COLUMNS},
+         (SELECT COUNT(DISTINCT v.voter_user_id)::int
+          FROM mutual_time_votes v WHERE v.event_id = e.id) AS voter_count
+       FROM mutual_time_events e
+       WHERE e.created_by_user_id = $1
+       ORDER BY e.created_at DESC`,
       [createdByUserId],
     );
-    const events: MutualTimeEvent[] = [];
-    for (const row of result.rows) {
-      const count = await voterCountFor(client, row.id);
-      events.push(mapEvent(row, count, now));
-    }
-    return events;
+    return result.rows.map((row) => mapEvent(row, row.voter_count ?? 0, now));
   });
 }
 
@@ -372,6 +379,11 @@ export async function saveVote(slug: string, userId: string, rawSlots: unknown):
     const candidates = candidateSlotSet(row.window_start_date, row.window_days);
     const picks = new Set<string>();
     for (const raw of rawSlots) {
+      // The payload must be a list of non-empty strings; a wrong element type is a malformed payload
+      // (invalidPayload), distinct from a well-formed string that is not a valid candidate (invalidSlot).
+      if (typeof raw !== 'string' || raw.trim().length === 0) {
+        throw new MutualTimeError(MUTUAL_TIME_ERROR_CODE.invalidPayload, 'Picks must be a list of time slots.');
+      }
       const iso = normalizeSlotIso(raw);
       if (!iso || !candidates.has(iso)) {
         throw new MutualTimeError(MUTUAL_TIME_ERROR_CODE.invalidSlot, 'One of your picks is not a valid time slot.');

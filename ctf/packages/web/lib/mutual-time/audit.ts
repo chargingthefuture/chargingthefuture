@@ -20,7 +20,11 @@ export function logMutualTimeAudit(event: MutualTimeAuditEvent): void {
     pluginId: event.pluginId,
     command: event.command,
     commandVersion: '1.0.0',
-    policyDecision: { status: event.status, reason: event.reason },
+    policyDecision: {
+      status: event.status,
+      reason: event.reason,
+      ...(event.evidence ? { evidence: event.evidence } : {}),
+    },
     targetContext: buildTargetContext(event.target),
     result: { status: event.result, errorCategory: event.errorCategory ?? 'none' },
   };

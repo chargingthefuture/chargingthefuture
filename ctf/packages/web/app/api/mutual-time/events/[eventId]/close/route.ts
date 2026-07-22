@@ -26,6 +26,7 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
       actorId: gate.auth.userId,
       status: 'allow',
       reason: 'admin',
+      evidence: 'role=admin;owner=true',
       target: { eventId: event.id, slug: event.slug, resultSlotStart: event.resultSlotStartIso },
       result: 'success',
       errorCategory: null,

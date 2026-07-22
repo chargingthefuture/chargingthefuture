@@ -3,10 +3,25 @@ import { MUTUAL_TIME_ERROR_CODE } from 'lib/mutual-time/constants';
 import { createEvent, listEventsForAdmin } from 'lib/mutual-time/repository';
 import { logMutualTimeAudit } from 'lib/mutual-time/audit';
 import { reportError } from 'lib/observability/report';
+import { checkMutationOrigin } from 'lib/auth/csrf';
 import { requireMutualTimeAdmin, ensureMutationCsrf, mutualTimeErrorResponse } from '../_lib';
 
-// GET /api/mutual-time/events — the admin's own events (dashboard list). Admin-only.
-export async function GET() {
+// Route convention (deliberate): admin surfaces are keyed by event id under the plural
+// /api/mutual-time/events/* (create, list, close), while the public shareable surface is keyed by
+// slug under the singular /api/mutual-time/event/[slug]/*. Slugs are the member-facing, guessable-free
+// share token; ids are the internal admin handle.
+
+// GET /api/mutual-time/events — the admin's own events (dashboard list). Admin-only. Adds a
+// same-origin check (in addition to the admin gate) so a credentialed cross-origin page cannot read
+// the admin's event list (slugs, voter counts). Missing-Origin same-origin requests still pass.
+export async function GET(request: Request) {
+  const originCheck = checkMutationOrigin(request);
+  if (originCheck !== 'allow') {
+    return NextResponse.json(
+      { ok: false, code: MUTUAL_TIME_ERROR_CODE.csrfDenied, message: 'Cross-origin read denied.' },
+      { status: 403 },
+    );
+  }
   const gate = await requireMutualTimeAdmin();
   if (!gate.allowed) {
     return gate.response;
@@ -58,6 +73,7 @@ export async function POST(request: Request) {
       actorId: gate.auth.userId,
       status: 'allow',
       reason: 'admin',
+      evidence: 'role=admin',
       target: { eventId: event.id, slug: event.slug, meetingPlugin: event.meetingPlugin },
       result: 'success',
       errorCategory: null,

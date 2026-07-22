@@ -86,8 +86,10 @@ Defined in `ctf/schema.sql` (CREATE TABLE IF NOT EXISTS + ALTER TABLE IF EXISTS 
 1. **Three access tiers.** Create/close: admin-only (`evaluatePluginAccess({ requiredRoles: ['admin'] })`;
    close also checks the actor is the event's creator). Vote: signed-in AND Unlock-approved
    (`minUnlockTier: 'approved_full'`). Read: public/anonymous, rate-limited per IP.
-2. **CSRF.** Every mutation requires the `x-ctf-csrf: '1'` header and a same-origin check
-   (`ensureMutationCsrf`).
+2. **CSRF / same-origin.** Every mutation requires the `x-ctf-csrf: '1'` header and a same-origin check
+   (`ensureMutationCsrf`). The admin event-list read (`GET /api/mutual-time/events`) additionally runs a
+   same-origin `checkMutationOrigin` check (missing-Origin same-origin requests still pass) so a
+   credentialed cross-origin page cannot read the admin's slugs/voter counts.
 3. **Privacy.** Individual votes are never exposed publicly. The public read returns only aggregate
    fields (voter count; after close the winning slot + how many can make it) plus, for a signed-in
    approved member, that member's own picks for hydration.
@@ -153,6 +155,17 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   fallback), but there was no link to it, so admins could not reach the create/manage dashboard ("not
   linked anywhere; cannot create a poll"). Added the `mutual-time` row (nav_rank 250, visible) to the
   `schema.sql` registry seed. Takes effect when `schema.sql` is applied to the database on deploy.
+- 2026-07-22: **Code-review fixes (issues #1803–#1809).** No behaviour change to the happy path.
+  (1) Audit lines now carry the contract's `policyDecision.evidence` (`role=admin`,
+  `role=admin;owner=true`, `unlockTier=approved_full`) so the emitted audit satisfies
+  `MUTUAL_TIME_PLUGIN_AUDIT_CONTRACTS.yaml` (#1807). (2) `GET /api/mutual-time/events` adds a same-origin
+  check so the admin's event list cannot be read cross-origin (#1806). (3) The public vote view now
+  reconciles the viewer's `canVote`/`picks` from the post-save refresh instead of the load-time snapshot
+  (#1805). (4) `saveVote` rejects a non-string pick element as `invalidPayload` (distinct from a
+  valid-but-unknown slot's `invalidSlot`) (#1804). (5) The admin list computes voter counts in one query
+  (correlated subquery) instead of one round-trip per event (#1809). (6) Comments added explaining why
+  `createEvent` always stores `status='open'` (scheduled is derived by `effectiveState`) (#1803) and the
+  deliberate slug-vs-id route split (public slug surface vs admin id surface) (#1808).
 
 ## Build Checklist
 

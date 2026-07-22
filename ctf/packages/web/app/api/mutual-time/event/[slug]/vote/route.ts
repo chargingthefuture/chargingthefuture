@@ -37,6 +37,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
       actorId: gate.auth.userId,
       status: 'allow',
       reason: 'approved_member',
+      evidence: 'unlockTier=approved_full',
       target: { slug, pickCount: String(picks.length) },
       result: 'success',
       errorCategory: null,
