@@ -233,6 +233,8 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
     toggleMentionsOnly,
     announcementsOnly,
     toggleAnnouncementsOnly,
+    loadAround,
+    showAllStream,
     isFilterRefreshing,
     lastSeenAtIso,
     markSeen,
@@ -273,25 +275,11 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
     window.setTimeout(() => target.classList.remove(styles.chatBubbleFlash), 1600);
   }, []);
 
-  // Deep link from a notification's "Open": /?post=<id> (a reply or @mention) or /?announcement=<id>
-  // (an announcement reply) lands the member on that exact message and flashes it — the same jump a
-  // quoted-reply tap gives, instead of dumping them at the top of the Commons. The target streams in
-  // asynchronously, so this retries briefly while the recent page loads, then gives up quietly (a post
-  // older than the loaded window is not fetched — the notification already summarized it). The query
-  // param is cleared once handled so a refresh or Back does not re-jump. Runs once on mount.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const postId = params.get('post');
-    const announcementId = params.get('announcement');
-    const selector = postId
-      ? `[data-post-id="${postId}"]`
-      : announcementId
-        ? `[data-announcement-id="${announcementId}"]`
-        : null;
-    if (!selector) return;
-    // Show the message stream, not the notifications panel, so the target is in the DOM to scroll to.
-    setNotificationsOpen(false);
+  // Scroll a deep-link target (a post bubble or announcement card) into view and flash it. The target
+  // streams in asynchronously (the recent page, plus the "load around" window for an older one), so it
+  // retries for ~12s, then gives up quietly if the target is genuinely gone. Clears the query param on
+  // success so a refresh or Back does not re-jump. Returns a canceller for effect cleanup.
+  const flashTarget = useCallback((selector: string) => {
     let attempts = 0;
     let timer = 0;
     const tryScroll = () => {
@@ -301,12 +289,12 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
         target.classList.add(styles.chatBubbleFlash);
         window.setTimeout(() => target.classList.remove(styles.chatBubbleFlash), 1600);
-        window.history.replaceState(null, '', window.location.pathname);
+        if (window.location.search) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
         return;
       }
       attempts += 1;
-      // ~12s of retries: enough for the initial page plus the deep-link "load around" fetch to land,
-      // then give up quietly (the target is genuinely gone or outside what the server returned).
       if (attempts < 40) {
         timer = window.setTimeout(tryScroll, 300);
       }
@@ -315,8 +303,58 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
     return () => {
       if (timer) window.clearTimeout(timer);
     };
-    // Mount-only: the deep link is read from the entry URL once.
   }, []);
+
+  const selectorForDeepLink = (postId: string | null, announcementId: string | null): string | null =>
+    postId
+      ? `[data-post-id="${postId}"]`
+      : announcementId
+        ? `[data-announcement-id="${announcementId}"]`
+        : null;
+
+  // Cold entry via URL (a fresh page load / device-push tap opening /?post=<id> or /?announcement=<id>):
+  // show the stream and jump to the target. The chat hook has already pulled the target's window on
+  // bootstrap. Runs once on mount — an in-app tap from the panel is handled by handleNotificationOpen,
+  // because a client-side navigation to the same route does not remount this component.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const selector = selectorForDeepLink(params.get('post'), params.get('announcement'));
+    if (!selector) return;
+    setNotificationsOpen(false);
+    return flashTarget(selector);
+  }, [flashTarget]);
+
+  // In-app "Open" from the notifications panel. A notification links to /?post=<id> or
+  // /?announcement=<id>, but that is the same route the Commons already sits on, so a client-side
+  // navigation would not remount the shell and the mount effect above would never fire — the reported
+  // "nothing happens" bug. So intercept the click here: leave the panel, force the unfiltered stream,
+  // pull the target's window, and scroll+flash it. Returns true when handled (the caller then blocks
+  // the default navigation); returns false for a non-Commons link (e.g. /apps/<plugin>), which
+  // navigates normally.
+  const handleNotificationOpen = useCallback(
+    (linkPath: string): boolean => {
+      if (typeof window === 'undefined') return false;
+      let url: URL;
+      try {
+        url = new URL(linkPath, window.location.origin);
+      } catch {
+        return false;
+      }
+      if (url.pathname !== '/') return false;
+      const postId = url.searchParams.get('post');
+      const announcementId = url.searchParams.get('announcement');
+      const selector = selectorForDeepLink(postId, announcementId);
+      if (!selector) return false;
+      setNotificationsOpen(false);
+      showAllStream();
+      window.history.replaceState(null, '', linkPath);
+      void loadAround(postId, announcementId).catch(() => undefined);
+      flashTarget(selector);
+      return true;
+    },
+    [flashTarget, loadAround, showAllStream],
+  );
 
   // Auto-grow the composer as the member types multiple lines (capped, then it scrolls). Runs on
   // every input change — including the reset to '' after a send, which shrinks it back to one line.
@@ -402,7 +440,7 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
       ) : null}
 
       {notificationsOpen ? (
-        <NotificationsPanel />
+        <NotificationsPanel onOpenDeepLink={handleNotificationOpen} />
       ) : (
       <div className={styles.chatMessages} ref={messagesContainerRef}>
         {(isLoading || isFilterRefreshing) && !hasContent ? (
