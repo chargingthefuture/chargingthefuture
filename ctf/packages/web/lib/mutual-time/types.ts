@@ -60,6 +60,9 @@ export type MutualTimeAuditEvent = {
   actorId: string;
   status: 'allow' | 'deny';
   reason: string;
+  // The policy evidence string from the access-policy/audit contract (e.g. 'role=admin',
+  // 'role=admin;owner=true', 'unlockTier=approved_full'). Included in the emitted policyDecision.
+  evidence?: string;
   target: Record<string, string | null | undefined>;
   result: 'success' | 'failure';
   errorCategory: string | null;
