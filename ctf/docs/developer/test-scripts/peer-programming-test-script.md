@@ -431,6 +431,22 @@ Result: web ☐
 
 ---
 
+### PP-A10 — Admin "Member feedback" inbox
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** Signed in as an admin. At least one member feedback entry exists (submit one via PP-8 if needed).
+
+**Steps:**
+1. Navigate to `/admin/peer-programming`.
+2. Find the "Member feedback" panel.
+
+**Expected:** The panel lists recent feedback, newest first — each row shows the author (a resolved name or a short `Member <id>` fallback), the issue type, the suggestion category, the time, and the note text. With no feedback it shows "No feedback yet." A load failure leaves the panel empty without breaking the rest of the admin page. (The admin-landing tile shows a "new to review" dot when feedback arrived since you last opened this area; opening the area clears it.)
+
+Result: web ☐
+
+---
+
 ## Parity check (web ↔ android)
 
 These cases must produce the same user-visible outcome on both surfaces. If the result differs, file a bug with both surface results.
