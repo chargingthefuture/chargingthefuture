@@ -30,8 +30,32 @@ import { PeerProgrammingAdminAssignments } from './pp-admin-assignments';
 type CohortMember = { userId: string; username: string | null };
 type AdminCohort = PeerProgrammingCohort & { members?: CohortMember[] };
 
+// One member feedback entry in the admin inbox (mirrors PeerProgrammingFeedbackItem from the
+// repository). Kept local so this client shell does not import the server repository module.
+type FeedbackItem = {
+  id: string;
+  cohortId: string | null;
+  userId: string;
+  authorName: string | null;
+  issueType: string;
+  suggestionCategory: string;
+  releaseSurface: string;
+  note: string;
+  createdAtIso: string;
+};
+
 function memberName(member: CohortMember): string {
   return member.username ?? `Member ${member.userId.slice(0, 6)}`;
+}
+
+function feedbackAuthor(item: FeedbackItem): string {
+  return item.authorName ?? `Member ${item.userId.slice(0, 6)}`;
+}
+
+function formatFeedbackTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 // Monday (UTC) of the current week — matches the server's getWeekStartDate so the
@@ -59,6 +83,7 @@ export function PeerProgrammingAdminShell() {
   const [lastRun, setLastRun] = useState<AssignmentRunResult | null>(null);
   const [mode, setMode] = useState<SingleOpenCohortMode | null>(null);
   const [savingMode, setSavingMode] = useState(false);
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
 
   const loadTopic = useCallback(async () => {
     const res = await fetch('/api/peer-programming/admin/topics');
@@ -87,17 +112,30 @@ export function PeerProgrammingAdminShell() {
     setMode(data.mode ?? null);
   }, []);
 
+  // The feedback inbox is best-effort: a failure leaves it empty rather than failing the whole admin
+  // page (the topic/cohort tools must still load).
+  const loadFeedback = useCallback(async () => {
+    try {
+      const res = await fetch('/api/peer-programming/admin/feedback');
+      if (!res.ok) return;
+      const data = (await res.json()) as { ok: boolean; feedback: FeedbackItem[] };
+      setFeedback(data.feedback ?? []);
+    } catch {
+      // best-effort
+    }
+  }, []);
+
   useEffect(() => {
     void (async () => {
       try {
-        await Promise.all([loadTopic(), loadCohorts(), loadMode()]);
+        await Promise.all([loadTopic(), loadCohorts(), loadMode(), loadFeedback()]);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Could not load the admin data.');
       } finally {
         setLoading(false);
       }
     })();
-  }, [loadTopic, loadCohorts, loadMode]);
+  }, [loadTopic, loadCohorts, loadMode, loadFeedback]);
 
   const submitTopic = useCallback(
     async (draft: {
@@ -302,6 +340,49 @@ export function PeerProgrammingAdminShell() {
           </div>
         ) : (
           <>
+            <section
+              style={{
+                marginBottom: 16,
+                padding: 16,
+                borderRadius: 12,
+                background: t.SURFACE,
+                border: `1px solid ${t.BORDER_SOLID}`,
+              }}
+            >
+              <h2 style={{ fontSize: 15, fontWeight: 800, color: t.TITLE, margin: '0 0 4px' }}>
+                Member feedback
+              </h2>
+              <p style={{ fontSize: 12, color: t.MUTED, margin: '0 0 12px', lineHeight: 1.5 }}>
+                What members sent from PeerProgramming, newest first. This is an inbox to read, not a
+                queue to clear — the admin dot flags feedback that arrived since you last opened this page.
+              </p>
+              {feedback.length === 0 ? (
+                <p style={{ fontSize: 13, color: t.MUTED, margin: 0 }}>No feedback yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {feedback.map((item) => (
+                    <div
+                      key={item.id}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        background: t.HEADER,
+                        border: `1px solid ${t.BORDER_SOLID}`,
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>{feedbackAuthor(item)}</span>
+                        <span style={{ fontSize: 11, color: t.ACCENT, fontWeight: 600 }}>{item.issueType}</span>
+                        <span style={{ fontSize: 11, color: t.MUTED }}>{item.suggestionCategory}</span>
+                        <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>{formatFeedbackTime(item.createdAtIso)}</span>
+                      </div>
+                      <p style={{ fontSize: 13, color: '#D1D5DB', margin: '6px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{item.note}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
             <section
               style={{
                 marginBottom: 16,
