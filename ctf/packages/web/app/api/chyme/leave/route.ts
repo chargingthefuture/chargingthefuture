@@ -3,12 +3,12 @@ import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { leaveRoom } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { reportError } from 'lib/observability/report';
-import { requireChymeAccess, ensureMutationCsrf } from '../_lib';
+import { requireChymeRoomAccess, ensureMutationCsrf } from '../_lib';
 
 // Explicit leave: drop the member's presence row so they stop counting as in the call right
 // away, instead of waiting for the presence window to lapse. The audio room calls this on Leave.
 export async function POST(request: Request) {
-  const gate = await requireChymeAccess();
+  const gate = await requireChymeRoomAccess(request);
   if (!gate.allowed) {
     return gate.response;
   }
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await leaveRoom(gate.identity);
+    await leaveRoom(gate.identity, gate.roomKey);
 
     logChymeAudit({
       pluginId: 'chyme',
