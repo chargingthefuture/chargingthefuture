@@ -26,6 +26,7 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { redact, emitDeduped } from "./lib/comicDatasetShared.mjs";
 
 const INCLUDED_SECTIONS = new Set([
   "Answers",
@@ -57,18 +58,6 @@ function stripTags(html) {
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
-}
-
-function redact(text) {
-  return text
-    .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "[email removed]")
-    .replace(/https?:\/\/signal\.group\/\S+/g, "[signal link removed]")
-    .replace(/\b(?:bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}\b/g, "[wallet removed]")
-    .replace(/\b[48][0-9AB][1-9A-HJ-NP-Za-km-z]{93}\b/g, "[wallet removed]")
-    .replace(/\+?\d[\d\s().-]{8,}\d/g, (m) =>
-      // Keep plain numbers like years/amounts; redact only phone-shaped runs.
-      /[\s().-]/.test(m) ? "[number removed]" : m,
-    );
 }
 
 // Pull "<strong>Label: </strong><span ...>value</span>"-style fields out of an
@@ -152,20 +141,10 @@ for (const dir of dirs) {
 }
 
 // Drop exact duplicates (recruiting boilerplate repeats across posts).
-const seen = new Set();
-let dupes = 0;
-for (const rec of all) {
-  const key = rec.type + "\u0000" + (rec.question || "") + "\u0000" + (rec.answer || rec.content);
-  if (seen.has(key)) {
-    dupes++;
-    continue;
-  }
-  seen.add(key);
-  process.stdout.write(JSON.stringify(rec) + "\n");
-}
-
-const counts = {};
-for (const key of seen) counts[key.split("\u0000")[0]] = (counts[key.split("\u0000")[0]] || 0) + 1;
+const { emitted, dupes, counts } = emitDeduped(
+  all,
+  (rec) => rec.type + "\u0000" + (rec.question || "") + "\u0000" + (rec.answer || rec.content),
+);
 console.error(
-  `Emitted ${seen.size} records (${JSON.stringify(counts)}), dropped ${dupes} exact duplicates.`,
+  `Emitted ${emitted} records (${JSON.stringify(counts)}), dropped ${dupes} exact duplicates.`,
 );
