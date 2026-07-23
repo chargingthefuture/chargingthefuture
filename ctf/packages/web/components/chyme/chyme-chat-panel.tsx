@@ -26,12 +26,12 @@ export function ChymeChatPanel({
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
-    <div style={{ width: '100%', borderLeft: 'none', borderTop: `1px solid ${t.BORDER}`, display: 'flex', flexDirection: 'column', background: t.HEADER, flexShrink: 0 }}>
-      <div style={{ padding: '14px 16px', borderBottom: `1px solid ${t.BORDER}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ width: '100%', borderLeft: 'none', borderTop: `1px solid ${t.BORDER}`, display: 'flex', flexDirection: 'column', background: t.HEADER, flex: '2 1 0', minHeight: 0 }}>
+      <div style={{ flexShrink: 0, padding: '14px 16px', borderBottom: `1px solid ${t.BORDER}`, display: 'flex', alignItems: 'center', gap: 8 }}>
         <Hash size={14} style={{ color: t.ACCENT }} />
         <span style={{ fontSize: 14, fontWeight: 600, color: t.TITLE }}>Room Chat</span>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', minHeight: 220 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', minHeight: 0 }}>
         {messages.length === 0 ? (
           <div style={{ color: t.FAINT, fontSize: 13 }}>No messages yet.</div>
         ) : (
@@ -47,7 +47,7 @@ export function ChymeChatPanel({
         )}
         <div ref={messagesEndRef} />
       </div>
-      <div style={{ padding: '10px 14px', borderTop: `1px solid ${t.BORDER}` }}>
+      <div style={{ flexShrink: 0, padding: '10px 14px', borderTop: `1px solid ${t.BORDER}` }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: '8px 12px' }}>
           <input
             value={draft}

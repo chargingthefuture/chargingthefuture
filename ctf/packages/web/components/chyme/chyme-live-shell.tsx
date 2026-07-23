@@ -158,7 +158,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', width: '100%', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ flex: 1, minHeight: 0, width: '100%', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <ChymeHeader
         participantCount={room?.participants.length ?? 0}
         isLive={Boolean(room)}
@@ -166,7 +166,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
         refreshing={refreshing}
       />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <ChymeSidebar
           loading={loading}
           room={room}
@@ -176,7 +176,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
           refreshing={refreshing}
         />
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {error && (
             <div style={{ padding: '12px 24px', background: '#2b0b0b', border: `1px solid #7f1d1d`, color: '#fecaca', fontSize: 13, margin: 16, borderRadius: 12 }}>
               {error}
