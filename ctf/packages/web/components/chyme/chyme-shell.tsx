@@ -16,11 +16,10 @@ type ChymeShellProps = {
   };
 };
 
-// Optional download link for the native Android app. There is no store URL committed in this repo,
-// so the card only renders when this public build-time variable is set — never a guessed/placeholder
-// URL. On an Android device the card is hidden regardless (owner request 2026-07-23): the rail there
-// is just the list of open rooms.
-const ANDROID_APP_URL = process.env.NEXT_PUBLIC_CHYME_ANDROID_APP_URL;
+// Where the "Get the Android app" card links: the native app's APK is downloaded from the repo's
+// GitHub Releases page only (owner decision 2026-07-23). On an Android device the card is hidden: the
+// rail there is just the list of open rooms.
+const ANDROID_APP_URL = 'https://github.com/chargingthefuture/chargingthefuture/releases';
 
 // Detect an Android browser so the "get the app" card can be hidden there. Runs client-side only (a
 // state flip after mount) so the server and first client render match and there is no hydration warning.
@@ -99,7 +98,7 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
     setRoomScope(scope);
   };
 
-  const showAndroidCard = Boolean(ANDROID_APP_URL) && !isAndroid;
+  const showAndroidCard = !isAndroid;
 
   const scopes = useMemo<ChymeRoomScope[]>(() => ['main', 'contributors'], []);
 
@@ -145,7 +144,7 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
           title="Weavers of the Commons"
           subtitle="Private · earned by contributors"
         />
-        {showAndroidCard && ANDROID_APP_URL ? (
+        {showAndroidCard ? (
           <a
             href={ANDROID_APP_URL}
             target="_blank"
@@ -168,7 +167,7 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
               <Smartphone size={15} />
               <span style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, lineHeight: 1.3 }}>Get the Android app</span>
             </div>
-            <span style={{ fontSize: 11, color: t.FAINT, lineHeight: 1.4 }}>Listen and speak natively on Android</span>
+            <span style={{ fontSize: 11, color: t.FAINT, lineHeight: 1.4 }}>Download the APK from GitHub releases</span>
           </a>
         ) : null}
       </div>
