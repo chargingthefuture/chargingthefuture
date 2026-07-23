@@ -2851,6 +2851,10 @@ CREATE TABLE IF NOT EXISTS level_up_auto_cohort_config (
   default_required_credits NUMERIC NOT NULL DEFAULT 0,
   default_trainer_split_percent NUMERIC NOT NULL DEFAULT 25,
   default_completion_bonus_credits NUMERIC NOT NULL DEFAULT 0,
+  -- Proposal-queue cadence (issue #904, 2026-07-23): how often gaps are re-read into proposals,
+  -- and when they were last read.
+  generation_interval_days INTEGER NOT NULL DEFAULT 90,
+  last_generated_at TIMESTAMPTZ,
   updated_by_user_id TEXT NOT NULL DEFAULT 'system',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -2867,6 +2871,11 @@ ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS defau
 ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_completion_bonus_credits NUMERIC NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
 ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Proposal-queue model (issue #904, owner decision 2026-07-23): gaps are re-read on a cadence and
+-- turned into an admin-approved proposal queue, not auto-created cohorts. generation_interval_days is
+-- how often the gaps are re-read (default 90); last_generated_at gates the cadence.
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS generation_interval_days INTEGER NOT NULL DEFAULT 90;
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS last_generated_at TIMESTAMPTZ;
 
 -- Per-occupation term overrides (issue #904): admins set how long a given occupation's auto cohort
 -- runs ("Mechanics × term", "Elementary teachers × term"); falls back to default_term_days when absent.
@@ -2881,6 +2890,51 @@ ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXIS
 ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS term_days INTEGER NOT NULL DEFAULT 90;
 ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
 ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Cohort proposal queue (issue #904, owner decision 2026-07-23). Instead of auto-creating cohorts,
+-- the scheduled run reads the Workforce gaps and writes ranked, sector-diverse *proposals* here; an
+-- admin approves one (choosing a 1/3/5-month term, which opens a real cohort) or dismisses it. Status:
+-- pending (awaiting a decision), approved (a cohort was opened — see created_cohort_id), dismissed
+-- (admin declined), superseded (a later generation invalidated it — occupation now covered or gap fell
+-- below threshold).
+CREATE TABLE IF NOT EXISTS level_up_cohort_proposals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_job_title_id UUID NOT NULL,
+  occupation TEXT NOT NULL,
+  sector TEXT NOT NULL DEFAULT 'Unassigned',
+  skill_level TEXT NOT NULL DEFAULT '',
+  gap_at_proposal NUMERIC NOT NULL DEFAULT 0,
+  rank INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pending',
+  generated_source TEXT NOT NULL DEFAULT 'cron',
+  generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  decided_by_user_id TEXT,
+  decided_at TIMESTAMPTZ,
+  created_cohort_id UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS source_job_title_id UUID;
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS occupation TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS sector TEXT NOT NULL DEFAULT 'Unassigned';
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS skill_level TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS gap_at_proposal NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS rank INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS generated_source TEXT NOT NULL DEFAULT 'cron';
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS decided_by_user_id TEXT;
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS created_cohort_id UUID;
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- At most one live (pending) proposal per occupation — mirrors uq_level_up_auto_cohort_active_source.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_level_up_cohort_proposal_pending
+  ON level_up_cohort_proposals (source_job_title_id)
+  WHERE status = 'pending';
+-- Ranked read of the live queue for the admin surface.
+CREATE INDEX IF NOT EXISTS idx_level_up_cohort_proposal_pending_rank
+  ON level_up_cohort_proposals (status, rank);
 
 CREATE TABLE IF NOT EXISTS level_up_curriculum_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

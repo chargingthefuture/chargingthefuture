@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { runAutoCohortCreation } from 'lib/level-up/auto-cohort';
+import { runAutoCohortProposals } from 'lib/level-up/auto-cohort';
 import { ensureMutationCsrf, levelUpErrorResponse, requireLevelUpAdminAccess } from 'lib/level-up/_lib';
 import { reportError } from 'lib/observability/report';
 
-// Admin manual fallback for the auto-cohort run (issue #904). Same logic the daily cron calls, behind
-// the admin gate + CSRF so an admin can trigger it on demand from the LevelUp admin screen.
+// Admin "Refresh proposals" action (issue #904): re-read the Workforce gaps into the proposal queue now
+// (force), behind the admin gate + CSRF. Also closes any expired auto cohort, same as the cron.
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -17,10 +17,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await runAutoCohortCreation({ source: 'admin' });
+    const result = await runAutoCohortProposals({ source: 'admin', force: true });
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'level-up', op: 'admin_auto_cohorts_run' });
-    return levelUpErrorResponse(error, 'Auto-cohort run unavailable.');
+    return levelUpErrorResponse(error, 'Proposal refresh unavailable.');
   }
 }

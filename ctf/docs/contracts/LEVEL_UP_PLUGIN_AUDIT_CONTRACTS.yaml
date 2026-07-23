@@ -209,3 +209,46 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: level-up
+    command: cohort.proposal_approve
+    commandVersion: 1.0.0
+    purpose: training_cohort_management
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - cohort_configuration
+      - workforce_gap_signal
+    targetContext:
+      workspaceId: workspace_identifier
+      cohortId: cohort_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: level-up
+    command: cohort.proposal_dismiss
+    commandVersion: 1.0.0
+    purpose: training_cohort_management
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - cohort_configuration
+    targetContext:
+      workspaceId: workspace_identifier
+      proposalId: proposal_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

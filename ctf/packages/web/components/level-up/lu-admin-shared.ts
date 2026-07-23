@@ -29,14 +29,33 @@ export type AdminCohort = {
   sourceSector?: string | null;
 };
 
-// Summary returned by POST /api/level-up/admin/auto-cohorts/run (and the cron route).
+// Summary returned by POST /api/level-up/admin/auto-cohorts/run (the "Refresh proposals" action) and
+// the cron route. The run refreshes the proposal queue and closes expired auto cohorts — it does not
+// create cohorts (issue #904, proposal-queue model).
 export type AutoCohortRunResult = {
   ok: boolean;
-  skipped?: 'disabled' | 'no_workforce_share';
-  created?: Array<{ cohortId: string; occupation: string; sector: string; gap: number; endDate: string }>;
+  skipped?: 'disabled' | 'no_workforce_share' | 'cadence_not_due';
+  generated?: number;
+  superseded?: number;
   closed?: Array<{ cohortId: string; occupation: string }>;
   message?: string;
 };
+
+// One pending cohort proposal in the admin queue (mirrors PendingProposal from lib/level-up/auto-cohort).
+export type AdminProposal = {
+  id: string;
+  sourceJobTitleId: string;
+  occupation: string;
+  sector: string;
+  skillLevel: string;
+  gap: number;
+  rank: number;
+  generatedAtIso: string;
+};
+
+// Term choices offered at approval (owner decision 2026-07-23), mirrors LEVEL_UP_PROPOSAL_TERM_MONTHS.
+export const PROPOSAL_TERM_MONTHS = [1, 3, 5] as const;
+export type ProposalTermMonths = (typeof PROPOSAL_TERM_MONTHS)[number];
 
 export type AdminKpis = {
   enrollments: number;

@@ -14,11 +14,14 @@ import { TrendingUp } from 'lucide-react';
 import {
   idempotencyKey,
   luAdminMutate,
+  PROPOSAL_TERM_MONTHS,
   type AdminCohort,
   type AdminDispute,
   type AdminKpis,
+  type AdminProposal,
   type AdminValidation,
   type AutoCohortRunResult,
+  type ProposalTermMonths,
 } from './lu-admin-shared';
 import { getLevelUpTokens, type LevelUpTokens } from './lu-shared';
 import { useTheme } from '@/hooks/useTheme';
@@ -69,15 +72,24 @@ export function LevelUpAdminShell({
   kpis,
   openDisputes,
   pendingValidations,
+  pendingProposals,
 }: {
   kpis: AdminKpis;
   openDisputes: AdminDispute[];
   pendingValidations: AdminValidation[];
+  pendingProposals: AdminProposal[];
 }) {
   const { theme } = useTheme();
   const t = getLevelUpTokens(theme);
   const [cohorts, setCohorts] = useState<AdminCohort[] | null>(null);
   const [cohortsError, setCohortsError] = useState<string | null>(null);
+
+  // Cohort proposal queue (issue #904). Seeded from the server prop, re-fetched after any action.
+  const [proposals, setProposals] = useState<AdminProposal[]>(pendingProposals);
+  const [proposalTerms, setProposalTerms] = useState<Record<string, ProposalTermMonths>>({});
+  const [busyProposalId, setBusyProposalId] = useState<string | null>(null);
+  const [proposalNotice, setProposalNotice] = useState<string | null>(null);
+  const [proposalError, setProposalError] = useState<string | null>(null);
 
   // Credit-adjustment form state.
   const [targetUserId, setTargetUserId] = useState('');
@@ -166,7 +178,20 @@ export function LevelUpAdminShell({
     setGovernanceTicketId('');
   }, [targetUserId, parsedAmount, reason, governanceTicketId, magnitude]);
 
-  const runAutoCohorts = useCallback(async () => {
+  const loadProposals = useCallback(async () => {
+    try {
+      const res = await fetch('/api/level-up/admin/cohort-proposals');
+      if (!res.ok) {
+        return;
+      }
+      const data = (await res.json()) as { ok: boolean; proposals?: AdminProposal[] };
+      setProposals(data.proposals ?? []);
+    } catch {
+      // Non-fatal: keep the current list on a transient fetch error.
+    }
+  }, []);
+
+  const refreshProposals = useCallback(async () => {
     setAutoRunning(true);
     setAutoNotice(null);
     setAutoError(null);
@@ -178,16 +203,62 @@ export function LevelUpAdminShell({
     }
     const data = result.data;
     if (data.skipped === 'disabled') {
-      setAutoNotice('Auto-cohort creation is turned off in config — nothing was created.');
+      setAutoNotice('Proposal generation is turned off in config — the queue was not refreshed.');
     } else if (data.skipped === 'no_workforce_share') {
       setAutoNotice('Skipped: no sector carries a workforce share yet, so the gap ranking is not meaningful.');
     } else {
-      const createdCount = data.created?.length ?? 0;
+      const generated = data.generated ?? 0;
+      const superseded = data.superseded ?? 0;
       const closedCount = data.closed?.length ?? 0;
-      setAutoNotice(`Run complete: ${createdCount} cohort(s) created, ${closedCount} closed (term ended).`);
+      setAutoNotice(`Queue refreshed: ${generated} proposal(s) ranked, ${superseded} superseded, ${closedCount} cohort(s) closed (term ended).`);
     }
-    await loadCohorts();
-  }, [loadCohorts]);
+    await Promise.all([loadProposals(), loadCohorts()]);
+  }, [loadCohorts, loadProposals]);
+
+  const approveProposal = useCallback(
+    async (proposal: AdminProposal) => {
+      setBusyProposalId(proposal.id);
+      setProposalNotice(null);
+      setProposalError(null);
+      const termMonths = proposalTerms[proposal.id] ?? 3;
+      const result = await luAdminMutate<{ status?: string; occupation?: string; endDate?: string }>(
+        `/api/level-up/admin/cohort-proposals/${proposal.id}/approve`,
+        { termMonths },
+      );
+      setBusyProposalId(null);
+      if (!result.ok) {
+        setProposalError(result.message);
+        return;
+      }
+      if (result.data.status === 'already_covered') {
+        setProposalNotice(`${proposal.occupation} already has an open cohort — the proposal was removed.`);
+      } else {
+        setProposalNotice(`Opened a ${termMonths}-month cohort for ${proposal.occupation} (ends ${result.data.endDate ?? ''}).`);
+      }
+      await Promise.all([loadProposals(), loadCohorts()]);
+    },
+    [proposalTerms, loadProposals, loadCohorts],
+  );
+
+  const dismissProposal = useCallback(
+    async (proposal: AdminProposal) => {
+      setBusyProposalId(proposal.id);
+      setProposalNotice(null);
+      setProposalError(null);
+      const result = await luAdminMutate<{ status?: string }>(
+        `/api/level-up/admin/cohort-proposals/${proposal.id}/dismiss`,
+        {},
+      );
+      setBusyProposalId(null);
+      if (!result.ok) {
+        setProposalError(result.message);
+        return;
+      }
+      setProposalNotice(`Dismissed the proposal for ${proposal.occupation}.`);
+      await loadProposals();
+    },
+    [loadProposals],
+  );
 
   return (
     <div
@@ -272,13 +343,25 @@ export function LevelUpAdminShell({
           )}
         </div>
 
-        {/* Auto cohorts (issue #904) */}
+        {/* Cohort proposals from Workforce gaps (issue #904) */}
         <div style={{ marginBottom: 24, padding: '16px 18px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 6 }}>Auto cohorts from Workforce gaps</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, margin: 0 }}>
+              Cohort proposals from Workforce gaps {proposals.length > 0 ? `(${proposals.length})` : ''}
+            </h2>
+            <button
+              type="button"
+              onClick={refreshProposals}
+              disabled={autoRunning}
+              style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: 8, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: autoRunning ? 'not-allowed' : 'pointer', opacity: autoRunning ? 0.6 : 1 }}
+            >
+              {autoRunning ? 'Refreshing…' : 'Refresh proposals'}
+            </button>
+          </div>
           <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginBottom: 14 }}>
-            The daily run reads the Workforce talent gaps and opens cohorts for the largest of them. Run
-            it now to apply the current gaps right away. It is safe to run more than once — a cohort is
-            never created twice for the same occupation, and cohorts past their term are closed.
+            The gaps are re-read on a cadence into a ranked, sector-diverse queue. Approve a proposal to
+            open a cohort — you choose the term — or dismiss it. Approving never opens two cohorts for the
+            same occupation; refreshing supersedes proposals whose gap has closed.
           </p>
           {autoError ? (
             <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
@@ -290,14 +373,66 @@ export function LevelUpAdminShell({
               {autoNotice}
             </div>
           ) : null}
-          <button
-            type="button"
-            onClick={runAutoCohorts}
-            disabled={autoRunning}
-            style={{ padding: '9px 18px', borderRadius: 8, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: autoRunning ? 'not-allowed' : 'pointer', opacity: autoRunning ? 0.6 : 1 }}
-          >
-            {autoRunning ? 'Running…' : 'Run now'}
-          </button>
+          {proposalError ? (
+            <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
+              {proposalError}
+            </div>
+          ) : null}
+          {proposalNotice ? (
+            <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13 }}>
+              {proposalNotice}
+            </div>
+          ) : null}
+          {proposals.length === 0 ? (
+            <div style={{ padding: '20px 16px', textAlign: 'center', color: t.MUTED, fontSize: 13, borderRadius: 10, background: t.BG, border: `1px solid ${t.BORDER_SOLID}` }}>
+              No pending proposals. Use “Refresh proposals” to re-read the current Workforce gaps.
+            </div>
+          ) : (
+            proposals.map((proposal) => {
+              const term = proposalTerms[proposal.id] ?? 3;
+              const busy = busyProposalId === proposal.id;
+              return (
+                <div key={proposal.id} style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 10, background: t.BG, border: `1px solid ${t.BORDER_SOLID}` }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>#{proposal.rank} · {proposal.occupation}</span>
+                    <Pill>{proposal.sector}</Pill>
+                    <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>gap {Math.round(proposal.gap)}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                    <label style={{ fontSize: 12, color: t.MUTED }}>
+                      Term:{' '}
+                      <select
+                        value={term}
+                        disabled={busy}
+                        onChange={(event) => setProposalTerms((prev) => ({ ...prev, [proposal.id]: Number(event.target.value) as ProposalTermMonths }))}
+                        style={{ borderRadius: 6, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, padding: '5px 8px', fontSize: 12 }}
+                      >
+                        {PROPOSAL_TERM_MONTHS.map((months) => (
+                          <option key={months} value={months}>{months} month{months === 1 ? '' : 's'}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => void approveProposal(proposal)}
+                      disabled={busy}
+                      style={{ marginLeft: 'auto', padding: '7px 14px', borderRadius: 7, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 12, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
+                    >
+                      {busy ? 'Working…' : 'Approve & open'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void dismissProposal(proposal)}
+                      disabled={busy}
+                      style={{ padding: '7px 14px', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Cohorts */}

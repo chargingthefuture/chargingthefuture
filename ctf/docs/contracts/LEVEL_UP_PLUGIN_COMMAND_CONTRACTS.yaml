@@ -319,23 +319,26 @@ contracts:
   - pluginId: level-up
     command: cohort.auto_create
     version: 1.0.0
-    description: Read the Workforce occupation training gaps and stand up LevelUp cohorts for the largest of them, idempotently. Cron-triggered (CRON_SECRET) or admin-triggered. Reads the Workforce/Skills Taxonomy gap signal only; never writes Workforce, Directory, or Skills Taxonomy.
+    description: Read the Workforce occupation training gaps and refresh the ranked, sector-diverse cohort proposal queue (does NOT create cohorts — an admin approves a proposal to open one). Also closes any expired auto cohort. Cron-triggered (CRON_SECRET, cadence-gated) or admin-triggered (force). Reads the Workforce/Skills Taxonomy gap signal only; never writes Workforce, Directory, or Skills Taxonomy.
     inputSchema:
       source:
         type: string
         required: false
+      force:
+        type: boolean
+        required: false
     outputSchema:
-      created:
-        type: array
+      generated:
+        type: number
+      superseded:
+        type: number
       closed:
         type: array
     dataAccess:
       - level_up_auto_cohort_config
       - level_up_auto_cohort_term_overrides
+      - level_up_cohort_proposals
       - level_up_cohorts
-      - level_up_curriculum_items
-      - level_up_milestones
-      - level_up_command_idempotency
       - level_up_audit_events
       - skills_taxonomy_sectors
       - skills_taxonomy_job_titles
@@ -361,6 +364,52 @@ contracts:
     dataAccess:
       - level_up_cohorts
       - level_up_enrollments
+      - level_up_audit_events
+    purpose: training_cohort_management
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: level-up
+    command: cohort.proposal_approve
+    version: 1.0.0
+    description: Admin approves a pending cohort proposal, opening a real cohort with the chosen term (1, 3, or 5 months). Guarded so a proposal cannot be double-approved; if the occupation already has an open auto cohort the proposal is superseded and no cohort is opened.
+    inputSchema:
+      proposalId:
+        type: string
+        required: true
+      termMonths:
+        type: number
+        required: true
+    outputSchema:
+      status:
+        type: string
+      cohortId:
+        type: string
+    dataAccess:
+      - level_up_cohort_proposals
+      - level_up_auto_cohort_config
+      - level_up_cohorts
+      - level_up_curriculum_items
+      - level_up_milestones
+      - level_up_command_idempotency
+      - level_up_audit_events
+    purpose: training_cohort_management
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: level-up
+    command: cohort.proposal_dismiss
+    version: 1.0.0
+    description: Admin dismisses a pending cohort proposal so it no longer appears in the queue. No cohort is created.
+    inputSchema:
+      proposalId:
+        type: string
+        required: true
+    outputSchema:
+      status:
+        type: string
+    dataAccess:
+      - level_up_cohort_proposals
       - level_up_audit_events
     purpose: training_cohort_management
     retentionClass: transactional_long_lived

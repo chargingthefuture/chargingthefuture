@@ -3,6 +3,7 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 
 export const dynamic = 'force-dynamic';
 import { getAdminPanelData } from 'lib/level-up/repository';
+import { listPendingProposals } from 'lib/level-up/auto-cohort';
 import { LevelUpAdminShell } from '@/components/level-up/lu-admin-shell';
 
 export default async function LevelUpAdminPage() {
@@ -11,13 +12,14 @@ export default async function LevelUpAdminPage() {
     redirect('/apps/level-up');
   }
 
-  const panel = await getAdminPanelData();
+  const [panel, pendingProposals] = await Promise.all([getAdminPanelData(), listPendingProposals(100)]);
 
   return (
     <LevelUpAdminShell
       kpis={panel.kpis}
       openDisputes={panel.openDisputes}
       pendingValidations={panel.pendingValidations}
+      pendingProposals={pendingProposals}
     />
   );
 }

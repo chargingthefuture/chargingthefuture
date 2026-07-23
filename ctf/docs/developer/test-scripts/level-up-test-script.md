@@ -403,47 +403,49 @@ Result: web ☐
 
 ---
 
-### LU-A4 — Auto-cohorts "Run now" button
-
-**Role:** admin · **Surfaces:** web, android
-**Precondition:** Signed in as seed admin. Workforce gap data available (seeded or present in dev DB).
-
-**Steps:**
-1. Open the admin panel (`/admin/level-up` on web; Admin LevelUp screen on Android).
-2. Locate the "Auto cohorts from Workforce gaps" card.
-3. Click/tap "Run now".
-4. Wait for the result.
-
-**Expected:**
-- The button triggers `POST /api/level-up/admin/auto-cohorts/run`.
-- A result banner appears showing created, closed, and/or skipped summary.
-- If the pre-flight guard fires (no positive `workforce_share`), the banner shows `skipped: no_workforce_share` — not a blank screen or error.
-- After a successful run, the cohort overview refreshes and any newly created cohorts carry an `auto` badge; auto-created cohorts with no trainer yet carry a `needs trainer` badge.
-
-Result: web ☐
-
----
-
-### LU-A5 — Auto-cohort idempotency
+### LU-A4 — Cohort proposals: refresh, ranking, approve, dismiss
 
 **Role:** admin · **Surfaces:** web
-**Precondition:** LU-A4 completed and at least one auto cohort was created.
+**Precondition:** Signed in as seed admin. Workforce gap data available (seeded or present in dev DB), with more than one sector carrying a positive `workforce_share`.
 
 **Steps:**
-1. Click "Run now" a second time immediately.
+1. Open `/admin/level-up` and locate the "Cohort proposals from Workforce gaps" card.
+2. Click **Refresh proposals** (triggers `POST /api/level-up/admin/auto-cohorts/run`).
+3. Read the ranked proposal list.
+4. On one proposal, choose a term of **3 months** and click **Approve & open**.
+5. On another proposal, click **Dismiss**.
 
 **Expected:**
-- No duplicate cohort is created for the same occupation.
-- The result banner reports 0 created (or the existing cohort is counted as already covered).
+- The refresh banner reports how many proposals were ranked / superseded / cohorts closed. If the pre-flight guard fires (no positive `workforce_share`), it shows `skipped: no_workforce_share` — not a blank screen or error.
+- The list is **sector-diverse**: the top rows span different sectors rather than all coming from one sector (no single sector dominates the top of the queue).
+- Approving opens a real cohort: a success banner names the occupation and end date, the proposal leaves the queue, and the cohort overview shows a new cohort with an `auto` badge (and `needs trainer` until a trainer claims it). Its end date is ~3 months out.
+- Dismissing removes that proposal from the queue with no cohort created.
 
 Result: web ☐
 
 ---
 
-### LU-A6 — Trainer claims an auto-created cohort
+### LU-A5 — Proposal queue idempotency and supersede
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** LU-A4 completed (at least one proposal approved into a cohort).
+
+**Steps:**
+1. Click **Refresh proposals** again.
+
+**Expected:**
+- The occupation you approved in LU-A4 does **not** reappear as a new proposal (it is now covered by an open cohort).
+- No occupation appears twice in the queue; each row is a distinct occupation.
+- If a previously pending proposal's gap has since closed below the threshold, it no longer appears (it was superseded).
+
+Result: web ☐
+
+---
+
+### LU-A6 — Trainer claims a cohort opened from a proposal
 
 **Role:** trainer (or admin acting as trainer) · **Surfaces:** web
-**Precondition:** At least one auto-created cohort exists with `needsTrainer` flag set (from LU-A4). Signed in as seed trainer.
+**Precondition:** At least one cohort opened from an approved proposal has the `needsTrainer` flag set (from LU-A4). Signed in as seed trainer.
 
 **Steps:**
 1. Find the auto-created cohort with the `needs trainer` badge in the cohort list.
