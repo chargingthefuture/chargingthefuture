@@ -76,7 +76,9 @@ member's post). No Delete control appears on other members' posts.
 2. Fix the text in the composer and send.
 **Expected:** Edit loads the post's text into the composer and deletes the original; sending posts a
 fresh message with a **new timestamp** and its own moderation — no in-place edit, no inherited
-reactions or replies. Any active reply is cleared when you press Edit.
+reactions or replies. Any active reply is cleared when you press Edit. The same Edit action ships in
+both Commons channels — the home channel and the gated #contributors channel — and shows only on your
+own messages (an admin's delete-any moderation power does not extend to editing someone else's post).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### FD-4 · Ask the AI Assistant (@comic) with consent
