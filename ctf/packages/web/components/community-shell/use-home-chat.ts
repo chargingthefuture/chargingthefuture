@@ -772,6 +772,19 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     [],
   );
 
+  // Edit one of the member's own peer posts. The product has no in-place edit — editing IS delete +
+  // repost — so this loads the post's text back into the composer and deletes the original. The member
+  // tweaks it and sends a fresh post (new timestamp, its own moderation, no inherited reactions or
+  // replies). Clears any active reply so the reposted text starts clean.
+  const editMessage = useCallback(
+    (postId: string, text: string) => {
+      setReplyTarget(null);
+      setInput(text);
+      void deleteMessage(postId);
+    },
+    [deleteMessage],
+  );
+
   // Consent modal "Confirm": persist consent and send the held @comic question.
   const confirmConsent = useCallback(async () => {
     if (typeof window !== 'undefined') {
@@ -902,6 +915,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     toggleReaction,
     toggleAnnouncementReaction,
     deleteMessage,
+    editMessage,
     mentionsOnly,
     toggleMentionsOnly,
     announcementsOnly,
