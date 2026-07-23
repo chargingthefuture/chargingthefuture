@@ -1143,6 +1143,21 @@ CREATE TABLE IF NOT EXISTS feed_hub_last_seen (
 ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
 ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Per-admin "last opened" marker for each admin area, powering the "new to review" dot on the admin
+-- landing tiles. A dot shows for an area when its newest actionable item (a pending review, a new
+-- report, etc.) is newer than this admin's marker for that area, or the admin has never opened it.
+-- One row per (admin, area); updated to NOW() when the admin opens that area. Best-effort: a read or
+-- write failure must never break the admin landing.
+CREATE TABLE IF NOT EXISTS admin_area_seen (
+  user_id TEXT NOT NULL,
+  area_slug TEXT NOT NULL,
+  seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, area_slug)
+);
+ALTER TABLE IF EXISTS admin_area_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS admin_area_seen ADD COLUMN IF NOT EXISTS area_slug TEXT;
+ALTER TABLE IF EXISTS admin_area_seen ADD COLUMN IF NOT EXISTS seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 CREATE INDEX IF NOT EXISTS idx_feed_questions_created_at ON feed_questions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_answers_question_created_at ON feed_answers(question_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_answer_ratings_answer_id ON feed_answer_ratings(answer_id);
