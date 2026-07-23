@@ -28,7 +28,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await reconcileUnlockRewards(Number.isFinite(body.limit) ? Number(body.limit) : undefined);
+    // body.limit is typed as number, so validate it is actually a finite number and pass it through
+    // as-is (no redundant Number() cast, which was a no-op and misleadingly implied string coercion).
+    const limit = typeof body.limit === 'number' && Number.isFinite(body.limit) ? body.limit : undefined;
+    const result = await reconcileUnlockRewards(limit);
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'unlock', op: 'internal_reconcile_rewards' });

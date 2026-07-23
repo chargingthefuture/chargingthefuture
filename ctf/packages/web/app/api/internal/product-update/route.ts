@@ -8,7 +8,9 @@ const CI_ACTOR_ID = 'ci-product-update';
 export async function POST(request: NextRequest) {
   const secret = process.env.INTERNAL_SERVICE_SECRET;
   if (!secret) {
-    return NextResponse.json({ error: 'Not configured' }, { status: 501 });
+    // 503 (not 501): the route exists but is unconfigured in this runtime. 503 lets the caller
+    // distinguish a misconfiguration from a wrong credential (401), matching the account/delete route.
+    return NextResponse.json({ error: 'Not configured' }, { status: 503 });
   }
 
   const auth = request.headers.get('authorization');
