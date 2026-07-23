@@ -26,12 +26,15 @@ export function ChymeChatPanel({
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
-    <div style={{ width: '100%', borderLeft: 'none', borderTop: `1px solid ${t.BORDER}`, display: 'flex', flexDirection: 'column', background: t.HEADER, flex: '2 1 0', minHeight: 0 }}>
+    <div style={{ width: '100%', borderLeft: 'none', borderTop: `1px solid ${t.BORDER}`, display: 'flex', flexDirection: 'column', background: t.HEADER, flexShrink: 0 }}>
       <div style={{ flexShrink: 0, padding: '14px 16px', borderBottom: `1px solid ${t.BORDER}`, display: 'flex', alignItems: 'center', gap: 8 }}>
         <Hash size={14} style={{ color: t.ACCENT }} />
         <span style={{ fontSize: 14, fontWeight: 600, color: t.TITLE }}>Room Chat</span>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', minHeight: 0 }}>
+      {/* The message list is a bounded window: it grows with content up to ~half the viewport, then
+          scrolls inside itself. This keeps the chat a fixed-size window (new messages scroll within
+          it, they don't stretch the page) without a full-height lock that clipped the input below. */}
+      <div style={{ overflowY: 'auto', padding: '12px 14px', minHeight: 200, maxHeight: '50vh' }}>
         {messages.length === 0 ? (
           <div style={{ color: t.FAINT, fontSize: 13 }}>No messages yet.</div>
         ) : (
