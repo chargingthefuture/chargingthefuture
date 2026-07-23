@@ -522,7 +522,11 @@ export async function enrollInCohort(input: {
     if (!cohort.rows[0].allow_no_deposit && depositRequested < requiredCredits) {
       throw new Error('invalid_payload');
     }
-    if (cohort.rows[0].allow_no_deposit && !input.allowWithoutDeposit && depositRequested <= 0) {
+    // A no-deposit cohort with a *nonzero* required amount still needs the caller to explicitly opt
+    // into skipping that deposit (allowWithoutDeposit). But a genuinely free cohort (requiredCredits
+    // === 0) has nothing to deposit, so a zero deposit is the normal path and must not require the
+    // opt-in flag — otherwise one-tap "Enroll" on a 0 SC cohort fails with invalid_payload.
+    if (cohort.rows[0].allow_no_deposit && requiredCredits > 0 && !input.allowWithoutDeposit && depositRequested <= 0) {
       throw new Error('invalid_payload');
     }
 
