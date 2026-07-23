@@ -14,6 +14,7 @@ import {
   postTreasuryFeeToFormance,
 } from 'lib/service-credits/formance-ledger';
 import { ensurePositiveAmount } from 'lib/service-credits/amounts';
+import { resolveUsernames } from 'lib/identity/resolve-usernames';
 
 type WalletRow = {
   user_id: string;
@@ -1618,6 +1619,50 @@ export async function createDispute(input: { transferId: string; openedByUserId:
   );
 
   return inserted.rows[0].id;
+}
+
+// One open dispute in the admin review list. `openedByName` is the resolved display name (null when
+// it can't be resolved). There is no status column on service_credits_disputes; "open" means no
+// dispute adjustment has been applied yet (no matching service_credits_dispute_adjustments row).
+export type ServiceCreditsAdminDispute = {
+  id: string;
+  transferId: string;
+  openedByUserId: string;
+  openedByName: string | null;
+  reason: string;
+  createdAtIso: string;
+};
+
+type OpenDisputeRow = {
+  id: string;
+  transfer_id: string;
+  opened_by_user_id: string;
+  reason: string;
+  created_at: Date;
+};
+
+// Admin-only: open disputes (no adjustment applied yet), newest first, capped. Resolves opener display
+// names in one batched Clerk lookup. Backs the admin disputes review list and the admin-landing dot.
+export async function listOpenDisputes(limit = 100): Promise<ServiceCreditsAdminDispute[]> {
+  const pageSize = Math.min(Math.max(1, limit), 200);
+  const result = await queryDb<OpenDisputeRow>(
+    `SELECT d.id::text, d.transfer_id::text, d.opened_by_user_id, d.reason, d.created_at
+       FROM service_credits_disputes d
+       LEFT JOIN service_credits_dispute_adjustments a ON a.dispute_case_id = d.id
+       WHERE a.id IS NULL
+       ORDER BY d.created_at DESC
+       LIMIT $1`,
+    [pageSize],
+  );
+  const names = await resolveUsernames(result.rows.map((row) => row.opened_by_user_id));
+  return result.rows.map((row) => ({
+    id: row.id,
+    transferId: row.transfer_id,
+    openedByUserId: row.opened_by_user_id,
+    openedByName: names.get(row.opened_by_user_id) ?? null,
+    reason: row.reason,
+    createdAtIso: row.created_at.toISOString(),
+  }));
 }
 
 export async function getTreasuryConfig() {

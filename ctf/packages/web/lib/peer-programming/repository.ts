@@ -164,13 +164,15 @@ type CohortRow = {
   topic_id: string | null;
   member_count: string;
   is_standing: boolean;
+  status: string;
+  ended_at: Date | null;
 };
 
-// Column list shared by every cohort SELECT, so the row shape (including is_standing and the
-// live member_count subquery) stays identical across getMyCohort, listActiveCohorts,
+// Column list shared by every cohort SELECT, so the row shape (including is_standing, status/ended_at
+// and the live member_count subquery) stays identical across getMyCohort, listActiveCohorts,
 // listManagedCohorts and getCohortById.
 const COHORT_SELECT_COLUMNS = `c.id, c.week_start_date::text, c.cohort_label, c.fallback_open, c.topic_id::text,
-            c.is_standing,
+            c.is_standing, c.status, c.ended_at,
             (SELECT COUNT(*) FROM peer_programming_cohort_members cm WHERE cm.cohort_id = c.id)::text AS member_count`;
 
 function mapCohortRow(row: CohortRow): PeerProgrammingCohort {
@@ -190,6 +192,8 @@ function mapCohortRow(row: CohortRow): PeerProgrammingCohort {
     topicId: row.topic_id,
     memberCount,
     isStanding,
+    status: row.status === 'ended' ? 'ended' : 'active',
+    endedAtIso: row.ended_at ? row.ended_at.toISOString() : null,
   };
 }
 
@@ -321,11 +325,14 @@ export async function listActiveCohorts(): Promise<PeerProgrammingCohort[]> {
     return result.rows.map(mapCohortRow);
   }
 
+  // Only live cohorts are "running" — an ended cohort is read-only history and must not appear in the
+  // room's running/listen-in list (admins still see it via listManagedCohorts).
   const weekStartDate = getWeekStartDate();
   const result = await queryDb<CohortRow>(
     `SELECT ${COHORT_SELECT_COLUMNS}
      FROM peer_programming_cohorts c
      WHERE c.week_start_date = $1
+       AND c.status = 'active'
      ORDER BY c.cohort_label ASC`,
     [weekStartDate],
   );
@@ -365,6 +372,41 @@ export async function getCohortById(cohortId: string): Promise<PeerProgrammingCo
   );
 
   return result.rows[0] ? mapCohortRow(result.rows[0]) : null;
+}
+
+// True when the cohort is ended (closed / read-only). A cheap status-only read used by the message
+// and reply routes to reject posting into an ended cohort. Unknown ids read as not-ended.
+export async function isCohortEnded(cohortId: string): Promise<boolean> {
+  const result = await queryDb<{ status: string }>(
+    `SELECT status FROM peer_programming_cohorts WHERE id = $1 LIMIT 1`,
+    [cohortId],
+  );
+  return result.rows[0]?.status === 'ended';
+}
+
+// End (close) a cohort: mark it 'ended', stamp who/when, and freeze its Direct Line (posting is then
+// rejected by the message/reply routes). The single standing Cohort 1 can never be ended. Idempotent:
+// ending an already-ended cohort returns it unchanged. Throws 'not_found' for an unknown id and
+// 'policy_denied' for the standing cohort, which the route maps to 404 / 403.
+export async function endCohort(input: { cohortId: string; actorId: string }): Promise<PeerProgrammingCohort> {
+  const existing = await getCohortById(input.cohortId);
+  if (!existing) {
+    throw new Error('not_found');
+  }
+  if (existing.isStanding) {
+    throw new Error('policy_denied');
+  }
+  if (existing.status === 'ended') {
+    return existing;
+  }
+  await queryDb(
+    `UPDATE peer_programming_cohorts
+     SET status = 'ended', ended_at = NOW(), ended_by_user_id = $2, updated_at = NOW()
+     WHERE id = $1 AND is_standing = FALSE AND status = 'active'`,
+    [input.cohortId, input.actorId],
+  );
+  const updated = await getCohortById(input.cohortId);
+  return updated ?? existing;
 }
 
 // Member user ids for a set of cohorts, grouped by cohort, in placement order. One query; the caller

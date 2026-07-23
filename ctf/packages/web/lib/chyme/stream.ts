@@ -24,10 +24,16 @@ async function ensureMember(streamClient: StreamChat, userId: string, name: stri
   return streamUserId;
 }
 
-async function ensureChannel(streamClient: StreamChat, streamUserId: string) {
-  const channel = streamClient.channel('messaging', CHYME_STREAM_CHANNEL_ID, {
+// The Stream chat channel id equals the room key, so each Chyme room (the open main room and the
+// private Weavers room) has its own distinct Stream channel. Defaults to the main room for callers
+// that don't pass one.
+async function ensureChannel(
+  streamClient: StreamChat,
+  streamUserId: string,
+  channelId: string = CHYME_STREAM_CHANNEL_ID,
+) {
+  const channel = streamClient.channel('messaging', channelId, {
     created_by_id: streamUserId,
-    name: 'Chyme Main Room',
   });
 
   try {
@@ -43,6 +49,7 @@ async function ensureChannel(streamClient: StreamChat, streamUserId: string) {
 export async function createStreamJoinCredentials(
   userId: string,
   name: string,
+  channelId: string = CHYME_STREAM_CHANNEL_ID,
 ): Promise<StreamJoinCredentials | null> {
   const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) {
@@ -52,11 +59,11 @@ export async function createStreamJoinCredentials(
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
   try {
     const streamUserId = await ensureMember(streamClient, userId, name);
-    const channel = await ensureChannel(streamClient, streamUserId);
+    const channel = await ensureChannel(streamClient, streamUserId, channelId);
 
     return {
       streamApiKey: streamConfig.apiKey,
-      streamChannelId: channel.id ?? CHYME_STREAM_CHANNEL_ID,
+      streamChannelId: channel.id ?? channelId,
       streamUserId,
       streamToken: streamClient.createToken(streamUserId),
     };
@@ -147,6 +154,8 @@ export async function sendChymeStreamMessage(input: {
   userId: string;
   name: string;
   text: string;
+  // The Stream channel id (= room key) to fan out into; defaults to the main room's channel.
+  channelId?: string;
 }): Promise<string | null> {
   const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) {
@@ -156,7 +165,7 @@ export async function sendChymeStreamMessage(input: {
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
   try {
     const streamUserId = await ensureMember(streamClient, input.userId, input.name);
-    const channel = await ensureChannel(streamClient, streamUserId);
+    const channel = await ensureChannel(streamClient, streamUserId, input.channelId ?? CHYME_STREAM_CHANNEL_ID);
 
     try {
       const result = await channel.sendMessage({

@@ -84,6 +84,7 @@ export function PeerProgrammingAdminShell() {
   const [mode, setMode] = useState<SingleOpenCohortMode | null>(null);
   const [savingMode, setSavingMode] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
+  const [endingCohortId, setEndingCohortId] = useState<string | null>(null);
 
   const loadTopic = useCallback(async () => {
     const res = await fetch('/api/peer-programming/admin/topics');
@@ -238,6 +239,33 @@ export function PeerProgrammingAdminShell() {
       setSavingMode(false);
     },
     [loadMode, loadCohorts],
+  );
+
+  // End (close) a cohort. Its Direct Line becomes read-only — members keep reading, no one can post.
+  // The standing Cohort 1 has no End button (it can never be ended). One-way in this build, so confirm.
+  const endCohortAction = useCallback(
+    async (cohortId: string) => {
+      setEndingCohortId(cohortId);
+      setError(null);
+      setNotice(null);
+      const result = await ppAdminMutate<{ cohort: AdminCohort }>(
+        '/api/peer-programming/admin/cohorts/end',
+        'POST',
+        { cohortId },
+      );
+      if (!result.ok) {
+        setError(result.message);
+      } else {
+        setNotice('Cohort ended. Its conversation is now read-only.');
+        try {
+          await loadCohorts();
+        } catch {
+          // The end succeeded; a cohort-list refresh failure is non-fatal.
+        }
+      }
+      setEndingCohortId(null);
+    },
+    [loadCohorts],
   );
 
   return (
@@ -596,7 +624,11 @@ export function PeerProgrammingAdminShell() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>Cohort {cohort.cohortLabel}</span>
-                          {cohort.fallbackOpen ? (
+                          {cohort.status === 'ended' ? (
+                            <span style={{ background: 'rgba(107,114,128,0.18)', color: t.MUTED, border: `1px solid ${t.BORDER_SOLID}`, fontSize: 10, padding: '1px 7px', borderRadius: 10 }}>
+                              Ended
+                            </span>
+                          ) : cohort.fallbackOpen ? (
                             <span style={{ background: 'rgba(234,179,8,0.15)', color: '#EAB308', border: '1px solid rgba(234,179,8,0.3)', fontSize: 10, padding: '1px 7px', borderRadius: 10 }}>
                               Open
                             </span>
@@ -611,12 +643,28 @@ export function PeerProgrammingAdminShell() {
                           </div>
                         ) : null}
                       </div>
-                      <Link
-                        href={`/apps/peer-programming?cohortId=${encodeURIComponent(cohort.id)}`}
-                        style={{ fontSize: 12, fontWeight: 700, color: t.ACCENT, textDecoration: 'none', whiteSpace: 'nowrap' }}
-                      >
-                        Open room →
-                      </Link>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                        {cohort.status === 'active' && !cohort.isStanding ? (
+                          <button
+                            type="button"
+                            disabled={endingCohortId === cohort.id}
+                            onClick={() => {
+                              if (window.confirm(`End Cohort ${cohort.cohortLabel}? Members can still read the conversation, but no one will be able to post. This cannot be undone here.`)) {
+                                void endCohortAction(cohort.id);
+                              }
+                            }}
+                            style={{ fontSize: 12, fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '6px 12px', cursor: endingCohortId === cohort.id ? 'progress' : 'pointer', whiteSpace: 'nowrap', opacity: endingCohortId === cohort.id ? 0.7 : 1 }}
+                          >
+                            {endingCohortId === cohort.id ? 'Ending…' : 'End cohort'}
+                          </button>
+                        ) : null}
+                        <Link
+                          href={`/apps/peer-programming?cohortId=${encodeURIComponent(cohort.id)}`}
+                          style={{ fontSize: 12, fontWeight: 700, color: t.ACCENT, textDecoration: 'none', whiteSpace: 'nowrap' }}
+                        >
+                          Open room →
+                        </Link>
+                      </div>
                     </div>
                   ))}
                 </div>

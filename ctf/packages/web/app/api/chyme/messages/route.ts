@@ -3,7 +3,7 @@ import { CHYME_DEFAULT_MESSAGES_LIMIT, CHYME_ERROR_CODE } from 'lib/chyme/consta
 import { logChymeAudit } from 'lib/chyme/audit';
 import { listRoomMessages, sendRoomMessage, validateMessageInput } from 'lib/chyme/repository';
 import { reportError } from 'lib/observability/report';
-import { requireChymeAccess, ensureMutationCsrf } from '../_lib';
+import { requireChymeRoomAccess, ensureMutationCsrf } from '../_lib';
 
 function parseLimit(url: string): number {
   const queryLimit = new URL(url).searchParams.get('limit');
@@ -24,13 +24,13 @@ function parseLimit(url: string): number {
 }
 
 export async function GET(request: Request) {
-  const gate = await requireChymeAccess();
+  const gate = await requireChymeRoomAccess(request);
   if (!gate.allowed) {
     return gate.response;
   }
 
   try {
-    const messages = await listRoomMessages(gate.identity, parseLimit(request.url));
+    const messages = await listRoomMessages(gate.identity, parseLimit(request.url), gate.roomKey);
 
     logChymeAudit({
       pluginId: 'chyme',
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       status: 'allow',
       reason: 'approved_user_or_admin',
       target: {
-        roomKey: 'chyme-main-room',
+        roomKey: gate.roomKey,
       },
       result: 'success',
       errorCategory: null,
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       {
-        roomKey: 'chyme-main-room',
+        roomKey: gate.roomKey,
         messages,
       },
       { status: 200 },
@@ -81,7 +81,7 @@ type MessageRequestBody = {
 };
 
 export async function POST(request: Request) {
-  const gate = await requireChymeAccess();
+  const gate = await requireChymeRoomAccess(request);
   if (!gate.allowed) {
     return gate.response;
   }
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
       status: 'deny',
       reason: 'empty_or_oversized_message',
       target: {
-        roomKey: 'chyme-main-room',
+        roomKey: gate.roomKey,
       },
       result: 'failure',
       errorCategory: 'validation',
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const message = await sendRoomMessage(gate.identity, validation.normalizedText);
+    const message = await sendRoomMessage(gate.identity, validation.normalizedText, gate.roomKey);
 
     logChymeAudit({
       pluginId: 'chyme',
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
       status: 'allow',
       reason: 'approved_user_or_admin',
       target: {
-        roomKey: 'chyme-main-room',
+        roomKey: gate.roomKey,
         messageId: message.id,
       },
       result: 'success',
@@ -158,7 +158,7 @@ export async function POST(request: Request) {
       status: 'allow',
       reason: 'approved_user_or_admin',
       target: {
-        roomKey: 'chyme-main-room',
+        roomKey: gate.roomKey,
       },
       result: 'failure',
       errorCategory: 'persistence_error',

@@ -34,7 +34,7 @@ export function ChymeChatPanel({
       {/* The message list is a bounded window: it grows with content up to ~half the viewport, then
           scrolls inside itself. This keeps the chat a fixed-size window (new messages scroll within
           it, they don't stretch the page) without a full-height lock that clipped the input below. */}
-      <div style={{ overflowY: 'auto', padding: '12px 14px', minHeight: 200, maxHeight: '50vh' }}>
+      <div style={{ overflowY: 'auto', overflowX: 'hidden', padding: '12px 14px', minHeight: 200, maxHeight: '50vh' }}>
         {messages.length === 0 ? (
           <div style={{ color: t.FAINT, fontSize: 13 }}>No messages yet.</div>
         ) : (
@@ -44,7 +44,9 @@ export function ChymeChatPanel({
                 <span style={{ fontSize: 13, fontWeight: 600, color: message.userId === currentUserId ? t.ACCENT : '#A7F3D0' }}>{chymeHandle(message.username, message.userId)}</span>
                 <span style={{ fontSize: 11, color: '#374151' }}>{new Date(message.sentAtIso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
               </div>
-              <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5 }}>{message.text}</div>
+              {/* Wrap long unbroken strings (e.g. a pasted URL) so a message can never widen the
+                  window and make it scroll left/right — the chat only scrolls up and down. */}
+              <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5, overflowWrap: 'anywhere', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{message.text}</div>
             </div>
           ))
         )}

@@ -1,6 +1,25 @@
 export const CHYME_PLUGIN_ID = 'chyme';
 export const CHYME_MAIN_ROOM_KEY = 'chyme-main-room';
 export const CHYME_MAIN_ROOM_NAME = 'Chyme Main Room: Exit the Gauntlet';
+
+// The private "Weavers of the Commons" audio room — the Chyme counterpart to the gated Commons chat
+// channel. Only contributor-eligible members (and admins) can join it, gated the same way the Commons
+// gated channel is (eligibility flag + the channel-open switch); everyone else gets a bare 404.
+export const CHYME_CONTRIBUTORS_ROOM_KEY = 'chyme-contributors-room';
+export const CHYME_CONTRIBUTORS_ROOM_NAME = 'Weavers of the Commons';
+
+// The two room "scopes" a Chyme route/client can address. 'main' is the open room every approved
+// member sees; 'contributors' is the private Weavers room. Kept as a small closed set so a room
+// identifier can never be an arbitrary caller-supplied string.
+export type ChymeRoomScope = 'main' | 'contributors';
+
+export function chymeRoomKeyForScope(scope: ChymeRoomScope): string {
+  return scope === 'contributors' ? CHYME_CONTRIBUTORS_ROOM_KEY : CHYME_MAIN_ROOM_KEY;
+}
+
+export function chymeRoomNameForKey(roomKey: string): string {
+  return roomKey === CHYME_CONTRIBUTORS_ROOM_KEY ? CHYME_CONTRIBUTORS_ROOM_NAME : CHYME_MAIN_ROOM_NAME;
+}
 export const CHYME_MAX_MESSAGE_LENGTH = 1000;
 export const CHYME_DEFAULT_MESSAGES_LIMIT = 100;
 

@@ -86,6 +86,9 @@ export async function GET(request: Request) {
       access,
       isMember: access === 'member',
       fallbackOpen: cohort?.fallbackOpen ?? true,
+      // An ended cohort is read-only: the client hides the composer and shows an "ended" notice, and
+      // the message/reply routes reject posting to it server-side.
+      ended: cohort ? cohort.status === 'ended' : false,
     });
   } catch (error) {
     reportError(error, { area: 'peer-programming', op: 'room' });

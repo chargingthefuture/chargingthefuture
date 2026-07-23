@@ -29,6 +29,7 @@ type RoomApiResponse = {
   members?: RoomMember[];
   myCohortId?: string | null;
   access?: RoomAccess;
+  ended?: boolean;
 };
 
 type RoomData = {
@@ -76,6 +77,7 @@ async function fetchRoomData(signal: AbortSignal, cohortId?: string | null): Pro
     name: data.cohort?.cohortLabel,
     topic: data.topic?.title,
     participants: [],
+    ended: Boolean(data.ended),
   };
   return {
     room,
@@ -302,6 +304,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
           onSend={() => void handlePostMessage()}
           submitting={submitting}
           readOnly={access !== "member"}
+          ended={Boolean(room?.ended)}
         />
       )}
     </>

@@ -63,9 +63,12 @@ directly).
 1. Send a normal message.
 2. Try to send an empty message (only spaces).
 3. Try to send a very long message (over 1000 characters).
+4. Send a message containing a long unbroken string (e.g. a full URL with no spaces), then read the
+   Room Chat window on a phone-width screen.
 **Expected:** The normal message posts and persists. An empty/whitespace-only message is rejected
 (the `chyme.message.send` contract requires 1 to 1000 characters after trimming). A message over
-1000 characters is rejected by the same bound, not silently cut.
+1000 characters is rejected by the same bound, not silently cut. The long-URL message **wraps**
+inside the chat window — the window scrolls only up and down, never left/right (no horizontal scroll).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-3 · Read chat history with a page size
@@ -284,6 +287,52 @@ Back Channel itself never mentions or moves credits.
 Chyme foreground service). Returning to the app shows the call still live. This is the same class of
 check as the room's CH-10 and the Android app script's AN-4 — a required release gate.
 **Result:** android ☐ — notes:
+
+---
+
+### CH-17 · Private "Weavers of the Commons" room (contributor-gated)
+**Role:** contributor-eligible member, non-eligible member, admin · **Surfaces:** web (mobile-responsive)
+**Precondition:** the contributor channel is open (`contributor_access_config.channel_open = true`); one
+test member is contributor-eligible, one is not, and one is an admin.
+**Steps:**
+1. Open Chyme. Confirm the rooms rail (a horizontal, left-to-right scroller of room cards at the top)
+   shows two cards: **Main Room** and **Weavers of the Commons** (the latter with the badge + a lock).
+2. As the **non-eligible** member, tap **Weavers of the Commons**.
+3. As the **eligible** member (or an **admin**), tap **Weavers of the Commons**, then Join Room, unmute,
+   send a chat message, and raise/lower your hand.
+4. Confirm the private room's participants and chat are separate from the main room (a message sent in
+   one room does not appear in the other).
+**Expected:** The non-eligible member sees the "Weavers of the Commons" explainer (badge + "How it's
+earned →") and no room content — no locked/absence wording, just the explainer (no-shaming). The
+eligible member/admin joins the private room, hears audio, sends/reads its own chat, and raises a hand
+— all scoped to `chyme-contributors-room` and never mixed with the main room. Tips and Back Channel are
+intentionally absent in the private room (MVP). If the channel is closed, even an eligible member gets
+the explainer (only an admin still enters).
+**Result:** web ☐ mobile ☐ — notes:
+
+### CH-19 · Rooms rail, no-disconnect room switch, and control placement
+**Role:** contributor-eligible member (so both rooms are reachable) · **Surfaces:** web (mobile-responsive)
+**Steps:**
+1. Open Chyme on a phone-width screen. Confirm the top is a single compact horizontal rail of room
+   cards that scrolls left-to-right — not a full-height card that repeats the room title. Confirm the
+   room title now appears only once below the rail (no duplicate).
+2. In the **Main Room**, Join Room and unmute so you are live (you hear yourself/others).
+3. While still joined and speaking, tap the **Weavers of the Commons** card, then tap **Main Room**
+   again. Confirm you were **not** disconnected — the main-room call stays connected the whole time
+   (audio never drops, you do not have to re-Join).
+4. Look at the joined room's layout top-to-bottom: participant avatars (On Stage), then the audio
+   controls (Mute/Unmute · Raise Hand · Leave), then the room chat. Confirm the controls sit **below**
+   the avatars and **above** the chat, and you can mute/unmute without scrolling.
+5. Android-app card: on a non-Android browser, confirm a "Get the Android app" card shows in the rail
+   and opens the repo's GitHub Releases page (`https://github.com/chargingthefuture/chargingthefuture/releases`),
+   where the APK is downloaded. On an Android device, confirm the card is hidden and the rail is just
+   the list of rooms.
+**Expected:** The rooms rail is one compact scrollable row; the title is not duplicated and no vertical
+space is wasted. Switching rooms never tears down a live call — a member joined in one room stays
+connected while viewing the other and when switching back. The in-room controls render between the
+avatars and the chat. The Android-app card links to the GitHub Releases page on a non-Android
+browser and is hidden on Android.
+**Result:** web ☐ mobile ☐ — notes:
 
 ---
 

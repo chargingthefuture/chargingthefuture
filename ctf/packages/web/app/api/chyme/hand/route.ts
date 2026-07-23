@@ -3,7 +3,7 @@ import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { setRoomMemberHandRaised } from 'lib/chyme/repository';
 import { reportError } from 'lib/observability/report';
-import { requireChymeAccess, ensureMutationCsrf } from '../_lib';
+import { requireChymeRoomAccess, ensureMutationCsrf } from '../_lib';
 
 // Persist the caller's raise/lower hand on their presence row so everyone in the room keeps seeing
 // the raised hand until they lower it (or leave). Stream reactions are transient and auto-clear, so
@@ -13,7 +13,7 @@ type HandRequestBody = {
 };
 
 export async function POST(request: Request) {
-  const gate = await requireChymeAccess();
+  const gate = await requireChymeRoomAccess(request);
   if (!gate.allowed) {
     return gate.response;
   }
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       actorId: gate.auth.userId,
       status: 'deny',
       reason: 'invalid_raised_flag',
-      target: { roomKey: 'chyme-main-room' },
+      target: { roomKey: gate.roomKey },
       result: 'failure',
       errorCategory: 'validation',
     });
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const room = await setRoomMemberHandRaised(gate.identity, body.raised);
+    const room = await setRoomMemberHandRaised(gate.identity, body.raised, gate.roomKey);
 
     logChymeAudit({
       pluginId: 'chyme',
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       actorId: gate.auth.userId,
       status: 'allow',
       reason: 'approved_user_or_admin',
-      target: { roomKey: 'chyme-main-room' },
+      target: { roomKey: gate.roomKey },
       result: 'failure',
       errorCategory: 'persistence_error',
     });

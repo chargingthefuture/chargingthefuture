@@ -4,10 +4,10 @@ import { createStreamJoinCredentials } from 'lib/chyme/stream';
 import { chymeHandle, getRoomState, markRoomCallJoined } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { reportError } from 'lib/observability/report';
-import { requireChymeAccess, ensureMutationCsrf } from '../_lib';
+import { requireChymeRoomAccess, ensureMutationCsrf } from '../_lib';
 
 export async function POST(request: Request) {
-  const gate = await requireChymeAccess();
+  const gate = await requireChymeRoomAccess(request);
   if (!gate.allowed) {
     return gate.response;
   }
@@ -18,10 +18,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const room = await getRoomState(gate.identity);
+    const room = await getRoomState(gate.identity, gate.roomKey);
     const credentials = await createStreamJoinCredentials(
       gate.auth.userId,
       chymeHandle(gate.identity.username, gate.identity.userId),
+      // The Stream chat channel id equals the room key, so the private room's chat is its own channel.
+      gate.roomKey,
     );
 
     if (!credentials) {
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const activeRoom = await markRoomCallJoined(gate.identity);
+    const activeRoom = await markRoomCallJoined(gate.identity, gate.roomKey);
 
     logChymeAudit({
       pluginId: 'chyme',

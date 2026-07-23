@@ -311,6 +311,22 @@ new message appear. Edit shows only on the member's own messages.
 
 ---
 
+### CA-C9 · Contributor eligibility also grants the private Chyme audio room
+**Role:** eligible member, non-eligible member, admin · **Surfaces:** web (mobile-responsive)
+**Note:** the room itself lives in the Chyme plugin; this check confirms the SAME eligibility gate
+carries over. The full room walkthrough is the Chyme test script's **CH-17** — run that for the audio
+and chat behavior; here just confirm the gate matches this module's channel gate.
+**Steps:**
+1. Confirm the contributor channel is open (`contributor_access_config.channel_open = true`).
+2. In Chyme, open the **Weavers of the Commons** room tab as each role.
+**Expected:** The private Chyme room opens for exactly the same members as the gated Commons chat
+channel — eligible members and admins get in; a non-eligible member sees the "how it's earned"
+explainer (no locked/absence state). With the channel closed, only an admin enters. The gate is the
+shared eligibility flag + channel-open switch (no separate Chyme allowlist).
+**Result:** web ☐ mobile ☐ — notes:
+
+---
+
 ## Known gaps — do not file these as bugs
 
 Carried from the inventory's "Gaps & Known Technical Debt" section:

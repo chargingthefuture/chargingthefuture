@@ -60,6 +60,14 @@ export function isWebRtcAvailable(): boolean {
   return typeof w.RTCPeerConnection !== 'undefined' || typeof w.webkitRTCPeerConnection !== 'undefined';
 }
 
+type ChymeRoomScope = 'main' | 'contributors';
+
+// The room-scope query appended to the presence/hand endpoints so they act on the right room. The
+// private contributors room passes `?room=contributors`; the main room passes nothing.
+function roomScopeQuery(roomScope: ChymeRoomScope): string {
+  return roomScope === 'contributors' ? '?room=contributors' : '';
+}
+
 type ChymeAudioRoomProps = {
   joinInfo: ChymeJoinResponse;
   currentUser: CurrentUser;
@@ -71,16 +79,22 @@ type ChymeAudioRoomProps = {
   // refreshed by the live shell's room poll. Drives the persistent raised-hand indicator for
   // everyone except the local member (who is driven by their own instant local toggle).
   raisedHandUserIds: ReadonlySet<string>;
+  // Which room this call is for. The private "contributors" room is an audio+chat MVP: Back Channel
+  // 1:1 calls (which are scoped to the main room's presence) are disabled there for now.
+  roomScope: ChymeRoomScope;
 };
 
-export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onLeave, raisedHandUserIds }: ChymeAudioRoomProps) {
+export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onLeave, raisedHandUserIds, roomScope }: ChymeAudioRoomProps) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error' | 'unsupported'>('connecting');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
-  const backChannel = useBackChannel(currentUser, true);
+  // Back Channel is a main-room feature only for now (its invites are scoped to the main room's
+  // presence). In the private room it is disabled, so the polling is off and no UI is rendered.
+  const backChannelEnabled = roomScope === 'main';
+  const backChannel = useBackChannel(currentUser, backChannelEnabled);
 
   // Closest a browser gets to the native Android background service: while joined and the tab is
   // foreground, hold a screen wake lock and publish Media Session presence so the OS keeps the audio
@@ -153,7 +167,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
     if (status !== 'joined') return;
     const ping = () => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-      void fetch('/api/chyme/heartbeat', {
+      void fetch(`/api/chyme/heartbeat${roomScopeQuery(roomScope)}`, {
         method: 'POST',
         headers: { 'x-ctf-csrf': '1' },
       }).catch(() => {
@@ -178,9 +192,9 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
   // Back Channel (spec #1746): a free 1:1 audio sidebar with another member in this room. The controller
   // polls for invites and owns the active call; the layer renders the incoming prompt + active panel as a
   // fixed overlay, so it stays put even while the room reconnects.
-  const backChannelLayer = (
+  const backChannelLayer = backChannelEnabled ? (
     <ChymeBackChannelLayer controller={backChannel} currentUser={currentUser} isMobile={true} />
-  );
+  ) : null;
 
   if (status === 'unsupported') {
     return (
@@ -241,6 +255,8 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
             onLeave={onLeave}
             raisedHandUserIds={raisedHandUserIds}
             backChannel={backChannel}
+            roomScope={roomScope}
+            backChannelEnabled={backChannelEnabled}
           />
         </StreamCall>
       </StreamVideo>
@@ -250,8 +266,10 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
 }
 
 // Layout shared by the connecting/error state and the live state so the room
-// keeps a stable shape. Controls (mute / raise hand / leave) are pinned to the TOP, above the stage
-// and chat, so a member can mute/unmute while talking without scrolling to the bottom of the chat.
+// keeps a stable shape. Order top-to-bottom is: the stage (avatars), then the controls
+// (mute / raise hand / leave), then the chat. Controls sit directly BELOW the avatars and ABOVE the
+// chat so a member can mute/unmute while talking without hunting past the avatars or scrolling the
+// chat (owner request 2026-07-23).
 function ChymeAudioFrame({
   stage,
   showChat,
@@ -269,9 +287,13 @@ function ChymeAudioFrame({
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
-    <>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {/* Natural height so the participant avatars always render (a cramped flex/overflow region
+          clipped the single avatar under the "On Stage" label). The page flows; chat stays a
+          bounded internal scroller. */}
+      <div style={{ padding: '20px 24px' }}>{stage}</div>
       {controls ?? (
-        <div style={{ padding: '16px 24px', borderBottom: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+        <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.BORDER}`, borderBottom: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
           <button
             onClick={onLeave}
             style={{ padding: '10px 18px', borderRadius: 12, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
@@ -280,14 +302,8 @@ function ChymeAudioFrame({
           </button>
         </div>
       )}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* Natural height so the participant avatars always render (a cramped flex/overflow region
-            clipped the single avatar under the "On Stage" label). The page flows; chat stays a
-            bounded internal scroller. */}
-        <div style={{ padding: '20px 24px' }}>{stage}</div>
-        {showChat && chatPanel}
-      </div>
-    </>
+      {showChat && chatPanel}
+    </div>
   );
 }
 
@@ -297,6 +313,8 @@ function ChymeAudioRoomLive({
   onLeave,
   raisedHandUserIds,
   backChannel,
+  roomScope,
+  backChannelEnabled,
 }: {
   showChat: boolean;
   chatPanel: ReactNode;
@@ -304,6 +322,8 @@ function ChymeAudioRoomLive({
   onLeave: () => void;
   raisedHandUserIds: ReadonlySet<string>;
   backChannel: BackChannelController;
+  roomScope: ChymeRoomScope;
+  backChannelEnabled: boolean;
 }) {
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
@@ -324,7 +344,7 @@ function ChymeAudioRoomLive({
         ? { type: 'raised_hand', emoji_code: ':raised_hand:' }
         : { type: 'lower_hand', emoji_code: ':hand:' },
     );
-    void fetch('/api/chyme/hand', {
+    void fetch(`/api/chyme/hand${roomScopeQuery(roomScope)}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
       body: JSON.stringify({ raised: next }),
@@ -362,6 +382,7 @@ function ChymeAudioRoomLive({
               localHandRaised={handRaised}
               raisedHandUserIds={raisedHandUserIds}
               backChannel={backChannel}
+              backChannelEnabled={backChannelEnabled}
             />
           ))}
         </div>
@@ -388,11 +409,13 @@ function ChymeSpeakerTile({
   localHandRaised = false,
   raisedHandUserIds,
   backChannel,
+  backChannelEnabled,
 }: {
   participant: StreamVideoParticipant;
   localHandRaised?: boolean;
   raisedHandUserIds: ReadonlySet<string>;
   backChannel: BackChannelController;
+  backChannelEnabled: boolean;
 }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
@@ -473,7 +496,9 @@ function ChymeSpeakerTile({
       {!isSelf && !isGuest ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
           <ChymeTipButton recipientUserId={clerkUserId} recipientName={name} />
-          <ChymeBackChannelButton recipientUserId={clerkUserId} controller={backChannel} />
+          {backChannelEnabled ? (
+            <ChymeBackChannelButton recipientUserId={clerkUserId} controller={backChannel} />
+          ) : null}
         </div>
       ) : null}
     </div>
