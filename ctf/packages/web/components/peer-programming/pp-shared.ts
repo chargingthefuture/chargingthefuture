@@ -47,6 +47,8 @@ export interface Room {
   participants?: Participant[];
   topic?: string;
   status?: string;
+  // True when the open cohort has ended — the Direct Line is read-only (no composer).
+  ended?: boolean;
 }
 
 export interface Message {

@@ -32,6 +32,7 @@ export function PeerProgrammingChatTab({
   onSend,
   submitting,
   readOnly = false,
+  ended = false,
 }: {
   room: Room | null;
   messages: Message[];
@@ -42,6 +43,8 @@ export function PeerProgrammingChatTab({
   // True when the viewer is listening in (or an admin viewing another cohort): the chat is visible
   // but the composer is replaced by a notice, since only cohort members can post.
   readOnly?: boolean;
+  // True when the cohort itself has ended: the Direct Line is frozen for everyone (read-only history).
+  ended?: boolean;
 }) {
   const { theme } = useTheme();
   const t = getPeerProgrammingTokens(theme);
@@ -66,6 +69,10 @@ export function PeerProgrammingChatTab({
       {!hasCohort ? (
         <div style={{ padding: "12px 24px", borderTop: `1px solid ${t.BORDER}`, background: "rgba(255,255,255,0.02)", textAlign: "center", color: t.MUTED, fontSize: 13 }}>
           Join a cohort to participate in chat
+        </div>
+      ) : ended ? (
+        <div style={{ padding: "12px 24px", borderTop: `1px solid ${t.BORDER}`, background: "rgba(255,255,255,0.02)", textAlign: "center", color: t.SUBTLE, fontSize: 13 }}>
+          This cohort has ended — the conversation is read-only.
         </div>
       ) : readOnly ? (
         <div style={{ padding: "12px 24px", borderTop: `1px solid ${t.BORDER}`, background: "rgba(255,255,255,0.02)", textAlign: "center", color: t.SUBTLE, fontSize: 13 }}>

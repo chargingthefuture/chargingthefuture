@@ -3952,6 +3952,12 @@ CREATE TABLE IF NOT EXISTS peer_programming_cohorts (
   topic_id UUID,
   assigned_by_user_id TEXT NOT NULL,
   is_standing BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Cohort lifecycle. 'active' is a live cohort; 'ended' is a closed, read-only cohort (admin "End
+  -- cohort" today; a week-end auto-transition later). An ended cohort's Direct Line is frozen — the
+  -- message/reply routes reject posting to it. The standing Cohort 1 is never ended.
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','ended')),
+  ended_at TIMESTAMPTZ,
+  ended_by_user_id TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (week_start_date, cohort_label)
@@ -3967,6 +3973,11 @@ ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS assigned
 -- the partial-unique index below; that one row persists across weeks and is found by is_standing,
 -- not by the current week.
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS is_standing BOOLEAN NOT NULL DEFAULT FALSE;
+-- Cohort lifecycle status: 'active' (live) or 'ended' (closed, read-only Direct Line). Additive and
+-- backfills every existing row to 'active'; nothing is ever 'ended' until an admin ends a cohort.
+ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS ended_by_user_id TEXT;
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Guarantee there is at most one standing cohort. The find-or-create helper uses this partial-unique
