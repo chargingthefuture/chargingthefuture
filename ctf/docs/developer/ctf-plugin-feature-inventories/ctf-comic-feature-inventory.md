@@ -325,7 +325,7 @@ not_helpful / flagged ratings) are the **two training inputs** for the @comic as
    also indexed on `active`. Populated by `ctf/scripts/importComicKnowledge.mjs` from the JSONL
    files produced by `parseQuoraExportToComicDataset.mjs` / `parseWikiToComicDataset.mjs`. At
    draft time `retrieveComicGrounding()` fetches the top 4 active entries ranked by
-   `ts_rank`/`websearch_to_tsquery` and injects them into the Ollama system prompt; retrieval is
+   `ts_rank`/`websearch_to_tsquery` and injects them into the Ollama model instructions; retrieval is
    best-effort (failure or no match → the draft runs ungrounded, as before). The draft turn
    records which entries grounded it in `comic_turns.grounding_entry_ids` (jsonb array, default
    `[]`) so grounded vs ungrounded drafts can be compared on correction rate — the #504

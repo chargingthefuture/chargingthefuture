@@ -334,7 +334,7 @@ async function retrieveComicGrounding(questionBody: string): Promise<ComicGround
   }
 }
 
-// Render retrieved entries as a grounding block appended to the system prompt: verified excerpts
+// Render retrieved entries as a grounding block appended to the model instructions: verified excerpts
 // of the community's own published answers, in the owner's voice, for the model to draw on.
 function buildGroundingPrompt(entries: ComicGroundingEntry[]): string {
   const excerpts = entries
@@ -364,7 +364,7 @@ async function generateComicDraft(questionBody: string): Promise<OllamaDraft> {
   if (isOllamaConfigured()) {
     try {
       // Retrieval grounding (#504): look up the owner's past answers / knowledge entries relevant
-      // to this question and inject them into the system prompt, so the draft is grounded in our
+      // to this question and inject them into the model instructions, so the draft is grounded in our
       // data instead of the base model's generic training. Best-effort — an empty result means the
       // draft simply runs ungrounded.
       const grounding = await retrieveComicGrounding(questionBody);
