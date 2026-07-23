@@ -44,6 +44,28 @@ export type AdminKpis = {
   avgDaysToFirstTrainerPayout: number;
 };
 
+// One open dispute in the admin review list (mirrors LevelUpAdminDispute from the repository).
+export type AdminDispute = {
+  id: string;
+  enrollmentId: string;
+  cohortId: string | null;
+  title: string;
+  description: string;
+  openedByUserId: string;
+  openedByName: string | null;
+  createdAtIso: string;
+};
+
+// One pending milestone validation in the admin review list (mirrors LevelUpAdminValidation).
+export type AdminValidation = {
+  id: string;
+  enrollmentId: string;
+  cohortId: string | null;
+  milestoneId: string;
+  validationNote: string | null;
+  createdAtIso: string;
+};
+
 // What the operator typed for a ServiceCredits adjustment. `amount` may be
 // positive (grant to the member) or negative (claw back from the member to the
 // LevelUp treasury) — exactly what POST /adjust-credits accepts.

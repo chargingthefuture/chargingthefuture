@@ -15,7 +15,9 @@ import {
   idempotencyKey,
   luAdminMutate,
   type AdminCohort,
+  type AdminDispute,
   type AdminKpis,
+  type AdminValidation,
   type AutoCohortRunResult,
 } from './lu-admin-shared';
 import { getLevelUpTokens, type LevelUpTokens } from './lu-shared';
@@ -57,7 +59,21 @@ const inputStyle = (t: LevelUpTokens): React.CSSProperties => ({
   outline: 'none',
 });
 
-export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
+function formatQueueTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+export function LevelUpAdminShell({
+  kpis,
+  openDisputes,
+  pendingValidations,
+}: {
+  kpis: AdminKpis;
+  openDisputes: AdminDispute[];
+  pendingValidations: AdminValidation[];
+}) {
   const { theme } = useTheme();
   const t = getLevelUpTokens(theme);
   const [cohorts, setCohorts] = useState<AdminCohort[] | null>(null);
@@ -203,6 +219,57 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
           <StatBlock label="Enrollments" value={String(kpis.enrollments)} />
           <StatBlock label="Completions" value={String(kpis.completions)} />
           <StatBlock label="Avg days to first trainer payout" value={`${kpis.avgDaysToFirstTrainerPayout} days`} />
+        </div>
+
+        {/* Review queue: open disputes. Read-only list so the admin-landing dot leads somewhere that
+            shows what is new; resolving a dispute stays in the existing dispute flow. */}
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>
+            Open disputes {openDisputes.length > 0 ? `(${openDisputes.length})` : ''}
+          </h2>
+          {openDisputes.length === 0 ? (
+            <div style={{ padding: '20px 16px', textAlign: 'center', color: t.MUTED, fontSize: 13, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+              No open disputes.
+            </div>
+          ) : (
+            openDisputes.map((dispute) => (
+              <div key={dispute.id} style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>{dispute.title}</span>
+                  <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>{formatQueueTime(dispute.createdAtIso)}</span>
+                </div>
+                <p style={{ fontSize: 13, color: '#D1D5DB', margin: '6px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{dispute.description}</p>
+                <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6 }}>
+                  Opened by {dispute.openedByName ?? `member ${dispute.openedByUserId.slice(0, 6)}`}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Review queue: pending milestone validations. */}
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>
+            Pending milestone validations {pendingValidations.length > 0 ? `(${pendingValidations.length})` : ''}
+          </h2>
+          {pendingValidations.length === 0 ? (
+            <div style={{ padding: '20px 16px', textAlign: 'center', color: t.MUTED, fontSize: 13, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+              No pending validations.
+            </div>
+          ) : (
+            pendingValidations.map((validation) => (
+              <div key={validation.id} style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>Milestone {validation.milestoneId.slice(0, 8)}</span>
+                  <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>{formatQueueTime(validation.createdAtIso)}</span>
+                </div>
+                {validation.validationNote ? (
+                  <p style={{ fontSize: 13, color: '#D1D5DB', margin: '6px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{validation.validationNote}</p>
+                ) : null}
+                <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6 }}>Enrollment {validation.enrollmentId.slice(0, 8)}</div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Auto cohorts (issue #904) */}
