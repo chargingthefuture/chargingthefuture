@@ -2,8 +2,8 @@ contracts:
   # ─── @comic message routing ────────────────────────────────────────────
   - pluginId: comic
     command: comic.message.route
-    version: 1.0.0
-    description: Route an inbound chat message to the AI Assistant when it mentions @comic; capture the user turn, run consent/moderation/safety checks, and branch to draft+review or human-first. Messages without an @comic mention are peer-to-peer and never reach the assistant.
+    version: 1.1.0
+    description: Route an inbound chat message to the AI Assistant when it mentions @comic; capture the user turn, run consent/moderation/safety checks, and branch to draft+review or human-first. The background draft is grounded in top-ranked comic_knowledge_entries excerpts (retrieval, #504). Messages without an @comic mention are peer-to-peer and never reach the assistant.
     inputSchema:
       body:
         type: string
@@ -32,14 +32,15 @@ contracts:
       - comic_conversations
       - comic_turns
       - comic_review_queue
+      - comic_knowledge_entries
     purpose: assistant_message_routing
     retentionClass: transactional_long_lived
     idempotency: false
 
   - pluginId: comic
     command: comic.reply.generate
-    version: 1.0.0
-    description: Generate an AI Assistant draft reply for a captured @comic turn via the self-hosted Ollama backend. Every draft is enqueued for human review and never surfaced to the asker.
+    version: 1.1.0
+    description: Generate an AI Assistant draft reply for a captured @comic turn via the self-hosted Ollama backend, grounded in top-ranked comic_knowledge_entries excerpts (retrieval, #504); the grounding entry ids are recorded on the draft turn. Every draft is enqueued for human review and never surfaced to the asker.
     inputSchema:
       turnId:
         type: string
@@ -55,6 +56,7 @@ contracts:
     dataAccess:
       - comic_turns
       - comic_review_queue
+      - comic_knowledge_entries
     purpose: assistant_reply_generation
     retentionClass: transactional_long_lived
     idempotency: true

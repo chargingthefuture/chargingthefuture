@@ -268,7 +268,9 @@ DBs converge: `comic_conversations(channel, status)`, `comic_turns(role, engine,
    [the asker's @username snapshotted at ask time, shown in the review dashboard in place of the raw
    user id; null for rows created before this was captured], `channel` text [hub|feed], `status` text
    [open|closed], `created_at`, `updated_at`). Indexed on `user_id`, `created_at`.
-2. `comic_turns` — one row per turn (`id` uuid pk, `conversation_id` uuid FK→comic_conversations,
+2. `comic_turns` — one row per turn, including `grounding_entry_ids` (jsonb array, default `[]`;
+   the `comic_knowledge_entries` ids injected as grounding when a bot draft was generated —
+   added 2026-07-23) (`id` uuid pk, `conversation_id` uuid FK→comic_conversations,
    `role` ∈ user|bot|human, `body`, `intent` text null, `nlu_confidence` numeric(5,4) null [0..1],
    `engine` ∈ rasa|ollama|template|human, `linked_plugin_slugs` jsonb not null default `'[]'`,
    `created_at`). Indexed on `conversation_id`, `created_at`. `linked_plugin_slugs` holds the
@@ -312,6 +314,22 @@ DBs converge: `comic_conversations(channel, status)`, `comic_turns(role, engine,
 Together, `comic_training_examples` (owner corrections) and `comic_answer_ratings` (helpful /
 not_helpful / flagged ratings) are the **two training inputs** for the @comic assistant. See the
 "Training dataset & how to begin fine-tuning" subsection below for how they are exported and used.
+
+6. `comic_knowledge_entries` — **retrieval knowledge base for draft grounding (#504 retrieval
+   step, added 2026-07-23).** Curated, redacted excerpts of the owner's public writing that ground
+   AI drafts at generation time (`id` uuid pk, `source` ∈ quora_export|github_wiki|approved_answer,
+   `entry_type` ∈ answer|post|comment|submission|wiki, `title` null, `question` null, `content`
+   text, `content_hash` text UNIQUE — idempotent imports, `active` boolean default true — the
+   curation off-switch, `authored_at` null, `created_at`). Full-text search runs over
+   question+title+content via the GIN expression index `idx_comic_knowledge_entries_search`;
+   also indexed on `active`. Populated by `ctf/scripts/importComicKnowledge.mjs` from the JSONL
+   files produced by `parseQuoraExportToComicDataset.mjs` / `parseWikiToComicDataset.mjs`. At
+   draft time `retrieveComicGrounding()` fetches the top 4 active entries ranked by
+   `ts_rank`/`websearch_to_tsquery` and injects them into the Ollama system prompt; retrieval is
+   best-effort (failure or no match → the draft runs ungrounded, as before). The draft turn
+   records which entries grounded it in `comic_turns.grounding_entry_ids` (jsonb array, default
+   `[]`) so grounded vs ungrounded drafts can be compared on correction rate — the #504
+   "measure" step.
 
 **Rasa tracker store:** Rasa's own SQL event store, provisioned in the same Neon Postgres
 (managed by Rasa, not hand-authored here). **Still deferred** — the scaffolded Rasa service is
@@ -497,6 +515,11 @@ reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the 
    wiring it to the Feed/comic data layer first.
 6. `@comic` persona is defined against dropped `hub_*` tables; persona + data layer must be
    reconciled with the Hub consolidation.
+7. Draft grounding retrieval (2026-07-23) is keyword full-text search (`websearch_to_tsquery`),
+   not semantic/embedding retrieval — good enough to start measuring, but questions phrased with
+   no word overlap against the knowledge base retrieve nothing. Upgrade path: embeddings via the
+   self-hosted engine once #502 (GPU host) lands. Knowledge-base curation is manual (`active`
+   flag); no admin UI for it yet.
 
 ## Future Notes (deliberately deferred — do not get bogged down now)
 
@@ -549,6 +572,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-07-23: **Retrieval grounding for AI drafts (#504 retrieval step).** Drafts are now grounded in the owner's own published answers instead of the base model's generic training. (1) Schema: new `comic_knowledge_entries` table (source ∈ quora_export|github_wiki|approved_answer; entry_type ∈ answer|post|comment|submission|wiki; content_hash UNIQUE for idempotent imports; `active` boolean as the curation off-switch; GIN full-text index over question+title+content) and new `comic_turns.grounding_entry_ids` jsonb column (which entries grounded each bot draft — the #504 "measure" hook: compare correction rates for grounded vs ungrounded drafts). `schema.demo.sql` regenerated. (2) Import: new `ctf/scripts/importComicKnowledge.mjs` loads the seed JSONL produced by `parseQuoraExportToComicDataset.mjs` / `parseWikiToComicDataset.mjs` (1,575 records currently: 110 Quora answers, 601 posts, 620 comments, 59 submissions, 185 wiki pages), keyed on sha256 content hash so re-runs insert nothing twice. (3) Draft path: `generateComicDraft` calls new `retrieveComicGrounding()` — Postgres full-text search (`websearch_to_tsquery` + `ts_rank`), top 4 active entries, each capped at 1,200 chars — and appends a grounding block to `SURVIVOR_SYSTEM_PROMPT` instructing the model to prefer the excerpts' guidance, facts, and tone. Retrieval is best-effort: on failure or no match the draft runs ungrounded exactly as before. Applies to both the background draft at ask time and the admin "Generate draft" (regenerate) path. The `[comic.inference]` audit gains `groundingEntryCount`. (4) Human review is unchanged: every draft still goes to the review queue; `policy.forceHumanReview()` stays unconditionally true. (5) Contracts: `comic.message.route` and `comic.reply.generate` bumped to 1.1.0 with `comic_knowledge_entries` in dataAccess. Remaining #504 work: import the second account's Quora export when it arrives, measure grounded-vs-ungrounded correction rates, upgrade retrieval/embeddings once #502 lands, fine-tune once volume is sufficient.
 - 2026-07-14: **Android pull-to-refresh on the owner Review Dashboard (`ComicReviewDashboard.tsx`).** Dragging the detail pane down re-pulls the review queue, training stats, and plugin list in the background (the existing `load` only shows the full-screen spinner on first mount, so the queue stays visible while it re-pulls). Mobile-client only — no backend, schema, route, or contract change.
 - 2026-07-01: **Relabel the training-examples "pending" count to "awaiting export" so it no longer reads like a queued review.** The queue header shows two counts side by side: the review-queue badge ("N pending" / "0 pending — Queue is clear") and the training-examples breakdown ("Training examples collected: N (N pending · … exported · … rated answers)"). Both used the word "pending" for different things — queued reviews vs. training-example export status — so "1 pending" in the training line read as a queue item even when the queue was clear. Renamed only the training-example status label to "awaiting export" in both surfaces (`comic-review-dashboard.tsx` `TrainingStatsBadge`, `packages/mobile/src/features/comic/ComicReviewDashboard.tsx` `TrainingStatsLine`). Copy only — no data, API, schema, or contract change; the underlying `trainingExamplesByStatus.pending` field is unchanged. Parity: web + mobile-responsive + android.
 - 2026-07-01: **Removed the misleading engine-status badges; the draft action now names the real failure; clearer "Generate draft" copy.** The always-"reachable" "Chat AI engine (RunPod / Ollama)" badge only pinged the endpoint's liveness (`/health` or `/api/tags`, 5s), not whether a real draft would succeed, so it showed "reachable · 65ms" while "Generate draft" failed — confusing. (1) Removed the badge from both surfaces: deleted `packages/web/app/admin/admin-ai-status-badge.tsx` and its use on the admin landing (`app/admin/page.tsx`), and removed the queue-header engine badge (`ServiceStatusBadge` + its `/api/comic/admin/ai-status` fetch) from `comic-review-dashboard.tsx`. The "Training examples collected" line stays. (2) `GET /api/comic/admin/ai-status` is kept as an admin diagnostic probe only (no UI). (3) Honest failure reason: `describeOllamaFailure(err)` (new export in `lib/chatbot/ollama.ts`) maps the thrown error to a plain cause (timeout / model-not-found 404 / auth 401-403 / engine 5xx / empty / network). `generateComicDraft` captures it as `OllamaDraft.failureReason`; `regenerateComicDraft` returns `{ attached, reason }`; the regenerate route returns `reason`; the dashboard shows it instead of a blanket "still unreachable". (4) Copy: the empty-draft placeholder now points at the real control — web "Use Generate draft to try again, or Edit & approve…" (there is no Refresh button), mobile "Check back in a moment, or use Edit & approve…" (no draft button on mobile). (5) The action label is state-aware while in flight: "Generating…" for a first draft, "Regenerating…" when re-running an existing one. No schema change. Parity: web + mobile-responsive + android (placeholder copy mirrored on the RN dashboard).
