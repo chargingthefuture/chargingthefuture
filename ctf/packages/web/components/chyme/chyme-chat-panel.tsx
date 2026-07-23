@@ -1,7 +1,7 @@
 'use client';
 
 import type { RefObject } from 'react';
-import { Hash, Send } from 'lucide-react';
+import { Hash, Pencil, Send, Trash2 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, chymeHandle } from './chyme-shared';
 import type { ChymeMessage } from 'lib/chyme/types';
@@ -14,6 +14,8 @@ export function ChymeChatPanel({
   onSend,
   sending,
   messagesEndRef,
+  onEditMessage,
+  onDeleteMessage,
 }: {
   messages: ChymeMessage[];
   currentUserId: string;
@@ -22,6 +24,10 @@ export function ChymeChatPanel({
   onSend: () => void;
   sending: boolean;
   messagesEndRef: RefObject<HTMLDivElement | null>;
+  // Edit = delete + repost (loads the text into the composer, deletes the original); Delete removes
+  // the member's own message. Both act on the member's own messages only.
+  onEditMessage: (messageId: string, text: string) => void;
+  onDeleteMessage: (messageId: string) => void;
 }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
@@ -38,17 +44,46 @@ export function ChymeChatPanel({
         {messages.length === 0 ? (
           <div style={{ color: t.FAINT, fontSize: 13 }}>No messages yet.</div>
         ) : (
-          messages.map((message) => (
-            <div key={message.id} style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: message.userId === currentUserId ? t.ACCENT : '#A7F3D0' }}>{chymeHandle(message.username, message.userId)}</span>
-                <span style={{ fontSize: 11, color: '#374151' }}>{new Date(message.sentAtIso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          messages.map((message) => {
+            const isOwn = message.userId === currentUserId;
+            return (
+              <div key={message.id} style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: isOwn ? t.ACCENT : '#A7F3D0' }}>{chymeHandle(message.username, message.userId)}</span>
+                  <span style={{ fontSize: 11, color: '#374151' }}>{new Date(message.sentAtIso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                {/* Wrap long unbroken strings (e.g. a pasted URL) so a message can never widen the
+                    window and make it scroll left/right — the chat only scrolls up and down. */}
+                <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5, overflowWrap: 'anywhere', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{message.text}</div>
+                {/* Edit / Delete on the member's own messages only (there is no in-place edit — edit
+                    loads the text into the composer and deletes the original, so a fix is a fresh row). */}
+                {isOwn ? (
+                  <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+                    <button
+                      type="button"
+                      onClick={() => onEditMessage(message.id, message.text)}
+                      aria-label="Edit your message"
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: t.FAINT, fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                    >
+                      <Pencil size={11} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm('Delete this message? This cannot be undone. To change it, delete and send again.')) {
+                          onDeleteMessage(message.id);
+                        }
+                      }}
+                      aria-label="Delete your message"
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: '#F87171', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                    >
+                      <Trash2 size={11} /> Delete
+                    </button>
+                  </div>
+                ) : null}
               </div>
-              {/* Wrap long unbroken strings (e.g. a pasted URL) so a message can never widen the
-                  window and make it scroll left/right — the chat only scrolls up and down. */}
-              <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5, overflowWrap: 'anywhere', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{message.text}</div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

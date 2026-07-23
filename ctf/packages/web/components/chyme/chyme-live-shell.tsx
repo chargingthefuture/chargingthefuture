@@ -153,6 +153,32 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
     }
   }
 
+  // Delete one of the member's own chat messages. Optimistically removes it, then DELETEs; on failure
+  // it is restored and an error is shown. Author-only is enforced server-side.
+  async function handleDeleteMessage(messageId: string): Promise<void> {
+    let removed: ChymeMessage | undefined;
+    setMessages((current) => {
+      removed = current.find((m) => m.id === messageId);
+      return current.filter((m) => m.id !== messageId);
+    });
+    try {
+      await requestJson(withRoom(`/api/chyme/messages/${encodeURIComponent(messageId)}`), { method: 'DELETE' });
+    } catch (deleteError) {
+      if (removed) {
+        const restored = removed;
+        setMessages((current) => [...current, restored].sort((a, b) => a.sentAtIso.localeCompare(b.sentAtIso)));
+      }
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete your message.');
+    }
+  }
+
+  // Edit = delete + repost (matching the Commons home chat): load the message text back into the
+  // composer and delete the original, so the member fixes it and sends a fresh message.
+  function handleEditMessage(messageId: string, text: string): void {
+    setDraft(text);
+    void handleDeleteMessage(messageId);
+  }
+
   async function handleLeave(): Promise<void> {
     // Unmount the Stream client immediately, then drop server-side presence so the member
     // stops being counted right away, and refresh the room so the count reflects the leave.
@@ -262,6 +288,8 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
               messagesEndRef={messagesEndRef}
               onLeave={() => void handleLeave()}
               roomScope={roomScope}
+              onEditMessage={handleEditMessage}
+              onDeleteMessage={(id) => void handleDeleteMessage(id)}
             />
           )}
         </div>
