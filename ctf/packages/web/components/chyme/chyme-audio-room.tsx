@@ -280,8 +280,10 @@ function ChymeAudioFrame({
           </button>
         </div>
       )}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>{stage}</div>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Stage scrolls within its own share of the height; the chat panel (flex-grow 2) takes the
+            larger share and scrolls internally, so incoming messages never stretch the page. */}
+        <div style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto', padding: '20px 24px' }}>{stage}</div>
         {showChat && chatPanel}
       </div>
     </>

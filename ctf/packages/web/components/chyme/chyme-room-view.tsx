@@ -94,7 +94,7 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           raisedHandUserIds={raisedHandUserIds}
         />
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <ChymeStage room={room} currentUserId={currentUser.userId} />
           {showChat && chatPanel}
         </div>
