@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 import type { SafetyReportStatus } from 'lib/safety/constants';
 import { useTheme } from '@/hooks/useTheme';
@@ -274,12 +273,6 @@ export function SafetyAdminShell() {
             </div>
           );
         })}
-
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${t.BORDER_SOLID}`, fontSize: 13 }}>
-          <Link href="/admin" style={{ color: t.ACCENT, textDecoration: 'none' }}>
-            ← Back to admin
-          </Link>
-        </div>
       </div>
     </div>
   );

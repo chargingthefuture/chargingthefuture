@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { KeyRound } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
@@ -229,12 +228,6 @@ export function ContributorAccessAdminShell() {
             <StatusCard t={t} eligibleCount={eligibleCount} needed={config.minEligibleToOpenChannel} channelOpen={config.channelOpen} channelMemberCount={channelMemberCount} />
           </>
         ) : null}
-
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${t.BORDER_SOLID}`, fontSize: 13 }}>
-          <Link href="/admin" style={{ color: t.ACCENT, textDecoration: 'none' }}>
-            ← Back to admin
-          </Link>
-        </div>
       </div>
     </div>
   );
