@@ -266,8 +266,10 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
 }
 
 // Layout shared by the connecting/error state and the live state so the room
-// keeps a stable shape. Controls (mute / raise hand / leave) are pinned to the TOP, above the stage
-// and chat, so a member can mute/unmute while talking without scrolling to the bottom of the chat.
+// keeps a stable shape. Order top-to-bottom is: the stage (avatars), then the controls
+// (mute / raise hand / leave), then the chat. Controls sit directly BELOW the avatars and ABOVE the
+// chat so a member can mute/unmute while talking without hunting past the avatars or scrolling the
+// chat (owner request 2026-07-23).
 function ChymeAudioFrame({
   stage,
   showChat,
@@ -285,9 +287,13 @@ function ChymeAudioFrame({
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
-    <>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {/* Natural height so the participant avatars always render (a cramped flex/overflow region
+          clipped the single avatar under the "On Stage" label). The page flows; chat stays a
+          bounded internal scroller. */}
+      <div style={{ padding: '20px 24px' }}>{stage}</div>
       {controls ?? (
-        <div style={{ padding: '16px 24px', borderBottom: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+        <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.BORDER}`, borderBottom: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
           <button
             onClick={onLeave}
             style={{ padding: '10px 18px', borderRadius: 12, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
@@ -296,14 +302,8 @@ function ChymeAudioFrame({
           </button>
         </div>
       )}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* Natural height so the participant avatars always render (a cramped flex/overflow region
-            clipped the single avatar under the "On Stage" label). The page flows; chat stays a
-            bounded internal scroller. */}
-        <div style={{ padding: '20px 24px' }}>{stage}</div>
-        {showChat && chatPanel}
-      </div>
-    </>
+      {showChat && chatPanel}
+    </div>
   );
 }
 

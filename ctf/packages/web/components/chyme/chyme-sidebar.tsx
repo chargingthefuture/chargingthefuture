@@ -1,22 +1,23 @@
 'use client';
 
-import { Mic, RefreshCw, Users } from 'lucide-react';
+import { Mic, RefreshCw } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
-import type { ChymeRoomResponse } from 'lib/chyme/types';
 
 type JoinState = 'idle' | 'joining' | 'ready';
 
+// Slim Join/refresh action row for the selected room. The room's name, live status, and participant
+// count now live in the room-card rail above (ChymeShell) and the room-view header below, so this no
+// longer repeats them — the title used to show twice and wasted a full card of vertical space on
+// phones (owner request 2026-07-23).
 export function ChymeSidebar({
   loading,
-  room,
   joinState,
   onJoin,
   onRefresh,
   refreshing = false,
 }: {
   loading: boolean;
-  room: ChymeRoomResponse | null;
   joinState: JoinState;
   onJoin: () => void;
   onRefresh: () => void;
@@ -27,10 +28,9 @@ export function ChymeSidebar({
   const joinLabel = joinState === 'joining' ? 'Joining…' : joinState === 'ready' ? '✓ Joined' : 'Join Room';
 
   return (
-    <aside style={{ width: '100%', borderRight: 'none', borderBottom: `1px solid ${t.BORDER}`, display: 'flex', flexDirection: 'column', flexShrink: 0, background: t.RAIL }}>
-      {/* On mobile the refresh control sits on this same row, to the right of Join Room (the header
-          row is dropped on phones). On desktop the button fills the row and refresh lives in the header. */}
-      <div style={{ padding: '16px 16px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+    <aside style={{ width: '100%', borderBottom: `1px solid ${t.BORDER}`, display: 'flex', flexDirection: 'column', flexShrink: 0, background: t.RAIL }}>
+      {/* The refresh control sits on the same row, to the right of Join Room. */}
+      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
         <button
           onClick={onJoin}
           disabled={joinState === 'joining' || joinState === 'ready'}
@@ -51,28 +51,8 @@ export function ChymeSidebar({
       </div>
 
       {loading ? (
-        <div style={{ padding: '12px 16px', color: '#16A34A', fontSize: 13 }}>Loading room…</div>
-      ) : room ? (
-        <div style={{ padding: '12px', margin: '0 12px 12px', borderRadius: 12, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}40`, cursor: 'pointer' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.ACCENT, flexShrink: 0, marginTop: 6, boxShadow: `0 0 6px ${t.ACCENT}` }} />
-            <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, lineHeight: 1.4, flex: 1 }}>{room.roomName}</div>
-          </div>
-          <div style={{ fontSize: 12, color: '#16A34A', marginBottom: 6 }}>
-            Key: {room.roomKey} · {room.participants.length} participants
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 10, color: t.ACCENT, background: `${t.ACCENT}15`, padding: '2px 8px', borderRadius: 20, border: `1px solid ${t.ACCENT}25` }}>
-              #{room.callActive ? 'live' : 'idle'}
-            </span>
-            <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, color: t.FAINT, fontSize: 12 }}>
-              <Users size={12} /> {room.participants.length}
-            </span>
-          </div>
-        </div>
-      ) : (
-        <div style={{ padding: '12px 16px', color: t.FAINT, fontSize: 13 }}>No active room</div>
-      )}
+        <div style={{ padding: '0 16px 12px', color: '#16A34A', fontSize: 13 }}>Loading room…</div>
+      ) : null}
     </aside>
   );
 }

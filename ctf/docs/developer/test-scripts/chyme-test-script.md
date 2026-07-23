@@ -292,7 +292,8 @@ check as the room's CH-10 and the Android app script's AN-4 — a required relea
 **Precondition:** the contributor channel is open (`contributor_access_config.channel_open = true`); one
 test member is contributor-eligible, one is not, and one is an admin.
 **Steps:**
-1. Open Chyme. Confirm a room switcher shows two tabs: **Main Room** and **Weavers of the Commons**.
+1. Open Chyme. Confirm the rooms rail (a horizontal, left-to-right scroller of room cards at the top)
+   shows two cards: **Main Room** and **Weavers of the Commons** (the latter with the badge + a lock).
 2. As the **non-eligible** member, tap **Weavers of the Commons**.
 3. As the **eligible** member (or an **admin**), tap **Weavers of the Commons**, then Join Room, unmute,
    send a chat message, and raise/lower your hand.
@@ -304,6 +305,29 @@ eligible member/admin joins the private room, hears audio, sends/reads its own c
 — all scoped to `chyme-contributors-room` and never mixed with the main room. Tips and Back Channel are
 intentionally absent in the private room (MVP). If the channel is closed, even an eligible member gets
 the explainer (only an admin still enters).
+**Result:** web ☐ mobile ☐ — notes:
+
+### CH-19 · Rooms rail, no-disconnect room switch, and control placement
+**Role:** contributor-eligible member (so both rooms are reachable) · **Surfaces:** web (mobile-responsive)
+**Steps:**
+1. Open Chyme on a phone-width screen. Confirm the top is a single compact horizontal rail of room
+   cards that scrolls left-to-right — not a full-height card that repeats the room title. Confirm the
+   room title now appears only once below the rail (no duplicate).
+2. In the **Main Room**, Join Room and unmute so you are live (you hear yourself/others).
+3. While still joined and speaking, tap the **Weavers of the Commons** card, then tap **Main Room**
+   again. Confirm you were **not** disconnected — the main-room call stays connected the whole time
+   (audio never drops, you do not have to re-Join).
+4. Look at the joined room's layout top-to-bottom: participant avatars (On Stage), then the audio
+   controls (Mute/Unmute · Raise Hand · Leave), then the room chat. Confirm the controls sit **below**
+   the avatars and **above** the chat, and you can mute/unmute without scrolling.
+5. Android-app card: with `NEXT_PUBLIC_CHYME_ANDROID_APP_URL` unset, confirm **no** "Get the Android
+   app" card shows. (If it is set: the card shows on a non-Android browser and is hidden on an Android
+   device.)
+**Expected:** The rooms rail is one compact scrollable row; the title is not duplicated and no vertical
+space is wasted. Switching rooms never tears down a live call — a member joined in one room stays
+connected while viewing the other and when switching back. The in-room controls render between the
+avatars and the chat. The Android-app card is absent unless its URL is configured, and is hidden on
+Android regardless.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---
