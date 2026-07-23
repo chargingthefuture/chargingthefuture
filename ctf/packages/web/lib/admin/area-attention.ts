@@ -56,6 +56,19 @@ const ATTENTION_QUERIES: Record<string, string[]> = {
     `SELECT COUNT(*)::int AS n FROM peer_programming_feedback
        WHERE $1::timestamptz IS NULL OR created_at > $1`,
   ],
+  'level-up': [
+    `SELECT COUNT(*)::int AS n FROM level_up_disputes
+       WHERE status = 'open' AND ($1::timestamptz IS NULL OR created_at > $1)`,
+    `SELECT COUNT(*)::int AS n FROM level_up_milestone_validations
+       WHERE status = 'pending' AND ($1::timestamptz IS NULL OR created_at > $1)`,
+  ],
+  // ServiceCredits disputes have no status column; "open" means no adjustment has been applied yet
+  // (no matching service_credits_dispute_adjustments row).
+  'service-credits': [
+    `SELECT COUNT(*)::int AS n FROM service_credits_disputes d
+       LEFT JOIN service_credits_dispute_adjustments a ON a.dispute_case_id = d.id
+       WHERE a.id IS NULL AND ($1::timestamptz IS NULL OR d.created_at > $1)`,
+  ],
 };
 
 // True when this area has a "new to review" signal (so marking it seen is meaningful).

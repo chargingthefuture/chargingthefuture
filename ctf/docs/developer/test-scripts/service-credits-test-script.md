@@ -432,6 +432,28 @@ Result: web ☐
 
 ---
 
+### SC-A7b — Open-disputes review list
+
+**Role:** admin
+**Surfaces:** web
+**Precondition:** At least one dispute has been opened (SC-9) and not yet adjusted.
+
+**Steps:**
+1. Open the Disputes panel on the admin dashboard.
+2. Find the "Open disputes" list above the adjustment form.
+3. Click "Resolve" on a listed dispute.
+4. Apply an adjustment for that case (as in SC-A7).
+
+**Expected:**
+- The "Open disputes" list shows each unadjusted dispute newest first — reason, who opened it (a resolved name or a short `member <id>` fallback), and time. With none it shows "No open disputes."
+- "Resolve" fills the adjustment form's dispute case ID.
+- After an adjustment is applied, the resolved dispute drops off the open list (it now has an adjustment).
+- The admin-landing tile shows a "new to review" dot when an unresolved dispute arrived since you last opened the area; opening it clears the dot.
+
+Result: web ☐
+
+---
+
 ### SC-A8 — Admin circulation metrics panel
 
 **Role:** admin
