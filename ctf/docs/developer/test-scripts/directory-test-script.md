@@ -50,6 +50,10 @@ can't-ship-broken checks. Member role unless noted.
    fellow community members sharing their skills, consistent with Foundation's "not a formally vetted
    service" note. (The account "Finish verifying" sign-in CTA is a separate thing and is fine.)
    → web ☐ mobile ☐
+6. **Back button does not bounce (admin).** As an admin, open Directory, tap the "Admin" pill to the
+   admin page, then tap the admin page's back button. It must return to wherever you were **before**
+   Directory (e.g. the apps menu) — not bounce back and forth between the admin and member Directory
+   pages. → web ☐ mobile ☐
 
 ---
 
