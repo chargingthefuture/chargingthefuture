@@ -13,6 +13,7 @@ import {
 import { Mic, MicOff, PhoneOff, Info } from 'lucide-react';
 import { PRIMARY, initials, chymeHandle, type CurrentUser } from './chyme-shared';
 import { reportError } from 'lib/observability/report';
+import { useAudioCallKeepAlive } from './use-audio-call-keep-alive';
 import type { ChymeBackChannelJoinCredentials } from 'lib/chyme/types';
 
 // Screen 2 (desktop) of the handoff: a floating mini-panel shown while a Back Channel call is live, so
@@ -77,6 +78,10 @@ export function ChymeBackChannelPanel({
       })();
     };
   }, [credentials.streamApiKey, credentials.streamToken, credentials.streamUserId, credentials.streamCallId, currentUser.username, currentUser.userId]);
+
+  // Same best-effort keep-alive as the main room: while the 1:1 call is joined and the tab is
+  // foreground, hold a screen wake lock + Media Session presence.
+  useAudioCallKeepAlive(status === 'joined', 'Chyme back channel');
 
   const shell = (children: React.ReactNode) => (
     <div
