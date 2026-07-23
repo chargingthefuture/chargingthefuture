@@ -19,6 +19,7 @@ import { ChymeControls } from './chyme-controls';
 import { ChymeTipButton } from './chyme-tip-dialog';
 import { useBackChannel, type BackChannelController } from './chyme-back-channel';
 import { ChymeBackChannelLayer, ChymeBackChannelButton } from './chyme-back-channel-layer';
+import { useAudioCallKeepAlive } from './use-audio-call-keep-alive';
 import { reportError } from 'lib/observability/report';
 import type { ChymeJoinResponse } from 'lib/chyme/types';
 
@@ -80,6 +81,12 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   const backChannel = useBackChannel(currentUser, true);
+
+  // Closest a browser gets to the native Android background service: while joined and the tab is
+  // foreground, hold a screen wake lock and publish Media Session presence so the OS keeps the audio
+  // prioritized and the screen doesn't sleep out from under the call. No web API can hold a live call
+  // in a fully backgrounded/locked page, so this does not match Android's leave-the-app behavior.
+  useAudioCallKeepAlive(status === 'joined');
 
   useEffect(() => {
     // If the browser has no WebRTC (Safari Lockdown Mode, some hardened/older browsers), the Stream

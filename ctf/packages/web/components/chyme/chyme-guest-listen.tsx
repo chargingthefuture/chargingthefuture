@@ -15,6 +15,7 @@ import { getChymeTokens } from './chyme-shared';
 import { reportError } from 'lib/observability/report';
 import type { StreamJoinCredentials } from 'lib/chyme/stream';
 import { CHYME_CALL_TYPE, toCallIdForChyme, isWebRtcAvailable } from './chyme-audio-room';
+import { useAudioCallKeepAlive } from './use-audio-call-keep-alive';
 
 // Signed-out listener. Connects an ephemeral guest Stream identity to the SAME call members are in
 // and plays its audio — receive-only. The guest never publishes: camera and microphone are disabled
@@ -77,6 +78,12 @@ export function ChymeGuestListen({
       })();
     };
   }, [credentials.streamApiKey, credentials.streamToken, credentials.streamUserId, credentials.streamChannelId]);
+
+  // While listening and the tab is foreground, hold a screen wake lock + Media Session presence so
+  // the OS keeps the audio prioritized and the screen doesn't sleep out from under playback. This is
+  // the closest a browser gets to the native Android background service; it does not survive a fully
+  // backgrounded/locked page.
+  useAudioCallKeepAlive(status === 'joined', 'Chyme live listen');
 
   if (status === 'unsupported') {
     return (
