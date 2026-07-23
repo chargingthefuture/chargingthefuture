@@ -105,6 +105,11 @@ to the env flag, then the default. With no admin setting and no env override, th
 2. Admins can inspect fallback-open activations on cohorts.
 3. Admin visibility includes delivery health for assignment notifications.
 
+### Member Feedback Inbox
+
+1. Admins read member feedback (issue type, suggestion category, note, author, time) newest first in the admin page's "Member feedback" panel.
+2. It is an inbox, not a resolvable queue (the table has no status), so the admin-landing "new to review" dot flags feedback that arrived since the admin last opened this area rather than an unresolved count.
+
 ## API Surface and Route Map
 
 ### User Routes
@@ -123,6 +128,7 @@ to the env flag, then the default. With no admin setting and no env override, th
 - `GET /api/peer-programming/admin/cohorts` — Admin-only: every cohort across recent weeks (last 84 days, most recent first, capped at 200) with live member counts, the fallback-open flag, and each cohort's `members` roster (`[{ userId, username }]`, usernames resolved via Clerk — see below). Backs the admin "Cohorts" list so an admin can reach and manage any cohort they formed, even after the week rolls over (the member-scoped `/room` returns only the admin's own cohort, and the listen-in list stays current-week). Uses `listManagedCohorts`; the current-week `listActiveCohorts` still powers the member room/listen-in list.
 - `GET /api/peer-programming/admin/single-open-cohort` — Admin-only: read the effective single standing, always-open Cohort 1 mode and where it resolves from. Returns `{ enabled, source, adminSetting, envFlagEnabled }` where `source` is `admin_setting` | `env_flag` | `default`. Resolution precedence: the persisted admin setting (`peer_programming_settings.single_open_cohort_enabled`) if set, then the env flag `PEER_PROGRAMMING_SINGLE_OPEN_COHORT`, then the built-in default (ON). Backs the admin "Single standing Cohort 1 mode" control.
 - `POST /api/peer-programming/admin/single-open-cohort` — Admin-only, CSRF-guarded: set or clear the persisted toggle. Body `{ enabled }` where `true`/`false` is the admin's explicit choice (supersedes the env flag) and `null` clears the admin setting (revert to the env flag, then default). Upserts the one-row `peer_programming_settings` singleton and writes an admin audit row (`peer-programming.settings.single-open-cohort.set`). Returns the re-resolved `{ enabled, source, adminSetting, envFlagEnabled }`.
+- `GET /api/peer-programming/admin/feedback` — Admin-only, read-only: the most recent member feedback (`peer_programming_feedback`), newest first, capped at 50, with each author's resolved display name (`listRecentFeedback`). `peer_programming_feedback` has no status column, so this is an inbox to read, not a resolvable queue. Backs the admin "Member feedback" panel and the admin-landing "new to review" dot (which flags feedback that arrived since the admin last opened this area).
 
 These admin routes are now surfaced by a real admin UI on web (the former Android admin surface was removed 2026-07-20 per rule 105, PR #1742; see Web and Android Delivery Status). The web admin page (`/admin/peer-programming`) is admin-gated; it binds the topic and assignment routes, the `admin/cohorts` list, and the `admin/single-open-cohort` read/write toggle, and links each cohort to the room via `/apps/peer-programming?cohortId=<id>`.
 
@@ -200,6 +206,7 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 
 ## Change Log
 
+- 2026-07-23: **Admin "Member feedback" inbox + admin-landing dot.** The admin page now shows the most recent member feedback, newest first, so an admin can actually read what members sent (previously feedback was write-only — `submitFeedback` inserted rows nothing surfaced). New read-only route `GET /api/peer-programming/admin/feedback` (admin-only) backed by a new `listRecentFeedback(limit)` repository function (newest first, capped at 50, author names resolved via Clerk). Rendered by a "Member feedback" panel in `pp-admin-shell.tsx` (best-effort load — a failure leaves it empty without breaking the page). Also wired PeerProgramming into the admin-landing "new to review" dot (`lib/admin/area-attention.ts`): since the table has no status column, the dot flags feedback that arrived since the admin last opened this area. No schema or contract change; additive read-only route.
 - 2026-07-18: **Cohort target size raised from 5 to 12 to match the shipped copy.** The UI/marketing copy has long said "12 per cohort" (`peer-programming-shell.tsx` header, `peer-programming-public-shell.tsx`, `pp-sidebar.tsx`), but the code formed cohorts of 5 (`PEER_PROGRAMMING_COHORT_TARGET_SIZE = 5`), so the engine and the copy disagreed. Owner decision: 12 is the intended number — place up to 12 per weekly cohort because participation is voluntary and asynchronous, with roughly 5 expected to actively show up in a given week. Changed `PEER_PROGRAMMING_COHORT_TARGET_SIZE` to 12 (the only place the split size lives; `runWeeklyAssignment` slices by it). This only affects the weekly auto-split, which is currently paused while single standing Cohort 1 mode is on, so there is no live behavior change today. Updated the inventory and manual test script to say 12 (≈5 participating). No schema, route, or contract change.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to

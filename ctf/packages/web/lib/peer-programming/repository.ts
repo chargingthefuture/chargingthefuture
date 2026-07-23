@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { queryDb } from 'lib/db/postgres';
+import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import {
   PEER_PROGRAMMING_COHORT_TARGET_SIZE,
   PEER_PROGRAMMING_MAX_FEEDBACK_LENGTH,
@@ -492,6 +493,58 @@ export async function submitFeedback(input: {
       ($1, $2, $3, $4, $5, $6, $7)`,
     [randomUUID(), input.cohortId, input.userId, input.issueType, input.suggestionCategory, input.releaseSurface, trimmedNote],
   );
+}
+
+// One row of the admin feedback inbox. `authorName` is the resolved display name (null when it can't
+// be resolved — the caller falls back to a short id). There is no status column on this table, so the
+// admin view is a "newest first" inbox; the admin landing dot is driven purely by "arrived since you
+// last opened it".
+export type PeerProgrammingFeedbackItem = {
+  id: string;
+  cohortId: string | null;
+  userId: string;
+  authorName: string | null;
+  issueType: string;
+  suggestionCategory: string;
+  releaseSurface: string;
+  note: string;
+  createdAtIso: string;
+};
+
+type FeedbackRow = {
+  id: string;
+  cohort_id: string | null;
+  user_id: string;
+  issue_type: string;
+  suggestion_category: string;
+  release_surface: string;
+  note: string;
+  created_at: Date;
+};
+
+// Admin-only: the most recent member feedback, newest first. Resolves author display names in one
+// batched Clerk lookup. `limit` is clamped to a sane range so a bad caller can't pull the whole table.
+export async function listRecentFeedback(limit = 50): Promise<PeerProgrammingFeedbackItem[]> {
+  const pageSize = Math.min(Math.max(1, limit), 100);
+  const result = await queryDb<FeedbackRow>(
+    `SELECT id, cohort_id, user_id, issue_type, suggestion_category, release_surface, note, created_at
+       FROM peer_programming_feedback
+       ORDER BY created_at DESC
+       LIMIT $1`,
+    [pageSize],
+  );
+  const names = await resolveUsernames(result.rows.map((row) => row.user_id));
+  return result.rows.map((row) => ({
+    id: row.id,
+    cohortId: row.cohort_id,
+    userId: row.user_id,
+    authorName: names.get(row.user_id) ?? null,
+    issueType: row.issue_type,
+    suggestionCategory: row.suggestion_category,
+    releaseSurface: row.release_surface,
+    note: row.note,
+    createdAtIso: row.created_at.toISOString(),
+  }));
 }
 
 export async function upsertWeeklyTopic(input: {

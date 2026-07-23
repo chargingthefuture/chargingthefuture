@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HubJoinResponse, HubLastSeenResponse, HubMessage, HubMessagesResponse } from '../../lib/hub/types';
 import { connectHubLive, type HubLiveConnection, type HubTypingUser } from '../../lib/hub/live-stream';
 import { resolveConcierge, conciergeStarterPrompts } from '../../lib/concierge/resolver';
+import { hubSuggestionChips } from '../../lib/concierge/hub-suggestions';
 import type { ChatMessage, ChatQuotedMessage, ChatReactionSummary, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
 import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
 
@@ -655,6 +656,28 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     }
   }, [consentGranted, currentUser.userId, input, isSending, notifyStopTyping, replyTarget, routeToComic]);
 
+  // One-tap "ask @comic" for a suggestion chip (issue #471): route a fixed question straight to the
+  // AI assistant, no composer step. Same consent gate and same holding-card flow the composer uses —
+  // the @comic mention is added here because the server only routes a body that mentions @comic
+  // (an unmentioned body is treated as a peer post and the assistant does nothing). On first use the
+  // consent modal opens holding the mentioned text; confirming sends it via routeToComic.
+  const askComic = useCallback(
+    (question: string) => {
+      const clean = question.trim();
+      if (!clean || isSending) return;
+      const mentioned = `@comic ${clean}`;
+      if (!consentGranted) {
+        setPendingConsentText(mentioned);
+        setConsentModalOpen(true);
+        return;
+      }
+      setIsSending(true);
+      setError(null);
+      void routeToComic(mentioned).finally(() => setIsSending(false));
+    },
+    [consentGranted, isSending, routeToComic],
+  );
+
   // Begin a Signal-style reply to a peer message: set the composer's "replying to …" state.
   // Only peer posts carry a communityPostId, so AI answers / concierge lines cannot be replied to.
   const beginReply = useCallback((message: ChatMessage) => {
@@ -848,8 +871,13 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     [],
   );
 
+  // The curated one-tap suggestion chips shown under the composer (#471): navigation chips open a
+  // plugin; ask chips route to @comic. Each chip's behavior is explicit (see hub-suggestions).
+  const suggestionChips = useMemo(() => hubSuggestionChips(), []);
+
   // Concierge starter prompts (real questions from the landing page) for the empty home chat — a
-  // one-tap way to "ask what you need" and get pointed at the right feature.
+  // one-tap way to "ask what you need" and get pointed at the right feature. Retained for the local
+  // concierge path (`sendConciergeAsk`); the visible chip row now uses `suggestionChips`.
   const starterPrompts = useMemo(() => conciergeStarterPrompts(5), []);
 
   // Run a concierge ask: show the question as the member's own message, then an instant local reply
@@ -903,7 +931,9 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     typingUsers,
     sendMessage,
     sendConciergeAsk,
+    askComic,
     starterPrompts,
+    suggestionChips,
     rateComicAnswer,
     composerMentionsComic,
     consentModalOpen,

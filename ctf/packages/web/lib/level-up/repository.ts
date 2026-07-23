@@ -10,6 +10,7 @@ import {
   releaseEscrow,
 } from 'lib/service-credits/repository';
 import { createTransfer } from 'lib/shared/service-credits/createTransfer';
+import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { LEVEL_UP_AUTO_COHORT_ACTOR_ID, LEVEL_UP_DEFAULT_TRAINER_SPLIT_PERCENT, LEVEL_UP_PLUGIN_SLUG } from 'lib/level-up/constants';
 
 function toNumber(value: string | number): number {
@@ -1253,8 +1254,99 @@ export async function getTrainerDashboardData(trainerUserId: string) {
   };
 }
 
+// One open dispute in the admin review queue. `openedByName` is the resolved display name (null when
+// it can't be resolved — the UI falls back to a short id). `cohortId` lets the admin jump to the cohort.
+export type LevelUpAdminDispute = {
+  id: string;
+  enrollmentId: string;
+  cohortId: string | null;
+  title: string;
+  description: string;
+  openedByUserId: string;
+  openedByName: string | null;
+  createdAtIso: string;
+};
+
+// One pending milestone validation awaiting an admin/trainer decision.
+export type LevelUpAdminValidation = {
+  id: string;
+  enrollmentId: string;
+  cohortId: string | null;
+  milestoneId: string;
+  validationNote: string | null;
+  createdAtIso: string;
+};
+
+type AdminDisputeRow = {
+  id: string;
+  enrollment_id: string;
+  cohort_id: string | null;
+  title: string;
+  description: string;
+  opened_by_user_id: string;
+  created_at: Date;
+};
+
+type AdminValidationRow = {
+  id: string;
+  enrollment_id: string;
+  cohort_id: string | null;
+  milestone_id: string;
+  validation_note: string | null;
+  created_at: Date;
+};
+
+// Admin-only: open disputes, newest first (capped). Resolves opener display names in one batched
+// Clerk lookup. Backs the admin "Open disputes" review list and the admin-landing dot.
+export async function listOpenDisputes(limit = 100): Promise<LevelUpAdminDispute[]> {
+  const pageSize = Math.min(Math.max(1, limit), 200);
+  const result = await queryDb<AdminDisputeRow>(
+    `SELECT d.id, d.enrollment_id, e.cohort_id, d.title, d.description, d.opened_by_user_id, d.created_at
+       FROM level_up_disputes d
+       LEFT JOIN level_up_enrollments e ON e.id = d.enrollment_id
+       WHERE d.status = 'open'
+       ORDER BY d.created_at DESC
+       LIMIT $1`,
+    [pageSize],
+  );
+  const names = await resolveUsernames(result.rows.map((row) => row.opened_by_user_id));
+  return result.rows.map((row) => ({
+    id: row.id,
+    enrollmentId: row.enrollment_id,
+    cohortId: row.cohort_id,
+    title: row.title,
+    description: row.description,
+    openedByUserId: row.opened_by_user_id,
+    openedByName: names.get(row.opened_by_user_id) ?? null,
+    createdAtIso: row.created_at.toISOString(),
+  }));
+}
+
+// Admin-only: pending milestone validations, newest first (capped). Backs the admin "Pending
+// validations" review list and the admin-landing dot.
+export async function listPendingMilestoneValidations(limit = 100): Promise<LevelUpAdminValidation[]> {
+  const pageSize = Math.min(Math.max(1, limit), 200);
+  const result = await queryDb<AdminValidationRow>(
+    `SELECT v.id, v.enrollment_id, e.cohort_id, v.milestone_id, v.validation_note, v.created_at
+       FROM level_up_milestone_validations v
+       LEFT JOIN level_up_enrollments e ON e.id = v.enrollment_id
+       WHERE v.status = 'pending'
+       ORDER BY v.created_at DESC
+       LIMIT $1`,
+    [pageSize],
+  );
+  return result.rows.map((row) => ({
+    id: row.id,
+    enrollmentId: row.enrollment_id,
+    cohortId: row.cohort_id,
+    milestoneId: row.milestone_id,
+    validationNote: row.validation_note,
+    createdAtIso: row.created_at.toISOString(),
+  }));
+}
+
 export async function getAdminPanelData() {
-  const [enrollments, completions, avgLeadDays] = await Promise.all([
+  const [enrollments, completions, avgLeadDays, openDisputes, pendingValidations] = await Promise.all([
     queryDb<{ total: string }>(`SELECT COUNT(*)::text AS total FROM level_up_enrollments`),
     queryDb<{ total: string }>(`SELECT COUNT(*)::text AS total FROM level_up_enrollments WHERE status = 'completed'`),
     queryDb<{ avg_days: string }>(
@@ -1269,6 +1361,8 @@ export async function getAdminPanelData() {
        JOIN first_trainer_payout f ON f.enrollment_id = e.id
        WHERE f.first_payout_at >= e.enrolled_at`,
     ),
+    listOpenDisputes(100),
+    listPendingMilestoneValidations(100),
   ]);
 
   return {
@@ -1277,6 +1371,8 @@ export async function getAdminPanelData() {
       completions: Number(completions.rows[0]?.total ?? '0'),
       avgDaysToFirstTrainerPayout: roundCurrency(Number(avgLeadDays.rows[0]?.avg_days ?? '0')),
     },
+    openDisputes,
+    pendingValidations,
   };
 }
 

@@ -8,7 +8,7 @@ import { reportError } from 'lib/observability/report';
 // Only areas whose admin page actually surfaces the queue are listed — a dot must lead somewhere that
 // shows what is new. Areas that are read-only dashboards, config editors, or browse views (directory,
 // beacon, lighthouse, foundation, socket-relay, weekly-performance, workforce, feed-announcements,
-// contributor-access, service-credits, level-up, peer-programming) have no entry and never get a dot.
+// contributor-access, service-credits) have no entry and never get a dot.
 //
 // Each query takes $1 = the admin's last-seen timestamp for that area (nullable; null = never opened,
 // so every actionable row counts). It returns a single integer column `n`. An area with more than one
@@ -48,6 +48,18 @@ const ATTENTION_QUERIES: Record<string, string[]> = {
   ],
   'what-works': [
     `SELECT COUNT(*)::int AS n FROM what_works_products
+       WHERE status = 'pending' AND ($1::timestamptz IS NULL OR created_at > $1)`,
+  ],
+  // PeerProgramming feedback has no status column (it is an inbox, not a resolvable queue), so the dot
+  // is purely "feedback arrived since you last opened it".
+  'peer-programming': [
+    `SELECT COUNT(*)::int AS n FROM peer_programming_feedback
+       WHERE $1::timestamptz IS NULL OR created_at > $1`,
+  ],
+  'level-up': [
+    `SELECT COUNT(*)::int AS n FROM level_up_disputes
+       WHERE status = 'open' AND ($1::timestamptz IS NULL OR created_at > $1)`,
+    `SELECT COUNT(*)::int AS n FROM level_up_milestone_validations
        WHERE status = 'pending' AND ($1::timestamptz IS NULL OR created_at > $1)`,
   ],
 };
