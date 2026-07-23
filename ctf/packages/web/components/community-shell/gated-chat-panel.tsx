@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Eye, Reply, Trash2, X } from 'lucide-react';
+import { Eye, Pencil, Reply, Trash2, X } from 'lucide-react';
 import {
   GATED_CHANNEL_DISPLAY_NAME,
   GATED_CHANNEL_MODERATOR_DISCLOSURE,
@@ -39,6 +39,7 @@ export function GatedChatPanel({ currentUser, isAdmin = false }: GatedChatPanelP
     sendMessage,
     toggleReaction,
     deleteMessage,
+    editMessage,
     isLoading,
     isSending,
     error,
@@ -158,6 +159,21 @@ export function GatedChatPanel({ currentUser, isAdmin = false }: GatedChatPanelP
                 >
                   <Reply size={12} /> Reply
                 </button>
+                {msg.from === 'user' ? (
+                  <button
+                    type="button"
+                    className={styles.chatEditBtn}
+                    onClick={() => {
+                      // Editing is delete + repost: pull the text into the composer, delete the original,
+                      // and focus the box so the member fixes it and sends a fresh message.
+                      editMessage(msg.id, msg.text);
+                      inputRef.current?.focus();
+                    }}
+                    aria-label="Edit your message"
+                  >
+                    <Pencil size={12} /> Edit
+                  </button>
+                ) : null}
                 {msg.from === 'user' || isAdmin ? (
                   <button
                     type="button"

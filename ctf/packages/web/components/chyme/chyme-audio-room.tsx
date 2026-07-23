@@ -19,6 +19,7 @@ import { ChymeControls } from './chyme-controls';
 import { ChymeTipButton } from './chyme-tip-dialog';
 import { useBackChannel, type BackChannelController } from './chyme-back-channel';
 import { ChymeBackChannelLayer, ChymeBackChannelButton } from './chyme-back-channel-layer';
+import { useAudioCallKeepAlive } from './use-audio-call-keep-alive';
 import { reportError } from 'lib/observability/report';
 import type { ChymeJoinResponse } from 'lib/chyme/types';
 
@@ -80,6 +81,12 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   const backChannel = useBackChannel(currentUser, true);
+
+  // Closest a browser gets to the native Android background service: while joined and the tab is
+  // foreground, hold a screen wake lock and publish Media Session presence so the OS keeps the audio
+  // prioritized and the screen doesn't sleep out from under the call. No web API can hold a live call
+  // in a fully backgrounded/locked page, so this does not match Android's leave-the-app behavior.
+  useAudioCallKeepAlive(status === 'joined');
 
   useEffect(() => {
     // If the browser has no WebRTC (Safari Lockdown Mode, some hardened/older browsers), the Stream
@@ -243,7 +250,8 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
 }
 
 // Layout shared by the connecting/error state and the live state so the room
-// keeps a stable shape (stage + optional chat, controls pinned to the bottom).
+// keeps a stable shape. Controls (mute / raise hand / leave) are pinned to the TOP, above the stage
+// and chat, so a member can mute/unmute while talking without scrolling to the bottom of the chat.
 function ChymeAudioFrame({
   stage,
   showChat,
@@ -262,12 +270,8 @@ function ChymeAudioFrame({
   const t = getChymeTokens(theme);
   return (
     <>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>{stage}</div>
-        {showChat && chatPanel}
-      </div>
       {controls ?? (
-        <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+        <div style={{ padding: '16px 24px', borderBottom: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
           <button
             onClick={onLeave}
             style={{ padding: '10px 18px', borderRadius: 12, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
@@ -276,6 +280,12 @@ function ChymeAudioFrame({
           </button>
         </div>
       )}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Stage scrolls within its own share of the height; the chat panel (flex-grow 2) takes the
+            larger share and scrolls internally, so incoming messages never stretch the page. */}
+        <div style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto', padding: '20px 24px' }}>{stage}</div>
+        {showChat && chatPanel}
+      </div>
     </>
   );
 }

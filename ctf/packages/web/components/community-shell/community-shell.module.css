@@ -969,6 +969,32 @@
   background: rgba(248, 113, 113, 0.12);
 }
 
+/* Edit affordance on the member's own peer posts. Editing is delete + repost (there is no in-place
+   edit): it pulls the text back into the composer and deletes the original. Mirrors the sibling
+   buttons; tints amber on hover/focus to read as a non-destructive "fix it" action. */
+.chatEditBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ctf-text-muted);
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.1s, color 0.1s, background 0.1s;
+}
+
+.chatRow:hover .chatEditBtn,
+.chatEditBtn:focus-visible {
+  opacity: 1;
+  color: #FBBF24;
+  background: rgba(251, 191, 36, 0.12);
+}
+
 /* The quoted block that sits above a message that is a Signal-style reply: a thin accent rail
    on the left, the quoted author in accent, and a one-line snippet of the quoted body. */
 .chatQuotedBlock {

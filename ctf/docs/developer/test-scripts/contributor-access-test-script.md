@@ -294,6 +294,21 @@ action shows only on the member's own messages and is confirm-gated (system dial
 delete-any affordance is web-only for now (the server still enforces admin delete on the API).
 **Result:** web ☐ mobile ☐ — notes:
 
+### CA-C8 · Edit — delete + repost, no history rewrite
+**Role:** eligible member + a second eligible account · **Surfaces:** web (desktop), web (mobile-responsive)
+**Steps:**
+1. As member A: post a message; confirm an Edit action shows on your own message but NOT on
+   member B's messages.
+2. Tap Edit: confirm the original message is deleted and its text is loaded into the composer.
+3. Change the text and send the fresh message.
+4. On the second account: read the channel and re-read `GET /api/contributor-access/channel/messages`.
+**Expected:** There is no in-place edit — tapping Edit deletes the original (it disappears
+everywhere within the poll interval) and drops its text into the composer. The reposted message
+is a brand-new message with a new id and a new timestamp; the original's timestamp is not
+carried over and its history is not rewritten. The second account sees the original vanish and the
+new message appear. Edit shows only on the member's own messages.
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ## Known gaps — do not file these as bugs
@@ -307,6 +322,8 @@ Carried from the inventory's "Gaps & Known Technical Debt" section:
   (deliberate): no live typing indicators (polling only), no admin delete-any affordance in the
   RN channel UI (server-enforced on the API), and the "how it's earned" explainer is condensed
   into the badge dialog instead of a separate page.
-- No message edit in the gated channel (deliberate — delete and post again, same as the Commons).
+- No in-place message edit in the gated channel (deliberate). Edit is delete + repost: the Edit
+  action pulls the text into the composer, deletes the original, and the member sends a fresh
+  message with a new timestamp — history is never rewritten. Same behavior as the Commons.
 - Default weights/threshold are a starting point pending owner tuning.
 - Active blocks/safety reports are not yet an admission gate (owner decision pending).
