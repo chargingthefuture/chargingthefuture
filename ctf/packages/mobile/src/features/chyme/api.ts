@@ -10,6 +10,7 @@ export {
   getChymeRoom,
   getChymeMessages,
   postChymeMessage,
+  deleteChymeMessage,
   postChymeJoin,
   postChymeTip,
   deleteChymeProfile,
