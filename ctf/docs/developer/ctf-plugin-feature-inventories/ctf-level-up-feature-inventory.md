@@ -218,6 +218,15 @@ that exist today.
 
 ## Change Log
 
+- 2026-07-23: **Fixed enrollment failing on free (0 SC) cohorts.** Tapping "Enroll" on a cohort with
+  no required deposit (`allow_no_deposit = true`, `required_credits = 0` — the default for
+  auto-created cohorts) returned "Invalid LevelUp payload." The `enrollInCohort` guard required the
+  caller to send `allowWithoutDeposit` whenever a no-deposit cohort was enrolled with a zero deposit,
+  but the web shell's one-tap Enroll does not send that flag. The flag only makes sense when there is
+  a *nonzero* required deposit to skip, so the guard is now gated on `requiredCredits > 0`; a
+  genuinely free cohort enrolls with a zero deposit (the existing `depositRequested <= 0` short-circuit
+  already skips escrow/wallet movement). No schema, route, or contract change. Paid and
+  deposit-optional cohorts are unchanged; a paid cohort with a zero deposit still rejects.
 - 2026-07-23: **Admin review queues for open disputes + pending validations, and the admin-landing dot.** The admin panel previously showed only KPIs, so open disputes and pending milestone validations had no admin surface. `getAdminPanelData()` now also returns `openDisputes` (`listOpenDisputes`, `level_up_disputes` `status='open'`, opener names resolved via Clerk) and `pendingValidations` (`listPendingMilestoneValidations`, `level_up_milestone_validations` `status='pending'`), both newest first and capped. The web admin shell (`lu-admin-shell.tsx`) renders them as two read-only review lists below the KPIs. LevelUp is now wired into the admin-landing "new to review" dot (`lib/admin/area-attention.ts`): a dot shows when a dispute/validation arrived since the admin last opened the area. Server-rendered (no new API route); no schema or contract change. Resolving/approving stays in the existing dispute/validation flows.
 - 2026-07-21: **Removed the orphaned member-shell right panel (resolves #1761).** The
   desktop-branch-collapse refactor (commit `279831a`) had already dropped the member shell's

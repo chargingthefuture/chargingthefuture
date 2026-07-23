@@ -106,6 +106,23 @@ Result: web ☐
 
 ---
 
+### LU-3b — Enrollment on a free (0 SC) cohort
+
+**Role:** member · **Surfaces:** web
+**Precondition:** Signed in as a member. An **open, free** cohort is visible — one whose card shows **Cost 0 SC** (e.g. an auto-created cohort: `allow_no_deposit = true`, `required_credits = 0`). Member is not yet enrolled in it.
+
+**Steps:**
+1. On the cohort browse screen, tap **Enroll** on the 0 SC cohort.
+
+**Expected:**
+- Enrollment succeeds — the button flips to "✓ Enrolled" and **no** "Invalid LevelUp payload." error banner appears.
+- Wallet balance is unchanged and no escrow is held (a free cohort deposits nothing).
+- The Enrolled stat count increases by one.
+
+Result: web ☐
+
+---
+
 ### LU-4 — Enrollment blocked for trainer-only account
 
 **Role:** trainer · **Surfaces:** web
