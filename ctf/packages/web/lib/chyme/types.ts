@@ -100,6 +100,7 @@ export type ChymeAuditEvent = {
     | 'chyme.room.state.fetch'
     | 'chyme.messages.list'
     | 'chyme.message.send'
+    | 'chyme.message.delete'
     | 'chyme.call.join'
     | 'chyme.call.leave'
     | 'chyme.hand'

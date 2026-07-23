@@ -439,6 +439,32 @@ export async function sendRoomMessage(
   });
 }
 
+// Delete one of the member's OWN room chat messages. Author-only: the row is deleted only when its
+// user_id matches the caller. The product has no in-place edit — editing IS delete + repost — so the
+// client re-uses this: it loads the text back into the composer and deletes the original, and the
+// member sends a fresh message. Throws 'message_not_found' (unknown/already gone) or
+// 'not_message_owner' (someone else's message) so the route can map them to 404 / 403.
+export async function deleteRoomMessage(
+  identity: IdentityInput,
+  messageId: string,
+  roomKey: string = CHYME_MAIN_ROOM_KEY,
+): Promise<void> {
+  await withDbTransaction(async (client) => {
+    const room = await ensureRoom(client, roomKey);
+    const existing = await client.query<{ user_id: string }>(
+      `SELECT user_id FROM chyme_messages WHERE id = $1 AND room_id = $2 LIMIT 1`,
+      [messageId, room.id],
+    );
+    if (existing.rowCount === 0) {
+      throw new Error('message_not_found');
+    }
+    if (existing.rows[0].user_id !== identity.userId) {
+      throw new Error('not_message_owner');
+    }
+    await client.query(`DELETE FROM chyme_messages WHERE id = $1 AND room_id = $2`, [messageId, room.id]);
+  });
+}
+
 export async function markRoomCallJoined(
   identity: IdentityInput,
   roomKey: string = CHYME_MAIN_ROOM_KEY,

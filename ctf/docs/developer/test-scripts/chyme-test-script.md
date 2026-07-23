@@ -310,6 +310,23 @@ intentionally absent in the private room (MVP). If the channel is closed, even a
 the explainer (only an admin still enters).
 **Result:** web ☐ mobile ☐ — notes:
 
+### CH-18 · Delete and Edit your own room chat message
+**Role:** two members (A and B) · **Surfaces:** web (mobile-responsive)
+**Precondition:** both in the same room (main or private); each has sent at least one chat message.
+**Steps:**
+1. As member A, confirm **Edit** and **Delete** show under your own messages but NOT under member B's.
+2. Tap **Delete** on one of your messages, confirm the prompt.
+3. Tap **Edit** on another of your messages, change the text in the composer, and send.
+4. As member B, re-read the chat (refresh).
+**Expected:** Delete removes your message (optimistically right away; it stays gone on B's next
+refresh). Edit deletes the original and loads its text into the composer — there is no in-place edit;
+the reposted message is a brand-new message with a new timestamp, not the original edited. Neither
+action appears on another member's messages, and the server rejects deleting someone else's message
+(403) — a member can only delete their own. This mirrors the Commons home chat.
+**Result:** web ☐ mobile ☐ — notes:
+
+---
+
 ### CH-19 · Rooms rail, no-disconnect room switch, and control placement
 **Role:** contributor-eligible member (so both rooms are reachable) · **Surfaces:** web (mobile-responsive)
 **Steps:**

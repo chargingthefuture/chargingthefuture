@@ -30,6 +30,8 @@ export type ChymeRoomViewProps = {
   messagesEndRef: RefObject<HTMLDivElement | null>;
   onLeave: () => void;
   roomScope: 'main' | 'contributors';
+  onEditMessage: (messageId: string, text: string) => void;
+  onDeleteMessage: (messageId: string) => void;
 };
 
 export function ChymeRoomView(props: ChymeRoomViewProps) {
@@ -54,6 +56,8 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
       onSend={props.onSend}
       sending={props.sending}
       messagesEndRef={props.messagesEndRef}
+      onEditMessage={props.onEditMessage}
+      onDeleteMessage={props.onDeleteMessage}
     />
   );
 

@@ -47,6 +47,9 @@ export const CHYME_ERROR_CODE = {
   persistenceUnavailable: 'CHYME_PERSISTENCE_UNAVAILABLE',
   internalError: 'CHYME_INTERNAL_ERROR',
   csrfDenied: 'CHYME_CSRF_DENIED',
+  // Single-message delete (author-only)
+  messageNotFound: 'CHYME_MESSAGE_NOT_FOUND',
+  notMessageOwner: 'CHYME_NOT_MESSAGE_OWNER',
   // Back Channel specific
   backChannelBlocked: 'CHYME_BACK_CHANNEL_BLOCKED',
   backChannelNotInRoom: 'CHYME_BACK_CHANNEL_NOT_IN_ROOM',
