@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AtSign, Reply, Trash2, X } from 'lucide-react';
+import { AtSign, Pencil, Reply, Trash2, X } from 'lucide-react';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { PublicCommunityPost } from '../../lib/feed/types';
 import { feedAuthorHandle } from '../../lib/feed/author-handle';
@@ -229,6 +229,7 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
     toggleReaction,
     toggleAnnouncementReaction,
     deleteMessage,
+    editMessage,
     mentionsOnly,
     toggleMentionsOnly,
     announcementsOnly,
@@ -435,7 +436,7 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
 
       {needsUsername ? (
         <section className={styles.usernameAlert} role="status">
-          You&apos;re posting as <strong>{ownHandle}</strong>. Open your account menu (your profile picture) and set a username so members recognize you.
+          You&apos;re posting as <strong>{ownHandle}</strong>. To pick a username members recognize, click the person icon at the top right, then <strong>Manage account</strong> — you can edit your username there.
         </section>
       ) : null}
 
@@ -576,6 +577,21 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
                         aria-label={`Reply to ${senderName}`}
                       >
                         <Reply size={12} /> Reply
+                      </button>
+                    ) : null}
+                    {canDelete && msg.communityPostId ? (
+                      <button
+                        type="button"
+                        className={styles.chatEditBtn}
+                        onClick={() => {
+                          // Editing is delete + repost: pull the text back into the composer, delete the
+                          // original, and focus the box so the member fixes it and sends a fresh post.
+                          editMessage(msg.communityPostId as string, msg.text);
+                          inputRef.current?.focus();
+                        }}
+                        aria-label="Edit your post"
+                      >
+                        <Pencil size={12} /> Edit
                       </button>
                     ) : null}
                     {canDelete && msg.communityPostId ? (

@@ -262,6 +262,17 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
     }
   }, [refreshHistory]);
 
+  // Edit one of the member's OWN messages. There is no in-place edit — editing is delete + repost —
+  // so this loads the message text into the composer and deletes the original; the member tweaks it
+  // and sends a fresh message. Clears any active reply so the reposted text starts clean.
+  const editMessage = useCallback(
+    (postId: string, text: string) => {
+      setInput(text);
+      void deleteMessage(postId);
+    },
+    [deleteMessage],
+  );
+
   const beginReply = useCallback((message: GatedChatMessage) => {
     setReplyTarget({
       postId: message.id,
@@ -307,6 +318,7 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
     sendMessage,
     toggleReaction,
     deleteMessage,
+    editMessage,
     isLoading,
     isLive,
     isSending,

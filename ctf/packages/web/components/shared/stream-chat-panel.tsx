@@ -11,12 +11,29 @@ import {
   useChannelActionContext,
   useChannelStateContext,
   type CustomMessageActions,
+  type MessageActionsArray,
 } from 'stream-chat-react';
 import 'stream-chat-react/dist/css/v2/index.css';
 import './stream-chat-panel.css';
 
 // How far ahead the "Remind me about this" action schedules its nudge (30 minutes).
 const REMINDER_DELAY_MS = 30 * 60 * 1000;
+
+// Message actions offered on every chat that uses this panel: the default Stream set MINUS 'edit'.
+// The product forbids in-place edits (a silent history rewrite that keeps the original timestamp) —
+// to change a message you delete it and repost, so a correction is a fresh message with a new
+// timestamp. Delete stays, so "edit" is delete + repost. Keep this list in sync with Stream's
+// defaults (add any new built-in action here) so removing edit never quietly drops another action.
+const MESSAGE_ACTIONS_NO_EDIT: MessageActionsArray = [
+  'delete',
+  'flag',
+  'markUnread',
+  'mute',
+  'pin',
+  'quote',
+  'react',
+  'reply',
+];
 
 // Shared Stream connection registry, keyed by API key. `StreamChat.getInstance(apiKey)` returns one
 // singleton client per key, so several StreamChatPanels on screen at once (e.g. a Beacon viewer plus a
@@ -376,7 +393,11 @@ const ConversationBody: React.FC<{
       <div className="ctf-chat-conversation">
         <Window>
           <ChannelSearchBar />
-          <MessageList customMessageActions={customMessageActions} />
+          {/* messageActions is the default Stream set with 'edit' removed: the product forbids an
+              in-place edit (a silent history rewrite that keeps the original timestamp). To change a
+              message you delete it and repost, so a correction lands as a fresh message with a new
+              timestamp. Delete and every other action stay. */}
+          <MessageList customMessageActions={customMessageActions} messageActions={MESSAGE_ACTIONS_NO_EDIT} />
           <MessageInput />
         </Window>
         {toast}
