@@ -44,6 +44,7 @@ import {
   CHYME_MAIN_ROOM_NAME,
   CHYME_MAX_MESSAGE_LENGTH,
   CHYME_PRESENCE_TTL_SECONDS,
+  chymeRoomNameForKey,
 } from './constants';
 import type {
   ChymeDeletionResponse,
@@ -209,7 +210,10 @@ async function getMainRoomReadOnly(client: PoolClient): Promise<RoomRow | null> 
   return result.rows[0] ?? null;
 }
 
-async function ensureMainRoom(client: PoolClient): Promise<RoomRow> {
+// Upsert a Chyme room row by key and return it. Defaults to the open main room; the private
+// contributors room passes CHYME_CONTRIBUTORS_ROOM_KEY. The room name is resolved from the known-key
+// map, never from caller input, so an arbitrary key can never set an arbitrary display name.
+async function ensureRoom(client: PoolClient, roomKey: string = CHYME_MAIN_ROOM_KEY): Promise<RoomRow> {
   const inserted = await client.query<RoomRow>(
     `
       INSERT INTO chyme_rooms (room_key, room_name, call_active)
@@ -218,7 +222,7 @@ async function ensureMainRoom(client: PoolClient): Promise<RoomRow> {
       DO UPDATE SET room_name = EXCLUDED.room_name
       RETURNING id, room_key, room_name, call_active
     `,
-    [CHYME_MAIN_ROOM_KEY, CHYME_MAIN_ROOM_NAME],
+    [roomKey, chymeRoomNameForKey(roomKey)],
   );
 
   return inserted.rows[0];
@@ -302,9 +306,12 @@ async function listRoomParticipants(client: PoolClient, roomId: string): Promise
   return result.rows.map(mapParticipant);
 }
 
-export async function getRoomState(identity: IdentityInput): Promise<ChymeRoomResponse> {
+export async function getRoomState(
+  identity: IdentityInput,
+  roomKey: string = CHYME_MAIN_ROOM_KEY,
+): Promise<ChymeRoomResponse> {
   return withDbTransaction(async (client) => {
-    const room = await ensureMainRoom(client);
+    const room = await ensureRoom(client, roomKey);
     await ensureServiceProfile(client, identity);
     // Viewing the room does NOT make you a participant — only joining the call does (see
     // markRoomCallJoined). Otherwise merely opening Chyme would list you on stage forever.
@@ -347,9 +354,13 @@ export async function getPublicRoomLiveState(): Promise<{
   });
 }
 
-export async function listRoomMessages(identity: IdentityInput, limit = CHYME_DEFAULT_MESSAGES_LIMIT): Promise<ChymeMessage[]> {
+export async function listRoomMessages(
+  identity: IdentityInput,
+  limit = CHYME_DEFAULT_MESSAGES_LIMIT,
+  roomKey: string = CHYME_MAIN_ROOM_KEY,
+): Promise<ChymeMessage[]> {
   return withDbTransaction(async (client) => {
-    const room = await ensureMainRoom(client);
+    const room = await ensureRoom(client, roomKey);
     await ensureServiceProfile(client, identity);
 
     const boundedLimit = Math.min(Math.max(limit, 1), CHYME_DEFAULT_MESSAGES_LIMIT);
@@ -380,19 +391,26 @@ export function validateMessageInput(text: string): { valid: true; normalizedTex
   };
 }
 
-export async function sendRoomMessage(identity: IdentityInput, text: string): Promise<ChymeMessage> {
+export async function sendRoomMessage(
+  identity: IdentityInput,
+  text: string,
+  roomKey: string = CHYME_MAIN_ROOM_KEY,
+): Promise<ChymeMessage> {
   const validation = validateMessageInput(text);
   if (!validation.valid) {
     throw new Error('invalid_message_text');
   }
 
   return withDbTransaction(async (client) => {
-    const room = await ensureMainRoom(client);
+    const room = await ensureRoom(client, roomKey);
     await ensureServiceProfile(client, identity);
     await sendChymeStreamMessage({
       userId: identity.userId,
       name: chymeHandle(identity.username, identity.userId),
       text: validation.normalizedText,
+      // Fan out to this room's Stream channel (the channel id equals the room key), so the private
+      // room's chat never lands in the main room's Stream channel.
+      channelId: room.room_key,
     });
 
     const inserted = await client.query<MessageRow>(
@@ -423,9 +441,10 @@ export async function sendRoomMessage(identity: IdentityInput, text: string): Pr
 
 export async function markRoomCallJoined(
   identity: IdentityInput,
+  roomKey: string = CHYME_MAIN_ROOM_KEY,
 ): Promise<ChymeRoomResponse> {
   return withDbTransaction(async (client) => {
-    const room = await ensureMainRoom(client);
+    const room = await ensureRoom(client, roomKey);
     await ensureServiceProfile(client, identity);
     await upsertMember(client, room.id, identity);
     const activeRoom = await setRoomCallActive(client, room.id, true);
@@ -443,9 +462,12 @@ export async function markRoomCallJoined(
 
 // Heartbeat from the audio room while a member is in the call: refreshes last_seen_at so the
 // member keeps counting as present (see listRoomParticipants' freshness window).
-export async function touchRoomPresence(identity: IdentityInput): Promise<void> {
+export async function touchRoomPresence(
+  identity: IdentityInput,
+  roomKey: string = CHYME_MAIN_ROOM_KEY,
+): Promise<void> {
   await withDbTransaction(async (client) => {
-    const room = await ensureMainRoom(client);
+    const room = await ensureRoom(client, roomKey);
     await upsertMember(client, room.id, identity);
   });
 }
@@ -458,9 +480,10 @@ export async function touchRoomPresence(identity: IdentityInput): Promise<void> 
 export async function setRoomMemberHandRaised(
   identity: IdentityInput,
   raised: boolean,
+  roomKey: string = CHYME_MAIN_ROOM_KEY,
 ): Promise<ChymeRoomResponse> {
   return withDbTransaction(async (client) => {
-    const room = await ensureMainRoom(client);
+    const room = await ensureRoom(client, roomKey);
     await client.query(
       `
         UPDATE chyme_room_members
@@ -484,9 +507,12 @@ export async function setRoomMemberHandRaised(
 // Explicit leave: remove the member row so the member stops being counted immediately
 // (rather than waiting for the presence window to lapse). Deleting the row also clears any
 // raised hand, so a member who left can never linger with a hand up.
-export async function leaveRoom(identity: IdentityInput): Promise<void> {
+export async function leaveRoom(
+  identity: IdentityInput,
+  roomKey: string = CHYME_MAIN_ROOM_KEY,
+): Promise<void> {
   await withDbTransaction(async (client) => {
-    const room = await ensureMainRoom(client);
+    const room = await ensureRoom(client, roomKey);
     await client.query(
       `DELETE FROM chyme_room_members WHERE room_id = $1 AND user_id = $2`,
       [room.id, identity.userId],
@@ -496,13 +522,6 @@ export async function leaveRoom(identity: IdentityInput): Promise<void> {
 
 export async function markServiceDeletion(userId: string): Promise<ChymeDeletionResponse> {
   const requestedAtIso = await withDbTransaction(async (client) => {
-    const roomResult = await client.query<RoomRow>(
-      `SELECT id, room_key, room_name, call_active FROM chyme_rooms WHERE room_key = $1`,
-      [CHYME_MAIN_ROOM_KEY],
-    );
-
-    const roomId = roomResult.rows[0]?.id;
-
     await client.query(
       `
         UPDATE chyme_service_profiles
@@ -512,10 +531,11 @@ export async function markServiceDeletion(userId: string): Promise<ChymeDeletion
       [userId],
     );
 
-    if (roomId) {
-      await client.query(`DELETE FROM chyme_messages WHERE room_id = $1 AND user_id = $2`, [roomId, userId]);
-      await client.query(`DELETE FROM chyme_room_members WHERE room_id = $1 AND user_id = $2`, [roomId, userId]);
-    }
+    // Remove the member's messages and presence rows from EVERY room (the open main room and the
+    // private Weavers room), keyed on user_id alone — deletion must not leave their content behind in
+    // a room the old main-room-scoped delete never touched.
+    await client.query(`DELETE FROM chyme_messages WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM chyme_room_members WHERE user_id = $1`, [userId]);
 
     // Back Channel calls hold no history worth keeping, so remove every row this member was part of
     // (as initiator or recipient) — not scoped to the current room. See lib/chyme/back-channel.ts.

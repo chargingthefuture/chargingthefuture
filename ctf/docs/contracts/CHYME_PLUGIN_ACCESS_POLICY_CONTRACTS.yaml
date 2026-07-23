@@ -1,3 +1,10 @@
+# Room scope note (2026-07-23): the room/join/messages/heartbeat/hand/leave commands below accept an
+# optional `?room=contributors` scope selecting the private "Weavers of the Commons" room. For that
+# scope, on top of the standard approved_user_or_admin gate the caller must ALSO clear the contributor
+# gate — the contributor channel-open switch AND (their contributor-access eligibility flag OR admin);
+# a member who fails receives a bare 404 (no-shaming), matching the gated Commons chat channel. The
+# default/absent scope is the open main room with the policies exactly as stated below. Tips
+# (chyme.transfer.*) and the back-channel commands are main-room only (no room scope).
 policies:
   - pluginId: chyme
     command: chyme.room.state.fetch

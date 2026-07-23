@@ -287,6 +287,27 @@ check as the room's CH-10 and the Android app script's AN-4 — a required relea
 
 ---
 
+### CH-17 · Private "Weavers of the Commons" room (contributor-gated)
+**Role:** contributor-eligible member, non-eligible member, admin · **Surfaces:** web (mobile-responsive)
+**Precondition:** the contributor channel is open (`contributor_access_config.channel_open = true`); one
+test member is contributor-eligible, one is not, and one is an admin.
+**Steps:**
+1. Open Chyme. Confirm a room switcher shows two tabs: **Main Room** and **Weavers of the Commons**.
+2. As the **non-eligible** member, tap **Weavers of the Commons**.
+3. As the **eligible** member (or an **admin**), tap **Weavers of the Commons**, then Join Room, unmute,
+   send a chat message, and raise/lower your hand.
+4. Confirm the private room's participants and chat are separate from the main room (a message sent in
+   one room does not appear in the other).
+**Expected:** The non-eligible member sees the "Weavers of the Commons" explainer (badge + "How it's
+earned →") and no room content — no locked/absence wording, just the explainer (no-shaming). The
+eligible member/admin joins the private room, hears audio, sends/reads its own chat, and raises a hand
+— all scoped to `chyme-contributors-room` and never mixed with the main room. Tips and Back Channel are
+intentionally absent in the private room (MVP). If the channel is closed, even an eligible member gets
+the explainer (only an admin still enters).
+**Result:** web ☐ mobile ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 Chyme has no plugin-specific admin UI in this build. Room/chat/join access is gated by the shared

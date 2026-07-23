@@ -29,6 +29,7 @@ export type ChymeRoomViewProps = {
   sending: boolean;
   messagesEndRef: RefObject<HTMLDivElement | null>;
   onLeave: () => void;
+  roomScope: 'main' | 'contributors';
 };
 
 export function ChymeRoomView(props: ChymeRoomViewProps) {
@@ -92,6 +93,7 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           isMobile={true}
           onLeave={props.onLeave}
           raisedHandUserIds={raisedHandUserIds}
+          roomScope={props.roomScope}
         />
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

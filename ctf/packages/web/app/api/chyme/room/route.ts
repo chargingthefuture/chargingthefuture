@@ -3,16 +3,16 @@ import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { getRoomState } from 'lib/chyme/repository';
 import { reportError } from 'lib/observability/report';
-import { requireChymeAccess } from '../_lib';
+import { requireChymeRoomAccess } from '../_lib';
 
-export async function GET() {
-  const gate = await requireChymeAccess();
+export async function GET(request: Request) {
+  const gate = await requireChymeRoomAccess(request);
   if (!gate.allowed) {
     return gate.response;
   }
 
   try {
-    const room = await getRoomState(gate.identity);
+    const room = await getRoomState(gate.identity, gate.roomKey);
     logChymeAudit({
       pluginId: 'chyme',
       command: 'chyme.room.state.fetch',
