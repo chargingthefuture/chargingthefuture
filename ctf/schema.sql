@@ -1145,6 +1145,21 @@ CREATE TABLE IF NOT EXISTS feed_hub_last_seen (
 ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
 ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Per-admin "last opened" marker for each admin area, powering the "new to review" dot on the admin
+-- landing tiles. A dot shows for an area when its newest actionable item (a pending review, a new
+-- report, etc.) is newer than this admin's marker for that area, or the admin has never opened it.
+-- One row per (admin, area); updated to NOW() when the admin opens that area. Best-effort: a read or
+-- write failure must never break the admin landing.
+CREATE TABLE IF NOT EXISTS admin_area_seen (
+  user_id TEXT NOT NULL,
+  area_slug TEXT NOT NULL,
+  seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, area_slug)
+);
+ALTER TABLE IF EXISTS admin_area_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS admin_area_seen ADD COLUMN IF NOT EXISTS area_slug TEXT;
+ALTER TABLE IF EXISTS admin_area_seen ADD COLUMN IF NOT EXISTS seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 CREATE INDEX IF NOT EXISTS idx_feed_questions_created_at ON feed_questions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_answers_question_created_at ON feed_answers(question_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_answer_ratings_answer_id ON feed_answer_ratings(answer_id);
@@ -4662,6 +4677,10 @@ CREATE TABLE IF NOT EXISTS comic_turns (
   -- a JSON array of plugin slugs (validated against the visible plugin registry, deduped, capped).
   -- Rendered as tappable plugin links beneath the published answer. Empty array = no links.
   linked_plugin_slugs JSONB NOT NULL DEFAULT '[]'::jsonb,
+  -- Knowledge-base entry ids (comic_knowledge_entries) injected as grounding when this bot draft
+  -- was generated (#504 retrieval step). Empty array = ungrounded draft. Lets grounded vs
+  -- ungrounded drafts be compared on correction rate.
+  grounding_entry_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
@@ -4672,6 +4691,7 @@ ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS intent TEXT NULL;
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS nlu_confidence NUMERIC(5,4) NULL;
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS engine TEXT NOT NULL DEFAULT 'ollama';
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS linked_plugin_slugs JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS grounding_entry_ids JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_comic_turns_conversation_id ON comic_turns(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_comic_turns_created_at ON comic_turns(created_at DESC);
@@ -4754,6 +4774,40 @@ ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS rating TEXT 
 ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_comic_answer_ratings_turn_id ON comic_answer_ratings(turn_id);
+
+-- Retrieval knowledge base for @comic draft grounding (#504, retrieval step). Rows are curated,
+-- redacted excerpts of the owner's public writing (Quora export, repo wiki) plus, later, approved
+-- answers. At draft time the top-ranked entries for the asker's question are injected into the
+-- Ollama prompt so the draft is grounded in the community's own verified answers instead of the
+-- base model's generic training. `content_hash` makes imports idempotent; `active` is the curation
+-- off-switch (deactivated rows are never retrieved). Full-text search runs over
+-- question + title + content via the expression index below.
+CREATE TABLE IF NOT EXISTS comic_knowledge_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source TEXT NOT NULL DEFAULT 'quora_export' CHECK (source IN ('quora_export', 'github_wiki', 'approved_answer')),
+  entry_type TEXT NOT NULL DEFAULT 'post' CHECK (entry_type IN ('answer', 'post', 'comment', 'submission', 'wiki')),
+  title TEXT NULL,
+  question TEXT NULL,
+  content TEXT NOT NULL,
+  content_hash TEXT NOT NULL UNIQUE,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  authored_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'quora_export';
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS entry_type TEXT NOT NULL DEFAULT 'post';
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS title TEXT NULL;
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS question TEXT NULL;
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS content TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS content_hash TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS authored_at TIMESTAMPTZ NULL;
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_comic_knowledge_entries_search
+  ON comic_knowledge_entries
+  USING GIN (to_tsvector('english', COALESCE(question, '') || ' ' || COALESCE(title, '') || ' ' || content));
+CREATE INDEX IF NOT EXISTS idx_comic_knowledge_entries_active ON comic_knowledge_entries(active);
 
 -- Named CHECK constraints for the comic_* enum/range columns. Idempotent (skip if present) so
 -- legacy DBs that predate the inline CHECKs converge. Enum values mirror lib/comic/constants.ts.
