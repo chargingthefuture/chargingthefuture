@@ -17,8 +17,10 @@ export type HubSuggestionChip =
 
 const HUB_SUGGESTION_CHIPS: readonly HubSuggestionChip[] = [
   { id: 'housing', label: 'Show housing options', kind: 'navigate', slug: 'lighthouse' },
-  { id: 'work', label: 'Find local work', kind: 'navigate', slug: 'workforce' },
-  { id: 'directory', label: 'Open the provider directory', kind: 'navigate', slug: 'directory' },
+  // The provider directory is Foundation (talent, tools, repairs, infrastructure support), NOT the
+  // Directory plugin — that one is the community skills directory below.
+  { id: 'providers', label: 'Open the provider directory', kind: 'navigate', slug: 'foundation' },
+  { id: 'skills', label: 'Browse the skills directory', kind: 'navigate', slug: 'directory' },
   { id: 'credits', label: 'Check my Service Credits', kind: 'navigate', slug: 'service-credits' },
   {
     id: 'gdp-week',
@@ -26,6 +28,9 @@ const HUB_SUGGESTION_CHIPS: readonly HubSuggestionChip[] = [
     kind: 'ask',
     question: 'What is the GDP tracker showing this week?',
   },
+  // Note: Workforce is intentionally not a chip — it is the real-time global work/skills-distribution
+  // dashboard and doesn't reduce to an accurate one-line "do this" action. Add it back only with an
+  // owner-provided description.
 ];
 
 // The chips shown under the Commons composer, in order. Kept as a function (not a bare export) to
