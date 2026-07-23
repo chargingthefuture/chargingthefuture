@@ -320,14 +320,15 @@ the explainer (only an admin still enters).
 4. Look at the joined room's layout top-to-bottom: participant avatars (On Stage), then the audio
    controls (Mute/Unmute · Raise Hand · Leave), then the room chat. Confirm the controls sit **below**
    the avatars and **above** the chat, and you can mute/unmute without scrolling.
-5. Android-app card: with `NEXT_PUBLIC_CHYME_ANDROID_APP_URL` unset, confirm **no** "Get the Android
-   app" card shows. (If it is set: the card shows on a non-Android browser and is hidden on an Android
-   device.)
+5. Android-app card: on a non-Android browser, confirm a "Get the Android app" card shows in the rail
+   and opens the repo's GitHub Releases page (`https://github.com/chargingthefuture/chargingthefuture/releases`),
+   where the APK is downloaded. On an Android device, confirm the card is hidden and the rail is just
+   the list of rooms.
 **Expected:** The rooms rail is one compact scrollable row; the title is not duplicated and no vertical
 space is wasted. Switching rooms never tears down a live call — a member joined in one room stays
 connected while viewing the other and when switching back. The in-room controls render between the
-avatars and the chat. The Android-app card is absent unless its URL is configured, and is hidden on
-Android regardless.
+avatars and the chat. The Android-app card links to the GitHub Releases page on a non-Android
+browser and is hidden on Android.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---
