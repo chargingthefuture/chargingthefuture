@@ -447,6 +447,39 @@ Result: web ☐
 
 ---
 
+### PP-A11 — Admin ends a cohort; it becomes read-only
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** Signed in as an admin. The admin Cohorts list shows at least one active, non-standing cohort (turn single standing Cohort 1 mode OFF and run the weekly assignment first if needed — the standing Cohort 1 has no "End cohort" button).
+
+**Steps:**
+1. In the admin Cohorts list, click "End cohort" on an active cohort and confirm the prompt.
+2. Watch the list refresh.
+3. Open that cohort's room (via its "Open room →" link) and look at the Direct Line composer.
+
+**Expected:** The cohort row now shows an "Ended" badge and no "End cohort" button. A success notice appears. In the room, the Direct Line shows "This cohort has ended — the conversation is read-only" with no message composer. The ended cohort no longer appears in a member's "Other running cohorts" list. The standing Cohort 1 never shows an "End cohort" button.
+
+Result: web ☐
+
+---
+
+### PP-A12 — Posting into an ended cohort is rejected server-side
+
+**Role:** member (of an ended cohort) · **Surfaces:** web
+
+**Precondition:** A cohort has been ended (PP-A11). You can post as a member of that cohort using browser dev tools.
+
+**Steps:**
+1. In dev tools, POST to `/api/peer-programming/messages` with `{ "cohortId": "<ended-cohort-id>", "body": "post after end" }` and headers `Content-Type: application/json`, `x-ctf-csrf: 1`.
+2. Check the response.
+
+**Expected:** The server returns 409 with code `peer_programming_cohort_ended` and the message is not stored — the read-only state is enforced on the server, not just hidden in the UI.
+
+Result: web ☐
+
+---
+
 ## Parity check (web ↔ android)
 
 These cases must produce the same user-visible outcome on both surfaces. If the result differs, file a bug with both surface results.

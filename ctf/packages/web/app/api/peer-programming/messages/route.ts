@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
-import { createMessage, insertPeerProgrammingAudit, isCohortMember } from 'lib/peer-programming/repository';
-import { PEER_PROGRAMMING_MAX_MESSAGE_LENGTH } from 'lib/peer-programming/constants';
+import { createMessage, insertPeerProgrammingAudit, isCohortEnded, isCohortMember } from 'lib/peer-programming/repository';
+import { PEER_PROGRAMMING_ERROR_CODE, PEER_PROGRAMMING_MAX_MESSAGE_LENGTH } from 'lib/peer-programming/constants';
 import { reportError } from 'lib/observability/report';
 
 type CreateMessageBody = {
@@ -54,6 +54,23 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { ok: false, code: 'peer_programming_policy_denied', message: 'Only cohort members can post in this cohort.' },
       { status: 403 },
+    );
+  }
+
+  // An ended cohort's Direct Line is read-only. Reject posting even from a member — closes the
+  // "post into a closed cohort via a leftover link" hole once weekly cohorts start being ended.
+  if (await isCohortEnded(body.cohortId)) {
+    await insertPeerProgrammingAudit({
+      actorId: gate.auth.userId,
+      command: 'peer-programming.thread.post.create',
+      policyStatus: 'deny',
+      reason: 'cohort_ended',
+      targetType: 'cohort',
+      targetId: body.cohortId,
+    });
+    return NextResponse.json(
+      { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.cohortEnded, message: 'This cohort has ended and is read-only.' },
+      { status: 409 },
     );
   }
 

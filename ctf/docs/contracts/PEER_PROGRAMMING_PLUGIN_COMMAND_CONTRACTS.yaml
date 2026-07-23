@@ -479,3 +479,20 @@ contracts:
     purpose: cohort_mode_governance
     retentionClass: audit_long_lived
     idempotency: true
+  - pluginId: peer-programming
+    command: admin.cohort.end
+    version: 1.0.0
+    description: End (close) a cohort. Marks the peer_programming_cohorts row status='ended' and stamps ended_at / ended_by_user_id, freezing its Direct Line — the message and reply routes then reject posting to the cohort. The single standing Cohort 1 can never be ended (denied with policy_denied). Records an admin audit row. CSRF-guarded, admin-only. Idempotent — ending an already-ended cohort is a no-op that returns it unchanged.
+    inputSchema:
+      cohortId:
+        type: string
+        required: true
+    outputSchema:
+      cohort:
+        type: object
+    dataAccess:
+      - peer_programming_cohorts
+      - peer_programming_admin_audit_trail
+    purpose: cohort_lifecycle_governance
+    retentionClass: audit_long_lived
+    idempotency: true

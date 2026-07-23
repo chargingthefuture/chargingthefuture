@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createMessage, getMessageById, insertPeerProgrammingAudit, isCohortMember } from 'lib/peer-programming/repository';
+import { createMessage, getMessageById, insertPeerProgrammingAudit, isCohortEnded, isCohortMember } from 'lib/peer-programming/repository';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
-import { PEER_PROGRAMMING_MAX_MESSAGE_LENGTH } from 'lib/peer-programming/constants';
+import { PEER_PROGRAMMING_ERROR_CODE, PEER_PROGRAMMING_MAX_MESSAGE_LENGTH } from 'lib/peer-programming/constants';
 import { reportError } from 'lib/observability/report';
 
 type ReplyBody = {
@@ -57,6 +57,23 @@ export async function POST(request: Request, context: { params: Promise<{ messag
     return NextResponse.json(
       { ok: false, code: 'peer_programming_policy_denied', message: 'Only cohort members can reply in this cohort.' },
       { status: 403 },
+    );
+  }
+
+  // An ended cohort's Direct Line is read-only — reject replies too (same rule as the post route).
+  if (await isCohortEnded(body.cohortId)) {
+    await insertPeerProgrammingAudit({
+      actorId: gate.auth.userId,
+      command: 'peer-programming.thread.reply.create',
+      policyStatus: 'deny',
+      reason: 'cohort_ended',
+      targetType: 'cohort',
+      targetId: body.cohortId,
+      metadata: { parentMessageId: messageId },
+    });
+    return NextResponse.json(
+      { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.cohortEnded, message: 'This cohort has ended and is read-only.' },
+      { status: 409 },
     );
   }
 
