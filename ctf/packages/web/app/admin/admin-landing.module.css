@@ -76,6 +76,7 @@
 
 .card {
   display: block;
+  position: relative;
   height: 100%;
   border-radius: 12px;
   background: var(--ctf-surface, #161b27);
@@ -85,6 +86,20 @@
   transition:
     border-color 0.15s ease,
     background 0.15s ease;
+}
+
+/* "New to review" dot on an admin tile — shown when that area has items newer than when this admin
+   last opened it. Amber so it reads as "attention," anchored to the tile's top-right corner. Tiles
+   with nothing new render exactly as before (no dot). */
+.newDot {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
 }
 
 .card:hover {

@@ -337,6 +337,47 @@ CREATE TABLE IF NOT EXISTS chyme_deletion_events (
   metadata JSONB NULL DEFAULT '{}'::jsonb
 );
 CREATE INDEX IF NOT EXISTS idx_chyme_deletion_events_user_scope ON chyme_deletion_events(user_id, scope, requested_at DESC);
+-- Back Channel: a free, casual 1:1 audio call between two members who are both currently in the same
+-- live Chyme room (spec #1746). A single row models the whole lifecycle via `status`:
+--   inviting -> active (recipient accepts)      -> ended (either party hangs up)
+--   inviting -> declined (recipient declines, terminal)
+--   inviting -> lapsed  (a party left the room before it was accepted, terminal)
+--   active   -> ended   (terminal)
+-- There is deliberately no history surfaced anywhere and no credits attached; rows exist only to run
+-- one call and are private (never in Trust evidence / feeds, per rule 132). A member's rows are removed
+-- on Chyme service deletion and account deletion.
+CREATE TABLE IF NOT EXISTS chyme_back_channel_calls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES chyme_rooms(id) ON DELETE CASCADE,
+  initiator_user_id TEXT NOT NULL,
+  recipient_user_id TEXT NOT NULL,
+  initiator_username TEXT NULL,
+  recipient_username TEXT NULL,
+  status TEXT NOT NULL CHECK (status IN ('inviting', 'active', 'declined', 'ended', 'lapsed')),
+  stream_call_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  answered_at TIMESTAMPTZ NULL,
+  ended_at TIMESTAMPTZ NULL,
+  ended_by_user_id TEXT NULL,
+  last_heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chyme_back_channel_no_self CHECK (initiator_user_id <> recipient_user_id)
+);
+-- Column reconciliation so legacy databases converge on the current shape (all added nullable / with
+-- safe defaults so they never fail on a populated table).
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS initiator_username TEXT;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS recipient_username TEXT;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS answered_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS ended_by_user_id TEXT;
+ALTER TABLE IF EXISTS chyme_back_channel_calls ADD COLUMN IF NOT EXISTS last_heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_chyme_bc_recipient_status ON chyme_back_channel_calls(recipient_user_id, status);
+CREATE INDEX IF NOT EXISTS idx_chyme_bc_initiator_status ON chyme_back_channel_calls(initiator_user_id, status);
+CREATE INDEX IF NOT EXISTS idx_chyme_bc_room ON chyme_back_channel_calls(room_id);
+-- At most one live (inviting or active) call from a given initiator to a given recipient at a time.
+-- Terminal rows (declined/ended/lapsed) are excluded so the pair can start a fresh call later.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_chyme_bc_live_pair
+  ON chyme_back_channel_calls(initiator_user_id, recipient_user_id)
+  WHERE status IN ('inviting', 'active');
 -- Chyme does not maintain its own service_credits_transactions table.
 -- Service credit accounting for Chyme is managed through the service-credits plugin if needed.
 COMMIT;
@@ -1101,6 +1142,21 @@ CREATE TABLE IF NOT EXISTS feed_hub_last_seen (
 );
 ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
 ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Per-admin "last opened" marker for each admin area, powering the "new to review" dot on the admin
+-- landing tiles. A dot shows for an area when its newest actionable item (a pending review, a new
+-- report, etc.) is newer than this admin's marker for that area, or the admin has never opened it.
+-- One row per (admin, area); updated to NOW() when the admin opens that area. Best-effort: a read or
+-- write failure must never break the admin landing.
+CREATE TABLE IF NOT EXISTS admin_area_seen (
+  user_id TEXT NOT NULL,
+  area_slug TEXT NOT NULL,
+  seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, area_slug)
+);
+ALTER TABLE IF EXISTS admin_area_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS admin_area_seen ADD COLUMN IF NOT EXISTS area_slug TEXT;
+ALTER TABLE IF EXISTS admin_area_seen ADD COLUMN IF NOT EXISTS seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_feed_questions_created_at ON feed_questions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_answers_question_created_at ON feed_answers(question_id, created_at DESC);
@@ -2188,7 +2244,8 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'implemented_shell', 210, TRUE),
   ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE),
   ('beacon',             'Beacon',               'Live one-way broadcasts from Farah. Watch publicly with just a link; sign in to chat and react.','implemented_shell', 230, TRUE),
-  ('recurring-activity', 'Recurring Activity',   'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.','implemented_shell', 240, TRUE)
+  ('recurring-activity', 'Recurring Activity',   'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.','implemented_shell', 240, TRUE),
+  ('mutual-time',        'Mutual Time',          'Find a meeting time everyone can make. Share one link; members pick times in their own timezone and the app chooses the slot with the most overlap.','implemented_shell', 250, TRUE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,
@@ -4181,6 +4238,16 @@ ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS service
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS thread_id UUID REFERENCES foundation_connection_threads(id);
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS lifecycle_state TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS last_transitioned_at TIMESTAMPTZ;
+-- Priced quote (issue #420/#425). This is the one-off engagement path only: when a provider responds
+-- they attach an amount + currency, and on close that value is the settled value (settled_at stamped),
+-- which the GDP recognition layer reads per currency. Foundation 1:1 instant calls are
+-- ServiceCredits-only and settle elsewhere (foundation_call_sessions). Recurring engagements are not
+-- quoted here at all — their ongoing value is recognized through the Recurring Activity plugin (owner
+-- decision, legal), so there is no recurring flag on the quote. quoted_currency is an FK to the shared
+-- currencies catalog (the same catalog LightHouse/TrustTransport use).
+ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS quoted_amount NUMERIC;
+ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS quoted_currency TEXT REFERENCES currencies(code);
+ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS settled_at TIMESTAMPTZ;
 
 -- level_up_enrollments (1 missing)
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS progress_percent NUMERIC NOT NULL DEFAULT 0;
@@ -5658,6 +5725,61 @@ ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NO
 ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS contributor_access_channel_post_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- === Mutual Time (one-link meeting-time picker, spec #1780) ============================
+-- An owner/admin creates an event with one shareable link. Approved members open the link and pick
+-- up to 3 one-hour windows (snapped to the half-hour) in their own timezone. When the survey closes
+-- (at closes_at, or manually), the app picks the one-hour window the most members can make (ties go
+-- to the earliest) and shows it in each viewer's own timezone with a link to where the meeting happens.
+-- No credits are involved anywhere. Candidate slots are computed from window_start_date + window_days
+-- (not stored per-slot); only cast votes are stored. A member's votes (and any events they created)
+-- are removed on account deletion — see lib/account/deletion-registry.ts.
+CREATE TABLE IF NOT EXISTS mutual_time_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT NOT NULL UNIQUE,
+  created_by_user_id TEXT NOT NULL,
+  title TEXT NULL,
+  description TEXT NULL,
+  meeting_plugin TEXT NOT NULL CHECK (meeting_plugin IN ('chyme', 'peer-programming')),
+  window_start_date DATE NOT NULL,
+  window_days INTEGER NOT NULL DEFAULT 7 CHECK (window_days BETWEEN 1 AND 14),
+  opens_at TIMESTAMPTZ NULL,
+  closes_at TIMESTAMPTZ NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+  result_slot_start TIMESTAMPTZ NULL,
+  result_can_make_it INTEGER NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  closed_at TIMESTAMPTZ NULL
+);
+-- Column reconciliation (all added nullable / with safe defaults so they never fail on a populated table).
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS meeting_plugin TEXT;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS window_start_date DATE;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS window_days INTEGER NOT NULL DEFAULT 7;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS opens_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS closes_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS result_slot_start TIMESTAMPTZ;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS result_can_make_it INTEGER;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_mutual_time_events_slug ON mutual_time_events(slug);
+CREATE INDEX IF NOT EXISTS idx_mutual_time_events_creator ON mutual_time_events(created_by_user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS mutual_time_votes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES mutual_time_events(id) ON DELETE CASCADE,
+  voter_user_id TEXT NOT NULL,
+  slot_start_utc TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS mutual_time_votes ADD COLUMN IF NOT EXISTS slot_start_utc TIMESTAMPTZ;
+ALTER TABLE IF EXISTS mutual_time_votes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- One row per (event, voter, slot): a voter cannot double-count a slot, and revising picks is a
+-- delete-then-insert of that voter's rows for the event.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_mutual_time_votes_event_voter_slot ON mutual_time_votes(event_id, voter_user_id, slot_start_utc);
+CREATE INDEX IF NOT EXISTS idx_mutual_time_votes_event_slot ON mutual_time_votes(event_id, slot_start_utc);
+CREATE INDEX IF NOT EXISTS idx_mutual_time_votes_voter ON mutual_time_votes(voter_user_id);
 
 -- ============================================================================
 -- Notifications center (cross-plugin, member-facing)

@@ -3,6 +3,14 @@ import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 import styles from './admin-landing.module.css';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { getAdminAreaAttention } from 'lib/admin/area-attention';
+import { AdminAreaGrid, type AdminAreaTile } from './admin-area-grid';
+
+// The area's stable slug is the last segment of its href (e.g. /admin/bug-reports → 'bug-reports'),
+// which is the key the attention signal and the seen-marker are keyed on.
+function areaSlug(href: string): string {
+  return href.split('/').filter(Boolean).pop() ?? href;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +89,14 @@ export default async function AdminPage() {
     );
   }
 
+  // Per-area "new to review" flags for this admin. Best-effort: on any failure every tile simply shows
+  // no dot (the landing must always render).
+  const attention = await getAdminAreaAttention(decision.userId).catch(() => ({} as Record<string, boolean>));
+  const tiles: AdminAreaTile[] = ADMIN_AREAS.map((area) => {
+    const slug = areaSlug(area.href);
+    return { href: area.href, name: area.name, slug, hasNew: attention[slug] === true };
+  });
+
   return (
     <div className={styles.page}>
       {/* Consistent one-level-up back control: from the admin directory, back goes to the home hub.
@@ -99,15 +115,7 @@ export default async function AdminPage() {
           <span className={styles.badge}>ADMIN</span>
         </div>
 
-        <ul className={styles.grid}>
-          {ADMIN_AREAS.map((area) => (
-            <li key={area.href}>
-              <Link href={area.href} className={styles.card}>
-                <span className={styles.cardName}>{area.name}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <AdminAreaGrid areas={tiles} />
 
         <div className={styles.footer}>
           Signed in as <span className={styles.footerStrong}>{decision.userId}</span> · role{' '}
