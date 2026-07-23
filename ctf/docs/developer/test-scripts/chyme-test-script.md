@@ -307,7 +307,7 @@ intentionally absent in the private room (MVP). If the channel is closed, even a
 the explainer (only an admin still enters).
 **Result:** web ☐ mobile ☐ — notes:
 
-### CH-18 · Rooms rail, no-disconnect room switch, and control placement
+### CH-19 · Rooms rail, no-disconnect room switch, and control placement
 **Role:** contributor-eligible member (so both rooms are reachable) · **Surfaces:** web (mobile-responsive)
 **Steps:**
 1. Open Chyme on a phone-width screen. Confirm the top is a single compact horizontal rail of room
