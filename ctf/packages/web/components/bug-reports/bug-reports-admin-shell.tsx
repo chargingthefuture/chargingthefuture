@@ -291,12 +291,6 @@ export function BugReportsAdminShell() {
             </div>
           );
         })}
-
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${t.BORDER_SOLID}`, fontSize: 13 }}>
-          <Link href="/admin" style={{ color: t.ACCENT, textDecoration: 'none' }}>
-            ← Back to admin
-          </Link>
-        </div>
       </div>
     </div>
   );
