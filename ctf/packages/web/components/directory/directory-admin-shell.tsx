@@ -20,8 +20,8 @@
 //     read-only rather than edited.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
+import { BackChevronButton } from "@/lib/nav/back-history";
 import {
   Search,
   Shield,
@@ -32,7 +32,6 @@ import {
   X,
   Save,
   UserCheck,
-  ChevronLeft,
   Ban,
   ShieldOff,
   RotateCcw,
@@ -552,9 +551,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
       <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, display: "flex", flexDirection: "column" }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, padding: "12px 16px 10px", borderBottom: `1px solid ${BORDER}`, background: "#0D0F14" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <Link href="/apps/directory" aria-label="Back to Directory" style={{ width: 38, height: 38, borderRadius: 10, background: `${COLOR}14`, border: `1px solid ${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", color: COLOR, textDecoration: "none", flexShrink: 0 }}>
-              <ChevronLeft size={20} />
-            </Link>
+            <BackChevronButton accent={COLOR} />
             <div style={{ width: 34, height: 34, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Shield size={16} color={COLOR} />
             </div>
