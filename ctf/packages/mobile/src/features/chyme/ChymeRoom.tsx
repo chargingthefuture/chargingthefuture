@@ -24,6 +24,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   chymeHandle,
+  deleteChymeMessage,
   getChymeMessages,
   getChymeRoom,
   postChymeJoin,
@@ -130,6 +131,33 @@ export const ChymeRoom: React.FC = () => {
     }
   }, [chatInput, sending]);
 
+  // Delete one of the member's OWN messages. Optimistically removes it, then DELETEs; on failure it
+  // is restored (in time order) and an alert is shown. Author-only is enforced server-side. Mirrors
+  // the web room chat's handleDeleteMessage.
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
+    let removed: MessagePayload | undefined;
+    setMessages((prev) => {
+      removed = prev.find((m) => m.id === messageId);
+      return prev.filter((m) => m.id !== messageId);
+    });
+    try {
+      await deleteChymeMessage(messageId);
+    } catch (err) {
+      if (removed) {
+        const restored = removed;
+        setMessages((prev) => [...prev, restored].sort((a, b) => a.sentAtIso.localeCompare(b.sentAtIso)));
+      }
+      Alert.alert('Delete failed', err instanceof Error ? err.message : 'Unable to delete your message.');
+    }
+  }, []);
+
+  // Edit = delete + repost (no in-place edit): load the message text into the composer and delete the
+  // original, so the member fixes it and sends a fresh message (new id/timestamp). Mirrors the web.
+  const handleEditMessage = useCallback((messageId: string, text: string) => {
+    setChatInput(text);
+    void handleDeleteMessage(messageId);
+  }, [handleDeleteMessage]);
+
   if (viewState === 'loading') {
     return <ChymeLoading />;
   }
@@ -158,13 +186,20 @@ export const ChymeRoom: React.FC = () => {
       text: m.text,
       sentAtIso: m.sentAtIso,
     }));
+    // The chat is only reachable after joining, so joinInfo is set here; the Stream user id is
+    // `chyme-<clerkUserId>`, and message.userId is that same clerk id — so stripping the prefix
+    // gives the id used to show Edit/Delete on the member's own messages only.
+    const currentUserId = joinInfo ? joinInfo.streamUserId.replace(/^chyme-/, '') : '';
     return (
       <ChymeChatView
         messages={chatMessages}
         input={chatInput}
         sending={sending}
+        currentUserId={currentUserId}
         onChangeInput={setChatInput}
         onSend={handleSendMessage}
+        onEditMessage={handleEditMessage}
+        onDeleteMessage={handleDeleteMessage}
         onBack={() => setViewState('inRoom')}
       />
     );

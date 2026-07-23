@@ -8,6 +8,7 @@
  */
 import React, { useMemo } from 'react';
 import {
+  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -15,7 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Send } from 'lucide-react-native';
+import { Pencil, Send, Trash2 } from 'lucide-react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { chymeHandle } from './api';
@@ -32,8 +33,14 @@ type Props = {
   messages: ChatMessage[];
   input: string;
   sending: boolean;
+  // Clerk user id of the signed-in member, so Edit/Delete show on their own messages only.
+  currentUserId: string;
   onChangeInput: (_text: string) => void;
   onSend: () => void;
+  // Edit = delete + repost (no in-place edit): load the text into the composer and delete the
+  // original, matching the web room chat and the Commons home chat.
+  onEditMessage: (_id: string, _text: string) => void;
+  onDeleteMessage: (_id: string) => void;
   onBack: () => void;
 };
 
@@ -55,13 +62,27 @@ export const ChymeChatView: React.FC<Props> = ({
   messages,
   input,
   sending,
+  currentUserId,
   onChangeInput,
   onSend,
+  onEditMessage,
+  onDeleteMessage,
   onBack,
 }) => {
   const { tokens, theme } = useTheme();
   const accent = getAppAccent('chyme', theme);
   const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+
+  const confirmDelete = (id: string) => {
+    Alert.alert(
+      'Delete this message?',
+      'This cannot be undone. To change it, delete and post again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => onDeleteMessage(id) },
+      ],
+    );
+  };
   return (
   <View style={styles.container}>
     <View style={styles.statusBar}>
@@ -82,15 +103,42 @@ export const ChymeChatView: React.FC<Props> = ({
       inverted
       style={styles.list}
       contentContainerStyle={styles.listContent}
-      renderItem={({ item }) => (
-        <View style={styles.messageItem}>
-          <View style={styles.messageMeta}>
-            <Text style={styles.messageAuthor}>{chymeHandle(item.username, item.userId)}</Text>
-            <Text style={styles.messageTime}>{formatTime(item.sentAtIso)}</Text>
+      renderItem={({ item }) => {
+        const isOwn = item.userId === currentUserId;
+        return (
+          <View style={styles.messageItem}>
+            <View style={styles.messageMeta}>
+              <Text style={styles.messageAuthor}>{chymeHandle(item.username, item.userId)}</Text>
+              <Text style={styles.messageTime}>{formatTime(item.sentAtIso)}</Text>
+            </View>
+            <Text style={styles.messageText}>{item.text}</Text>
+            {/* Edit / Delete on the member's own messages only. Edit is delete + repost (no in-place
+                edit), matching the web room chat and the Commons home chat. */}
+            {isOwn ? (
+              <View style={styles.messageActions}>
+                <TouchableOpacity
+                  style={styles.messageAction}
+                  onPress={() => onEditMessage(item.id, item.text)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit your message"
+                >
+                  <Pencil size={12} color={tokens.textMuted} strokeWidth={2} />
+                  <Text style={styles.messageActionText}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.messageAction}
+                  onPress={() => confirmDelete(item.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete your message"
+                >
+                  <Trash2 size={12} color="#F87171" strokeWidth={2} />
+                  <Text style={[styles.messageActionText, styles.messageActionDelete]}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
-          <Text style={styles.messageText}>{item.text}</Text>
-        </View>
-      )}
+        );
+      }}
       ListEmptyComponent={
         <View style={styles.empty}>
           <Text style={styles.emptyText}>No messages yet. Be the first to speak.</Text>
@@ -171,6 +219,10 @@ function makeStyles(t: ThemeTokens, accent: string) {
   messageAuthor: { fontSize: 13, fontWeight: '700', fontFamily: interFamily('700'), color: '#A7F3D0' },
   messageTime: { fontSize: 11, color: '#374151', fontFamily: interFamily('400') },
   messageText: { fontSize: 14, color: t.textSecondary, lineHeight: 21, fontFamily: interFamily('400') },
+  messageActions: { flexDirection: 'row', gap: 16, marginTop: 6 },
+  messageAction: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  messageActionText: { fontSize: 12, fontWeight: '600', fontFamily: interFamily('600'), color: t.textMuted },
+  messageActionDelete: { color: '#F87171' },
   empty: { flex: 1, alignItems: 'center', paddingVertical: 24 },
   emptyText: { fontSize: 14, color: t.textMuted, textAlign: 'center', fontFamily: interFamily('400') },
   inputRow: {

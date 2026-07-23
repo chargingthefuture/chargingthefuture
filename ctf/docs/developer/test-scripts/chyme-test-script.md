@@ -311,8 +311,9 @@ the explainer (only an admin still enters).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CH-18 · Delete and Edit your own room chat message
-**Role:** two members (A and B) · **Surfaces:** web (mobile-responsive)
+**Role:** two members (A and B) · **Surfaces:** web (mobile-responsive), android (native app, #1858)
 **Precondition:** both in the same room (main or private); each has sent at least one chat message.
+On Android, run it in the native app's Chyme Room Chat (open a room → Chat).
 **Steps:**
 1. As member A, confirm **Edit** and **Delete** show under your own messages but NOT under member B's.
 2. Tap **Delete** on one of your messages, confirm the prompt.
@@ -323,7 +324,11 @@ refresh). Edit deletes the original and loads its text into the composer — the
 the reposted message is a brand-new message with a new timestamp, not the original edited. Neither
 action appears on another member's messages, and the server rejects deleting someone else's message
 (403) — a member can only delete their own. This mirrors the Commons home chat.
-**Result:** web ☐ mobile ☐ — notes:
+**Android (#1858):** same behavior in the native app — Edit/Delete under your own messages only,
+Delete is confirm-gated (system dialog), Edit loads the text into the composer and deletes the
+original (delete + repost). Both call the same `DELETE /api/chyme/messages/[messageId]` route; the
+optimistic remove restores the message and shows a "Delete failed" alert if the request fails.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
 

@@ -81,6 +81,17 @@ export async function postChymeMessage(text: string): Promise<ChymeSendResponse>
   });
 }
 
+// Delete the signed-in member's OWN room chat message. Author-only is enforced server-side
+// (DELETE /api/chyme/messages/[messageId] → 403 for someone else's message, 404 for a missing id,
+// 400 for a non-UUID). CSRF-guarded. There is no in-place edit: the client's "Edit" loads the text
+// back into the composer and calls this delete, then the member sends a fresh message (new id/time).
+export async function deleteChymeMessage(messageId: string): Promise<{ ok: true }> {
+  return authedFetchJson(`/api/chyme/messages/${encodeURIComponent(messageId)}`, {
+    method: 'DELETE',
+    headers: { 'x-ctf-csrf': '1' },
+  });
+}
+
 export async function postChymeJoin(): Promise<ChymeJoinResponse> {
   return authedFetchJson('/api/chyme/join', {
     method: 'POST',
