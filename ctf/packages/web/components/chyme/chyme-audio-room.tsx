@@ -281,7 +281,10 @@ function ChymeAudioFrame({
         </div>
       )}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>{stage}</div>
+        {/* Natural height so the participant avatars always render (a cramped flex/overflow region
+            clipped the single avatar under the "On Stage" label). The page flows; chat stays a
+            bounded internal scroller. */}
+        <div style={{ padding: '20px 24px' }}>{stage}</div>
         {showChat && chatPanel}
       </div>
     </>
