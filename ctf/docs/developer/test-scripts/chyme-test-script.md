@@ -63,9 +63,12 @@ directly).
 1. Send a normal message.
 2. Try to send an empty message (only spaces).
 3. Try to send a very long message (over 1000 characters).
+4. Send a message containing a long unbroken string (e.g. a full URL with no spaces), then read the
+   Room Chat window on a phone-width screen.
 **Expected:** The normal message posts and persists. An empty/whitespace-only message is rejected
 (the `chyme.message.send` contract requires 1 to 1000 characters after trimming). A message over
-1000 characters is rejected by the same bound, not silently cut.
+1000 characters is rejected by the same bound, not silently cut. The long-URL message **wraps**
+inside the chat window — the window scrolls only up and down, never left/right (no horizontal scroll).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-3 · Read chat history with a page size
