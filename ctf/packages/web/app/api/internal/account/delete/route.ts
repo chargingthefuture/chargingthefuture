@@ -19,24 +19,25 @@ import { reportError } from 'lib/observability/report';
 // and ledgers are `retain` in the registry and settled by the existing reclaim flow.
 const OPERATOR_ACTOR_ID = 'account-deletion-operator';
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.ACCOUNT_DELETE_SECRET;
-  if (!secret || secret.trim().length === 0) {
-    return false;
-  }
+// Correctness-only check: the caller has already confirmed the secret is configured (the 503 guard in
+// POST is the single place that checks for presence), so this only compares the supplied Bearer token
+// against the known-non-empty secret.
+function isAuthorized(request: Request, secret: string): boolean {
   return request.headers.get('authorization') === `Bearer ${secret}`;
 }
 
 export async function POST(request: Request) {
   // Distinguish "not configured" (503 — secret missing in the app runtime) from "wrong/no secret"
-  // (403) so the workflow's error message can point at the right fix.
-  if (!process.env.ACCOUNT_DELETE_SECRET || process.env.ACCOUNT_DELETE_SECRET.trim().length === 0) {
+  // (403) so the workflow's error message can point at the right fix. This is the ONLY presence check;
+  // isAuthorized below assumes a configured secret and only verifies the supplied token.
+  const secret = process.env.ACCOUNT_DELETE_SECRET?.trim() ?? '';
+  if (secret.length === 0) {
     return NextResponse.json(
       { ok: false, code: 'account_delete_not_configured', message: 'ACCOUNT_DELETE_SECRET is not set in the app runtime.' },
       { status: 503 },
     );
   }
-  if (!isAuthorized(request)) {
+  if (!isAuthorized(request, secret)) {
     return NextResponse.json(
       { ok: false, code: 'account_delete_forbidden', message: 'Invalid account-delete secret.' },
       { status: 403 },
@@ -122,6 +123,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     reportError(error, { area: 'account', op: 'operator_delete', extra: { step } });
+    // `status` is the POLICY-gate decision (allow/deny), not the outcome — the request passed the
+    // secret gate, so it is 'allow' here too. Whether the operation actually completed is carried by
+    // `result` ('failure') and `errorCategory`. An audit query for policy denials keys off `status`
+    // = 'deny'; this failed-but-permitted request is correctly 'allow' + result 'failure'.
     logChymeAudit({
       pluginId: 'chyme',
       command: 'account.profile.delete.full',
