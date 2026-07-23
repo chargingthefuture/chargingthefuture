@@ -17,7 +17,7 @@ export function ChymeStage({
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
-    <div style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto', padding: '20px 24px' }}>
+    <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: t.FAINT, textTransform: 'uppercase', marginBottom: 16 }}>
           On Stage · {room.participants.length} Participants

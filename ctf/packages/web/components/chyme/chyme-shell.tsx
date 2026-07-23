@@ -18,13 +18,13 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
 
-  // Chyme is a fixed-height app shell (like Commons): the whole surface fills the viewport and does
-  // NOT grow the page. The compact top bar (back + brand) is pinned, and the live shell below it owns
-  // the remaining height and scrolls internally — so incoming chat scrolls inside the chat window
-  // instead of stretching the document taller.
+  // The compact top bar (back + brand) is pinned with position:sticky, and the page below flows
+  // naturally. The chat message list is capped (see chyme-chat-panel) so incoming messages scroll
+  // inside the chat window instead of stretching the document — without a hard viewport lock that
+  // clipped the chat's input off the bottom of the screen on phones.
   return (
-      <div style={{ height: '100dvh', background: t.BG, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
+      <div style={{ minHeight: '100dvh', background: t.BG }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <BackChevronButton accent={t.ACCENT} />
           <div style={{ width: 32, height: 32, borderRadius: 9, background: t.ACCENT_TINT_15, border: `1px solid ${t.ACCENT_TINT_40}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.ACCENT, flexShrink: 0 }}>
             <Radio size={18} />
