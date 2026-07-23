@@ -216,8 +216,8 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
     notifyTyping,
     typingUsers,
     sendMessage,
-    sendConciergeAsk,
-    starterPrompts,
+    askComic,
+    suggestionChips,
     rateComicAnswer,
     composerMentionsComic,
     consentModalOpen,
@@ -628,13 +628,14 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
       </div>
       )}
 
-      {/* Concierge "ask what you need" chips — persistent (shown whether or not the chat already has
-          messages), so a member can always tap one. Unlike the old hidden chips (#471) that merely
-          filled the composer with no answer, tapping here runs the local concierge (sendConciergeAsk):
-          it posts the question and an instant reply pointing at the best-matching feature, so there is
-          always an immediate response. The "@ Mentions" filter chip leads this row at every width
-          (owner directive, 2026-07-17; it previously floated alone above the desktop stream) —
-          same pill size as the question chips, sky-blue so it stays visually distinct; it scrolls
+      {/* One-tap suggestion chips (#471) — persistent (shown whether or not the chat already has
+          messages), so a member can always tap one. Each chip does the right thing on a single tap,
+          never just a composer pre-fill (the original #471 complaint): a NAVIGATE chip opens that
+          plugin directly (it is an action, not a question), and an ASK chip routes the question to the
+          @comic AI assistant, which shows the "reviewing for safety" pending card immediately and the
+          human-approved answer when it is ready. The "@ Mentions" filter chip leads this row at every
+          width (owner directive, 2026-07-17; it previously floated alone above the desktop stream) —
+          same pill size as the suggestion chips, sky-blue so it stays visually distinct; it scrolls
           with the row. The rail always renders because the chip is always present. */}
       <div className={styles.conciergeChipRail} role="group" aria-label="Ask what you need">
         {/* Mentions filter — icon-only "@" chip (the word was dropped to match the 📣 chip), so the
@@ -675,17 +676,30 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
         >
           <span aria-hidden="true">🔔</span>
         </button>
-        {notificationsOpen ? null : starterPrompts.map((prompt) => (
-          <button
-            key={prompt}
-            type="button"
-            className={styles.conciergeChip}
-            title={prompt}
-            onClick={() => sendConciergeAsk(prompt)}
-          >
-            {prompt}
-          </button>
-        ))}
+        {notificationsOpen
+          ? null
+          : suggestionChips.map((chip) =>
+              chip.kind === 'navigate' ? (
+                <Link
+                  key={chip.id}
+                  href={`/apps/${chip.slug}`}
+                  className={styles.conciergeChip}
+                  title={chip.label}
+                >
+                  {chip.label}
+                </Link>
+              ) : (
+                <button
+                  key={chip.id}
+                  type="button"
+                  className={styles.conciergeChip}
+                  title={chip.label}
+                  onClick={() => askComic(chip.question)}
+                >
+                  {chip.label}
+                </button>
+              ),
+            )}
       </div>
 
       {/* Composer + helpers hide while the notifications center is open — you read notifications
