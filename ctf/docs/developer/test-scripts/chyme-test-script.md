@@ -180,6 +180,30 @@ presence heartbeat and room poll running. Leaving the room clears the notificati
 
 ---
 
+### CH-10w · Web keep-alive: wake lock + Media Session while joined
+**Role:** member · **Surfaces:** web (mobile-responsive) · **Best-effort only — the browser cannot
+match the Android foreground service.** No web API holds a live call in a fully backgrounded or
+screen-locked tab; this check confirms the two things the web platform *can* do while the tab is open.
+**Precondition:** signed in in a browser that supports the Screen Wake Lock API (recent Chrome/Edge on
+Android or desktop; a second member speaking so there is audio).
+**Steps:**
+1. Join the Chyme audio room and confirm you hear the other member.
+2. Leave the tab foreground and idle — do not touch the device. Confirm the screen does **not** dim/
+   sleep on its usual timeout while you stay in the call.
+3. On a phone, check the lock screen / media notifications: a "Chyme audio room" media entry should be
+   present (Media Session), showing the call as active audio.
+4. Switch to another browser tab or minimize, then return. Confirm you are still in the call (the wake
+   lock auto-releases when hidden and re-acquires when the tab is visible again — no crash, no drop).
+5. On a browser without Wake Lock support (e.g. older Safari), repeat step 1: the room must still work
+   normally — the keep-alive simply no-ops.
+**Expected:** While joined and foreground, the screen stays awake and a Media Session entry shows the
+call as playing; hiding/showing the tab re-acquires the wake lock cleanly. Nothing changes on
+unsupported browsers. This does **not** keep the call alive when the tab is fully backgrounded or the
+phone is locked — that is Android-only (CH-10).
+**Result:** web ☐ mobile ☐ — notes:
+
+---
+
 ### CH-11 · Deletion also clears the Stream copy (privacy)
 **Role:** member · **Surfaces:** api/data (no in-app button — call the endpoint directly)
 **Precondition:** a test member who has sent at least one chat message (so there is a Stream copy).
