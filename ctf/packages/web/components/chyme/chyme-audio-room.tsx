@@ -243,7 +243,8 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
 }
 
 // Layout shared by the connecting/error state and the live state so the room
-// keeps a stable shape (stage + optional chat, controls pinned to the bottom).
+// keeps a stable shape. Controls (mute / raise hand / leave) are pinned to the TOP, above the stage
+// and chat, so a member can mute/unmute while talking without scrolling to the bottom of the chat.
 function ChymeAudioFrame({
   stage,
   showChat,
@@ -262,12 +263,8 @@ function ChymeAudioFrame({
   const t = getChymeTokens(theme);
   return (
     <>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>{stage}</div>
-        {showChat && chatPanel}
-      </div>
       {controls ?? (
-        <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+        <div style={{ padding: '16px 24px', borderBottom: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
           <button
             onClick={onLeave}
             style={{ padding: '10px 18px', borderRadius: 12, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
@@ -276,6 +273,10 @@ function ChymeAudioFrame({
           </button>
         </div>
       )}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>{stage}</div>
+        {showChat && chatPanel}
+      </div>
     </>
   );
 }
