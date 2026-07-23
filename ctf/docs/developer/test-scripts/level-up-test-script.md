@@ -327,6 +327,24 @@ Result: web ☐
 
 ---
 
+### LU-A1b — Admin review queues (open disputes, pending validations)
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** Signed in as seed admin. Ideally at least one open dispute (open one via LU-10) and/or one pending milestone validation exist.
+
+**Steps:**
+1. Open `/admin/level-up`.
+2. Find the "Open disputes" and "Pending milestone validations" sections below the KPI cards.
+
+**Expected:**
+- "Open disputes" lists each open dispute newest first — title, description, who opened it (a resolved name or a short `member <id>` fallback), and time. With none it shows "No open disputes."
+- "Pending milestone validations" lists each pending validation newest first (milestone, note if present, enrollment). With none it shows "No pending validations."
+- Both are read-only here (resolving/approving happens in the existing dispute and trainer-validation flows). The admin-landing tile shows a "new to review" dot when a dispute/validation arrived since you last opened the area; opening it clears the dot.
+
+Result: web ☐
+
+---
+
 ### LU-A2 — Admin credit grant — confirm step and grant-only constraint
 
 **Role:** admin · **Surfaces:** web, android

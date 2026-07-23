@@ -13,5 +13,11 @@ export default async function LevelUpAdminPage() {
 
   const panel = await getAdminPanelData();
 
-  return <LevelUpAdminShell kpis={panel.kpis} />;
+  return (
+    <LevelUpAdminShell
+      kpis={panel.kpis}
+      openDisputes={panel.openDisputes}
+      pendingValidations={panel.pendingValidations}
+    />
+  );
 }

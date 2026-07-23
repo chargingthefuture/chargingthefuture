@@ -34,6 +34,7 @@
 2. Dispute resolution endpoint with optional adjustment transfer.
 3. Admin panel with operational KPIs (enrollments, completions, avg days to first trainer payout) plus a read-only cohort overview (title, track, status, seats open, required deposit, trainer split, completion bonus) from `GET /api/level-up/cohorts`.
 4. Auto-cohort run control (issue #904): a "Run now" button that triggers the same auto-cohort creation the daily cron runs (reads the Workforce talent gaps and opens cohorts for the largest of them). The admin cohort overview shows `auto` and `needs trainer` badges on auto-created cohorts that have no human trainer yet.
+5. Review queues on the admin panel (read-only lists): **Open disputes** (`level_up_disputes` `status='open'`, newest first, with title, description, opener name, and time) and **Pending milestone validations** (`level_up_milestone_validations` `status='pending'`, newest first). Both are server-rendered from `getAdminPanelData()` (`listOpenDisputes` / `listPendingMilestoneValidations`) and drive the admin-landing "new to review" dot (an item created since the admin last opened this area). Resolving a dispute / approving a validation stays in the existing dispute and trainer-validation flows; these lists exist so the dot leads somewhere that shows what is new.
 
 ## Auto-Cohort Creation from Workforce Gaps (issue #904)
 
@@ -217,6 +218,7 @@ that exist today.
 
 ## Change Log
 
+- 2026-07-23: **Admin review queues for open disputes + pending validations, and the admin-landing dot.** The admin panel previously showed only KPIs, so open disputes and pending milestone validations had no admin surface. `getAdminPanelData()` now also returns `openDisputes` (`listOpenDisputes`, `level_up_disputes` `status='open'`, opener names resolved via Clerk) and `pendingValidations` (`listPendingMilestoneValidations`, `level_up_milestone_validations` `status='pending'`), both newest first and capped. The web admin shell (`lu-admin-shell.tsx`) renders them as two read-only review lists below the KPIs. LevelUp is now wired into the admin-landing "new to review" dot (`lib/admin/area-attention.ts`): a dot shows when a dispute/validation arrived since the admin last opened the area. Server-rendered (no new API route); no schema or contract change. Resolving/approving stays in the existing dispute/validation flows.
 - 2026-07-21: **Removed the orphaned member-shell right panel (resolves #1761).** The
   desktop-branch-collapse refactor (commit `279831a`) had already dropped the member shell's
   right-side panel from render — the enrollments summary now lives in the Progress tab — leaving
