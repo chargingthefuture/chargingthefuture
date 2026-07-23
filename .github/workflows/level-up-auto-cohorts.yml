@@ -1,11 +1,13 @@
 name: LevelUp — Auto Cohorts from Workforce Gaps
 
-# Stands up LevelUp training cohorts from the Workforce talent gaps once a day, without an admin
-# hand-building each cohort (issue #904). Workforce shows where the population is short of workers;
-# this asks production to turn the largest of those gaps into cohorts. The run is idempotent — a
-# cohort is never created twice for the same occupation (a partial unique index guards it), and
-# cohorts past their fixed term are closed — so a re-run can never double-create. The manual
-# "Run now" button on the LevelUp admin screen does the same thing as a fallback/override.
+# Keeps the LevelUp cohort-proposal queue and auto-cohort lifecycle current from the Workforce talent
+# gaps (issue #904, proposal-queue model, owner decision 2026-07-23). Workforce shows where the
+# population is short of workers; each day this asks production to (1) close any auto cohort past its
+# term and (2) — at most every generation_interval_days (default 90) — re-read the largest gaps into a
+# ranked, sector-diverse proposal queue. It does NOT create cohorts: an admin approves a proposal on the
+# LevelUp admin screen (choosing the term) to open one. The daily schedule keeps expiry-close frequent
+# while the cadence guard keeps proposal regeneration to ~every 90 days. The run is idempotent (cadence
+# guard + one pending proposal per occupation). The admin "Refresh proposals" button forces a re-read.
 #
 # What it needs (Settings → Secrets and variables → Actions):
 #   NEXT_PUBLIC_APP_URL secret — your production base URL (e.g. https://app.example.com). This is the

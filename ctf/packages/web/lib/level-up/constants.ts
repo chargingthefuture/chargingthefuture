@@ -35,7 +35,15 @@ export const LEVEL_UP_AUTO_COHORT_DEFAULTS = {
   defaultRequiredCredits: 0,
   defaultTrainerSplitPercent: 25,
   defaultCompletionBonusCredits: 0,
+  // Proposal-queue cadence (owner decision 2026-07-23): re-read the Workforce gaps into proposals at
+  // most this often. Cohort expiry is still checked on every run.
+  generationIntervalDays: 90,
 } as const;
+
+// Term choices offered to the admin when approving a proposal (owner decision 2026-07-23): the admin
+// picks one and the cohort opens with that end date. Months, not days, so the term reads naturally.
+export const LEVEL_UP_PROPOSAL_TERM_MONTHS = [1, 3, 5] as const;
+export type LevelUpProposalTermMonths = (typeof LEVEL_UP_PROPOSAL_TERM_MONTHS)[number];
 
 // Default milestone skeleton stamped onto every auto-created cohort (issue #904). Milestones are what
 // drive the escrow split, the trainer payout, and the completion bonus on release — without them an

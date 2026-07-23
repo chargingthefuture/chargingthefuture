@@ -33,45 +33,55 @@
 1. Admin credit grant endpoint (`mint`/`adjustment` path), wired to a real admin UI on both web and Android. Owner decision (2026-06-06): the admin UI is grant-only — it only ever grants ServiceCredits to a member ("earn or earn nothing") and exposes no remove/negative path; the amount input accepts positive values only and submit is disabled client-side for non-positive amounts. (The backend endpoint still technically accepts a signed amount so a mistaken grant can be corrected later, but the UI never sends a negative.) Every grant requires a member user ID, an amount greater than zero, a reason, and a governance ticket ID, and goes behind an explicit in-screen confirm step that restates exactly what will change ("add N credits to member X") before submit. The mutation carries the `x-ctf-csrf: '1'` header and is written to the audit log.
 2. Dispute resolution endpoint with optional adjustment transfer.
 3. Admin panel with operational KPIs (enrollments, completions, avg days to first trainer payout) plus a read-only cohort overview (title, track, status, seats open, required deposit, trainer split, completion bonus) from `GET /api/level-up/cohorts`.
-4. Auto-cohort run control (issue #904): a "Run now" button that triggers the same auto-cohort creation the daily cron runs (reads the Workforce talent gaps and opens cohorts for the largest of them). The admin cohort overview shows `auto` and `needs trainer` badges on auto-created cohorts that have no human trainer yet.
+4. Cohort proposal queue (issue #904, proposal-queue model — owner decision 2026-07-23): a ranked, sector-diverse list of proposed cohorts derived from the Workforce talent gaps. Each row shows the occupation, sector, and gap, with a 1/3/5-month **term** selector and **Approve & open** / **Dismiss** actions; a **Refresh proposals** button re-reads the current gaps. Approving opens a real cohort (the admin picks the term); dismissing removes the proposal. The admin cohort overview shows `auto` and `needs trainer` badges on cohorts opened from proposals that have no human trainer yet.
 5. Review queues on the admin panel (read-only lists): **Open disputes** (`level_up_disputes` `status='open'`, newest first, with title, description, opener name, and time) and **Pending milestone validations** (`level_up_milestone_validations` `status='pending'`, newest first). Both are server-rendered from `getAdminPanelData()` (`listOpenDisputes` / `listPendingMilestoneValidations`) and drive the admin-landing "new to review" dot (an item created since the admin last opened this area). Resolving a dispute / approving a validation stays in the existing dispute and trainer-validation flows; these lists exist so the dot leads somewhere that shows what is new.
 
-## Auto-Cohort Creation from Workforce Gaps (issue #904)
+## Cohort Proposals from Workforce Gaps (issue #904)
 
-LevelUp stands up training cohorts from the Workforce talent gaps without an admin hand-building each
-one. The behaviour is deliberately lean for the current small active user base; the gap×talent-spread
-algorithm that will later set cadence and caps is deferred (see the deferral issues in the Change Log).
+LevelUp turns the Workforce talent gaps into a **ranked, admin-approved proposal queue** — it does not
+create cohorts on its own. Owner decision (2026-07-23, small active user base): the admin opens and
+closes cohorts at their discretion by approving proposals; full auto-create and a demand-*prediction*
+algorithm (tracking Workforce trends over time to forecast demand, not just today's snapshot) are
+deferred. That future model is where `max_concurrent` becomes load-bearing again.
 
 **LevelUp ↔ Workforce read interface (the contract the issue asked for before build):**
 
 - LevelUp reads the gap signal **server-side, in-process** via `fetchOccupationGapReport()` from
   `lib/workforce/repository` — it does not call Workforce over HTTP. The return is the per-occupation
   list `{ jobTitleId, occupation, sector, skillLevel, target, recruited, gap }`, sorted largest-gap-first.
-- The read is **one-way**: LevelUp never writes Workforce, Directory, or Skills Taxonomy. The cohort's
-  `source_job_title_id` is the gap's `jobTitleId` (a Skills Taxonomy job title id), so a cohort ties to
-  the exact occupation with no fuzzy title match.
+- The read is **one-way**: LevelUp never writes Workforce, Directory, or Skills Taxonomy. A proposal's
+  and the resulting cohort's `source_job_title_id` is the gap's `jobTitleId` (a Skills Taxonomy job title
+  id), so it ties to the exact occupation with no fuzzy title match.
 - **Cadence:** a daily GitHub Actions cron (`.github/workflows/level-up-auto-cohorts.yml`) calls
-  `POST /api/internal/level-up/auto-cohorts/run` (CRON_SECRET bearer). An admin "Run now" button is the
-  manual fallback.
-- **Selection / caps (admin-editable in `level_up_auto_cohort_config`):** filter to the configured skill
-  level (default `Foundational`), require `gap ≥ min_gap_threshold`, take the `top_n` largest, cap total
-  concurrent auto cohorts at `max_concurrent` (default 3) and at `per_sector_cap` per sector (default 1).
-- **Lifecycle:** fixed term — each cohort's end date is start + the per-occupation term override (or
-  `default_term_days`). The run closes any auto cohort whose term has elapsed (status → `completed`).
-- **Economics (one global policy, admin-editable):** every auto cohort is stamped with the deposit
+  `POST /api/internal/level-up/auto-cohorts/run` (CRON_SECRET bearer). Each run closes expired auto
+  cohorts, and — at most every `generation_interval_days` (default 90) — re-reads the gaps into the
+  proposal queue. The admin **Refresh proposals** button forces a re-read on demand.
+- **Selection (admin-editable in `level_up_auto_cohort_config`):** filter to the configured skill level
+  (default `Foundational`), require `gap ≥ min_gap_threshold`, exclude occupations already covered by an
+  open/active auto cohort or already holding a pending proposal, then rank **sector-diverse**:
+  round-robin across sectors (each sector's occupations largest-gap-first; sectors ordered by their top
+  gap) up to `per_sector_cap` per sector, bounded by `top_n` for a reviewable queue. There is **no**
+  max-concurrent cap on proposals — the admin opens on demand.
+- **Approval → term:** the admin approves a proposal and picks a **1/3/5-month** term; a real cohort
+  opens with `start = today`, `end = today + term`, `auto_created = true`, and the `source_*` fields. If
+  the occupation already has an open auto cohort (the `uq_level_up_auto_cohort_active_source` guard
+  fires), the proposal is marked `superseded` and no second cohort opens.
+- **Economics (one global policy, admin-editable):** every approved cohort is stamped with the deposit
   (`default_required_credits`, default 0 = free to join — sets `allow_no_deposit`), the trainer split
   (`default_trainer_split_percent`, default 25%), the completion bonus (`default_completion_bonus_credits`,
   default 0), and a standard 3-milestone skeleton (`LEVEL_UP_AUTO_COHORT_DEFAULT_MILESTONES`: 40/30/30).
-  Milestones matter because the escrow split, the trainer payout, and the completion bonus only settle on
-  milestone release — a cohort with no milestones has no progression or payout path. Per-occupation
-  economic tuning is deferred (#1197).
-- **Idempotency:** a deterministic command idempotency key plus the partial unique index mean a re-run
-  never duplicates a cohort for an occupation; a concurrent duplicate is caught as the occupation being
-  already covered.
+  Per-occupation economic tuning is deferred (#1197).
+- **Lifecycle:** each approved cohort's end date is `start + term`. The daily run closes any auto cohort
+  whose term has elapsed (status → `completed`). Expiry is checked every run; proposal regeneration is
+  gated to the 90-day cadence.
+- **Queue upkeep / idempotency:** the partial unique index `uq_level_up_cohort_proposal_pending`
+  (one pending proposal per occupation) plus the cadence guard make repeat runs idempotent. On each
+  regeneration, pending proposals no longer valid (occupation now covered, or gap fell below the
+  threshold) are marked `superseded`; still-valid ones keep their row with a refreshed gap/rank.
 - **Pre-flight guard:** if no sector carries a positive `skills_taxonomy_sectors.workforce_share`,
   Workforce demand falls back to an even split and the "largest gap" order is meaningless, so the run
-  does nothing and records `skipped: no_workforce_share`.
-- **Recruiting:** an auto cohort opens with the scheduler as a placeholder owner and `status='open'`
+  generates nothing and records `skipped: no_workforce_share`.
+- **Recruiting:** an approved cohort opens with the scheduler as a placeholder owner and `status='open'`
   (so it shows in the existing cohort browse and trainees can enroll). A trainer claims it via
   `POST /api/level-up/cohorts/[cohortId]/claim-trainer`, which makes them the trainer of record; until
   then the cohort carries a derived `needsTrainer` flag.
@@ -81,8 +91,11 @@ algorithm that will later set cadence and caps is deferred (see the deferral iss
 - `GET /api/level-up/cohorts`
 - `POST /api/level-up/cohorts` — create a cohort; admin or trainer role (per `cohort.create` contract). The cohort list response now also carries `autoCreated`, `sourceJobTitleId`, `sourceSector`, and a derived `needsTrainer` flag.
 - `POST /api/level-up/cohorts/[cohortId]/claim-trainer` — a trainer or admin claims an auto-created cohort that has no human trainer yet, becoming its trainer of record (per `cohort.claim_trainer` contract).
-- `POST /api/level-up/admin/auto-cohorts/run` — admin-only manual trigger for the auto-cohort run (the fallback for the daily cron); CSRF-guarded (per `cohort.auto_create` contract).
-- `POST /api/internal/level-up/auto-cohorts/run` — cron-only auto-cohort run, guarded by `Authorization: Bearer ${CRON_SECRET}` (no user session). Reads the Workforce occupation gaps and stands up cohorts for the largest of them, then closes any auto cohort whose term has elapsed. Idempotent.
+- `POST /api/level-up/admin/auto-cohorts/run` — admin-only "Refresh proposals" action; force-regenerates the cohort proposal queue from the current Workforce gaps and closes expired auto cohorts; CSRF-guarded (per `cohort.auto_create` contract).
+- `POST /api/internal/level-up/auto-cohorts/run` — cron-only run, guarded by `Authorization: Bearer ${CRON_SECRET}` (no user session). Closes any auto cohort whose term has elapsed, and — at most every `generation_interval_days` (default 90) — re-reads the Workforce occupation gaps into the ranked, sector-diverse proposal queue. Does **not** create cohorts. Idempotent.
+- `GET /api/level-up/admin/cohort-proposals` — admin-only; the ranked pending proposal queue (per `cohort.proposal_approve`/`_dismiss` read surface).
+- `POST /api/level-up/admin/cohort-proposals/[proposalId]/approve` — admin-only; opens a cohort from a pending proposal with a chosen term of 1/3/5 months; CSRF-guarded (per `cohort.proposal_approve` contract).
+- `POST /api/level-up/admin/cohort-proposals/[proposalId]/dismiss` — admin-only; removes a pending proposal from the queue; CSRF-guarded (per `cohort.proposal_dismiss` contract).
 - `POST /api/level-up/enroll` — member or admin only; trainer-only accounts are blocked (per `enrollment.create` contract).
 - `POST /api/level-up/milestones/[milestoneId]/validate`
 - `POST /api/level-up/milestones/[milestoneId]/release`
@@ -117,8 +130,9 @@ Core tables:
 15. `level_up_trainers` — trainer directory profile. Columns: `id` (PK), `user_id` (unique), `display_name`, `headline`, `bio`, `tracks` (jsonb array), `status`, `created_at`, `updated_at`. Read-only browse surface.
 16. `level_up_achievements` — grant-only badge definitions. Columns: `id` (PK), `slug` (unique), `name`, `description`, `track`, `icon`, `credit_reward` (display-only grant amount), `sequence_no`, `status`, `created_at`, `updated_at`.
 17. `level_up_user_achievements` — per-user earned badge rows (grant-only: a row means earned). Columns: `id` (PK), `user_id`, `achievement_id`, `earned_at`, `granted_credits`, `source_reference`, `created_at`; unique on `(user_id, achievement_id)`.
-18. `level_up_auto_cohort_config` — singleton config for auto-cohort creation (issue #904). Columns: `singleton_key` (PK bool), `enabled`, `min_gap_threshold`, `max_concurrent` (default 3), `per_sector_cap` (default 1), `skill_level_filter` (default `Foundational`), `top_n` (default 10), `default_term_days` (default 90), `default_seats` (default 12), `default_required_credits` (default 0 = free to join), `default_trainer_split_percent` (default 25), `default_completion_bonus_credits` (default 0), `updated_by_user_id`, `updated_at`. Admin-editable. The economic columns are one global policy applied to every auto cohort; per-occupation tuning is deferred (#1197).
-19. `level_up_auto_cohort_term_overrides` — per-occupation fixed-term overrides (issue #904). Columns: `job_title_id` (PK), `occupation`, `term_days`, `updated_by_user_id`, `updated_at`. Falls back to `default_term_days` when an occupation has no override.
+18. `level_up_auto_cohort_config` — singleton config for the gap-driven proposal queue (issue #904). Columns: `singleton_key` (PK bool), `enabled` (gates proposal generation), `min_gap_threshold`, `max_concurrent` (default 3 — retained for the future full-auto model; **not** used by proposal generation), `per_sector_cap` (default 1 — diversity cap), `skill_level_filter` (default `Foundational`), `top_n` (default 10 — queue-size bound), `default_term_days` (default 90), `default_seats` (default 12), `default_required_credits` (default 0 = free to join), `default_trainer_split_percent` (default 25), `default_completion_bonus_credits` (default 0), `generation_interval_days` (default 90 — the cadence), `last_generated_at` (nullable — cadence guard), `updated_by_user_id`, `updated_at`. Admin-editable. The economic columns are one global policy applied to every approved cohort; per-occupation tuning is deferred (#1197).
+19. `level_up_auto_cohort_term_overrides` — legacy per-occupation fixed-term overrides (issue #904). Columns: `job_title_id` (PK), `occupation`, `term_days`, `updated_by_user_id`, `updated_at`. No longer consulted in the proposal model (the admin picks 1/3/5 months at approval); kept for the future full-auto model.
+20. `level_up_cohort_proposals` — the gap-driven cohort proposal queue (issue #904, proposal-queue model). Columns: `id` (PK), `source_job_title_id` (Skills Taxonomy job title — no hard FK, mirroring `level_up_cohorts.source_job_title_id`), `occupation`, `sector`, `skill_level`, `gap_at_proposal`, `rank`, `status` (`pending`/`approved`/`dismissed`/`superseded`), `generated_source`, `generated_at`, `decided_by_user_id`, `decided_at`, `created_cohort_id` (set when approved), `created_at`, `updated_at`. Partial unique index `uq_level_up_cohort_proposal_pending` on `source_job_title_id WHERE status='pending'` (at most one live proposal per occupation); `idx_level_up_cohort_proposal_pending_rank` on `(status, rank)` for the ranked read.
 
 Auto-cohort columns on `level_up_cohorts` (issue #904): `auto_created` (bool), `source_job_title_id` (UUID, references `skills_taxonomy_job_titles.id` by convention — no hard FK, mirroring `directory_profiles.job_title_id`), `source_sector` (text), `source_gap_at_creation` (numeric). A partial unique index `uq_level_up_auto_cohort_active_source` on `source_job_title_id WHERE auto_created = TRUE AND status IN ('open','active')` enforces at most one open/active auto cohort per occupation (the database-level idempotency guard).
 
@@ -218,6 +232,26 @@ that exist today.
 
 ## Change Log
 
+- 2026-07-23: **#904 delivered as an admin-approved cohort proposal queue (replaces auto-create).**
+  Owner decision (small active user base): instead of the daily cron creating cohorts outright, LevelUp
+  now re-reads the Workforce gaps on a cadence into a ranked, **sector-diverse** proposal queue that the
+  admin approves at their discretion. New table `level_up_cohort_proposals` (pending/approved/dismissed/
+  superseded; one pending per occupation). `level_up_auto_cohort_config` gains `generation_interval_days`
+  (default 90 — the re-read cadence) and `last_generated_at` (cadence guard); `max_concurrent` is no
+  longer used by generation (retained for the future full-auto model). `lib/level-up/auto-cohort.ts` was
+  rewritten: `generateCohortProposals` (sector-diverse round-robin, per-sector cap, supersede-stale),
+  `runAutoCohortProposals` (always close expired cohorts; regenerate only when forced or the 90-day
+  cadence is due), `approveCohortProposal` (admin picks a **1/3/5-month** term → opens a cohort;
+  double-approve-guarded; already-covered → superseded), `dismissCohortProposal`, `listPendingProposals`.
+  The two `auto-cohorts/run` routes were repointed (admin = force refresh, cron = cadence-gated). New
+  admin routes: `GET /api/level-up/admin/cohort-proposals`, `POST …/[proposalId]/approve`,
+  `POST …/[proposalId]/dismiss`. The admin shell (`lu-admin-shell.tsx`) replaces the "Run now" button
+  with a **Refresh proposals** action and a proposal queue (occupation · sector · gap, term selector,
+  Approve & open / Dismiss). New contracts `cohort.proposal_approve` / `cohort.proposal_dismiss` (command
+  / access-policy / audit); `cohort.auto_create` updated to the proposal-generation shape. Cron header
+  and `schema.demo.sql` regenerated. Deferred: full auto-create and the demand-prediction algorithm;
+  per-occupation economic tuning (#1197). The admin picks the term (not the trainer) and the queue is
+  Foundational-only for now — both admin-editable/revisitable.
 - 2026-07-23: **Admin review queues for open disputes + pending validations, and the admin-landing dot.** The admin panel previously showed only KPIs, so open disputes and pending milestone validations had no admin surface. `getAdminPanelData()` now also returns `openDisputes` (`listOpenDisputes`, `level_up_disputes` `status='open'`, opener names resolved via Clerk) and `pendingValidations` (`listPendingMilestoneValidations`, `level_up_milestone_validations` `status='pending'`), both newest first and capped. The web admin shell (`lu-admin-shell.tsx`) renders them as two read-only review lists below the KPIs. LevelUp is now wired into the admin-landing "new to review" dot (`lib/admin/area-attention.ts`): a dot shows when a dispute/validation arrived since the admin last opened the area. Server-rendered (no new API route); no schema or contract change. Resolving/approving stays in the existing dispute/validation flows.
 - 2026-07-21: **Removed the orphaned member-shell right panel (resolves #1761).** The
   desktop-branch-collapse refactor (commit `279831a`) had already dropped the member shell's
