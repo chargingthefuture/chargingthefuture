@@ -7,14 +7,16 @@
 //
 // Each <export-dir> is an unzipped Quora "content" export containing an
 // index.html. The script emits one JSON object per line:
-//   { type: "answer",  question, answer, created, source }
-//   { type: "post",    space, url, content, created, source }
-//   { type: "comment", content, created, source }
+//   { type: "answer",     question, answer, created, source }
+//   { type: "post",       space, url, content, created, source }
+//   { type: "comment",    content, created, source }
+//   { type: "submission", space, content, created, source }
 //
-// Included sections: Answers, Spaces Items, Answer/Question/Post Comments —
-// all public content authored by the account owner.
+// Included sections: Answers, Spaces Items, Answer/Question/Post Comments,
+// and Space Submissions (the owner's questions and posts submitted to other
+// spaces) — all public content authored by the account owner.
 // Excluded sections: Inbox Messages (private correspondence), Answer Drafts
-// (unpublished), Space Submissions (authorship not guaranteed), profile data.
+// (unpublished), profile data.
 //
 // A mechanical redaction pass removes emails, phone-number-like strings,
 // Signal group links, and cryptocurrency wallet addresses. This is NOT full
@@ -31,6 +33,7 @@ const INCLUDED_SECTIONS = new Set([
   "Answer Comments",
   "Question Comments",
   "Post Comments",
+  "Space Submissions",
 ]);
 
 function decodeEntities(s) {
@@ -89,8 +92,20 @@ function parseFile(html) {
     if (!INCLUDED_SECTIONS.has(sectionName)) continue;
     const items = section.split(/<h2[^>]*>/).slice(1);
     for (const item of items) {
-      const created = field(item, "Creation time");
-      if (sectionName === "Answers") {
+      const created = field(item, "Creation time") || field(item, "Time");
+      if (sectionName === "Space Submissions") {
+        // The owner's questions and posts submitted to other spaces. An item
+        // carries either a "Question" field or "Post title"/"Post content".
+        const space = field(item, "Space name");
+        const content = redact(
+          [field(item, "Question"), field(item, "Post title"), field(item, "Post content")]
+            .filter(Boolean)
+            .join("\n"),
+        );
+        if (content) {
+          records.push({ type: "submission", space, content, created, source: "quora_export" });
+        }
+      } else if (sectionName === "Answers") {
         const question = redact(field(item, "Question"));
         const answer = redact(field(item, "Content"));
         if (question && answer) {
