@@ -44,7 +44,7 @@ export function ChymeControls({
   const handStyle = toggleButtonStyle(t, handRaised, 'rgba(234,179,8,0.15)', 'rgba(234,179,8,0.4)', '#FDE047');
 
   return (
-    <div style={{ padding: '16px 24px', borderBottom: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, flexWrap: 'wrap' }}>
+    <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.BORDER}`, borderBottom: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, flexWrap: 'wrap' }}>
       <button onClick={onToggleMute} style={muteStyle}>
         {muted ? <MicOff size={16} /> : <Mic size={16} />}
         {muted ? 'Unmute' : 'Mute'}

@@ -221,7 +221,6 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <ChymeSidebar
           loading={loading}
-          room={room}
           joinState={joinState}
           onJoin={() => void handleJoin()}
           onRefresh={() => void refreshRoomAndMessages()}
