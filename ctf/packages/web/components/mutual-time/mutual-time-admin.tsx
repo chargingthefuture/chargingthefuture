@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CalendarClock, Copy, Check, Link2 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { MUTUAL_TIME_MEETING_PLUGINS } from 'lib/mutual-time/constants';
 import { meetingPluginName } from 'lib/mutual-time/meeting-plugin';
 import type { MutualTimeEvent } from 'lib/mutual-time/types';
@@ -123,11 +124,10 @@ export function MutualTimeAdmin() {
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TITLE }}>
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <CalendarClock size={22} style={{ color: t.ACCENT }} />
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Mutual Time</h1>
-        </div>
+      {/* Shared top nav (same as other pages): accent back chevron + brand icon + title, plus the
+          bug/settings/avatar actions cluster. */}
+      <MobileScreenHeader title="Mutual Time" accent={t.ACCENT} icon={<CalendarClock size={18} color={t.ACCENT} />} />
+      <div style={{ maxWidth: 860, margin: '0 auto', padding: '20px 20px 32px' }}>
         <p style={{ color: t.SUBTLE, fontSize: 14, marginTop: 4 }}>
           Create a one-link scheduling survey. Members vote in their own timezone; the app picks the time with the most overlap.
         </p>
@@ -156,7 +156,9 @@ export function MutualTimeAdmin() {
           </select>
           <p style={{ fontSize: 12, color: t.SUBTLE, margin: '4px 0 10px' }}>After the time is chosen, voters see a link directly to this plugin.</p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {/* Stack the two datetime-local fields: side by side they overflowed the phone-width column
+              (each datetime picker has a wide intrinsic min-width). Mobile-first = one column. */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
             <div>
               <label htmlFor="mt-opens" style={labelStyle}>Survey opens (optional)</label>
               <input id="mt-opens" type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} style={inputStyle} />

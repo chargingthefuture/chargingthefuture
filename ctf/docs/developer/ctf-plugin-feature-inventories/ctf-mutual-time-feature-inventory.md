@@ -166,8 +166,20 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   (correlated subquery) instead of one round-trip per event (#1809). (6) Comments added explaining why
   `createEvent` always stores `status='open'` (scheduled is derived by `effectiveState`) (#1803) and the
   deliberate slug-vs-id route split (public slug surface vs admin id surface) (#1808).
-
-## Build Checklist
+- 2026-07-22: **Admin-only surfacing + admin-form overflow fix.** (1) Mutual Time is now in
+  `ADMIN_ONLY_PLUGIN_SLUGS` (`lib/plugins/repository.ts`), so it no longer appears as a tile in a
+  non-admin member's apps launcher — creation is admin-only and members only ever reach an event via its
+  shared link, so a member-facing launcher tile was misleading. Admins still reach it from the admin area
+  grid (`/admin`, added in #1829) and their own launcher; `/apps/mutual-time` stays reachable (page
+  visibility unchanged). (2) The create-event form's "Survey opens / Survey closes" `datetime-local`
+  fields were a two-column grid that overflowed the phone-width column ("falling off the page"); they now
+  stack in a single column.
+- 2026-07-22: **Admin-only route + shared top nav.** `/apps/mutual-time` is now admin-only: the page
+  gates with `evaluatePluginAccess({ requiredRoles: ['admin'] })` and a non-admin gets a 404. The
+  member-facing explainer (`mutual-time-member-info.tsx`) is deleted — there was no use for it, since
+  members only ever reach an event through its shared link (`/mutual-time/<slug>`), never
+  `/apps/mutual-time`. The admin dashboard now renders the shared `MobileScreenHeader` top nav (accent
+  back chevron + brand icon + title + the bug/settings/avatar actions), matching every other page.
 
 Ordered, dependency-based (no phases). Each item done in this initial build.
 
