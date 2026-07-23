@@ -6,6 +6,8 @@ import {
   COMIC_ASKER_STREAM_LIMIT,
   COMIC_DEFAULT_PAGE,
   COMIC_DEFAULT_PAGE_SIZE,
+  COMIC_GROUNDING_MAX_ENTRY_CHARS,
+  COMIC_GROUNDING_TOP_K,
   COMIC_HOLDING_RESPONSE,
   COMIC_MAX_CORRECTION_LENGTH,
   COMIC_MAX_MESSAGE_LENGTH,
@@ -256,15 +258,26 @@ async function insertTurn(
     intent: string | null;
     nluConfidence: number | null;
     engine: ComicTurnEngine;
+    // comic_knowledge_entries ids injected as grounding when this bot draft was generated (#504).
+    // Omitted (empty) for user/human turns and ungrounded drafts.
+    groundingEntryIds?: string[];
   },
 ): Promise<string> {
   const inserted = await client.query<{ id: string }>(
     `
-      INSERT INTO comic_turns (conversation_id, role, body, intent, nlu_confidence, engine)
-      VALUES ($1::uuid, $2, $3, $4, $5, $6)
+      INSERT INTO comic_turns (conversation_id, role, body, intent, nlu_confidence, engine, grounding_entry_ids)
+      VALUES ($1::uuid, $2, $3, $4, $5, $6, $7::jsonb)
       RETURNING id
     `,
-    [input.conversationId, input.role, input.body, input.intent, input.nluConfidence, input.engine],
+    [
+      input.conversationId,
+      input.role,
+      input.body,
+      input.intent,
+      input.nluConfidence,
+      input.engine,
+      JSON.stringify(input.groundingEntryIds ?? []),
+    ],
   );
 
   return inserted.rows[0].id;
@@ -281,7 +294,64 @@ type OllamaDraft = {
   // auth, network, or not configured). Null on a real draft. Surfaced by the admin "Generate draft"
   // action so the reviewer sees the real cause instead of a blanket "unreachable".
   failureReason: string | null;
+  // comic_knowledge_entries ids injected as grounding for this draft (#504 retrieval step).
+  // Empty when retrieval found nothing (or failed) — the draft ran ungrounded.
+  groundingEntryIds: string[];
 };
+
+type ComicGroundingEntry = {
+  id: string;
+  title: string | null;
+  question: string | null;
+  content: string;
+};
+
+// Fetch the top-ranked knowledge-base entries for an asker question via Postgres full-text search
+// (#504 retrieval step). websearch_to_tsquery accepts free text safely, so the asker's words go in
+// unmodified. Never throws: retrieval is best-effort and an empty result simply means the draft
+// runs ungrounded, exactly as before this feature.
+async function retrieveComicGrounding(questionBody: string): Promise<ComicGroundingEntry[]> {
+  try {
+    const result = await queryDb<ComicGroundingEntry>(
+      `
+        SELECT id, title, question, content
+        FROM comic_knowledge_entries
+        WHERE active
+          AND to_tsvector('english', COALESCE(question, '') || ' ' || COALESCE(title, '') || ' ' || content)
+              @@ websearch_to_tsquery('english', $1)
+        ORDER BY ts_rank(
+          to_tsvector('english', COALESCE(question, '') || ' ' || COALESCE(title, '') || ' ' || content),
+          websearch_to_tsquery('english', $1)
+        ) DESC
+        LIMIT $2
+      `,
+      [questionBody, COMIC_GROUNDING_TOP_K],
+    );
+    return result.rows;
+  } catch (err) {
+    console.error('[comic/repository] knowledge retrieval failed, drafting ungrounded', err);
+    return [];
+  }
+}
+
+// Render retrieved entries as a grounding block appended to the model instructions: verified excerpts
+// of the community's own published answers, in the owner's voice, for the model to draw on.
+function buildGroundingPrompt(entries: ComicGroundingEntry[]): string {
+  const excerpts = entries
+    .map((entry, index) => {
+      const heading = entry.question || entry.title || `Excerpt ${index + 1}`;
+      const body = entry.content.slice(0, COMIC_GROUNDING_MAX_ENTRY_CHARS);
+      return `[${index + 1}] ${heading}\n${body}`;
+    })
+    .join('\n\n');
+  return (
+    '\n\nGround your answer in the following verified excerpts from this community\'s own ' +
+    'published answers and documentation. Prefer their guidance, facts, and tone over your ' +
+    'general knowledge. Do not invent details that contradict them. Do not mention the excerpts ' +
+    'or their numbering in your answer.\n\n' +
+    excerpts
+  );
+}
 
 // Draft an answer via Ollama, reusing the shared survivor guidance. The draft is captured but,
 // under the interim policy, NEVER returned to the asker — it is enqueued for human review.
@@ -293,8 +363,16 @@ async function generateComicDraft(questionBody: string): Promise<OllamaDraft> {
   let failureReason: string | null = null;
   if (isOllamaConfigured()) {
     try {
+      // Retrieval grounding (#504): look up the owner's past answers / knowledge entries relevant
+      // to this question and inject them into the model instructions, so the draft is grounded in our
+      // data instead of the base model's generic training. Best-effort — an empty result means the
+      // draft simply runs ungrounded.
+      const grounding = await retrieveComicGrounding(questionBody);
+      const systemPrompt =
+        grounding.length > 0 ? SURVIVOR_SYSTEM_PROMPT + buildGroundingPrompt(grounding) : SURVIVOR_SYSTEM_PROMPT;
+
       const result = await callOllamaChat([
-        { role: 'system', content: SURVIVOR_SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: questionBody },
       ]);
 
@@ -304,9 +382,10 @@ async function generateComicDraft(questionBody: string): Promise<OllamaDraft> {
         modelId: `ollama/${OLLAMA_MODEL}`,
         latencyMs: result.latencyMs,
         // token counts are length-based estimates for logging only, not billing
-        promptTokenCount: Math.max(24, Math.ceil(questionBody.length / 4)),
+        promptTokenCount: Math.max(24, Math.ceil((questionBody.length + systemPrompt.length) / 4)),
         completionTokenCount: Math.max(48, Math.ceil(result.content.length / 4)),
         failureReason: null,
+        groundingEntryIds: grounding.map((entry) => entry.id),
       };
     } catch (err) {
       console.error('[comic/repository] Ollama draft failed, using template fallback', err);
@@ -327,6 +406,7 @@ async function generateComicDraft(questionBody: string): Promise<OllamaDraft> {
     promptTokenCount: Math.max(24, Math.ceil(questionBody.length / 4)),
     completionTokenCount: Math.max(24, Math.ceil(body.length / 4)),
     failureReason,
+    groundingEntryIds: [],
   };
 }
 
@@ -363,6 +443,7 @@ async function logComicInference(
       promptTokenCount: input.draft.promptTokenCount,
       completionTokenCount: input.draft.completionTokenCount,
       totalTokenCount: input.draft.promptTokenCount + input.draft.completionTokenCount,
+      groundingEntryCount: input.draft.groundingEntryIds.length,
       status: 'completed',
     }),
   );
@@ -488,6 +569,7 @@ async function generateAndAttachDraft(input: {
         intent: null,
         nluConfidence: null,
         engine: draft.engine,
+        groundingEntryIds: draft.groundingEntryIds,
       });
       await client.query(
         `UPDATE comic_review_queue SET draft_turn_id = $2::uuid WHERE id = $1::uuid AND status = 'pending'`,
@@ -554,6 +636,7 @@ export async function regenerateComicDraft(
       intent: null,
       nluConfidence: null,
       engine: draft.engine,
+      groundingEntryIds: draft.groundingEntryIds,
     });
     await client.query(
       `UPDATE comic_review_queue SET draft_turn_id = $2::uuid WHERE id = $1::uuid AND status = 'pending'`,

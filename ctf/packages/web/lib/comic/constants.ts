@@ -25,6 +25,11 @@ export const COMIC_MAX_MESSAGE_LENGTH = 600;
 export const COMIC_MAX_CORRECTION_LENGTH = 4000;
 export const COMIC_MAX_REASON_LENGTH = 600;
 
+// Retrieval grounding (#504): how many knowledge-base entries are injected into the draft prompt,
+// and the per-entry excerpt cap that keeps the grounded prompt bounded.
+export const COMIC_GROUNDING_TOP_K = 4;
+export const COMIC_GROUNDING_MAX_ENTRY_CHARS = 1200;
+
 export const COMIC_DEFAULT_PAGE = 1;
 export const COMIC_DEFAULT_PAGE_SIZE = 20;
 export const COMIC_MAX_PAGE_SIZE = 100;
