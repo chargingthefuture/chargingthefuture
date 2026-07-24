@@ -92,7 +92,7 @@ async function handleUpsert(request: Request) {
   }
 
   try {
-    const profile = await upsertOwnProfile(gate.auth.userId, input);
+    const { profile, quoraUrlKept } = await upsertOwnProfile(gate.auth.userId, input);
 
     logDirectoryAudit({
       actorId: gate.auth.userId,
@@ -105,9 +105,35 @@ async function handleUpsert(request: Request) {
       errorCategory: null,
     });
 
-    return NextResponse.json({ ok: true, profile }, { status: 200 });
+    // quoraUrlKept === true means the member submitted an empty/invalid Quora URL and we kept their
+    // previous one (the URL can never be emptied). The client shows a note when this is set.
+    return NextResponse.json({ ok: true, profile, quoraUrlKept }, { status: 200 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown';
+
+    // A first-time profile with no valid Quora URL: the Quora profile link is required to appear in
+    // the directory (it is the only social proof), so this is a client validation problem, not a fault.
+    if (message === 'directory_quora_url_required') {
+      logDirectoryAudit({
+        actorId: gate.auth.userId,
+        command: 'directory.profile.upsert',
+        status: 'deny',
+        reason: 'quora_url_required',
+        targetType: 'profile',
+        targetId: gate.auth.userId,
+        result: 'failure',
+        errorCategory: 'validation',
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          code: DIRECTORY_ERROR_CODE.invalidPayload,
+          message: 'A valid Quora profile URL is required (e.g. https://www.quora.com/profile/Your-Name).',
+        },
+        { status: 400 },
+      );
+    }
+
     const isSelectorIssue = message.includes('directory_') && message.endsWith('_not_found');
 
     // A selector-not-found is a client validation problem; anything else is an

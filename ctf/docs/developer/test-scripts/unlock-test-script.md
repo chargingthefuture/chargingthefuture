@@ -172,6 +172,23 @@ support-only, and stamps `reward_revoked_at` so reconcile never re-grants it. Bo
 admin-gated, CSRF-guarded (`x-ctf-csrf: '1'`), and audited.
 **Result:** web ☐ — notes:
 
+### UNLOCK-A5b · Quora URL history + change-count, then revoke a gamer
+**Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
+**Precondition:** a test member who was approved, then changed their Quora URL in the Directory at least
+once (and once tried to clear it — an empty submission that was kept). See DIR-4c to produce the changes.
+**Steps:**
+1. Open `/admin/unlock`. On that member's row, confirm a **"URL changed N×"** badge appears when they
+   changed it more than once.
+2. Click **URL history**. Confirm the panel lists each change newest-first: previous → new URL, the time,
+   and the source (set at onboarding / changed by member in Directory / changed by an admin).
+3. If the member is clearly gaming the low-bar proof, use **Revoke reward** (UNLOCK-A5) as the response.
+**Expected:** The badge and history reflect `directory_quora_url_history` — the onboarding baseline plus
+every Directory self-edit and admin edit. The history is a read (`GET /api/unlock/admin/quora-history`),
+admin-gated and audited (`unlock.admin.quora.history.read`). It is a **review aid only** — a URL change is
+not by itself proof of anything (Quora sometimes deletes accounts), so there is no automatic flag or
+penalty; the admin decides and Revoke is the manual action.
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A6 · Search the submissions list
 **Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
 **Precondition:** the All view has several submissions (the demo seed / a real queue with 30+ rows).

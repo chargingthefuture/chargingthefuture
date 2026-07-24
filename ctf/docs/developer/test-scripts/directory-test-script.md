@@ -166,6 +166,22 @@ profile"** (its submit button reads **"Create profile"**) when the member has no
 until both first name and country are set, and after saving the new profile appears in the list.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-4c · Quora profile URL can be changed but never emptied
+**Role:** member with a directory profile · **Surfaces:** web (mobile-responsive)
+**Precondition:** signed in as a member whose profile already has a valid Quora URL.
+**Steps:**
+1. Open **Edit my profile**. Confirm the Quora field reads **"(required)"** and shows the helper note
+   that the URL can't be removed but can be replaced.
+2. Clear the Quora URL field entirely and save.
+3. Put a non-Quora / malformed value (e.g. `not a url` or `https://example.com/x`) in the field and save.
+4. Paste a NEW valid Quora profile URL (e.g. `https://www.quora.com/profile/New-Name`) and save.
+**Expected:** In steps 2 and 3 the rest of the edit saves, but the Quora URL is **kept** at its previous
+value (never emptied/invalid) and a note appears: "Your Quora profile URL can't be removed — your
+previous link was kept." In step 4 the new valid URL saves and replaces the old one. A member creating a
+first profile with no valid Quora URL is rejected with "A valid Quora profile URL is required." Each real
+change is recorded in the Quora URL history (visible to admins in the Unlock queue — see UNL test script).
+**Result:** web ☐ mobile ☐ — notes:
+
 ### DIR-5 · Read announcements
 **Role:** member · **Surfaces:** all
 **Steps:**

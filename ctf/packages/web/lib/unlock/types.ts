@@ -23,6 +23,10 @@ export type UnlockSubmission = {
   // How many accounts (including this one) have claimed the same normalized Quora URL. Only populated
   // by the admin queue list; 1 means no duplicate. Undefined where not computed.
   sharedUrlAccountCount?: number;
+  // How many times this member's Quora URL has changed (directory_quora_url_history). Only populated by
+  // the admin queue list. 0/1 is normal; a higher count is a signal to open the history and review —
+  // never an automatic flag (Quora sometimes deletes accounts, so re-profiling is legitimate).
+  quoraUrlChangeCount?: number;
   createdAt: string;
   updatedAt: string;
 };

@@ -62,6 +62,31 @@ function StatBlock({ label, value, accent }: { label: string; value: number; acc
   );
 }
 
+// One Quora URL change from the admin history read (GET /api/unlock/admin/quora-history). Kept local
+// so the client component does not import the server repository module.
+type QuoraHistoryEntry = {
+  id: string;
+  userId: string;
+  previousUrl: string | null;
+  newUrl: string;
+  changedByUserId: string;
+  source: 'directory_self' | 'directory_admin' | 'unlock_onboarding';
+  createdAtIso: string;
+};
+
+function historySourceLabel(source: QuoraHistoryEntry['source']): string {
+  switch (source) {
+    case 'unlock_onboarding':
+      return 'set at onboarding';
+    case 'directory_self':
+      return 'changed by member in Directory';
+    case 'directory_admin':
+      return 'changed by an admin';
+    default:
+      return source;
+  }
+}
+
 export function UnlockAdminShell({
   dashboard,
   submissions: initialSubmissions,
@@ -90,6 +115,38 @@ export function UnlockAdminShell({
   // Which submission is awaiting an explicit revoke confirmation (revoke burns the reward, so it is a
   // money action — never one-click).
   const [confirmRevokeId, setConfirmRevokeId] = useState<number | null>(null);
+  // Quora URL history, loaded on demand per member. Which member's history panel is open, plus a
+  // per-member cache and loading marker. A member who changed their social-proof URL after approval
+  // (or tried to remove it — an empty submission keeps the previous URL) shows up here.
+  const [historyOpenUser, setHistoryOpenUser] = useState<string | null>(null);
+  const [historyByUser, setHistoryByUser] = useState<Record<string, QuoraHistoryEntry[]>>({});
+  const [historyLoadingUser, setHistoryLoadingUser] = useState<string | null>(null);
+
+  // Open/close a member's Quora URL history, fetching it the first time.
+  async function toggleHistory(userId: string): Promise<void> {
+    if (historyOpenUser === userId) {
+      setHistoryOpenUser(null);
+      return;
+    }
+    setHistoryOpenUser(userId);
+    if (historyByUser[userId]) {
+      return;
+    }
+    setHistoryLoadingUser(userId);
+    try {
+      const res = await fetch(`/api/unlock/admin/quora-history?userId=${encodeURIComponent(userId)}`, { cache: 'no-store' });
+      const data = (await res.json().catch(() => null)) as { history?: QuoraHistoryEntry[]; message?: string } | null;
+      if (res.ok && Array.isArray(data?.history)) {
+        setHistoryByUser((current) => ({ ...current, [userId]: data.history as QuoraHistoryEntry[] }));
+      } else {
+        setError(data?.message ?? 'Could not load Quora URL history.');
+      }
+    } catch {
+      setError('Could not load Quora URL history.');
+    } finally {
+      setHistoryLoadingUser(null);
+    }
+  }
 
   const visible = tab === 'pending' ? submissions.filter((s) => s.reviewStatus === 'pending') : submissions;
   // Client-side search over the loaded page so an admin can find a submission by Quora URL, user id,
@@ -462,6 +519,18 @@ export function UnlockAdminShell({
                           Shared by {s.sharedUrlAccountCount}
                         </span>
                       ) : null}
+                      {s.quoraUrlChangeCount && s.quoraUrlChangeCount > 1 ? (
+                        <span title="This member has changed their Quora URL more than once — open the history to review. A change is not itself a problem (Quora sometimes deletes accounts)." style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}>
+                          URL changed {s.quoraUrlChangeCount}×
+                        </span>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => void toggleHistory(s.userId)}
+                        style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, cursor: 'pointer' }}
+                      >
+                        {historyOpenUser === s.userId ? 'Hide URL history' : 'URL history'}
+                      </button>
                       {s.rewardWithheldAt && !s.incentiveGrantedAt && !s.rewardRevokedAt ? (
                         <span title="Another account already holds this Quora identity's reward — held for your determination" style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}>
                           Reward withheld
@@ -487,6 +556,37 @@ export function UnlockAdminShell({
                   </div>
                 ) : null}
                 <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 4 }}>User: {s.userId}</div>
+                {historyOpenUser === s.userId ? (
+                  <div style={{ margin: '6px 0 10px', padding: 10, borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: t.TITLE, marginBottom: 6 }}>Quora URL history</div>
+                    {historyLoadingUser === s.userId && !historyByUser[s.userId] ? (
+                      <div style={{ fontSize: 12, color: t.MUTED }}>Loading…</div>
+                    ) : (historyByUser[s.userId]?.length ?? 0) === 0 ? (
+                      <div style={{ fontSize: 12, color: t.MUTED }}>No URL changes recorded for this member.</div>
+                    ) : (
+                      <ol style={{ margin: 0, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {historyByUser[s.userId]?.map((entry) => (
+                          <li key={entry.id} style={{ fontSize: 12, color: t.MUTED }}>
+                            <div style={{ color: t.SUBTLE, marginBottom: 2 }}>
+                              {new Date(entry.createdAtIso).toLocaleString()} · {historySourceLabel(entry.source)}
+                            </div>
+                            {entry.previousUrl ? (
+                              <div style={{ wordBreak: 'break-all' }}>
+                                <span style={{ color: t.SUBTLE }}>from</span> {entry.previousUrl}
+                              </div>
+                            ) : null}
+                            <div style={{ wordBreak: 'break-all' }}>
+                              <span style={{ color: t.SUBTLE }}>{entry.previousUrl ? 'to' : 'set'}</span>{' '}
+                              <a href={entry.newUrl} target="_blank" rel="noopener noreferrer" style={{ color: t.ACCENT, fontWeight: 600 }}>
+                                {entry.newUrl}
+                              </a>
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                ) : null}
                 <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 10 }}>
                   Submitted {new Date(s.createdAt).toLocaleDateString()} · window expires {new Date(s.unlockWindowExpiresAt).toLocaleDateString()} · tier {s.accessTier}
                 </div>
