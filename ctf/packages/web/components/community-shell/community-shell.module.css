@@ -2677,10 +2677,11 @@
 .comicConsentTrigger {
   font-size: 13px;
   color: #A78BFA;
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  /* Normal text flow (NOT flex): the sentence and the @comic token must read as one line and wrap
+     together. As a flex row the wrapped text and the token became two items, floating @comic to the
+     right, vertically centered against the wrapped subtitle. */
   margin: 2px 0 0;
+  line-height: 1.4;
 }
 
 .comicConsentTriggerToken {
