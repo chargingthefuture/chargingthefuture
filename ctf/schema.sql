@@ -2681,6 +2681,37 @@ ALTER TABLE IF EXISTS directory_profile_change_events ADD COLUMN IF NOT EXISTS t
 ALTER TABLE IF EXISTS directory_profile_change_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS directory_profile_change_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Append-only history of a member's Quora profile URL. The Quora URL is the only social-proof signal
+-- and can be changed after a member is approved (Directory is the only post-unlock place it can be
+-- edited). A member may replace it with a new valid Quora URL but can never empty it (see
+-- upsertOwnProfile — an empty/invalid submission keeps the previous URL). Every real change is
+-- recorded here (first set at Unlock onboarding, later edits in Directory, and any admin edit) so an
+-- admin can review the trail in the Unlock queue and revoke someone gaming the low-bar social proof.
+-- Changing a URL is NOT by itself a red flag — Quora sometimes deletes an account and the member must
+-- re-profile — so this is a watch/audit trail for a human, never an automated flag.
+CREATE TABLE IF NOT EXISTS directory_quora_url_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  previous_url TEXT,
+  new_url TEXT NOT NULL,
+  previous_url_normalized TEXT,
+  new_url_normalized TEXT NOT NULL,
+  changed_by_user_id TEXT NOT NULL,
+  source TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS previous_url TEXT;
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS new_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS previous_url_normalized TEXT;
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS new_url_normalized TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS changed_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_directory_quora_url_history_user
+  ON directory_quora_url_history (user_id, created_at DESC);
+
 -- Suppression list for the "remove at the person's request" takedown (distinct from the ordinary
 -- unclaimed-profile delete, which is for duplicates/accidents and does NOT block re-adding). When an
 -- admin takes down a community-generated profile because the (accountless) person asked to be removed,

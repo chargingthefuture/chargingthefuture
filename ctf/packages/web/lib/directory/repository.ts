@@ -475,13 +475,147 @@ export async function getOwnProfile(userId: string): Promise<DirectoryProfile | 
   return withDbTransaction(async (client) => loadProfileByUser(client, userId));
 }
 
-export async function upsertOwnProfile(userId: string, input: DirectoryProfileInput): Promise<DirectoryProfile> {
+export type QuoraUrlChangeSource = 'directory_self' | 'directory_admin' | 'unlock_onboarding';
+
+export type QuoraUrlHistoryEntry = {
+  id: string;
+  userId: string;
+  previousUrl: string | null;
+  newUrl: string;
+  changedByUserId: string;
+  source: QuoraUrlChangeSource;
+  createdAtIso: string;
+};
+
+// Append-only record of a Quora profile URL change (directory_quora_url_history). Written inside the
+// same transaction as the profile update, so the trail can never drift from the stored URL. Recorded
+// only for a real change (a new valid URL replacing the previous one), from any source: the member's
+// own Directory edit, an admin edit, or the first capture at Unlock onboarding. Exported so the Unlock
+// onboarding path can record the first URL through the same trail.
+export async function recordQuoraUrlChange(
+  client: PoolClient,
+  input: {
+    userId: string;
+    previousUrl: string | null;
+    newUrl: string;
+    changedByUserId: string;
+    source: QuoraUrlChangeSource;
+  },
+): Promise<void> {
+  await client.query(
+    `
+      INSERT INTO directory_quora_url_history
+        (user_id, previous_url, new_url, previous_url_normalized, new_url_normalized, changed_by_user_id, source)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `,
+    [
+      input.userId,
+      input.previousUrl,
+      input.newUrl,
+      normalizeQuoraProfileUrl(input.previousUrl),
+      normalizeQuoraProfileUrl(input.newUrl),
+      input.changedByUserId,
+      input.source,
+    ],
+  );
+}
+
+// queryDb (non-transactional) variant for a caller outside a directory transaction — the Unlock
+// onboarding path records the first captured URL through this so the history trail includes the
+// baseline. Best-effort at the call site; a failure here must never block onboarding.
+export async function recordQuoraUrlChangeStandalone(input: {
+  userId: string;
+  previousUrl: string | null;
+  newUrl: string;
+  changedByUserId: string;
+  source: QuoraUrlChangeSource;
+}): Promise<void> {
+  await queryDb(
+    `
+      INSERT INTO directory_quora_url_history
+        (user_id, previous_url, new_url, previous_url_normalized, new_url_normalized, changed_by_user_id, source)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `,
+    [
+      input.userId,
+      input.previousUrl,
+      input.newUrl,
+      normalizeQuoraProfileUrl(input.previousUrl),
+      normalizeQuoraProfileUrl(input.newUrl),
+      input.changedByUserId,
+      input.source,
+    ],
+  );
+}
+
+// The number of Quora URL changes recorded for each of the given users — a cheap signal for the
+// Unlock queue so an admin can spot at a glance who has changed their social-proof URL and how often.
+export async function countQuoraUrlChangesByUser(userIds: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (userIds.length === 0) {
+    return counts;
+  }
+  const result = await queryDb<{ user_id: string; change_count: string }>(
+    `
+      SELECT user_id, COUNT(*)::text AS change_count
+      FROM directory_quora_url_history
+      WHERE user_id = ANY($1::text[])
+      GROUP BY user_id
+    `,
+    [userIds],
+  );
+  for (const row of result.rows) {
+    counts.set(row.user_id, Number.parseInt(row.change_count, 10) || 0);
+  }
+  return counts;
+}
+
+// The full Quora URL change history for one member, newest first — read by the Unlock admin queue so
+// an admin can review whether someone changed or tried to remove their social-proof URL.
+export async function listQuoraUrlHistory(userId: string): Promise<QuoraUrlHistoryEntry[]> {
+  const result = await queryDb<{
+    id: string;
+    user_id: string;
+    previous_url: string | null;
+    new_url: string;
+    changed_by_user_id: string;
+    source: QuoraUrlChangeSource;
+    created_at: Date;
+  }>(
+    `
+      SELECT id, user_id, previous_url, new_url, changed_by_user_id, source, created_at
+      FROM directory_quora_url_history
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+    `,
+    [userId],
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    previousUrl: row.previous_url,
+    newUrl: row.new_url,
+    changedByUserId: row.changed_by_user_id,
+    source: row.source,
+    createdAtIso: new Date(row.created_at).toISOString(),
+  }));
+}
+
+export type UpsertOwnProfileResult = {
+  profile: DirectoryProfile;
+  // True when the member submitted an empty/invalid Quora URL and we KEPT their previous one instead
+  // of clearing it — the client shows a note explaining the URL can't be removed.
+  quoraUrlKept: boolean;
+};
+
+export async function upsertOwnProfile(userId: string, input: DirectoryProfileInput): Promise<UpsertOwnProfileResult> {
   return withDbTransaction(async (client) => {
     const firstName = normalizeText(input.firstName);
     const lastName = normalizeNullableText(input.lastName);
     const headline = normalizeNullableText(input.headline);
     const bio = normalizeNullableText(input.bio);
-    const profileUrl = normalizeNullableText(input.profileUrl);
+    const submittedProfileUrl = normalizeNullableText(input.profileUrl);
     const sectorId = input.sectorId ?? null;
     const jobTitleId = input.jobTitleId ?? null;
     const skillIds = normalizeSkillIds(input.skillIds);
@@ -495,16 +629,36 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
     const country = normalizeNullableText(input.country);
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
-    // A Quora URL taken down at the person's request stays blocked until an admin lifts it — this
-    // holds even for a member editing their own profile, so a suppressed URL cannot slip back in.
-    await assertQuoraUrlNotSuppressed(client, profileUrl);
 
-    const existing = await client.query<{ id: string }>(
-      'SELECT id FROM directory_profiles WHERE claimed_by_user_id = $1 LIMIT 1',
+    const existing = await client.query<{ id: string; profile_url: string | null }>(
+      'SELECT id, profile_url FROM directory_profiles WHERE claimed_by_user_id = $1 LIMIT 1',
       [userId],
     );
 
     let profileId = existing.rows[0]?.id;
+    const previousUrl = existing.rows[0]?.profile_url ?? null;
+
+    // The Quora profile URL is the only social proof and can never be emptied. A member may replace it
+    // with a NEW valid Quora URL — common and legitimate (Quora sometimes deletes an account and the
+    // member has to re-profile) — but an empty or invalid submission KEEPS the previous URL rather than
+    // clearing it, so an approved member cannot remove it to shed their identity. A first-time profile
+    // must supply a valid one. Changing the URL is not itself a red flag; the history table records the
+    // change for a human to review, it is never auto-penalized.
+    const submittedNormalized = normalizeQuoraProfileUrl(submittedProfileUrl);
+    let profileUrl: string;
+    let quoraUrlKept = false;
+    if (submittedNormalized) {
+      profileUrl = submittedNormalized;
+    } else if (previousUrl && previousUrl.trim().length > 0) {
+      profileUrl = previousUrl;
+      quoraUrlKept = submittedProfileUrl !== previousUrl;
+    } else {
+      throw new Error('directory_quora_url_required');
+    }
+
+    // A Quora URL taken down at the person's request stays blocked until an admin lifts it — this
+    // holds even for a member editing their own profile, so a suppressed URL cannot slip back in.
+    await assertQuoraUrlNotSuppressed(client, profileUrl);
 
     if (profileId) {
       await client.query(
@@ -610,6 +764,18 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
       [userId, profileId],
     );
 
+    // Record a Quora URL change (first set or a replacement) in the append-only history so an admin can
+    // review the trail in the Unlock queue. Only a real change is recorded — a kept/unchanged URL is not.
+    if (profileUrl !== previousUrl) {
+      await recordQuoraUrlChange(client, {
+        userId,
+        previousUrl,
+        newUrl: profileUrl,
+        changedByUserId: userId,
+        source: 'directory_self',
+      });
+    }
+
     const refreshed = await client.query<DirectoryProfileRow>(
       `
         SELECT
@@ -646,7 +812,8 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
       [profileId],
     );
 
-    return mapProfileRow(client, refreshed.rows[0]);
+    const profile = await mapProfileRow(client, refreshed.rows[0]);
+    return { profile, quoraUrlKept };
   });
 }
 
@@ -1238,6 +1405,8 @@ export async function updateAdminProfile(
     // member-owned payment addresses, and older clients may not send location yet.
     const existing = await client.query<{
       id: string;
+      claimed_by_user_id: string | null;
+      profile_url: string | null;
       venmo_address: string | null;
       monero_address: string | null;
       bitcoin_address: string | null;
@@ -1246,7 +1415,7 @@ export async function updateAdminProfile(
       state: string | null;
       country: string | null;
     }>(
-      `SELECT id, venmo_address, monero_address, bitcoin_address, service_credits_address, city, state, country
+      `SELECT id, claimed_by_user_id, profile_url, venmo_address, monero_address, bitcoin_address, service_credits_address, city, state, country
        FROM directory_profiles WHERE id::text = $1`,
       [profileId],
     );
@@ -1326,6 +1495,18 @@ export async function updateAdminProfile(
       `,
       [actorId, profileId],
     );
+
+    // Record an admin-made Quora URL change for a claimed profile (non-empty new URL, actually changed)
+    // so the Unlock queue's history trail is complete regardless of who changed it.
+    if (current.claimed_by_user_id && profileUrl && profileUrl !== current.profile_url) {
+      await recordQuoraUrlChange(client, {
+        userId: current.claimed_by_user_id,
+        previousUrl: current.profile_url,
+        newUrl: profileUrl,
+        changedByUserId: actorId,
+        source: 'directory_admin',
+      });
+    }
 
     const result = await client.query<DirectoryProfileRow>(
       `

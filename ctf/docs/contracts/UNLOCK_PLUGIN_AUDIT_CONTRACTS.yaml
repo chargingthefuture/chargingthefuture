@@ -64,6 +64,27 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: unlock
+    command: unlock.admin.quora.history.read
+    commandVersion: 1.0.0
+    purpose: moderation_review
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - directory_quora_url_history
+    targetContext:
+      adminUserId: user_identifier
+      targetUserId: user_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: unlock
     command: unlock.admin.submission.review
     commandVersion: 1.0.0
     purpose: moderation_and_unlock_transition

@@ -1,4 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
+import { reportError } from 'lib/observability/report';
+import { recordQuoraUrlChangeStandalone } from 'lib/directory/repository';
 import type {
   CreateUnlockSubmissionInput,
   ReviewUnlockSubmissionInput,
@@ -42,6 +44,8 @@ type UnlockSubmissionRow = {
   reward_revoked_at: Date | null;
   // Only present on the admin queue list (a per-URL COUNT). Undefined elsewhere.
   shared_url_account_count?: string;
+  // Only present on the admin queue list: how many times this member changed their Quora URL.
+  quora_url_change_count?: string;
   created_at: Date;
   updated_at: Date;
 };
@@ -72,6 +76,9 @@ function mapUnlockSubmission(row: UnlockSubmissionRow): UnlockSubmission {
     rewardRevokedAt: row.reward_revoked_at ? row.reward_revoked_at.toISOString() : null,
     ...(row.shared_url_account_count !== undefined
       ? { sharedUrlAccountCount: Number(row.shared_url_account_count) }
+      : {}),
+    ...(row.quora_url_change_count !== undefined
+      ? { quoraUrlChangeCount: Number(row.quora_url_change_count) }
       : {}),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
@@ -195,6 +202,15 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
   const runtimeConfig = await getUnlockRuntimeConfig();
   const submissionWindowHours = runtimeConfig.submissionWindowHours;
 
+  // The URL this member's submission held before this onboarding write, so the change can be recorded
+  // in the shared Quora URL history (the baseline of the trail the Unlock admin reviews).
+  const previous = await queryDb<{ quora_profile_url: string | null; quora_profile_url_normalized: string | null }>(
+    `SELECT quora_profile_url, quora_profile_url_normalized FROM unlock_verification_submissions WHERE user_id = $1`,
+    [input.userId],
+  );
+  const previousUrl = previous.rows[0]?.quora_profile_url ?? null;
+  const previousUrlNormalized = previous.rows[0]?.quora_profile_url_normalized ?? null;
+
   const result = await queryDb<UnlockSubmissionRow>(
     `INSERT INTO unlock_verification_submissions (
        user_id,
@@ -252,6 +268,23 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
     [input.userId, input.quoraProfileUrl, input.quoraProfileUrlNormalized, String(submissionWindowHours)],
   );
 
+  // Record the captured URL in the shared Quora URL history when it is the first submission or a real
+  // change (normalized differs). Best-effort: the history is an audit trail, so a failure here must
+  // never break onboarding.
+  if (input.quoraProfileUrlNormalized !== previousUrlNormalized) {
+    try {
+      await recordQuoraUrlChangeStandalone({
+        userId: input.userId,
+        previousUrl,
+        newUrl: input.quoraProfileUrl,
+        changedByUserId: input.userId,
+        source: 'unlock_onboarding',
+      });
+    } catch (error) {
+      reportError(error, { area: 'unlock', op: 'record_quora_url_history', extra: { userId: input.userId } });
+    }
+  }
+
   return mapUnlockSubmission(result.rows[0]);
 }
 
@@ -292,7 +325,10 @@ export async function listUnlockSubmissions(filters: UnlockQueueFilters = {}): P
        updated_at,
        (SELECT COUNT(*)
           FROM unlock_verification_submissions dup
-         WHERE dup.quora_profile_url_normalized = s.quora_profile_url_normalized) AS shared_url_account_count
+         WHERE dup.quora_profile_url_normalized = s.quora_profile_url_normalized) AS shared_url_account_count,
+       (SELECT COUNT(*)
+          FROM directory_quora_url_history h
+         WHERE h.user_id = s.user_id) AS quora_url_change_count
      FROM unlock_verification_submissions s
      ${whereClause}
      ORDER BY created_at DESC

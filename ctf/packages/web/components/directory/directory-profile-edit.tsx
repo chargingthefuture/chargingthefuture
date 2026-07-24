@@ -109,6 +109,8 @@ export function DirectoryProfileEdit({
   const [skills, setSkills] = useState<SkillOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // A non-error notice shown when the Quora URL couldn't be emptied and the previous one was kept.
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   // Whether the caller already had a profile when the form loaded. Drives create-vs-edit wording; the
   // PUT upsert behaves the same either way.
   const [hadProfile, setHadProfile] = useState(false);
@@ -232,6 +234,7 @@ export function DirectoryProfileEdit({
   async function handleSave() {
     setSaving(true);
     setSaveError(null);
+    setSaveNotice(null);
 
     // Build the COMPLETE upsert payload: every field the server's toProfileInput reads, including
     // the ones not edited, so the full-upsert can never wipe an unshown value.
@@ -260,8 +263,24 @@ export function DirectoryProfileEdit({
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify(payload),
       });
-      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
+        quoraUrlKept?: boolean;
+        profile?: { profileUrl?: string | null };
+      };
       if (res.ok && body.ok !== false) {
+        if (body.quoraUrlKept) {
+          // The submitted Quora URL was empty/invalid, so the previous one was kept (it can't be
+          // removed). Sync the field to the kept URL and keep the editor open so the member can enter a
+          // valid new Quora link if they meant to change it — the rest of their edits already saved.
+          if (typeof body.profile?.profileUrl === "string") {
+            const keptUrl = body.profile.profileUrl;
+            setForm((p) => ({ ...p, profileUrl: keptUrl }));
+          }
+          setSaveNotice("Your Quora profile URL can’t be removed — your previous link was kept. To change it, enter a new valid Quora profile URL and save again.");
+          return;
+        }
         onSaved();
         return;
       }
@@ -350,8 +369,16 @@ export function DirectoryProfileEdit({
               </div>
 
               <div style={fieldGap}>
-                <label style={labelStyle} htmlFor="dpe-url">Quora profile URL</label>
+                <label style={labelStyle} htmlFor="dpe-url">Quora profile URL <span style={{ color: t.ACCENT }}>(required)</span></label>
                 <input id="dpe-url" value={form.profileUrl} onChange={(e) => setForm((p) => ({ ...p, profileUrl: e.target.value }))} style={inputStyle} placeholder="https://www.quora.com/profile/…" />
+                <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 6, lineHeight: 1.5 }}>
+                  Your Quora profile is the community&rsquo;s social proof, so it can&rsquo;t be removed. If your Quora
+                  account changed, just paste your new profile link here — the previous one is kept until you replace
+                  it with a valid Quora URL.
+                </div>
+                {saveNotice ? (
+                  <div style={{ fontSize: 12, color: t.ACCENT, marginTop: 6, lineHeight: 1.5 }}>{saveNotice}</div>
+                ) : null}
               </div>
 
               {/* Location — shared Country/State controls (lib/geo/locations.ts) so the data stays
