@@ -57,7 +57,7 @@ export const FEED_ANSWER_RATINGS = ['helpful', 'not_helpful', 'flagged'] as cons
 // The fixed quick set of emoji a member can react with on a community post. Shared by server
 // and client so both agree; the server rejects any emoji outside this set. Deliberately small —
 // this is not a full emoji picker. The display order here is the order reactions render in.
-export const FEED_REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏', '😢'] as const;
+export const FEED_REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏', '😢', '👋'] as const;
 
 export type FeedReactionEmoji = (typeof FEED_REACTION_EMOJIS)[number];
 

@@ -55,7 +55,7 @@ unless noted.
 **Steps:**
 1. Post a community message.
 2. On another member's post, use **Reply** (Signal-style quote) and send a reply.
-3. Toggle an emoji reaction (👍 ❤️ 😂 🎉 🙏 😢) on a post; toggle it again to remove.
+3. Toggle an emoji reaction (👍 ❤️ 😂 🎉 🙏 😢 👋) on a post; toggle it again to remove.
 **Expected:** The post, the quoted reply, and the reaction all appear and persist on reload. A second
 toggle of the same emoji removes your reaction. Reactions are stored in our database, not Stream.
 **Result:** web ☐ mobile ☐ — notes:
