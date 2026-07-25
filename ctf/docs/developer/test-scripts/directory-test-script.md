@@ -122,8 +122,9 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
    replaced by a flat cross-sector result list, that a match toggles on/off like an accordion chip,
    that a no-match query shows the "No skills match" note, and that clearing the box (the ✕) brings the
    accordion back.
-5. Use the "Know their profession? Add its skills" dropdown to pick a profession and confirm all of
-   that profession's skills are added at once as chips.
+5. Confirm there is **no** "Know their profession? Add its skills" prefill dropdown in the picker — a
+   member authors their own profile, so that third-party prefill is intentionally absent (it is also
+   absent in the admin edit form).
 6. Add a free-text skill the taxonomy does not have through the "Don't see what you need? Add it"
    box, then save.
 7. **Sector and job title are independent and optional.** With no sector chosen, open the Job title
@@ -140,9 +141,10 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
 field is never blanked. **Country and at least one skill are required** — Save stays disabled while
 either is missing (city, state, sector, and job title stay optional), and the country rule matches the
 server, which rejects a blank country on `PUT /api/directory/profile`. The skills picker matches the
-SkillsHunt picker exactly: removable selected chips, a "Search skills by keyword" box with a flat
-cross-sector result list, a one-open-at-a-time sector accordion with per-sector "N selected" badges, and
-a profession prefill that bulk-adds a profession's skills. Sector and job title are independent, optional
+SkillsHunt picker's building blocks: removable selected chips, a "Search skills by keyword" box with a
+flat cross-sector result list, a one-open-at-a-time sector accordion with per-sector "N selected"
+badges, and a free-text fallback — but **not** the "add a profession's skills" prefill (intentionally
+omitted for a self-authored profile). Sector and job title are independent, optional
 selectors — the job-title dropdown lists all titles grouped by sector and never requires choosing a
 sector first; choosing a job title fills in its sector. There is no hard cap on taxonomy skills. The free-text label persists (capped at 10 labels of
 at most 40 characters) and round-trips back as a yellow "pending review" chip. (The pending chip later

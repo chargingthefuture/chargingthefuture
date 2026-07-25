@@ -24,7 +24,6 @@ interface DirectorySkillsPickerProps {
   loading: boolean;
   selectedSkillIds: string[];
   onToggleSkill: (id: string) => void;
-  onAddOccupationSkills: (ids: string[]) => void;
   // Free-text "pending review" proposals are member-owned: the member self-edit form passes all of
   // these; the admin edit form omits them (the admin update contract has no proposedSkills), which
   // hides the free-text section entirely.
@@ -35,16 +34,15 @@ interface DirectorySkillsPickerProps {
   onRemoveProposed?: (label: string) => void;
 }
 
-// Group the ID-based taxonomy the way SkillsHunt groups its flattened rows: by sector for the
-// accordion, and by job-title (occupation) for the "add a profession's skills" shortcut. Both come
-// from the one set of option lists the edit form already loads, so there is no extra fetch.
+// Group the ID-based taxonomy by sector for the accordion (the same sector grouping SkillsHunt uses).
+// Both the sectors and job-titles maps come from the option lists the edit form already loads, so
+// there is no extra fetch; job titles only supply each skill's sector here.
 function useGroupedTaxonomy(sectors: TaxonomyOption[], jobTitles: JobTitleOption[], skills: SkillOption[]) {
   return useMemo(() => {
     const sectorNameById = new Map(sectors.map((s) => [s.id, s.name] as const));
     const jobTitleById = new Map(jobTitles.map((j) => [j.id, j] as const));
 
     const bySector = new Map<string, SkillOption[]>();
-    const byOccupation = new Map<string, string[]>();
 
     for (const skill of skills) {
       const jobTitle = jobTitleById.get(skill.jobTitleId);
@@ -53,12 +51,6 @@ function useGroupedTaxonomy(sectors: TaxonomyOption[], jobTitles: JobTitleOption
       const sectorSkills = bySector.get(sectorName) ?? [];
       sectorSkills.push(skill);
       bySector.set(sectorName, sectorSkills);
-
-      if (jobTitle) {
-        const occupationSkills = byOccupation.get(jobTitle.name) ?? [];
-        occupationSkills.push(skill.id);
-        byOccupation.set(jobTitle.name, occupationSkills);
-      }
     }
 
     const categories = [...bySector.entries()]
@@ -73,11 +65,7 @@ function useGroupedTaxonomy(sectors: TaxonomyOption[], jobTitles: JobTitleOption
         return a.sector.localeCompare(b.sector);
       });
 
-    const occupations = [...byOccupation.entries()]
-      .map(([name, ids]) => ({ name, ids }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    return { categories, occupations };
+    return { categories };
   }, [sectors, jobTitles, skills]);
 }
 
@@ -157,22 +145,22 @@ function SectorRow({
   );
 }
 
-// The Directory profile's skill picker. Mirrors the SkillsHunt Scout picker's structure — selected
-// chips, an optional "add a profession's skills" prefill dropdown, a one-open-at-a-time sector
-// accordion, and a free-text fallback — so skill picking looks and behaves the same across the app.
-// Unlike SkillsHunt there is no hard cap on taxonomy skills (Directory enforces none server-side);
-// only the free-text proposed skills are capped, matching the existing rule.
+// The Directory profile's skill picker. Selected chips, a keyword search, a one-open-at-a-time sector
+// accordion, and a free-text fallback. Unlike the SkillsHunt Scout picker there is no "add a
+// profession's skills" prefill — a member authors their own profile, so the third-party "know their
+// profession" framing does not apply here (owner decision). There is no hard cap on taxonomy skills
+// (Directory enforces none server-side); only the free-text proposed skills are capped.
 export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
   const {
     tokens, sectors, jobTitles, skills, loading, selectedSkillIds,
-    onToggleSkill, onAddOccupationSkills, onProposedInputChange, onAddProposed, onRemoveProposed,
+    onToggleSkill, onProposedInputChange, onAddProposed, onRemoveProposed,
   } = props;
   const proposedSkills = props.proposedSkills ?? [];
   const proposedInput = props.proposedInput ?? "";
   const allowProposed = Boolean(onProposedInputChange && onAddProposed && onRemoveProposed);
 
   const [openSector, setOpenSector] = useState<string | null>(null);
-  const { categories, occupations } = useGroupedTaxonomy(sectors, jobTitles, skills);
+  const { categories } = useGroupedTaxonomy(sectors, jobTitles, skills);
   const skillNameById = useMemo(() => new Map(skills.map((s) => [s.id, s.name] as const)), [skills]);
   const proposedFull = proposedSkills.length >= DIRECTORY_MAX_PROPOSED_SKILLS;
 
@@ -217,29 +205,6 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
               </button>
             </span>
           ))}
-        </div>
-      )}
-
-      {/* Profession shortcut — picking an occupation adds all of its skills at once. */}
-      {occupations.length > 0 && (
-        <div style={{ marginBottom: 10 }}>
-          <label htmlFor="dpe-occupation-prefill" style={{ fontSize: 11, color: tokens.SUBTLE, display: "block", marginBottom: 4 }}>
-            Know their profession? Add its skills <span style={{ color: tokens.FAINT }}>(optional — fills the skills in for you)</span>
-          </label>
-          <select
-            id="dpe-occupation-prefill"
-            value=""
-            onChange={(e) => {
-              const occ = occupations.find((o) => o.name === e.target.value);
-              if (occ) onAddOccupationSkills(occ.ids);
-            }}
-            style={{ width: "100%", padding: "9px 12px", background: tokens.INPUT_BG, border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 8, fontSize: 13, color: tokens.TEXT, outline: "none", cursor: "pointer", boxSizing: "border-box" }}
-          >
-            <option value="">Select a profession…</option>
-            {occupations.map((occ) => (
-              <option key={occ.name} value={occ.name}>{occ.name}</option>
-            ))}
-          </select>
         </div>
       )}
 
