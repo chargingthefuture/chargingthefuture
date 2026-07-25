@@ -19,7 +19,7 @@
     },
     {
       "name": "admin",
-      "type": "module",
+      "type": "plugin",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
       "cursor": 0,
@@ -260,34 +260,47 @@
     {
       "name": "hub",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-25T08:27:58.413Z",
+      "lastRunIssues": 6,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/hub",
+        "ctf/packages/web/lib/hub"
+      ]
     },
     {
       "name": "identity",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-07-24T09:00:54.256Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/identity"
+      ]
     },
     {
       "name": "integrations",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-07-23T09:04:00.711Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/integrations"
+      ]
     },
     {
       "name": "internal",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-22T09:05:40.694Z",
+      "lastRunIssues": 7,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/internal"
+      ]
     },
     {
       "name": "level-up",
