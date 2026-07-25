@@ -217,17 +217,6 @@ export function DirectoryProfileEdit({
     }));
   }
 
-  // Prefill shortcut: add every skill of a chosen profession, skipping any already selected.
-  function addOccupationSkills(ids: string[]) {
-    setForm((prev) => {
-      const merged = [...prev.skillIds];
-      for (const id of ids) {
-        if (!merged.includes(id)) merged.push(id);
-      }
-      return { ...prev, skillIds: merged };
-    });
-  }
-
   // Commit the "skill not listed" draft as a free-text proposed skill. Skips blanks, anything past
   // the count cap, and labels that duplicate an existing entry or an already-selected taxonomy skill.
   function addProposedSkill() {
@@ -482,7 +471,6 @@ export function DirectoryProfileEdit({
                   proposedSkills={form.proposedSkills}
                   proposedInput={proposedInput}
                   onToggleSkill={toggleSkill}
-                  onAddOccupationSkills={addOccupationSkills}
                   onProposedInputChange={setProposedInput}
                   onAddProposed={addProposedSkill}
                   onRemoveProposed={removeProposedSkill}

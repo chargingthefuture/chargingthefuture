@@ -465,15 +465,6 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
               skillIds: f.skillIds.includes(id) ? f.skillIds.filter((s) => s !== id) : [...f.skillIds, id],
             }))
           }
-          onAddOccupationSkills={(ids) =>
-            setForm((f) => {
-              const merged = [...f.skillIds];
-              for (const id of ids) {
-                if (!merged.includes(id)) merged.push(id);
-              }
-              return { ...f, skillIds: merged };
-            })
-          }
         />
 
         {/* Assign / attach an unclaimed profile to a user account. */}
