@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import type { DirectoryTokens } from "./shared";
 import { DIRECTORY_MAX_PROPOSED_SKILL_LENGTH, DIRECTORY_MAX_PROPOSED_SKILLS } from "@/lib/directory/constants";
 
@@ -81,6 +81,31 @@ function useGroupedTaxonomy(sectors: TaxonomyOption[], jobTitles: JobTitleOption
   }, [sectors, jobTitles, skills]);
 }
 
+// One selectable taxonomy-skill chip — shared by the sector accordion and the keyword-search
+// results so both look and behave identically (mirrors the SkillsHunt picker).
+function SkillChip({ skill, active, tokens, onToggleSkill }: {
+  skill: SkillOption;
+  active: boolean;
+  tokens: DirectoryTokens;
+  onToggleSkill: (id: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggleSkill(skill.id)}
+      aria-pressed={active}
+      style={{
+        padding: "5px 12px", borderRadius: 14, fontSize: 13, fontWeight: active ? 700 : 500, cursor: "pointer",
+        background: active ? `${tokens.ACCENT}20` : "transparent",
+        border: `1px solid ${active ? `${tokens.ACCENT}50` : tokens.BORDER_HI}`,
+        color: active ? tokens.ACCENT : tokens.SUBTLE,
+      }}
+    >
+      {active ? "✓ " : ""}{skill.name}
+    </button>
+  );
+}
+
 function SectorRow({
   sector,
   sectorSkills,
@@ -123,25 +148,9 @@ function SectorRow({
       </button>
       {isOpen && (
         <div style={{ padding: "10px 14px", display: "flex", flexWrap: "wrap", gap: 7 }}>
-          {sectorSkills.map((s) => {
-            const active = selectedSkillIds.includes(s.id);
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => onToggleSkill(s.id)}
-                aria-pressed={active}
-                style={{
-                  padding: "5px 12px", borderRadius: 14, fontSize: 13, fontWeight: active ? 700 : 500, cursor: "pointer",
-                  background: active ? `${tokens.ACCENT}20` : "transparent",
-                  border: `1px solid ${active ? `${tokens.ACCENT}50` : tokens.BORDER_HI}`,
-                  color: active ? tokens.ACCENT : tokens.SUBTLE,
-                }}
-              >
-                {active ? "✓ " : ""}{s.name}
-              </button>
-            );
-          })}
+          {sectorSkills.map((s) => (
+            <SkillChip key={s.id} skill={s} active={selectedSkillIds.includes(s.id)} tokens={tokens} onToggleSkill={onToggleSkill} />
+          ))}
         </div>
       )}
     </div>
@@ -166,6 +175,17 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
   const { categories, occupations } = useGroupedTaxonomy(sectors, jobTitles, skills);
   const skillNameById = useMemo(() => new Map(skills.map((s) => [s.id, s.name] as const)), [skills]);
   const proposedFull = proposedSkills.length >= DIRECTORY_MAX_PROPOSED_SKILLS;
+
+  // Keyword search across every sector — a flat, de-duplicated skill list filtered by substring.
+  // Local UI state only; it does not touch the form model. Matches the SkillsHunt picker exactly:
+  // while a query is present the accordion is replaced by a flat cross-sector result list.
+  const [search, setSearch] = useState("");
+  const query = search.trim().toLowerCase();
+  const allSkills = useMemo(() => {
+    const byId = new Map(skills.map((s) => [s.id, s] as const));
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [skills]);
+  const matches = query ? allSkills.filter((s) => s.name.toLowerCase().includes(query)) : [];
 
   const labelStyle = { fontSize: 12, fontWeight: 700, color: tokens.MUTED, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 6, display: "block" };
 
@@ -233,8 +253,46 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
         </div>
       )}
 
-      {/* Sector accordion — one sector open at a time, each showing only its own skills. */}
+      {/* Keyword search — type to find a skill across every sector without opening accordions. */}
       {categories.length > 0 && (
+        <div style={{ position: "relative", marginBottom: 10 }}>
+          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: tokens.FAINT, pointerEvents: "none" }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search skills by keyword"
+            placeholder="Search skills by keyword…"
+            style={{ width: "100%", padding: "9px 32px 9px 34px", background: tokens.INPUT_BG, border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 8, fontSize: 13, color: tokens.TEXT, outline: "none", boxSizing: "border-box" }}
+          />
+          {search && (
+            <button type="button" aria-label="Clear skill search" onClick={() => setSearch("")}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: tokens.FAINT, cursor: "pointer", padding: 4, lineHeight: 1, display: "flex" }}>
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* While searching, a flat cross-sector result list replaces the accordion. */}
+      {categories.length > 0 && query && (
+        <div style={{ border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
+          {matches.length === 0 ? (
+            <div style={{ fontSize: 12, color: tokens.MUTED }}>
+              No skills match “{search.trim()}”.{allowProposed ? " Add it as a free-text skill below." : ""}
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+              {matches.map((s) => (
+                <SkillChip key={s.id} skill={s} active={selectedSkillIds.includes(s.id)} tokens={tokens} onToggleSkill={onToggleSkill} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sector accordion — one sector open at a time, each showing only its own skills. Hidden
+          while a keyword search is active (the flat result list above takes its place). */}
+      {categories.length > 0 && !query && (
         <div style={{ border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
           {categories.map(({ sector, skills: sectorSkills }) => (
             <SectorRow

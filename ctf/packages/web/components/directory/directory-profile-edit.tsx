@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { getDirectoryTokens } from "./shared";
 import { DirectorySkillsPicker } from "./directory-skills-picker";
@@ -186,10 +186,26 @@ export function DirectoryProfileEdit({
     return () => controller.abort();
   }, []);
 
-  // Changing sector clears a now-invalid job-title pick. The job-title dropdown is filtered from the
-  // already-loaded full list client-side, so no refetch is needed.
+  // Sector and job title are independent, optional selectors (a member can pick a sector, a job
+  // title, either, or neither). Changing the sector clears a job title that belongs to a different
+  // sector so the two never contradict each other; picking a job title under the same sector is
+  // preserved.
   function handleSectorChange(nextSectorId: string) {
-    setForm((prev) => ({ ...prev, sectorId: nextSectorId, jobTitleId: "" }));
+    setForm((prev) => {
+      const jt = jobTitles.find((j) => j.id === prev.jobTitleId);
+      const keepJobTitle = jt && jt.sectorId === nextSectorId;
+      return { ...prev, sectorId: nextSectorId, jobTitleId: keepJobTitle ? prev.jobTitleId : "" };
+    });
+  }
+
+  // Job titles map to a sector, so choosing a job title fills in its sector — the member never has
+  // to choose a sector first. Clearing the job title leaves the sector as-is.
+  function handleJobTitleChange(nextJobTitleId: string) {
+    setForm((prev) => {
+      if (!nextJobTitleId) return { ...prev, jobTitleId: "" };
+      const jt = jobTitles.find((j) => j.id === nextJobTitleId);
+      return { ...prev, jobTitleId: nextJobTitleId, sectorId: jt ? jt.sectorId : prev.sectorId };
+    });
   }
 
   function toggleSkill(id: string) {
@@ -295,13 +311,30 @@ export function DirectoryProfileEdit({
   const labelStyle = { fontSize: 12, fontWeight: 700, color: t.MUTED, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 6, display: "block" };
   const inputStyle = { width: "100%", padding: "9px 12px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", boxSizing: "border-box" as const };
   const fieldGap = { marginBottom: 18 };
-  // First name and country are both required (city/state stay optional). Country gates Save so a
-  // member cannot save a profile with no country — the same rule the server now enforces.
-  const canSave = form.firstName.trim().length > 0 && form.country.trim().length > 0 && !saving;
+  // At least one skill is required — a taxonomy skill or a free-text proposed one.
+  const hasSkill = form.skillIds.length > 0 || form.proposedSkills.length > 0;
+  // First name, country, and at least one skill are required (city/state/sector/job title stay
+  // optional). All three gate Save so a member cannot save an incomplete profile.
+  const canSave = form.firstName.trim().length > 0 && form.country.trim().length > 0 && hasSkill && !saving;
 
-  // Job titles are loaded for every sector at once; the dropdown shows only those under the
-  // currently selected sector.
-  const sectorJobTitles = jobTitles.filter((j) => j.sectorId === form.sectorId);
+  // Every job title, grouped by its sector, so the job-title dropdown lists them all (via <optgroup>)
+  // without the member having to pick a sector first — the two selectors are independent.
+  const jobTitlesBySector = useMemo(() => {
+    const sectorNameById = new Map(sectors.map((s) => [s.id, s.name] as const));
+    const bySector = new Map<string, JobTitleOption[]>();
+    for (const j of jobTitles) {
+      const arr = bySector.get(j.sectorId) ?? [];
+      arr.push(j);
+      bySector.set(j.sectorId, arr);
+    }
+    return [...bySector.entries()]
+      .map(([sectorId, list]) => ({
+        sectorId,
+        sectorName: sectorNameById.get(sectorId) ?? "Other",
+        titles: [...list].sort((a, b) => a.name.localeCompare(b.name)),
+      }))
+      .sort((a, b) => a.sectorName.localeCompare(b.sectorName));
+  }, [sectors, jobTitles]);
 
   // Close on Escape so keyboard users have the same "dismiss" the backdrop click gives mouse users.
   useEffect(() => {
@@ -410,8 +443,11 @@ export function DirectoryProfileEdit({
                 <input id="dpe-city" value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} style={inputStyle} placeholder="City" />
               </div>
 
+              {/* Sector and job title are optional and independent — pick a sector, a job title,
+                  either, or neither. Job titles are mapped to sectors, so choosing a job title fills
+                  in its sector automatically; there is no "choose a sector first" requirement. */}
               <div style={fieldGap}>
-                <label style={labelStyle} htmlFor="dpe-sector">Sector</label>
+                <label style={labelStyle} htmlFor="dpe-sector">Sector <span style={{ color: t.SUBTLE, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
                 <select id="dpe-sector" value={form.sectorId} onChange={(e) => handleSectorChange(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
                   <option value="">Not set</option>
                   {sectors.map((s) => (
@@ -421,13 +457,18 @@ export function DirectoryProfileEdit({
               </div>
 
               <div style={fieldGap}>
-                <label style={labelStyle} htmlFor="dpe-jobtitle">Job title</label>
-                <select id="dpe-jobtitle" value={form.jobTitleId} onChange={(e) => setForm((p) => ({ ...p, jobTitleId: e.target.value }))} disabled={!form.sectorId} style={{ ...inputStyle, cursor: form.sectorId ? "pointer" : "not-allowed", opacity: form.sectorId ? 1 : 0.6 }}>
-                  <option value="">{form.sectorId ? "Not set" : "Choose a sector first"}</option>
-                  {sectorJobTitles.map((j) => (
-                    <option key={j.id} value={j.id}>{j.name}</option>
+                <label style={labelStyle} htmlFor="dpe-jobtitle">Job title <span style={{ color: t.SUBTLE, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+                <select id="dpe-jobtitle" value={form.jobTitleId} onChange={(e) => handleJobTitleChange(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="">Not set</option>
+                  {jobTitlesBySector.map((group) => (
+                    <optgroup key={group.sectorId} label={group.sectorName}>
+                      {group.titles.map((j) => (
+                        <option key={j.id} value={j.id}>{j.name}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
+                <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 6, lineHeight: 1.5 }}>Choosing a job title fills in its sector for you. Both are optional.</div>
               </div>
 
               <div style={fieldGap}>
@@ -446,6 +487,9 @@ export function DirectoryProfileEdit({
                   onAddProposed={addProposedSkill}
                   onRemoveProposed={removeProposedSkill}
                 />
+                {!hasSkill && (
+                  <div style={{ fontSize: 12, color: t.ACCENT, marginTop: 8, lineHeight: 1.5 }}>Choose at least one skill to save your profile.</div>
+                )}
               </div>
 
               <div style={{ margin: "8px 0 14px", fontSize: 12, fontWeight: 700, color: t.MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>Payment addresses</div>
