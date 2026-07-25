@@ -5,10 +5,18 @@ import { MessageSquare, Send } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getPeerProgrammingTokens, initials, type Message, type Room } from "./pp-shared";
 
+// Message stamp: date + time, not time alone — without the date, messages from different days (e.g.
+// an 08:43 AM and a 04:36 PM) can't be told apart.
+function formatMessageTimestamp(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
 function MessageRow({ msg }: { msg: Message }) {
   const { theme } = useTheme();
   const t = getPeerProgrammingTokens(theme);
-  const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+  const time = msg.timestamp ? formatMessageTimestamp(msg.timestamp) : "";
   return (
     <div style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 12 }}>
       <div style={{ width: 32, height: 32, borderRadius: 10, background: `${t.ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13, color: t.ACCENT, fontWeight: 700 }}>
