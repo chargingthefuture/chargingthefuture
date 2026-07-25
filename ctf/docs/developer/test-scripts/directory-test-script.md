@@ -91,8 +91,10 @@ share."** — no "guarantee" / "your identity is protected" wording anywhere on 
 2. Read every section.
 **Expected:** Name renders as "First Last" (`first_name` required, `last_name` optional). You see job
 title, sector, location ("City, State, Country" — only the parts that are set; a non-US member may show
-just a country), specializations/skills, and the bio. A community-generated profile shows its
-"Community generated" badge and `@community-…` handle. No endorsements, reviews, booking, or chat
+just a country), specializations/skills, and the bio. An **unclaimed** community-generated profile shows
+the "Community-generated profile" line; once that profile is **claimed**, that line is hidden publicly
+while the "Nominated by @handle" line still shows (the backend keeps `source = 'community-generated'`
+either way; the admin surface still shows the community-generated record). No endorsements, reviews, booking, or chat
 sections appear (those were removed as out-of-scope mockup elements). Confirm a carried-over v2 profile
 shows its city/state/country (the data was cloned from v2 and is now read directly). On android, the
 profile detail's privacy note reads **"🔒 Privacy First — Profiles show only what each member chooses
