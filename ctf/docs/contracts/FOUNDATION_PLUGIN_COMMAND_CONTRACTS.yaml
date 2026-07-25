@@ -39,6 +39,9 @@ contracts:
         type: integer
       instantCallIntervalMinutes:
         type: integer
+      shortDescription:
+        type: string
+        nullable: true
     dataAccess:
       - foundation_provider_search_index
       - directory_provider_profiles_read_model
@@ -718,6 +721,43 @@ contracts:
     idempotency: true
 
   - pluginId: foundation
+    command: foundation.provider.description.get
+    version: 1.0.0
+    description: Read the signed-in member's own Foundation listing blurb (a short description, one or two sentences, shown on their provider card and profile before a member requests a quote).
+    inputSchema: {}
+    outputSchema:
+      shortDescription:
+        type: string
+        nullable: true
+      maxLength:
+        type: integer
+    dataAccess:
+      - foundation_user_extension
+    purpose: provider_self_settings
+    retentionClass: profile_long_lived
+    idempotency: true
+
+  - pluginId: foundation
+    command: foundation.provider.description.update
+    version: 1.0.0
+    description: Save the signed-in member's own Foundation listing blurb. A blank string clears it. The value is trimmed and must be at most 200 characters, otherwise the command is rejected.
+    inputSchema:
+      shortDescription:
+        type: string
+        required: true
+    outputSchema:
+      shortDescription:
+        type: string
+        nullable: true
+      maxLength:
+        type: integer
+    dataAccess:
+      - foundation_user_extension
+    purpose: provider_self_settings
+    retentionClass: profile_long_lived
+    idempotency: true
+
+  - pluginId: foundation
     command: foundation.push.subscribe
     version: 1.1.0
     description: Save the signed-in member's push subscription for one device. A provider who enabled instant calls turns on "call alerts on this device" so the instant-call ring can wake that device with the app closed. Two kinds share this command, branched on the body's kind field — kind 'web' (default, issue #808 task 5) stores the browser's Web Push subscription (endpoint + the p256dh/auth encryption keys); kind 'expo' (issue #884) stores the Android app's Expo push token (the token is the identity, stored as the endpoint; no encryption keys). Both store into the user-global push_subscriptions table on (user_id, endpoint). The member acts only on their own subscription; the endpoint/token and any keys are stored but never logged.
@@ -799,3 +839,5 @@ changelog:
     change: Added Expo (Android native) push delivery for the instant-call ring (issue #884). foundation.push.subscribe is now v1.1.0 — it takes an optional kind field; kind 'expo' stores the Android app's Expo push token in the same push_subscriptions table (kind 'expo'; token as endpoint, no encryption keys). foundation.push.unsubscribe is kind-agnostic (matches by endpoint, so the same call removes a web or expo row). The ring now also sends an Expo push alongside the Web Push, best-effort and isolated so neither push can affect the ring. The optional EXPO_ACCESS_TOKEN secret is read from env for the send and the send is a graceful no-op-shaped degrade when unset (it still sends for projects without enhanced push security); never logged. A 'DeviceNotRegistered' Expo receipt prunes the dead token. Expo native push needs an EAS native build (expo-notifications cannot run in Expo Go).
   - date: 2026-07-11
     change: foundation.search.providers (and the by-id provider read) now also return each provider's location — city, state, country — read from their claimed directory profile (the shared member profile). Read-only; the fields come from the existing directory_provider_profiles_read_model already in dataAccess. No new table or write path.
+  - date: 2026-07-25
+    change: Added the provider listing blurb (short description) commands — foundation.provider.description.get / .update — reading and writing foundation_user_extension.short_description (nullable TEXT, capped 200 chars in the app; blank clears it). foundation.search.providers and foundation.provider.get now also return the provider's shortDescription read-only from foundation_user_extension. The blurb shows on the provider card and profile before a member requests a quote; separate from the Directory headline/bio and the offered-skill chips.

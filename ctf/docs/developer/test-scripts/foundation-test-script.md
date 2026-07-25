@@ -91,6 +91,22 @@ About), not a cramped right-hand column; on desktop it stays the right-hand side
 persists and the member then appears in provider search for those skills.
 **Result:** web ☐ mobile ☐ — notes:
 
+### FND-2b · Listing blurb (provider short description)
+**Role:** member · **Surfaces:** web
+**Precondition:** the member is a provider (offers at least one skill, per FND-2).
+**Steps:**
+1. Open the Offer skills tab; in "Your listing blurb", type a one- or two-sentence description; watch
+   the character counter; save.
+2. Try to save a description longer than 200 characters.
+3. Clear the field to empty and save.
+4. As another member, open this provider in Browse and on their profile.
+**Expected:** The blurb saves and shows "Saved". Over 200 characters the Save button is disabled and
+the counter goes negative (a server 400 is the backstop). Clearing to empty saves and removes the blurb.
+The saved blurb appears on the provider's Browse card (before the skill chips) and near the top of
+their profile (before the About section); an empty blurb shows nothing. The blurb is separate from the
+Directory headline/bio.
+**Result:** web ☐ — notes:
+
 ### FND-3 · Quote request and Direct Line chat
 **Role:** member · **Surfaces:** all
 **Precondition:** a seeded provider other than yourself.

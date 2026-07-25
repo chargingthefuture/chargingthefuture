@@ -118,20 +118,33 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
 3. In the specializations picker, expand a sector in the accordion (only one opens at a time) and
    toggle a skill on and off; confirm the sector row shows an "N selected" badge and the pick appears
    as a removable chip at the top.
-4. Use the "Know their profession? Add its skills" dropdown to pick a profession and confirm all of
+4. In the same picker, type in the **"Search skills by keyword"** box; confirm the accordion is
+   replaced by a flat cross-sector result list, that a match toggles on/off like an accordion chip,
+   that a no-match query shows the "No skills match" note, and that clearing the box (the ✕) brings the
+   accordion back.
+5. Use the "Know their profession? Add its skills" dropdown to pick a profession and confirm all of
    that profession's skills are added at once as chips.
-5. Add a free-text skill the taxonomy does not have through the "Don't see what you need? Add it"
+6. Add a free-text skill the taxonomy does not have through the "Don't see what you need? Add it"
    box, then save.
-6. Set Country to a non-US country (State becomes a free-text region box); set Country to United States
+7. **Sector and job title are independent and optional.** With no sector chosen, open the Job title
+   dropdown and confirm it lists every job title grouped by sector (not "Choose a sector first" /
+   disabled); pick a job title and confirm its sector is filled in automatically. Separately, pick a
+   sector alone (no job title) and confirm you can still save. Confirm neither is required.
+8. Remove every skill (taxonomy + free-text) and confirm Save is disabled with the "Choose at least one
+   skill to save your profile." hint; add one skill back and confirm Save enables.
+9. Set Country to a non-US country (State becomes a free-text region box); set Country to United States
    (State becomes a US-state dropdown); enter a City; save and reopen to confirm the location persisted.
-7. Clear the Country (pick the blank/placeholder option) and confirm you cannot save: the Country label
-   reads "(required)" and the Save button is disabled until a country is chosen again.
+10. Clear the Country (pick the blank/placeholder option) and confirm you cannot save: the Country label
+    reads "(required)" and the Save button is disabled until a country is chosen again.
 **Expected:** The form prefills every editable field and re-sends the complete set, so an untouched
-field is never blanked. **Country is required** — Save stays disabled while it is blank (city and state
-stay optional), matching the server, which rejects a blank country on `PUT /api/directory/profile`. The
-skills picker matches the SkillsHunt picker: removable selected chips, a one-open-at-a-time sector
-accordion with per-sector "N selected" badges, and a profession prefill that bulk-adds a profession's
-skills. There is no hard cap on taxonomy skills. The free-text label persists (capped at 10 labels of
+field is never blanked. **Country and at least one skill are required** — Save stays disabled while
+either is missing (city, state, sector, and job title stay optional), and the country rule matches the
+server, which rejects a blank country on `PUT /api/directory/profile`. The skills picker matches the
+SkillsHunt picker exactly: removable selected chips, a "Search skills by keyword" box with a flat
+cross-sector result list, a one-open-at-a-time sector accordion with per-sector "N selected" badges, and
+a profession prefill that bulk-adds a profession's skills. Sector and job title are independent, optional
+selectors — the job-title dropdown lists all titles grouped by sector and never requires choosing a
+sector first; choosing a job title fills in its sector. There is no hard cap on taxonomy skills. The free-text label persists (capped at 10 labels of
 at most 40 characters) and round-trips back as a yellow "pending review" chip. (The pending chip later
 becomes a real taxonomy chip only after the owner approves the label — an `addSkill` entry in the
 taxonomy change list (`ctf/scripts/lib/taxonomyChange.mjs`) applied by the owner-run workflow, which
@@ -159,10 +172,11 @@ untouched payment address / location is never wiped).
 3. Press "Add my profile". Confirm the modal title is **"Create my profile"** and the submit button
    reads **"Create profile"**.
 4. Fill a first name only and confirm Save is still disabled (Country reads "(required)"); pick a
-   Country and confirm Save enables; save.
-**Expected:** The modal is the same editor as DIR-4, starting blank. **Both first name and country are
-required** to save (city/state optional); the save goes through `PUT /api/directory/profile` with the
-CSRF header. After saving, the header button flips to **"Edit my profile"**, and the new profile appears
+   Country and confirm Save is still disabled until at least one skill is added; add a skill and confirm
+   Save enables; save.
+**Expected:** The modal is the same editor as DIR-4, starting blank. **First name, country, and at least
+one skill are all required** to save (city/state/sector/job title optional); the save goes through
+`PUT /api/directory/profile` with the CSRF header. After saving, the header button flips to **"Edit my profile"**, and the new profile appears
 in the list. On android the same "Edit my profile" header button opens the editor titled **"Create my
 profile"** (its submit button reads **"Create profile"**) when the member has none; Save stays disabled
 until both first name and country are set, and after saving the new profile appears in the list.
