@@ -136,6 +136,11 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 
 ## Change Log
 
+- 2026-07-23: PeerProgramming cohort-message producer. `POST /api/peer-programming/messages` now emits
+  `peer-programming.cohort.message` (category `community`) via `notifySafe` to every other cohort member
+  after a message is stored — deduped per (member, message), never the sender, deep-linked to the room.
+  PeerProgramming previously had no producer, so cohort messages never reached the 🔔 center even though
+  the Community device-push toggle listed it. Reuses the existing backbone; no schema or contract change.
 - 2026-07-22: Deep links now reach messages older than the recent page. The Commons only loaded the
   recent page, so an "Open" to an older message landed without the flash. `GET /api/hub/messages` gained
   `aroundPost` / `aroundAnnouncement` params that return a page centered on the target, and the Commons

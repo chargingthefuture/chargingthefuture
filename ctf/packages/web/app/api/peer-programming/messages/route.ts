@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
-import { createMessage, insertPeerProgrammingAudit, isCohortEnded, isCohortMember } from 'lib/peer-programming/repository';
+import { createMessage, insertPeerProgrammingAudit, isCohortEnded, isCohortMember, listCohortMemberUserIds } from 'lib/peer-programming/repository';
 import { PEER_PROGRAMMING_ERROR_CODE, PEER_PROGRAMMING_MAX_MESSAGE_LENGTH } from 'lib/peer-programming/constants';
+import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
 
 type CreateMessageBody = {
@@ -90,6 +91,31 @@ export async function POST(request: Request) {
       targetType: 'message',
       targetId: message.id,
     });
+
+    // Notify the other cohort members that a message landed — best-effort, after the write, never the
+    // sender. Cohorts are small, so a per-member notification per message is fine; the notification is
+    // deduped per (member, message) via target_ref. This is what surfaces a cohort message in the 🔔
+    // notifications center and (for members who opted the Community category in) pings their device.
+    try {
+      const membersByCohort = await listCohortMemberUserIds([body.cohortId]);
+      const memberIds = membersByCohort.get(body.cohortId) ?? [];
+      for (const memberId of memberIds) {
+        if (memberId === gate.auth.userId) {
+          continue;
+        }
+        await notifySafe({
+          userId: memberId,
+          sourcePlugin: 'peer-programming',
+          notificationType: 'peer-programming.cohort.message',
+          category: 'community',
+          summary: 'New message in your PeerProgramming cohort.',
+          linkPath: `/apps/peer-programming?cohortId=${encodeURIComponent(body.cohortId)}`,
+          targetRef: message.id,
+        });
+      }
+    } catch (notifyError) {
+      reportError(notifyError, { area: 'peer-programming', op: 'emit_cohort_message_notification' });
+    }
 
     return NextResponse.json({ ok: true, message }, { status: 201 });
   } catch (error) {
