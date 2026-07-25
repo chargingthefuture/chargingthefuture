@@ -157,7 +157,9 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
             name: [item.firstName, item.lastName].filter(Boolean).join(" ").trim(),
             sector: item.sectorName ?? "",
             jobTitle: item.jobTitleName ?? "",
-            skills: item.skills.map((s) => s.name),
+            // De-duplicate by name: the taxonomy lists some skills under several occupations, so a
+            // profile can hold two ids with the same name — show that name once, never a repeated chip.
+            skills: [...new Set(item.skills.map((s) => s.name))],
             pendingSkills: item.pendingSkills ?? [],
             claimedByUserId: item.claimedByUserId ?? null,
             profileUrl: item.profileUrl ?? null,
@@ -204,7 +206,8 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
           name: [item.firstName, item.lastName].filter(Boolean).join(" ").trim(),
           sector: item.sectorName ?? "",
           jobTitle: item.jobTitleName ?? "",
-          skills: item.skills.map((s) => s.name),
+          // De-duplicate by name (see the browse mapping above): one chip per skill name.
+          skills: [...new Set(item.skills.map((s) => s.name))],
           pendingSkills: item.pendingSkills ?? [],
           claimedByUserId: item.claimedByUserId ?? null,
           profileUrl: item.profileUrl ?? null,

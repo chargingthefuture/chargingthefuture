@@ -12,6 +12,13 @@ type TaxonomyOption = { id: string; name: string };
 type JobTitleOption = { id: string; name: string; sectorId: string };
 type SkillOption = { id: string; name: string; jobTitleId: string };
 
+// One picker entry = one skill NAME plus every taxonomy id that shares it. The taxonomy lists the
+// same skill name under several occupations on purpose (Workforce matches by name), but to a member
+// picking a skill those duplicates are one thing — indistinguishable and confusing. So we show the
+// name once and toggle all of its ids together: picking it selects the first id; unpicking removes
+// every selected id that shares the name (which also self-heals a profile that already holds two).
+type SkillEntry = { name: string; ids: string[] };
+
 // Skills that cannot be traced back to a sector (missing/inactive job title) still need a home in
 // the accordion so they remain selectable. They go under this bucket, sorted last.
 const OTHER_SECTOR = "Other";
@@ -34,29 +41,37 @@ interface DirectorySkillsPickerProps {
   onRemoveProposed?: (label: string) => void;
 }
 
-// Group the ID-based taxonomy by sector for the accordion (the same sector grouping SkillsHunt uses).
-// Both the sectors and job-titles maps come from the option lists the edit form already loads, so
-// there is no extra fetch; job titles only supply each skill's sector here.
+// Group the ID-based taxonomy by sector for the accordion. Within a sector, same-named skills are
+// collapsed into one SkillEntry carrying all their ids (see SkillEntry), so a name shows once. Job
+// titles only supply each skill's sector here; there is no extra fetch.
 function useGroupedTaxonomy(sectors: TaxonomyOption[], jobTitles: JobTitleOption[], skills: SkillOption[]) {
   return useMemo(() => {
     const sectorNameById = new Map(sectors.map((s) => [s.id, s.name] as const));
     const jobTitleById = new Map(jobTitles.map((j) => [j.id, j] as const));
 
-    const bySector = new Map<string, SkillOption[]>();
+    // sector name -> (skill name -> ordered unique ids)
+    const bySector = new Map<string, Map<string, string[]>>();
 
     for (const skill of skills) {
       const jobTitle = jobTitleById.get(skill.jobTitleId);
       const sectorName = jobTitle ? sectorNameById.get(jobTitle.sectorId) ?? OTHER_SECTOR : OTHER_SECTOR;
 
-      const sectorSkills = bySector.get(sectorName) ?? [];
-      sectorSkills.push(skill);
-      bySector.set(sectorName, sectorSkills);
+      let nameMap = bySector.get(sectorName);
+      if (!nameMap) {
+        nameMap = new Map();
+        bySector.set(sectorName, nameMap);
+      }
+      const ids = nameMap.get(skill.name) ?? [];
+      if (!ids.includes(skill.id)) ids.push(skill.id);
+      nameMap.set(skill.name, ids);
     }
 
     const categories = [...bySector.entries()]
-      .map(([sector, sectorSkills]) => ({
+      .map(([sector, nameMap]) => ({
         sector,
-        skills: [...sectorSkills].sort((a, b) => a.name.localeCompare(b.name)),
+        entries: [...nameMap.entries()]
+          .map(([name, ids]) => ({ name, ids }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
       }))
       // "Other" always sorts last; everything else alphabetically.
       .sort((a, b) => {
@@ -69,18 +84,18 @@ function useGroupedTaxonomy(sectors: TaxonomyOption[], jobTitles: JobTitleOption
   }, [sectors, jobTitles, skills]);
 }
 
-// One selectable taxonomy-skill chip — shared by the sector accordion and the keyword-search
-// results so both look and behave identically (mirrors the SkillsHunt picker).
-function SkillChip({ skill, active, tokens, onToggleSkill }: {
-  skill: SkillOption;
+// One selectable skill chip — shared by the sector accordion and the keyword-search results so both
+// look and behave identically. It represents a name-entry: active when any of its ids are selected.
+function SkillChip({ entry, active, tokens, onToggleEntry }: {
+  entry: SkillEntry;
   active: boolean;
   tokens: DirectoryTokens;
-  onToggleSkill: (id: string) => void;
+  onToggleEntry: (entry: SkillEntry) => void;
 }) {
   return (
     <button
       type="button"
-      onClick={() => onToggleSkill(skill.id)}
+      onClick={() => onToggleEntry(entry)}
       aria-pressed={active}
       style={{
         padding: "5px 12px", borderRadius: 14, fontSize: 13, fontWeight: active ? 700 : 500, cursor: "pointer",
@@ -89,29 +104,29 @@ function SkillChip({ skill, active, tokens, onToggleSkill }: {
         color: active ? tokens.ACCENT : tokens.SUBTLE,
       }}
     >
-      {active ? "✓ " : ""}{skill.name}
+      {active ? "✓ " : ""}{entry.name}
     </button>
   );
 }
 
 function SectorRow({
   sector,
-  sectorSkills,
-  selectedSkillIds,
+  entries,
+  selectedIds,
   isOpen,
   tokens,
   onToggle,
-  onToggleSkill,
+  onToggleEntry,
 }: {
   sector: string;
-  sectorSkills: SkillOption[];
-  selectedSkillIds: string[];
+  entries: SkillEntry[];
+  selectedIds: Set<string>;
   isOpen: boolean;
   tokens: DirectoryTokens;
   onToggle: () => void;
-  onToggleSkill: (id: string) => void;
+  onToggleEntry: (entry: SkillEntry) => void;
 }) {
-  const selectedCount = sectorSkills.filter((s) => selectedSkillIds.includes(s.id)).length;
+  const selectedCount = entries.filter((e) => e.ids.some((id) => selectedIds.has(id))).length;
   return (
     <div>
       <button
@@ -136,8 +151,8 @@ function SectorRow({
       </button>
       {isOpen && (
         <div style={{ padding: "10px 14px", display: "flex", flexWrap: "wrap", gap: 7 }}>
-          {sectorSkills.map((s) => (
-            <SkillChip key={s.id} skill={s} active={selectedSkillIds.includes(s.id)} tokens={tokens} onToggleSkill={onToggleSkill} />
+          {entries.map((e) => (
+            <SkillChip key={e.name} entry={e} active={e.ids.some((id) => selectedIds.has(id))} tokens={tokens} onToggleEntry={onToggleEntry} />
           ))}
         </div>
       )}
@@ -162,18 +177,61 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
   const [openSector, setOpenSector] = useState<string | null>(null);
   const { categories } = useGroupedTaxonomy(sectors, jobTitles, skills);
   const skillNameById = useMemo(() => new Map(skills.map((s) => [s.id, s.name] as const)), [skills]);
+  const selectedIds = useMemo(() => new Set(selectedSkillIds), [selectedSkillIds]);
   const proposedFull = proposedSkills.length >= DIRECTORY_MAX_PROPOSED_SKILLS;
 
-  // Keyword search across every sector — a flat, de-duplicated skill list filtered by substring.
-  // Local UI state only; it does not touch the form model. Matches the SkillsHunt picker exactly:
-  // while a query is present the accordion is replaced by a flat cross-sector result list.
+  // Toggle a whole name-entry: unpick removes every selected id that shares the name (both parents'
+  // onToggleSkill is a functional setState, so N synchronous calls compose correctly); pick adds the
+  // first id as the representative. This is what lets the member treat a repeated name as one skill.
+  function toggleEntry(entry: SkillEntry) {
+    const selectedForName = entry.ids.filter((id) => selectedIds.has(id));
+    if (selectedForName.length > 0) {
+      selectedForName.forEach((id) => onToggleSkill(id));
+    } else if (entry.ids.length > 0) {
+      onToggleSkill(entry.ids[0]);
+    }
+  }
+
+  // Keyword search across every sector — a flat, name-de-duplicated skill list filtered by substring.
+  // Local UI state only; it does not touch the form model. While a query is present the accordion is
+  // replaced by this flat result list (mirrors the SkillsHunt picker).
   const [search, setSearch] = useState("");
   const query = search.trim().toLowerCase();
-  const allSkills = useMemo(() => {
-    const byId = new Map(skills.map((s) => [s.id, s] as const));
-    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const allEntries = useMemo(() => {
+    const byName = new Map<string, string[]>();
+    const order: string[] = [];
+    for (const s of skills) {
+      const ids = byName.get(s.name);
+      if (ids) {
+        if (!ids.includes(s.id)) ids.push(s.id);
+      } else {
+        byName.set(s.name, [s.id]);
+        order.push(s.name);
+      }
+    }
+    return order
+      .map((name) => ({ name, ids: byName.get(name) ?? [] }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [skills]);
-  const matches = query ? allSkills.filter((s) => s.name.toLowerCase().includes(query)) : [];
+  const matches = query ? allEntries.filter((e) => e.name.toLowerCase().includes(query)) : [];
+
+  // The selected picks, de-duplicated by name: a profile that already holds two ids for one name
+  // shows a single chip, and removing it clears every id behind that name.
+  const selectedNames = useMemo(() => {
+    const order: string[] = [];
+    const idsByName = new Map<string, string[]>();
+    for (const id of selectedSkillIds) {
+      const name = skillNameById.get(id) ?? "Skill";
+      const list = idsByName.get(name);
+      if (list) {
+        list.push(id);
+      } else {
+        idsByName.set(name, [id]);
+        order.push(name);
+      }
+    }
+    return order.map((name) => ({ name, ids: idsByName.get(name) ?? [] }));
+  }, [selectedSkillIds, skillNameById]);
 
   const labelStyle = { fontSize: 12, fontWeight: 700, color: tokens.MUTED, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 6, display: "block" };
 
@@ -181,18 +239,18 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
     <div>
       <label style={labelStyle}>
         Specializations
-        {selectedSkillIds.length > 0 && (
-          <span style={{ marginLeft: 8, color: tokens.ACCENT, fontWeight: 700 }}>{selectedSkillIds.length} selected</span>
+        {selectedNames.length > 0 && (
+          <span style={{ marginLeft: 8, color: tokens.ACCENT, fontWeight: 700 }}>{selectedNames.length} selected</span>
         )}
       </label>
 
       {/* Selected picks — taxonomy skills in the app accent, proposed skills in amber, each removable. */}
-      {(selectedSkillIds.length > 0 || proposedSkills.length > 0) && (
+      {(selectedNames.length > 0 || proposedSkills.length > 0) && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-          {selectedSkillIds.map((id) => (
-            <span key={id} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, background: `${tokens.ACCENT}20`, border: `1px solid ${tokens.ACCENT}40`, fontSize: 12, color: tokens.ACCENT, fontWeight: 600 }}>
-              {skillNameById.get(id) ?? "Skill"}
-              <button type="button" aria-label={`Remove ${skillNameById.get(id) ?? "skill"}`} onClick={() => onToggleSkill(id)} style={{ background: "none", border: "none", color: tokens.ACCENT, cursor: "pointer", padding: 0, lineHeight: 1, display: "flex" }}>
+          {selectedNames.map((entry) => (
+            <span key={entry.name} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, background: `${tokens.ACCENT}20`, border: `1px solid ${tokens.ACCENT}40`, fontSize: 12, color: tokens.ACCENT, fontWeight: 600 }}>
+              {entry.name}
+              <button type="button" aria-label={`Remove ${entry.name}`} onClick={() => entry.ids.forEach((id) => onToggleSkill(id))} style={{ background: "none", border: "none", color: tokens.ACCENT, cursor: "pointer", padding: 0, lineHeight: 1, display: "flex" }}>
                 <X size={11} />
               </button>
             </span>
@@ -247,8 +305,8 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
             </div>
           ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-              {matches.map((s) => (
-                <SkillChip key={s.id} skill={s} active={selectedSkillIds.includes(s.id)} tokens={tokens} onToggleSkill={onToggleSkill} />
+              {matches.map((e) => (
+                <SkillChip key={e.name} entry={e} active={e.ids.some((id) => selectedIds.has(id))} tokens={tokens} onToggleEntry={toggleEntry} />
               ))}
             </div>
           )}
@@ -259,16 +317,16 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
           while a keyword search is active (the flat result list above takes its place). */}
       {categories.length > 0 && !query && (
         <div style={{ border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
-          {categories.map(({ sector, skills: sectorSkills }) => (
+          {categories.map(({ sector, entries }) => (
             <SectorRow
               key={sector}
               sector={sector}
-              sectorSkills={sectorSkills}
-              selectedSkillIds={selectedSkillIds}
+              entries={entries}
+              selectedIds={selectedIds}
               isOpen={openSector === sector}
               tokens={tokens}
               onToggle={() => setOpenSector(openSector === sector ? null : sector)}
-              onToggleSkill={onToggleSkill}
+              onToggleEntry={toggleEntry}
             />
           ))}
         </div>

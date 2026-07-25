@@ -89,9 +89,12 @@ share."** — no "guarantee" / "your identity is protected" wording anywhere on 
 **Steps:**
 1. Open a claimed profile, then an unclaimed one.
 2. Read every section.
+3. If you have a profile that holds a skill the taxonomy lists under more than one occupation (e.g.
+   "First Aid & CPR"), confirm that skill shows as **one** chip, not two identical ones.
 **Expected:** Name renders as "First Last" (`first_name` required, `last_name` optional). You see job
 title, sector, location ("City, State, Country" — only the parts that are set; a non-US member may show
-just a country), specializations/skills, and the bio. An **unclaimed** community-generated profile shows
+just a country), specializations/skills, and the bio. Each skill **name appears at most once** — no
+duplicate chips even when the taxonomy maps that name to several occupations. An **unclaimed** community-generated profile shows
 the "Community-generated profile" line; once that profile is **claimed**, that line is hidden publicly
 while the "Nominated by @handle" line still shows (the backend keeps `source = 'community-generated'`
 either way; the admin surface still shows the community-generated record). No endorsements, reviews, booking, or chat
@@ -117,11 +120,13 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
 2. Change the headline and one other field; leave the rest untouched and save.
 3. In the specializations picker, expand a sector in the accordion (only one opens at a time) and
    toggle a skill on and off; confirm the sector row shows an "N selected" badge and the pick appears
-   as a removable chip at the top.
+   as a removable chip at the top. Confirm each **skill name appears only once** in the accordion — a
+   name the taxonomy maps to several occupations is a single, unambiguous chip (picking it once
+   selects it; removing it clears it), and the selected-chips row never shows the same name twice.
 4. In the same picker, type in the **"Search skills by keyword"** box; confirm the accordion is
-   replaced by a flat cross-sector result list, that a match toggles on/off like an accordion chip,
-   that a no-match query shows the "No skills match" note, and that clearing the box (the ✕) brings the
-   accordion back.
+   replaced by a flat cross-sector result list (each name appears once there too), that a match toggles
+   on/off like an accordion chip, that a no-match query shows the "No skills match" note, and that
+   clearing the box (the ✕) brings the accordion back.
 5. Confirm there is **no** "Know their profession? Add its skills" prefill dropdown in the picker — a
    member authors their own profile, so that third-party prefill is intentionally absent (it is also
    absent in the admin edit form).
