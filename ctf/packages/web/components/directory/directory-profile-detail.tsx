@@ -188,7 +188,13 @@ export function DirectoryProfileDetail({
               </div>
               {isCommunityGenerated ? (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT }}>Community-generated profile</div>
+                  {/* "Community-generated profile" is only true until the person claims it. Once claimed
+                      it no longer makes sense to a viewer, so hide that line publicly after a claim —
+                      the backend still records source === "community-generated". Keep "Nominated by",
+                      which stays accurate whether or not the profile has been claimed. */}
+                  {claimedUserId == null && (
+                    <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT }}>Community-generated profile</div>
+                  )}
                   {p.invitedByUsername && (
                     <div style={{ fontSize: 13, color: t.SUBTLE, marginTop: 2, lineHeight: 1.4 }}>Nominated by @{p.invitedByUsername}</div>
                   )}
