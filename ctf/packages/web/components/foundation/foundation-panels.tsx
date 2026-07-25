@@ -190,6 +190,12 @@ export function BrowsePanel({
                     </span>
                   </div>
 
+                  {/* Provider's own short blurb — their plain "here's what I offer" line, shown
+                      before the skills and the CTA so a member can size up the listing at a glance. */}
+                  {p.shortDescription ? (
+                    <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5 }}>{p.shortDescription}</div>
+                  ) : null}
+
                   {/* Skills use the full card width and wrap into a compact cloud, capped
                       with a "+N more" chip that opens the full profile. */}
                   {p.offeredSkills.length > 0 ? (
