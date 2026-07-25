@@ -28,9 +28,11 @@ export async function GET() {
     };
 
     // The gated contributor channel is listed ONLY when it is open AND this member holds the
-    // eligibility flag (or is an admin — moderators keep read access, disclosed in-channel).
-    // The filter is server-side on purpose: a non-eligible member's response contains no trace
-    // of the channel — no locked teaser, no absence state (the spec's no-shaming rule).
+    // eligibility flag, OR is an admin. There is no separate "moderator" role for this channel: the
+    // disclosed moderator is an admin acting as moderator (see lib/contributor-access/channel-repository.ts),
+    // so `gate.auth.isAdmin` is the moderator/oversight path here. The filter is server-side on
+    // purpose: a non-eligible member's response contains no trace of the channel — no locked teaser,
+    // no absence state (the spec's no-shaming rule).
     const [config, eligible] = await Promise.all([
       getContributorAccessConfig(),
       isMemberEligible(gate.auth.userId),

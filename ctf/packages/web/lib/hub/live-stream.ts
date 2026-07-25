@@ -65,7 +65,16 @@ export async function connectHubLive(
   let client: StreamChat | null = null;
   try {
     client = StreamChat.getInstance(credentials.streamApiKey);
-    await client.connectUser({ id: credentials.streamUserId }, credentials.streamToken);
+    // getInstance returns a singleton per API key, so a prior connection (after an account switch
+    // or a reconnect) may still be authenticated as a different user. Never call connectUser on an
+    // already-connected client: reuse it when it is already this user, otherwise disconnect the
+    // stale user first — this prevents one member's real-time events from reaching another.
+    if (client.userID && client.userID !== credentials.streamUserId) {
+      await client.disconnectUser().catch(() => undefined);
+    }
+    if (!client.userID) {
+      await client.connectUser({ id: credentials.streamUserId }, credentials.streamToken);
+    }
 
     const channel = client.channel(credentials.streamChannelType ?? 'messaging', credentials.streamChannelId);
     await channel.watch();

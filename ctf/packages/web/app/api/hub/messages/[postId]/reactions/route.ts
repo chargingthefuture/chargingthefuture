@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { FEED_ERROR_CODE, isAllowedFeedReactionEmoji } from 'lib/feed/constants';
-import { toggleCommunityPostReaction } from 'lib/feed/repository';
+import { normalizeUuid, toggleCommunityPostReaction } from 'lib/feed/repository';
 import { requireHubAccess } from '../../../_lib';
 import { ensureMutationCsrf } from '../../../../feed/_lib';
 
@@ -27,7 +27,15 @@ export async function POST(
     return csrfDeny;
   }
 
-  const { postId } = await context.params;
+  const { postId: rawPostId } = await context.params;
+  // Reject a malformed id (community post ids are UUIDs) before it reaches the repository.
+  const postId = normalizeUuid(rawPostId);
+  if (!postId) {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid post id.' },
+      { status: 400 },
+    );
+  }
 
   let body: ReactionRequestBody;
   try {

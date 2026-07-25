@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
-import { deleteCommunityPost } from 'lib/feed/repository';
+import { deleteCommunityPost, normalizeUuid } from 'lib/feed/repository';
 import { requireHubAccess } from '../../_lib';
 import { ensureMutationCsrf } from '../../../feed/_lib';
 
@@ -25,7 +25,16 @@ export async function DELETE(
     return csrfDeny;
   }
 
-  const { postId } = await context.params;
+  const { postId: rawPostId } = await context.params;
+  // Reject a malformed id (community post ids are UUIDs) before it reaches the repository, so an
+  // arbitrarily long or malformed path segment cannot waste a database round-trip.
+  const postId = normalizeUuid(rawPostId);
+  if (!postId) {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid post id.' },
+      { status: 400 },
+    );
+  }
 
   try {
     await deleteCommunityPost(gate.auth.userId, postId);

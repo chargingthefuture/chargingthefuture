@@ -235,7 +235,9 @@ function isValidIsoDatetime(value: string): boolean {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function normalizeUuid(value: unknown): string | null {
+// Return the trimmed value only when it is a well-formed UUID, else null. Exported so route handlers
+// can reject a malformed path/id (e.g. an arbitrarily long postId) before it reaches the repository.
+export function normalizeUuid(value: unknown): string | null {
   if (typeof value !== 'string') {
     return null;
   }
