@@ -40,6 +40,9 @@ export interface ProviderView {
   instantCallEnabled: boolean;
   instantCallRateCredits: number | null;
   instantCallIntervalMinutes: number;
+  // The provider's own short blurb, shown on the card and profile before requesting a quote. null
+  // when they haven't set one.
+  shortDescription: string | null;
 }
 
 /** Quote view model — only fields the real quote-history API returns. */

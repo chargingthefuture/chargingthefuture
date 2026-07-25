@@ -90,6 +90,7 @@ type FoundationProviderRow = {
   instant_call_enabled: boolean | null;
   instant_call_rate_credits: number | null;
   instant_call_interval_minutes: number | null;
+  short_description: string | null;
 };
 
 function mapProviderRow(row: FoundationProviderRow): FoundationProviderSearchItem {
@@ -111,6 +112,7 @@ function mapProviderRow(row: FoundationProviderRow): FoundationProviderSearchIte
     instantCallEnabled: Boolean(row.instant_call_enabled),
     instantCallRateCredits: rate === null || rate === undefined ? null : Number(rate),
     instantCallIntervalMinutes: Number(row.instant_call_interval_minutes ?? FOUNDATION_INSTANT_CALL_DEFAULT_INTERVAL),
+    shortDescription: row.short_description && row.short_description.trim().length > 0 ? row.short_description : null,
   };
 }
 
@@ -175,7 +177,8 @@ export async function searchProviders(input: {
           ), '[]'::jsonb) AS offered_skills,
           fue.instant_call_enabled,
           fue.instant_call_rate_credits,
-          fue.instant_call_interval_minutes
+          fue.instant_call_interval_minutes,
+          fue.short_description
         FROM directory_profiles dp
         LEFT JOIN foundation_user_extension fue ON fue.user_id = dp.claimed_by_user_id
         WHERE dp.is_active = TRUE
@@ -238,7 +241,8 @@ export async function getProviderById(profileId: string): Promise<FoundationProv
         ), '[]'::jsonb) AS offered_skills,
         fue.instant_call_enabled,
         fue.instant_call_rate_credits,
-        fue.instant_call_interval_minutes
+        fue.instant_call_interval_minutes,
+        fue.short_description
       FROM directory_profiles dp
       LEFT JOIN foundation_user_extension fue ON fue.user_id = dp.claimed_by_user_id
       WHERE dp.id::text = $1
@@ -429,6 +433,47 @@ export async function setOwnInstantCallSettings(
   );
 
   return mapInstantCallRow(updated.rows[0]);
+}
+
+export const FOUNDATION_SHORT_DESCRIPTION_MAX = 200;
+
+// The provider's own short blurb shown on their Foundation listing. A member with no row yet, or a
+// blank value, reads null. Trimmed for display so trailing whitespace never shows.
+export async function getOwnProviderShortDescription(userId: string): Promise<string | null> {
+  const result = await queryDb<{ short_description: string | null }>(
+    `SELECT short_description FROM foundation_user_extension WHERE user_id = $1`,
+    [userId],
+  );
+  const value = result.rows[0]?.short_description;
+  return value && value.trim().length > 0 ? value.trim() : null;
+}
+
+// Save the provider's short blurb. A blank string clears it (stored as NULL). Anything longer than
+// FOUNDATION_SHORT_DESCRIPTION_MAX after trimming throws 'invalid_short_description' so the route can
+// return a clear member-facing 400. Upserts only this column + updated_at, matching the other
+// per-field writers on foundation_user_extension.
+export async function setOwnProviderShortDescription(userId: string, input: string): Promise<string | null> {
+  const trimmed = typeof input === 'string' ? input.trim() : '';
+  if (trimmed.length > FOUNDATION_SHORT_DESCRIPTION_MAX) {
+    throw new Error('invalid_short_description');
+  }
+  const toStore = trimmed.length > 0 ? trimmed : null;
+
+  const updated = await queryDb<{ short_description: string | null }>(
+    `
+      INSERT INTO foundation_user_extension (user_id, short_description)
+      VALUES ($1, $2)
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        short_description = EXCLUDED.short_description,
+        updated_at = NOW()
+      RETURNING short_description
+    `,
+    [userId, toStore],
+  );
+
+  const value = updated.rows[0]?.short_description;
+  return value && value.trim().length > 0 ? value.trim() : null;
 }
 
 type FoundationThreadRow = {

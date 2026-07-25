@@ -6,6 +6,7 @@ import { Check, ShieldCheck } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getFoundationTokens } from "./foundation-ui";
 import { InstantCallSettings } from "./foundation-instant-call-settings";
+import { ProviderDescriptionSettings } from "./foundation-description-settings";
 
 type OfferableSkill = { id: string; name: string; offered: boolean };
 
@@ -74,6 +75,8 @@ export function OfferSkillsPanel() {
   return (
     <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "24px" }}>
+        <ProviderDescriptionSettings />
+
         <InstantCallSettings />
 
         <div style={{ marginBottom: 20, padding: "20px 24px", borderRadius: 16, background: `linear-gradient(135deg,${t.ACCENT}15 0%,rgba(239,68,68,0.05) 100%)`, border: `1px solid ${t.ACCENT}20` }}>

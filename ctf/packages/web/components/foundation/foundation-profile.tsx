@@ -83,6 +83,10 @@ export function ProviderProfile({
           </div>
           {quoteError && <div style={{ fontSize: 13, color: "#EF4444", marginBottom: 12 }}>{quoteError}</div>}
           {quoteSuccess && <div style={{ fontSize: 13, color: "#22C55E", marginBottom: 12 }}>Quote requested. Check the Quotes tab.</div>}
+          {/* Provider's own short blurb, before the skills and About sections. */}
+          {provider.shortDescription && (
+            <div style={{ fontSize: 14, color: t.SUBTLE, lineHeight: 1.6, marginBottom: 16 }}>{provider.shortDescription}</div>
+          )}
           {provider.offeredSkills.length > 0 && (
             <div style={{ padding: "20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}18`, marginBottom: 16 }}>
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.FAINT, textTransform: "uppercase", marginBottom: 10 }}>Willing to be contacted about</div>

@@ -3350,6 +3350,7 @@ CREATE TABLE IF NOT EXISTS foundation_user_extension (
   instant_call_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   instant_call_rate_credits INTEGER,
   instant_call_interval_minutes INTEGER NOT NULL DEFAULT 10,
+  short_description TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
@@ -3373,6 +3374,11 @@ ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS instant
 -- separate field in foundation_provider_accepted_currencies, never derived from rate_currency.
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_amount NUMERIC;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_currency TEXT REFERENCES currencies(code);
+-- A provider's own short blurb, one or two sentences, shown on their Foundation listing before a
+-- member requests a quote. It is the provider's plain "here's what I offer" line — separate from the
+-- Directory headline/bio (which the provider may not control) and from the offered-skill chips.
+-- Capped to ~200 characters in the app; nullable, because a provider need not set one.
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS short_description TEXT;
 
 -- A Foundation provider opts in to being contacted to offer specific skills. This is the
 -- "willing to offer SAID skill" signal that distinguishes Foundation from the Directory (where a

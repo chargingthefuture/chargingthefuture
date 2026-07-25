@@ -90,6 +90,9 @@ export type FoundationProviderSearchItem = {
   instantCallEnabled: boolean;
   instantCallRateCredits: number | null;
   instantCallIntervalMinutes: number;
+  // The provider's own short blurb (one or two sentences, capped ~200 chars), shown on their
+  // Foundation listing before a member requests a quote. null when they haven't set one.
+  shortDescription: string | null;
 };
 
 export type FoundationThread = {
