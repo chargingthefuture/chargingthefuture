@@ -186,12 +186,15 @@ export function DirectoryProfileDetail({
                   <WeaversBadgeControl size={20} tokens={t} />
                 )}
               </div>
-              {isCommunityGenerated ? (
+              {/* The headline (a short one-line tagline) always shows when set — including on a
+                  community-generated profile, where it used to be suppressed. */}
+              {headline && <div style={{ fontSize: 15, color: t.SUBTLE, marginBottom: 8, lineHeight: 1.4 }}>{headline}</div>}
+              {/* Community-generated origin block. "Community-generated profile" is only true until the
+                  person claims it, so hide that line publicly after a claim — the backend still records
+                  source === "community-generated". "Nominated by" stays accurate whether or not the
+                  profile has been claimed. Rendered only when there is at least one line to show. */}
+              {isCommunityGenerated && (claimedUserId == null || p.invitedByUsername) && (
                 <div style={{ marginBottom: 8 }}>
-                  {/* "Community-generated profile" is only true until the person claims it. Once claimed
-                      it no longer makes sense to a viewer, so hide that line publicly after a claim —
-                      the backend still records source === "community-generated". Keep "Nominated by",
-                      which stays accurate whether or not the profile has been claimed. */}
                   {claimedUserId == null && (
                     <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT }}>Community-generated profile</div>
                   )}
@@ -199,8 +202,6 @@ export function DirectoryProfileDetail({
                     <div style={{ fontSize: 13, color: t.SUBTLE, marginTop: 2, lineHeight: 1.4 }}>Nominated by @{p.invitedByUsername}</div>
                   )}
                 </div>
-              ) : (
-                headline && <div style={{ fontSize: 15, color: t.SUBTLE, marginBottom: 8, lineHeight: 1.4 }}>{headline}</div>
               )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {p.sector && <Badge style={{ background: `${t.ACCENT}15`, color: t.ACCENT, border: `1px solid ${t.ACCENT}30`, fontSize: 12 }}>{p.sector}</Badge>}
