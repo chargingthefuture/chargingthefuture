@@ -246,6 +246,7 @@ web ☐
 - Claimed requests are represented by their active fulfillment row, not an extra pending row.
 - On Android, each pending-request card shows a "No helper yet" note (not a chat), explaining the request is still open on the feed.
 - Tapping an active-fulfillment row opens the chat thread (web); on Android, each active-fulfillment card shows an "Open chat" button that opens the chat (see SR-10a).
+- On web (phone-width), the Direct Line is a **single full-width column**, not a side-by-side split: the tab first shows the conversation list; tapping a row replaces it with that conversation full-width (the chat, or a "No helper yet" pane for a pending request), with a **"‹ All conversations"** back control at the top. No text should wrap to one or two words per line, and Back returns to the list. A `?fulfillment=<id>` deep link opens straight into that conversation with the same Back control.
 
 web ☐
 
