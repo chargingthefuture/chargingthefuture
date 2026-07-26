@@ -830,15 +830,15 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     }
   }, [currentUser.userId, pendingConsentText, routeToComic]);
 
-  // Consent modal "Not now": do not route; keep the question in the composer so the asker can edit
-  // or send it as a normal post.
+  // Consent modal "Not now": do not route, and do NOT populate the composer. When the modal was
+  // opened from a composer-typed @comic message the text is already in the input (the send path never
+  // cleared it), so it stays put on its own. When it was opened from a one-tap suggestion chip the
+  // input was empty, so we must leave it empty — dropping the chip's "@comic …" question into the box
+  // (the old behavior) looked like a message queued to send that the member never wrote.
   const dismissConsent = useCallback(() => {
     setConsentModalOpen(false);
-    if (pendingConsentText) {
-      setInput(pendingConsentText);
-    }
     setPendingConsentText(null);
-  }, [pendingConsentText]);
+  }, []);
 
   // Rate an answered AI Assistant card. Optimistically reflects the choice; reverts on failure.
   const rateComicAnswer = useCallback(
