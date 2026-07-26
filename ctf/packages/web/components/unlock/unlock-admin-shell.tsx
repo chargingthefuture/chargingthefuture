@@ -354,7 +354,11 @@ export function UnlockAdminShell({
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="Unlock Admin" accent={t.ACCENT} icon={<Unlock size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/unlock" accent={t.ACCENT} />} />
+      {/* Unlock's member surface is /plugin/unlock, NOT /apps/unlock. The plugin is registered with
+          isVisible: false so it stays out of the app launcher, and /apps/[pluginSlug] calls
+          notFound() on any plugin that is not visible — so an /apps/unlock link 404s for everyone,
+          admins included (owner report, 2026-07-26). */}
+      <MobileScreenHeader title="Unlock Admin" accent={t.ACCENT} icon={<Unlock size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/plugin/unlock" accent={t.ACCENT} />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
