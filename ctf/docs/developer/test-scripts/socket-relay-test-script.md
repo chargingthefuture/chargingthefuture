@@ -191,6 +191,8 @@ web ☐
 - The claim succeeds and a fulfillment is created.
 - The request no longer shows the claim button for this member.
 - The claimer can see the new fulfillment in their Direct Line / "my fulfillments" list.
+- On the **requester's** side, the request card in the feed now reads **"Being helped"** (amber) — not "✓ closed". The status badge and the action label agree.
+- The requester receives a "Someone offered to help…" notification whose **Open** button deep-links straight to that Direct Line (`/apps/socket-relay?fulfillment=<id>`) — it opens the Direct Line tab with that conversation selected, not the feed homepage.
 
 web ☐
 

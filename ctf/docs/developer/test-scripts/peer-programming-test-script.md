@@ -77,7 +77,23 @@ Result: web ☐
 2. Type a short message, e.g. "Test post from manual run".
 3. Tap/click Send.
 
-**Expected:** The message appears in the message list attributed to your username (e.g. `@alice` or a short member label). The composer clears after sending. No error message is shown. In single standing Cohort 1 mode, simply opening the room (or the live session) is what enrolls you in Cohort 1 so you can post — a member who has opened PeerProgramming at least once can post; a pure listen-in / read never enrolls anyone.
+**Expected:** The message appears in the message list attributed to your username (e.g. `@alice` or a short member label). The composer clears after sending. No error message is shown. Each message's stamp shows **both a date and a time** (e.g. "Jul 21, 09:21 PM"), not a time alone, so messages from different days can be told apart. In single standing Cohort 1 mode, simply opening the room (or the live session) is what enrolls you in Cohort 1 so you can post — a member who has opened PeerProgramming at least once can post; a pure listen-in / read never enrolls anyone.
+
+Result: web ☐
+
+---
+
+### PP-2b — A cohort message notifies the other members
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Two seeded members (A and B) are in the same cohort. Sign in as A in one session; B is the recipient under test.
+
+**Steps:**
+1. As member A, post a message in the cohort's Direct Line.
+2. Sign in as member B and open the 🔔 Notifications tab in the Commons (the bell chip next to @ and 📣).
+
+**Expected:** B sees a "New message in your PeerProgramming cohort." notification whose "Open" deep-links to the cohort room. A (the sender) does **not** get a notification for their own message. Posting the same message once produces at most one notification per other member. If B has turned on the "Community" device-push toggle (in the 🔔 tab's "Manage what pings your device"), B's device also gets a ping.
 
 Result: web ☐
 
