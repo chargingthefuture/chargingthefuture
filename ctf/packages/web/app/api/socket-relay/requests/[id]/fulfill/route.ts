@@ -22,7 +22,7 @@ export async function POST(request: Request, { params }: RouteProps) {
   const { id } = await params;
 
   try {
-    const created = await claimRequest(id, gate.auth.userId);
+    const created = await claimRequest(id, gate.auth.userId, gate.auth.username ?? null);
     await insertSocketRelayAudit({
       actorId: gate.auth.userId,
       command: 'socket-relay.fulfillment.claim',

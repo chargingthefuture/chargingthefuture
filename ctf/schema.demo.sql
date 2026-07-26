@@ -2679,6 +2679,37 @@ ALTER TABLE IF EXISTS directory_profile_change_events ADD COLUMN IF NOT EXISTS t
 ALTER TABLE IF EXISTS directory_profile_change_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS directory_profile_change_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Append-only history of a member's Quora profile URL. The Quora URL is the only social-proof signal
+-- and can be changed after a member is approved (Directory is the only post-unlock place it can be
+-- edited). A member may replace it with a new valid Quora URL but can never empty it (see
+-- upsertOwnProfile — an empty/invalid submission keeps the previous URL). Every real change is
+-- recorded here (first set at Unlock onboarding, later edits in Directory, and any admin edit) so an
+-- admin can review the trail in the Unlock queue and revoke someone gaming the low-bar social proof.
+-- Changing a URL is NOT by itself a red flag — Quora sometimes deletes an account and the member must
+-- re-profile — so this is a watch/audit trail for a human, never an automated flag.
+CREATE TABLE IF NOT EXISTS directory_quora_url_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  previous_url TEXT,
+  new_url TEXT NOT NULL,
+  previous_url_normalized TEXT,
+  new_url_normalized TEXT NOT NULL,
+  changed_by_user_id TEXT NOT NULL,
+  source TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS previous_url TEXT;
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS new_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS previous_url_normalized TEXT;
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS new_url_normalized TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS changed_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_quora_url_history ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_directory_quora_url_history_user
+  ON directory_quora_url_history (user_id, created_at DESC);
+
 -- Suppression list for the "remove at the person's request" takedown (distinct from the ordinary
 -- unclaimed-profile delete, which is for duplicates/accidents and does NOT block re-adding). When an
 -- admin takes down a community-generated profile because the (accountless) person asked to be removed,
@@ -3317,6 +3348,7 @@ CREATE TABLE IF NOT EXISTS foundation_user_extension (
   instant_call_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   instant_call_rate_credits INTEGER,
   instant_call_interval_minutes INTEGER NOT NULL DEFAULT 10,
+  short_description TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
@@ -3340,6 +3372,11 @@ ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS instant
 -- separate field in foundation_provider_accepted_currencies, never derived from rate_currency.
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_amount NUMERIC;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_currency TEXT REFERENCES currencies(code);
+-- A provider's own short blurb, one or two sentences, shown on their Foundation listing before a
+-- member requests a quote. It is the provider's plain "here's what I offer" line — separate from the
+-- Directory headline/bio (which the provider may not control) and from the offered-skill chips.
+-- Capped to ~200 characters in the app; nullable, because a provider need not set one.
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS short_description TEXT;
 
 -- A Foundation provider opts in to being contacted to offer specific skills. This is the
 -- "willing to offer SAID skill" signal that distinguishes Foundation from the Directory (where a
@@ -3644,6 +3681,11 @@ CREATE TABLE IF NOT EXISTS socket_relay_fulfillments (
   request_id UUID NOT NULL,
   requester_user_id TEXT NOT NULL,
   fulfiller_user_id TEXT NOT NULL,
+  -- Denormalized @usernames captured at claim time (mirrors socket_relay_requests.owner_username):
+  -- v3 has no server-side store of other members' handles, so store both so the Direct Line chat can
+  -- show real participant names instead of a raw user id. Nullable for legacy rows / missing handles.
+  requester_username TEXT,
+  fulfiller_username TEXT,
   status TEXT NOT NULL DEFAULT 'active',
   close_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -3653,6 +3695,8 @@ ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS id UUID
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS request_id UUID NOT NULL DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS requester_user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS fulfiller_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS requester_username TEXT;
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS fulfiller_username TEXT;
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS close_reason TEXT;
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();

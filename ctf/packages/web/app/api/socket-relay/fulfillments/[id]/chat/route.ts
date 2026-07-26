@@ -35,12 +35,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
+    // Use the handles captured on the fulfillment at claim time so both participants render with a real
+    // @name. Passing null here (as before) re-upserted both Stream users nameless and overwrote the good
+    // names set at claim, which is why the counterparty showed as a raw user id.
     const streamChannelId = await ensureSocketRelayFulfillmentChannel({
       fulfillmentId: fulfillment.id,
       requesterUserId: fulfillment.requesterUserId,
-      requesterDisplayName: buildIdentityDisplayName(null, fulfillment.requesterUserId),
+      requesterDisplayName: buildIdentityDisplayName(fulfillment.requesterUsername, fulfillment.requesterUserId),
       fulfillerUserId: fulfillment.fulfillerUserId,
-      fulfillerDisplayName: buildIdentityDisplayName(null, fulfillment.fulfillerUserId),
+      fulfillerDisplayName: buildIdentityDisplayName(fulfillment.fulfillerUsername, fulfillment.fulfillerUserId),
     });
     if (!streamChannelId) {
       return NextResponse.json({ ok: false, message: 'Unable to create chat channel' }, { status: 500 });

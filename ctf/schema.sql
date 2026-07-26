@@ -3683,6 +3683,11 @@ CREATE TABLE IF NOT EXISTS socket_relay_fulfillments (
   request_id UUID NOT NULL,
   requester_user_id TEXT NOT NULL,
   fulfiller_user_id TEXT NOT NULL,
+  -- Denormalized @usernames captured at claim time (mirrors socket_relay_requests.owner_username):
+  -- v3 has no server-side store of other members' handles, so store both so the Direct Line chat can
+  -- show real participant names instead of a raw user id. Nullable for legacy rows / missing handles.
+  requester_username TEXT,
+  fulfiller_username TEXT,
   status TEXT NOT NULL DEFAULT 'active',
   close_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -3692,6 +3697,8 @@ ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS id UUID
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS request_id UUID NOT NULL DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS requester_user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS fulfiller_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS requester_username TEXT;
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS fulfiller_username TEXT;
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS close_reason TEXT;
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();

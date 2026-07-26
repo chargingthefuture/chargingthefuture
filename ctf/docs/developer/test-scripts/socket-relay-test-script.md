@@ -172,6 +172,7 @@ web ☐
 - The "I Can Help" / claim button is absent or disabled for the expired card.
 - The other member does **not** see the expired request in their feed (expired posts are hidden from everyone except the owner).
 - Tapping "Re-post" (owner) makes the request live again: the Expired pill disappears, the 28-day clock resets, and the card becomes visible to other members.
+- Re-post is offered only on expired/closed posts — never on a **claimed** request (one with an active helper). A `POST /requests/:id/repost` on a claimed request is rejected with a readable 409 ("resolve the Direct Line before re-posting"); it must not blank the claim and leave the request both open and mid-conversation.
 
 web ☐
 
@@ -252,6 +253,7 @@ web ☐
 **Expected:**
 - Both participants can send and receive messages.
 - The chat panel shows the request title and each participant's role ("Your request" / "You're helping").
+- Each participant sees the **other** person by their real `@username` (or a readable name) — **not** a raw `user-xxxxxxxx` id. This holds both right after the claim and when re-opening the chat later (opening the chat must not degrade the counterparty's name).
 - When the message list is empty a branded empty state appears ("No messages yet" or similar) — not Stream's default "No chats here yet…".
 
 web ☐
