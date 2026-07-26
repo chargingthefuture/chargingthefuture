@@ -30,7 +30,7 @@ function bannerGoals(f: FundraiserResponse['fundraiser']): BannerGoal[] {
  * "Not now" calls the server-side silent snooze (the duration is never shown).
  *
  * On phone width, dismissing does not remove the reminder entirely — the reminder becomes the small
- * gift emoji in the top bar (ContributionsGiftTrigger below, mounted between the TSE mark and the
+ * gift emoji in the top bar (ContributionsGiftTrigger below, mounted between the brand mark and the
  * section tabs), so no strip of vertical space is spent on it. The full banner returns on its own
  * when the snooze lapses. On desktop, dismissing hides it until the snooze lapses (no emoji — a
  * slim desktop bar is already unobtrusive).
@@ -128,7 +128,7 @@ export function ContributionsBanner() {
 }
 
 /**
- * The phone-top-bar gift reminder: a small 🎁 between the TSE mark and the section tabs (owner
+ * The phone-top-bar gift reminder: a small 🎁 between the brand mark and the section tabs (owner
  * placement decision, 2026-07-19). It appears only while a drive is active AND the full banner is
  * not showing (dismissed this session or server-snoozed), so the reminder survives without
  * spending a strip of vertical space. Opens the Contributions plugin. Phone widths only — on

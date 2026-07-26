@@ -29,7 +29,7 @@ import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
-import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Path } from 'react-native-svg';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
 
 // Register the Android foreground service once, at module load, before any Chyme call is joined.
@@ -51,10 +51,14 @@ StreamVideoRN.updateConfig({
   },
 });
 
-// The "TSE" brand chip — the mobile counterpart of the web icon-rail logo (which reads "TSE" for
-// "TI Skills Economy"). Default theme paints the signature purple→cyan gradient (matches web
-// `--ctf-cta-bg`); comic theme flattens to an ink panel with a hard cream border (matches web's comic
-// CTA treatment). Kept small and self-contained.
+// The Skills Economy brand mark — the mobile counterpart of the web icon-rail logo. It draws the
+// "Stack" (skill progression) logo: three ascending rounded bars filled with the brand teal→purple
+// gradient (vector source: design/logo-options concept-d-stack-mark, chosen 2026-07-26). Comic theme
+// keeps the ink panel + hard cream border and paints the same mark in the border ink so it reads on
+// the warm newsprint surface. Kept small and self-contained.
+const SE_MARK_PATH =
+  'm94 105.7h-26v-7.7h25.5c1.5-0.1 3.1-1.3 3.1-3.3v-11.7c0-1.5-1.2-2.9-2.8-2.9l-22.5-0.1c-1.7 0-3.3 1.4-3.3 3.1l0.1 9.7h-24.8c-1.6 0-3 1.3-3 2.9v12.9h-25.7c-1.6 0-3.1 1.3-3.1 2.9v8.1c0 1.4 1.2 2.7 2.6 2.7h79.9c1.5 0 2.8-1.3 2.9-2.7v-11.3c-0.2-1.3-1.4-2.6-2.9-2.6zm-0.2 21.2h-79.3c-1.4 0-2.9 1.2-2.9 2.8v8.3c0 1.4 1.2 3 2.8 3h79.6c1.6 0 2.8-1.3 2.8-2.8v-8c0-1.8-1.4-3.2-3-3.3z';
+
 function BrandMark({ size = 36 }: { size?: number }) {
   const { tokens } = useTheme();
   const radius = tokens.radiusControl;
@@ -72,28 +76,15 @@ function BrandMark({ size = 36 }: { size?: number }) {
         borderColor: tokens.border,
       }}
     >
-      {!tokens.isComic ? (
-        <Svg width={size} height={size} style={{ position: 'absolute' }}>
-          <Defs>
-            <SvgLinearGradient id="brandmark" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor="#7C3AED" />
-              <Stop offset="1" stopColor="#0EA5E9" />
-            </SvgLinearGradient>
-          </Defs>
-          <Rect width={size} height={size} fill="url(#brandmark)" />
-        </Svg>
-      ) : null}
-      <Text
-        style={{
-          fontSize: size * 0.44,
-          fontWeight: '800',
-          fontFamily: 'Inter_800ExtraBold',
-          color: tokens.isComic ? tokens.border : '#FFFFFF',
-          letterSpacing: 0.5,
-        }}
-      >
-        TSE
-      </Text>
+      <Svg width={size} height={size} viewBox="4 67.9 100 85">
+        <Defs>
+          <SvgLinearGradient id="brandmark" x1="11.51" y1="110.4" x2="96.71" y2="110.4" gradientUnits="userSpaceOnUse">
+            <Stop offset="0" stopColor="#006D72" />
+            <Stop offset="1" stopColor="#8F4BB2" />
+          </SvgLinearGradient>
+        </Defs>
+        <Path d={SE_MARK_PATH} fill={tokens.isComic ? tokens.border : 'url(#brandmark)'} />
+      </Svg>
     </View>
   );
 }
@@ -283,7 +274,7 @@ function AppShell() {
       <View style={styles.brandRow}>
         <BrandMark />
         <View>
-          <Text style={[styles.wordmark, { color: tokens.textPrimary }]}>TI Skills Economy</Text>
+          <Text style={[styles.wordmark, { color: tokens.textPrimary }]}>Skills Economy</Text>
           <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>Community</Text>
         </View>
       </View>

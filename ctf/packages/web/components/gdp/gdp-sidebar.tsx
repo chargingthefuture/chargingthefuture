@@ -25,7 +25,7 @@ function LiveTicker({ metrics }: { metrics: GdpMetrics }) {
             <span style={{ display: "inline-flex", alignItems: "center", fontSize: 9, fontWeight: 600, color: t.MUTED, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, padding: "1px 6px", letterSpacing: "0.04em" }}>{GDP_ESTIMATE_CHIP_LABEL}</span>
           ) : null}
         </div>
-        <div style={{ fontSize: 11, color: t.MUTED, marginBottom: 4 }}>Current TI Skills Economy</div>
+        <div style={{ fontSize: 11, color: t.MUTED, marginBottom: 4 }}>Current Skills Economy</div>
         {metrics.delta ? <div style={{ fontSize: 12, color: "#22C55E" }}>{metrics.delta}</div> : null}
       </div>
       {rows.map(({ l, v }) => (

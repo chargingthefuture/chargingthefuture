@@ -53,7 +53,7 @@ export type GdpLiveReport = {
   sources: GdpLiveSource[];
 };
 
-const LIVE_PUBLICATION_TITLE = 'TI Skills Economy — Live';
+const LIVE_PUBLICATION_TITLE = 'Skills Economy — Live';
 const LIVE_PUBLICATION_SUMMARY =
   'Live measure of every recognized non-incentive exchange across the community, recomputed on each visit — no weekly publish step. Incentives (rewards, bonuses, thank-you grants) and plain transfers are not counted.';
 

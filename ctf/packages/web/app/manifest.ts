@@ -7,8 +7,8 @@ import type { MetadataRoute } from 'next';
 // the Commons in its own window — no browser chrome — and receives web push.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'TI Skills Economy',
-    short_name: 'TSE',
+    name: 'Skills Economy',
+    short_name: 'SE',
     description: 'A psyop-free economy: survivors exchanging real skills, help, and resources.',
     id: '/',
     start_url: '/',

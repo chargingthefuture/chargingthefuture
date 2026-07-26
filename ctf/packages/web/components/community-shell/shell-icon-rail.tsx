@@ -5,6 +5,7 @@ import { UserButton } from '@clerk/nextjs';
 import { Users, Zap, Shield, SlidersHorizontal, Gift } from 'lucide-react';
 import type { ShellSection } from './shell-types';
 import { HelpControl } from '../bug-reports/help-control';
+import { SeMark } from '../shared/se-mark';
 import styles from './community-shell.module.css';
 
 type IconRailProps = {
@@ -18,8 +19,10 @@ type IconRailProps = {
 export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthenticated = false, isAdmin = false }: IconRailProps) {
   return (
     <aside className={styles.iconRail}>
-      {/* Product wordmark — matches the site title "TI Skills Economy (TSE)" in layout.tsx. */}
-      <div className={styles.iconRailLogo} aria-hidden="true">TSE</div>
+      {/* Product mark — the Skills Economy "Stack" logo (matches the site title in layout.tsx). */}
+      <div className={styles.iconRailLogo}>
+        <SeMark size={34} />
+      </div>
 
       <button
         type="button"

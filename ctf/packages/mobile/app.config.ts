@@ -28,7 +28,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: 'ChargingTheFuture',
+    // Display name shown under the launcher icon. The slug / scheme / bundle id below stay tied to
+    // "charging the future" — they are the EAS project + OAuth redirect identity, not the brand name.
+    name: 'Skills Economy',
     slug: 'charging-the-future',
     // App URL scheme for the OAuth sign-in redirect back into the app
     // (ctf://oauth-callback). Must match the redirect URI registered on the
@@ -41,7 +43,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     splash: {
       image: './assets/splash.png',
       resizeMode: 'contain',
-      backgroundColor: '#ffffff',
+      // Brand dark (matches the Skills Economy logo backdrop) so the splash is seamless with the
+      // centered mark instead of a white letterbox around it.
+      backgroundColor: '#0F0E17',
     },
     assetBundlePatterns: ['**/*'],
     ios: {
@@ -51,7 +55,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
-        backgroundColor: '#ffffff',
+        // Brand dark launcher backdrop for the Skills Economy mark (was a white stopgap).
+        backgroundColor: '#0F0E17',
       },
       package: 'com.chargingthefuture.app',
     },
