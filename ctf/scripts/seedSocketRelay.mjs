@@ -66,11 +66,13 @@ async function main() {
     await client.query(
       `
         INSERT INTO socket_relay_fulfillments
-          (id, request_id, requester_user_id, fulfiller_user_id, status, close_reason)
+          (id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason)
         VALUES
-          ($1::uuid, $2::uuid, 'seed-socket-relay-owner-01', 'seed-socket-relay-fulfiller-01', 'active', NULL)
+          ($1::uuid, $2::uuid, 'seed-socket-relay-owner-01', 'seed-socket-relay-fulfiller-01', 'seedowner', 'seedhelper', 'active', NULL)
         ON CONFLICT (id)
         DO UPDATE SET
+          requester_username = EXCLUDED.requester_username,
+          fulfiller_username = EXCLUDED.fulfiller_username,
           status = EXCLUDED.status,
           close_reason = EXCLUDED.close_reason,
           updated_at = NOW()

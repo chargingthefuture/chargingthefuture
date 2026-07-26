@@ -97,6 +97,8 @@ type FulfillmentRow = {
   request_id: string;
   requester_user_id: string;
   fulfiller_user_id: string;
+  requester_username: string | null;
+  fulfiller_username: string | null;
   status: 'active' | 'closed' | 'cancelled';
   close_reason: string | null;
   created_at: Date;
@@ -233,6 +235,8 @@ function mapFulfillmentRow(row: FulfillmentRow): SocketRelayFulfillment {
     requestId: row.request_id,
     requesterUserId: row.requester_user_id,
     fulfillerUserId: row.fulfiller_user_id,
+    requesterUsername: row.requester_username ?? null,
+    fulfillerUsername: row.fulfiller_username ?? null,
     status: row.status,
     closeReason: row.close_reason,
     createdAtIso: toIso(row.created_at),
@@ -590,6 +594,15 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
     throw new Error('not_owner');
   }
 
+  // A claimed request has an active helper and a live Direct Line. Re-posting it would blank
+  // `claimed_fulfillment_id` and set the request back to `open` while leaving that fulfillment `active`
+  // — a request that is simultaneously a live conversation and a "waiting for a helper" row, and
+  // re-claimable by a second helper. Block it: the requester must resolve the Direct Line first
+  // (reopen-for-others already cancels the helper atomically). Repost is for expired/closed posts only.
+  if (existing.status === 'claimed') {
+    throw new Error('request_not_repostable');
+  }
+
   const result = await queryDb<RequestRow>(
     `UPDATE socket_relay_requests
      SET status = 'open',
@@ -611,7 +624,7 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
   return request;
 }
 
-export async function claimRequest(requestId: string, actorUserId: string): Promise<{ request: SocketRelayRequest; fulfillment: SocketRelayFulfillment }> {
+export async function claimRequest(requestId: string, actorUserId: string, actorUsername: string | null = null): Promise<{ request: SocketRelayRequest; fulfillment: SocketRelayFulfillment }> {
   const created = await withDbTransaction(async (client) => {
     const requestResult = await client.query<RequestRow>(
       `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, state, country, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at
@@ -642,10 +655,10 @@ export async function claimRequest(requestId: string, actorUserId: string): Prom
     }
 
     const fulfillment = await client.query<FulfillmentRow>(
-      `INSERT INTO socket_relay_fulfillments (request_id, requester_user_id, fulfiller_user_id, status)
-       VALUES ($1::uuid, $2, $3, 'active')
-       RETURNING id, request_id, requester_user_id, fulfiller_user_id, status, close_reason, created_at, updated_at`,
-      [requestId, requestRow.owner_user_id, actorUserId],
+      `INSERT INTO socket_relay_fulfillments (request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status)
+       VALUES ($1::uuid, $2, $3, $4, $5, 'active')
+       RETURNING id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at`,
+      [requestId, requestRow.owner_user_id, actorUserId, normalizeNullableText(requestRow.owner_username), normalizeNullableText(actorUsername)],
     );
 
     await client.query(
@@ -675,16 +688,16 @@ export async function claimRequest(requestId: string, actorUserId: string): Prom
     };
   });
 
-  // Resolve readable display names for the Stream channel instead of passing raw user UUIDs (which
-  // would show as the participants' names in chat). The requester's `@username` is denormalized on the
-  // request row; the fulfiller's handle is not known server-side here, so it falls back to a formatted
-  // short id. The chat-credentials route also upserts these names when either participant opens the chat.
+  // Resolve readable display names for the Stream channel instead of raw user UUIDs. Both handles are
+  // now captured on the fulfillment at claim time (requester = the request's owner_username; fulfiller =
+  // the claimer's own username), so both participants render with a real @handle in chat. The chat
+  // route reads these same stored handles on every open, so a later open never degrades them.
   await ensureSocketRelayFulfillmentChannel({
     fulfillmentId: created.fulfillment.id,
     requesterUserId: created.fulfillment.requesterUserId,
-    requesterDisplayName: buildIdentityDisplayName(created.request.ownerUsername, created.fulfillment.requesterUserId),
+    requesterDisplayName: buildIdentityDisplayName(created.fulfillment.requesterUsername, created.fulfillment.requesterUserId),
     fulfillerUserId: created.fulfillment.fulfillerUserId,
-    fulfillerDisplayName: buildIdentityDisplayName(null, created.fulfillment.fulfillerUserId),
+    fulfillerDisplayName: buildIdentityDisplayName(created.fulfillment.fulfillerUsername, created.fulfillment.fulfillerUserId),
   });
 
   // Best-effort presence sync after the durable claim: the post left the open pool (status 'claimed'),
@@ -696,7 +709,7 @@ export async function claimRequest(requestId: string, actorUserId: string): Prom
 
 export async function getFulfillmentById(fulfillmentId: string): Promise<SocketRelayFulfillment | null> {
   const result = await queryDb<FulfillmentRow>(
-    `SELECT id, request_id, requester_user_id, fulfiller_user_id, status, close_reason, created_at, updated_at
+    `SELECT id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at
      FROM socket_relay_fulfillments
      WHERE id = $1::uuid
      LIMIT 1`,
@@ -714,7 +727,7 @@ export async function listMyFulfillments(userId: string): Promise<SocketRelayFul
   // Join the request so the chat can show what the conversation is about (title + current status)
   // instead of a bare "Fulfillment <uuid>".
   const result = await queryDb<FulfillmentRow & { request_title: string | null; request_status: string | null }>(
-    `SELECT f.id, f.request_id, f.requester_user_id, f.fulfiller_user_id, f.status, f.close_reason, f.created_at, f.updated_at,
+    `SELECT f.id, f.request_id, f.requester_user_id, f.fulfiller_user_id, f.requester_username, f.fulfiller_username, f.status, f.close_reason, f.created_at, f.updated_at,
             r.title AS request_title, r.status AS request_status
      FROM socket_relay_fulfillments f
      LEFT JOIN socket_relay_requests r ON r.id = f.request_id
@@ -763,7 +776,7 @@ export async function resolveFulfillment(
     // retried resolve can't both pass checks and double-apply side effects (e.g. incrementing
     // reopened_count twice or inserting duplicate request events).
     const locked = await client.query<FulfillmentRow>(
-      `SELECT id, request_id, requester_user_id, fulfiller_user_id, status, close_reason, created_at, updated_at
+      `SELECT id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at
        FROM socket_relay_fulfillments
        WHERE id = $1::uuid
        FOR UPDATE`,
@@ -788,7 +801,7 @@ export async function resolveFulfillment(
       `UPDATE socket_relay_fulfillments
        SET status = $3, close_reason = $2, updated_at = NOW()
        WHERE id = $1::uuid AND status = 'active'
-       RETURNING id, request_id, requester_user_id, fulfiller_user_id, status, close_reason, created_at, updated_at`,
+       RETURNING id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at`,
       [fulfillmentId, outcome, fulfillmentStatus],
     );
     if ((updated.rowCount ?? 0) === 0) {
@@ -932,7 +945,7 @@ export async function listAdminRequests(options?: { page?: number; pageSize?: nu
 
 export async function listAdminFulfillments(): Promise<SocketRelayFulfillment[]> {
   const result = await queryDb<FulfillmentRow>(
-    `SELECT id, request_id, requester_user_id, fulfiller_user_id, status, close_reason, created_at, updated_at
+    `SELECT id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at
      FROM socket_relay_fulfillments
      ORDER BY created_at DESC`,
   );

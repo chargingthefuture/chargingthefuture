@@ -79,6 +79,10 @@ export type SocketRelayFulfillment = {
   requestId: string;
   requesterUserId: string;
   fulfillerUserId: string;
+  // The two participants' @usernames, captured on the fulfillment at claim time so the Direct Line chat
+  // can render real names instead of a raw user id. Null for legacy rows / members with no handle.
+  requesterUsername: string | null;
+  fulfillerUsername: string | null;
   status: SocketRelayFulfillmentStatus;
   closeReason: string | null;
   createdAtIso: string;

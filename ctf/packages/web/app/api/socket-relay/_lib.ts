@@ -120,6 +120,13 @@ export function socketRelayErrorResponse(error: unknown, fallbackMessage: string
     );
   }
 
+  if (code === 'request_not_repostable') {
+    return NextResponse.json(
+      { ok: false, code: SOCKET_RELAY_ERROR_CODE.requestNotRepostable, message: 'This request has an active helper — resolve the Direct Line before re-posting.' },
+      { status: 409 },
+    );
+  }
+
   if (code === 'actor_is_owner') {
     return NextResponse.json(
       { ok: false, code: SOCKET_RELAY_ERROR_CODE.actorIsOwner, message: 'Request owner cannot claim fulfillment.' },

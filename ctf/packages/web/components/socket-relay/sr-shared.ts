@@ -58,6 +58,10 @@ export type SrFulfillment = {
   requestId: string;
   requesterUserId: string;
   fulfillerUserId: string;
+  // Participant @usernames captured at claim time (may be null for legacy rows). Returned by
+  // /api/socket-relay/my-fulfillments; the chat itself renders names from Stream, so these are optional.
+  requesterUsername?: string | null;
+  fulfillerUsername?: string | null;
   status: "active" | "closed" | "cancelled";
   closeReason: string | null;
   createdAtIso: string;
