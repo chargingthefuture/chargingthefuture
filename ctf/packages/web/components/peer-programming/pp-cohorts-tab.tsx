@@ -189,7 +189,7 @@ export function PeerProgrammingCohortsTab({
     <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 24 }}>
       <div style={{ marginBottom: 20, padding: "18px 24px", borderRadius: 16, background: `linear-gradient(135deg,${t.ACCENT}15 0%,rgba(139,92,246,0.05) 100%)`, border: `1px solid ${t.ACCENT}25` }}>
         <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>Weekly Global Masterminds</div>
-        <div style={{ fontSize: 14, color: t.SUBTLE }}>Deterministic placement — you always get a cohort. No one left behind.</div>
+        <div style={{ fontSize: 14, color: t.SUBTLE }}>Active members get placed each week — sign in during the week and you&apos;re in a cohort. No competitive selection.</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {!myCohortId ? (
