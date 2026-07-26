@@ -72,7 +72,10 @@ bucket or flag state. The link opens the network's Quora space. There is no long
 Commons" link on the Unlock screen — help points to Quora.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), admins see the shared Admin pill in the member shell header, and the admin screen
-header shows a "Member view" pill opening `/apps/unlock`.
+header shows a "Member view" pill that opens the member Unlock screen at `/plugin/unlock` — click it
+and confirm the screen loads. It must NOT point at `/apps/unlock`: Unlock is hidden from the app
+launcher (`isVisible: false`), and the `/apps/<slug>` route 404s any hidden plugin, so that link
+404s for admins too (fixed 2026-07-26).
 **Result:** web ☐ android ☐ — notes:
 
 ### UNLOCK-M2 · Verify prompt on the Commons (A/B treatment)

@@ -170,6 +170,12 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-07-26: **Fix: the "Member view" button in the Unlock admin header 404'd.** It pointed at
+  `/apps/unlock`, but Unlock is registered with `isVisible: false` (it is deliberately kept out of
+  the app launcher) and `app/apps/[pluginSlug]/page.tsx` calls `notFound()` for any plugin that is
+  not visible — so the link 404'd for everyone, admins included, even though the member Unlock
+  screen was live. Unlock's member surface is its own route, `/plugin/unlock`; the button now points
+  there. One-line href fix in `unlock-admin-shell.tsx`; no route, schema, or contract change.
 - 2026-07-23: **Quora URL history in the admin queue + revoke (web).** The Quora profile URL is the only social proof and can be changed after approval (in Directory). The admin queue now surfaces the trail so a reviewer can catch someone gaming it: each submission row shows a `quoraUrlChangeCount` badge ("URL changed N×"), and a "URL history" toggle opens the full change list from a new admin route `GET /api/unlock/admin/quora-history?userId=<id>` (`listQuoraUrlHistory` over the new `directory_quora_url_history` table). Each entry shows the previous → new URL, when, and the source (set at onboarding / changed by the member in Directory / changed by an admin). The existing `POST /revoke` is the manual response (drops the member to `rejected` + `locked_support_only` and claws the reward). The Unlock onboarding submission now records the captured URL into the shared history (best-effort, `recordQuoraUrlChangeStandalone`, source `unlock_onboarding`) so the trail includes the baseline. Framed as a human watch tool, never an automatic flag — a change is legitimate when Quora deletes an account. New audit command `unlock.admin.quora.history.read`. Schema change: `directory_quora_url_history` (owned by Directory). Verified: `@ctf/web` typecheck, lint, a11y lint, build. Owner-review lane.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
