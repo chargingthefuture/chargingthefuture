@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAccountAccess } from '../_lib';
 import { accountDeletionRegistry } from 'lib/account/deletion-registry';
+import { isExportable } from 'lib/account/export-engine';
 
 // Read-only projection of the account deletion registry for the Account & Data UI.
 //
@@ -23,6 +24,10 @@ export async function GET() {
     return gate.response;
   }
 
+  // `exportable` marks services with at least one user-scoped table, i.e. where the JSON export
+  // (GET /api/account/services/:slug/export) has anything to read — independent of whether the
+  // service supports standalone deletion (e.g. Notifications is retained-scope for delete but
+  // still holds the member's own exportable rows).
   const deletable = accountDeletionRegistry
     .filter((entry) => entry.serviceScopeSupported)
     .map((entry) => ({
@@ -30,6 +35,7 @@ export async function GET() {
       name: entry.name,
       summary: entry.dataSummary,
       serviceScopeSupported: true as const,
+      exportable: isExportable(entry),
     }));
 
   const retained = accountDeletionRegistry
@@ -39,6 +45,7 @@ export async function GET() {
       name: entry.name,
       summary: entry.dataSummary,
       serviceScopeSupported: false as const,
+      exportable: isExportable(entry),
     }));
 
   return NextResponse.json(

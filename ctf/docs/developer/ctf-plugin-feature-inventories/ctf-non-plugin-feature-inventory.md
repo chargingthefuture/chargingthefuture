@@ -36,17 +36,41 @@
   deletion in a single transaction, records one `account_deletion_events` row, logs an
   `[account.audit]` line. Money is settled only by the existing ServiceCredits reclaim flow, never
   hard-deleted here.
+- `ctf/packages/web/lib/account/export-engine.ts` + `export-orchestrator.ts` — the read-side twin of
+  the deletion engine (issue #1264, JSON data export). The engine is a pure planner over the SAME
+  deletion registry: every table with a `userColumn` becomes
+  `SELECT * FROM <table> WHERE <userColumn> = $1` (the authenticated user id is always the bound
+  parameter, never inlined); `retain` tables (money ledgers, audit trails, shared content) have no
+  user column and are skipped — the MVP export scope, stated honestly in the file's `notes`.
+  Checked without a DB by `ctf/scripts/check-export-engine.mjs` (wired into CI beside the deletion
+  engine check). The orchestrator assembles the self-describing envelope
+  `{ exportVersion: 1, generatedAtIso, userId, scope, services[], notes[] }` in ONE transaction so
+  the file is a consistent snapshot; each service carries
+  `{ slug, name, tables: [{ table, userColumn, rowCount, rows }] }`.
 - API:
   - `GET /api/account/services` — read-only projection of the deletion registry for the Account &
     Data UI. Returns `{ ok, deletable[], retained[], counts }`, where each entry is
-    `{ slug, name, summary, serviceScopeSupported }` taken straight from the registry (no copy is
-    stored in the route or the UI). `deletable` = `serviceScopeSupported === true`; `retained` =
-    `false` (ServiceCredits wallet/ledger kept for financial integrity, settled at full-account
-    deletion; GDP / Weekly Performance hold only community-wide aggregate totals). Gated by
-    `requireAccountAccess` (any signed-in identity, read-only — no CSRF needed).
+    `{ slug, name, summary, serviceScopeSupported, exportable }` taken straight from the registry (no
+    copy is stored in the route or the UI). `deletable` = `serviceScopeSupported === true`;
+    `retained` = `false` (ServiceCredits wallet/ledger kept for financial integrity, settled at
+    full-account deletion; GDP / Weekly Performance hold only community-wide aggregate totals).
+    `exportable` marks services with ≥1 user-scoped table, i.e. where the JSON export has anything to
+    read — independent of deletability (Notifications and Contributor Access are retained-scope for
+    delete but still exportable). Gated by `requireAccountAccess` (any signed-in identity, read-only
+    — no CSRF needed).
   - `DELETE /api/account/services/:slug` (one plugin) and `DELETE /api/account/full-account`
     (every plugin + ServiceCredits reclaim). Both are self-service (caller's own rows only) and
     same-origin CSRF-guarded (`x-ctf-csrf: 1`).
+  - `GET /api/account/services/:slug/export` and `GET /api/account/full-account/export` (issue
+    #1264) — download the member's own data as JSON, per service or whole account. Both gated by
+    `requireAccountAccess`, read-only (no CSRF needed on GET), returned with
+    `Content-Disposition: attachment; filename="ctf-account-data-<scope>-<date>.json"` and
+    `Cache-Control: no-store`. Any registry slug is exportable (a service with nothing user-scoped
+    returns an honest zero-table envelope; an unknown slug is 404 `ACCOUNT_UNKNOWN_SERVICE`).
+    Audit-logged as `account.data.export.service` / `account.data.export.full` (`[account.audit]`
+    line with table/row counts, no personal data), and rate-limited per user (10 service exports /
+    3 full exports per 10 minutes → 429 `ACCOUNT_RATE_LIMITED` with `Retry-After`; per-process
+    fixed-window brake from `lib/security/rate-limit.ts`).
 - Data model: `account_deletion_events` (id, user_id, scope, service_name, requested_at,
   completed_at, status, summary). The `GET /api/account/services` projection adds no tables — it
   reads only the in-code registry.
@@ -56,6 +80,11 @@
     One responsive component set switches desktop/mobile on `useIsMobile()` (768px), with loading,
     empty, populated, and confirm-delete states matching the survivor-hub mockups. Per-service delete
     uses a two-step confirm; full-account delete requires typing the exact phrase `delete my account`.
+    The data view also carries the JSON export controls (issue #1264): a "Download all my data
+    (JSON)" action at the top, and a per-service Download button beside each Delete button (also on
+    retained-list services whose registry entry is `exportable`), with in-flight spinners and inline
+    per-row error states; downloads go through fetch → blob so a failure shows inline instead of
+    replacing the page.
     Reached from the community shell icon rail (the previously-disabled settings slot now links to
     `/account/data`).
   - Android: `ctf/packages/mobile/src/features/account-data/` (`AccountData.tsx` + `api.ts`),
@@ -223,6 +252,7 @@ The admin landing (`/admin`) shows a small amber dot on an area's tile when that
 
 ## 5) Change Log
 
+- 2026-07-26: **JSON data export on Account & Data — download your data, the read-side twin of delete (issue #1264, web).** A signed-in member can now download their data as a JSON file from `/account/data`: per service (a Download button beside each Delete button, and on retained-list services that still hold the member's own rows, e.g. Notifications), or the whole account ("Download all my data (JSON)" at the top of the data view). New pure `lib/account/export-engine.ts` mirrors the deletion engine over the SAME schema-validated registry (`SELECT * FROM <table> WHERE <userColumn> = $1`; retain tables skipped — MVP scope 2a, stated in the file's own `notes`), with `lib/account/export-orchestrator.ts` assembling the self-describing envelope (`exportVersion: 1`, `generatedAtIso`, `userId`, `scope`, `services[].tables[]` with `rowCount` + `rows`) in one transaction for a consistent snapshot. New routes `GET /api/account/services/:slug/export` and `GET /api/account/full-account/export` — auth-gated (`requireAccountAccess`), self-only ($1-bound user id), audit-logged (`account.data.export.service` / `.full`), per-user rate-limited (10 service / 3 full per 10 min → 429), downloaded via `Content-Disposition: attachment`. `GET /api/account/services` gains `exportable` per entry. New CI check `ctf/scripts/check-export-engine.mjs` validates every generated SELECT without a DB, exactly like the deletion-engine check. No schema change (read-only; no new table). Follow-ups deliberately deferred: exporting user-owned retained rows (money/audit ledgers — scope 2b) and the Android share-sheet flow.
 - 2026-07-23: **Admin landing "new to review" dots (§1.14).** The admin landing (`/admin`) now shows an amber dot on an area's tile when that area has actionable items an admin has not seen yet — a new pending review, report, or dispute since they last opened it — so an admin knows which area to open without checking each. New table `admin_area_seen` (per-admin, per-area last-opened marker) and route `POST /api/admin/area-seen` (admin-only, CSRF-guarded) that clears a dot on open. The per-area signal registry (`lib/admin/area-attention.ts`) counts actionable rows newer than the marker for: unlock, comic, bug-reports, contributions, safety, skills-hunt (nominations + reports), trust-transport (disputes + risk signals), and what-works. Areas that are dashboards/config/browse (directory et al.) get no dot. Server-computed on the landing (`app/admin/page.tsx`), rendered by the new client tile grid (`app/admin/admin-area-grid.tsx`). Best-effort throughout: any failure degrades to "no dot" and never breaks the landing. `schema.demo.sql` regenerated. Admin-facing and separate from the member notifications center.
 - 2026-07-22: **Standardized internal-route "not configured" responses and small cleanups (code-review sweep #1819–#1824).** No behavior change for correctly-configured callers. The internal service routes returned inconsistent status codes when their secret env var was absent; they now uniformly return **503** ("not configured") so a workflow/cron caller can tell a misconfigured deployment from a wrong credential (401/403): `POST /api/internal/product-update` and `POST /api/internal/weekly-performance/goal-snapshot` and `POST /api/internal/contributor-access/recompute` were **501 → 503** (#1821, #1822); `POST /api/internal/service-credits/accounts/[accountId]/deletion-reclaims/[deletionRequestId]/execute` now returns **503** (`service_credits_internal_not_configured`) when its token is unset instead of a 403 that looked like an auth failure (#1823). In `account/delete` and the service-credits reclaim route the env-var presence check now lives only in the 503 guard, and `isAuthorized` takes the validated secret and checks correctness only (removes the duplicated/unreachable check, #1820). Added a comment in `account/delete` clarifying that the failure-path audit's `status: 'allow'` is the policy-gate decision (not the outcome, which is `result: 'failure'`) — semantically correct, no change (#1819). `unlock/reconcile-rewards` now coerces `body.limit` with a `typeof`/`Number.isFinite` guard instead of a redundant `Number()` cast (#1824). Copy of the §1.9 product-update status code updated to 503. No schema or contract change.
 - 2026-07-20: **Privacy policy corrected — Formance is self-hosted, not a third party (owner report).** The `/terms` Privacy Policy listed Formance under "Service providers we share information with," stated it was "bound by a data-processing agreement," and said it "Receives transaction records" — implying member transaction data is sent to an outside company. That is inaccurate: Formance is the open-source ledger, self-hosted inside our own infrastructure (`ctf-formance-ledger` on our hosting, with a Postgres we own and back up nightly via `backup-formance.yml`), so no member data leaves to a third party. `policy-content.ts` now: (1) removes the Formance bullet from the third-party sharing list (§4) and instead names the self-hosted ledger inside the "hosting and infrastructure (our own systems)" bullet; (2) §1 "What we collect" describes transactions as "recorded in our own self-hosted ledger (Formance), which runs inside our infrastructure"; (3) the ServiceCredits/payments section describes real-money payouts as "recorded in our own self-hosted ledger (Formance)…" rather than "handled through our ledger provider, Formance." The other listed providers (Clerk, GetStream, Sentry, hosting/push transports) are genuine third parties and are unchanged; Supabase is not listed because the web app does not use it for any member data. Also added an **automated-processing disclosure** to §3 ("How we use your information"): the Questions feature sends the member's question text to our own self-hosted AI model (Ollama, running on our compute infrastructure) to draft an answer, the content is not used to train any third-party model, and a draft answer is a suggestion (not a decision with a legal/similarly significant effect). Infrastructure hosts (Render/Railway/RunPod) are deliberately kept as categories, not named, per owner decision — category disclosure is sufficient and avoids drift on host migrations. Copy-only; no route, schema, or contract change.
