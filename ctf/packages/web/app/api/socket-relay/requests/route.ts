@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, parsePositiveInteger, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socket-relay/_lib';
-import { SOCKET_RELAY_DEFAULT_PAGE, SOCKET_RELAY_DEFAULT_PAGE_SIZE, SOCKET_RELAY_ERROR_CODE } from 'lib/socket-relay/constants';
-import { createRequest, insertSocketRelayAudit, isValidRequestPrice, listRequests, validateRequestInput } from 'lib/socket-relay/repository';
+import {
+  SOCKET_RELAY_DEFAULT_PAGE,
+  SOCKET_RELAY_DEFAULT_PAGE_SIZE,
+  SOCKET_RELAY_ERROR_CODE,
+  SOCKET_RELAY_TAG_LENGTH_MESSAGE,
+} from 'lib/socket-relay/constants';
+import {
+  createRequest,
+  hasOverlongTag,
+  insertSocketRelayAudit,
+  isValidRequestPrice,
+  listRequests,
+  validateRequestInput,
+} from 'lib/socket-relay/repository';
 import type { SocketRelayRequestInput } from 'lib/socket-relay/types';
 import { reportError } from 'lib/observability/report';
 
@@ -88,6 +100,14 @@ export async function POST(request: Request) {
   }
 
   const input = parseRequestInput(body);
+  // Answer the one payload problem a caller can act on by itself before the catch-all message below.
+  if (hasOverlongTag(input.tags)) {
+    return NextResponse.json(
+      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: SOCKET_RELAY_TAG_LENGTH_MESSAGE },
+      { status: 400 },
+    );
+  }
+
   if (!validateRequestInput(input) || !(await isValidRequestPrice(input.priceCurrency, input.priceAmount))) {
     return NextResponse.json(
       { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid request payload.' },

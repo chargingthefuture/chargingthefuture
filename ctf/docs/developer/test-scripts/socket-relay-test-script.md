@@ -104,6 +104,10 @@ web ☐
   your profile. (Android posts city-only for now; the country/state picker is deferred.)
 - The form accepts 1–3 tags. After 3 tags are added, adding a fourth is blocked by the form (not rejected later by the server).
 - A tag longer than 64 characters is truncated to 64 before being added to the chip list.
+- A direct API caller that sends a tag over 64 characters (bypassing the form) gets a 400 whose
+  message names the limit ("Each tag must be 64 characters or fewer."), not the generic
+  "Invalid request payload." — for both creating (`POST /api/socket-relay/requests`) and editing
+  (`PUT /api/socket-relay/requests/:id`).
 - Submitting with zero tags shows a field-level validation message (not a raw server error).
 - On success the new request appears in the feed with the correct tags, the poster's `@username`, and
   its "City, State, Country" location (only the parts that were set).
