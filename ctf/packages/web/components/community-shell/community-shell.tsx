@@ -292,6 +292,16 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
         <div className={styles.mobileBarLogo}>
           <SeMark size={26} />
         </div>
+        {/* Signed out, the bar carries far fewer controls (no gift reminder, help, settings or
+            avatar), so the full "SE / SKILLS ECONOMY" lockup fits beside the mark and a first-time
+            visitor sees the product name, not just a symbol. Signed in, the name is dropped again
+            so the mark, gift reminder, tabs and account controls all fit a 390px phone. */}
+        {!isAuthenticated ? (
+          <span className={styles.mobileBarWordmark} aria-hidden="true">
+            <span className={styles.mobileBarWordmarkInitials}>SE</span>
+            <span className={styles.mobileBarWordmarkName}>Skills Economy</span>
+          </span>
+        ) : null}
         {/* Fundraiser gift reminder — sits between the brand mark and the section tabs (owner
             placement). Renders only on phone widths while a drive is active and the full banner is
             dismissed or snoozed; the banner itself (when open) stays in the content area below. */}

@@ -193,7 +193,7 @@ function PublicCommunityPanel({ plugins, signInUrl }: { stats: ShellStats; plugi
         </Link>
         <p className={styles.chatSuggestionsInfo}>
           {hasPosts
-            ? 'You are reading the community. Sign in — free — to post, reply, and access housing, work, and safety resources.'
+            ? 'You are reading the Commons. Sign in — free — to post, reply, and access housing, work, and safety resources.'
             : 'Survivor Hub is free and helps you access housing, work, safety resources, and connect with others in the community.'}
         </p>
       </div>
