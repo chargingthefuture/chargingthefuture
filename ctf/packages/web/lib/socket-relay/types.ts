@@ -102,18 +102,3 @@ export type SocketRelayMessage = {
   moderationStatus: 'accepted' | 'flagged';
   createdAtIso: string;
 };
-
-export type SocketRelayPublicRequest = {
-  id: string;
-  ownerUsername: string | null;
-  title: string;
-  category: string;
-  tags: string[];
-  city: string | null;
-  state: string | null;
-  country: string | null;
-  status: SocketRelayRequestStatus;
-  priceCurrency: string | null;
-  priceAmount: number | null;
-  createdAtIso: string;
-};

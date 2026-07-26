@@ -15,7 +15,6 @@ import type {
   SocketRelayMessage,
   SocketRelayProfile,
   SocketRelayProfileInput,
-  SocketRelayPublicRequest,
   SocketRelayRequest,
   SocketRelayRequestInput,
   SocketRelayRequestStatus,
@@ -216,23 +215,6 @@ function mapRequestRow(row: RequestRow): SocketRelayRequest {
     // still open and waiting (a claimed/closed/cancelled post is not "expired"). Derived here so the
     // whole app reads the same expiry without a scheduled job flipping a status column.
     isExpired: row.status === 'open' && row.expires_at != null && new Date(row.expires_at).getTime() < Date.now(),
-  };
-}
-
-function mapPublicRequestRow(row: RequestRow): SocketRelayPublicRequest {
-  return {
-    id: row.id,
-    ownerUsername: row.owner_username,
-    title: row.title,
-    category: row.category,
-    tags: rowTags(row),
-    city: row.city,
-    state: row.state,
-    country: row.country,
-    status: row.status,
-    priceCurrency: row.price_currency,
-    priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
-    createdAtIso: toIso(row.created_at),
   };
 }
 
@@ -473,21 +455,24 @@ export async function listRequests(options?: {
   page?: number;
   pageSize?: number;
   ownerUserId?: string;
-  isPublicOnly?: boolean;
+  statuses?: SocketRelayRequestStatus[];
 }): Promise<{ items: SocketRelayRequest[]; page: number; pageSize: number; total: number }> {
   const page = normalizePage(options?.page);
   const pageSize = normalizePageSize(options?.pageSize);
   const offset = (page - 1) * pageSize;
 
   const ownerUserId = normalizeNullableText(options?.ownerUserId ?? null);
-  const isPublicOnly = Boolean(options?.isPublicOnly);
+  // Optional status scoping. The member feed asks for open (claimable) requests only, so resolved and
+  // claimed posts do not crowd out open ones on a page. Null means every status — the owner "Mine" /
+  // Direct Line lists and the admin list all keep their full-status view.
+  const statuses = options?.statuses && options.statuses.length > 0 ? options.statuses : null;
 
   const count = await queryDb<CountRow>(
     `SELECT COUNT(*)::text AS total
      FROM socket_relay_requests
      WHERE ($1::text IS NULL OR owner_user_id = $1)
-       AND ($2::boolean = FALSE OR is_public = TRUE)`,
-    [ownerUserId, isPublicOnly],
+       AND ($2::text[] IS NULL OR status = ANY($2))`,
+    [ownerUserId, statuses],
   );
 
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
@@ -496,10 +481,10 @@ export async function listRequests(options?: {
     `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, state, country, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at
      FROM socket_relay_requests
      WHERE ($1::text IS NULL OR owner_user_id = $1)
-       AND ($2::boolean = FALSE OR is_public = TRUE)
+       AND ($2::text[] IS NULL OR status = ANY($2))
      ORDER BY created_at DESC
      OFFSET $3 LIMIT $4`,
-    [ownerUserId, isPublicOnly, offset, pageSize],
+    [ownerUserId, statuses, offset, pageSize],
   );
 
   return {
@@ -937,51 +922,6 @@ export async function sendFulfillmentMessage(
   );
 
   return mapMessageRow(result.rows[0]);
-}
-
-export async function listPublicRequests(options?: { page?: number; pageSize?: number }): Promise<{ items: SocketRelayPublicRequest[]; page: number; pageSize: number; total: number }> {
-  const page = normalizePage(options?.page);
-  const pageSize = normalizePageSize(options?.pageSize);
-  const offset = (page - 1) * pageSize;
-
-  const count = await queryDb<CountRow>(
-    `SELECT COUNT(*)::text AS total
-     FROM socket_relay_requests
-     WHERE is_public = TRUE AND status <> 'cancelled'`,
-  );
-  const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
-
-  const result = await queryDb<RequestRow>(
-    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, state, country, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at
-     FROM socket_relay_requests
-     WHERE is_public = TRUE AND status <> 'cancelled'
-     ORDER BY created_at DESC
-     OFFSET $1 LIMIT $2`,
-    [offset, pageSize],
-  );
-
-  return {
-    items: result.rows.map(mapPublicRequestRow),
-    page,
-    pageSize,
-    total,
-  };
-}
-
-export async function getPublicRequestById(requestId: string): Promise<SocketRelayPublicRequest | null> {
-  const result = await queryDb<RequestRow>(
-    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, state, country, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at
-     FROM socket_relay_requests
-     WHERE id = $1::uuid AND is_public = TRUE AND status <> 'cancelled'
-     LIMIT 1`,
-    [requestId],
-  );
-
-  if ((result.rowCount ?? 0) === 0) {
-    return null;
-  }
-
-  return mapPublicRequestRow(result.rows[0]);
 }
 
 export async function listAdminRequests(options?: { page?: number; pageSize?: number }) {

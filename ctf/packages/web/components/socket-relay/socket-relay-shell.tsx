@@ -46,18 +46,30 @@ async function getJson<T>(url: string): Promise<T | null> {
   return (await res.json()) as T;
 }
 
+// Page size for the main feed. The server scopes the feed to open (claimable) requests; "Load more"
+// pulls the next page and appends it, so resolved/claimed posts never crowd open ones off page one.
+const FEED_PAGE_SIZE = 20;
+
 // Load all three feed datasets at once, normalizing missing payloads to empties.
 // Kept out of the component so the loader stays within the rule-116 complexity limit.
-// My-requests is fetched at the max page size so the Direct Line list can show every open request as a
-// pending line (a member realistically has far fewer than 100 open at once).
-async function loadSocketRelayData(): Promise<{ requests: SrRequest[]; myRequests: SrRequest[]; myRequestCount: number; fulfillments: SrFulfillment[] }> {
+// The main feed asks for open requests only (server-side ?status=open) — the first page. My-requests is
+// fetched at the max page size (all statuses) so the "Mine" filter and the Direct Line list can show a
+// member's own posts regardless of status (a member realistically has far fewer than 100 at once).
+async function loadSocketRelayData(): Promise<{
+  requests: SrRequest[];
+  requestsTotal: number;
+  myRequests: SrRequest[];
+  myRequestCount: number;
+  fulfillments: SrFulfillment[];
+}> {
   const [reqData, myReqData, fulData] = await Promise.all([
-    getJson<SrListResponse>("/api/socket-relay/requests"),
+    getJson<SrListResponse>(`/api/socket-relay/requests?status=open&page=1&pageSize=${FEED_PAGE_SIZE}`),
     getJson<SrListResponse>("/api/socket-relay/my-requests?pageSize=100"),
     getJson<SrFulfillmentsResponse>("/api/socket-relay/my-fulfillments"),
   ]);
   return {
     requests: reqData?.items ?? [],
+    requestsTotal: reqData?.total ?? 0,
     myRequests: myReqData?.items ?? [],
     myRequestCount: myReqData?.total ?? 0,
     fulfillments: fulData?.items ?? [],
@@ -74,6 +86,11 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requests, setRequests] = useState<SrRequest[]>([]);
+  // Server-side total of open (claimable) requests, and how many feed pages have been pulled in. Drive
+  // the "N open" badge and the "Load more" button so a full board isn't capped at the first 20.
+  const [requestsTotal, setRequestsTotal] = useState(0);
+  const [requestsPage, setRequestsPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [myRequests, setMyRequests] = useState<SrRequest[]>([]);
   const [, setMyRequestCount] = useState(0);
   const [fulfillments, setFulfillments] = useState<SrFulfillment[]>([]);
@@ -104,6 +121,8 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     try {
       const data = await loadSocketRelayData();
       setRequests(data.requests);
+      setRequestsTotal(data.requestsTotal);
+      setRequestsPage(1);
       setMyRequests(data.myRequests);
       setMyRequestCount(data.myRequestCount);
       setFulfillments(data.fulfillments);
@@ -113,6 +132,28 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
       if (showLoading) setLoading(false);
     }
   }, []);
+
+  // "Load more": pull the next page of open requests and append it, de-duping by id so a post that
+  // shifted across the page boundary (e.g. a new post arrived) is never shown twice.
+  const loadMore = useCallback(async () => {
+    setLoadingMore(true);
+    try {
+      const next = requestsPage + 1;
+      const data = await getJson<SrListResponse>(
+        `/api/socket-relay/requests?status=open&page=${next}&pageSize=${FEED_PAGE_SIZE}`,
+      );
+      if (data) {
+        setRequests((prev) => {
+          const seen = new Set(prev.map((r) => r.id));
+          return [...prev, ...data.items.filter((item) => !seen.has(item.id))];
+        });
+        setRequestsTotal(data.total);
+        setRequestsPage(next);
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [requestsPage]);
 
   useEffect(() => { void fetchData(); }, [fetchData]);
 
@@ -347,9 +388,12 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     );
   }
 
-  // An expired post (open but past its 28-day life) is no longer "active", so it does not count toward
-  // the open badge and does not appear in the active feed — only under the member's own "Mine" filter.
-  const openCount = requests.filter((r) => r.status === "open" && !r.isExpired).length;
+  // The "N open" badge uses the server-side total of open requests (not just the loaded page), so it
+  // stays honest when the board has more than one page. It counts every open post; a small number may
+  // be expired-open (hidden from non-owners in the feed), which is close enough for a header badge.
+  const openCount = requestsTotal;
+  // Only the default "All" feed paginates the board; "Mine" is already the member's own full set.
+  const hasMore = category !== "Mine" && requests.length < requestsTotal;
   // "Mine" is a leading filter (only when signed in) so a member can always find their own posts — on a
   // small phone screen especially — to edit or re-post them, instead of hunting through the whole feed.
   const baseCategories = deriveCategories(requests, category === "Mine" ? "All" : category);
@@ -389,6 +433,9 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
           currentUserId={userId}
           submitting={submitting}
           filterActive={Boolean(search.trim()) || category !== "All"}
+          hasMore={hasMore}
+          loadingMore={loadingMore}
+          onLoadMore={() => void loadMore()}
           onClaim={(id) => void handleClaim(id)}
           onPost={() => setTab("post")}
           onEdit={startEdit}

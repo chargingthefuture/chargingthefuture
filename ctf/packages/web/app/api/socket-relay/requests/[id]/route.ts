@@ -72,14 +72,10 @@ export async function GET(_: Request, { params }: RouteProps) {
       );
     }
 
-    const isVisibleToActor = item.isPublic || item.ownerUserId === gate.auth.userId || gate.auth.isAdmin;
-    if (!isVisibleToActor) {
-      return NextResponse.json(
-        { ok: false, code: SOCKET_RELAY_ERROR_CODE.policyDenied, message: 'Operation denied by policy.' },
-        { status: 403 },
-      );
-    }
-
+    // v3 is members-only: there is no public board, so any signed-in member (already past the read
+    // gate above) may view any request by its deep link. The old is_public visibility check was a v2
+    // remnant that made the detail route 403 on a request the feed list happily showed — the two now
+    // agree. `is_public` is retained on the row but no longer gates who can read a request.
     return NextResponse.json({ ok: true, item }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'socket-relay', op: 'requests_id' });

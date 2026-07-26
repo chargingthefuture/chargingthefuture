@@ -14,8 +14,23 @@ import {
   listRequests,
   validateRequestInput,
 } from 'lib/socket-relay/repository';
-import type { SocketRelayRequestInput } from 'lib/socket-relay/types';
+import type { SocketRelayRequestInput, SocketRelayRequestStatus } from 'lib/socket-relay/types';
 import { reportError } from 'lib/observability/report';
+
+const REQUEST_STATUSES: SocketRelayRequestStatus[] = ['open', 'claimed', 'closed', 'cancelled'];
+
+// Parse the optional ?status= filter: a comma-separated list of request statuses, keeping only known
+// ones. Returns undefined when nothing valid was asked for, which leaves listRequests full-status.
+function parseStatusFilter(raw: string | null): SocketRelayRequestStatus[] | undefined {
+  if (!raw) return undefined;
+  const wanted = raw
+    .split(',')
+    .map((value) => value.trim())
+    .filter((value): value is SocketRelayRequestStatus =>
+      (REQUEST_STATUSES as string[]).includes(value),
+    );
+  return wanted.length > 0 ? wanted : undefined;
+}
 
 // Only a real number or a non-empty numeric string becomes an amount; booleans, arrays, objects, and
 // `null`/`undefined` never coerce to a price (so e.g. `true` is not read as 1).
@@ -70,7 +85,10 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const page = parsePositiveInteger(url.searchParams.get('page'), SOCKET_RELAY_DEFAULT_PAGE);
     const pageSize = parsePositiveInteger(url.searchParams.get('pageSize'), SOCKET_RELAY_DEFAULT_PAGE_SIZE);
-    const response = await listRequests({ page, pageSize });
+    // Optional ?status=open (comma-separated) scopes the feed to claimable posts so resolved/claimed
+    // ones don't crowd out open requests on a page. Absent/unknown values leave the full-status list.
+    const statuses = parseStatusFilter(url.searchParams.get('status'));
+    const response = await listRequests({ page, pageSize, statuses });
     return NextResponse.json({ ok: true, ...response }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'socket-relay', op: 'requests' });
