@@ -666,6 +666,27 @@ export async function claimRequest(requestId: string, actorUserId: string, actor
     }
 
     if (requestRow.status !== 'open') {
+      // Idempotency: a network retry after the first claim already committed will find the request
+      // 'claimed'. If it was claimed by THIS actor, return the existing active fulfillment instead of
+      // erroring — the command contract marks claim idempotent, so a retry of a claim that actually
+      // succeeded should read as success, not `request_not_claimable`. Another member's claim still
+      // errors.
+      if (requestRow.status === 'claimed') {
+        const existing = await client.query<FulfillmentRow>(
+          `SELECT id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at
+           FROM socket_relay_fulfillments
+           WHERE request_id = $1::uuid AND fulfiller_user_id = $2 AND status = 'active'
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [requestId, actorUserId],
+        );
+        if ((existing.rowCount ?? 0) > 0) {
+          return {
+            request: mapRequestRow(requestRow),
+            fulfillment: mapFulfillmentRow(existing.rows[0]),
+          };
+        }
+      }
       throw new Error('request_not_claimable');
     }
 
@@ -938,7 +959,7 @@ export async function listAdminFulfillments(): Promise<SocketRelayFulfillment[]>
   return result.rows.map(mapFulfillmentRow);
 }
 
-export async function adminDeleteRequest(requestId: string): Promise<void> {
+export async function adminDeleteRequest(requestId: string, audit: AuditInput): Promise<void> {
   // These tables carry no ON DELETE CASCADE (they are plain UUID columns, not FKs), so deleting the
   // request alone would leave orphaned fulfillments, participants, and lifecycle events pointing at a
   // row that no longer exists. Remove them in one transaction so the delete is deterministic. The
@@ -965,6 +986,11 @@ export async function adminDeleteRequest(requestId: string): Promise<void> {
     await client.query(`DELETE FROM socket_relay_fulfillments WHERE request_id = $1::uuid`, [requestId]);
     await client.query(`DELETE FROM socket_relay_request_events WHERE request_id = $1::uuid`, [requestId]);
 
+    // Write the audit row in the SAME transaction as the delete, so the removal is never committed
+    // without its audit record (if the audit insert fails, the whole delete rolls back).
+    const auditQuery = socketRelayAuditInsert(audit);
+    await client.query(auditQuery.text, auditQuery.params);
+
     return mapRequestRow(result.rows[0]);
   });
 
@@ -977,9 +1003,11 @@ export async function adminDeleteRequest(requestId: string): Promise<void> {
   });
 }
 
-export async function insertSocketRelayAudit(input: AuditInput): Promise<void> {
-  await queryDb(
-    `INSERT INTO socket_relay_admin_audit_trail (
+// The audit INSERT, split out so it can run either on its own connection (`insertSocketRelayAudit`)
+// or inside an existing transaction (e.g. admin delete, so the delete and its audit row are atomic).
+function socketRelayAuditInsert(input: AuditInput): { text: string; params: unknown[] } {
+  return {
+    text: `INSERT INTO socket_relay_admin_audit_trail (
        actor_id,
        command,
        policy_status,
@@ -988,7 +1016,7 @@ export async function insertSocketRelayAudit(input: AuditInput): Promise<void> {
        target_id,
        metadata
      ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
-    [
+    params: [
       input.actorId,
       input.command,
       input.policyStatus,
@@ -997,5 +1025,10 @@ export async function insertSocketRelayAudit(input: AuditInput): Promise<void> {
       input.targetId,
       JSON.stringify(input.metadata ?? {}),
     ],
-  );
+  };
+}
+
+export async function insertSocketRelayAudit(input: AuditInput): Promise<void> {
+  const { text, params } = socketRelayAuditInsert(input);
+  await queryDb(text, params);
 }

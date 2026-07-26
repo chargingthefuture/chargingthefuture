@@ -205,6 +205,7 @@ web ☐
 - The claimer can see the new fulfillment in their Direct Line / "my fulfillments" list.
 - On the **requester's** side, the request card in the feed now reads **"Being helped"** (amber) — not "✓ closed". The status badge and the action label agree.
 - The requester receives a "Someone offered to help…" notification whose **Open** button deep-links straight to that Direct Line (`/apps/socket-relay?fulfillment=<id>`) — it opens the Direct Line tab with that conversation selected, not the feed homepage.
+- Idempotent retry: re-sending the same claim (`POST /requests/:id/fulfill`) after it already succeeded returns the **same** fulfillment (201) rather than a `request_not_claimable` error, and does **not** create a second fulfillment. A different member claiming the now-claimed request still gets the error.
 
 web ☐
 
@@ -542,7 +543,7 @@ web ☐
 - A confirmation dialog appears before any delete call is made (both web and Android).
 - After confirming, the request disappears from the admin list.
 - Dismissing the dialog without confirming leaves the request untouched.
-- The removal is transactional: the request's fulfillments, participants, and lifecycle events are cleared too (no orphaned rows), while fulfillment chat messages are retained server-side as moderation evidence. The removal writes a `socket-relay.admin.request.delete` audit row.
+- The removal is transactional: the request's fulfillments, participants, and lifecycle events are cleared too (no orphaned rows), while fulfillment chat messages are retained server-side as moderation evidence. The `socket-relay.admin.request.delete` audit row is written **in the same transaction** as the delete — a removed request always has a matching audit row (the delete and audit commit or roll back together).
 
 web ☐
 
