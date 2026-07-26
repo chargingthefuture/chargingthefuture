@@ -175,8 +175,10 @@ web ☐
 - Owner sees their expired request in the **main "All" feed** (not only under "Mine") — dimmed, with an "Expired" pill plus "Re-post" and "Edit" buttons. The owner's own post never silently disappears from their feed.
 - The "I Can Help" / claim button is absent or disabled for the expired card.
 - The other member does **not** see the expired request in their feed (expired posts are hidden from everyone except the owner).
-- Tapping "Re-post" (owner) makes the request live again: the Expired pill disappears, the 28-day clock resets, and the card becomes visible to other members.
+- Tapping "Re-post" (owner) makes the request live again: the Expired pill disappears, the 28-day clock resets, and the card becomes visible to other members. The re-post writes a `request_reposted` row into `socket_relay_request_events`.
 - Re-post is offered only on expired/closed posts — never on a **claimed** request (one with an active helper). A `POST /requests/:id/repost` on a claimed request is rejected with a readable 409 ("resolve the Direct Line before re-posting"); it must not blank the claim and leave the request both open and mid-conversation.
+- The member's own posts appear under the **"Mine"** filter even on a busy board (the filter reads the owner-scoped my-requests list, not just the 20 newest global posts), so Edit/Re-post stay reachable.
+- A search or category/"Mine" filter that matches nothing shows "No matches" (not the false "No requests yet — be the first to post").
 
 web ☐
 
@@ -355,7 +357,7 @@ web ☐
 1. As the helper, call `POST /api/socket-relay/fulfillments/{id}/close` with `{ outcome: "successful" }`.
 
 **Expected:**
-- The server returns a non-2xx response (forbidden / policy deny for `actor_not_requester`).
+- The server returns **403** (not 503) for `actor_not_requester` — an authorization denial, not a server outage, and it must not fire a server-error alert. Resolving an **already-resolved** fulfillment returns **409** (`fulfillment_not_active`), and a bad/missing `outcome` returns **400** (`invalid_outcome`).
 - The fulfillment status is unchanged.
 
 web ☐
