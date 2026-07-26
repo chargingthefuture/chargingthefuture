@@ -1,0 +1,61 @@
+name: Comic Knowledge — One-Time Seed Import 2 (production)
+
+# ONE-TIME workflow (issue #504, retrieval step — second Quora account export). Loads
+# ctf/scripts/data/comic-knowledge-seed-2.jsonl (redacted, all-public-source excerpts of the
+# owner's second Quora account: answers, space posts, comments, and space submissions) into the
+# comic_knowledge_entries table in production, adding to the 1,575 entries the first import loaded.
+#
+# The owner starts it by hand from the Actions tab (Run workflow). The import is idempotent
+# (content-hash keyed), so an accidental re-run — or content that overlaps the first account's
+# export — inserts nothing twice.
+#
+# DELETE AFTER USE: once a run finishes green, delete BOTH this file and
+# ctf/scripts/data/comic-knowledge-seed-2.jsonl. The rows live in the database after the run; the
+# repo copies must not linger in the open-source tree. Tracked as its own cleanup issue.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: import-comic-knowledge
+  cancel-in-progress: false
+
+jobs:
+  import:
+    name: Import second-account seed knowledge into production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # DATABASE_URL is a runtime secret; Infisical is the single source of truth (this matches
+      # seed-skills-taxonomy.yml and skills-proposal-issues.yml).
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      # The import needs only the Postgres client. Install it standalone so the run does not pay
+      # for a full monorepo install.
+      - name: Install Postgres client
+        run: npm install --no-save pg@8
+
+      - name: Import seed knowledge
+        # DATABASE_URL is injected by the Infisical step above. The script prints
+        # inserted / already-present / invalid counts.
+        run: |
+          set -euo pipefail
+          node ctf/scripts/importComicKnowledge.mjs ctf/scripts/data/comic-knowledge-seed-2.jsonl | tee /tmp/import-result.txt
+          echo "$(cat /tmp/import-result.txt)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Reminder: delete .github/workflows/import-comic-knowledge-2.yml and ctf/scripts/data/comic-knowledge-seed-2.jsonl now that the import is done (#504 follow-up cleanup issue)." >> "$GITHUB_STEP_SUMMARY"
