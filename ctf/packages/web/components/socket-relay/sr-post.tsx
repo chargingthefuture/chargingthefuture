@@ -46,14 +46,19 @@ function TagEditor({
   const { theme } = useTheme();
   const t = getSocketRelayTokens(theme);
   const [input, setInput] = useState("");
+  // Set when the last add trimmed an over-long tag, so the member is told their input was shortened
+  // instead of it changing silently.
+  const [notice, setNotice] = useState<string | null>(null);
   const full = tags.length >= MAX_TAGS_PER_POST;
 
   const addTag = (raw: string) => {
     // Truncate to the server's max so a long tag can't be added and then bounce off the API as an
     // invalid payload — the form stays the source of truth for what is submittable.
-    const tag = raw.trim().replace(/\s+/g, " ").slice(0, MAX_TAG_LENGTH);
+    const normalized = raw.trim().replace(/\s+/g, " ");
+    const tag = normalized.slice(0, MAX_TAG_LENGTH);
     if (!tag || full) return;
     if (tags.some((t) => t.toLowerCase() === tag.toLowerCase())) return;
+    setNotice(normalized.length > MAX_TAG_LENGTH ? `Tag trimmed to ${MAX_TAG_LENGTH} characters.` : null);
     onChange([...tags, tag]);
     setInput("");
   };
@@ -75,7 +80,7 @@ function TagEditor({
       <input
         {...a11y}
         value={input}
-        onChange={(e) => setInput(e.target.value)}
+        onChange={(e) => { setInput(e.target.value); if (notice) setNotice(null); }}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === ",") {
             e.preventDefault();
@@ -87,6 +92,9 @@ function TagEditor({
         disabled={full}
         style={{ width: "100%", padding: "10px 16px", background: t.INPUT_BG, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, fontSize: 14, color: t.TEXT, outline: "none", boxSizing: "border-box" }}
       />
+      {notice && (
+        <div role="status" style={{ fontSize: 12, color: SUBTLE, marginTop: 6 }}>{notice}</div>
+      )}
       {suggestions.length > 0 && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
           <span style={{ fontSize: 12, color: SUBTLE, alignSelf: "center" }}>In use:</span>

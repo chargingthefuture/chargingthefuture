@@ -8,52 +8,12 @@ import {
   updateRequest,
   validateRequestInput,
 } from 'lib/socket-relay/repository';
-import type { SocketRelayRequestInput } from 'lib/socket-relay/types';
+import { parseRequestInput } from 'lib/socket-relay/parse-input';
 import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
   params: Promise<{ id: string }>;
 };
-
-// Only a real number or a non-empty numeric string becomes an amount; booleans, arrays, objects, and
-// `null`/`undefined` never coerce to a price (so e.g. `true` is not read as 1).
-function parsePriceAmount(value: unknown): number | null {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) && value > 0 ? value : null;
-  }
-  if (typeof value === 'string' && value.trim().length > 0) {
-    const parsed = Number(value.trim());
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  }
-  return null;
-}
-
-// Older clients send a single `category` string; newer ones send a `tags` array (1-3).
-function parseTags(body: Record<string, unknown>): string[] {
-  if (Array.isArray(body.tags)) {
-    return body.tags.filter((tag): tag is string => typeof tag === 'string');
-  }
-  return typeof body.category === 'string' && body.category.trim() ? [body.category] : [];
-}
-
-function parseRequestInput(body: Record<string, unknown>): SocketRelayRequestInput {
-  const priceCurrency =
-    typeof body.priceCurrency === 'string' && body.priceCurrency.trim().length > 0
-      ? body.priceCurrency.trim()
-      : null;
-  const priceAmount = parsePriceAmount(body.priceAmount);
-  return {
-    title: typeof body.title === 'string' ? body.title : '',
-    details: typeof body.details === 'string' ? body.details : '',
-    tags: parseTags(body),
-    city: typeof body.city === 'string' ? body.city : null,
-    state: typeof body.state === 'string' ? body.state : null,
-    country: typeof body.country === 'string' ? body.country : null,
-    isPublic: typeof body.isPublic === 'boolean' ? body.isPublic : false,
-    priceCurrency,
-    priceAmount,
-  };
-}
 
 export async function GET(_: Request, { params }: RouteProps) {
   const gate = await requireSocketRelayReadAccess();

@@ -59,7 +59,9 @@ export async function POST(request: Request) {
       reason: 'ok',
       targetType: 'service_credits_transfer',
       targetId: input.toUserId,
-      metadata: { amount: input.amount, idempotencyKey },
+      // Evidence fields the audit contract asks for. Reaching this point proves the amount passed the
+      // positive-number check above, so record it as passed alongside the recipient/amount/key context.
+      metadata: { recipientUserId: input.toUserId, amount: input.amount, idempotencyKey, amountPositiveCheck: 'pass' },
     });
 
     return NextResponse.json({ ok: true, transaction: tx }, { status: 200 });
