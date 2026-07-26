@@ -48,13 +48,9 @@
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #7C3AED 0%, #0EA5E9 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  font-weight: 800;
-  color: #fff;
   margin-bottom: 8px;
   flex-shrink: 0;
   user-select: none;
@@ -1813,7 +1809,7 @@
 .mobileBar {
   display: none;
   align-items: center;
-  /* Tightened (owner report, 2026-07-19): with the TSE mark, gift reminder, tabs, admin, help,
+  /* Tightened (owner report, 2026-07-19): with the brand mark, gift reminder, tabs, admin, help,
      settings, and avatar all present, 8px gaps + 12px padding overflowed a 390px phone and clipped
      the avatar off the right edge. */
   gap: 5px;
@@ -1863,13 +1859,9 @@
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  background: linear-gradient(135deg, #7C3AED 0%, #0EA5E9 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: 800;
-  color: #fff;
   flex-shrink: 0;
   user-select: none;
 }

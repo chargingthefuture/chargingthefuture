@@ -41,7 +41,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     splash: {
       image: './assets/splash.png',
       resizeMode: 'contain',
-      backgroundColor: '#ffffff',
+      // Brand dark (matches the Skills Economy logo backdrop) so the splash is seamless with the
+      // centered mark instead of a white letterbox around it.
+      backgroundColor: '#0F0E17',
     },
     assetBundlePatterns: ['**/*'],
     ios: {
@@ -51,7 +53,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
-        backgroundColor: '#ffffff',
+        // Brand dark launcher backdrop for the Skills Economy mark (was a white stopgap).
+        backgroundColor: '#0F0E17',
       },
       package: 'com.chargingthefuture.app',
     },

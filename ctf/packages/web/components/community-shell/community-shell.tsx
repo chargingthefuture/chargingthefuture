@@ -21,6 +21,7 @@ import { ShellRightRail } from './shell-right-rail';
 import { ContributionsBanner, ContributionsGiftTrigger } from '../contributions/contributions-banner';
 import { UnlockVerifyBanner } from './unlock-verify-banner';
 import { HelpControl } from '../bug-reports/help-control';
+import { SeMark } from '../shared/se-mark';
 import type { UnlockReviewStatus } from '../../lib/unlock/types';
 import styles from './community-shell.module.css';
 
@@ -285,12 +286,13 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
   return (
     <div className={`${styles.shell} ctf-self-responsive`}>
       <header className={styles.mobileBar}>
-        {/* Brand mark on the phone bar (styled in CSS, previously unused): it is the first product
-            identity a member sees on a phone. It sits on the left; the section tabs keep their
-            margin-left:auto so the tabs + controls cluster on the right. "TSE" matches the site
-            title "TI Skills Economy (TSE)" in layout.tsx. */}
-        <div className={styles.mobileBarLogo} aria-hidden="true">TSE</div>
-        {/* Fundraiser gift reminder — sits between the TSE mark and the section tabs (owner
+        {/* Brand mark on the phone bar: it is the first product identity a member sees on a phone.
+            It sits on the left; the section tabs keep their margin-left:auto so the tabs + controls
+            cluster on the right. The Skills Economy "Stack" mark matches the site title in layout.tsx. */}
+        <div className={styles.mobileBarLogo}>
+          <SeMark size={26} />
+        </div>
+        {/* Fundraiser gift reminder — sits between the brand mark and the section tabs (owner
             placement). Renders only on phone widths while a drive is active and the full banner is
             dismissed or snoozed; the banner itself (when open) stays in the content area below. */}
         {isAuthenticated ? <ContributionsGiftTrigger /> : null}
