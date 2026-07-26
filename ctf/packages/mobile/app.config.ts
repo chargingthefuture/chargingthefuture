@@ -28,7 +28,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: 'ChargingTheFuture',
+    // Display name shown under the launcher icon. The slug / scheme / bundle id below stay tied to
+    // "charging the future" — they are the EAS project + OAuth redirect identity, not the brand name.
+    name: 'Skills Economy',
     slug: 'charging-the-future',
     // App URL scheme for the OAuth sign-in redirect back into the app
     // (ctf://oauth-callback). Must match the redirect URI registered on the
