@@ -9,13 +9,18 @@
 
 ## Intent and Outcome
 
-SocketRelay is a request-and-fulfillment plugin with profile management, request lifecycle, fulfillment closure, participant chat, public sharing views, and admin moderation controls.
+SocketRelay is a request-and-fulfillment plugin with profile management, request lifecycle, fulfillment closure, participant chat, and admin moderation controls. It is **members-only** (v3): there is no public/anonymous board — every request is viewable only by signed-in members, including via a shared deep link.
 
 ## 1) User Features
 
 ### 1.1 Dashboard and Request Lifecycle
 
-1. Authenticated request dashboard with active and owned request views.
+1. Authenticated request dashboard with active and owned request views. The main feed is scoped
+   server-side to **open (claimable)** requests (`GET /api/socket-relay/requests?status=open`), so
+   resolved and claimed posts never crowd open ones off the first page; a **"Load more"** button pulls
+   the next page and appends it (de-duped by id). The "N open" header badge reflects the server-side
+   total of open requests, not just the loaded page. The owner's own posts of every status stay
+   reachable under the "Mine" filter, which sources the owner-scoped `my-requests` list.
 2. Request create/update/repost flows with deterministic status semantics. Owners can edit their
    own open requests from the feed (web); the edit reuses the post form and the existing
    `PUT /api/socket-relay/requests/:id` route.
@@ -49,11 +54,18 @@ SocketRelay is a request-and-fulfillment plugin with profile management, request
 5. Direct Line list: the Direct Line tab shows one row per request the member is currently waiting on or talking through — every **active** fulfillment (a live conversation, whether they posted the request or offered to help) plus their own **still-open, non-expired** requests as pending placeholders ("waiting for a helper", no chat until a helper claims it). Cancelled/closed fulfillments and claimed/closed requests drop out (a claimed request is already represented by its active fulfillment). This is composed client-side from `my-fulfillments` + `my-requests` (no new route or table); it is presentation only and does not change chat access or the messaging lifecycle above.
 6. Live chat surface (web + Android): each active Direct Line opens the real requester <-> helper Stream chat. Web renders it inline (`sr-chat.tsx` / `StreamChatPanel`); Android opens it from an "Open chat" button on each Direct Line card into a full-screen modal (`SocketRelayDirectLineChat.tsx`, reusing the shared `StreamChatView`). Both connect to the **same** per-fulfillment Stream channel (`socket-relay-fulfillment-<id>`) via `POST /api/socket-relay/fulfillments/:id/chat`; mobile opens no new channel type, just a second client. Resolve controls stay alongside the chat.
 
-### 1.5 Public Sharing Surface
+### 1.5 Members-Only Visibility (no public board)
 
-1. Public list and public detail views for shareable requests.
-2. Public DTO projection with privacy-minimized fields only.
-3. Anti-scraping and rate-limit behavior defined at contract level.
+1. Every request is viewable only by a signed-in member. There is **no public/anonymous board** in
+   v3 — a request the poster shares as a deep link (`/apps/socket-relay?request=<id>`) still requires
+   the recipient to sign in to view it. (This supersedes the v2 "public sharing" surface: the anonymous
+   `GET /api/socket-relay/public` and `GET /api/socket-relay/public/:id` routes were removed 2026-07-26.)
+2. The member feed and the single-request detail (`GET /api/socket-relay/requests/:id`) agree: any
+   signed-in member may view any request. The old `is_public` visibility gate on the detail route (a v2
+   remnant that returned 403 to a non-owner on a non-public request the feed already listed) is gone.
+3. The `is_public` column is retained on `socket_relay_requests` but is **inert** — nothing reads it to
+   decide who can see a request. It is no longer user-toggled (the "make public" control was removed
+   2026-06-12) and no longer affects any read path.
 
 ## 2) Admin Features
 
@@ -71,8 +83,8 @@ User/authenticated routes:
 - `POST /api/socket-relay/profile`
 - `PUT /api/socket-relay/profile`
 - `DELETE /api/socket-relay/profile`
-- `GET /api/socket-relay/requests`
-- `GET /api/socket-relay/requests/:id`
+- `GET /api/socket-relay/requests` — member feed. Optional `?status=open` (comma-separated statuses) scopes the list to claimable posts; `?page`/`?pageSize` paginate (feed uses `status=open`, pageSize 20, with a "Load more" button). Absent/unknown `status` returns the full-status list.
+- `GET /api/socket-relay/requests/:id` — single request, members-only. Any signed-in member may view any request (no `is_public` gate); 404 for a missing request.
 - `GET /api/socket-relay/my-requests`
 - `POST /api/socket-relay/requests`
 - `PUT /api/socket-relay/requests/:id`
@@ -85,10 +97,9 @@ User/authenticated routes:
 - `POST /api/socket-relay/fulfillments/:id/messages`
 - `POST /api/socket-relay/service-credits` ← `{ toUserId, amount, message?, idempotencyKey? }` → `{ ok, transaction }` — send ServiceCredits from the signed-in member to `toUserId` from a SocketRelay surface (e.g. settling a fulfilled request in credits). Read-access gated (`requireSocketRelayReadAccess`) + CSRF (`x-ctf-csrf: '1'`); `amount` must be a positive number (else 400). Uses the shared ServiceCredits `createTransfer` primitive with `originPlugin: 'socket-relay'`, `reasonCode: 'socket-relay.transfer'` (idempotent on `(sender, idempotencyKey)`; a default key is derived when none is supplied). SocketRelay owns no credits ledger — the movement is recorded only in the canonical ServiceCredits tables (per the "Not owned" boundary above). Declared as command `socket-relay.service-credits.send` (command + access-policy + audit contracts) so the cross-plugin data access path is explicit, and the route emits a `socket-relay.service-credits.send` audit row on success.
 
-Public routes:
-
-- `GET /api/socket-relay/public`
-- `GET /api/socket-relay/public/:id`
+Public routes: **none** (removed 2026-07-26). SocketRelay is members-only in v3 — the former anonymous
+`GET /api/socket-relay/public` and `GET /api/socket-relay/public/:id` routes, the `SocketRelayPublicRequest`
+projection, and the `listPublicRequests` / `getPublicRequestById` repository functions were all removed.
 
 Admin routes:
 
@@ -104,7 +115,7 @@ Tables owned by this plugin:
 2. `socket_relay_requests` — Request lifecycle rows (status, ownership, repost lineage). Includes a
    `tags TEXT[] NOT NULL DEFAULT '{}'` column holding 1-3 free-text tags; the legacy `category TEXT`
    column is kept in sync with the first tag so older clients (and legacy rows, which read as
-   `[category]`) keep working. Also includes a nullable `owner_username TEXT` column that captures the poster's chosen `@username` at request-creation time (denormalized from the Clerk session, exactly like `chyme_messages.username` and `feed_community_posts.author_username`), because v3 has no reliable server-side store of other users' usernames. This handle is surfaced in every view, including the not-signed-in / public projection — never "Anonymous" (owner decision, 2026-06-04). Includes a nullable `expires_at TIMESTAMPTZ` column: a post auto-expires 28 days after it is posted or last re-posted. Expiry is derived at read time (`isExpired` = open AND `expires_at` has passed), so no scheduled job flips a status; `created_at`/`updated_at` and `reopened_count` are unchanged. Create sets `expires_at = NOW() + 28 days`; `repostRequest` resets it; a claim on an expired-but-open post is rejected (`request_expired`). Location columns `city`, `state`, `country` (each nullable `TEXT`) hold the request's location. In the create form these default from the member's own directory profile (the shared member profile — `GET /api/directory/profile`), but they are fully editable and clearable per request, because a request can be for a different place than where the member lives (a second property, a cross-city errand, a package delivery abroad). `city` stays "city or neighborhood only, never an exact address" for privacy.
+   `[category]`) keep working. Also includes a nullable `owner_username TEXT` column that captures the poster's chosen `@username` at request-creation time (denormalized from the Clerk session, exactly like `chyme_messages.username` and `feed_community_posts.author_username`), because v3 has no reliable server-side store of other users' usernames. This handle is surfaced in every (members-only) view — never "Anonymous" (owner decision, 2026-06-04). Includes a nullable `expires_at TIMESTAMPTZ` column: a post auto-expires 28 days after it is posted or last re-posted. Expiry is derived at read time (`isExpired` = open AND `expires_at` has passed), so no scheduled job flips a status; `created_at`/`updated_at` and `reopened_count` are unchanged. Create sets `expires_at = NOW() + 28 days`; `repostRequest` resets it; a claim on an expired-but-open post is rejected (`request_expired`). Location columns `city`, `state`, `country` (each nullable `TEXT`) hold the request's location. In the create form these default from the member's own directory profile (the shared member profile — `GET /api/directory/profile`), but they are fully editable and clearable per request, because a request can be for a different place than where the member lives (a second property, a cross-city errand, a package delivery abroad). `city` stays "city or neighborhood only, never an exact address" for privacy.
 3. `socket_relay_request_events` — Event log for request state transitions.
 4. `socket_relay_fulfillments` — Fulfillment claims and outcomes per request. Includes nullable `requester_username` / `fulfiller_username TEXT` columns, the two participants' `@usernames` captured at claim time (mirrors `socket_relay_requests.owner_username`) so the Direct Line chat renders real participant names instead of a raw user id — v3 has no server-side store of other members' handles. Null for legacy rows or members with no handle.
 5. `socket_relay_fulfillment_participants` — Participant access records for fulfillment chats.
@@ -121,19 +132,21 @@ exists — never derived from `price_currency`. No ServiceCredits amount is show
 Storage and projection rules:
 
 1. Request and fulfillment status transitions are explicit and replay-safe via the `request_events` log. Every mutating path writes an event in the same transaction as the row change: `request_created`, `request_updated` (edits), `request_claimed`, and `fulfillment_closed` / `fulfillment_reopened`. A helper-cancelled reopen (`unsuccessful_reopen`) also resets the 28-day `expires_at` so the re-opened post is not immediately expired.
-2. Public projection contracts are separated from authenticated/admin DTOs (privacy-minimized fields only on public routes). The public projection (`SocketRelayPublicRequest`, served by `GET /api/socket-relay/public` and `GET /api/socket-relay/public/:id`) now includes `ownerUsername` so the poster's `@username` is shown to signed-out visitors (owner decision, 2026-06-04). The authenticated `SocketRelayRequest` DTO also carries `ownerUsername`.
+2. There is a single members-only DTO (`SocketRelayRequest`, carrying `ownerUsername`) for the feed
+   list and the single-request detail — no separate public projection. The v2 privacy-minimized public
+   DTO (`SocketRelayPublicRequest`) and its two anonymous routes were removed 2026-07-26; every read
+   path is behind the member read gate.
 3. Mutation operations enforce deterministic storage outcomes and audit-friendly metadata.
 4. Admin request removal is transactional: because these tables have no FK cascade, the delete clears the request plus its fulfillments, participants, and request-events itself (no orphans), retains `socket_relay_messages` as moderation evidence (rule 100), and writes a `socket-relay.admin.request.delete` audit row. See the deletion contract.
 
 ## 5) Security, Privacy, and Compliance Controls
 
-1. Auth guards on all private user routes.
+1. Auth guards on all routes — every read and write is behind the member read gate (`requireSocketRelayReadAccess`); there are no anonymous routes (the v2 public board was removed 2026-07-26).
 2. Admin authorization on all admin routes.
 3. CSRF checks on admin write routes with explicit contract behavior.
-4. Privacy-minimized DTO projection for public responses.
-5. Anti-scraping and rate-limiting controls on public endpoints.
-6. Audit logging for sensitive admin mutations and policy-denied outcomes. Member mutations also emit audit rows: request create, fulfillment claim, fulfillment resolve, fulfillment message send (with participant-membership and moderation evidence), and the SocketRelay-initiated ServiceCredits transfer (`socket-relay.service-credits.send`, the financial mutation).
-7. Participant-only routes return 403 (not 404) when the fulfillment exists but the caller is not a participant, so existence is not leaked; 404 is reserved for a genuinely missing fulfillment.
+4. Members-only visibility: any signed-in member may view any request (feed list and detail agree); the `is_public` column no longer gates reads.
+5. Audit logging for sensitive admin mutations and policy-denied outcomes. Member mutations also emit audit rows: request create, fulfillment claim, fulfillment resolve, fulfillment message send (with participant-membership and moderation evidence), and the SocketRelay-initiated ServiceCredits transfer (`socket-relay.service-credits.send`, the financial mutation).
+6. Participant-only routes return 403 (not 404) when the fulfillment exists but the caller is not a participant, so existence is not leaked; 404 is reserved for a genuinely missing fulfillment.
 
 ## 6) Web and Android Delivery Status
 
@@ -156,12 +169,13 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 8) Gaps and Known Technical Debt
 
-1. Anti-scraping rate limit thresholds on `/api/socket-relay/public` are conservative defaults; production-grade abuse signal classification is a known follow-up.
-2. Audit retention policy for `socket_relay_admin_audit_trail` follows the platform default; a plugin-specific retention contract has not been finalized.
-3. The design mockup (`MobileSocketRelayAdmin.tsx`) shows per-request approve/reject moderation, but the backend exposes no approve/reject request endpoint — the only admin request-state mutation is `DELETE /api/socket-relay/admin/requests/:id`. The Android admin mirrors delete only; an approve/reject command/contract + route would be needed to back that mockup affordance.
-4. Android requests now go through the shared `authedFetch` wrapper (Clerk bearer token, base URL from runtime config) like chyme/currency; earlier the SocketRelay mobile client used plain dev-only `fetch`. The admin client (`admin-api.ts`) and the chat-credentials fetcher (`fetchFulfillmentChatCredentials` in `api.ts`) now use the same wrapper. Ownership detection still leans on `GET /api/socket-relay/my-requests` (a card is "mine" if its id appears in that list) because the client does not compare user ids locally; one extra request per feed load.
+1. Audit retention policy for `socket_relay_admin_audit_trail` follows the platform default; a plugin-specific retention contract has not been finalized.
+2. The design mockup (`MobileSocketRelayAdmin.tsx`) shows per-request approve/reject moderation, but the backend exposes no approve/reject request endpoint — the only admin request-state mutation is `DELETE /api/socket-relay/admin/requests/:id`. The Android admin mirrors delete only; an approve/reject command/contract + route would be needed to back that mockup affordance.
+3. Android requests now go through the shared `authedFetch` wrapper (Clerk bearer token, base URL from runtime config) like chyme/currency; earlier the SocketRelay mobile client used plain dev-only `fetch`. The admin client (`admin-api.ts`) and the chat-credentials fetcher (`fetchFulfillmentChatCredentials` in `api.ts`) now use the same wrapper. Ownership detection still leans on `GET /api/socket-relay/my-requests` (a card is "mine" if its id appears in that list) because the client does not compare user ids locally; one extra request per feed load.
 
 ## 9) Change Log
+
+- 2026-07-26: **Members-only visibility (no public board) + open-scoped feed with "Load more".** Two owner-directed fixes. (1) **Visibility drift.** The list and single-request routes disagreed: the feed (`GET /requests`) showed every request to any signed-in member, but the detail route (`GET /requests/:id`) still ran a v2 `is_public` gate and returned 403 to a non-owner on a non-public request the feed had just listed. Per the owner ruling — v3 has no public post; only signed-in members can view, including a shared deep link — the detail route's `is_public` visibility check is removed (any signed-in member may view any request), and the anonymous public board is deleted: `GET /api/socket-relay/public`, `GET /api/socket-relay/public/:id`, the `SocketRelayPublicRequest` DTO, and the `listPublicRequests` / `getPublicRequestById` / `mapPublicRequestRow` functions are gone. The `is_public` column is retained but inert (no read path consults it; it was already un-toggled since 2026-06-12). (2) **Feed pagination.** `listRequests` gained an optional `statuses` filter and `GET /requests` an optional `?status=` param; the web feed now asks for `status=open` (claimable) so resolved/claimed posts don't crowd open ones off the first 20, with a **"Load more"** button that appends the next page (de-duped by id). The "N open" badge reads the server-side open total. "Mine" already sources `my-requests` (all statuses), so a member's own resolved/claimed posts stay reachable. Schema: none (`is_public` kept). Contracts/test-script/inventory updated.
 
 - 2026-07-26: **Full code-review sweep of SocketRelay — correctness & reliability batch.** From a comprehensive review (the automated sweep timed out before the contracts/last files). Fixes: (a) the "Mine" feed filter now sources the owner-scoped `my-requests` list (fetched at pageSize 100) instead of the 20-item global feed, so a member's own older posts no longer vanish from "Mine" (they were being hidden once 20 newer board-wide posts existed, blocking Edit/Re-post); (b) the resolve route now returns proper status codes — a helper trying to resolve gets 403 (`actor_not_requester`), an already-resolved fulfillment gets 409 (`fulfillment_not_active`), and a bad `outcome` gets 400 (`invalid_outcome`) — instead of a 503 that also fired a false server-error alert; (c) `repostRequest` is now transactional with a `FOR UPDATE` lock and a `status <> 'claimed'` predicate (closing a claim-vs-repost race the earlier unlocked guard left open) and writes a `request_reposted` lifecycle event (closes #1881); (d) the claim-time Stream channel call is now best-effort — a Stream outage no longer fails an already-committed claim, drops its audit row, or loses the "someone offered to help" notification (the chat route self-heals the channel); (e) `updateRequest` guards against a concurrent delete (clean `request_not_found` instead of a 500); (f) the feed empty state now says "No matches" for a search/filter with no results instead of falsely claiming the board is empty; (g) the `?fulfillment=` deep-link param is stripped after handoff so a refresh doesn't re-force the Direct Line tab; (h) added the missing unique index backing `socket_relay_messages`' `ON CONFLICT` idempotency (the send route would otherwise throw 42P10). Verified false: #1367 (`updateRequest` already emits its `request_updated` event). Schema: one unique index (no columns/data). Contract-doc drift (undeclared profile/repost/admin-delete commands, resolve audit event, deletion-contract fictional tables, a few `dataAccess` mismatches) is tracked as a separate follow-up.
 
@@ -207,6 +221,10 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 > validation/release gates (Rule 118) — not missing implementation. The authoritative production bar
 > (pixel-perfect to `design` + parity + gates + deploy) is tracked in
 > `ctf/docs/developer/PRODUCTION_READINESS_PLAN.md`, which wins where it differs from this checklist.
+>
+> **Superseded 2026-07-26:** every "public projection / public API routes / public DTO privacy" item
+> below is obsolete — v3 is members-only and the anonymous public board was removed. Ignore those
+> items; see §1.5 (Members-Only Visibility) and the Change Log.
 
 ### Scope and Boundary
 

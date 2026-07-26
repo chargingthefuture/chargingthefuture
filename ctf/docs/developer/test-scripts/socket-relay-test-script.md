@@ -56,6 +56,10 @@ web ☐
 - Each card shows 1–3 tag chips.
 - If no price was set, the settlement label reads "Free" or shows no amount — never "$0".
 - If `price_amount` + `price_currency` are set, a settlement badge appears with the label.
+- The default "All" feed shows **open (claimable)** requests only — resolved and claimed requests do
+  not appear here (a member's own appear under the "Mine" filter). The header badge reads "N open".
+- If the board has more open requests than one page (20), a **"Load more"** button appears at the
+  bottom; clicking it appends the next page without duplicating any card already shown.
 
 web ☐
 
@@ -406,22 +410,24 @@ web ☐
 
 ---
 
-### SR-17 — Public feed and detail (signed-out)
+### SR-17 — Members-only visibility (no public board; deep link needs sign-in)
 
-**Role:** none (unauthenticated) · **Surfaces:** web
+**Role:** member + signed-out · **Surfaces:** web
 
-**Precondition:** No auth session.
+**Precondition:** A member owns at least one request. Note its id (from the feed / share link).
 
 **Steps:**
-1. Fetch `GET /api/socket-relay/public`.
-2. Pick one item and fetch `GET /api/socket-relay/public/{id}`.
-3. Inspect the response fields.
+1. While **signed out**, fetch `GET /api/socket-relay/public` and `GET /api/socket-relay/public/{id}`.
+2. While **signed out**, open the share deep link `/apps/socket-relay?request={id}`.
+3. Sign in as a **different** member (not the owner). Fetch `GET /api/socket-relay/requests/{id}` for
+   that same request.
 
 **Expected:**
-- Both routes return 200 with a privacy-minimized DTO.
-- `ownerUsername` is present (the poster's handle is shown publicly per the 2026-06-04 owner decision).
-- No authenticated-only fields (e.g. user IDs, internal metadata, fulfillment details) appear in the response.
-- Private / members-only requests (`isPublic: false`) are not included in the public list.
+- The anonymous public routes no longer exist — `GET /api/socket-relay/public` and
+  `/api/socket-relay/public/{id}` return 404 (v3 has no public board).
+- The signed-out deep link does not expose the request; the app shows a sign-in gate, not the request.
+- The signed-in non-owner member **can** view the request via `GET /api/socket-relay/requests/{id}`
+  (200) — any signed-in member may view any request. It does **not** return 403 based on `is_public`.
 
 web ☐
 
@@ -597,13 +603,11 @@ The following cases must produce the same observable result on both surfaces. Ru
 
 ## Known gaps — do not file these as bugs
 
-1. **Public rate-limit thresholds** (`GET /api/socket-relay/public`): anti-scraping rate limits use conservative defaults. Production-grade abuse signal classification is a known follow-up. Do not file a bug if the limits seem too loose or too tight in dev.
+1. **Audit retention policy**: `socket_relay_admin_audit_trail` follows the platform default retention period. A plugin-specific retention contract has not been finalized. Do not file gaps in admin audit retention as SocketRelay bugs.
 
-2. **Audit retention policy**: `socket_relay_admin_audit_trail` follows the platform default retention period. A plugin-specific retention contract has not been finalized. Do not file gaps in admin audit retention as SocketRelay bugs.
+2. **Approve/reject moderation**: the design mockup (`MobileSocketRelayAdmin.tsx`) shows per-request approve/reject controls. No approve/reject endpoint exists — the only admin request mutation is delete. Do not file the absence of approve/reject buttons as a bug; it is a known missing backend command.
 
-3. **Approve/reject moderation**: the design mockup (`MobileSocketRelayAdmin.tsx`) shows per-request approve/reject controls. No approve/reject endpoint exists — the only admin request mutation is delete. Do not file the absence of approve/reject buttons as a bug; it is a known missing backend command.
-
-4. **Ownership detection via extra request**: on Android, whether a feed card belongs to the signed-in member is determined by checking `GET /api/socket-relay/my-requests` (one extra request per feed load) rather than a local user-ID comparison. This is a known performance trade-off, not a bug.
+3. **Ownership detection via extra request**: on Android, whether a feed card belongs to the signed-in member is determined by checking `GET /api/socket-relay/my-requests` (one extra request per feed load) rather than a local user-ID comparison. This is a known performance trade-off, not a bug.
 
 ---
 

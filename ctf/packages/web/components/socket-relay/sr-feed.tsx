@@ -130,6 +130,9 @@ export function SocketRelayFeed({
   currentUserId,
   submitting,
   filterActive = false,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
   onClaim,
   onPost,
   onEdit,
@@ -141,6 +144,10 @@ export function SocketRelayFeed({
   // True when a search term or a non-"All" category/"Mine" filter is active, so the empty state can say
   // "no matches" instead of falsely claiming the whole board is empty.
   filterActive?: boolean;
+  // The board has more open requests than are loaded; show a "Load more" button that pulls the next page.
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
   onClaim: (id: string) => void;
   onPost: () => void;
   onEdit: (request: SrRequest) => void;
@@ -169,6 +176,15 @@ export function SocketRelayFeed({
             {requests.map((r) => (
               <RequestCard key={r.id} request={r} isOwn={r.ownerUserId === currentUserId} submitting={submitting} onClaim={onClaim} onEdit={onEdit} onRepost={onRepost} />
             ))}
+            {hasMore && onLoadMore && (
+              <button
+                onClick={onLoadMore}
+                disabled={loadingMore}
+                style={{ marginTop: 4, padding: "10px 20px", borderRadius: 10, background: "transparent", border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: loadingMore ? "not-allowed" : "pointer", alignSelf: "center" }}
+              >
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            )}
           </div>
         )}
       </div>
