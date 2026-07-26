@@ -1866,6 +1866,39 @@
   user-select: none;
 }
 
+/* Full brand lockup shown only to signed-out visitors on the phone bar. It mirrors the layout of
+   public/brand/se-lockup.svg — large "SE" above small letter-spaced "SKILLS ECONOMY" — but is drawn
+   with theme tokens instead of the file's hard-coded dark background and light text, so it stays
+   readable in every theme. min-width: 0 + overflow: hidden means it gives up its space first if a
+   very narrow phone can't fit everything, rather than pushing the tabs off the right edge. */
+.mobileBarWordmark {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1;
+  min-width: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+.mobileBarWordmarkInitials {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--ctf-text-shell);
+  white-space: nowrap;
+}
+
+.mobileBarWordmarkName {
+  margin-top: 2px;
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--ctf-text-subtle);
+  white-space: nowrap;
+}
+
 .mobileBarTitle {
   font-size: 14px;
   font-weight: 700;
