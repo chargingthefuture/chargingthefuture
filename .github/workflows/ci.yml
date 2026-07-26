@@ -339,6 +339,9 @@ jobs:
       - name: Validate account deletion engine SQL generation
         run: node ctf/scripts/check-deletion-engine.mjs
 
+      - name: Validate account data-export engine SQL generation
+        run: node ctf/scripts/check-export-engine.mjs
+
   inventory-drift-gate:
     name: Inventory Drift Gate
     runs-on: ubuntu-latest
