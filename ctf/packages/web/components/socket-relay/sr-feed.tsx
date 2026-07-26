@@ -129,6 +129,7 @@ export function SocketRelayFeed({
   requests,
   currentUserId,
   submitting,
+  filterActive = false,
   onClaim,
   onPost,
   onEdit,
@@ -137,6 +138,9 @@ export function SocketRelayFeed({
   requests: SrRequest[];
   currentUserId: string | undefined;
   submitting: boolean;
+  // True when a search term or a non-"All" category/"Mine" filter is active, so the empty state can say
+  // "no matches" instead of falsely claiming the whole board is empty.
+  filterActive?: boolean;
   onClaim: (id: string) => void;
   onPost: () => void;
   onEdit: (request: SrRequest) => void;
@@ -152,11 +156,13 @@ export function SocketRelayFeed({
             <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${t.ACCENT}4D`, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Share2 size={20} style={{ color: `${t.ACCENT}66` }} />
             </div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>No requests yet</div>
-            <div style={{ fontSize: 13, color: FAINT }}>Be the first to post a need or offer to your community.</div>
-            <button onClick={onPost} style={{ padding: "10px 20px", borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-              Post Now
-            </button>
+            <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>{filterActive ? "No matches" : "No requests yet"}</div>
+            <div style={{ fontSize: 13, color: FAINT }}>{filterActive ? "No requests match your search or filter. Try clearing it." : "Be the first to post a need or offer to your community."}</div>
+            {!filterActive && (
+              <button onClick={onPost} style={{ padding: "10px 20px", borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Post Now
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

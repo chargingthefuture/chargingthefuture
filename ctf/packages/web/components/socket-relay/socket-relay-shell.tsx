@@ -305,6 +305,9 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     );
     setTab("chat");
     if (match) void handleSelectLine(match);
+    // Strip ?fulfillment=<id> from the URL so a later refresh doesn't yank the member back to the
+    // Direct Line tab after they've moved to Feed/Post. One-time handoff, not a persistent view.
+    window.history.replaceState(null, "", window.location.pathname);
     setDeepLinkHandled(true);
   }, [deepLinkHandled, loading, fulfillments, myRequests, handleSelectLine]);
 
@@ -351,14 +354,19 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   // small phone screen especially — to edit or re-post them, instead of hunting through the whole feed.
   const baseCategories = deriveCategories(requests, category === "Mine" ? "All" : category);
   const categories = userId ? ["All", "Mine", ...baseCategories.filter((c) => c !== "All")] : baseCategories;
-  const visible = requests.filter((r) => {
+  // "Mine" sources from `myRequests` (owner-scoped server-side, fetched at pageSize=100), NOT the global
+  // feed `requests` (only the 20 newest). Reading the global feed meant a member's own post fell out of
+  // "Mine" as soon as 20 newer posts existed board-wide — hiding their own posts and blocking Edit/Re-post.
+  const source = category === "Mine" ? myRequests : requests;
+  const visible = source.filter((r) => {
     if (category === "Mine") {
+      // Every row in myRequests is already the member's own; keep all statuses so they can always find,
+      // edit, and re-post their own posts.
       if (r.ownerUserId !== userId) return false;
     } else {
       // Active feed: an expired post drops out for everyone EXCEPT its owner. The owner always sees
       // their own posts — including expired ones (dimmed, with the Expired pill + Re-post) — so a post
       // never silently disappears from the poster's own feed and re-posting is always one click away.
-      // This matches the mobile app, which keeps the owner's expired posts in the feed too.
       if (r.isExpired && r.ownerUserId !== userId) return false;
       if (category !== "All" && !requestTags(r).some((tag) => tag.toLowerCase() === category.toLowerCase())) return false;
     }
@@ -380,6 +388,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
           requests={visible}
           currentUserId={userId}
           submitting={submitting}
+          filterActive={Boolean(search.trim()) || category !== "All"}
           onClaim={(id) => void handleClaim(id)}
           onPost={() => setTab("post")}
           onEdit={startEdit}

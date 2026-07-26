@@ -127,6 +127,30 @@ export function socketRelayErrorResponse(error: unknown, fallbackMessage: string
     );
   }
 
+  // Resolve-flow errors from resolveFulfillment. Without these, an authorization denial (a helper trying
+  // to resolve) and a conflict (resolving an already-resolved fulfillment) both fell through to the 503
+  // default branch — reporting an authz/conflict as a server outage and firing a spurious error alert.
+  if (code === 'actor_not_requester') {
+    return NextResponse.json(
+      { ok: false, code: SOCKET_RELAY_ERROR_CODE.actorNotRequester, message: 'Only the person who posted this request can resolve it.' },
+      { status: 403 },
+    );
+  }
+
+  if (code === 'fulfillment_not_active') {
+    return NextResponse.json(
+      { ok: false, code: SOCKET_RELAY_ERROR_CODE.fulfillmentNotActive, message: 'This Direct Line is already resolved.' },
+      { status: 409 },
+    );
+  }
+
+  if (code === 'invalid_outcome') {
+    return NextResponse.json(
+      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidOutcome, message: 'Choose how to resolve this request.' },
+      { status: 400 },
+    );
+  }
+
   if (code === 'actor_is_owner') {
     return NextResponse.json(
       { ok: false, code: SOCKET_RELAY_ERROR_CODE.actorIsOwner, message: 'Request owner cannot claim fulfillment.' },

@@ -24,6 +24,7 @@ import type {
 import { ensureSocketRelayFulfillmentChannel } from './stream';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
+import { reportError } from 'lib/observability/report';
 
 // Cross-plugin presence: a SocketRelay help post (the Commons request a member created) marks its
 // owner as active in SocketRelay. A post counts as active presence only while its status is 'open';
@@ -568,6 +569,13 @@ export async function updateRequest(requestId: string, actorUserId: string, isAd
       ],
     );
 
+    // The row could have been deleted between the getRequestById check above and this UPDATE (e.g. a
+    // concurrent admin delete); without this guard `rows[0]` is undefined and mapRequestRow throws an
+    // opaque TypeError → 500 instead of a clean request_not_found.
+    if ((result.rowCount ?? 0) === 0) {
+      throw new Error('request_not_found');
+    }
+
     await client.query(
       `INSERT INTO socket_relay_request_events (request_id, actor_user_id, event_name, metadata)
        VALUES ($1::uuid, $2, 'request_updated', '{}'::jsonb)`,
@@ -594,28 +602,49 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
     throw new Error('not_owner');
   }
 
-  // A claimed request has an active helper and a live Direct Line. Re-posting it would blank
-  // `claimed_fulfillment_id` and set the request back to `open` while leaving that fulfillment `active`
-  // — a request that is simultaneously a live conversation and a "waiting for a helper" row, and
-  // re-claimable by a second helper. Block it: the requester must resolve the Direct Line first
-  // (reopen-for-others already cancels the helper atomically). Repost is for expired/closed posts only.
-  if (existing.status === 'claimed') {
-    throw new Error('request_not_repostable');
-  }
+  const request = await withDbTransaction(async (client) => {
+    // Lock the row and re-check status UNDER the lock. A claimed request has an active helper and a live
+    // Direct Line; re-posting it would blank `claimed_fulfillment_id` and set the request back to `open`
+    // while its fulfillment stays `active` — a request that is at once a live conversation and a "waiting
+    // for a helper" row, re-claimable by a second helper. The earlier ownership read is unlocked, so a
+    // concurrent claim could flip the status in between; the FOR UPDATE lock + the `status <> 'claimed'`
+    // predicate on the UPDATE close that race. Repost is for expired/closed posts only.
+    const locked = await client.query<{ id: string; status: string }>(
+      `SELECT id, status FROM socket_relay_requests WHERE id = $1::uuid FOR UPDATE`,
+      [requestId],
+    );
+    if ((locked.rowCount ?? 0) === 0) {
+      throw new Error('request_not_found');
+    }
+    if (locked.rows[0].status === 'claimed') {
+      throw new Error('request_not_repostable');
+    }
 
-  const result = await queryDb<RequestRow>(
-    `UPDATE socket_relay_requests
-     SET status = 'open',
-         reopened_count = reopened_count + 1,
-         claimed_fulfillment_id = NULL,
-         updated_at = NOW(),
-         expires_at = NOW() + INTERVAL '28 days'
-     WHERE id = $1::uuid
-     RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, state, country, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at`,
-    [requestId],
-  );
+    const updated = await client.query<RequestRow>(
+      `UPDATE socket_relay_requests
+       SET status = 'open',
+           reopened_count = reopened_count + 1,
+           claimed_fulfillment_id = NULL,
+           updated_at = NOW(),
+           expires_at = NOW() + INTERVAL '28 days'
+       WHERE id = $1::uuid AND status <> 'claimed'
+       RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, state, country, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at`,
+      [requestId],
+    );
+    if ((updated.rowCount ?? 0) === 0) {
+      throw new Error('request_not_repostable');
+    }
 
-  const request = mapRequestRow(result.rows[0]);
+    // Log the lifecycle event in the same transaction, mirroring create/update/claim/resolve — a repost
+    // re-enters the post into the claimable pool with a fresh expiry, so it belongs in the event log.
+    await client.query(
+      `INSERT INTO socket_relay_request_events (request_id, actor_user_id, event_name, metadata)
+       VALUES ($1::uuid, $2, 'request_reposted', '{}'::jsonb)`,
+      [requestId, actorUserId],
+    );
+
+    return mapRequestRow(updated.rows[0]);
+  });
 
   // Best-effort presence write after the durable repost: the post is back to open, so its owner is
   // active again in SocketRelay. Never breaks the repost.
@@ -692,13 +721,23 @@ export async function claimRequest(requestId: string, actorUserId: string, actor
   // now captured on the fulfillment at claim time (requester = the request's owner_username; fulfiller =
   // the claimer's own username), so both participants render with a real @handle in chat. The chat
   // route reads these same stored handles on every open, so a later open never degrades them.
-  await ensureSocketRelayFulfillmentChannel({
-    fulfillmentId: created.fulfillment.id,
-    requesterUserId: created.fulfillment.requesterUserId,
-    requesterDisplayName: buildIdentityDisplayName(created.fulfillment.requesterUsername, created.fulfillment.requesterUserId),
-    fulfillerUserId: created.fulfillment.fulfillerUserId,
-    fulfillerDisplayName: buildIdentityDisplayName(created.fulfillment.fulfillerUsername, created.fulfillment.fulfillerUserId),
-  });
+  //
+  // Best-effort: the claim is already durably committed above, so a Stream outage here must NOT throw
+  // out of claimRequest — that would make the fulfill route return 500, skip its audit row and the
+  // "someone offered to help" notification, and leave a retry stuck on `request_not_claimable` for a
+  // claim that actually succeeded. The chat-credentials route re-ensures the channel on first open, so
+  // it self-heals; here we just log and move on.
+  try {
+    await ensureSocketRelayFulfillmentChannel({
+      fulfillmentId: created.fulfillment.id,
+      requesterUserId: created.fulfillment.requesterUserId,
+      requesterDisplayName: buildIdentityDisplayName(created.fulfillment.requesterUsername, created.fulfillment.requesterUserId),
+      fulfillerUserId: created.fulfillment.fulfillerUserId,
+      fulfillerDisplayName: buildIdentityDisplayName(created.fulfillment.fulfillerUsername, created.fulfillment.fulfillerUserId),
+    });
+  } catch (error) {
+    reportError(error, { area: 'socket-relay', op: 'claim_ensure_channel' });
+  }
 
   // Best-effort presence sync after the durable claim: the post left the open pool (status 'claimed'),
   // so its owner's presence for this post is cleared. Never breaks the claim.

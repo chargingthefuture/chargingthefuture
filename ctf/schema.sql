@@ -4738,6 +4738,12 @@ ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS
 
 -- socket_relay_messages (1 missing)
 ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS client_message_id TEXT;
+-- Idempotency key backing sendFulfillmentMessage's `ON CONFLICT (fulfillment_id, sender_user_id,
+-- client_message_id)`. Without a matching unique index Postgres rejects that ON CONFLICT (error 42P10)
+-- and the message-send route throws — so this index is required for the route to work at all. Created
+-- after the client_message_id column is added above so the referenced column always exists.
+CREATE UNIQUE INDEX IF NOT EXISTS socket_relay_messages_idempotency_uidx
+  ON socket_relay_messages (fulfillment_id, sender_user_id, client_message_id);
 
 -- trust_transport_user_extension (5 missing)
 ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS mode_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
