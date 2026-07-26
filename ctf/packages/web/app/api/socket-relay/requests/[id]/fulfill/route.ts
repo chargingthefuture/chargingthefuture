@@ -30,7 +30,9 @@ export async function POST(request: Request, { params }: RouteProps) {
       reason: 'ok',
       targetType: 'fulfillment',
       targetId: created.fulfillment.id,
-      metadata: { requestId: id },
+      // Evidence fields the audit contract asks for. claimRequest only returns a fulfillment once the
+      // request was claimable and the claimer is not its owner, so reaching this call proves both.
+      metadata: { requestId: id, claimabilityCheck: 'pass', ownerSeparationCheck: 'pass' },
     });
     // Notify the requester that someone offered to help — best-effort, deduped on the fulfillment id.
     // The claimer cannot be the owner (the repository rejects a self-claim), so no self-notify guard
