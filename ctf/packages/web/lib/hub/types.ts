@@ -107,10 +107,16 @@ export type HubJoinResponse =
     configured: false;
   };
 
+// Who a Hub channel is listed for. 'public' = every signed-in member; 'authenticated' reserved for a
+// members-only channel; 'eligible' = the contributor-gated channel (Weavers of the Commons). The
+// `role:${string}` arm keeps room for future role-scoped channels without collapsing the union to a
+// bare `string` (which would silently accept any typo).
+export type HubVisibilityScope = 'public' | 'authenticated' | 'eligible' | `role:${string}`;
+
 export type HubChannelInfo = {
   slug: string;
   displayName: string;
-  visibilityScope: 'public' | 'authenticated' | string; // role:* patterns supported
+  visibilityScope: HubVisibilityScope;
   streamChannelId: string;
 };
 
