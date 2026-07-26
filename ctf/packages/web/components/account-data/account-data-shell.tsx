@@ -26,6 +26,8 @@ export function AccountDataShell() {
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
   const [rowError, setRowError] = useState<{ slug: string; message: string } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // Which export is in flight: a service slug, or 'full-account' for the download-all action.
+  const [exportingKey, setExportingKey] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -85,6 +87,61 @@ export function AccountDataShell() {
     }
   }, []);
 
+  // Download a JSON export (issue #1264): fetch the export route, then hand the payload to the
+  // browser as a file download. fetch → blob (rather than a bare navigation) so a failure can show
+  // an inline error instead of replacing the page with raw JSON.
+  const downloadExport = useCallback(async (url: string, filename: string, key: string, errorSlug: string) => {
+    setExportingKey(key);
+    setRowError(null);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        let message = 'Unable to export this data. Please try again.';
+        try {
+          const body = (await res.json()) as { message?: string };
+          if (body.message) message = body.message;
+        } catch {
+          // keep default message
+        }
+        setRowError({ slug: errorSlug, message });
+        return;
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      setRowError({ slug: errorSlug, message: 'Network error. Please try again.' });
+    } finally {
+      setExportingKey(null);
+    }
+  }, []);
+
+  const handleExportService = useCallback((service: AccountService) => {
+    const date = new Date().toISOString().slice(0, 10);
+    void downloadExport(
+      `/api/account/services/${encodeURIComponent(service.slug)}/export`,
+      `ctf-account-data-${service.slug}-${date}.json`,
+      service.slug,
+      service.slug,
+    );
+  }, [downloadExport]);
+
+  const handleExportAll = useCallback(() => {
+    const date = new Date().toISOString().slice(0, 10);
+    void downloadExport(
+      '/api/account/full-account/export',
+      `ctf-account-data-full-account-${date}.json`,
+      'full-account',
+      'full-account',
+    );
+  }, [downloadExport]);
+
   const handleConfirmFullAccount = useCallback(async () => {
     const res = await fetch('/api/account/full-account', {
       method: 'DELETE',
@@ -119,7 +176,10 @@ export function AccountDataShell() {
       deletedSlugs={deletedSlugs}
       pendingSlug={pendingSlug}
       rowError={rowError}
+      exportingKey={exportingKey}
       onDeleteService={handleDeleteService}
+      onExportService={handleExportService}
+      onExportAll={handleExportAll}
       onOpenAccountDelete={() => setConfirmOpen(true)}
     />
   );
