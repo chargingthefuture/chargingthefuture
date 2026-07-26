@@ -1,5 +1,6 @@
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
+import { reportError } from 'lib/observability/report';
 
 export type SocketRelayStreamParticipantCredentials = {
   streamApiKey: string;
@@ -63,10 +64,19 @@ export async function ensureSocketRelayFulfillmentChannel(input: {
     name: 'SocketRelay Fulfillment Thread',
   });
 
+  // create() fails in the common, benign case where the channel already exists — fall back to watch()
+  // to attach to it. But a genuine failure (auth, network, bad id) makes watch() fail too; when it
+  // does, surface the original create error (it is otherwise masked behind the watch error) so the
+  // real cause is not swallowed, then rethrow so the caller sees the failure.
   try {
     await channel.create();
-  } catch {
-    await channel.watch();
+  } catch (createError) {
+    try {
+      await channel.watch();
+    } catch (watchError) {
+      reportError(createError, { area: 'socket-relay', op: 'ensure_channel_create' });
+      throw watchError;
+    }
   }
 
   await channel.addMembers([requesterStreamUserId, fulfillerStreamUserId]);

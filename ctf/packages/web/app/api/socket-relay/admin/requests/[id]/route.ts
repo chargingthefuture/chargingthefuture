@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSocketRelayAdminAccess, socketRelayErrorResponse } from 'lib/socket-relay/_lib';
-import { adminDeleteRequest, insertSocketRelayAudit } from 'lib/socket-relay/repository';
+import { adminDeleteRequest } from 'lib/socket-relay/repository';
 import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
@@ -21,8 +21,9 @@ export async function DELETE(request: Request, { params }: RouteProps) {
   const { id } = await params;
 
   try {
-    await adminDeleteRequest(id);
-    await insertSocketRelayAudit({
+    // The audit row is written inside adminDeleteRequest's transaction, so the delete and its audit
+    // are atomic — the removal is never committed without its audit record.
+    await adminDeleteRequest(id, {
       actorId: gate.auth.userId,
       command: 'socket-relay.admin.request.delete',
       policyStatus: 'allow',
