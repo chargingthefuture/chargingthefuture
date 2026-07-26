@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, MessageCircle } from "lucide-react";
+import { ChevronLeft, Clock, MessageCircle } from "lucide-react";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
 import { FAINT, SUBTLE, type SrChatCredentials, type SrDirectLine, type SrFulfillment, type SrResolveOutcome } from "./sr-shared";
 import { useTheme } from '@/hooks/useTheme';
@@ -102,7 +102,7 @@ function ChatPane({
 }) {
   const { theme } = useTheme();
   const t = getSocketRelayTokens(theme);
-  if (!selected) return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: FAINT, fontSize: 14 }}>Pick a conversation on the left.</div>;
+  if (!selected) return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: FAINT, fontSize: 14 }}>Pick a conversation.</div>;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -178,6 +178,7 @@ export function SocketRelayChat({
   currentUserId,
   resolving = false,
   onSelect,
+  onBack,
   onResolve,
   chatLoading,
   chatError,
@@ -188,6 +189,9 @@ export function SocketRelayChat({
   currentUserId?: string;
   resolving?: boolean;
   onSelect: (line: SrDirectLine) => void;
+  // Clear the selection and return to the conversation list (the app is phone-width only, so the list
+  // and the open conversation are separate full-width views, not a side-by-side split).
+  onBack: () => void;
   onResolve: (fulfillmentId: string, outcome: SrResolveOutcome) => void;
   chatLoading: boolean;
   chatError: string | null;
@@ -212,29 +216,41 @@ export function SocketRelayChat({
   const selectedFulfillment = selected?.kind === "fulfillment" ? selected.fulfillment : null;
   const selectedIsRequester = Boolean(selectedFulfillment && currentUserId && selectedFulfillment.requesterUserId === currentUserId);
 
-  return (
-    <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-      <div style={{ width: 240, borderRight: "1px solid rgba(255,255,255,0.06)", padding: "12px 8px", overflowY: "auto" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: "uppercase", letterSpacing: "0.08em", padding: "0 8px", marginBottom: 8 }}>Conversations</div>
+  // Single phone-width column (rule 105): show the conversation list, or — once a row is picked — the
+  // open conversation full-width with a Back control, rather than a cramped side-by-side split.
+  if (!selected) {
+    return (
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflowY: "auto", padding: "12px 12px" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: "uppercase", letterSpacing: "0.08em", padding: "0 4px", marginBottom: 8 }}>Conversations</div>
         {directLines.map((line) => (
-          <DirectLineRow key={line.key} line={line} active={selected?.key === line.key} currentUserId={currentUserId} onSelect={onSelect} />
+          <DirectLineRow key={line.key} line={line} active={false} currentUserId={currentUserId} onSelect={onSelect} />
         ))}
       </div>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {selected?.kind === "pending" ? (
-          <PendingPane title={selected.request.title} />
-        ) : (
-          <ChatPane
-            selected={selectedFulfillment}
-            isRequester={selectedIsRequester}
-            resolving={resolving}
-            onResolve={onResolve}
-            chatLoading={chatLoading}
-            chatError={chatError}
-            chatCredentials={chatCredentials}
-          />
-        )}
-      </div>
+    );
+  }
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <button
+        type="button"
+        onClick={onBack}
+        style={{ display: "flex", alignItems: "center", gap: 4, padding: "10px 12px", background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.06)", color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+      >
+        <ChevronLeft size={16} /> All conversations
+      </button>
+      {selected.kind === "pending" ? (
+        <PendingPane title={selected.request.title} />
+      ) : (
+        <ChatPane
+          selected={selectedFulfillment}
+          isRequester={selectedIsRequester}
+          resolving={resolving}
+          onResolve={onResolve}
+          chatLoading={chatLoading}
+          chatError={chatError}
+          chatCredentials={chatCredentials}
+        />
+      )}
     </div>
   );
 }

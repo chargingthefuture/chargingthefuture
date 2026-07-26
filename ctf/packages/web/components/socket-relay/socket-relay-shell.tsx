@@ -462,6 +462,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
           currentUserId={userId}
           resolving={resolving}
           onSelect={(line) => void handleSelectLine(line)}
+          onBack={() => { setSelectedLine(null); setChatCredentials(null); setChatError(null); }}
           onResolve={(id, outcome) => void handleResolve(id, outcome)}
           chatLoading={chatLoading}
           chatError={chatError}
