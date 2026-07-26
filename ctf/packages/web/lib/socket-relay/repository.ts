@@ -160,6 +160,12 @@ export function normalizeTags(tags: string[]): string[] {
   return result;
 }
 
+// Same length rule validateRequestInput applies, exported so a route can answer a too-long tag with
+// a message that names the limit instead of the generic invalid-payload one.
+export function hasOverlongTag(tags: string[]): boolean {
+  return normalizeTags(tags).some((tag) => tag.length > SOCKET_RELAY_MAX_TAG_LENGTH);
+}
+
 // Legacy rows predate the tags column; fall back to the single category.
 function rowTags(row: RequestRow): string[] {
   if (Array.isArray(row.tags) && row.tags.length > 0) return row.tags;
@@ -289,7 +295,7 @@ export function validateRequestInput(input: SocketRelayRequestInput): boolean {
     return false;
   }
 
-  if (tags.some((tag) => tag.length > SOCKET_RELAY_MAX_TAG_LENGTH)) {
+  if (hasOverlongTag(tags)) {
     return false;
   }
 

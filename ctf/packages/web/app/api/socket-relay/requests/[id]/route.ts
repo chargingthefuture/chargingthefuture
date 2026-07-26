@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socket-relay/_lib';
-import { SOCKET_RELAY_ERROR_CODE } from 'lib/socket-relay/constants';
-import { getRequestById, isValidRequestPrice, updateRequest, validateRequestInput } from 'lib/socket-relay/repository';
+import { SOCKET_RELAY_ERROR_CODE, SOCKET_RELAY_TAG_LENGTH_MESSAGE } from 'lib/socket-relay/constants';
+import {
+  getRequestById,
+  hasOverlongTag,
+  isValidRequestPrice,
+  updateRequest,
+  validateRequestInput,
+} from 'lib/socket-relay/repository';
 import type { SocketRelayRequestInput } from 'lib/socket-relay/types';
 import { reportError } from 'lib/observability/report';
 
@@ -103,6 +109,14 @@ export async function PUT(request: Request, { params }: RouteProps) {
   }
 
   const input = parseRequestInput(body);
+  // Answer the one payload problem a caller can act on by itself before the catch-all message below.
+  if (hasOverlongTag(input.tags)) {
+    return NextResponse.json(
+      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: SOCKET_RELAY_TAG_LENGTH_MESSAGE },
+      { status: 400 },
+    );
+  }
+
   if (!validateRequestInput(input) || !(await isValidRequestPrice(input.priceCurrency, input.priceAmount))) {
     return NextResponse.json(
       { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid request payload.' },

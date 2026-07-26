@@ -7,6 +7,10 @@ export const SOCKET_RELAY_MAX_MESSAGE_LENGTH = 2000;
 export const SOCKET_RELAY_MAX_TAGS_PER_REQUEST = 3;
 export const SOCKET_RELAY_MAX_TAG_LENGTH = 64;
 
+// Named limit for the 400 a too-long tag gets, so a direct API caller sees what to fix instead of
+// the generic "Invalid request payload." message.
+export const SOCKET_RELAY_TAG_LENGTH_MESSAGE = `Each tag must be ${SOCKET_RELAY_MAX_TAG_LENGTH} characters or fewer.`;
+
 export const SOCKET_RELAY_ERROR_CODE = {
   invalidPayload: 'SOCKET_RELAY_INVALID_PAYLOAD',
   persistenceUnavailable: 'SOCKET_RELAY_PERSISTENCE_UNAVAILABLE',
