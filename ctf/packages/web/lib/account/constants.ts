@@ -8,6 +8,7 @@ export const ACCOUNT_ERROR_CODE = {
   serviceScopeUnsupported: 'ACCOUNT_SERVICE_SCOPE_UNSUPPORTED',
   unknownService: 'ACCOUNT_UNKNOWN_SERVICE',
   persistenceUnavailable: 'ACCOUNT_PERSISTENCE_UNAVAILABLE',
+  rateLimited: 'ACCOUNT_RATE_LIMITED',
 } as const;
 
 export type AccountErrorCode = (typeof ACCOUNT_ERROR_CODE)[keyof typeof ACCOUNT_ERROR_CODE];

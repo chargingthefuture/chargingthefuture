@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  Shield, Trash2, Lock, AlertTriangle, Info, ChevronRight, Loader2,
+  Shield, Trash2, Lock, AlertTriangle, Info, ChevronRight, Loader2, Download,
 } from 'lucide-react';
 import { BackChevronButton } from '@/lib/nav/back-history';
 import {
@@ -20,14 +20,18 @@ type MobileProps = {
   deletedSlugs: string[];
   pendingSlug: string | null;
   rowError: { slug: string; message: string } | null;
+  /** The export currently in flight: a service slug, or 'full-account'. */
+  exportingKey: string | null;
   onDeleteService: (service: AccountService) => void;
+  onExportService: (service: AccountService) => void;
+  onExportAll: () => void;
   onOpenAccountDelete: () => void;
 };
 
 // Mobile (<768px) Account & Data layout. Matches MobileAccountData.tsx / MobileAccountDataEmpty.tsx.
 export function AccountDataMobile({
-  view, onViewChange, deletable, retained, deletedSlugs, pendingSlug, rowError,
-  onDeleteService, onOpenAccountDelete,
+  view, onViewChange, deletable, retained, deletedSlugs, pendingSlug, rowError, exportingKey,
+  onDeleteService, onExportService, onExportAll, onOpenAccountDelete,
 }: MobileProps) {
   const { theme } = useTheme();
   const tokens = getAccountDataTokens(theme);
@@ -76,7 +80,10 @@ export function AccountDataMobile({
               retained={retained}
               pendingSlug={pendingSlug}
               rowError={rowError}
+              exportingKey={exportingKey}
               onDeleteService={onDeleteService}
+              onExportService={onExportService}
+              onExportAll={onExportAll}
               tokens={tokens}
             />
           )
@@ -88,28 +95,74 @@ export function AccountDataMobile({
   );
 }
 
+// The export affordance shared by every service card: a small download button that mirrors the
+// delete button's shape, in the brand color instead of the danger red (export is safe/read-only).
+function ExportButton({ service, isExporting, tokens, onExportService }: {
+  service: AccountService;
+  isExporting: boolean;
+  tokens: AccountDataTokens;
+  onExportService: (service: AccountService) => void;
+}) {
+  const { BRAND } = tokens;
+  return (
+    <button
+      type="button"
+      onClick={() => onExportService(service)}
+      disabled={isExporting}
+      aria-label={`Download your ${service.name} data as JSON`}
+      title="Download this data (JSON)"
+      style={{ flexShrink: 0, padding: '5px 8px', borderRadius: 7, background: `${BRAND}08`, border: `1px solid ${BRAND}25`, color: BRAND, fontSize: 11, fontWeight: 700, cursor: isExporting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}
+    >
+      {isExporting ? <Loader2 size={12} className="account-data-spin" /> : <Download size={12} />}
+    </button>
+  );
+}
+
 function MobileDataView({
-  remaining, retained, pendingSlug, rowError, onDeleteService, tokens,
+  remaining, retained, pendingSlug, rowError, exportingKey, onDeleteService, onExportService, onExportAll, tokens,
 }: {
   remaining: AccountService[];
   retained: AccountService[];
   pendingSlug: string | null;
   rowError: { slug: string; message: string } | null;
+  exportingKey: string | null;
   onDeleteService: (service: AccountService) => void;
+  onExportService: (service: AccountService) => void;
+  onExportAll: () => void;
   tokens: AccountDataTokens;
 }) {
   const { BRAND, SURFACE, BORDER, TEXT, SUBTLE } = tokens;
+  const exportingAll = exportingKey === 'full-account';
+  const fullExportError = rowError?.slug === 'full-account' ? rowError.message : null;
   return (
     <>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 10, background: `${BRAND}06`, border: `1px solid ${BRAND}18`, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 10, background: `${BRAND}06`, border: `1px solid ${BRAND}18`, marginBottom: 12 }}>
         <Info size={13} color={BRAND} style={{ flexShrink: 0, marginTop: 1 }} />
         <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.5 }}>Deleting from a service is permanent. Some audit records are retained for platform integrity.</div>
       </div>
+
+      {/* Take your data with you (issue #1264): one action downloads every service's data as a
+          single JSON file. The per-service download sits on each card below. */}
+      <button
+        type="button"
+        onClick={onExportAll}
+        disabled={exportingAll}
+        style={{ width: '100%', padding: '10px 12px', borderRadius: 10, background: `${BRAND}0C`, border: `1px solid ${fullExportError ? 'rgba(239,68,68,0.35)' : `${BRAND}30`}`, color: BRAND, fontSize: 13, fontWeight: 700, cursor: exportingAll ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 6 }}
+      >
+        {exportingAll ? <Loader2 size={14} className="account-data-spin" /> : <Download size={14} />}
+        {exportingAll ? 'Preparing your download…' : 'Download all my data (JSON)'}
+      </button>
+      {fullExportError ? (
+        <div style={{ fontSize: 11, color: '#F87171', lineHeight: 1.4, marginBottom: 10 }}>{fullExportError}</div>
+      ) : (
+        <div style={{ fontSize: 11, color: '#4B5563', lineHeight: 1.4, marginBottom: 10 }}>One JSON file with your own rows from every service. Money ledgers and audit records are retained by design and not included.</div>
+      )}
 
       <div style={{ fontSize: 12, fontWeight: 700, color: SUBTLE, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Personal data — {remaining.length} {remaining.length === 1 ? 'service' : 'services'}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 24 }}>
         {remaining.map((service) => {
           const isPending = pendingSlug === service.slug;
+          const isExporting = exportingKey === service.slug;
           const error = rowError?.slug === service.slug ? rowError.message : null;
           return (
             <div key={service.slug} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12, background: SURFACE, border: `1px solid ${error ? 'rgba(239,68,68,0.35)' : BORDER}`, opacity: isPending ? 0.7 : 1 }}>
@@ -120,6 +173,9 @@ function MobileDataView({
                 <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{service.name}</div>
                 <div style={{ fontSize: 11, color: error ? '#F87171' : '#4B5563', lineHeight: 1.3, marginTop: 1 }}>{error ?? service.summary}</div>
               </div>
+              {service.exportable ? (
+                <ExportButton service={service} isExporting={isExporting} tokens={tokens} onExportService={onExportService} />
+              ) : null}
               <button
                 type="button"
                 onClick={() => onDeleteService(service)}
@@ -138,18 +194,26 @@ function MobileDataView({
         <>
           <div style={{ fontSize: 12, fontWeight: 700, color: SUBTLE, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Always retained — {retained.length} {retained.length === 1 ? 'service' : 'services'}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {retained.map((service) => (
-              <div key={service.slug} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '11px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.01)', border: `1px solid ${BORDER}` }}>
-                <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{glyphForService(service.slug)}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: SUBTLE }}>{service.name}</span>
-                    <Lock size={10} color="#374151" />
+            {retained.map((service) => {
+              const error = rowError?.slug === service.slug ? rowError.message : null;
+              return (
+                <div key={service.slug} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '11px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.01)', border: `1px solid ${error ? 'rgba(239,68,68,0.35)' : BORDER}` }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{glyphForService(service.slug)}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: SUBTLE }}>{service.name}</span>
+                      <Lock size={10} color="#374151" />
+                    </div>
+                    <div style={{ fontSize: 11, color: error ? '#F87171' : '#4B5563', lineHeight: 1.4 }}>{error ?? service.summary}</div>
                   </div>
-                  <div style={{ fontSize: 11, color: '#4B5563', lineHeight: 1.4 }}>{service.summary}</div>
+                  {/* A retained service can still hold the member's own exportable rows (e.g.
+                      Notifications) — export is read-only, so it is offered even where delete is not. */}
+                  {service.exportable ? (
+                    <ExportButton service={service} isExporting={exportingKey === service.slug} tokens={tokens} onExportService={onExportService} />
+                  ) : null}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       ) : null}

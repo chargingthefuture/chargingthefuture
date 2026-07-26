@@ -52,6 +52,9 @@ export type AccountService = {
   name: string;
   summary: string;
   serviceScopeSupported: boolean;
+  // Whether the JSON export has anything to read for this service (≥1 user-scoped table). Drives
+  // the per-service Export button; absent on older payloads, treated as false.
+  exportable?: boolean;
 };
 
 export type AccountServicesResponse = {

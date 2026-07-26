@@ -25,20 +25,20 @@ import './globals.css';
 // The site title doubles as the link-preview descriptor other sites (e.g. Quora) show when a page
 // here is shared: they read og:title, falling back to <title>. Both are set to the same string so
 // the unfurl reads exactly this, on every surface.
-const SITE_TITLE = 'TI Skills Economy (TSE); Exit their economy, exit the psyop.';
+const SITE_TITLE = 'Skills Economy; Exit their economy, exit the psyop.';
 const SITE_DESCRIPTION = 'A skills-based community economy for survivors — mutual support, real participation, no outside systems needed.';
 
 export const metadata: Metadata = {
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
-  applicationName: 'TI Skills Economy (TSE)',
+  applicationName: 'Skills Economy',
   // Installable PWA (owner decision, 2026-07-20): the manifest + service worker make the web app
   // installable to the home screen on Android and iOS, so the mobile-responsive web app covers the
   // whole product on phones. appleWebApp enables the standalone (no browser chrome) mode on iOS.
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'TSE',
+    title: 'SE',
     statusBarStyle: 'black-translucent',
   },
   icons: {
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    siteName: 'TI Skills Economy (TSE)',
+    siteName: 'Skills Economy',
   },
   twitter: {
     card: 'summary',

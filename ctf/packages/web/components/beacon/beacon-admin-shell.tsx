@@ -253,7 +253,7 @@ export function BeaconAdminShell() {
         <section style={cardStyle(t)}>
           <h2 style={cardTitleStyle}>Create an event</h2>
           <label htmlFor="beacon-event-title" style={labelStyle(t)}>Title</label>
-          <input id="beacon-event-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="State of the TI Skills Economy" style={inputStyle(t)} />
+          <input id="beacon-event-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="State of the Skills Economy" style={inputStyle(t)} />
           <label htmlFor="beacon-event-description" style={labelStyle(t)}>Description</label>
           <textarea id="beacon-event-description" value={description} onChange={(event) => setDescription(event.target.value)} rows={3} style={{ ...inputStyle(t), resize: 'vertical' }} />
           <button type="button" onClick={() => void createEvent()} disabled={creating} style={primaryButtonStyle(t)}>

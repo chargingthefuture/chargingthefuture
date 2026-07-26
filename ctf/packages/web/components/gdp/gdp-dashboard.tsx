@@ -47,7 +47,7 @@ function GdpHero({ metrics }: { metrics: GdpMetrics }) {
     <div style={{ marginBottom: 24, padding: "28px 32px", borderRadius: 20, background: `linear-gradient(135deg,${t.ACCENT}20 0%,rgba(6,182,212,0.05) 100%)`, border: `1px solid ${t.ACCENT}25` }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "center" }}>
         <div style={{ flex: "1 1 260px", minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", color: t.ACCENT, textTransform: "uppercase", marginBottom: 8 }}>TI Skills Economy — Live</div>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", color: t.ACCENT, textTransform: "uppercase", marginBottom: 8 }}>Skills Economy — Live</div>
           <div style={{ display: "flex", alignItems: "baseline", marginBottom: 8 }}>
             <div style={{ fontSize: 48, fontWeight: 900, color: t.TITLE, lineHeight: 1 }}>{metrics.currentValue || "—"}</div>
             {isEstimate ? <EstimateChip /> : null}
