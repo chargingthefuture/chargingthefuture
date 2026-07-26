@@ -88,6 +88,9 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   const [postError, setPostError] = useState<string | null>(null);
   const [postSuccess, setPostSuccess] = useState(false);
   const [selectedLine, setSelectedLine] = useState<SrDirectLine | null>(null);
+  // Whether the ?fulfillment=<id> deep link (from the "someone offered to help" notification) has been
+  // resolved to an open Direct Line yet. Guards the one-shot deep-link effect below.
+  const [deepLinkHandled, setDeepLinkHandled] = useState(false);
   const [chatCredentials, setChatCredentials] = useState<SrChatCredentials | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
@@ -261,7 +264,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
 
   // Select a Direct Line row. A pending request (no helper yet) has no chat to open — it just shows the
   // "waiting for a helper" pane — so only a fulfillment row fetches chat credentials.
-  async function handleSelectLine(line: SrDirectLine) {
+  const handleSelectLine = useCallback(async (line: SrDirectLine) => {
     setSelectedLine(line);
     setChatCredentials(null);
     setChatError(null);
@@ -284,7 +287,26 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     } finally {
       setChatLoading(false);
     }
-  }
+  }, []);
+
+  // Deep link: the "Someone offered to help" notification links to /apps/socket-relay?fulfillment=<id>.
+  // Once the data has loaded, open the Direct Line tab and select that conversation, instead of dropping
+  // the member on the feed. Runs once. If the fulfillment is no longer active (already resolved), it
+  // still lands on the Direct Line tab so the member sees their conversations rather than the feed.
+  useEffect(() => {
+    if (deepLinkHandled || loading) return;
+    const fulfillmentId = new URLSearchParams(window.location.search).get("fulfillment");
+    if (!fulfillmentId) {
+      setDeepLinkHandled(true);
+      return;
+    }
+    const match = buildDirectLines(fulfillments, myRequests).find(
+      (l) => l.kind === "fulfillment" && l.fulfillment.id === fulfillmentId,
+    );
+    setTab("chat");
+    if (match) void handleSelectLine(match);
+    setDeepLinkHandled(true);
+  }, [deepLinkHandled, loading, fulfillments, myRequests, handleSelectLine]);
 
   // Only the requester (the person who posted) can resolve; the route enforces this too. On success
   // we refresh and clear the selection so the resolved/reopened state is reflected.

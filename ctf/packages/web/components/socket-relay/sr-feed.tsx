@@ -3,7 +3,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Share2 } from "lucide-react";
-import { FAINT, SUBTLE, requestTags, settlementLabel, srHandle, timeAgo, type SrRequest } from "./sr-shared";
+import { FAINT, SUBTLE, requestTags, settlementLabel, srHandle, timeAgo, type SrRequest, type SrRequestStatus } from "./sr-shared";
 import { ShareLink } from "@/components/shared/share-link";
 import { useTheme } from '@/hooks/useTheme';
 import { getSocketRelayTokens } from './sr-shared';
@@ -11,7 +11,7 @@ import { getSocketRelayTokens } from './sr-shared';
 const editButtonStyle = { padding: "6px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer" } as const;
 
 function CardAction({
-  open,
+  status,
   expired,
   isOwn,
   submitting,
@@ -19,7 +19,7 @@ function CardAction({
   onEdit,
   onRepost,
 }: {
-  open: boolean;
+  status: SrRequestStatus;
   expired: boolean;
   isOwn: boolean;
   submitting: boolean;
@@ -29,6 +29,7 @@ function CardAction({
 }) {
   const { theme } = useTheme();
   const t = getSocketRelayTokens(theme);
+  const open = status === "open" && !expired;
   // An expired post is no longer in the active feed. The owner sees it under "Mine" with Re-post (which
   // resets the 28-day clock and re-opens it) and Edit; nobody else can claim it.
   if (expired) {
@@ -45,6 +46,11 @@ function CardAction({
     }
     return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600 }}>Expired</div>;
   }
+  // A claimed request has an active helper — the conversation lives on the Direct Line. It is neither
+  // closed nor claimable, so it must not read "✓ closed" (that was the bug: a claimed request looked
+  // closed in the feed while its Direct Line was still live).
+  if (status === "claimed") return <div style={{ fontSize: 12, color: "#F59E0B", fontWeight: 600 }}>Being helped</div>;
+  if (status === "cancelled") return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600 }}>Cancelled</div>;
   if (!open) return <div style={{ fontSize: 12, color: "#22C55E", fontWeight: 600 }}>✓ closed</div>;
   if (isOwn) {
     return (
@@ -112,7 +118,7 @@ function RequestCard({
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
-          <CardAction open={open} expired={expired} isOwn={isOwn} submitting={submitting} onClaim={() => onClaim(r.id)} onEdit={() => onEdit(r)} onRepost={() => onRepost(r.id)} />
+          <CardAction status={r.status} expired={expired} isOwn={isOwn} submitting={submitting} onClaim={() => onClaim(r.id)} onEdit={() => onEdit(r)} onRepost={() => onRepost(r.id)} />
         </div>
       </div>
     </div>

@@ -42,7 +42,9 @@ export async function POST(request: Request, { params }: RouteProps) {
         notificationType: 'socket-relay.request.claimed',
         category: 'safety',
         summary: 'Someone offered to help with your SocketRelay request.',
-        linkPath: '/apps/socket-relay',
+        // Deep-link straight to this fulfillment's Direct Line, not the app homepage — the shell reads
+        // ?fulfillment=<id> and opens that conversation.
+        linkPath: `/apps/socket-relay?fulfillment=${created.fulfillment.id}`,
         targetRef: created.fulfillment.id,
       });
     }
