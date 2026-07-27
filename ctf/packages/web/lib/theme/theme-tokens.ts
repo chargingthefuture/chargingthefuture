@@ -37,7 +37,7 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   'trust-transport': { standard: '#67E8F9', comic: '#0C4A5E' },
   directory: { standard: '#93C5FD', comic: '#1A3A6A' },
   foundation: { standard: '#F59E0B', comic: '#7A4A05' },
-  'peer-programming': { standard: '#86EFAC', comic: '#1A5C40' },
+  'peer-programming': { standard: '#16A34A', comic: '#1A5C40' },
   gdp: { standard: '#06B6D4', comic: '#0E5A68' },
   'gross-domestic-product': { standard: '#06B6D4', comic: '#0E5A68' },
   'service-credits': { standard: '#A855F7', comic: '#5C2C8A' },
@@ -51,7 +51,7 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   'what-works': { standard: '#84CC16', comic: '#4A6B10' },
   trust: { standard: '#0EA5E9', comic: '#0C5278' },
   'click-log': { standard: '#EC4899', comic: '#7A1A4A' },
-  contributions: { standard: '#F43F5E', comic: '#7A1A2A' },
+  contributions: { standard: '#FB7185', comic: '#7A2A34' },
   'skills-taxonomy': { standard: '#8B5CF6', comic: '#3A2A7A' },
   unlock: { standard: '#D946EF', comic: '#6A1A7A' },
   'weekly-performance': { standard: '#6366F1', comic: '#2A2A6A' },
@@ -61,8 +61,8 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   'account-data': { standard: '#D946EF', comic: '#B91C1C' },
   // Recurring Activity: a calm teal. Recognition of everyday ties, never a bill — no red or warning tone.
   'recurring-activity': { standard: '#14B8A6', comic: '#0F5C54' },
-  // Beacon: a distinct red so it never reads as Foundation's amber; the viewer accent follows this.
-  beacon: { standard: '#DC2626', comic: '#7A1A1A' },
+  // Beacon: a deep red so it never reads as Foundation's amber or Contributions' coral; viewer follows this.
+  beacon: { standard: '#B91C1C', comic: '#7A1A1A' },
   // Mutual Time: the rose accent from the design mockups (#F472B6); comic uses a deep ink-pink.
   'mutual-time': { standard: '#F472B6', comic: '#7A1A4A' },
 };

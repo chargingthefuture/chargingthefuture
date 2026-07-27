@@ -38,7 +38,7 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   'trust-transport': { standard: '#67E8F9', comic: '#0C4A5E' },
   directory: { standard: '#93C5FD', comic: '#1A3A6A' },
   foundation: { standard: '#F59E0B', comic: '#7A4A05' },
-  'peer-programming': { standard: '#86EFAC', comic: '#1A5C40' },
+  'peer-programming': { standard: '#16A34A', comic: '#1A5C40' },
   gdp: { standard: '#06B6D4', comic: '#0E5A68' },
   'gross-domestic-product': { standard: '#06B6D4', comic: '#0E5A68' },
   'service-credits': { standard: '#A855F7', comic: '#5C2C8A' },
@@ -58,8 +58,8 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   comic: { standard: '#38BDF8', comic: '#7A6A50' },
   // Account & Data uses comic-danger for its destructive zone.
   'account-data': { standard: '#D946EF', comic: '#B91C1C' },
-  // Beacon: a distinct red so it never reads as Foundation's amber; matches the web accent table.
-  beacon: { standard: '#DC2626', comic: '#7A1A1A' },
+  // Beacon: a deep red so it never reads as Foundation's amber or Contributions' coral; matches web.
+  beacon: { standard: '#B91C1C', comic: '#7A1A1A' },
   // Recurring Activity: a calm teal. Matches the web accent table verbatim.
   'recurring-activity': { standard: '#14B8A6', comic: '#0F5C54' },
 };

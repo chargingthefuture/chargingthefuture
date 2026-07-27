@@ -15,8 +15,8 @@ import type {
 // theme renders faithful to the mockup, and the comic theme uses the comic surface tokens.
 export type ContributionsTokens = PluginShellTokens & { SURFACE: string; BORDER_SOLID: string };
 
-// The shell accent is rose #F43F5E — distinct from ClickLog's pink so the two never read alike.
-export const ACCENT_DEFAULT = '#F43F5E';
+// The shell accent is coral #FB7185 — distinct from ClickLog's pink and Beacon's deep red.
+export const ACCENT_DEFAULT = '#FB7185';
 
 export function getContributionsTokens(theme: ThemeName): ContributionsTokens {
   if (theme === 'comic') {
