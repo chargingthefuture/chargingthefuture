@@ -53,6 +53,12 @@ export function MobileScreenHeader({
         zIndex: 40,
         display: 'flex',
         alignItems: 'center',
+        // Wrap rather than squeeze: see the title comment below. The controls are one flex child, so
+        // when they and a legible title cannot share a row, the whole control cluster drops to a
+        // second row instead of eating the title. On a wide enough bar nothing wraps and this is a
+        // no-op, so it costs height only when it is actually buying legibility.
+        flexWrap: 'wrap',
+        rowGap: 8,
         gap: 10,
         padding: '10px 14px',
         background: 'var(--ctf-bg, rgba(8, 8, 10, 0.96))',
@@ -102,12 +108,38 @@ export function MobileScreenHeader({
         </span>
       ) : null}
 
-      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ctf-text, #F9FAFB)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      {/* The title claims the leftover width instead of being squeezed out of it (owner report,
+          2026-07-27). Every other child of this bar is flexShrink: 0 — back chevron, icon, actions,
+          MobileTopActions — so without `flex: 1` the title was the only thing that could shrink, and
+          on a 390px phone it collapsed to a single letter ("Unlock Admin" rendered as "U"). It still
+          ellipsises when a long name genuinely does not fit, but only after it has taken the space
+          nothing else wanted. `minWidth: 0` is what lets a flex child shrink below its text width at
+          all, which is what makes the ellipsis work rather than overflowing the bar. */}
+      <span
+        style={{
+          flex: 1,
+          // A floor, not zero: the title must claim at least this much before the control cluster is
+          // allowed to share the row. Below it the controls wrap away instead, which is the whole
+          // point — a one-letter title is worse than a two-row bar.
+          minWidth: 140,
+          fontSize: 15,
+          fontWeight: 700,
+          color: 'var(--ctf-text, #F9FAFB)',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+      >
         {title}
       </span>
 
-      {actions}
-      <MobileTopActions />
+      {/* One flex child, so the controls wrap as a group. Splitting them would let the bar break
+          mid-cluster and strand a lone avatar on the second row. marginLeft:auto right-aligns them
+          while they share the title's row; once wrapped it is inert (they already fill the row). */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto', flexShrink: 0 }}>
+        {actions}
+        <MobileTopActions />
+      </div>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import styles from './admin-landing.module.css';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getAdminAreaAttention } from 'lib/admin/area-attention';
 import { AdminAreaGrid, type AdminAreaTile } from './admin-area-grid';
+import { AdminRefreshButton } from './admin-refresh-button';
 
 // The area's stable slug is the last segment of its href (e.g. /admin/bug-reports → 'bug-reports'),
 // which is the key the attention signal and the seen-marker are keyed on.
@@ -101,20 +102,16 @@ export default async function AdminPage() {
     <div className={styles.page}>
       {/* Consistent one-level-up back control: from the admin directory, back goes to the home hub.
           The shared header resolves the destination from the path (see resolveBackTarget). */}
-      <MobileScreenHeader title="Admin" accent="#6366F1" icon={<ShieldCheck size={18} color="#6366F1" />} />
+      <MobileScreenHeader
+        title="Admin"
+        accent="#6366F1"
+        icon={<ShieldCheck size={18} color="#6366F1" />}
+        actions={<AdminRefreshButton />}
+      />
+      {/* No in-page title card here: the header above already names the screen and carries the icon
+          and back control. Repeating it cost a screen of phone height for no new information (owner
+          report, 2026-07-27) — every admin surface now goes straight to content after the nav bar. */}
       <div className={styles.inner}>
-        {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.iconChip}>
-            <ShieldCheck size={18} color="#6366F1" />
-          </div>
-          <div>
-            <div className={styles.title}>Admin</div>
-            <div className={styles.subtitle}>Pick an area to manage. Each area is restricted to admins.</div>
-          </div>
-          <span className={styles.badge}>ADMIN</span>
-        </div>
-
         <AdminAreaGrid areas={tiles} />
 
         <div className={styles.footer}>

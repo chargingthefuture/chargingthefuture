@@ -57,9 +57,14 @@ per-resource grants, but the real Unlock backend is a Quora-profile-URL **verifi
 
 Therefore, when building an admin page from a mockup:
 
-1. Implement the admin **visual design** — the header with icon + `ADMIN` badge, snapshot/stat blocks,
-   tabs, status-pill cards, and action buttons — bound to that plugin's **real data and real
-   endpoints**.
+1. Implement the admin **visual design** — snapshot/stat blocks, tabs, status-pill cards, and action
+   buttons — bound to that plugin's **real data and real endpoints**.
+   **No in-page title card (owner report, 2026-07-27).** `MobileScreenHeader` already names the
+   screen and carries the icon, the back control, and the Member view link, so an admin shell goes
+   **straight to content** after it. Mockups often draw a second title card with an icon chip and an
+   `ADMIN` badge below the nav bar — do not build it. It repeats what is directly above it and costs
+   a whole screen of phone height. (Every shell that had one was stripped on 2026-07-27; each now
+   carries a comment saying why, so it does not creep back.)
 2. **Never fabricate data and never invent a backend** to match a mockup. "Design only what the backend
    supports." If the mockup shows a feature the backend does not have, build the real feature the
    backend does have, in the mockup's visual language, and note the divergence in the plugin's inventory
@@ -72,5 +77,6 @@ Therefore, when building an admin page from a mockup:
 
 Dark admin palette: bg `#0F1117`, panel `#0D0F14`, far rail `#090B0F`, surface `#161B27`, border
 `#1E2A3A`, text `#F9FAFB`, subtle `#6B7280`. Per-app accents come from the "App accent colors" table in
-`DESIGN_GUIDE.md`. Use neutral `#6366F1` for cross-cutting admin chrome (the `ADMIN` badge, etc.). Admin
+`DESIGN_GUIDE.md`. Use neutral `#6366F1` for cross-cutting admin chrome (the admin landing's chrome, the deny view's
+`ADMIN` badge, etc. — the badge no longer appears on a plugin admin shell; see above). Admin
 surfaces have Loading / Empty / Populated states and no public/anonymous state.
