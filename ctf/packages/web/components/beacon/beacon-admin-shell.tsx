@@ -53,7 +53,7 @@ type ChatCredentials = {
   streamToken: string;
 };
 
-async function adminMutate<T = unknown>(url: string, method: 'POST', body?: unknown): Promise<{ ok: boolean; data: T | null; message?: string }> {
+async function adminMutate<T = unknown>(url: string, method: 'POST' | 'DELETE', body?: unknown): Promise<{ ok: boolean; data: T | null; message?: string }> {
   try {
     const res = await fetch(url, {
       method,
@@ -86,6 +86,10 @@ export function BeaconAdminShell() {
   const [chat, setChat] = useState<ChatCredentials | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [moderateTarget, setModerateTarget] = useState('');
+  // Two-step delete: the first click arms this id and turns the button into "Confirm delete", the
+  // second does it. A single click cannot destroy a draft, and there is no modal to build.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const broadcastSectionRef = useRef<HTMLElement | null>(null);
 
   const loadEvents = useCallback(async () => {
@@ -141,6 +145,26 @@ export function BeaconAdminShell() {
     }
     setCreating(false);
   }, [title, description, loadEvents]);
+
+  // Delete a draft. Drafts only — the route refuses anything else, and the button below is only
+  // rendered for drafts, so this is the second of three guards (UI, route, SQL predicate).
+  const deleteDraft = useCallback(async (eventId: string) => {
+    setDeletingId(eventId);
+    setError(null);
+    setNotice(null);
+    const result = await adminMutate(`/api/beacon/${eventId}`, 'DELETE');
+    if (!result.ok) {
+      setError(result.message ?? 'Could not delete the draft.');
+    } else {
+      setNotice('Draft deleted.');
+      // If the deleted draft was the one open in the Broadcast panel, close the panel — otherwise it
+      // keeps showing controls for an event that no longer exists.
+      setActiveEventId((current) => (current === eventId ? null : current));
+      try { await loadEvents(); } catch { /* non-fatal */ }
+    }
+    setConfirmDeleteId(null);
+    setDeletingId(null);
+  }, [loadEvents]);
 
   // Fetch the RTMP ingest + host token. Used to populate the broadcaster panel before going live.
   const loadIngest = useCallback(async (eventId: string) => {
@@ -336,6 +360,34 @@ export function BeaconAdminShell() {
                     {event.status !== 'ended' ? (
                       <button type="button" onClick={() => setActiveEventId(event.id)} style={chipButtonStyle(t)}>Open</button>
                     ) : null}
+                    {/* Delete is offered for drafts only. A draft was never broadcast — nobody saw
+                        it, it has no recording, and it does not appear in the member view — so
+                        removing a mistyped one destroys nothing. A live or ended event is public
+                        history and is never deletable from here. */}
+                    {event.status === 'draft' ? (
+                      confirmDeleteId === event.id ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => deleteDraft(event.id)}
+                            disabled={deletingId === event.id}
+                            style={dangerButtonStyle(t)}
+                          >
+                            {deletingId === event.id ? 'Deleting…' : 'Confirm delete'}
+                          </button>
+                          <button type="button" onClick={() => setConfirmDeleteId(null)} style={chipButtonStyle(t)}>Cancel</button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(event.id)}
+                          aria-label={`Delete the draft "${event.title}"`}
+                          style={chipButtonStyle(t)}
+                        >
+                          Delete
+                        </button>
+                      )
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -368,4 +420,8 @@ const labelStyle = (t: BeaconTokens): React.CSSProperties => ({ display: 'block'
 const inputStyle = (t: BeaconTokens): React.CSSProperties => ({ width: '100%', boxSizing: 'border-box', background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, padding: '10px 12px', color: t.TITLE, fontSize: 14, marginBottom: 8 });
 const primaryButtonStyle = (t: BeaconTokens): React.CSSProperties => ({ marginTop: 8, padding: '10px 18px', borderRadius: 10, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}55`, color: t.ACCENT, fontSize: 14, fontWeight: 700, cursor: 'pointer' });
 const chipButtonStyle = (t: BeaconTokens): React.CSSProperties => ({ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' });
+// Armed-delete chip: same shape as chipButtonStyle, tinted red so the confirming click is visibly
+// the destructive one. Red is not derived from the Beacon amber accent on purpose — it must not read
+// as just another action.
+const dangerButtonStyle = (t: BeaconTokens): React.CSSProperties => ({ ...chipButtonStyle(t), background: 'rgba(220,38,38,0.16)', border: '1px solid rgba(220,38,38,0.5)', color: '#F87171' });
 const bannerStyle = (t: BeaconTokens): React.CSSProperties => ({ marginTop: 14, padding: '10px 14px', borderRadius: 10, background: t.SURFACE, border: '1px solid', fontSize: 14 });

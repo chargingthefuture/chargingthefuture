@@ -165,6 +165,32 @@ policies:
       - event_not_found
 
   - pluginId: beacon
+    command: event.delete
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      adminOnly: true
+      # Drafts only. A live or ended event is public broadcast history and is never deletable
+      # through the app; the route refuses it with 409 and the SQL predicate refuses it again.
+      draftStatusOnly: true
+    consentRequirements:
+      scopes:
+        - beacon_event_manage
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - event_not_found
+      - event_not_draft
+
+  - pluginId: beacon
     command: event.admin.list
     version: 1.0.0
     requiredRoles:
