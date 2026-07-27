@@ -19,6 +19,11 @@ This document is the canonical source of truth for brand language across:
 - Skills Economy: product name for the ecosystem. Short form: **SE**. The mark is the Stack logo.
   The old name "TI Skills Economy (TSE)" is retired (owner decision, commit `bb0aa50`) — do not use
   it in any new copy, and drop the "TI" when updating existing copy.
+  - **Which form to use.** Write **Skills Economy (SE)** where the reader is meeting the product for
+    the first time and the abbreviation is about to be used — a link preview, a page title, the top
+    of a document. Everywhere after that, write plain **Skills Economy**, or plain **SE** where space
+    is tight (a phone top bar, an app icon). Never "TI Skills Economy" and never "TSE", in either
+    position.
 - Psyop-Free Economy: positioning phrase used in campaign and mission framing.
 - TI: Targeted Individual. Still valid when describing a person; never part of the product name.
 
