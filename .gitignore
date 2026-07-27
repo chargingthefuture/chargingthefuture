@@ -9,6 +9,9 @@ package-lock.json
 
 # ctf rewrite build artifacts and local env
 ctf/packages/web/.next/
+# Next.js build output anywhere in the monorepo (landing-page/, waitlist-landing-page/, …)
+# — never commit build output; the secret scanner flags the generated preview keys.
+**/.next/
 ctf/packages/web/.env.local
 ctf/packages/web/tsconfig.tsbuildinfo
 ctf/packages/mobile/.expo/

@@ -1,0 +1,31 @@
+# gitleaks configuration for the monorepo.
+#
+# The scheduled full-history secret scan (the "Security and Compliance" workflow,
+# "Secret Scanning" job) reads this file automatically. Without it, the history
+# scan flags 22 findings that are all committed build output or documentation
+# false positives — none are real credentials:
+#
+#   - **/.next/**  Next.js build artifacts committed by mistake in old history
+#                  (landing-page/ and waitlist-landing-page/). These are the
+#                  prerender/preview keys Next.js regenerates on every build, the
+#                  server-reference manifest, and *.js.map source maps where a
+#                  github.com/vercel/next.js/commit/<hash> URL is misread as a token.
+#   - .refact/**   Local AI-tool state logs (idempotency keys in a memory log),
+#                  never secrets. Already .gitignored.
+#   - one docs checklist file where prose is matched as a generic key.
+#
+# All of these paths are already removed from the working tree and ignored (see
+# .gitignore), so this allowlist only stops the history scan from re-flagging
+# them, letting the required check go green. Real secrets live in Infisical and
+# are never committed.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Committed build artifacts, local AI-tool logs, and documentation false positives"
+paths = [
+  '''(^|/)\.next/''',
+  '''(^|/)\.refact/''',
+  '''ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-rewrite-checklist\.md$''',
+]
