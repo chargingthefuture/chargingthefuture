@@ -16,9 +16,11 @@ This document is the canonical source of truth for brand language across:
 ## Brand Identity Hierarchy
 
 - Charging the Future: organization and umbrella brand name.
-- TI Skills Economy: product name for the ecosystem.
+- Skills Economy: product name for the ecosystem. Short form: **SE**. The mark is the Stack logo.
+  The old name "TI Skills Economy (TSE)" is retired (owner decision, commit `bb0aa50`) — do not use
+  it in any new copy, and drop the "TI" when updating existing copy.
 - Psyop-Free Economy: positioning phrase used in campaign and mission framing.
-- TI: Targeted Individual.
+- TI: Targeted Individual. Still valid when describing a person; never part of the product name.
 
 ## Mission and Core Line
 

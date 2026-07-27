@@ -5394,7 +5394,7 @@ ON CONFLICT (user_id) DO NOTHING;
 
 -- === beacon-plugin ===
 -- Beacon: admin-only one-way livestream. An admin goes live ad hoc to broadcast a live demo
--- (screen content), flagship use the "State of the TI Skills Economy" address. Watching is public
+-- (screen content), flagship use the "State of the Skills Economy" address. Watching is public
 -- (HLS, no sign-in); chatting/reacting needs a signed-in member (Stream Chat). Live chat is
 -- ephemeral (Stream only) and is NOT stored here — only the event lifecycle and the saved recording.
 BEGIN;

@@ -3,7 +3,7 @@
 ## Summary
 
 - Feature/Change: Beacon, an admin-only one-way livestream plugin. An admin goes live ad hoc to
-  broadcast a live demo (screen content); the flagship use is the "State of the TI Skills Economy"
+  broadcast a live demo (screen content); the flagship use is the "State of the Skills Economy"
   address. Watching is public over HLS (no sign-in); chatting/reacting needs a signed-in member
   (Stream Chat). Recording is on; the replay is posted to the Commons.
 - PR: branch `feat/beacon-plugin` (no PR opened yet)

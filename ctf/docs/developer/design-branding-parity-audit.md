@@ -108,7 +108,8 @@ E5-adoption (incremental screen migration onto the primitives/typeScale) and E6 
 Main has since narrowed the native Android app to a small **keep-list** (rule 105): `FeatureKey` in
 `App.tsx` is now just `chyme | account-data | blocked-members | bug-report`; everything else is served
 by the **web app**, which is now an installable **PWA** covering the whole product on phones. The
-product also rebranded to **"TI Skills Economy (TSE)"** (see `app/layout.tsx` metadata).
+product also rebranded — at the time of this audit to "TI Skills Economy (TSE)", and since then (commit
+`bb0aa50`) to **"Skills Economy" / "SE"** with the Stack mark (see `app/layout.tsx` metadata).
 
 Consequences for E5-adoption:
 - **E5 is scoped to the Android keep-list screens** (Chyme + account-data + blocked-members +
@@ -118,9 +119,9 @@ Consequences for E5-adoption:
   rather than re-scaling onto `typeScale` or forcing the generic `Card`/gradient-`CtaButton`
   primitives — Chyme has an intentional deep-green identity and is already fully theme-aware, so a
   blanket primitive swap would regress it. The brand-font adoption is the concrete "same branding" win.
-- **OPEN — brand-name reconciliation (for owner):** web is now "TI Skills Economy (TSE)"; the mobile
-  launcher still shows the "SH" gradient chip + a "Charging The Future" wordmark. These should be
-  reconciled to one brand name/mark — flagged for the owner (do not silently change shipped brand copy).
+- **RESOLVED — brand-name reconciliation.** Settled by the owner in commit `bb0aa50`: the one product
+  name is **Skills Economy** (short form **SE**) with the Stack mark. The old "TI Skills Economy (TSE)"
+  name and the mobile launcher's "SH" gradient chip are both retired.
 
 ## 4. Progress log
 

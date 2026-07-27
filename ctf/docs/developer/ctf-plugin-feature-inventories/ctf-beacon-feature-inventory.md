@@ -18,7 +18,7 @@
 Beacon lets an admin go live ad hoc — a one-way broadcast — so the community can watch and take part
 in real time. The broadcast is primarily a **live demo of the app**: the admin streams their **phone
 screen** (or a desktop screen/window) to show features live, not just a face cam. Its flagship use is
-the **State of the TI Skills Economy** address (a "state of the union"-style update the owner gives
+the **State of the Skills Economy** address (a "state of the union"-style update the owner gives
 whenever there is something to say, not on a fixed cadence).
 
 It exists because the previous approach (Twitch) had friction the community could not get past: Twitch
@@ -32,7 +32,7 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 
 ## Owner-Locked Decisions (2026-06-21)
 
-1. **Name = Beacon; slug = `beacon`.** Flagship event = the "State of the TI Skills Economy" address.
+1. **Name = Beacon; slug = `beacon`.** Flagship event = the "State of the Skills Economy" address.
 2. **Watching is public; chatting/reacting requires sign-in.** Anyone with the link watches without an
    account (max reach, no phone-number wall). To post a chat message or a reaction you must be a
    signed-in member, so every comment is tied to a real account the admin can moderate. This is a
@@ -179,7 +179,7 @@ default on the ALTER (the `id` default lesson from the announcements fix). Regen
 
 ## Seed Coverage Status
 
-`ctf/scripts/seedBeaconPhase0.mjs` inserts one past `ended` event ("State of the TI Skills Economy")
+`ctf/scripts/seedBeaconPhase0.mjs` inserts one past `ended` event ("State of the Skills Economy")
 with a recording URL and a deterministic UUID, plus one matching admin audit row. This makes the
 viewer idle/replay state and the admin history list render with real data in demos. Re-runnable
 (`ON CONFLICT (id) DO NOTHING`). No per-member rows are seeded (Beacon stores none).
@@ -234,6 +234,14 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-07-26: **Brand name: the flagship broadcast is the "State of the Skills Economy" address.** The
+  product was renamed from "TI Skills Economy (TSE)" to **Skills Economy** in commit `bb0aa50`, but the
+  old name survived in Beacon's seed data and docs. Renamed in `ctf/scripts/seedBeaconPhase0.mjs` (the
+  seeded past event's title), the `schema.sql` / `schema.demo.sql` Beacon comment, this inventory, the
+  Beacon test script, and the Beacon quota-impact note. Copy only — no schema, route, or contract
+  change. Note for the owner: the seed inserts with `ON CONFLICT DO NOTHING`, so a production row
+  already carrying the old title keeps it until renamed by hand; fresh and demo databases get the new
+  title.
 - 2026-07-20: **Account deletion now clears the member's Beacon Stream chat copy, and Beacon joined the deletion registry (privacy).** Two gaps: (1) Beacon had **no entry** in the account-deletion registry at all, so the orchestrator did not know about it; (2) a member's per-event live chat is sent into Stream Chat under `beacon-<userId>` and **persists** there (Stream retains chat with no expiry — it is not "ephemeral" as the older deletion contract assumed), yet nothing removed it on account deletion. Added a Beacon `deletion-registry` entry (`beacon_events` and `beacon_events_admin_audit_trail` are **retained** — public broadcast history and the admin audit trail, per the Beacon deletion contract — so Beacon deletes no Postgres rows, matching "no per-member rows"), and registered `deleteBeaconStreamData(userId)` (in `lib/beacon/stream.ts` — hard-deletes the Stream user `beacon-<userId>` with `mark_messages_deleted`; never throws) into the shared external-cleanup hook (`lib/account/external-cleanup-registry.ts`). The orchestrator runs it after the DB transaction commits on every whole-account deletion path (full-account route, internal delete, Clerk webhook), best-effort. Also corrected the deletion contract's "chat is ephemeral in Stream" claim. No schema change.
 - 2026-07-19: **Copy: broadcasts are "from Farah", not "from the team" (owner report).** The
   platform has a single operator, so "the team" was inaccurate. Updated everywhere the phrase
