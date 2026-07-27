@@ -35,12 +35,10 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
   return (
     <div style={{ minHeight: "100vh", background: t.BG, color: t.TEXT, fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
       <MobileScreenHeader title="SkillsHunt Admin" accent={t.ACCENT} icon={<Search size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/skills-hunt" accent={t.ACCENT} />} />
-      <header style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, margin: 0 }}>SkillsHunt — Admin</h1>
-          <div style={{ fontSize: 13, color: t.MUTED }}>Run rounds, pay scouts in ServiceCredits, review nominations, publish missions, handle reports.</div>
-        </div>      </header>
-
+      {/* No in-page title here: MobileScreenHeader above already names the screen and carries the
+          icon, back control, and Member view. Repeating it cost a screen of phone height for no new
+          information (owner report, 2026-07-27) — every admin surface goes straight to content
+          after the nav bar. */}
       <div role="tablist" aria-label="SkillsHunt admin sections" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
         {TABS.map((entry) => {
           const active = tab === entry.key;

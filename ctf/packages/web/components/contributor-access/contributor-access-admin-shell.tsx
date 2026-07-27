@@ -192,17 +192,9 @@ export function ContributorAccessAdminShell() {
     >
       <MobileScreenHeader title="Contributor Access Admin" accent={t.ACCENT} icon={<KeyRound size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <KeyRound size={18} color={t.ACCENT} />
-          </div>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 800 }}>Contributor Access</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Earned-standing eligibility</div>
-          </div>
-          <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, color: '#6366F1', fontWeight: 700 }}>ADMIN</span>
-        </div>
-
+        {/* No in-page title card here: MobileScreenHeader above already names the screen and
+            carries the icon, back control, and Member view. Repeating it cost a screen of phone
+            height for no new information (owner report, 2026-07-27). */}
         <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, marginBottom: 16 }}>
           Members earn a single categorical standing — eligible or not-yet — through steady, broad contribution across
           plugins. The weekly recompute only ever admits; revoking is for cause only, never for going quiet. No score is

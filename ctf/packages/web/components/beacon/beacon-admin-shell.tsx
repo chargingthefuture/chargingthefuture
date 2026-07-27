@@ -263,14 +263,10 @@ export function BeaconAdminShell() {
     >
       <MobileScreenHeader title="Beacon Admin" accent={t.ACCENT} icon={<Radio size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/beacon" accent={t.ACCENT} />} />
       <div style={{ maxWidth: 980, margin: '0 auto', padding: '32px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Radio size={22} style={{ color: t.ACCENT }} />
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Beacon admin</h1>
-        </div>
-        <p style={{ color: t.SUBTLE, fontSize: 14, marginTop: 4 }}>
-          Go live with a one-way broadcast. Watching is public; chatting needs a signed-in member.
-        </p>
-
+        {/* No in-page title here: MobileScreenHeader above already names the screen and carries the
+            icon, back control, and Member view. Repeating it cost a screen of phone height for no
+            new information (owner report, 2026-07-27) — every admin surface goes straight to
+            content after the nav bar. */}
         {error ? <div style={{ ...bannerStyle(t), color: '#F87171', borderColor: 'rgba(239,68,68,0.35)' }}>{error}</div> : null}
         {notice ? <div style={{ ...bannerStyle(t), color: t.ACCENT, borderColor: `${t.ACCENT}55` }}>{notice}</div> : null}
 
