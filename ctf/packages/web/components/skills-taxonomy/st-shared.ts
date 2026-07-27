@@ -16,7 +16,7 @@ export type StSector = TaxonomyHierarchySector;
 export type StJobTitle = TaxonomyHierarchyJobTitle;
 export type StSkill = TaxonomyHierarchySkill;
 
-export const BRAND = "#818CF8";
+export const BRAND = "#8B5CF6";
 export const BG = "#0F1117";
 export const SURFACE = "#161B27";
 export const BORDER = "#1E2A3A";

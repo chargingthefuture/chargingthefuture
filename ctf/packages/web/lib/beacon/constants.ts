@@ -20,7 +20,7 @@ export const BEACON_STREAM_CALL_TYPE = 'livestream';
 export const BEACON_CHAT_CHANNEL_TYPE = 'livestream';
 
 // Brand accent for the Beacon surfaces (amber — a warm "we are on air" signal).
-export const BEACON_COLOR = '#F59E0B';
+export const BEACON_COLOR = '#DC2626';
 
 export const BEACON_MAX_TITLE_LENGTH = 160;
 export const BEACON_MAX_DESCRIPTION_LENGTH = 2000;

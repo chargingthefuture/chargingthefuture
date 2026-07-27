@@ -7,7 +7,7 @@ import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link
 import { getSkillsHuntTokens } from './sh-shared';
 
 // Palette from the SkillsHuntPublic / MobileSkillsHuntPublic design mockups, served via the
-// shared theme tokens (default theme keeps the shipped hex: bg #0F1117, accent #FBBF24,
+// shared theme tokens (default theme keeps the shipped hex: bg #0F1117, accent #FACC15,
 // title #F9FAFB).
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 

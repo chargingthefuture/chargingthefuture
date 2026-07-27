@@ -7,14 +7,14 @@
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
-export const COLOR = "#FB923C";
+export const COLOR = "#FDBA74";
 export const BG = "#0F1117";
 export const TEXT = "#E8EAF0";
 export const SUBTLE = "#6B7280";
 export const FAINT = "#4B5563";
 
 // Theme-aware chrome tokens for the SocketRelay shell. Default keeps the shipped values (accent
-// stays #FB923C); comic uses the shared comic surface tokens plus the SocketRelay comic-ink accent.
+// stays #FDBA74); comic uses the shared comic surface tokens plus the SocketRelay comic-ink accent.
 export type SocketRelayTokens = PluginShellTokens;
 
 export function getSocketRelayTokens(theme: ThemeName): SocketRelayTokens {
