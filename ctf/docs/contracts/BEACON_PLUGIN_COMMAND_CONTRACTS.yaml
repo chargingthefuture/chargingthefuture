@@ -144,6 +144,30 @@ contracts:
     idempotency: true
 
   - pluginId: beacon
+    command: event.delete
+    version: 1.0.0
+    description: >-
+      Delete a DRAFT Beacon event. Admin-only. Drafts only — a live or ended event is refused with a
+      409, because an ended event is public broadcast history with a recording attached and is
+      retained per the Beacon deletion contract. A draft was never broadcast, has no recording, and
+      never appeared in the member view, so deleting a mistyped one removes nothing a member saw.
+      The draft-only rule is enforced in the route AND in the SQL predicate. A refused attempt is
+      itself written to the audit trail.
+    inputSchema:
+      eventId:
+        type: string
+        required: true
+    outputSchema:
+      deletedId:
+        type: string
+    dataAccess:
+      - beacon_events
+      - beacon_events_admin_audit_trail
+    purpose: event_lifecycle
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: beacon
     command: event.admin.list
     version: 1.0.0
     description: List Beacon events newest-first, including past events and their recordings. Admin-only.

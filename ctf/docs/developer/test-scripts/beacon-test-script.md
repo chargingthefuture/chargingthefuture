@@ -128,6 +128,24 @@ logged for retry.
 commands are deny-by-default).
 **Result:** web ☐ mobile ☐ — notes:
 
+### BCN-A1b · Delete a draft (and confirm broadcast history cannot be deleted)
+**Role:** admin · **Surfaces:** web (admin surface)
+**Steps:**
+1. Open `/admin/beacon` and create a throwaway draft, e.g. "Delete me".
+2. In Event history, find that row and press `Delete`. The button should change to `Confirm delete`
+   with a `Cancel` beside it.
+3. Press `Cancel` first — the row must still be there, untouched.
+4. Press `Delete` again, then `Confirm delete`.
+5. Now look at any `ended` event in the same list.
+**Expected:** After step 4 the draft disappears from Event history and the page shows "Draft deleted."
+A single click never deletes anything — step 3 proves the first click only arms it. In step 5 the
+`ended` event has **no** Delete button at all: broadcast history is not deletable from the app. If you
+call `DELETE /api/beacon/<id>` directly against a `live` or `ended` event it must come back 409
+(`beacon_conflict`) and leave the row in place, and that refused attempt is written to
+`beacon_events_admin_audit_trail` with `policy_status = 'deny'`. A successful draft delete is written
+there too, with `policy_status = 'allow'`.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### BCN-A2 · Go Live (both input paths)
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**

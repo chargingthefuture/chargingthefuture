@@ -103,6 +103,28 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  # Written on both outcomes: allow (a draft was deleted) and deny (an attempt to delete a live or
+  # ended broadcast was refused). The refusal is the more interesting of the two to keep.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: beacon
+    command: event.delete
+    commandVersion: 1.0.0
+    purpose: event_lifecycle
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - beacon_event_record
+    targetContext:
+      eventId: beacon_event_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal

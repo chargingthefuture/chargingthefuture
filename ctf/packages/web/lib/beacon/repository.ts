@@ -122,6 +122,22 @@ export async function listBeaconEvents(limit = 50): Promise<BeaconEvent[]> {
   return result.rows.map(mapEventRow);
 }
 
+// Delete a draft event. DRAFTS ONLY — the `status = 'draft'` predicate is in the SQL, not just in
+// the route, so no future caller can delete a live or ended broadcast even by mistake. A draft has
+// never been broadcast: nobody watched it, it has no recording, and it is absent from the member
+// view, so deleting one destroys nothing a member ever saw. A live or ended event is the opposite —
+// it is public history plus a recording, and removing it is not the app's job.
+//
+// Returns true when a row was deleted, false when the id does not exist OR is not a draft. The
+// caller distinguishes those two cases by loading the event first.
+export async function deleteDraftBeaconEvent(eventId: string): Promise<boolean> {
+  const result = await queryDb(
+    `DELETE FROM beacon_events WHERE id = $1::uuid AND status = 'draft'`,
+    [eventId],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
 export async function markBeaconEventLive(eventId: string): Promise<BeaconEvent | null> {
   const result = await queryDb<BeaconEventRow>(
     `UPDATE beacon_events

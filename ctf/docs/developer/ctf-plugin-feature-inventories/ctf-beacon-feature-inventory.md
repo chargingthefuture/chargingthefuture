@@ -104,6 +104,11 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 5. **End the event** — stops the broadcast and billing; on recording-ready, auto-posts the replay to
    the Commons.
 6. **See event history** (past events + their recordings).
+7. **Delete a draft** — a draft that was mistyped or abandoned can be removed from the Event history
+   list. Two clicks: `Delete` arms the row, `Confirm delete` does it. **Drafts only** — a live or
+   ended event has no delete control, and the route refuses one with a 409, because an ended event is
+   public broadcast history with a recording attached. A draft was never broadcast, has no recording,
+   and never appeared in the member view, so removing one takes away nothing a member saw.
 
 ## API Surface and Route Map
 
@@ -125,6 +130,9 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 - `POST /api/beacon/[id]/end` — end the call; flips status to `ended`.
 - `GET /api/beacon/admin` — list events.
 - `POST /api/beacon/[id]/moderate` — mute / ban / slow-mode actions on the event chat.
+- `DELETE /api/beacon/[id]` — delete a **draft** event. Refuses a `live` or `ended` event with a 409
+  (`beacon_conflict`); the draft-only rule is enforced in the route and again in the SQL predicate of
+  `deleteDraftBeaconEvent`. Both the deletion and a refused attempt are written to the audit trail.
 
 ### Webhook
 - `POST /api/beacon/stream-webhook` — Stream recording-ready (and call lifecycle) events; verifies the
@@ -157,7 +165,11 @@ default on the ALTER (the `id` default lesson from the announcements fix). Regen
    states recording is on; the replay is posted publicly to the Commons.
 6. Webhook signature verification on the Stream webhook; idempotent recording-post (never double-post
    the replay).
-7. Survivor-safety: the admin is the only person on camera; members are never required to appear; chat
+7. **Broadcast history cannot be deleted from the app.** The only delete path is `DELETE
+   /api/beacon/[id]`, and it is restricted to `status = 'draft'` in two independent places (the route
+   check and the SQL predicate). A `live` or `ended` event — the rows the deletion contract retains —
+   has no delete control in the UI and is refused by the route.
+8. Survivor-safety: the admin is the only person on camera; members are never required to appear; chat
    is text only.
 
 ## Web and Android Delivery Status
@@ -234,6 +246,19 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-07-27: **Admins can delete a draft event (owner report).** A mistyped or abandoned draft was
+  permanent from the app's side — there was no delete control, no `DELETE` route, and no repository
+  function — so the only way to remove one was a hand-written `DELETE` straight against the
+  production database. Added `DELETE /api/beacon/[id]` (admin-gated, CSRF-checked, audited) plus
+  `deleteDraftBeaconEvent()` in `lib/beacon/repository.ts`, and a two-click `Delete` → `Confirm
+  delete` control on each draft row in the admin Event history.
+  **Drafts only, guarded three times:** the button renders only for `status === 'draft'`; the route
+  refuses anything else with a 409 and records the refusal in the audit trail; and the SQL itself
+  carries `AND status = 'draft'`, so no future caller can delete broadcast history even by mistake.
+  A draft has never been broadcast — no viewer saw it, it has no recording, and it is absent from the
+  member view — so deleting one removes nothing a member ever saw, which is why this is not treated
+  as destroying history. Contracts updated: new `event.delete` command, access policy
+  (`draftStatusOnly`, deny condition `event_not_draft`), and audit event. No schema change.
 - 2026-07-26: **Brand name: the flagship broadcast is the "State of the Skills Economy" address.** The
   product was renamed from "TI Skills Economy (TSE)" to **Skills Economy** in commit `bb0aa50`, but the
   old name survived in Beacon's seed data and docs. Renamed in `ctf/scripts/seedBeaconPhase0.mjs` (the
