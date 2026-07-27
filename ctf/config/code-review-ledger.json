@@ -236,26 +236,37 @@
     {
       "name": "gentle-pulse",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-27T10:14:04.508Z",
+      "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/gentle-pulse",
+        "ctf/packages/web/components/gentle-pulse",
+        "ctf/packages/web/lib/gentle-pulse"
+      ]
     },
     {
       "name": "geo",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-07-26T10:41:31.407Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/geo"
+      ]
     },
     {
       "name": "health",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-07-26T08:41:33.760Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/health"
+      ]
     },
     {
       "name": "hub",
@@ -546,12 +557,11 @@
     {
       "name": "socket-relay",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-05T09:25:57.840Z",
-      "lastRunIssues": 8,
+      "lastReviewedAt": "2026-07-26T00:22:51.077Z",
+      "lastRunIssues": 1,
       "cursor": 0,
       "partial": false,
       "paths": [
-        "ctf/packages/mobile/src/features/socket-relay",
         "ctf/packages/web/app/api/socket-relay",
         "ctf/packages/web/components/socket-relay",
         "ctf/packages/web/lib/socket-relay"

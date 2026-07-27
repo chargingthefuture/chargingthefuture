@@ -39,13 +39,18 @@ that Stream user (with `mark_messages_deleted`), removing the copy.
   - Contains personal data? minimal — `host_user_id` (an admin) and the saved public recording URL.
     No viewer or chatter identities are stored in this table (chat lives in Stream, not the DB — and
     is cleared from Stream on account deletion via the external-cleanup hook).
-  - Retention period: long-lived (event history and replay links).
+  - Retention period: long-lived (event history and replay links). A `live` or `ended` row is never
+    deletable through the app — the admin surface has no delete control for one, and the
+    `DELETE /api/beacon/[id]` route refuses it with a 409 and records the refusal in the audit trail.
+    A `draft` row is the one exception: an admin can delete it (see below), because a draft was never
+    broadcast, has no recording, and never appeared in the member view.
   - Legal/compliance note: the broadcast and its recording are public by design; the replay is posted
     publicly to the Commons. No private member content is stored here.
 - Table/entity: `beacon_events_admin_audit_trail`
   - Contains personal data? minimal — `actor_id` (the admin) and an optional moderated `target_id`.
   - Retention period: compliance retention window.
-  - Legal/compliance note: admin-action audit trail (create, go-live, end, moderate, recording-ingest).
+  - Legal/compliance note: admin-action audit trail (create, go-live, end, moderate,
+    recording-ingest, and draft delete — including a *refused* delete of a live or ended event).
 
 ## 5) Service-Scoped Deletion Contract
 
