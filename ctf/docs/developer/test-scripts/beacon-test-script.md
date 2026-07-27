@@ -55,7 +55,7 @@ One-way admin broadcast; public watch, sign-in to chat. Member role unless noted
 
 ### BCN-1 · Watch the idle / replay state
 **Role:** member · **Surfaces:** all · **Seed:** `seed:demo`
-**Precondition:** seed inserts one past `ended` event ("State of the TI Skills Economy") with a
+**Precondition:** seed inserts one past `ended` event ("State of the Skills Economy") with a
 recording URL.
 **Steps:**
 1. Open `/apps/beacon` with no live event.

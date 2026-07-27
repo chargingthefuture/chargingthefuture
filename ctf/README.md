@@ -1,4 +1,4 @@
-# TI Skills Economy Monorepo (ctf)
+# Skills Economy Monorepo (ctf)
 
 This folder contains the rewrite monorepo scaffold for:
 

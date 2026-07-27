@@ -54,7 +54,7 @@ async function seed() {
        ON CONFLICT (id) DO NOTHING`,
       [
         EVENT_ID,
-        'State of the TI Skills Economy',
+        'State of the Skills Economy',
         'A live walkthrough of where the survivor skills economy stands and what is shipping next.',
         HOST_USER_ID,
         `beacon-${EVENT_ID}`,

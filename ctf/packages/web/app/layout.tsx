@@ -25,7 +25,10 @@ import './globals.css';
 // The site title doubles as the link-preview descriptor other sites (e.g. Quora) show when a page
 // here is shared: they read og:title, falling back to <title>. Both are set to the same string so
 // the unfurl reads exactly this, on every surface.
-const SITE_TITLE = 'Skills Economy; Exit their economy, exit the psyop.';
+// The parenthetical short form belongs here (owner decision, 2026-07-27): a link preview is where
+// most people meet the product for the first time, so it introduces the abbreviation. Elsewhere in
+// the app, once the name is established, plain "Skills Economy" or plain "SE" is correct.
+const SITE_TITLE = 'Skills Economy (SE); Exit their economy, exit the psyop.';
 const SITE_DESCRIPTION = 'A skills-based community economy for survivors — mutual support, real participation, no outside systems needed.';
 
 export const metadata: Metadata = {
