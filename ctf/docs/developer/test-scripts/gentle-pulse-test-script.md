@@ -1,145 +1,282 @@
 # GentlePulse — Manual Test Script
 
-> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+> Generated from the GentlePulse feature inventory and declared contracts; this is the runnable checklist for hand-testing the plugin on a real device.
+> Regenerate: `pnpm --dir ctf test-script:generate -- gentle-pulse`
 
-> Walk these steps on a real device to confirm the plugin works end to end. This script is
-> generated from the plugin's feature inventory and contracts — those files are the source of
-> truth, this is the runnable checklist derived from them. Do not edit a step here to match a
-> bug; fix the code (or the inventory) and regenerate.
->
-> **How to regenerate:** `pnpm --dir ctf test-script:generate -- gentle-pulse`
-
-| | |
+| Field | Value |
 |---|---|
-| **Plugin** | GentlePulse (`gentle-pulse`) |
-| **Visibility** | Member-facing |
+| **Plugin** | GentlePulse |
+| **Visibility** | Member |
 | **Roles to test** | member |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
+| **Surfaces** | web (`/apps/gentle-pulse`) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gentle-pulse-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-27 (commit 0918b3dc) |
+
+---
 
 ## How to run this
 
-- Each case is **precondition → steps → expected**. Do it on each surface listed for the case.
-- Mark each surface box: ✅ pass · ❌ fail · ⛔ blocked/can't reach.
-- A ❌ becomes a row in the **Bug Reporting** plugin. Put the bug link in the notes line so the
-  next run knows it's already filed.
-- Run the **Core smoke** block every session. Run the full walkthrough when you changed this
-  plugin or on a pre-release sweep.
-
-This is a personal-wellbeing surface. A member's favorites, ratings, and play history are their own —
-do not test for, or expect, any screen that surfaces one member's private activity to another person.
+- Mark each check ✅ pass, ❌ fail, or ⛔ blocked.
+- A ❌ becomes a row in the Bug Reporting plugin — include the case ID, surface, and what you observed vs. what was expected.
+- Run **Core smoke** at the start of every test session before doing anything else.
+- Android (React Native) surface was removed 2026-07-20 (rule 105, PR #1742). All cases are web-only.
 
 ---
 
 ## Core smoke (every session)
 
-Member role unless noted.
+1. Sign in as a member. Navigate to `/apps/gentle-pulse`. The library page loads without an error screen and shows at least one meditation card.
+   web ☐
 
-1. **Library loads.** Open GentlePulse. The meditation library renders with items (title, description),
-   not a spinner or error. → web ☐ mobile ☐
-2. **Play records.** Play a meditation. The play is recorded and the media URL opens. → web ☐ mobile ☐
-3. **Rate a meditation.** Submit a 1–5 star rating. The aggregate average and count refresh. → web ☐ mobile ☐
-4. **Favorite toggles.** Add then remove a favorite. The state flips both ways and persists on reload.
-   → web ☐ mobile ☐
+2. Without signing in, navigate directly to `/apps/gentle-pulse`. You should be redirected away or shown an auth gate — you must not see library content.
+   web ☐
+
+3. While signed in, open `/apps/gentle-pulse/support`. The support page loads and contains a description of GentlePulse and a privacy statement. No error.
+   web ☐
 
 ---
 
 ## Member walkthrough
 
-### GP-1 · Library list, sort, and filter
-**Role:** member · **Surfaces:** all · **Seed:** `seed:demo`
-**Steps:**
-1. Open the library.
-2. Switch the sort mode (newest / oldest / title).
-3. Apply a tag filter, then turn on favorites-only.
-**Expected:** Items reorder by the chosen sort. The tag filter narrows the list. Favorites-only shows
-only this member's favorites. Pagination (`limit`/`offset`) works, and the unpaginated total is shown.
-Loading, empty, and error states each render deterministically.
-**Result:** web ☐ mobile ☐ — notes:
+### GP-1 — Library loads with meditation cards
 
-### GP-2 · Open a meditation
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Open one library item.
-**Expected:** The item's title, description, average rating, and rating count render. A missing item id
-returns a not-found state (404), not a crash.
-**Result:** web ☐ mobile ☐ — notes:
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as a member. Seed has been run (`pnpm --dir ctf seed:demo`).
 
-### GP-3 · Play increments the count
-**Role:** member · **Surfaces:** all
 **Steps:**
-1. Play a meditation.
-2. Re-open the library / item.
-**Expected:** The play is recorded and the media URL opens. The play path is write-gated and sends the
-CSRF header; without it the play would be refused. An anonymous play (with an anonymous client id) is
-still counted.
-**Result:** web ☐ mobile ☐ — notes:
+1. Go to `/apps/gentle-pulse`.
+2. Wait for the library to finish loading.
 
-### GP-4 · Rate a meditation
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Submit a star rating from 1 to 5.
-2. Submit a different rating for the same item.
-**Expected:** The rating saves and the aggregate average + count refresh. The second submission updates
-your one rating (per user + meditation), it does not stack a second one. A missing or non-numeric value
-is refused (400).
-**Result:** web ☐ mobile ☐ — notes:
+**Expected:** At least one meditation card is visible. Each visible card shows a title and description. No spinner stays on screen indefinitely. No JavaScript console errors about missing `items`.
 
-### GP-5 · Favorite add and remove
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Add a favorite on an item.
-2. Remove it.
-3. Reload and re-check favorites-only.
-**Expected:** Add and remove each flip the favorited state with user feedback, and the state persists on
-reload. The favorites-only filter reflects the change.
-**Result:** web ☐ mobile ☐ — notes:
-
-### GP-6 · Support / about page
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Open the support / about route.
-**Expected:** The trauma-informed plugin description and a privacy statement aligned to current policy
-language render. The route points to app-level support.
-**Result:** web ☐ mobile ☐ — notes:
+Result: web ☐
 
 ---
 
-### GP-7 · Refresh the library (header button / pull-to-refresh)
-**Role:** member · **Surfaces:** all
+### GP-2 — Sort modes change the card order
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Library page is open with at least two meditation cards visible.
+
 **Steps:**
-1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open GentlePulse
-   and tap the refresh icon in the header.
-2. On android, open GentlePulse and pull down on the session list (pull-to-refresh shipped earlier on
-   this screen).
-3. In another session, change library data (e.g. play a session to bump its count), then refresh as above.
-**Expected:** On web the refresh icon spins while loading; on android the pull-to-refresh spinner
-shows. The library re-pulls and the change from the other session appears without closing and
-reopening the app. Refreshing never clears the current screen to the full-screen loading state.
-The header back chevron returns to the page you came from (falling back to All Apps when opened
-directly).
-**Result:** web ☐ mobile ☐ — notes:
+1. Find the sort control on the library page.
+2. Select **Newest** (or the equivalent label). Note the order of cards.
+3. Select **Most Rated**. Note the order of cards.
+4. Select **Highest Rating**. Note the order of cards.
+
+**Expected:** The card list re-orders when you change the sort. At minimum, switching between options produces a visually different ordering or the same ordering if data happens to be identical — the key check is that the UI does not show an error and does not revert to the previous sort silently.
+
+Result: web ☐
+
+---
+
+### GP-3 — Tag filtering narrows the library
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Library page is open. At least one tag is visible in the sidebar or filter area.
+
+**Steps:**
+1. Click a tag in the sidebar or filter controls.
+2. Observe the meditation card list.
+
+**Expected:** Only cards matching the selected tag are shown. If no cards match, an empty state message appears instead of a blank or broken layout.
+
+Result: web ☐
+
+---
+
+### GP-4 — Favorites-only mode shows an empty state when nothing is favorited
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as a member whose account has no favorites (fresh seed account or clear favorites first).
+
+**Steps:**
+1. Go to `/apps/gentle-pulse`.
+2. Activate the favorites-only filter (look for a "Favorites" toggle or tab).
+
+**Expected:** A dedicated empty state is shown — not a blank area or an error — indicating no favorites have been saved yet.
+
+Result: web ☐
+
+---
+
+### GP-5 — Play action records the event and opens media
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Library page shows at least one meditation card.
+
+**Steps:**
+1. Click the play button on any meditation card.
+2. Observe what happens in the page and in the browser's network tab (optional confirmation).
+
+**Expected:** The meditation player opens or the media URL is launched. No 403 or 401 error appears. The play count on the card increments by 1 (or the updated play count is reflected after refresh) — the API returns `{ ok, meditationId, playCount, mediaUrl }`.
+
+Result: web ☐
+
+---
+
+### GP-6 — Rating a meditation (1–5 stars) refreshes the aggregate
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** At least one meditation card is visible.
+
+**Steps:**
+1. On any meditation card, find the star-rating control.
+2. Select 4 stars (or any value 1–5).
+3. Confirm the submission (click submit or wait for auto-save depending on UI).
+4. Observe the displayed average rating and rating count on that card.
+
+**Expected:** The rating is accepted without an error. The displayed average rating and rating count update to reflect the new submission. No 403 error appears.
+
+Result: web ☐
+
+---
+
+### GP-7 — Rating validation rejects values outside 1–5
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Browser developer tools open to inspect network responses, or ability to submit a direct API call. The API is at `PUT /api/gentle-pulse/library/[itemId]/rating`.
+
+**Steps:**
+1. Using a tool such as the browser console or a REST client, send `PUT /api/gentle-pulse/library/[itemId]/rating` with body `{ "rating": 0 }` (or `6`, or a non-numeric value) while authenticated.
+2. Note the HTTP response code.
+
+**Expected:** The server returns 400. The existing aggregate for that item is unchanged.
+
+Result: web ☐
+
+---
+
+### GP-8 — Add a favorite and see it in favorites-only mode
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Library page is open. The member has no existing favorites (or note which cards are already favorited).
+
+**Steps:**
+1. Click the favorite button (heart or bookmark icon) on a meditation card.
+2. Confirm the UI updates to show the item as favorited (icon changes state).
+3. Activate the favorites-only filter.
+
+**Expected:** The card you just favorited appears in the favorites-only view. Other non-favorited cards are not shown.
+
+Result: web ☐
+
+---
+
+### GP-9 — Remove a favorite removes it from favorites-only mode
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** At least one meditation is currently marked as a favorite (from GP-8 or pre-existing).
+
+**Steps:**
+1. While in favorites-only mode (or navigate back to it), find the favorited card.
+2. Click the favorite button again to remove the favorite.
+3. Observe the card in favorites-only mode.
+
+**Expected:** The card disappears from the favorites-only view immediately or after the next list refresh. The favorite icon reverts to the un-favorited state. No error is shown.
+
+Result: web ☐
+
+---
+
+### GP-10 — Pagination moves through the library
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Seed has produced enough meditation items to require more than one page (check the seed data; if fewer than `limit` items exist, this case is blocked).
+
+**Steps:**
+1. On the library page, scroll to or click the pagination control.
+2. Move to page 2 (or the next offset).
+
+**Expected:** A different set of meditation cards loads. The total count displayed (if shown) remains the same as on page 1. No error.
+
+Result: web ☐
+
+---
+
+### GP-11 — Support/About page content
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as a member.
+
+**Steps:**
+1. Navigate to `/apps/gentle-pulse/support`.
+2. Read the page content.
+
+**Expected:** The page contains a trauma-informed description of GentlePulse and a privacy statement aligned to CTF policy language. No raw JSON or blank page is shown.
+
+Result: web ☐
+
+---
+
+### GP-12 — Unauthenticated requests to API routes are denied
+
+**Role:** none (signed out)  
+**Surfaces:** web  
+**Precondition:** Signed out of the application.
+
+**Steps:**
+1. In a browser where you are not signed in, navigate to `GET /api/gentle-pulse/library` directly (type it in the address bar or use a REST client with no auth token).
+2. Note the response.
+
+**Expected:** The server returns a 401 or redirect — not a 200 with meditation data. Library content is not exposed to unauthenticated callers.
+
+Result: web ☐
+
+---
+
+### GP-13 — Refresh button re-fetches the library without a full-screen loading flash
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Library page has finished loading at least once.
+
+**Steps:**
+1. On the library page, locate the refresh button in the header.
+2. Click it.
+3. Observe the page during the refresh.
+
+**Expected:** The library re-loads and cards update. The full-screen loading spinner does not cover the page during the refresh — cards may shimmer or update in place, but the page does not revert to a blank loading screen.
+
+Result: web ☐
+
+---
+
+### GP-14 — Back navigation returns to the previous page or All Apps
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Navigate to `/apps/gentle-pulse` from another in-app page (e.g., the All Apps list).
+
+**Steps:**
+1. From the All Apps list, click GentlePulse to open `/apps/gentle-pulse`.
+2. Click the back chevron button in the GentlePulse header.
+
+**Expected:** You are returned to the previous in-app page (All Apps or wherever you came from). If there is no in-app history, you land on the All Apps page. You are not sent to a browser default back destination outside the app.
+
+Result: web ☐
 
 ---
 
 ## Parity check (web ↔ android)
 
-For GP-1, GP-3, GP-4, and GP-5, the android app and the mobile-responsive web layout must behave the
-same: same library list, same play recording, same rating aggregate, same favorite toggle. Note any
-drift here rather than filing separate bugs.
-
-**Result:** matches ☐ — drift notes:
+The Android (React Native) surface for GentlePulse was removed 2026-07-20 (rule 105, PR #1742). There is no Android surface to compare against. All cases in this script are web-only. No parity checks are required.
 
 ---
 
 ## Known gaps — do not file these as bugs
 
-Carried from the inventory's "Gaps and Known Technical Debt" section at authoring time. If you hit one
-of these, it is already tracked, not a new bug:
-
-- Legacy anonymous `clientId` playback history is not migrated into the authenticated user model, so
-  legacy listening data does not surface under the member's account.
-- Media-playback telemetry flows through generic platform analytics rather than a dedicated plugin
-  telemetry contract.
+- **Legacy anonymous play history is not migrated.** If a user previously played meditations without being signed in, those plays do not appear under their account. This is expected.
+- **Media playback telemetry uses generic analytics.** Play events feed into the platform's generic analytics pipeline rather than a dedicated GentlePulse telemetry contract. Discrepancies between what the plugin records and what analytics surfaces are expected and not a plugin bug.
