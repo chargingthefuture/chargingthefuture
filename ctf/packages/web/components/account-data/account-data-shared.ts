@@ -73,7 +73,6 @@ const SERVICE_GLYPH: Record<string, string> = {
   'feed-announcements': '📣',
   foundation: '🪛',
   mood: '🌿',
-  'gentle-pulse': '🎵',
   'peer-programming': '👥',
   lighthouse: '🏠',
   'socket-relay': '🔂',

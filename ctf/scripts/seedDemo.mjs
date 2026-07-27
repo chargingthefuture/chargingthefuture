@@ -75,8 +75,6 @@ const ID = {
   milestone1: 'ddd00000-0000-4000-8000-000000000012',
   milestone2: 'ddd00000-0000-4000-8000-000000000013',
   thread: 'ddd00000-0000-4000-8000-000000000014',
-  gpItem1: 'ddd00000-0000-4000-8000-000000000015',
-  gpItem2: 'ddd00000-0000-4000-8000-000000000016',
   week: 'ddd00000-0000-4000-8000-000000000017',
   dirProfileOwner: 'ddd00000-0000-4000-8000-000000000018',
   dirProfilePeer1: 'ddd00000-0000-4000-8000-000000000019',
@@ -679,53 +677,6 @@ async function seedMood(c) {
   console.log('  ✓ mood');
 }
 
-async function seedGentlePulse(c) {
-  const items = [
-    [ID.gpItem1, 'breath-reset', '4-7-8 Breathing Reset',
-     'A guided breathing exercise to reset focus and reduce stress.',
-     'https://cdn.ctf.app/demo/gentle-pulse/breath-reset.mp4', '/api/foundation/support'],
-    [ID.gpItem2, 'grounding-5x5', '5-5-5 Grounding',
-     'Quick sensory grounding technique for moments of overwhelm.',
-     'https://cdn.ctf.app/demo/gentle-pulse/grounding.mp4', '/api/foundation/support'],
-  ];
-
-  for (const [id, slug, title, desc, url, route] of items) {
-    await c.query(
-      `INSERT INTO gentle_pulse_library_items
-       (id, slug, title, description, media_url, support_route, is_active)
-       VALUES ($1::uuid, $2, $3, $4, $5, $6, true)
-       ON CONFLICT (slug) DO UPDATE SET title = EXCLUDED.title, is_active = true`,
-      [id, slug, title, desc, url, route],
-    );
-  }
-
-  // Owner played and rated the first item
-  await c.query(
-    // Deterministic id + ON CONFLICT so a re-run does not append another play
-    // event (the table has only a uuid pk, no natural unique key).
-    `INSERT INTO gentle_pulse_play_events (id, user_id, item_id, completed)
-     VALUES ($1::uuid, $2, $3::uuid, true)
-     ON CONFLICT (id) DO NOTHING`,
-    [sha256id('gp-play', OWNER, ID.gpItem1), OWNER, ID.gpItem1],
-  );
-
-  await c.query(
-    `INSERT INTO gentle_pulse_ratings (user_id, item_id, rating)
-     VALUES ($1, $2::uuid, 5)
-     ON CONFLICT (user_id, item_id) DO UPDATE SET rating = EXCLUDED.rating`,
-    [OWNER, ID.gpItem1],
-  );
-
-  await c.query(
-    `INSERT INTO gentle_pulse_favorites (user_id, item_id)
-     VALUES ($1, $2::uuid)
-     ON CONFLICT (user_id, item_id) DO NOTHING`,
-    [OWNER, ID.gpItem1],
-  );
-
-  console.log('  ✓ gentle-pulse');
-}
-
 async function seedFoundation(c) {
   // Capacity policy (singleton row — safe to upsert)
   await c.query(
@@ -1304,7 +1255,6 @@ async function main() {
     await seedFeedAnnouncements(client);
     await seedTrust(client);
     await seedMood(client);
-    await seedGentlePulse(client);
     // Taxonomy before Foundation: foundation_provider_skills FK-references
     // skills_taxonomy_skills, so the skills must exist first.
     await seedSkillsTaxonomy(client);

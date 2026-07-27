@@ -124,7 +124,6 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | trust-transport | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | peer-programming | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | mood | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
-| gentle-pulse | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | weekly-performance | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | gdp | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | service-credits | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |

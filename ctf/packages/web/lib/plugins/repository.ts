@@ -142,14 +142,6 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
-    slug: 'gentle-pulse',
-    name: 'GentlePulse',
-    summary: 'Meditations: gentle, consistent, non-intrusive.',
-    availabilityState: 'implemented_shell',
-    navRank: 130,
-    isVisible: true,
-  },
-  {
     slug: 'weekly-performance',
     name: 'Weekly Performance',
     summary: 'Week selection/guardrails with metrics, comparisons, and export gate checks.',

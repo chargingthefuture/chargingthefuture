@@ -92,7 +92,7 @@ export async function getLatestTrustSnapshotAt(userId: string): Promise<Date | n
 //   - recurring_activities     → distinct members with a CONFIRMED ongoing activity (either side)
 // Only coarse COUNTs are read — never amounts, balances, or sensitive per-row detail — and no numeric
 // score is produced. Privacy-sensitive personal-wellbeing/verification plugins (ClickLog, Mood,
-// GentlePulse, Unlock) are deliberately excluded so Trust never exposes what a member is going through;
+// Unlock) are deliberately excluded so Trust never exposes what a member is going through;
 // their activity is still reflected by the login signal. Foundation surfaces the provider side only —
 // the seeker side (requesting services) is help-seeking and is never counted.
 function countOf(result: { rows: { count: string }[] }): number {

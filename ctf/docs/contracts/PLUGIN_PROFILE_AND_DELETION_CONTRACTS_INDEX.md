@@ -9,7 +9,6 @@ This index is the Rule 114 baseline artifact map for coding readiness.
 | `directory`              | `ctf/docs/contracts/DIRECTORY_PROFILE_AND_DELETION_CONTRACT.md`          | Present |
 | `feed`                   | `ctf/docs/contracts/FEED_PROFILE_AND_DELETION_CONTRACT.md`               | Present |
 | `foundation`             | `ctf/docs/contracts/FOUNDATION_PROFILE_AND_DELETION_CONTRACT.md`         | Present |
-| `gentle-pulse`            | `ctf/docs/contracts/GENTLE_PULSE_PROFILE_AND_DELETION_CONTRACT.md`        | Present |
 | `gross-domestic-product` | `ctf/docs/contracts/GDP_PROFILE_AND_DELETION_CONTRACT.md`                | Present |
 | `lighthouse`             | `ctf/docs/contracts/LIGHTHOUSE_PROFILE_AND_DELETION_CONTRACT.md`         | Present |
 | `mood`                   | `ctf/docs/contracts/MOOD_PROFILE_AND_DELETION_CONTRACT.md`               | Present |

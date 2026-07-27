@@ -18,7 +18,6 @@ export const PLUGIN_EMOJI: Record<string, string> = {
   'gross-domestic-product': '🗺️',
   'service-credits': '⚙️',
   workforce: '💼',
-  'gentle-pulse': '💚',
   mood: '😁',
   'socket-relay': '🔂',
   'skills-hunt': '🎓',

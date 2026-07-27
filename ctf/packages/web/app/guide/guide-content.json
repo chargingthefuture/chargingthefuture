@@ -120,23 +120,6 @@
       ]
     },
     {
-      "id": "gentle-pulse",
-      "title": "GentlePulse",
-      "updated": "2026-07-20",
-      "summary": "GentlePulse is a library of guided meditations you can play, rate, and save.",
-      "body": [
-        "Open GentlePulse to browse meditations. Each one shows its title, description, how long it is, and ratings from other members. You can sort by newest, most-rated, or highest-rating, and filter by tags.",
-        "Play any meditation to listen. When you play one, the app records that you played it and opens the audio. You can also give a meditation a 1 to 5 star rating, and those ratings update for everyone.",
-        "Mark meditations as favorites to save them. Your favorites stay saved even after you close the app. You can remove a favorite anytime."
-      ],
-      "howTo": [
-        "Open GentlePulse and look through the meditation library.",
-        "Pick a meditation and tap play. The audio will open.",
-        "Give the meditation a star rating (1 to 5 stars).",
-        "Add or remove it as a favorite by tapping the star icon."
-      ]
-    },
-    {
       "id": "what-works",
       "title": "WhatWorks",
       "updated": "2026-07-20",

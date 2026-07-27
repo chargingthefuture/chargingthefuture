@@ -78,7 +78,7 @@ describe('buildTrustEvidence', () => {
     expect(login?.details).toContain('2026-06-28');
   });
 
-  it('never surfaces the privacy-excluded plugins (Mood, ClickLog, GentlePulse, Unlock)', () => {
+  it('never surfaces the privacy-excluded plugins (Mood, ClickLog, Unlock)', () => {
     const everything: TrustSignalMetrics = {
       loginDays: 3,
       loginEvents: 3,

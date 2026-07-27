@@ -92,7 +92,7 @@ export function resolveConcierge(text: string): ConciergeMatch[] {
 
 // Featured starters for the empty home chat — empowerment-forward (get a place, work, a ride,
 // connection, a repair), per the reframe (2026-06-17): lead with getting-needs-met, not with
-// "log it" or "breathe". ClickLog / Mood / GentlePulse are still resolvable when someone explicitly
+// "log it" or "breathe". ClickLog / Mood are still resolvable when someone explicitly
 // asks for them, but they are not featured as starters.
 const FEATURED_STARTER_SLUGS = ['lighthouse', 'workforce', 'trust-transport', 'chyme', 'directory'];
 

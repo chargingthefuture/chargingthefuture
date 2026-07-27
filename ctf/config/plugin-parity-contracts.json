@@ -74,12 +74,6 @@
       "requiresExplicitWebShell": true
     },
     {
-      "slug": "gentle-pulse",
-      "mobileFeatureDirs": [],
-      "requiresMobileSurface": false,
-      "requiresExplicitWebShell": true
-    },
-    {
       "slug": "weekly-performance",
       "mobileFeatureDirs": [],
       "requiresMobileSurface": false,
