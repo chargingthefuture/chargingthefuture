@@ -82,17 +82,6 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
     starter: 'I want a private record of what happened — and a check-in for when I get home.',
   },
   {
-    slug: 'gentle-pulse',
-    name: 'GentlePulse',
-    blurb: 'A short, guided breath — nothing to download.',
-    keywords: [
-      'chest is tight', 'can’t breathe', 'cant breathe', 'breathing', 'panic', 'panicking',
-      'anxious', 'anxiety', 'calm down', 'overwhelmed', 'freaking out', 'ground myself',
-      'slow down', 'meditate', 'meditation',
-    ],
-    starter: "My chest is tight and I can't slow my breathing down.",
-  },
-  {
     slug: 'mood',
     name: 'Mood',
     blurb: 'Private check-ins that show your patterns over time.',

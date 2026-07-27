@@ -11,7 +11,6 @@ Canonical contract files remain under docs/contracts to preserve existing automa
 - [Feedback](./feedback/README.md)
 - [Feed](./feed/README.md)
 - [Foundation](./foundation/README.md)
-- [GentlePulse](./gentle-pulse/README.md)
 - [Gross Domestic Product](./gross-domestic-product/README.md)
 - [LevelUp](./level-up/README.md)
 - [LightHouse](./lighthouse/README.md)

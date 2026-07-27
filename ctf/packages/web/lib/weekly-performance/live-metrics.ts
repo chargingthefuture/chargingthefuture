@@ -19,7 +19,7 @@ import { buildLiveGdpReport } from 'lib/gdp/repository';
 //
 // Dropped from the old set (owner decision): login/engagement counts (logins are downstream of
 // value, not value), feed counts, and LevelUp enrollments-started (intent, not delivered value —
-// replaced by completions). GentlePulse and Skills Taxonomy carry no dashboard stats at all.
+// replaced by completions). Skills Taxonomy carries no dashboard stats at all.
 //
 // The Foundation row is an aggregate count on this admin-only surface; per rule 132 the underlying
 // participation is sensitive (wellbeing/payment), so it must never appear on a public surface or as

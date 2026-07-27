@@ -17,7 +17,6 @@ const PLUGIN_VISUALS: Record<string, PluginVisuals> = {
   gdp: { emoji: '🗺️', color: '#06B6D4', bg: '#011417' },
   'service-credits': { emoji: '⚙️', color: '#A855F7', bg: '#12091B' },
   workforce: { emoji: '💼', color: '#F97316', bg: '#1B0D02' },
-  'gentle-pulse': { emoji: '💚', color: '#6EE7B7', bg: '#0C1914' },
   mood: { emoji: '😁', color: '#BEF264', bg: '#151B0B' },
   'socket-relay': { emoji: '🔂', color: '#FDBA74', bg: '#1C140D' },
   'skills-hunt': { emoji: '🎓', color: '#FACC15', bg: '#1C1602' },

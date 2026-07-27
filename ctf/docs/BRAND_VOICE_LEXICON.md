@@ -118,7 +118,6 @@ This document is the canonical source of truth for brand language across:
 - Directory
 - SocketRelay
 - CompareNotes
-- GentlePulse
 - Chyme
 - LostMail
 - PeerProgramming

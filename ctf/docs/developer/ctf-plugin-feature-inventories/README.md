@@ -35,7 +35,6 @@ Examples:
 - [LevelUp](./ctf-level-up-feature-inventory.md)
 - [SkillsHunt](./ctf-skills-hunt-feature-inventory.md)
 - [Workforce](./ctf-workforce-feature-inventory.md)
-- [GentlePulse](./ctf-gentle-pulse-feature-inventory.md)
 - [Mood](./ctf-mood-feature-inventory.md)
 - [SocketRelay](./ctf-socket-relay-feature-inventory.md)
 - [Weekly Performance](./ctf-weekly-performance-feature-inventory.md)

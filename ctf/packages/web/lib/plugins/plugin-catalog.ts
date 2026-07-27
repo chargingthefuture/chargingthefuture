@@ -104,12 +104,6 @@ export const pluginCatalog: PluginCatalogItem[] = [
     summary: 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',
   },
   {
-    id: 'gentle-pulse',
-    name: 'GentlePulse',
-    kind: 'plugin',
-    summary: 'Meditations: gentle, consistent, non-intrusive.',
-  },
-  {
     id: 'weekly-performance',
     name: 'Weekly Performance',
     kind: 'plugin',

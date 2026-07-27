@@ -234,19 +234,6 @@
       "partial": false
     },
     {
-      "name": "gentle-pulse",
-      "type": "plugin",
-      "lastReviewedAt": "2026-07-27T10:14:04.508Z",
-      "lastRunIssues": 8,
-      "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/gentle-pulse",
-        "ctf/packages/web/components/gentle-pulse",
-        "ctf/packages/web/lib/gentle-pulse"
-      ]
-    },
-    {
       "name": "geo",
       "type": "module",
       "lastReviewedAt": "2026-07-26T10:41:31.407Z",

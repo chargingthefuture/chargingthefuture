@@ -7,7 +7,6 @@ import { ChymeShell } from '@/components/chyme/chyme-shell';
 import { DirectoryShell } from '@/components/directory/directory-shell';
 import { FoundationShell } from '@/components/foundation/foundation-shell';
 import GdpShell from '@/components/gdp/gdp-shell';
-import { GentlePulseShell } from '@/components/gentle-pulse/gentle-pulse-shell';
 import { LighthouseShell } from '@/components/lighthouse/lighthouse-shell';
 import { LevelUpShell } from '@/components/level-up/level-up-shell';
 import MoodShell from '@/components/mood/mood-shell';
@@ -258,10 +257,6 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
 
   if (selectedPlugin.slug === 'mood') {
     return <MoodShell />;
-  }
-
-  if (selectedPlugin.slug === 'gentle-pulse') {
-    return <GentlePulseShell />;
   }
 
   if (selectedPlugin.slug === 'weekly-performance') {

@@ -46,7 +46,6 @@ const ORDER = [
   ['beacon', 'Beacon'],
   ['peer-programming', 'PeerProgramming'],
   ['mood', 'Mood'],
-  ['gentle-pulse', 'GentlePulse'],
   ['what-works', 'WhatWorks'],
   ['skills-hunt', 'SkillsHunt'],
   ['workforce', 'Workforce'],

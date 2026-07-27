@@ -133,25 +133,6 @@ Your check-in stays private. The community can see only an overall chart of mood
 2. Pick a mood value (1 to 5) and submit.
 3. After you submit, a 7-day cooldown starts. You will not be able to check in again until 7 days have passed.
 
-## GentlePulse
-
-_Last updated: 2026-07-20_
-
-GentlePulse is a library of guided meditations you can play, rate, and save.
-
-Open GentlePulse to browse meditations. Each one shows its title, description, how long it is, and ratings from other members. You can sort by newest, most-rated, or highest-rating, and filter by tags.
-
-Play any meditation to listen. When you play one, the app records that you played it and opens the audio. You can also give a meditation a 1 to 5 star rating, and those ratings update for everyone.
-
-Mark meditations as favorites to save them. Your favorites stay saved even after you close the app. You can remove a favorite anytime.
-
-**How to use it**
-
-1. Open GentlePulse and look through the meditation library.
-2. Pick a meditation and tap play. The audio will open.
-3. Give the meditation a star rating (1 to 5 stars).
-4. Add or remove it as a favorite by tapping the star icon.
-
 ## WhatWorks
 
 _Last updated: 2026-07-20_
