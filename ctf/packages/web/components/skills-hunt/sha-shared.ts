@@ -3,10 +3,10 @@ import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import type { SkillsHuntSubmissionStatus } from "lib/skills-hunt/types";
 
-export const COLOR = "#FBBF24";
+export const COLOR = "#FACC15";
 
 // Theme-aware chrome tokens for the SkillsHunt admin panels. Default keeps the shipped values
-// (accent stays #FBBF24); comic uses the shared comic surface tokens plus the SkillsHunt
+// (accent stays #FACC15); comic uses the shared comic surface tokens plus the SkillsHunt
 // comic-ink accent. Mirrors getSkillsHuntTokens in sh-shared.ts (click-log precedent).
 export type SkillsHuntAdminTokens = PluginShellTokens;
 

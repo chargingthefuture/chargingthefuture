@@ -21,13 +21,13 @@ export type {
   SkillsHuntMissionWithProgress,
 };
 
-export const COLOR = "#FBBF24";
+export const COLOR = "#FACC15";
 export const BG = "#0F1117";
 export const BIO_MAX = 280;
 export const MAX_SKILLS = 10;
 
 // Theme-aware chrome tokens for the SkillsHunt shell. Default keeps the shipped values (accent
-// stays #FBBF24); comic uses the shared comic surface tokens plus the SkillsHunt comic-ink accent.
+// stays #FACC15); comic uses the shared comic surface tokens plus the SkillsHunt comic-ink accent.
 export type SkillsHuntTokens = PluginShellTokens;
 
 export function getSkillsHuntTokens(theme: ThemeName): SkillsHuntTokens {

@@ -11,13 +11,13 @@ import { formatPrice, sortPreferred } from "@/lib/currency/format";
 // and campers). Stored verbatim on `property_type`; also the option set for the host form picker.
 export const LIGHTHOUSE_PROPERTY_TYPES = ["House", "Room in a house", "Apartment", "Camper"] as const;
 
-export const COLOR = "#60A5FA";
+export const COLOR = "#3B82F6";
 // App surface background as rendered by the mockup (the mockup's `BG`
 // constant is dead code; every rendered surface uses #0F1117).
 export const BG = "#0F1117";
 
 // Theme-aware chrome tokens for the LightHouse shell. Default keeps the shipped values (accent
-// stays #60A5FA); comic uses the shared comic surface tokens plus the LightHouse comic-ink accent.
+// stays #3B82F6); comic uses the shared comic surface tokens plus the LightHouse comic-ink accent.
 export type LighthouseTokens = PluginShellTokens;
 
 export function getLighthouseTokens(theme: ThemeName): LighthouseTokens {

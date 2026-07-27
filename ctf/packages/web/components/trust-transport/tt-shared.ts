@@ -4,7 +4,7 @@ import { Car, Package, Utensils } from "lucide-react";
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
-export const COLOR = "#38BDF8";
+export const COLOR = "#67E8F9";
 export const BG = "#0F1117";
 
 // Theme-aware chrome tokens for the TrustTransport shell. The shell paints its accent both as
