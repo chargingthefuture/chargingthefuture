@@ -14,6 +14,8 @@ import { NotificationsPanel } from './notifications-panel';
 import { ChatReactionRow } from './chat-reaction-row';
 import { ComicConsentModal } from './comic-consent-modal';
 import styles from './community-shell.module.css';
+import { feedPostLength } from '../../lib/feed/normalize';
+import { FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH, FEED_MAX_COMMUNITY_POST_LENGTH } from '../../lib/feed/constants';
 
 // Avatar glyph for a chat sender: "SH" for the Survivor Hub system/AI, otherwise the first letter of
 // the member's handle. Keeps each post attributable instead of every row reading as the same "SH".
@@ -35,6 +37,7 @@ type AuthenticatedChatPanelProps = {
   stats: ShellStats;
   plugins: PluginRegistryItem[];
   currentUser: ShellCurrentUser;
+  isAdmin?: boolean;
 };
 
 type ShellChatPanelProps = {
@@ -42,12 +45,13 @@ type ShellChatPanelProps = {
   plugins: PluginRegistryItem[];
   currentUser: ShellCurrentUser;
   isAuthenticated?: boolean;
+  isAdmin?: boolean;
   signInUrl?: string;
 };
 
-export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = false, signInUrl = '/sign-in' }: ShellChatPanelProps) {
+export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = false, isAdmin = false, signInUrl = '/sign-in' }: ShellChatPanelProps) {
   if (isAuthenticated) {
-    return <AuthenticatedChatPanel stats={stats} plugins={plugins} currentUser={currentUser} />;
+    return <AuthenticatedChatPanel stats={stats} plugins={plugins} currentUser={currentUser} isAdmin={isAdmin} />;
   }
 
   return <PublicCommunityPanel stats={stats} plugins={plugins} signInUrl={signInUrl} />;
@@ -201,13 +205,16 @@ function PublicCommunityPanel({ plugins, signInUrl }: { stats: ShellStats; plugi
   );
 }
 
-function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
+function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedChatPanelProps) {
   // A member who hasn't set a username posts under a stable per-user handle
   // (matching the server's feedAuthorHandle and Chyme), so they stay recognizable
   // and accountable across posts instead of blending into a shared label. We nudge
   // them to set a real username below.
   const ownHandle = feedAuthorHandle(currentUser.username, currentUser.userId);
   const needsUsername = !currentUser.username;
+  // Length cap for THIS member: admins get the higher cap the API grants them, so the counter never
+  // warns the owner about a post the server would happily accept.
+  const maxLength = isAdmin ? FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH : FEED_MAX_COMMUNITY_POST_LENGTH;
   const {
     messages,
     comicItems,
@@ -244,6 +251,19 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
     isLive,
     error,
   } = useHomeChat(currentUser);
+  // Live length of what is in the composer, measured exactly the way the server measures it: on the
+  // whitespace-normalized text, not the raw characters (see lib/feed/normalize.ts). Counting raw
+  // characters would tell a member who indents or double-spaces that they are over when they are not.
+  //
+  // An @comic question goes to the AI Assistant on a different route with its own limit, so the
+  // Commons cap does not apply and the counter stays out of the way for those.
+  const composerLength = useMemo(() => feedPostLength(input), [input]);
+  const composerOverBy = composerMentionsComic ? 0 : Math.max(0, composerLength - maxLength);
+  // Stay quiet until the last stretch. A counter that is always on is noise on a two-line message;
+  // what a member needs is a warning while there is still time to shape the ending, and then an
+  // exact number to cut.
+  const showComposerCount = !composerMentionsComic && composerLength > maxLength - 150;
+
   // The @-form other members type to mention this member — shown in the mentions empty state.
   // feedAuthorHandle already prefixes a set username with '@'; the id pseudonym needs it added.
   const ownMentionLabel = ownHandle.startsWith('@') ? ownHandle : `@${ownHandle}`;
@@ -767,16 +787,35 @@ function AuthenticatedChatPanel({ currentUser }: AuthenticatedChatPanelProps) {
         />
         <button
           type="button"
-          className={input.trim() ? `${styles.chatSendBtn} ${styles.chatSendBtnActive}` : styles.chatSendBtn}
+          className={input.trim() && composerOverBy === 0 ? `${styles.chatSendBtn} ${styles.chatSendBtnActive}` : styles.chatSendBtn}
           onClick={() => {
             void sendMessage();
           }}
           aria-label={composerMentionsComic ? 'Ask the AI Assistant' : 'Send message'}
-          disabled={isSending}
+          // Blocked while over the limit: the server would reject it anyway, and a rejection the
+          // member can see before pressing send beats one they discover afterwards.
+          disabled={isSending || composerOverBy > 0}
         >
           ➤
         </button>
       </div>
+
+      {/* Character count, shown only near and past the limit. Over the limit it names the exact
+          number to remove, which is the number a member actually needs — "1,318 / 1,200" makes them
+          do the subtraction themselves. aria-live is polite so it does not interrupt typing, and the
+          announcement is throttled by only rendering in the last stretch. */}
+      {showComposerCount ? (
+        <p
+          className={styles.chatFootnote}
+          role="status"
+          aria-live="polite"
+          style={{ color: composerOverBy > 0 ? '#F87171' : undefined, marginTop: 6, marginBottom: 0 }}
+        >
+          {composerOverBy > 0
+            ? `${composerOverBy.toLocaleString()} character${composerOverBy === 1 ? '' : 's'} over the limit — remove ${composerOverBy === 1 ? 'it' : 'that many'} to post. Or split this into two messages.`
+            : `${(maxLength - composerLength).toLocaleString()} character${maxLength - composerLength === 1 ? '' : 's'} left.`}
+        </p>
+      ) : null}
 
       <p className={styles.chatFootnote}>
         {isLive ? 'Human-in-the-loop AI support and community support channel.' : 'Support channel keeps syncing as new messages arrive.'}{' '}

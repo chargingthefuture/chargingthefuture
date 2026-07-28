@@ -168,11 +168,25 @@
 2. Type a community post in the composer (fewer than 1,200 characters, no HTML tags, no more than 3 links).
 3. Submit the post.
 4. Confirm the post appears immediately in the feed under the author's handle (`@username` or `user-<first 8 of user id>` if no username is set).
-5. Now try to submit a post that is exactly 1,201 characters long.
+5. Now paste a post that is exactly 1,201 characters long.
+6. Watch the line under the composer as you approach and pass the limit, then press send.
+7. Delete one character and check the line again.
 
 **Expected:**
 - The valid post appears in the feed attributed to the correct member handle.
-- The 1,201-character post is rejected with a validation error before it reaches the server (or returns a 400); it does not silently post.
+- From roughly 1,050 characters the composer shows "N characters left"; past 1,200 it turns red and
+  reads **"1 character over the limit — remove it to post."** (at 1,201), naming the exact number to
+  cut rather than a raw "1,201 / 1,200" count.
+- The send button is **disabled** while over, so the post cannot be attempted at all.
+- **The message is never lost.** If a send does fail (force one by shrinking the cap, or by going
+  offline), the text comes back into the composer rather than being cleared — unless you have already
+  started typing something new, which is never overwritten.
+- Indentation and double spaces do not count against you: the counter measures the same
+  whitespace-normalized text the server measures, so a post padded with spaces or blank lines is not
+  falsely reported as over.
+- As an **admin**, the cap is 4,000 and the counter reflects that — it must not warn at 1,200.
+- An `@comic` question shows no counter (it goes to the AI Assistant on a different route with its
+  own limit).
 
 **Result:** web ☐
 

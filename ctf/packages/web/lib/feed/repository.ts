@@ -20,6 +20,7 @@ import {
   isAllowedFeedReactionEmoji,
 } from './constants';
 import { extractMentionHandles, feedAuthorHandle, feedMentionTokens } from './author-handle';
+import { normalizeMultilineText } from './normalize';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
 import { emitFeedMembershipEventToStream } from './stream';
 import { getPluginBySlug, getPluginRoute, isAdminOnlyPlugin } from 'lib/plugins/repository';
@@ -210,15 +211,11 @@ function normalizeText(value: string): string {
 // member's multi-paragraph message keeps its structure instead of collapsing into one wall of text.
 // Used for conversational bodies (community posts, replies, announcements); the render side pairs
 // this with `white-space: pre-wrap`.
-function normalizeMultilineText(value: string): string {
-  return value
-    .replace(/\r\n?/g, '\n')
-    .split('\n')
-    .map((line) => line.replace(/[^\S\n]+/g, ' ').trim())
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
+//
+// The implementation moved to lib/feed/normalize.ts so the composer's character counter can import
+// it in the browser (this module pulls in the database client and cannot be bundled client-side).
+// Re-exported under the original name so every existing call site here is unchanged — and, more to
+// the point, so the counter and the server's length check can never drift apart.
 
 function normalizeNullableText(value: string | null | undefined): string | null {
   if (typeof value !== 'string') {

@@ -650,6 +650,12 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
       if (activeReply) {
         setReplyTarget(activeReply);
       }
+      // Put the text back in the composer (owner report, 2026-07-27). The input is cleared
+      // optimistically above so the send feels instant; before this, a rejected send — a message
+      // over the length cap, or any network failure — cleared the box and the member's writing was
+      // gone with nothing to retry. Only restore when the member has not started typing something
+      // new in the meantime, so a recovery never overwrites live work.
+      setInput((current) => (current.trim().length === 0 ? text : current));
       setError(sendError instanceof Error ? sendError.message : 'Unable to send your message right now.');
     } finally {
       setIsSending(false);
