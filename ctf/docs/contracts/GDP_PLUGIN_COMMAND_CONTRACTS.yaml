@@ -119,6 +119,10 @@ contracts:
     outputSchema:
       countries:
         type: array
+      # Active members on the roster with no country recorded (totalMembers minus the located
+      # per-country sum, floored at 0). The web shell renders it as one "Location not set" row.
+      unspecified:
+        type: integer
       totalMembers:
         type: integer
     dataAccess:

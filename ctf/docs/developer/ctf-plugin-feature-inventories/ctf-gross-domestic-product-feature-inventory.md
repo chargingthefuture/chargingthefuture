@@ -330,6 +330,16 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-07-28: **Declared the `unspecified` field in the `countries.read` command contract, and stopped
+  the web shell deriving a second copy of it.** `GET /api/gdp/countries` has returned `unspecified`
+  (active members with no country recorded) since 2026-07-16, but the contract's `outputSchema` in
+  `GDP_PLUGIN_COMMAND_CONTRACTS.yaml` listed only `countries` and `totalMembers`, so the documented
+  shape did not match the shipped response. The field is now declared as an integer. `gdp-shell.tsx`
+  previously fell back to recomputing `totalMembers - located` when the field was absent, giving two
+  independent derivations of the same number; it now reads the field as sent (defaulting to 0, which
+  omits the "Location not set" row) since the route already floors it at 0 and omits it when the
+  roster read fails. Response shape and rendered output are unchanged; contract text and one client
+  line only — no schema or route-signature change.
 - 2026-07-17: **History-aware back navigation (app-wide sweep).** The member shell's hand-rolled
   back chevron was replaced by the shared `BackChevronButton` — it returns to the previous in-app
   page and falls back to All Apps when there is no in-app history. UI-only; no schema, route, or
