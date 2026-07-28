@@ -1,194 +1,339 @@
-# GDP — Manual Test Script
+# Gross Domestic Product — Manual Test Script
 
-> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+> Generated from the GDP feature inventory and contracts; this is the runnable checklist for hand-testing the GDP plugin on a real device or browser.
+> To regenerate: `pnpm --dir ctf test-script:generate -- gdp`
 
-> Walk these steps on a real device to confirm the plugin works end to end. This script is
-> generated from the plugin's feature inventory and contracts — those files are the source of
-> truth, this is the runnable checklist derived from them. Do not edit a step here to match a
-> bug; fix the code (or the inventory) and regenerate.
->
-> **How to regenerate:** `pnpm --dir ctf test-script:generate -- gdp`
-
-| | |
+| Field | Value |
 |---|---|
-| **Plugin** | GDP (`gdp`) |
-| **Visibility** | Member-facing |
-| **Roles to test** | member (admin has no GDP-specific surface — the GDP admin was retired) |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
+| **Plugin** | Gross Domestic Product (`gdp`) |
+| **Visibility** | Member (authenticated-only; no public/unauthenticated access) |
+| **Roles to test** | member, admin |
+| **Surfaces** | Web (`/apps/gdp`, `/api/gdp/report/current`, `/api/gdp/countries`) — web-only since 2026-07-20; Android surface removed |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md` |
-| **Generated** | 2026-07-16 (GDP admin retired + Community Value Index live-by-default; decorative Map tab removed; All Countries panel shows real member distribution and reconciles to the member roster via a "Location not set" bucket — see GDP-3) |
+| **Generated** | 2026-07-28 (commit 5564bff3) |
+
+---
 
 ## How to run this
 
-- Each case is **precondition → steps → expected**. Do it on each surface listed for the case.
-- Mark each surface box: ✅ pass · ❌ fail · ⛔ blocked/can't reach.
-- A ❌ becomes a row in the **Bug Reporting** plugin. Put the bug link in the notes line so the
-  next run knows it's already filed.
-- Run the **Core smoke** block every session. Run the full walkthrough when you changed this
-  plugin or on a pre-release sweep.
+- Mark each check ✅ pass, ❌ fail, or ⛔ blocked.
+- A ❌ becomes a row in the Bug Reporting plugin — note the case ID, what you expected, and what actually happened.
+- Run **Core smoke** at the start of every test session before anything else.
+- "Web" means the browser at the `/apps/gdp` route (desktop unless noted). Mobile-responsive means the same URL in a narrow viewport (≤ 430 px wide).
 
 ---
 
 ## Core smoke (every session)
 
-Transparency-reporting plugin — these confirm the community figure shows and never reads as a
-per-wallet money value. Member role unless noted.
+1. **Dashboard loads for a signed-in member.** Go to `/apps/gdp` while signed in as a member. The dashboard renders without a crash, a spinner that never resolves, or a blank white page. web ☐
 
-1. **Dashboard loads.** Open the GDP report. The headline community figure and total member count
-   render with numbers, not a spinner or error. There is no "active members" stat. → web ☐ mobile ☐
-2. **No public view of the data.** Sign out and open GDP. A signed-out visitor does reach a public
-   GDP landing shell (a "coming soon" page with locked placeholders and a sign-in prompt), and the
-   signed-out home shows the community member count — but NO report **data** is exposed: the live
-   Community Value figure, the "Value by Source" breakdown, and the "All Countries" panel are all
-   behind sign-in. Confirm a signed-out visitor never sees a real GDP figure or breakdown. → web ☐ mobile ☐
-3. **Estimate is labelled.** Where the figure is an estimate, an "Estimate" chip and a short
-   footnote show next to it. → web ☐ mobile ☐
-4. **Not a price.** Confirm the figure is shown with no currency symbol as a per-wallet value and
-   no "N ServiceCredits = $X" line appears anywhere on the surface. → web ☐ mobile ☐
-5. **Activity counts live.** The figure is computed live on each load — there is no publish step and
-   no admin weight-setting step. If real non-incentive activity exists (ServiceCredits transfers,
-   Foundation calls, completed favors, etc.), the figure is greater than zero and the "Value by
-   Source" breakdown lists the contributing plugins. → web ☐ mobile ☐
+2. **Unauthenticated access is blocked.** Sign out, then navigate directly to `/apps/gdp` and to `GET /api/gdp/report/current`. Both redirect to sign-in or return a 401/403 — no GDP data is shown to an unauthenticated visitor. web ☐
+
+3. **Live report API returns data.** While signed in, open DevTools and reload `/apps/gdp`. Confirm `GET /api/gdp/report/current` returns HTTP 200 with a JSON body containing a `metrics` array (may be empty in a fresh seed but the array key must be present). web ☐
+
+4. **Countries API returns data.** Same session, confirm `GET /api/gdp/countries` returns HTTP 200 with `{ ok: true, countries: [...], totalMembers: <number>, unspecified: <number> }`. web ☐
+
+5. **No currency symbol on the Community Value Index.** The hero figure on the dashboard has no `$`, `€`, or other currency prefix. web ☐
 
 ---
 
 ## Member walkthrough
 
-### GDP-1 · Transparency overview reads
-**Role:** member · **Surfaces:** all · **Seed:** `seed:demo`
-**Steps:**
-1. Open the GDP report.
-2. Read the headline community figure and the total member count.
-**Expected:** Both values render from real data with plain-language labels. No tile is blank, a
-spinner, or a raw metric key. The figure is computed live on each load — there is no publish step. If
-there is no recognized activity yet, an honest empty/zero state shows instead of an invented number.
-**Result:** web ☐ mobile ☐ — notes:
+### GDP-1 — Dashboard hero renders with live data
 
-### GDP-1b · Member count matches Workforce and Directory (active Directory roster)
-**Role:** anonymous (signed out) + admin · **Surfaces:** web + mobile-responsive
-**Steps:**
-1. On the signed-out home/launcher, read the GDP "Members" stat.
-2. Compare it to (a) the Workforce dashboard's Recruited/Members count, (b) the Directory roster, and
-   (c) `SELECT COUNT(*) FROM directory_profiles WHERE is_active = TRUE AND deleted_at IS NULL`.
-**Expected:** All of them are the SAME number — GDP, Workforce, and the Directory all count the active
-Directory roster (active, non-deleted profiles, claimed or not). It is NOT the (lower) count of Clerk
-accounts / members who have logged in. If the Directory read fails, GDP falls back to the signup count
-rather than blanking.
-**Result:** web ☐ mobile ☐ — notes:
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Seed run. Signed in as a member. Navigate to `/apps/gdp`.
 
-### GDP-2 · Estimate treatment
-**Role:** member · **Surfaces:** all
 **Steps:**
-1. Find the headline figure (and the sidebar aggregate on web).
-**Expected:** Where the data is flagged an estimate, an understated "Estimate" chip plus a short
-footnote appear; the copy describes a community-wide figure, never a per-member redemption value. The
-chip does not appear on values that are not estimates.
-**Result:** web ☐ mobile ☐ — notes:
+1. Look at the hero section of the dashboard.
+2. Confirm a "Members" count tile is shown.
+3. Confirm no "Active · 7d" tile appears anywhere on the page (it was removed 2026-07-11).
 
-### GDP-3 · All Countries panel (real member distribution, reconciles to the roster)
-**Role:** member · **Surfaces:** web (android omits this panel)
-**Steps:**
-1. On the web dashboard, find the "All Countries" panel (subtitle "Members by country"). There is no
-   longer a "Map" tab — the dashboard is a single view.
-2. Cross-check a country's member count against `SELECT country, COUNT(*) FROM directory_profiles WHERE
-   is_active = TRUE AND deleted_at IS NULL AND btrim(country) <> '' GROUP BY country`.
-3. Add up every row's member count (all countries **plus** the "Location not set" row) and compare the
-   total to the hero's total-member count. Cross-check the "Location not set" count against
-   `SELECT COUNT(*) FROM directory_profiles WHERE is_active = TRUE AND deleted_at IS NULL AND (country IS
-   NULL OR btrim(country) = '')`.
-**Expected:** Each country row shows a country, its real member count, and a share bar that is that
-country's percentage of the **whole member roster** (a real metric — not a width derived from list
-position). The counts include every active member profile that has a country (claimed or not), so they
-use the same member population as the hero's total-member count — not just claimed profiles. Every country
-with at least one located member appears (no small-count suppression). Active members with **no** country
-recorded are shown as a single muted, italic **"Location not set"** row (caption "no country recorded"),
-so the rows sum exactly to the hero's total-member count. That bucket is **not** counted as a country: the
-hero "N countries" line matches the number of real country rows, excluding "Location not set". The figures
-are people-counts read from members' directory profiles — there is no per-country money figure. If every
-active member has a country, the "Location not set" row does not appear; if none do, the panel is that
-single bucket row at 100% (never a fabricated country).
-**Result:** web ☐ — notes:
+**Expected:**
+- One hero tile labelled "Members" shows a whole number greater than zero.
+- The weekly-active-members tile is absent.
+- No mock or placeholder numbers (e.g. "1,234,567") appear — the count matches what the Directory shows for total active members.
 
-### GDP-4 · No fiat parity anywhere
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Walk the overview, the sidebar aggregate, and the All Countries panel.
-**Expected:** The community figure never reads as money for one wallet, a price, an exchange rate, or
-a redemption value for ServiceCredits or any token. Currencies, where named, appear by label (e.g.
-"ServiceCredits", "United States Dollar"), never a bare code used as a value.
-**Result:** web ☐ mobile ☐ — notes:
+Result: web ☐
 
-### GDP-5 · Refresh the dashboard
-**Role:** member · **Surfaces:** all
+---
+
+### GDP-2 — "Estimate" chip on headline figure
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Seed run includes at least one `gdp_metric_snapshots` row with `is_estimate = true` for the headline metric (`gdp_total_revenue` or `gdp_value_index`).
+
 **Steps:**
-1. On web (desktop and the mobile-responsive layout, ideally the installed web app), open the GDP
-   dashboard and tap the refresh icon in the header.
-2. On android, open GDP and pull down on the dashboard content.
-3. In another session, change the underlying data (e.g. a settled ServiceCredits transfer that moves
-   the Community Value Index), then refresh as above.
-**Expected:** The refresh icon spins while loading and the report + All Countries panel re-pull from
-the server; on android the pull-to-refresh spinner shows and then the dashboard updates. After step 3
-the change appears without closing and reopening the app. Refreshing never clears the current screen
-to the full-screen loading state.
-The header back chevron returns to the page you came from (falling back to All Apps when opened
-directly).
-**Result:** web ☐ mobile ☐ — notes:
+1. On `/apps/gdp`, locate the main GDP headline value in the hero and in the sidebar Live Ticker.
+2. Check for an "Estimate" chip or badge next to each flagged figure.
+3. Read the footnote beneath the chip.
+
+**Expected:**
+- An understated "Estimate" chip appears on the headline figure (and in the sidebar Live Ticker) wherever `isEstimate` is true.
+- The footnote describes a community-wide normalized figure — not a per-user redemption value or a dollar balance.
+- No currency symbol appears alongside the index value.
+- If the seed has no estimate-flagged metric, the chip simply does not appear (no crash).
+
+Result: web ☐
+
+---
+
+### GDP-3 — Community Value disclaimer always visible
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in. On `/apps/gdp`.
+
+**Steps:**
+1. Read the dashboard hero area.
+2. Look for the Community Value disclaimer (the note that the index is a relative community index, not money).
+
+**Expected:**
+- The disclaimer is present on the Dashboard hero — always, not only on a separate tab.
+- There is no "Map" tab, no tab bar, and no navigation to a world-map view anywhere on the page.
+
+Result: web ☐
+
+---
+
+### GDP-4 — "All Countries" panel reconciles to the member total
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Seed run. At least one `directory_profiles` row has a country set; at least one active profile has no country set (so the "Location not set" bucket is exercised).
+
+**Steps:**
+1. On `/apps/gdp`, locate the "All Countries" panel.
+2. Add up the member counts shown for every country row plus the "Location not set" row.
+3. Compare that sum to the "Members" count in the hero.
+
+**Expected:**
+- The panel is headed "All Countries" (not "Top Countries").
+- A "Location not set" row appears when there are active members with no country recorded; it is styled differently (muted / italic) and carries a caption like "no country recorded".
+- The sum of all country rows + "Location not set" equals the hero "Members" total exactly.
+- The "Location not set" row does not increment the "N countries" line in the hero.
+- Every country with at least one member is listed — no small-count suppression.
+- Each row shows a share bar; the share is a percentage of the total member count, not just of located members.
+
+Result: web ☐
+
+---
+
+### GDP-5 — "Location not set" bucket is absent when all members have a country
+
+**Role:** member
+**Surfaces:** web (desktop)
+**Precondition:** Modify seed (or use a dedicated fixture) so every active `directory_profiles` row has a country set. Navigate to `/apps/gdp`.
+
+**Steps:**
+1. Scan the "All Countries" panel for a "Location not set" row.
+
+**Expected:**
+- No "Location not set" row appears.
+- The country rows sum to the hero "Members" total.
+
+Result: web ☐
+
+---
+
+### GDP-6 — Dashboard loading state
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in.
+
+**Steps:**
+1. In DevTools, throttle the network to "Slow 3G".
+2. Hard-refresh `/apps/gdp`.
+3. Watch the page during load.
+
+**Expected:**
+- A loading state (spinner or skeleton) renders while the report is fetching — not a blank white page.
+- Once the report arrives, the loading state is replaced by the dashboard content without a full-page flash.
+
+Result: web ☐
+
+---
+
+### GDP-7 — Refresh button re-fetches without a full-screen loading flash
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Dashboard is loaded and showing data.
+
+**Steps:**
+1. Locate the refresh button in the GDP shell header.
+2. Click it.
+3. Watch the page.
+
+**Expected:**
+- Both the report and the countries data re-fetch.
+- The full-screen loading state does not flash — existing content stays visible while data refreshes.
+- After the fetch completes, the counts update (they may be identical values on a stable seed, but no error appears).
+
+Result: web ☐
+
+---
+
+### GDP-8 — Back navigation returns to previous page
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Navigate to another in-app page first (e.g. the app launcher), then go to `/apps/gdp`.
+
+**Steps:**
+1. On `/apps/gdp`, find and click the back chevron button in the header.
+
+**Expected:**
+- The browser navigates back to the previous in-app page (not to a broken URL or an external site).
+- If there is no in-app history (navigated directly to the URL), the back button takes the user to All Apps.
+
+Result: web ☐
+
+---
+
+### GDP-9 — Public shell shows accurate feature copy
+
+**Role:** member (or any visitor who reaches the public marketing shell before authentication)
+**Surfaces:** web
+**Precondition:** Access the GDP public shell view (`gdp-public-shell.tsx`).
+
+**Steps:**
+1. Observe the feature list or capability blurb on the public-facing GDP shell.
+
+**Expected:**
+- No mention of "contributor rankings" (that feature does not exist).
+- No mention of "skill gaps" (that belongs to the Workforce plugin).
+- No mention of "appear on the global map" (the map was removed 2026-07-11).
+- The panel references "Value by Source" (not "Sector Breakdown") and "Members by Country" (not "Top Countries by Economic Output").
+- The active-members placeholder reads "Members", not "Active Members".
+
+Result: web ☐
+
+---
+
+### GDP-10 — No retired admin routes are reachable
+
+**Role:** member (and admin — both should get the same denial)
+**Surfaces:** web
+**Precondition:** Signed in.
+
+**Steps:**
+1. Navigate directly to `/admin/gdp`.
+2. Navigate directly to `/admin/gdp/rates`.
+3. Call `GET /api/gdp/admin/currency-rates` directly (browser address bar or DevTools fetch).
+4. Call `POST /api/gdp/admin/publications` directly.
+
+**Expected:**
+- All four return 404 or redirect to a not-found page — none render a live admin surface.
+- No GDP admin UI appears for any role.
+
+Result: web ☐
+
+---
+
+### GDP-11 — Community Value Index shows no currency symbol and carries the legal disclaimer
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Dashboard loaded with at least one recognized source contributing a non-zero value.
+
+**Steps:**
+1. Locate every place the Community Value Index figure appears (hero, sidebar Live Ticker).
+2. Check the surrounding labels and any footnote text.
+
+**Expected:**
+- No `$`, `€`, `£`, or other currency prefix or suffix on the index figure.
+- The label or footnote makes clear this is a relative index — not a ledger amount, price, or redemption value for any token or currency.
+
+Result: web ☐
 
 ---
 
 ## Admin walkthrough
 
-**The GDP admin was retired (2026-07-11).** There is nothing to configure: the Community Value Index
-runs on fixed, built-in contribution weights (no currency-rate screen) and there is no weekly-publish
-step (a standing "live" heading is synthesized). The one case here confirms the retirement.
+The GDP admin was retired 2026-07-11 (weekly publications, currency-rate management). There is no live admin UI for this plugin. The cases below verify the retirement is complete and that the built-in weights require no admin action.
 
-### GDP-A1 · No GDP admin surface
-**Role:** admin · **Surfaces:** web
+### GDP-A1 — Admin sees no GDP admin navigation entry
+
+**Role:** admin
+**Surfaces:** web
+**Precondition:** Signed in as an admin. Open the admin index or `/admin`.
+
 **Steps:**
-1. As admin, open the `/admin` index and look for "GDP" / "GDP Rates" rows.
-2. Navigate directly to `/admin/gdp` and `/admin/gdp/rates`.
-3. Open the member GDP dashboard as admin and look for an admin button in the header.
-**Expected:** No "GDP" or "GDP Rates" rows on the `/admin` index. `/admin/gdp` and `/admin/gdp/rates`
-do not resolve to an admin screen (they redirect to the app or 404). The GDP dashboard header shows
-no admin button. The community figure still renders live for the admin exactly as it does for a
-member.
-**Result:** web ☐ — notes:
+1. Look for any GDP-related link in the admin navigation index.
+
+**Expected:**
+- No "GDP" or "Gross Domestic Product" admin entry appears in the admin index.
+- No link to `/admin/gdp` or `/admin/gdp/rates` is rendered.
+
+Result: web ☐
+
+---
+
+### GDP-A2 — Community Value Index is live with no admin publish step
+
+**Role:** admin
+**Surfaces:** web
+**Precondition:** Signed in as an admin. Navigate to `/apps/gdp`.
+
+**Steps:**
+1. View the GDP dashboard.
+2. Confirm the Community Value Index reflects live data with no "Publish" or "Activate" button visible anywhere on the page.
+
+**Expected:**
+- The dashboard loads with a live figure computed from built-in contribution weights.
+- There is no publish, activate, or rate-management control anywhere on the GDP dashboard for any role.
+- The index is live and never reads `currency_usd_rates` or `gdp_publications` (no admin step is needed or available).
+
+Result: web ☐
+
+---
+
+### GDP-A3 — Retired admin API endpoints return 404 for admin role
+
+**Role:** admin
+**Surfaces:** web
+**Precondition:** Signed in as an admin.
+
+**Steps:**
+1. Call `POST /api/gdp/admin/publications` with a valid JSON body.
+2. Call `GET /api/gdp/admin/currency-rates`.
+3. Call `POST /api/gdp/admin/currency-rates` with a valid JSON body.
+
+**Expected:**
+- All three return HTTP 404 (or 405 if the route file is gone but the method handler is absent).
+- None return 200, 201, or any GDP data.
+
+Result: web ☐
 
 ---
 
 ## Parity check (web ↔ android)
 
-For GDP-1 and GDP-2, the android app and the mobile-responsive web layout must show the same figure:
-both read the same live report payload, so the headline value and the estimate label must match. Note
-any drift here rather than filing separate bugs. (GDP-3, the All Countries panel, is web-only — the
-Android app omits the country breakdown.)
+Android was removed 2026-07-20 (rule 105, PR #1742). All parity checks are web-only.
 
-**Result:** matches ☐ — drift notes:
+| Case | Must behave identically on… |
+|---|---|
+| GDP-1 (hero member count) | desktop web and mobile-responsive web |
+| GDP-2 (Estimate chip) | desktop web and mobile-responsive web |
+| GDP-3 (Community Value disclaimer always visible) | desktop web and mobile-responsive web |
+| GDP-4 (All Countries reconciliation) | desktop web and mobile-responsive web |
+| GDP-6 (loading state) | desktop web and mobile-responsive web |
+| GDP-7 (refresh button) | desktop web and mobile-responsive web |
+| GDP-11 (no currency symbol, legal disclaimer) | desktop web and mobile-responsive web |
+
+The member count shown on the GDP dashboard must equal the member count shown in the Directory and the Workforce dashboard — all three read `countActiveDirectoryProfiles` (`is_active AND NOT deleted`, claimed or not).
 
 ---
 
 ## Known gaps — do not file these as bugs
 
-Carried from the inventory's "Gaps and Known Technical Debt" section at generation time. If you hit one
-of these, it is already tracked, not a new bug:
+Pulled from §9 of the feature inventory:
 
-- Metric ownership assignments live in contracts but are not surfaced on a single roster page.
-- Regional/legal constraints for cross-region GDP publication follow platform defaults; a
-  plugin-specific transfer-control contract is not finalized.
-- Snapshot publication timing follows operational best-effort; an explicit timing/freeze-window
-  document has not been published.
-
-## Recurring Activity recognition source (2026-07-04, issue #885)
-
-Recurring peer activities now feed the Community Value Index. To test:
-
-1. Seed it: `pnpm --dir ctf seed:recurring-activity`, then run the rollup
-   `pnpm --dir ctf gdp:recognize` (contribution weights are built into the rollup — there is no
-   currency-rate seed to run).
-2. A **confirmed** (`active`) fiat recurring activity contributes by COUNT (one hidden `RACT` unit,
-   weight 1) — never a fiat amount. A **confirmed ServiceCredits** activity contributes by its
-   declared `sc_value`. Confirm the index reflects both.
-3. A **pending** activity must contribute NOTHING until the counterparty confirms it.
-4. Confirm no fiat amount is ever shown or summed anywhere (fiat lines carry no amount by design),
-   and that this source does not double-count the direct ServiceCredits transfer source.
+1. **Metric ownership roster not surfaced.** Ownership assignments for economics metrics are documented in contracts but there is no single roster page. A missing owner page is not a bug.
+2. **No plugin-specific cross-region transfer contract.** Regional/legal constraints for authenticated cross-region GDP publication are governed by platform defaults; a GDP-specific transfer-control contract has not been finalized. The absence of a plugin-level override is not a bug.
+3. **No explicit SLA document for snapshot publication.** Snapshot publication SLA and freeze windows follow operational best-effort; a formal SLA document has not been published. Missing SLA documentation is not a testable bug here.
