@@ -330,6 +330,46 @@ function buildAlreadyTrackedBlock(existingFindings) {
   ];
 }
 
+// The repo's plain-voice rules (CLAUDE.md "Voice — no pleasantries, no feelings") are enforced on
+// human-facing agent output by the Stop hook .claude/hooks/check-no-pleasantries.mjs, which holds the
+// CANONICAL banned-term list. This sweep's findings are human-facing too — they become GitHub issue
+// titles and bodies — but they are produced by a separate model call the Stop hook never sees, which is
+// how a banned word reaches a filed issue (e.g. issue #1938). Derive the same terms from that canonical
+// file at runtime and fold them into the review prompt, so there is ONE source of truth, not a second
+// copy that drifts. Defensive: any read/parse failure falls back to a general plain-language line rather
+// than failing the review.
+function loadPlainLanguageRules() {
+  const fallback = [
+    'PLAIN-LANGUAGE RULE (repository voice): write every field in plain, factual language. No',
+    'pleasantries, sign-offs, or first-person feeling words. Prefer the simple word, and name the',
+    'specific problem instead of a vague label.',
+  ];
+  try {
+    const hookText = readFileSync(join(repoRoot, '.claude/hooks/check-no-pleasantries.mjs'), 'utf8');
+    // Each VOCABULARY entry is one line: `{ re: /\bWORD\b.../i, use: 'REPLACEMENT' },`
+    const vocab = [];
+    const entryRe = /re:\s*\/\\b([^\\/]+?)\\b[^,]*,\s*use:\s*'([^']*)'/g;
+    let m;
+    while ((m = entryRe.exec(hookText)) !== null) {
+      vocab.push({ term: m[1].trim(), use: m[2].trim() });
+    }
+    if (vocab.length === 0) {
+      return fallback;
+    }
+    return [
+      'PLAIN-LANGUAGE RULE (repository voice — enforced on all human-facing agent output; your findings',
+      'become GitHub issues, so they must follow it too):',
+      '  - Write every field in plain, factual language. No pleasantries, sign-offs, or first-person',
+      '    feeling words (no "thanks", "glad", "happy to", "sorry", "hope this/that", etc.).',
+      '  - Do NOT use these banned words in any field — use the replacement instead:',
+      ...vocab.map((v) => `      - "${v.term}": ${v.use}`),
+      '  - Name the specific problem, not a vague label.',
+    ];
+  } catch {
+    return fallback;
+  }
+}
+
 async function askClaude(slice, source, chunkNote, contractsText, existingFindings = []) {
   const layers = slice.paths.join('\n  ');
   const system = [
@@ -364,7 +404,9 @@ async function askClaude(slice, source, chunkNote, contractsText, existingFindin
     'NOT reporting it.',
     '',
     'Do NOT report pure style or formatting nits, and do not invent problems. If the slice looks',
-    'fine, return []. Write every field in plain language. Be specific and brief.',
+    'fine, return []. Be specific and brief.',
+    '',
+    ...loadPlainLanguageRules(),
   ].join('\n');
 
   const user = [
