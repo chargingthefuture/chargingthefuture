@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Globe } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
 import { Badge } from "@/components/ui/badge";
@@ -136,9 +136,17 @@ export default function GdpShell() {
   }, [fetchCountries]);
 
   // Header refresh: re-pull the report and the country panel without the full-screen loading state.
+  // Track the refresh AbortController in a ref so a new refresh (or an unmount) cancels an in-flight one:
+  // the initial-load effects already abort on unmount, and this gives the refresh path the same cleanup
+  // and stops two rapid refreshes from racing.
+  const refreshControllerRef = useRef<AbortController | null>(null);
   const handleRefresh = useCallback(async () => {
-    await Promise.all([fetchReport(false), fetchCountries()]);
+    refreshControllerRef.current?.abort();
+    const controller = new AbortController();
+    refreshControllerRef.current = controller;
+    await Promise.all([fetchReport(false, controller.signal), fetchCountries(controller.signal)]);
   }, [fetchReport, fetchCountries]);
+  useEffect(() => () => refreshControllerRef.current?.abort(), []);
 
   if (loading) return <GdpLoading />;
 
