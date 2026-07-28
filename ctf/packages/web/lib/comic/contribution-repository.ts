@@ -1,5 +1,5 @@
-import { queryDb, withDbTransaction } from 'lib/db/postgres';
-import type { ContributedEntry } from './quora-export-intake';
+import { queryDb, withDbTransaction } from "lib/db/postgres";
+import type { ContributedEntry } from "./quora-export-intake";
 
 // Storage for member-contributed Quora writing. Nothing written here is visible to the assistant:
 // entries sit in comic_contribution_entries until a human accepts them, at which point they are
@@ -7,8 +7,8 @@ import type { ContributedEntry } from './quora-export-intake';
 
 export type ContributionSummary = {
   id: string;
-  kind: 'links' | 'export';
-  status: 'pending_review' | 'accepted' | 'declined' | 'withdrawn';
+  kind: "links" | "export";
+  status: "pending_review" | "accepted" | "declined" | "withdrawn";
   entryCount: number;
   discardedSections: string[];
   declineReason: string;
@@ -17,8 +17,8 @@ export type ContributionSummary = {
 
 type ContributionRow = {
   id: string;
-  kind: 'links' | 'export';
-  status: ContributionSummary['status'];
+  kind: "links" | "export";
+  status: ContributionSummary["status"];
   entry_count: number;
   discarded_sections: unknown;
   decline_reason: string;
@@ -32,7 +32,7 @@ function mapRow(row: ContributionRow): ContributionSummary {
     status: row.status,
     entryCount: row.entry_count,
     discardedSections: Array.isArray(row.discarded_sections)
-      ? row.discarded_sections.filter((value): value is string => typeof value === 'string')
+      ? row.discarded_sections.filter((value): value is string => typeof value === "string")
       : [],
     declineReason: row.decline_reason,
     createdAtIso: new Date(row.created_at).toISOString(),
@@ -51,7 +51,7 @@ function parseAuthoredAt(raw: string | null): string | null {
 // never end up stored without its consent row, or counted with entries that failed to write.
 export async function createContribution(input: {
   userId: string;
-  kind: 'links' | 'export';
+  kind: "links" | "export";
   consentVersion: string;
   thirdPartyNote: string;
   discardedSections: string[];
@@ -110,21 +110,27 @@ export async function listContributionsForUser(userId: string): Promise<Contribu
 // How many contributions this member has sent recently. The upload route uses this as its own rate
 // limit — parsing an archive is expensive, and a signed-in account should not be able to spend the
 // server's memory in a loop.
-export async function countRecentContributions(userId: string, withinHours: number): Promise<number> {
+export async function countRecentContributions(
+  userId: string,
+  withinHours: number,
+): Promise<number> {
   const result = await queryDb<{ count: string }>(
     `SELECT COUNT(*)::text AS count
      FROM comic_contributions
      WHERE user_id = $1 AND created_at > NOW() - ($2 || ' hours')::interval`,
     [userId, String(withinHours)],
   );
-  return Number(result.rows[0]?.count ?? '0');
+  return Number(result.rows[0]?.count ?? "0");
 }
 
 // Withdraw a contribution at the member's request: mark it withdrawn AND deactivate every knowledge
 // row it produced, in one transaction. Deactivating (not deleting) matches how curation works in
 // comic_knowledge_entries everywhere else — but the effect the member was promised is the one that
 // matters: the assistant stops quoting them.
-export async function withdrawContribution(userId: string, contributionId: string): Promise<boolean> {
+export async function withdrawContribution(
+  userId: string,
+  contributionId: string,
+): Promise<boolean> {
   return withDbTransaction(async (client) => {
     const owned = await client.query<{ id: string }>(
       `SELECT id FROM comic_contributions
@@ -177,11 +183,13 @@ export type ContributionForReview = ContributionSummary & {
 };
 
 export async function listContributionsForReview(status: string): Promise<ContributionForReview[]> {
-  const contributions = await queryDb<ContributionRow & {
-    user_id: string;
-    consent_version: string;
-    third_party_note: string;
-  }>(
+  const contributions = await queryDb<
+    ContributionRow & {
+      user_id: string;
+      consent_version: string;
+      third_party_note: string;
+    }
+  >(
     `SELECT id, user_id, kind, status, consent_version, third_party_note, entry_count,
             discarded_sections, decline_reason, created_at
      FROM comic_contributions
@@ -235,7 +243,7 @@ export async function listContributionsForReview(status: string): Promise<Contri
 }
 
 export type AcceptResult = {
-  status: 'accepted';
+  status: "accepted";
   promoted: number;
   alreadyPresent: number;
   contributorUserId: string;
@@ -249,7 +257,12 @@ export type AcceptResult = {
 //     deletion able to find these rows later — without it the member's words would be unreachable.
 //   * `content_hash` uses the SAME formula as importComicKnowledge.mjs, and the insert is
 //     ON CONFLICT DO NOTHING. Two members who quote the same widely-shared passage do not create a
-//     duplicate; the second simply finds the row already there.
+//     duplicate; the second simply finds the row already there. The conflict target is the PARTIAL
+//     index `uq_comic_knowledge_entries_content_hash` (`WHERE source_ref IS NULL`), so the clause
+//     carries that predicate. Contributed rows have a null `source_ref` and live in that partition;
+//     rows imported from the edited Quora Markdown repo carry a `source_ref` and are a separate
+//     identity space, so a Markdown row and a contributed row may share `content_hash` without
+//     colliding — the backfill lookup below is likewise scoped to `source_ref IS NULL`.
 export async function acceptContribution(input: {
   contributionId: string;
   reviewerId: string;
@@ -297,9 +310,16 @@ export async function acceptContribution(input: {
         `INSERT INTO comic_knowledge_entries
            (source, entry_type, question, content, content_hash, authored_at, contribution_id)
          VALUES ('quora_export', $1, $2, $3, $4, $5, $6::uuid)
-         ON CONFLICT (content_hash) DO NOTHING
+         ON CONFLICT (content_hash) WHERE source_ref IS NULL DO NOTHING
          RETURNING id`,
-        [entry.entry_type, entry.question, entry.content, hash, entry.authored_at, input.contributionId],
+        [
+          entry.entry_type,
+          entry.question,
+          entry.content,
+          hash,
+          entry.authored_at,
+          input.contributionId,
+        ],
       );
 
       if (inserted.rowCount === 1) {
@@ -313,7 +333,7 @@ export async function acceptContribution(input: {
         // Point at the row that already carries this text, so a later withdrawal still reaches it.
         await client.query(
           `UPDATE comic_contribution_entries
-           SET knowledge_entry_id = (SELECT id FROM comic_knowledge_entries WHERE content_hash = $2)
+           SET knowledge_entry_id = (SELECT id FROM comic_knowledge_entries WHERE content_hash = $2 AND source_ref IS NULL LIMIT 1)
            WHERE id = $1::uuid`,
           [entry.id, hash],
         );
@@ -327,7 +347,7 @@ export async function acceptContribution(input: {
       [input.contributionId, input.reviewerId],
     );
 
-    return { status: 'accepted' as const, promoted, alreadyPresent, contributorUserId };
+    return { status: "accepted" as const, promoted, alreadyPresent, contributorUserId };
   });
 }
 
