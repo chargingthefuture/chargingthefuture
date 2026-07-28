@@ -428,7 +428,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
             activeChannel === GATED_CHANNEL_SLUG ? (
               <GatedChatPanel currentUser={currentUser} isAdmin={isAdmin} />
             ) : (
-              <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} signInUrl={signInUrl} />
+              <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} isAdmin={isAdmin} signInUrl={signInUrl} />
             )
           ) : (
             <ShellAppsPanel

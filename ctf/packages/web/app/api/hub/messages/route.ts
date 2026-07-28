@@ -16,6 +16,7 @@ import {
   resolveAnnouncementLinkedPlugins,
   validateFeedCommunityPostInput,
 } from 'lib/feed/repository';
+import { feedPostLength as normalizedPostLength } from 'lib/feed/normalize';
 import { requireHubAccess } from '../_lib';
 import { ensureMutationCsrf } from '../../feed/_lib';
 
@@ -227,10 +228,17 @@ export async function POST(request: Request) {
   const isPrivileged = gate.auth.isAdmin;
   const maxLength = isPrivileged ? FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH : FEED_MAX_COMMUNITY_POST_LENGTH;
   if (!text || !validateFeedCommunityPostInput(input, maxLength)) {
+    // Name the length when that is the reason. The composer blocks an over-limit send before it gets
+    // here, but a client with a wrong cap (an out-of-date tab, the API called directly) would
+    // otherwise get "must be a valid community post" and no idea what to change.
+    const overBy = normalizedPostLength(text) - maxLength;
     return NextResponse.json(
       {
         ok: false,
-        message: 'Message text must be a valid community post.',
+        message:
+          overBy > 0
+            ? `That message is ${overBy.toLocaleString()} characters over the ${maxLength.toLocaleString()}-character limit. Shorten it, or split it into two messages.`
+            : 'Message text must be a valid community post.',
       },
       { status: 400 },
     );

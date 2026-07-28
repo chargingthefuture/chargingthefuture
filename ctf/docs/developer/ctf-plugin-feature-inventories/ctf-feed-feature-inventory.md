@@ -289,6 +289,23 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-07-27: **Commons composer shows how far over the character limit you are — and no longer
+  destroys an over-limit message (owner report).** A member's long post silently failed: the composer
+  had no character counter and no `maxLength`, and `sendMessage` cleared the input *before* the
+  request, restoring only the reply target on failure — so a post over the 1,200-character cap was
+  rejected by the API and the member's writing was gone, with a generic "must be a valid community
+  post" as the only clue. Three fixes: (1) a live counter under the composer, quiet until the last
+  150 characters, then showing characters remaining and, past the limit, **the exact number to
+  remove** plus a nudge to split the message; (2) the composer text is restored on any failed send
+  (only when the member has not started typing something new, so recovery never overwrites live
+  work), and the send button is disabled while over the limit; (3) the API's 400 now names the
+  overage instead of a generic message. The counter measures the **whitespace-normalized** text the
+  server measures, via a new client-safe `lib/feed/normalize.ts` that `lib/feed/repository.ts` now
+  imports — one implementation, so the counter cannot drift from the check. It uses the caller's own
+  cap (`FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH` 4,000 for admins, `FEED_MAX_COMMUNITY_POST_LENGTH`
+  1,200 for members), so `isAdmin` is now threaded to `ShellChatPanel`. @comic questions are exempt
+  (different route, different limit). No schema or contract change. Web + mobile-responsive (Commons
+  is web-only). Verified: typecheck, lint, build.
 - 2026-07-24: **Added 👋 to the Commons reaction quick set.** The fixed reaction set gains a wave, so it is now 👍 ❤️ 😂 🎉 🙏 😢 👋. Appended at the end of `FEED_REACTION_EMOJIS` (`lib/feed/constants.ts`) so existing reactions keep their order/rank; the set is shared by server and client, so the server accepts 👋 and the picker offers it on both community posts and announcements. Enums + descriptions in `FEED_PLUGIN_COMMAND_CONTRACTS.yaml` (`feed.community.post.reaction.toggle` and `feed.announcement.reaction.toggle`) updated to match. No schema change. Web + mobile-responsive (Commons is web-only). Verified: `@ctf/web` typecheck + eslint clean.
 - 2026-07-22: **"Edit" action on a member's own Commons chat post (edit = delete + repost).** Members could already delete their own community post, and the product model is deliberately no-in-place-edit (a corrected post is a fresh row with its own moderation, no inherited reactions/replies), but the only way to fix a typo was to delete then retype — so people posted follow-up corrections like "*done" instead. Added an **Edit** button next to Delete on the author's own message in both Commons channels: the home channel (`shell-chat-panel.tsx` + `use-home-chat.ts`) and the gated #contributors channel (`gated-chat-panel.tsx` + `use-gated-chat.ts`). It loads the post's text back into the composer, deletes the original (existing `feed.community.post.delete` / the contributor-access channel delete), clears any active reply, and focuses the box; sending posts a fresh message via the existing create path — a new row with a new timestamp. No schema, route, or contract change — reuses the existing delete + create. Web + mobile-responsive (Commons is web-only; the RN app has no Commons surface). Verified: `@ctf/web` typecheck + eslint clean, EOF clean.
 - 2026-07-17: **"Edit" button for draft announcements in the admin surface.** The admin could create, publish, and archive announcements but had no way to edit a draft before publishing — the `feed.announcement.draft.update` command and its `PUT /api/feed/admin/announcements/:id` route already existed but were never exposed in the UI. Added an "Edit" action on each draft row (`feed-announcements-admin-shell.tsx`) that loads the draft (title, body, linked plugin) into the top form; the form switches to "Edit announcement" with a "Save changes" button (PUT) and a "Cancel" that clears edit mode. Create-draft is unchanged (still POST). Edit is offered on drafts only (the update command already rejects non-draft rows server-side). UI-only — no schema, route, or contract change. Verified: typecheck, lint, production build.
