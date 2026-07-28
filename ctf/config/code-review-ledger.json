@@ -228,10 +228,15 @@
     {
       "name": "gdp",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-28T09:12:53.372Z",
+      "lastRunIssues": 5,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/gdp",
+        "ctf/packages/web/components/gdp",
+        "ctf/packages/web/lib/gdp"
+      ]
     },
     {
       "name": "geo",
