@@ -113,6 +113,7 @@ Result: web ☐
 **Expected:**
 - The panel is headed "All Countries" (not "Top Countries").
 - A "Location not set" row appears when there are active members with no country recorded; it is styled differently (muted / italic) and carries a caption like "no country recorded".
+- The "Location not set" count is the API's `unspecified` field — a documented integer in the `countries.read` command contract (`GDP_PLUGIN_COMMAND_CONTRACTS.yaml` outputSchema) — rendered as sent. The shell reads it directly and no longer recomputes `totalMembers − located` itself, so there is a single source for the number.
 - The sum of all country rows + "Location not set" equals the hero "Members" total exactly.
 - The "Location not set" row does not increment the "N countries" line in the hero.
 - Every country with at least one member is listed — no small-count suppression.
