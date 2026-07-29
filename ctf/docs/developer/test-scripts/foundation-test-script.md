@@ -447,8 +447,12 @@ Result: web ☐
 4. Observe the callee's overlay.
 5. Check the caller's ServiceCredits balance (either in Foundation or in the ServiceCredits plugin UI after the call).
 6. As either participant: click "End call."
+7. With the browser network tab open on the caller, watch the responses from
+   `GET /api/foundation/connections/instant-calls/<callId>` while the overlay says "connecting", and
+   check that the id the audio room joins is the **video** call id (`streamCallId`) and not the chat
+   channel id (`streamChannelId`) — the two come back in the same response and must not be swapped.
 
-**Expected:** Step 3: caller's overlay transitions to "connecting" then shows an in-call state with a live block countdown, "1 of N blocks paid," and an "Extend (+X credits)" control. The countdown runs from `paid_through_at`. Step 4: callee's overlay shows an in-call state with mute and end-call controls but no billing strip. Step 5: the caller's balance has decreased by exactly `rateCreditsLocked` (one block). Step 6: call ends cleanly for both; the terminal state is a plain hang-up (not "out of credits" or "paid time used up").
+**Expected:** Step 3: caller's overlay transitions to "connecting" then shows an in-call state with a live block countdown, "1 of N blocks paid," and an "Extend (+X credits)" control. The countdown runs from `paid_through_at`. Step 4: callee's overlay shows an in-call state with mute and end-call controls but no billing strip. Step 5: the caller's balance has decreased by exactly `rateCreditsLocked` (one block). Step 6: call ends cleanly for both; the terminal state is a plain hang-up (not "out of credits" or "paid time used up"). Step 7: the audio room joins on `streamCallId`. If that id is missing from a response, the overlay stays on "connecting" and the 2-second poll keeps going until it arrives — it must never try to join with an empty id, which would fail silently and show the caller nothing.
 
 Result: web ☐
 
