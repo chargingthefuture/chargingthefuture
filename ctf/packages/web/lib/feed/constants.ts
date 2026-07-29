@@ -19,6 +19,20 @@ export const FEED_ERROR_CODE = {
   moderationRejected: 'FEED_CONTENT_POLICY_VIOLATION',
 } as const;
 
+// Moderation states for member-authored Commons content (`feed_community_posts`,
+// `feed_community_replies`). The column has existed since those tables were created, defaulting to
+// 'accepted', but nothing read it — so a row set to anything else stayed fully visible and the only
+// way to take a post down was to delete it. These are the two states the read path now honours:
+// 'accepted' is visible, 'hidden' is not. Kept to two on purpose — an admin either leaves a post up
+// or takes it down, and a third "under review but still visible" state would be a promise the code
+// does not keep.
+export const FEED_MODERATION_STATUS = {
+  accepted: 'accepted',
+  hidden: 'hidden',
+} as const;
+
+export type FeedModerationStatus = (typeof FEED_MODERATION_STATUS)[keyof typeof FEED_MODERATION_STATUS];
+
 export const FEED_DEFAULT_PAGE = 1;
 export const FEED_DEFAULT_PAGE_SIZE = 20;
 export const FEED_MAX_PAGE_SIZE = 100;

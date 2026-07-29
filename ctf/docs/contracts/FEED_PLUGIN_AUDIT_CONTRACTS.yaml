@@ -468,3 +468,63 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: feed
+    command: feed.community.moderation.hide
+    commandVersion: 1.0.0
+    purpose: content_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        adminCheck: pass_or_fail
+        csrfCheck: pass_or_fail
+        targetExistsCheck: pass_or_fail
+    dataClassesAccessed:
+      - feed_community_post_metadata
+      - feed_community_reply_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      targetType: feed_community_post_or_reply
+      targetId: content_identifier
+      previousStatus: moderation_status
+      newStatus: moderation_status
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: feed
+    command: feed.community.moderation.restore
+    commandVersion: 1.0.0
+    purpose: content_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        adminCheck: pass_or_fail
+        csrfCheck: pass_or_fail
+        targetExistsCheck: pass_or_fail
+    dataClassesAccessed:
+      - feed_community_post_metadata
+      - feed_community_reply_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      targetType: feed_community_post_or_reply
+      targetId: content_identifier
+      previousStatus: moderation_status
+      newStatus: moderation_status
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
