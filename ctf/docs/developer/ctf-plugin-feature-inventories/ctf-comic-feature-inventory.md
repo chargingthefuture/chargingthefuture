@@ -173,7 +173,13 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 3. When unsure, the bot shows a clear pre-approved holding response and hands the question
    to a human — the user is never shown speculative content.
 4. Users can rate any answer (`helpful / not_helpful / flagged`) — feeds the training loop.
-5. **Contribute your own writing (`/knowledge`).** The path is `/knowledge`, deliberately **not**
+5. **Contribute your own writing (`/knowledge`).** **Open to any signed-in member, and it is a route
+   INTO verification** (owner decision, 2026-07-29): judging a contribution means opening the
+   contributor's Quora account and seeing a real person writing real things, which is the same look
+   Unlock asks for — so gating it behind Unlock would review the same account twice. A **signed-out
+   visitor gets a public landing page**, because this is the URL the invitation post links to from
+   Quora and most people opening it have no account yet.
+   The path is `/knowledge`, deliberately **not**
    `/contribute` — the Contributions plugin is a different thing entirely (the fundraiser and donation
    surface), and two member-facing paths a word apart would be a standing source of confusion (owner
    decision, 2026-07-29). The screen is titled "Knowledge library" for the same reason. A member can lend their own public Quora
@@ -262,7 +268,13 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   via Ollama (captured as a bot turn), enqueues to `comic_review_queue`, and returns **only a
   safe holding response (HTTP 202)** — never the unreviewed draft. Safety-flagged turns skip
   generation and are queued human-first.
-- `POST /api/comic/contributions` (`comic.contribution.submit`) — signed-in member. Accepts either
+- `POST /api/comic/contributions` (`comic.contribution.submit`) — **any signed-in member**
+  (`requireComicContributionAccess`, `minUnlockTier: 'any_authenticated'` — deliberately looser than
+  the rest of comic, which stays `approved_full`). Optionally carries `quoraProfileUrl`: when the
+  member has **no Quora URL on file**, it opens a **pending** Unlock submission from it (never an
+  approval) audited as `unlock.verification.submit` with `source: comic_knowledge_contribution`.
+  Best-effort and run *after* the contribution is stored, so a failure cannot lose the writing.
+  Accepts either
   **`kind=links`** (the default: pasted posts, each with a quora.com URL as provenance — nothing is
   fetched) or **`kind=export`** (a Quora export `.zip`, multipart, 25 MB cap), plus the consent
   payload. **Consent is validated before the
@@ -674,6 +686,28 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-07-29 (later): **Contributing is a route INTO verification, and `/knowledge` gets a public
+  landing page (owner decision).** Judging a contribution means opening the contributor's Quora
+  account and seeing a real person writing real things — exactly the look Unlock verification asks
+  for. Gating contribution behind Unlock reviews the same account twice and makes the most useful
+  thing a new member can do into something they wait for. (This settles a mismatch found the same
+  day: the page was `any_authenticated` while the routes were `approved_full`, so a member could fill
+  in the whole form and only then be refused. Resolved by loosening the routes, not tightening the
+  page — PR #1963, which did the opposite, was closed unmerged.)
+  - **Access:** new `requireComicContributionAccess` (`any_authenticated`) on the three contribution
+    routes; the rest of comic stays `approved_full`.
+  - **Unlock linkage** (`lib/comic/contribution-unlock-link.ts`): the submission may carry a Quora
+    profile URL. With **no URL on file** it opens a normal **pending** Unlock submission, audited
+    `source: comic_knowledge_contribution`. Never an auto-approval — one review now answers both
+    questions instead of one blocking the other. Best-effort, after the contribution is stored, so a
+    failure cannot lose someone's writing; the receipt states whether verification started. A member
+    who already has a URL on file is **never asked again** (owner decision), and the server re-checks
+    rather than trusting the page, so two conflicting URLs cannot reach one account this way.
+  - **Public landing page** (`comic-knowledge-public-shell.tsx`) for signed-out visitors.
+  - `normalizeQuoraProfileUrl` moved to `lib/unlock/quora-url.ts` and re-exported from
+    `app/api/unlock/_lib.ts`: `lib` must not import from `app`. It stays separate from the looser
+    `lib/directory/quora-url.ts` — verification needs the profile itself.
 
 - 2026-07-29: **Third-party identifier scrub applied to production; the one-time tooling is deleted
   (#1912 closed out).** The first seed import ran before `redact()` covered Quora profile links and

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireComicReadAccess } from '../../../_lib';
+import { ensureMutationCsrf, requireComicContributionAccess } from '../../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { logComicAudit } from 'lib/comic/audit';
 import { withdrawContribution } from 'lib/comic/contribution-repository';
@@ -18,7 +18,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 // that marks it withdrawn, so there is no window where the submission reads as withdrawn while the
 // assistant is still quoting it.
 export async function POST(request: Request, context: RouteContext) {
-  const gate = await requireComicReadAccess();
+  const gate = await requireComicContributionAccess();
   if (!gate.allowed) return gate.response;
 
   const csrfDeny = ensureMutationCsrf(request);
