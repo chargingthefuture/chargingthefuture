@@ -29,6 +29,27 @@ export async function requireComicReadAccess(): Promise<ComicApiGate> {
   };
 }
 
+// Contribution routes only. Unlike the rest of comic (which needs `approved_full`), lending your
+// own public writing is open to ANY signed-in member — because contributing is now a route INTO
+// verification, not something gated behind it (owner decision, 2026-07-29). A member submits their
+// writing with their Quora profile URL; the owner has to look at that URL to judge the contribution
+// anyway, and that same look is the Unlock review. Requiring Unlock first would make the front door
+// depend on the room behind it.
+export async function requireComicContributionAccess(): Promise<ComicApiGate> {
+  const decision = await evaluatePluginAccess({ minUnlockTier: 'any_authenticated', requireUsername: false });
+  if (!decision.allowed) {
+    return {
+      allowed: false,
+      response: NextResponse.json(decision, { status: decision.status }),
+    };
+  }
+
+  return {
+    allowed: true,
+    auth: decision,
+  };
+}
+
 export async function requireComicAdminAccess(): Promise<ComicApiGate> {
   const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {

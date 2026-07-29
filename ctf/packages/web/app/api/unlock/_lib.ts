@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { ensureUnlockAdmin } from 'lib/unlock/policy';
 import { checkMutationOrigin } from 'lib/auth/csrf';
-import { reportError } from 'lib/observability/report';
 
 // CSRF guard for unlock admin mutations that move ServiceCredits (reward grant determination, revoke).
 // Requires the same `x-ctf-csrf: 1` confirmation header + same-origin check the ServiceCredits admin uses,
@@ -33,29 +32,10 @@ export function resolveUnlockRequestId(request: Request): string {
   );
 }
 
-// Validate and normalize a Quora profile URL. Returns the canonical form (host lowercased, hash and
-// query stripped) or null when the URL is not a valid Quora profile link. Shared by the member
-// submission path and the admin URL-edit path so both apply the exact same rules.
-export function normalizeQuoraProfileUrl(rawUrl: string): string | null {
-  try {
-    const parsed = new URL(rawUrl.trim());
-    const host = parsed.hostname.toLowerCase();
-    if (host !== 'quora.com' && host !== 'www.quora.com') {
-      return null;
-    }
-
-    if (!parsed.pathname.startsWith('/profile/')) {
-      return null;
-    }
-
-    parsed.hash = '';
-    parsed.search = '';
-    return parsed.toString();
-  } catch (error) {
-    reportError(error, { area: 'unlock', op: 'normalize_quora_url' });
-    return null;
-  }
-}
+// Re-exported from lib/unlock/quora-url.ts so every existing caller here is unchanged. It moved to
+// lib/ because the knowledge-library contribution path opens an Unlock submission too, and lib must
+// not import from app.
+export { normalizeQuoraProfileUrl } from 'lib/unlock/quora-url';
 
 export async function requireUnlockUserAccess() {
   const decision = await evaluatePluginAccess({ requireUsername: false, minUnlockTier: 'any_authenticated' });

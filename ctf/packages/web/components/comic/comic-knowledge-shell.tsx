@@ -46,7 +46,7 @@ const STATUS_LABEL: Record<ContributionSummary['status'], string> = {
   withdrawn: 'Withdrawn',
 };
 
-export function ComicKnowledgeShell() {
+export function ComicKnowledgeShell({ askForQuoraUrl = false }: { askForQuoraUrl?: boolean }) {
   const { theme } = useTheme();
   const t = getComicTokens(theme);
 
@@ -57,10 +57,16 @@ export function ComicKnowledgeShell() {
   const [posts, setPosts] = useState<LinkedPostDraft[]>([{ url: '', text: '' }]);
   const [agreed, setAgreed] = useState<Set<string>>(new Set());
   const [thirdPartyNote, setThirdPartyNote] = useState('');
+  // Only rendered when the member has no Quora URL on file. Submitting it opens an Unlock
+  // submission, so contributing doubles as verification instead of waiting behind it.
+  const [quoraProfileUrl, setQuoraProfileUrl] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ContributionSummary | null>(null);
+  // What happened to the Unlock submission this contribution opened, so the receipt can say so.
+  // Silence here would leave a member unsure whether they still need to verify separately.
+  const [unlockLink, setUnlockLink] = useState<string | null>(null);
   const [history, setHistory] = useState<ContributionSummary[]>([]);
 
   const allAgreed = CONTRIBUTION_CONSENT_CLAUSES.every((clause) => agreed.has(clause.id));
@@ -90,7 +96,10 @@ export function ComicKnowledgeShell() {
   }
 
   const filledPosts = posts.filter((post) => post.url.trim().length > 0 || post.text.trim().length > 0);
-  const canSend = allAgreed && (mode === 'export' ? file !== null : filledPosts.length > 0);
+  const canSend =
+    allAgreed
+    && (mode === 'export' ? file !== null : filledPosts.length > 0)
+    && (!askForQuoraUrl || quoraProfileUrl.trim().length > 0);
 
   async function submit() {
     if (!canSend || submitting) return;
@@ -107,20 +116,25 @@ export function ComicKnowledgeShell() {
       body.set('consentVersion', CONTRIBUTION_CONSENT_VERSION);
       body.set('agreedClauseIds', JSON.stringify([...agreed]));
       body.set('thirdPartyNote', thirdPartyNote.trim());
+      if (askForQuoraUrl) {
+        body.set('quoraProfileUrl', quoraProfileUrl.trim());
+      }
       const res = await fetch('/api/comic/contributions', {
         method: 'POST',
         headers: { 'x-ctf-csrf': '1' },
         body,
       });
       const data = (await res.json().catch(() => null)) as
-        | { contribution?: ContributionSummary; message?: string }
+        | { contribution?: ContributionSummary; message?: string; unlockLink?: string }
         | null;
       if (!res.ok || !data?.contribution) {
         setError(data?.message ?? 'Could not send that file. Nothing was kept.');
       } else {
         setReceipt(data.contribution);
+        setUnlockLink(data.unlockLink ?? null);
         setFile(null);
         setPosts([{ url: '', text: '' }]);
+        setQuoraProfileUrl('');
         setAgreed(new Set());
         setThirdPartyNote('');
         void loadHistory();
@@ -286,6 +300,37 @@ export function ComicKnowledgeShell() {
               <span>{clause.text}</span>
             </label>
           ))}
+
+          {/* Shown only to a member with no Quora URL on file. Submitting it opens an Unlock
+              submission, so contributing IS the verification step rather than something waiting
+              behind it — the reviewer opens this account to judge the writing either way. */}
+          {askForQuoraUrl ? (
+            <>
+              <label
+                htmlFor="quora-profile-url"
+                style={{ display: 'block', marginTop: 16, fontSize: 13, fontWeight: 600, color: t.SUBTLE }}
+              >
+                Your Quora profile link
+              </label>
+              <p style={{ fontSize: 12, lineHeight: 1.55, color: t.MUTED, margin: '4px 0 0' }}>
+                Open your own Quora profile and copy the address. It is how it gets checked that you
+                are a real person — the same check joining asks for, done once instead of twice.
+              </p>
+              <input
+                id="quora-profile-url"
+                type="url"
+                inputMode="url"
+                value={quoraProfileUrl}
+                disabled={!allAgreed}
+                onChange={(event) => {
+                  setQuoraProfileUrl(event.target.value);
+                  setError(null);
+                }}
+                placeholder="https://www.quora.com/profile/..."
+                style={fieldStyle(t)}
+              />
+            </>
+          ) : null}
 
           <label
             htmlFor="third-party-note"
@@ -462,6 +507,17 @@ export function ComicKnowledgeShell() {
               {receipt.entryCount === 1 ? 'piece' : 'pieces'} of your writing were kept and are waiting
               to be read.
             </p>
+            {unlockLink === 'submitted' ? (
+              <p style={{ ...bodyStyle(t), color: t.ACCENT }}>
+                Your Quora profile went in for verification at the same time — you do not need to do
+                that separately.
+              </p>
+            ) : unlockLink === 'invalid_url' ? (
+              <p style={{ ...bodyStyle(t), color: '#F59E0B' }}>
+                Your writing was received, but that Quora link was not a profile address, so
+                verification did not start. Finish it on the Unlock screen.
+              </p>
+            ) : null}
             {receipt.kind === 'export' ? (
               receipt.discardedSections.length > 0 ? (
                 <p style={{ ...bodyStyle(t), marginBottom: 0 }}>

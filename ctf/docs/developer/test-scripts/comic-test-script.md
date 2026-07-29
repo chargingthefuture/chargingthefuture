@@ -11,6 +11,39 @@ the tests worth running slowly.
 
 ---
 
+## CMC-C0 · The landing page, and contributing as the way in
+**Role:** a signed-out visitor, then a brand-new signed-in member who has NOT verified
+**Steps:**
+1. Signed out, open `/knowledge`.
+2. Sign up as a fresh account that has never submitted a Quora URL, and open `/knowledge` again.
+3. Tick the six consent lines, paste a post, paste your own Quora **profile** link in the field that
+   appears, and send.
+4. Open `/admin/unlock` as admin.
+5. As a member who **already** has a Quora URL on file, open `/knowledge`.
+6. As a fresh unverified member, send a contribution with a Quora **post** link (not `/profile/`) in
+   that field.
+
+**Expected:**
+- Step 1 → the **public landing page**, not a redirect to sign-in. It says what the library is, what
+  happens to your writing, that you can take it back, and that contributing also verifies you. This
+  is the page the invitation post links to from Quora, so a visitor with no account has to be able to
+  read it and decide.
+- Step 2 → the form loads. An unverified member is **not** turned away — contributing is the way in,
+  not something behind the gate.
+- Step 3 → send is blocked until the profile field is filled; the receipt then says the Quora profile
+  went in for verification at the same time.
+- Step 4 → a **pending** submission for that member is in the queue, with an audit row tagged
+  `source: comic_knowledge_contribution`. **Pending, never auto-approved** — the point is that one
+  review covers both questions, not that review is skipped.
+- Step 5 → **no Quora URL field at all.** A member who already has one on file is never asked again,
+  so two conflicting URLs cannot reach one account by this route.
+- Step 6 → the writing is still kept and the receipt says verification did not start. Losing
+  someone's writing over a malformed link would be the wrong trade.
+
+**Result:** web ☐
+
+---
+
 ## CMC-C1 · Pick a few posts (the default path)
 **Role:** signed-in member · **Surfaces:** web + mobile-responsive
 **Precondition:** two of your own public Quora posts.
