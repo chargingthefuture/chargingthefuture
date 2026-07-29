@@ -2230,6 +2230,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('workforce',          'Workforce',            'Real-time work and skills distribution amongst 5 million survivors globally.',                           'implemented_shell', 50,  TRUE),
   ('skills-hunt',        'SkillsHunt',          'Nominate survivors to build the Directory and grow the economy.', 'implemented_shell', 60,  TRUE),
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
+  ('knowledge',          'Knowledge Library',    'Lend your own public writing so the assistant answers from more than one person.', 'implemented_shell', 66,  TRUE),
   ('foundation',         'Foundation',           'Find talent, tools, repairs, and infrastructure support in real time.',                      'implemented_shell', 70,  TRUE),
   ('lighthouse',         'LightHouse',           'Community housing listings from trauma-informed hosts; ServiceCredits accepted.', 'implemented_shell', 80,  TRUE),
   ('socket-relay',         'SocketRelay',          'Real-time resource sharing across the network.',                        'implemented_shell', 90,  TRUE),
