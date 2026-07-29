@@ -383,11 +383,17 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'comic',
     name: 'Comic',
-    dataSummary: 'Your assistant conversations and answer ratings.',
+    dataSummary: 'Your assistant conversations, answer ratings, and any writing you contributed.',
     serviceScopeSupported: true,
     tables: [
       del('comic_answer_ratings', 'user_id', 'Your answer ratings.'),
       del('comic_conversations', 'user_id', 'Your conversations.'),
+      // Deleting the account deletes the contribution record and, by ON DELETE CASCADE, both every
+      // entry held for review under it AND every comic_knowledge_entries row it produced
+      // (comic_knowledge_entries.contribution_id). Account deletion must not be a weaker promise
+      // than the Withdraw button — and Withdraw only deactivates, so this one actually removes the
+      // words. The cascade is a foreign key rather than a step here so it cannot be forgotten.
+      del('comic_contributions', 'user_id', 'Writing you contributed to the assistant.'),
       // comic_turns / review_queue / training_examples are shared/admin/model data.
     ],
   },

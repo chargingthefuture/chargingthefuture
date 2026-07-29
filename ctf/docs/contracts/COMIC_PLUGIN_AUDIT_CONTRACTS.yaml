@@ -217,3 +217,53 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  # Records the CONSENT, never the contributed content: which wording the member agreed to, when,
+  # how many public pieces survived intake, and which private sections were discarded. The content
+  # itself lives in comic_contributions and is never copied into an audit line.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.contribution.submit
+    commandVersion: 1.0.0
+    purpose: assistant_knowledge_contribution
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        consentVersion: consent_wording_version
+        everyClauseAgreed: pass_or_fail
+    dataClassesAccessed:
+      - comic_contribution_metadata
+    targetContext:
+      contributionId: contribution_identifier
+      entryCount: integer
+      discardedSections: discarded_section_names
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.contribution.withdraw
+    commandVersion: 1.0.0
+    purpose: assistant_knowledge_contribution
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        ownerCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_contribution_metadata
+    targetContext:
+      contributionId: contribution_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

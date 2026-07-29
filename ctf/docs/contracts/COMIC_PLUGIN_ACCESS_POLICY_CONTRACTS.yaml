@@ -200,3 +200,66 @@ policies:
       requiresAdditionalAudit: false
     denyConditions:
       - actor_not_admin
+
+  - pluginId: comic
+    command: comic.contribution.submit
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      # Explicit, per-clause consent — every clause id must be present, and the version submitted
+      # must match the wording currently served. This is the lawful basis for using the content, so
+      # it is checked before the uploaded file is read at all.
+      explicitConsentRequired: true
+      consentVersionMustMatch: true
+      # The archive is parsed in memory and discarded with the request; nothing is written to disk.
+      uploadedFileNeverStored: true
+      # Allowlist: only public sections survive intake. Inbox messages, drafts, and profile data are
+      # dropped before any human reads the submission.
+      privateSectionsStrippedBeforeReview: true
+      rateLimitPerUserPerDay: 5
+    consentRequirements:
+      scopes:
+        - comic_knowledge_contribution
+      # Consent is the basis here, not legitimate interest — a contribution without it is unusable.
+      fallbackLawfulBasis: none
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - consent_not_granted
+      - consent_version_mismatch
+      - archive_not_readable
+      - rate_limit_exceeded
+
+  - pluginId: comic
+    command: comic.contribution.withdraw
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      # A member may only withdraw their own contribution; ownership is enforced inside the query.
+      ownerOnly: true
+      # Withdrawal deactivates the knowledge rows in the same transaction, so the assistant cannot
+      # still be quoting a contribution that reads as withdrawn.
+      deactivatesKnowledgeRowsAtomically: true
+    consentRequirements:
+      scopes:
+        - comic_knowledge_contribution
+      fallbackLawfulBasis: none
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - contribution_not_found
+      - contribution_not_owned

@@ -173,6 +173,21 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 3. When unsure, the bot shows a clear pre-approved holding response and hands the question
    to a human — the user is never shown speculative content.
 4. Users can rate any answer (`helpful / not_helpful / flagged`) — feeds the training loop.
+5. **Contribute your own writing (`/contribute`).** A member can lend their own public Quora
+   answers and posts to the assistant's reference library, so the bot answers from more than one
+   person's experience. They get their Quora export (Settings → Privacy → Download your
+   information) and upload the `.zip` exactly as it arrived. On the same page they read and tick
+   six consent statements — one checkbox each, no bundled "agree to all" — covering: it is their own
+   public writing; the one use permitted; they keep every right; they can withdraw; a human reads it
+   and not everything is used; parts naming other people may be cut. An optional box asks whether
+   anyone else is named, so a reviewer knows to look.
+   On arrival the export is parsed **in memory** and only the public sections are kept — inbox
+   messages, drafts, and profile data are discarded before any person opens it, and **the `.zip`
+   itself is never stored**. The member does not have to clean the file first. They immediately see a
+   receipt naming how many pieces were kept and what was thrown away.
+6. **Withdraw a contribution** at any time from the same page. Withdrawal deactivates every
+   knowledge row that contribution produced, in the same transaction — real because the assistant
+   *retrieves* from a table at answer time rather than being trained on the text.
 
 ## Target Admin / Owner Features
 
@@ -207,6 +222,19 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   via Ollama (captured as a bot turn), enqueues to `comic_review_queue`, and returns **only a
   safe holding response (HTTP 202)** — never the unreviewed draft. Safety-flagged turns skip
   generation and are queued human-first.
+- `POST /api/comic/contributions` (`comic.contribution.submit`) — signed-in member. Accepts a Quora
+  export `.zip` (multipart, 25 MB cap) plus the consent payload. **Consent is validated before the
+  file is read at all**, and the submitted `consentVersion` must match the current
+  `CONTRIBUTION_CONSENT_VERSION` (a cached older page is refused rather than recorded as having
+  agreed to wording it never showed). The archive is read in memory — only `index.html` is
+  decompressed, entry names are validated, and a decompressed-size ceiling guards against a zip
+  bomb; nothing is written to disk or executed. Public sections are kept, everything else discarded.
+  Rate-limited to 5 per member per 24h. Audits the **consent**, never the content.
+- `GET /api/comic/contributions` — signed-in member. The caller's own contribution history.
+- `POST /api/comic/contributions/[id]/withdraw` (`comic.contribution.withdraw`) — signed-in member,
+  own contribution only (scoped inside the query, so another member's id is indistinguishable from a
+  missing one). Marks it withdrawn and deactivates its `comic_knowledge_entries` rows in one
+  transaction, so there is no window where it reads as withdrawn while still being quoted.
 - `GET /api/comic/review` (`comic.reply.generate` data surface) — admin. Paginated list of
   pending review items (asker question + draft + intent/confidence + safety category).
 - `POST /api/comic/review/[turnId]/resolve` (`comic.review.resolve`) — admin. Approve / correct
@@ -330,6 +358,28 @@ not_helpful / flagged ratings) are the **two training inputs** for the @comic as
    records which entries grounded it in `comic_turns.grounding_entry_ids` (jsonb array, default
    `[]`) so grounded vs ungrounded drafts can be compared on correction rate — the #504
    "measure" step.
+
+7. `comic_contributions` — **member-contributed writing, and the consent that permits using it
+   (added 2026-07-29).** One row per submitted Quora export (`id` uuid pk, `user_id`, `status` ∈
+   pending_review|accepted|declined|withdrawn, `consent_version` — WHICH wording the member read, so a
+   later edit to the form cannot retroactively be claimed as something an earlier contributor agreed
+   to, `consent_granted_at`, `third_party_note` — the member's own statement about anyone named in
+   their posts, `entry_count`, `discarded_sections` jsonb — what the automatic strip threw away, shown
+   back as the contributor's receipt, `reviewed_by`/`reviewed_at`/`decline_reason`, `granted_at` —
+   set once the ServiceCredits recognition grant is made so a re-review cannot double-grant,
+   `withdrawn_at`, `created_at`, `updated_at`). Indexed on (`user_id`, `created_at` desc) and
+   (`status`, `created_at` desc).
+   **What is deliberately NOT stored: the uploaded `.zip`.** The archive is parsed in memory and
+   discarded with the request — there is no file at rest to leak and nothing to delete later. Inbox
+   messages, drafts, and profile data never reach this table at all; they are dropped by the
+   allowlist in `lib/comic/quora-export-intake.ts` before any human sees them.
+8. `comic_contribution_entries` — the surviving public entries of one contribution, held for review
+   (`id` uuid pk, `contribution_id` uuid FK → `comic_contributions` ON DELETE CASCADE, `entry_type` ∈
+   answer|post|comment|submission, `question` null, `content` text, `knowledge_entry_id` uuid null —
+   set once a reviewer promotes it, so re-running review is safe, `excluded` boolean, `authored_at`
+   null, `created_at`). Indexed on `contribution_id`. **Nothing here is visible to the assistant** —
+   an entry only reaches the bot once it is copied into `comic_knowledge_entries`. The gap between
+   these two tables *is* the human review step.
 
 **Rasa tracker store:** Rasa's own SQL event store, provisioned in the same Neon Postgres
 (managed by Rasa, not hand-authored here). **Still deferred** — the scaffolded Rasa service is
@@ -572,6 +622,44 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-07-29: **Members can contribute their own public Quora writing, with the consent form on the
+  page (`/contribute`).** The assistant answers from one person's writing; this is the intake that
+  lets it answer from more than one. New page, two member routes, two tables.
+  **The consent form is on the page itself**, not behind a link, because a link is a thing people
+  click past. Six clauses, one checkbox each, no bundled "agree to all" — own public writing / the
+  single permitted use / contributor keeps every right / withdrawal / a human reads it and not
+  everything is used / parts naming others may be cut. The clauses render from
+  `lib/comic/contribution-consent.ts`, the same module the server version-stamps into the record, so
+  the displayed wording and the agreed wording cannot come apart; changing what a contributor agrees
+  to requires bumping `CONTRIBUTION_CONSENT_VERSION`, and a page cached from before a change is
+  refused rather than recorded as consent to wording it never showed. The file picker stays disabled
+  until all six are ticked, so the order is always read-then-choose.
+  **The contributor is not asked to clean their own export.** A Quora `.zip` bundles inbox messages,
+  drafts, and profile data alongside the public posts; most people would get the stripping wrong, and
+  the ones who got it wrong would be the ones harmed. So it happens automatically, in
+  `lib/comic/quora-export-intake.ts`, on an **allowlist** — an unrecognized section is discarded, so a
+  new Quora section containing private mail would be dropped for never having been named. The member
+  gets an immediate receipt naming what was kept and what was thrown away.
+  **The uploaded archive is never stored.** It is parsed in memory (`lib/comic/contribution-archive.ts`:
+  only `index.html` decompressed, entry names validated against traversal, decompressed-size ceiling
+  against a zip bomb, nothing executed and no shell invoked) and discarded with the request — the
+  upload endpoint takes files from anyone signed in, and the people this community exists to protect
+  against are motivated to send a malicious one.
+  **Withdrawal is real, and the design is why.** `POST /api/comic/contributions/[id]/withdraw`
+  deactivates every knowledge row a contribution produced in the same transaction that marks it
+  withdrawn. That is possible because the assistant retrieves from a table at answer time rather than
+  being trained on the text. Account deletion goes further and removes them, enforced by
+  `comic_knowledge_entries.contribution_id` ON DELETE CASCADE rather than a step in the orchestrator,
+  so it cannot be forgotten. Comic's deletion-registry entry and deletion contract updated to match.
+  Schema: `comic_contributions`, `comic_contribution_entries`, and `comic_knowledge_entries.contribution_id`.
+  New commands `comic.contribution.submit` / `comic.contribution.withdraw` in the command, access-policy,
+  and audit contracts — the audit records the **consent**, never the content. New dependency: `fflate`
+  (zip reading, no transitive dependencies).
+  **Not in this slice:** the admin review surface that accepts a contribution, promotes entries into
+  `comic_knowledge_entries`, and makes the ServiceCredits recognition grant. Contributions land in
+  `pending_review` and are inert until that ships — nothing a member sends can reach the assistant on
+  its own.
 
 - 2026-07-26: **Seed corpus drops URLs — an accuracy decision, not a privacy one (owner, 2026-07-26).** The seed's value is the writing, not a link directory, and links are its most perishable part. Measured across the 1,800 seed records: **35% contain a URL, and 24% contain a URL the Quora export itself truncated with `...`** — already unusable and unfixable from this data. Others point at routes that no longer exist (e.g. `/apps/directory/public/<id>`; the Directory's public projection was removed 2026-05-18 and legacy URLs are deliberately not redirected). Worst case, a link to another member's account can rot into a safety failure: that account may be deleted, or taken over, and a bot answer sending a survivor there is not merely out-of-date. `redact()` now replaces every URL with `[link removed]` (Quora profile links keep their own `[profile link removed]` label). **Prose is untouched** — people and places are still named, so attribution survives ("Nat Morris created a list of questions…"); only the fragile pointer goes. Average answer length is unchanged at ~514 characters. The bot should tell a member to open LightHouse, not hand them a URL it cannot vouch for. Applies to both parsers and, via `scrubComicKnowledgeIdentifiers.mjs`, to the rows already imported (609 of 1,575 change).
 - 2026-07-26: **Second Quora account export parsed and staged for import (#504; data-only, no schema impact).** The owner supplied the second account's Quora export ("Pedigree101"), the last open dependency on #504. Parsed with the existing `parseQuoraExportToComicDataset.mjs`: **225 records** (43 answers, 72 space posts, 87 comments, 23 space submissions), 16 exact duplicates dropped, and a post-run scan confirming **zero** remaining emails, Signal links, or wallet addresses. Staged as a temporary data file (`ctf/scripts/data/comic-knowledge-seed-2.jsonl`) plus a one-time manually-triggered workflow (`.github/workflows/import-comic-knowledge-2.yml`), the same pattern the first import used; both are deleted after one green run (tracked on its own cleanup issue). The import is idempotent (sha256 content hash + `ON CONFLICT DO NOTHING`), so content overlapping the first account's 1,575 entries inserts nothing twice. **The companion "data" export was deliberately excluded**: it holds account metadata (139 bookmarks, 101 user follows, 11 user blocks, 25 user mutes, topic/question mutes) plus the owner's own name/email/profile URL — settings and ~137 third-party identities, not "what good help looks like". Training on it would add no answer-quality signal and would risk a fine-tuned model emitting another member's name from a block list, which #504's de-identification rule exists to prevent. Only owner-authored public content is imported.

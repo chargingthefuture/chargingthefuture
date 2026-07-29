@@ -28,6 +28,7 @@
     "@sentry/nextjs": "^10.21.0",
     "@stream-io/video-react-sdk": "^1.19.0",
     "decimal.js": "^10.6.0",
+    "fflate": "^0.8.3",
     "getstream": "^8.7.0",
     "hls.js": "^1.5.18",
     "lucide-react": "^1.8.0",

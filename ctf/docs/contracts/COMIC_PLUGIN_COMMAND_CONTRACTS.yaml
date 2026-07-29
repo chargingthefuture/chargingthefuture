@@ -191,6 +191,69 @@ contracts:
     idempotency: true
 
   - pluginId: comic
+    command: comic.contribution.submit
+    version: 1.0.0
+    description: >-
+      Accept a member's own Quora export and keep only their public answers and posts as candidate
+      reference material for the assistant. Signed-in members. Consent is validated BEFORE the file is
+      read at all, and the submitted consentVersion must match the current wording — a page cached
+      from before a consent change is refused rather than recorded as agreement to wording it never
+      displayed. The archive is parsed in memory (only index.html decompressed, entry names
+      validated, decompressed-size ceiling against a zip bomb); nothing is written to disk or
+      executed, and THE UPLOADED FILE IS NEVER STORED. Inbox messages, drafts, and profile data are
+      dropped by an allowlist before any human reads the submission. Nothing accepted here is visible
+      to the assistant until a human promotes it into comic_knowledge_entries. Rate-limited to 5 per
+      member per 24 hours. The audit records the CONSENT, never the content.
+    inputSchema:
+      archive:
+        type: file
+        required: true
+      consentVersion:
+        type: string
+        required: true
+      agreedClauseIds:
+        type: array
+        required: true
+      thirdPartyNote:
+        type: string
+        required: false
+    outputSchema:
+      contribution:
+        type: object
+    dataAccess:
+      - comic_contributions
+      - comic_contribution_entries
+    purpose: assistant_knowledge_contribution
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: comic
+    command: comic.contribution.withdraw
+    version: 1.0.0
+    description: >-
+      Withdraw a contribution at the contributor's own request. Scoped to the caller inside the query,
+      so another member's id is indistinguishable from one that does not exist. Marks the contribution
+      withdrawn and deactivates every comic_knowledge_entries row it produced in the SAME transaction,
+      so there is no window in which it reads as withdrawn while the assistant is still quoting it.
+      This command is what makes the consent form's promise of withdrawal real, and it is only
+      possible because the assistant retrieves from a table at answer time rather than being trained
+      on the text — words in model weights could not be withdrawn.
+    inputSchema:
+      contributionId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - comic_contributions
+      - comic_contribution_entries
+      - comic_knowledge_entries
+    purpose: assistant_knowledge_contribution
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: comic
     command: comic.training.export
     version: 1.1.0
     description: >-

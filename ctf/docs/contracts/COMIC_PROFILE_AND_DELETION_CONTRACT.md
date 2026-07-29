@@ -66,6 +66,23 @@ fields.
   - Retention period: medium-lived (quality signal)
   - Legal/compliance note: helpful/not_helpful/flagged rating per answered turn; CASCADE-deleted with the rated turn
 
+- Table/entity: `comic_contributions` (+ `comic_contribution_entries`)
+  - Contains personal data? yes — the member's own public Quora writing, plus their consent record
+    and any note they wrote about third parties named in their posts.
+  - Retention period: long-lived while the member wants it in the library; removed on withdrawal of
+    the account, and deactivated on withdrawal of the contribution.
+  - Legal/compliance note: the lawful basis is the member's explicit, per-clause consent, captured at
+    submit time with the version of the wording they read (`consent_version`) — a later edit to the
+    form cannot be claimed as agreement from an earlier contributor. **The uploaded `.zip` is never
+    stored**: it is parsed in memory and discarded with the request, so there is no archive at rest.
+    Inbox messages, unpublished drafts, and profile data are dropped by an allowlist before any human
+    reads the submission, so the contributor is not relied upon to strip them.
+  - Right to erasure: deliverable in practice, not just on paper, because the assistant **retrieves**
+    from `comic_knowledge_entries` at answer time rather than being trained on the text. Withdrawal
+    deactivates those rows; account deletion removes them outright via
+    `comic_knowledge_entries.contribution_id` ON DELETE CASCADE. Words absorbed into model weights
+    could not be withdrawn, which is why the design does not absorb them.
+
 ## 5) Service-Scoped Deletion Contract
 
 When user deletes AI Assistant usage only:
@@ -74,6 +91,10 @@ When user deletes AI Assistant usage only:
   - `comic_conversations` owned by the user (CASCADE removes `comic_turns`, which CASCADEs to
     `comic_review_queue`, `comic_training_examples`, and `comic_answer_ratings` derived from those
     turns)
+  - `comic_contributions` owned by the user, which CASCADEs to `comic_contribution_entries` and to
+    every `comic_knowledge_entries` row that contribution produced — so deleting the data also stops
+    the assistant quoting it. Account deletion must never be a weaker promise than the member's own
+    Withdraw button.
 - Anonymize/pseudonymize:
   - reviewer attribution on retained supervision records where hard delete is not policy-allowed
 - Retain for compliance/fraud/finance:
