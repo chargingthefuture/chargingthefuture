@@ -122,7 +122,7 @@ const STAT_PROVIDERS = [
         { label: 'different skills people have listed', value: distinctSkills.rows[0].n },
         { label: 'skills available to pick from in total', value: totalSkills.rows[0].n },
         {
-          label: 'documented skills toward a full economy',
+          label: 'documented skills toward an economy',
           value: `${documentedNow} of ${FULL_ECONOMY_SKILL_BASELINE} (${pctOfBaseline}%) — all ${FULL_ECONOMY_SKILL_BASELINE} would be about $300 billion in community value`,
         },
       ];
@@ -253,7 +253,7 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
     messages: [
       {
         role: 'user',
-        content: `This week's whole-community totals:\n\n${statsForPrompt}\n\nWrite a community snapshot. Return ONLY a JSON object with these exact keys:\n- title: A short, plain in-list title (max 80 chars), e.g. "Community activity — ${today}".\n- quoraDraft: A 2-4 short-paragraph Quora post, written like a personal note. Lead with the SocketRelay open posts and the Directory numbers, since those show need most clearly. Work in the skills-documented-so-far line — how many of the 650 skills a full economy needs are documented now, and the percentage — since it shows how the economy is filling in; use only the exact numbers given for it. When you first name each app, paste its exact direct link (given above as "direct link: ...") right after the name in parentheses, so a reader can tap straight through to it. Remember an open-post count is a count of posts, not people. Plain words, ~6th-grade reading level. Make it concrete: a number, what it means, and one simple thing a reader can do (join, list a skill, answer an open post). One sentence on where the project lives, giving the GitHub URL exactly as ${repoUrl}. Do not invent numbers or links, do not sell importance, no rhetorical questions.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
+        content: `This week's whole-community totals:\n\n${statsForPrompt}\n\nWrite a community snapshot. Return ONLY a JSON object with these exact keys:\n- title: A short, plain in-list title (max 80 chars), e.g. "Community activity — ${today}".\n- quoraDraft: A 2-4 short-paragraph Quora post, written like a personal note. Lead with the SocketRelay open posts and the Directory numbers, since those show need most clearly. Work in the skills-documented-so-far line — how many of the 650 skills an economy needs are documented now, and the percentage — since it shows how the economy is filling in; use only the exact numbers given for it. When you first name each app, paste its exact direct link (given above as "direct link: ...") right after the name in parentheses, so a reader can tap straight through to it. Remember an open-post count is a count of posts, not people. Plain words, ~6th-grade reading level. Make it concrete: a number, what it means, and one simple thing a reader can do (join, list a skill, answer an open post). One sentence on where the project lives, giving the GitHub URL exactly as ${repoUrl}. Do not invent numbers or links, do not sell importance, no rhetorical questions.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
       },
     ],
   }),
