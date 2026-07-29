@@ -675,6 +675,24 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-07-29: **Third-party identifier scrub applied to production; the one-time tooling is deleted
+  (#1912 closed out).** The first seed import ran before `redact()` covered Quora profile links and
+  @handles, so live rows could carry another person's identity into a model prompt. The dry run
+  scanned 1,575 rows and reported 609 changes; the apply run (workflow_dispatch, 2026-07-29) landed
+  them. Most of the 609 are the URL removal — an **accuracy** decision, not a privacy one: a quarter
+  of the seed's links were already truncated by Quora's own exporter, old app deep links point at
+  routes that no longer exist, and a link to another member's account can rot into something worse
+  than out-of-date if that account is deleted or taken over.
+  `.github/workflows/scrub-comic-knowledge-identifiers.yml` and
+  `ctf/scripts/scrubComicKnowledgeIdentifiers.mjs` are now removed: they were catch-up for rows
+  imported before the fix, and the fix itself lives permanently in the parsers' shared `redact()` and
+  in `lib/comic/redact.ts`. Nothing to re-run.
+  **Note for the record:** the scrub corrected the **database**. The original seed file is still in
+  git history at commit `6f423fe` with 14 profile links naming 9 people. Those are public Quora posts
+  and links to accounts their owners made public — the risk was always accuracy rather than
+  disclosure — but removing them from history would need a force-push rewrite of a public repo, which
+  has not been done.
+
 - 2026-07-29: **Quora space renamed — `space` label updated in the retained seed export (data-only, no schema impact).** The owner renamed their Quora space (subdomain `tiskillsnetwork.quora.com` → `skillseconomy.quora.com`; visible name "TI Skills Network" → "Skills Economy"). In `ctf/scripts/data/comic-knowledge-seed-2.jsonl` the `space` metadata field was changed from `TI Skills Network` to `Skills Economy` on the 70 rows for that space (the parser maps `rec.space` to the knowledge-entry `title` when a row has no explicit title — see `importComicKnowledge.mjs`), so a future re-import grounds under the current space name. Left exact: post `url` values (never imported, and several encode the old subdomain inside the canonical slug — rewriting would corrupt them) and every "TI Skills Network" mention inside verbatim post `content` (a member's own words). Note: this repo file is the retained source-of-record; the rows already imported into `comic_knowledge_entries` are not changed by the seed edit. To bring the live rows in step, a one-time script `ctf/scripts/renameComicSpaceTitle.mjs` plus a manually-triggered workflow (`.github/workflows/rename-comic-space-title.yml`) update the `title` from `TI Skills Network` to `Skills Economy` — matched exactly on `title` so only space-post rows are touched; `content` is left verbatim and `content_hash` is not recomputed (title is not part of the hash), so import idempotency is unaffected. Dry-run by default. The owner ran the apply job green against production, so the live rows now carry the new title; per the one-time-tooling pattern, `ctf/scripts/renameComicSpaceTitle.mjs` and `.github/workflows/rename-comic-space-title.yml` have since been removed. All 225 seed lines re-validated as JSON.
 - 2026-07-29: **Members can contribute their own public Quora writing, with the consent form on the
   page (`/knowledge`).** The path and the screen title avoid the word "contribute" on purpose: the
