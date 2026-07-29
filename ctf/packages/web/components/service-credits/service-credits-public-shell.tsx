@@ -12,11 +12,11 @@ import { getServiceCreditsTokens } from './sc-shared';
 const EARN_GREEN = '#22C55E';
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-// The earn/spend lists describe how the Hub economy works (program rules), not per-user balances or
+// The earn/spend lists describe how the Skills Economy works (program rules), not per-user balances or
 // fabricated transactions, so they are safe to render in a signed-out public shell. They are derived
 // from the SAME shared constants the signed-in Earn tab (sc-earn-tab.tsx) renders, so the public
 // teaser can never drift from the real earn model: a few platform-funded rewards (verify your
-// account, SkillsHunt, fundraiser contributions) plus peer-to-peer trading across the Hub. No
+// account, SkillsHunt, fundraiser contributions) plus peer-to-peer trading across Skills Economy. No
 // invented amounts — each value comes straight from the shared model, and peer-to-peer spend is
 // member-set, so it shows as "Variable".
 const EARN_WAYS = PLATFORM_EARN_METHODS.map((m) => ({ action: m.title, credits: m.credits }));
@@ -70,7 +70,7 @@ function MobileServiceCreditsPublic({ signInUrl, verifyUrl }: { signInUrl: strin
  * experience pixel-faithful to the ServiceCreditsPublic (desktop) and
  * MobileServiceCreditsPublic (phone) design mockups, with sign-in affordances
  * pointing at the real hosted sign-in URL. It shows no private or per-user data:
- * the earn/spend lists are static marketing copy describing the Hub economy's
+ * the earn/spend lists are static marketing copy describing the Skills Economy's
  * rules, not any per-user balance or transaction history.
  */
 export function ServiceCreditsPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {

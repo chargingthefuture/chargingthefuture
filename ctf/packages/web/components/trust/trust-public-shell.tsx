@@ -64,7 +64,7 @@ function MobileTrustPublic({ signInUrl, verifyUrl }: { signInUrl: string; verify
             <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>Sign in to build yours</div>
           </div>
           <a href={verifyUrl ?? signInUrl} style={{ width: '100%', padding: '13px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', boxSizing: 'border-box', textDecoration: 'none' }}>
-            {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
+            {verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}
           </a>
         </div>
       </div>
