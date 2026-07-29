@@ -203,11 +203,19 @@ policies:
 
   - pluginId: comic
     command: comic.contribution.submit
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles:
       - member
+    # ANY signed-in member — deliberately looser than the rest of comic (owner decision, 2026-07-29).
+    # Contributing is a route INTO verification: judging a contribution means opening the
+    # contributor's Quora account, the same look Unlock asks for, so gating it behind Unlock would
+    # review the same account twice.
+    minUnlockTier: any_authenticated
     attributePolicies:
       tenancy: same_workspace
+      # With no Quora URL on file, the submission opens a PENDING Unlock submission from the one
+      # supplied. Never an auto-approval; the owner still reviews.
+      maySeedPendingUnlockSubmission: true
       # Explicit, per-clause consent — every clause id must be present, and the version submitted
       # must match the wording currently served. This is the lawful basis for using the content, so
       # it is checked before the uploaded file is read at all.
@@ -239,9 +247,10 @@ policies:
 
   - pluginId: comic
     command: comic.contribution.withdraw
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles:
       - member
+    minUnlockTier: any_authenticated
     attributePolicies:
       tenancy: same_workspace
       # A member may only withdraw their own contribution; ownership is enforced inside the query.
