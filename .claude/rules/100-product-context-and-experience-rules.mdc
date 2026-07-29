@@ -4,7 +4,7 @@
 Provide mandatory context so implementation decisions protect users and prevent harmful product behavior.
 
 ## Product Identity
-- Product name: TI Skills Economy.
+- Product name: Skills Economy (short form SE). The old "TI Skills Economy (TSE)" is retired (see `ctf/docs/BRAND_VOICE_LEXICON.md`).
 - Mission: a psyop-free skills economy designed exclusively for human trafficking survivors.
 - Operating model: single secure account with multiple plugins under one cohesive platform.
 
