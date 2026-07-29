@@ -33,12 +33,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid payload.' }, { status: 400 });
   }
 
-  try {
-    const idempotencyKey =
-      typeof input.idempotencyKey === 'string' && input.idempotencyKey.trim().length > 0
-        ? input.idempotencyKey.trim()
-        : `foundation-${gate.auth.userId}-${Date.now()}`;
+  // A ServiceCredits transfer must be idempotent on retry, so the caller must supply a stable
+  // idempotencyKey (one per user action, reused across network retries). The previous fallback keyed on
+  // Date.now(), which changed on every request, so a client retry created a DUPLICATE transfer instead of
+  // replaying the first one — a money-safety gap (issue #1957). Require the key rather than invent one.
+  const idempotencyKey = typeof input.idempotencyKey === 'string' ? input.idempotencyKey.trim() : '';
+  if (idempotencyKey.length === 0) {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'idempotencyKey is required.' },
+      { status: 400 },
+    );
+  }
 
+  try {
     const tx = await createTransfer({
       senderUserId: gate.auth.userId,
       recipientUserId: input.toUserId,

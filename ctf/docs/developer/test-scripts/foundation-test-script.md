@@ -503,7 +503,7 @@ Result: web ☐
 **Steps:**
 1. Open the provider's profile, click "Connect now," complete the consent dialog, and click "Start call."
 
-**Expected:** The ring is rejected before it is placed. The UI shows a clear error (insufficient funds). No ring state appears on the provider's side. No credits are moved.
+**Expected:** The ring is rejected before it is placed. The UI shows a clear error (insufficient funds). No ring state appears on the provider's side. No credits are moved. Terminal-state integrity: if a call has already reached a terminal state (declined / timed_out / ended), a later billing-driven end must not overwrite that state or its recorded reason — the original terminal reason stands.
 
 Result: web ☐
 
