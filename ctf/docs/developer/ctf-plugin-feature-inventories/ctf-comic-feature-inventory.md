@@ -687,6 +687,14 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-07-29 (latest): **Knowledge Library now actually appears in the Apps launcher.** The plugin
+  was added to `fallbackPluginRegistry` in `lib/plugins/repository.ts` and to the parity contracts,
+  but never to the `ctf_plugin_registry` seed in `schema.sql` — and `listPluginRegistry` only falls
+  back to the in-code array when that table is empty or unreadable, which never happens in
+  production. So the tile was missing from the member Apps list for three releases while the code
+  looked correct. Added the `knowledge` row (nav rank 66, visible) to `schema.sql` and
+  `schema.demo.sql`, and put a comment above the seed block saying the table — not the in-code array
+  — is what the launcher reads, so the next plugin does not repeat it.
 - 2026-07-29 (later): **Contributing is a route INTO verification, and `/knowledge` gets a public
   landing page (owner decision).** Judging a contribution means opening the contributor's Quora
   account and seeing a real person writing real things — exactly the look Unlock verification asks

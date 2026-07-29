@@ -499,17 +499,29 @@ async function chargeBlock(input: {
 // charge fails for lack of funds (so the call ends cleanly and no credits moved) or an extend hits the cap.
 async function endCallWithReason(callId: string, reason: FoundationCallEndedReason): Promise<FoundationCallRow> {
   return withDbTransaction(async (client) => {
+    // Only move a call to 'ended' from a non-terminal state. The per-block charge runs outside a
+    // transaction, so a concurrent decline/timeout/normal-end could have already set a terminal
+    // ring_status and ended_reason; without this guard that terminal state (and its original reason)
+    // would be clobbered. If the row is already terminal, leave it and return it as-is (issue #1971).
     const updated = await client.query<FoundationCallRow>(
       `
         UPDATE foundation_call_sessions
         SET ring_status = 'ended', status = 'ended', ended_at = NOW(), updated_at = NOW(),
             ended_reason = $2
         WHERE id = $1::uuid
+          AND ring_status NOT IN ('declined', 'timed_out', 'ended')
         RETURNING ${CALL_ROW_COLUMNS}
       `,
       [callId, reason],
     );
-    return updated.rows[0];
+    if (updated.rows[0]) {
+      return updated.rows[0];
+    }
+    const current = await client.query<FoundationCallRow>(
+      `SELECT ${CALL_ROW_COLUMNS} FROM foundation_call_sessions WHERE id = $1::uuid`,
+      [callId],
+    );
+    return current.rows[0];
   });
 }
 

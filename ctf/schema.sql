@@ -2224,7 +2224,12 @@ DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('whatworks', 'trusttranspo
 -- GentlePulse decommissioned 2026-07-27 (owner decision): remove its registry row from existing DBs.
 DELETE FROM ctf_plugin_registry WHERE plugin_slug = 'gentle-pulse';
 
--- Seed plugin registry (upsert so re-running is safe)
+-- Seed plugin registry (upsert so re-running is safe).
+--
+-- THIS TABLE IS WHAT THE APPS LIST SHOWS. `fallbackPluginRegistry` in
+-- packages/web/lib/plugins/repository.ts is only used when this table is empty or unreadable, which
+-- is never true in production — so adding a plugin to that array alone puts NO tile in the launcher.
+-- A new plugin needs a row here as well, or it is invisible to members.
 INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availability_state, nav_rank, is_visible) VALUES
   ('chyme',              'Chyme',                'Live social audio rooms. Broadcast, listen, and connect in real time.',                       'implemented_shell', 10,  TRUE),
   ('skills-taxonomy',    'Skills Taxonomy',      'Browse the shared catalog of sectors, job titles, and skills.',                     'implemented_shell', 20,  TRUE),
@@ -2232,6 +2237,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('workforce',          'Workforce',            'Real-time work and skills distribution amongst 5 million survivors globally.',                           'implemented_shell', 50,  TRUE),
   ('skills-hunt',        'SkillsHunt',          'Nominate survivors to build the Directory and grow the economy.', 'implemented_shell', 60,  TRUE),
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
+  ('knowledge',          'Knowledge Library',    'Lend your own public writing so the assistant answers from more than one person.', 'implemented_shell', 66,  TRUE),
   ('foundation',         'Foundation',           'Find talent, tools, repairs, and infrastructure support in real time.',                      'implemented_shell', 70,  TRUE),
   ('lighthouse',         'LightHouse',           'Community housing listings from trauma-informed hosts; ServiceCredits accepted.', 'implemented_shell', 80,  TRUE),
   ('socket-relay',         'SocketRelay',          'Real-time resource sharing across the network.',                        'implemented_shell', 90,  TRUE),
