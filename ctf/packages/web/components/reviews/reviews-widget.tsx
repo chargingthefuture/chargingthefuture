@@ -31,9 +31,12 @@ export function ReviewsWidget({ endpoint = REVIEWS_ENDPOINT }: { endpoint?: stri
   const [fadingOut, setFadingOut] = useState(false);
   const pausedRef = useRef(false);
 
-  // Load the curated list unless the visitor dismissed the widget this session.
+  // Load the curated list unless the visitor dismissed the widget this session. The check sits at
+  // the top of the effect so it is re-evaluated on every run, not just the first: if `endpoint` ever
+  // changes after mount, a visitor who dismissed the widget still does not get a second fetch.
+  // (No `typeof window` guard — an effect only ever runs in the browser.)
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.sessionStorage.getItem(DISMISS_KEY) === '1') {
+    if (window.sessionStorage.getItem(DISMISS_KEY) === '1') {
       return;
     }
     let cancelled = false;
