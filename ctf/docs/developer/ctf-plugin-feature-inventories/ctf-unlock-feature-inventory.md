@@ -170,6 +170,22 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-07-29: **Quora space renamed — help links now point to `skillseconomy.quora.com`.** The owner
+  renamed the network's Quora space from `tiskillsnetwork.quora.com` to `skillseconomy.quora.com`, so
+  every "Can't find your Quora profile URL?" help callout that pointed members at the old address was
+  updated to the new one: the web help block (`unlock-quora-help.tsx`, `UNLOCK_QUORA_HELP_URL` +
+  `UNLOCK_QUORA_HELP_DOMAIN`), the web Commons verify banner
+  (`components/community-shell/unlock-verify-banner.tsx`), and the mobile Unlock submission/re-submit
+  screens and `UnlockVerifyBanner` (`packages/mobile/src/features/unlock/`). The Jen S. Quora review
+  source link in `lib/reviews/reviews-data.ts` and the UNLOCK-M1/M2 steps in the Unlock test script
+  were pointed at the new host too. Copy/link only — no route, schema, or contract change. The owner
+  also confirmed the space's visible display name changed from "TI Skills Network" to "Skills
+  Economy", so the `space` label on the 70 Quora-export rows for that space in
+  `ctf/scripts/data/comic-knowledge-seed-2.jsonl` was updated (that label is imported as the comic
+  knowledge-entry title — see the comic inventory). Left as-is in that file: the post `url` values
+  (never imported, and several encode the old subdomain inside the canonical slug, so rewriting would
+  corrupt them) and any "TI Skills Network" mention inside verbatim post `content` (a member's own
+  words, kept exact). The old space redirects to the new one on Quora.
 - 2026-07-26: **Fix: the "Member view" button in the Unlock admin header 404'd.** It pointed at
   `/apps/unlock`, but Unlock is registered with `isVisible: false` (it is deliberately kept out of
   the app launcher) and `app/apps/[pluginSlug]/page.tsx` calls `notFound()` for any plugin that is

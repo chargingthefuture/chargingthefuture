@@ -6,8 +6,8 @@ import { getUnlockTokens } from "./unlock-shared";
 
 // The Quora space where a stuck member can ask for their profile URL. Exported so every surface that
 // requests the Quora URL points at the same place.
-export const UNLOCK_QUORA_HELP_URL = "https://tiskillsnetwork.quora.com";
-export const UNLOCK_QUORA_HELP_DOMAIN = "tiskillsnetwork.quora.com";
+export const UNLOCK_QUORA_HELP_URL = "https://skillseconomy.quora.com";
+export const UNLOCK_QUORA_HELP_DOMAIN = "skillseconomy.quora.com";
 
 // Prominent, universal help for a member who can't find their Quora profile URL. Shown on every
 // surface that asks for that URL (the submission form, the status/resubmit view, and the Commons

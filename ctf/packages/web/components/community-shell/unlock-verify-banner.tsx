@@ -157,12 +157,12 @@ export function UnlockVerifyBanner({
           >
             <strong style={{ color: 'var(--ctf-text)' }}>Can’t find your Quora profile URL?</strong> Go to{' '}
             <a
-              href="https://tiskillsnetwork.quora.com"
+              href="https://skillseconomy.quora.com"
               target="_blank"
               rel="noopener noreferrer"
               style={{ color: '#C084FC', fontWeight: 700 }}
             >
-              tiskillsnetwork.quora.com
+              skillseconomy.quora.com
             </a>{' '}
             and comment on any post asking for help — I&apos;ll reply with your profile URL.
           </div>

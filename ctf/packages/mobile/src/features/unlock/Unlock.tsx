@@ -41,7 +41,7 @@ function toDisplayStatus(r: UnlockReviewStatus | null): DisplayStatus {
 
 type Styles = ReturnType<typeof makeStyles>;
 
-const UNLOCK_QUORA_HELP_URL = 'https://tiskillsnetwork.quora.com';
+const UNLOCK_QUORA_HELP_URL = 'https://skillseconomy.quora.com';
 
 // Prominent, universal help for a member who can't find their Quora profile URL. Shown wherever the
 // Unlock flow asks for that URL. Directs them to comment on the network's Quora space, where the team
@@ -59,7 +59,7 @@ function QuoraHelp({ s }: { s: Styles }) {
             void Linking.openURL(UNLOCK_QUORA_HELP_URL);
           }}
         >
-          tiskillsnetwork.quora.com
+          skillseconomy.quora.com
         </Text>{' '}
         and comment on any post asking for help — I&apos;ll reply with your profile URL.
       </Text>
