@@ -426,8 +426,10 @@ Result: web ☐
 3. As callee (provider): the incoming-call overlay should appear (via the ~polling of `GET /api/foundation/connections/incoming-call`) showing an answer and a decline button.
 4. As callee: do nothing for ~60 seconds (let the ring time out).
 5. Observe both sides after the timeout.
+6. Back on the caller's "Connect now" dialog, open the block-cap picker and note the largest value it
+   offers. Ring with that largest value selected.
 
-**Expected:** Step 2: caller sees a "ringing" overlay (no credits are moved yet). Step 3: within a few seconds the callee sees an incoming-ring surface with the caller's name, and answer/decline controls. Step 5: after ~60s the ring times out; both sides transition to a "timed out" terminal state. No credits are moved for a timed-out ring.
+**Expected:** Step 2: caller sees a "ringing" overlay (no credits are moved yet). Step 3: within a few seconds the callee sees an incoming-ring surface with the caller's name, and answer/decline controls. Step 5: after ~60s the ring times out; both sides transition to a "timed out" terminal state. No credits are moved for a timed-out ring. Step 6: the largest offered cap equals `FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS`, and ringing with it is accepted — the picker must never offer a value the server rejects with `invalid_authorized_blocks`, because the buyer only sees that failure after they have already consented to spend.
 
 Result: web ☐
 

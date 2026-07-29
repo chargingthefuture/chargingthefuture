@@ -5,6 +5,7 @@ import { PhoneCall, PhoneIncoming, X } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getFoundationTokens, type ProviderView } from "./foundation-ui";
 import { FoundationCallAudio, type FoundationCallCredentials } from "./foundation-call-audio";
+import type { FoundationCallRingStatus, FoundationInstantCall } from "@/lib/foundation/types";
 
 // Client orchestration for the Foundation instant 1:1 call ring/answer lifecycle (issue #808 task 3).
 // Audio-only for v1. One <FoundationInstantCallController> is mounted once at the shell root; it both:
@@ -19,25 +20,32 @@ const CSRF_HEADERS = { "Content-Type": "application/json", "x-ctf-csrf": "1" };
 const RING_POLL_MS = 2000;
 const INBOX_POLL_MS = 4000;
 
-type RingStatus = "none" | "ringing" | "answered" | "declined" | "timed_out" | "ended";
+type RingStatus = FoundationCallRingStatus;
 
-type InstantCall = {
-  id: string;
-  threadId: string;
-  callerUserId: string;
-  calleeUserId: string;
-  ringStatus: RingStatus;
-  streamCallId: string;
-  ringExpiresAtIso: string | null;
-  // Per-block billing (issue #808 task 4). authorizedBlocks is the buyer-set cap; blocksCharged is how many
-  // blocks have been paid; paidThroughAtIso is when the current prepaid block runs out (drives the
-  // countdown); intervalMinutesLocked is the locked block length; endedReason explains a non-hang-up end.
-  authorizedBlocks: number | null;
-  blocksCharged: number;
-  paidThroughAtIso: string | null;
-  intervalMinutesLocked: number | null;
-  endedReason: string | null;
-};
+// The subset of the server's call row this overlay reads, DERIVED from the server type rather than
+// re-declared. Deriving is the point: when the two were independent declarations, a field the route
+// sends could be absent from the client's copy and the compiler had nothing to say — which is exactly
+// how the streamCallId mix-up (issue #987) stayed invisible until it was found by hand. With Pick, a
+// field renamed or dropped server-side is a compile error here instead of an undefined at runtime.
+//
+// Per-block billing (issue #808 task 4): authorizedBlocks is the buyer-set cap; blocksCharged is how many
+// blocks have been paid; paidThroughAtIso is when the current prepaid block runs out (drives the
+// countdown); intervalMinutesLocked is the locked block length; endedReason explains a non-hang-up end.
+type InstantCall = Pick<
+  FoundationInstantCall,
+  | "id"
+  | "threadId"
+  | "callerUserId"
+  | "calleeUserId"
+  | "ringStatus"
+  | "streamCallId"
+  | "ringExpiresAtIso"
+  | "authorizedBlocks"
+  | "blocksCharged"
+  | "paidThroughAtIso"
+  | "intervalMinutesLocked"
+  | "endedReason"
+>;
 
 // Two distinct Stream ids come back here and must not be swapped (issue #987):
 //   - streamCallId is the Stream **Video** call id the audio room joins (the route surfaces it flat, and it
