@@ -11,8 +11,25 @@ the tests worth running slowly.
 
 ---
 
+## CMC-C0 · An unverified member cannot get in
+**Role:** signed-in member who has NOT completed Unlock
+**Steps:**
+1. Open `/knowledge`.
+2. Signed out entirely, open `/knowledge`.
+
+**Expected:**
+- Step 1 → redirected to `/plugin/unlock`, **not** to sign-in. They are already signed in; telling
+  them to sign in again would explain nothing. They must never reach the form and fill it in only to
+  be refused on send (that mismatch was the 2026-07-29 fix).
+- Step 2 → redirected to sign-in.
+- `POST /api/comic/contributions` called directly by an unverified member → 403 `unlock_required`.
+
+**Result:** web ☐
+
+---
+
 ## CMC-C1 · Pick a few posts (the default path)
-**Role:** signed-in member · **Surfaces:** web + mobile-responsive
+**Role:** verified member (Unlock complete) · **Surfaces:** web + mobile-responsive
 **Precondition:** two of your own public Quora posts.
 
 **Steps:**
@@ -139,16 +156,14 @@ the tests worth running slowly.
 
 ---
 
-## CMC-A1 · Review: accept, and what the credits do
-**Role:** admin, plus two contributors — one **verified (Unlock complete)** and one **not yet verified**
+## CMC-A1 · Review: accept, and the credits
+**Role:** admin, plus a verified contributor
 **Steps:**
-1. Have both contributors send a contribution from `/knowledge`.
+1. Have the contributor send a contribution from `/knowledge`.
 2. Open `/admin/comic/contributions`.
-3. On the verified member's card, press **Leave out** on one entry, then press it again and confirm
-   it toggles back with **Put back**.
+3. Press **Leave out** on one entry, then press it again and confirm it toggles back with **Put back**.
 4. Press **Accept N of M**.
-5. Repeat on the not-yet-verified member's card.
-6. Check `comic_knowledge_entries` and the contributors' ServiceCredits balances.
+5. Check `comic_knowledge_entries` and the contributor's ServiceCredits balance.
 
 **Expected:**
 - Every entry is shown **in full**, not summarised — the decision cannot be made from a count.
@@ -157,11 +172,10 @@ the tests worth running slowly.
 - If the contributor wrote a third-party note, it appears **at the top of the card**, highlighted —
   that is the thing to check before promoting anything.
 - After step 4: the left-out entry is **not** in `comic_knowledge_entries`; the kept ones are, each
-  carrying `contribution_id`. The screen says how many were added and that the credits were granted.
-- After step 5: the writing is in the library, and the screen says **no credits, because that member
-  is not verified yet**, and that the grant can be made once they finish Unlock. This is a decision,
-  not a failure — it must never look like a silent no-op.
-- `granted_at` is set only on the verified member's row.
+  carrying `contribution_id`. The screen says how many were added and that the credits were granted,
+  and `granted_at` is set.
+- The "no credits — not verified yet" branch is **unreachable** now that contributing requires Unlock
+  (CMC-C0). It is kept as the last gate before a mint; there is nothing to test by hand.
 
 **Result:** web ☐
 

@@ -195,7 +195,9 @@ contracts:
     version: 1.0.0
     description: >-
       Accept a member's own public Quora writing as candidate reference material for the assistant.
-      Signed-in members. TWO PATHS: kind=links (DEFAULT) takes posts the member picked, each with a
+      Requires COMPLETED UNLOCK (approved_full), not merely a signed-in account — reviewing is manual,
+      so an unverified throwaway account could spend the reviewer's time without ever getting near the
+      assistant. TWO PATHS: kind=links (DEFAULT) takes posts the member picked, each with a
       quora.com URL kept as provenance and NEVER fetched — most accounts are mixed, nothing here sorts
       on-topic from off-topic automatically, and picking is both far less reviewer reading and a more
       honest consent than handing over a whole account. kind=export takes the whole Quora export for

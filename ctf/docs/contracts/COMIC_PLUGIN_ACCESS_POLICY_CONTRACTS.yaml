@@ -203,9 +203,13 @@ policies:
 
   - pluginId: comic
     command: comic.contribution.submit
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles:
       - member
+    # Completed Unlock, not merely a signed-in account (owner decision, 2026-07-29). Reviewing is
+    # manual, so the scarce resource is the reviewer's reading time; an unverified throwaway account
+    # could spend it without ever getting near the assistant.
+    minUnlockTier: approved_full
     attributePolicies:
       tenancy: same_workspace
       # Explicit, per-clause consent — every clause id must be present, and the version submitted
@@ -232,6 +236,7 @@ policies:
       requiresAdditionalAudit: true
     denyConditions:
       - actor_not_authenticated
+      - unlock_required
       - consent_not_granted
       - consent_version_mismatch
       - archive_not_readable
@@ -239,9 +244,10 @@ policies:
 
   - pluginId: comic
     command: comic.contribution.withdraw
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles:
       - member
+    minUnlockTier: approved_full
     attributePolicies:
       tenancy: same_workspace
       # A member may only withdraw their own contribution; ownership is enforced inside the query.
@@ -261,6 +267,7 @@ policies:
       requiresAdditionalAudit: true
     denyConditions:
       - actor_not_authenticated
+      - unlock_required
       - contribution_not_found
       - contribution_not_owned
 

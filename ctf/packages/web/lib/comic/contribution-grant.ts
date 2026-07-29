@@ -5,13 +5,13 @@
 //
 // TWO RULES, and they are the reason this is its own module rather than a few lines in the route.
 //
-// 1. ONLY AN UNLOCKED MEMBER RECEIVES CREDITS (owner decision, 2026-07-29). Contributing is open to
-//    any signed-in member — someone still working through verification may have years of writing
-//    worth having, and refusing it would cost the library more than it protects. The grant is the
-//    part that requires full Unlock access. It is also the part a bad actor would want: paying for
-//    contributions is an invitation to submit poisoned material, and requiring verification puts a
-//    real cost in front of that. An accepted contribution from a not-yet-verified member stays
-//    accepted and ungranted; nothing is lost, and the grant can be made later once they verify.
+// 1. ONLY AN UNLOCKED MEMBER RECEIVES CREDITS. As of 2026-07-29 contributing ITSELF requires
+//    completed Unlock (the /knowledge page and the submit route both enforce it), so in practice no
+//    unverified member can reach an accepted contribution and this check should never fire. It is
+//    kept as defence in depth: it is the last gate before credits are minted, and if the submit-side
+//    requirement is ever relaxed again, the money-adjacent path must not quietly start paying out.
+//    A contribution that somehow arrives from an unverified member stays accepted and ungranted
+//    rather than failing — the writing is still worth having.
 //
 // 2. NEVER GRANT TWICE. `granted_at` is stamped in the database before the mint is attempted, and
 //    the mint itself carries a per-contribution idempotency key, so a retried review, a double-click,

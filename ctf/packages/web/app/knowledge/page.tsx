@@ -8,11 +8,16 @@ export const dynamic = 'force-dynamic';
 // Where a member lends their own public Quora writing to the assistant's reference library, and
 // where the consent that permits it is given.
 //
-// Signed-in only, at `any_authenticated` rather than full Unlock access: someone who has not finished
-// verifying can still have years of public writing worth contributing, and consent is the thing that
-// makes it usable — not their verification tier. It stays gated to a signed-in account because a
-// contribution has to be attributable to the person consenting, and withdrawal has to be something
-// only they can do.
+// Requires COMPLETED UNLOCK, not merely a signed-in account (owner decision, 2026-07-29). It first
+// shipped open to any authenticated member, on the reasoning that someone mid-verification may have
+// years of writing worth contributing. What that reasoning missed: reviewing a contribution is
+// manual and slow, so the scarce resource is the reviewer's reading time — and an unverified account
+// can spend it without ever getting near the assistant. Nothing unreviewed reaches the bot either
+// way, but a throwaway account could still put junk in front of a human every day. Verification is
+// the cost that makes that not worth doing.
+//
+// A member who has not verified is sent to the Unlock flow rather than the sign-in page, because
+// they are already signed in and telling them to sign in again explains nothing.
 //
 // A short top-level path (`/knowledge`) rather than one under /apps, because the invitation post
 // links here from outside the app and the link should be easy to type and read. Deliberately NOT
@@ -20,8 +25,12 @@ export const dynamic = 'force-dynamic';
 // surface — and two member-facing paths a word apart would be a standing source of confusion (owner
 // decision, 2026-07-29).
 export default async function KnowledgePage() {
-  const decision = await evaluatePluginAccess({ minUnlockTier: 'any_authenticated', requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
+    // Signed in but not yet verified → the Unlock flow. Not signed in at all → sign-in.
+    if (decision.reason === 'unlock_required') {
+      redirect('/plugin/unlock');
+    }
     redirect(getHostedSignInUrl() ?? '/sign-in');
   }
 

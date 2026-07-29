@@ -173,7 +173,8 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 3. When unsure, the bot shows a clear pre-approved holding response and hands the question
    to a human — the user is never shown speculative content.
 4. Users can rate any answer (`helpful / not_helpful / flagged`) — feeds the training loop.
-5. **Contribute your own writing (`/knowledge`).** The path is `/knowledge`, deliberately **not**
+5. **Contribute your own writing (`/knowledge`).** **Requires completed Unlock** (owner decision,
+   2026-07-29) — see the change log for why this tightened after launch. The path is `/knowledge`, deliberately **not**
    `/contribute` — the Contributions plugin is a different thing entirely (the fundraiser and donation
    surface), and two member-facing paths a word apart would be a standing source of confusion (owner
    decision, 2026-07-29). The screen is titled "Knowledge library" for the same reason. A member can lend their own public Quora
@@ -262,7 +263,8 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   via Ollama (captured as a bot turn), enqueues to `comic_review_queue`, and returns **only a
   safe holding response (HTTP 202)** — never the unreviewed draft. Safety-flagged turns skip
   generation and are queued human-first.
-- `POST /api/comic/contributions` (`comic.contribution.submit`) — signed-in member. Accepts either
+- `POST /api/comic/contributions` (`comic.contribution.submit`) — **verified member** (`approved_full`,
+   the default `minUnlockTier` on `requireComicReadAccess`). Accepts either
   **`kind=links`** (the default: pasted posts, each with a quora.com URL as provenance — nothing is
   fetched) or **`kind=export`** (a Quora export `.zip`, multipart, 25 MB cap), plus the consent
   payload. **Consent is validated before the
@@ -272,8 +274,8 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   decompressed, entry names are validated, and a decompressed-size ceiling guards against a zip
   bomb; nothing is written to disk or executed. Public sections are kept, everything else discarded.
   Rate-limited to 5 per member per 24h. Audits the **consent**, never the content.
-- `GET /api/comic/contributions` — signed-in member. The caller's own contribution history.
-- `POST /api/comic/contributions/[id]/withdraw` (`comic.contribution.withdraw`) — signed-in member,
+- `GET /api/comic/contributions` — verified member. The caller's own contribution history.
+- `POST /api/comic/contributions/[id]/withdraw` (`comic.contribution.withdraw`) — verified member,
   own contribution only (scoped inside the query, so another member's id is indistinguishable from a
   missing one). Marks it withdrawn and deactivates its `comic_knowledge_entries` rows in one
   transaction, so there is no window where it reads as withdrawn while still being quoted.
@@ -674,6 +676,26 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-07-29: **Contributing requires completed Unlock; the page now matches the API it always had
+  (owner report).** The `/knowledge` page was gated at `any_authenticated` while
+  `requireComicReadAccess` — which the submit, list, and withdraw routes all use — takes the default
+  `minUnlockTier: 'approved_full'`. So an unverified member could open the page, read six consent
+  clauses, paste their posts, and only then hit a 403 on send. Not a security hole (nothing
+  unverified was ever accepted) but a bad wall to walk someone into, and the page's own comment
+  asserted an openness the API never honoured.
+  Settled the other way per the owner: **contributing requires Unlock.** The page now redirects an
+  unverified member to `/plugin/unlock` rather than the sign-in page — they are already signed in, so
+  "sign in" would explain nothing. Reasoning: reviewing a contribution is manual and slow, so the
+  scarce resource is the reviewer's reading time, and an unverified throwaway account could spend it
+  (5/day) without ever getting near the assistant. Verification is the cost that makes that not worth
+  doing.
+  Consent notes and the page copy no longer say a member can contribute before verifying — that was
+  the openness the API never allowed. `CONTRIBUTION_CONSENT_VERSION` bumped to `2026-07-29.2`, so any
+  page cached with the old wording is refused rather than recorded as agreement to it. The
+  `isUserUnlocked` check in `contribution-grant.ts` is now unreachable in practice and documented as
+  defence in depth: it is the last gate before credits are minted, and a money-adjacent path must not
+  quietly start paying out if the submit-side requirement is ever relaxed again.
 
 - 2026-07-29: **Third-party identifier scrub applied to production; the one-time tooling is deleted
   (#1912 closed out).** The first seed import ran before `redact()` covered Quora profile links and
