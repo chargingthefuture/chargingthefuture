@@ -192,6 +192,19 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   not visible — so the link 404'd for everyone, admins included, even though the member Unlock
   screen was live. Unlock's member surface is its own route, `/plugin/unlock`; the button now points
   there. One-line href fix in `unlock-admin-shell.tsx`; no route, schema, or contract change.
+- 2026-07-29: **Support-only filter in the admin queue (web).** The admin dashboard already counted
+  Support-only members, but there was no way to see *who* they were — only Pending and All submissions.
+  Added a third tab, `Support-only`, filtering the loaded page on `accessTier === 'locked_support_only'`.
+  Filtered on access **tier**, not review status, on purpose: a member reaches that tier by more than
+  one route — rejected, marked spam, or a `pending` submission whose window lapsed and was swept by
+  `supportOnlyAfterExpiry` — and the tier is the only thing all of those share. It is also exactly what
+  the Support-only counter counts, so the number and the list cannot disagree. Two supporting bits: each
+  card now shows a grey `Support-only` pill when the member is on that tier (review status alone does not
+  explain a swept `pending` row), and the tab prints how many of the counter's total this page is
+  actually showing, so once there are more submissions than the page cap a short list reads as a
+  shortfall rather than as everyone. Client-side filter over already-loaded data; combines with the
+  existing search box. No route, schema, or contract change. **Parity:** web + mobile-responsive;
+  Android out of scope (web-only per rule 105).
 - 2026-07-23: **Quora URL history in the admin queue + revoke (web).** The Quora profile URL is the only social proof and can be changed after approval (in Directory). The admin queue now surfaces the trail so a reviewer can catch someone gaming it: each submission row shows a `quoraUrlChangeCount` badge ("URL changed N×"), and a "URL history" toggle opens the full change list from a new admin route `GET /api/unlock/admin/quora-history?userId=<id>` (`listQuoraUrlHistory` over the new `directory_quora_url_history` table). Each entry shows the previous → new URL, when, and the source (set at onboarding / changed by the member in Directory / changed by an admin). The existing `POST /revoke` is the manual response (drops the member to `rejected` + `locked_support_only` and claws the reward). The Unlock onboarding submission now records the captured URL into the shared history (best-effort, `recordQuoraUrlChangeStandalone`, source `unlock_onboarding`) so the trail includes the baseline. Framed as a human watch tool, never an automatic flag — a change is legitimate when Quora deletes an account. New audit command `unlock.admin.quora.history.read`. Schema change: `directory_quora_url_history` (owned by Directory). Verified: `@ctf/web` typecheck, lint, a11y lint, build. Owner-review lane.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to

@@ -118,10 +118,17 @@ not see this banner. On android the client Unlock gate lets a treatment member t
 **Steps:**
 1. Open `/admin/unlock`.
 2. Read the snapshot counts at the top.
-3. Switch between the Pending and All views.
+3. Switch between the Pending, Support-only, and All views.
+4. On the Support-only view, compare the number of rows listed against the Support-only counter in
+   the snapshot, and check that each row carries a grey "Support-only" pill.
 **Expected:** The queue lists submissions; the Pending view shows only pending rows, the All view
 shows every status. Each row shows the submitter's Quora profile link and its review status. A
-non-admin cannot reach this page (`requireUnlockAdminAccess`).
+non-admin cannot reach this page (`requireUnlockAdminAccess`). Step 3/4: the Support-only view shows
+only members on the `locked_support_only` access tier — which includes rejected and spam rows **and**
+any `pending` row whose window lapsed and was swept by `supportOnlyAfterExpiry`, so do not expect it
+to equal rejected + spam. The row count matches the Support-only counter; if the page holds fewer
+than the counter reports, the view says so ("Showing N of M …") rather than presenting a short list as
+the whole set. Every listed row shows the Support-only pill.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A2 · Review decision — approve / reject / spam
