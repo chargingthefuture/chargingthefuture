@@ -13,6 +13,7 @@ import {
   createContribution,
   listContributionsForUser,
 } from 'lib/comic/contribution-repository';
+import { validateLinkedPosts } from 'lib/comic/contribution-links';
 import { reportError } from 'lib/observability/report';
 
 export const dynamic = 'force-dynamic';
@@ -45,12 +46,11 @@ export async function GET() {
   }
 }
 
-// POST: accept a member's Quora export, keep only their public answers and posts, and record the
-// consent that permits using them.
+// POST: accept a member's contribution and record the consent that permits using it.
 //
 // The order of operations here is the promise made on the contribute page, in code:
-//   1. check consent BEFORE looking at the file at all — no consent, nothing is read;
-//   2. parse the archive in memory, reading only index.html;
+//   1. check consent BEFORE looking at the content at all — no consent, nothing is read;
+//   2. for an export, parse the archive in memory, reading only index.html;
 //   3. keep the allowlisted public sections and DISCARD THE REST — inbox, drafts, profile — before
 //      anything is written or any human sees it;
 //   4. store only what survived. The uploaded archive is never written to disk and is gone as soon
@@ -66,8 +66,18 @@ export async function POST(request: Request) {
   try {
     form = await request.formData();
   } catch {
-    return badRequest('Could not read the upload.');
+    return badRequest('Could not read what you sent.');
   }
+
+  // Two paths, and the default is the smaller one. `links` — the member pastes the two or three
+  // posts that are actually about being targeted, each with its Quora link as provenance. Most
+  // people's writing is mixed (dating, politics, faith, memes), and NOTHING in this pipeline sorts
+  // on-topic from off-topic automatically, so this puts the choosing where it is instant and free:
+  // with the author, who already knows which posts they are. It is also the more honest consent —
+  // picking three posts is knowing exactly what you are giving, where handing over an archive is
+  // agreeing in bulk to things you have forgotten you wrote.
+  // `export` stays for the rarer member whose public writing is nearly all on-topic.
+  const kind = form.get('kind') === 'export' ? 'export' : 'links';
 
   // Consent is checked first, on purpose: an upload without it is never parsed, so a member who did
   // not agree has their file ignored rather than processed and then rejected.
@@ -78,7 +88,7 @@ export async function POST(request: Request) {
     agreedClauseIds = null;
   }
   if (!hasAgreedToEveryClause(agreedClauseIds)) {
-    return badRequest('Every consent statement has to be agreed to before a file can be sent.');
+    return badRequest('Every consent statement has to be agreed to before anything can be sent.');
   }
   // A page cached from before a consent change would submit the old clause ids. Those pass the check
   // above only if the ids still match; a version mismatch means the member read different wording,
@@ -90,13 +100,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const file = form.get('archive');
-  if (!(file instanceof File)) {
-    return badRequest('Attach the .zip file Quora sent you.');
-  }
-  if (file.size === 0) return badRequest('That file is empty.');
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return badRequest(`That file is larger than ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))} MB.`);
+  // The file is only required on the export path. A links contribution carries no upload at all,
+  // which is most of why it is the safer default: no archive to parse, and nothing to attack.
+  let file: File | null = null;
+  if (kind === 'export') {
+    const uploaded = form.get('archive');
+    if (!(uploaded instanceof File)) {
+      return badRequest('Attach the .zip file Quora sent you.');
+    }
+    if (uploaded.size === 0) return badRequest('That file is empty.');
+    if (uploaded.size > MAX_UPLOAD_BYTES) {
+      return badRequest(`That file is larger than ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))} MB.`);
+    }
+    file = uploaded;
   }
 
   try {
@@ -105,40 +121,57 @@ export async function POST(request: Request) {
         {
           ok: false,
           code: COMIC_ERROR_CODE.rateLimitExceeded,
-          message: 'You have sent several files today. Try again tomorrow.',
+          message: 'You have sent several contributions today. Try again tomorrow.',
         },
         { status: 429 },
       );
     }
 
-    const archive = readQuoraExportArchive(new Uint8Array(await file.arrayBuffer()));
-    if (!archive.ok) {
-      const message =
-        archive.reason === 'not_a_zip'
-          ? 'That is not the .zip file Quora sends. Send the file from Quora as it arrived, without unzipping it.'
-          : archive.reason === 'no_index_html'
-            ? 'That .zip does not look like a Quora export — it has no index.html inside.'
-            : 'That export is too large to read.';
-      return badRequest(message);
-    }
+    let entries;
+    let discarded: string[] = [];
 
-    const parsed = parseQuoraExportHtml(archive.html);
-    if (!parsed.looksLikeQuoraExport) {
-      return badRequest('That file does not look like a Quora export.');
-    }
+    if (kind === 'links') {
+      let posts: unknown;
+      try {
+        posts = JSON.parse(String(form.get('posts') ?? '[]'));
+      } catch {
+        return badRequest('Could not read the posts you pasted.');
+      }
+      const validated = validateLinkedPosts(posts);
+      if (!validated.ok) return badRequest(validated.message);
+      entries = validated.entries;
+    } else {
+      const archive = readQuoraExportArchive(new Uint8Array(await (file as File).arrayBuffer()));
+      if (!archive.ok) {
+        const message =
+          archive.reason === 'not_a_zip'
+            ? 'That is not the .zip file Quora sends. Send the file from Quora as it arrived, without unzipping it.'
+            : archive.reason === 'no_index_html'
+              ? 'That .zip does not look like a Quora export — it has no index.html inside.'
+              : 'That export is too large to read.';
+        return badRequest(message);
+      }
 
-    const entries = dedupeContributedEntries(parsed.entries);
-    if (entries.length === 0) {
-      return badRequest(
-        'Nothing public was found in that export — no answers, posts, or comments. Nothing has been kept.',
-      );
+      const parsed = parseQuoraExportHtml(archive.html);
+      if (!parsed.looksLikeQuoraExport) {
+        return badRequest('That file does not look like a Quora export.');
+      }
+
+      entries = dedupeContributedEntries(parsed.entries);
+      discarded = parsed.discarded;
+      if (entries.length === 0) {
+        return badRequest(
+          'Nothing public was found in that export — no answers, posts, or comments. Nothing has been kept.',
+        );
+      }
     }
 
     const contribution = await createContribution({
       userId: gate.auth.userId,
+      kind,
       consentVersion: CONTRIBUTION_CONSENT_VERSION,
       thirdPartyNote: String(form.get('thirdPartyNote') ?? ''),
-      discardedSections: parsed.discarded,
+      discardedSections: discarded,
       entries,
     });
 
@@ -157,7 +190,8 @@ export async function POST(request: Request) {
       metadata: {
         consentVersion: CONTRIBUTION_CONSENT_VERSION,
         entryCount: contribution.entryCount,
-        discardedSections: parsed.discarded,
+        kind,
+        discardedSections: discarded,
       },
     });
 

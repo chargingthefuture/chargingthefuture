@@ -4886,6 +4886,12 @@ CREATE INDEX IF NOT EXISTS idx_comic_knowledge_entries_active ON comic_knowledge
 CREATE TABLE IF NOT EXISTS comic_contributions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
+  -- How the member sent their writing. 'links' is the DEFAULT path and the one most people should
+  -- use: they paste the two or three posts that are actually about being targeted. Most accounts are
+  -- mixed — dating, politics, faith, memes — so an export makes the reviewer read hundreds of posts
+  -- to find a handful, while the author can pick them out instantly. 'export' remains for the rarer
+  -- member whose public writing is nearly all on-topic.
+  kind TEXT NOT NULL DEFAULT 'links' CHECK (kind IN ('links', 'export')),
   status TEXT NOT NULL DEFAULT 'pending_review'
     CHECK (status IN ('pending_review', 'accepted', 'declined', 'withdrawn')),
   -- Consent, captured at submit time from the form on the contribute page.
@@ -4912,6 +4918,7 @@ CREATE TABLE IF NOT EXISTS comic_contributions (
 );
 ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'links';
 ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending_review';
 ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS consent_version TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS consent_granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -4939,6 +4946,11 @@ CREATE TABLE IF NOT EXISTS comic_contribution_entries (
     CHECK (entry_type IN ('answer', 'post', 'comment', 'submission')),
   question TEXT NULL,
   content TEXT NOT NULL,
+  -- For a linked post: where it came from, kept as PROVENANCE so a reviewer can confirm the post is
+  -- public and belongs to the contributor. It is deliberately not a fetch target — nothing here
+  -- scrapes Quora, because a link that rots between paste and read would leave an entry nobody can
+  -- verify, and the redaction pass strips links from the content itself for the same reason.
+  source_url TEXT NULL,
   -- Set once a reviewer promotes this entry into the knowledge base, so re-running review is safe.
   knowledge_entry_id UUID NULL,
   excluded BOOLEAN NOT NULL DEFAULT FALSE,
@@ -4950,6 +4962,7 @@ ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS contri
 ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS entry_type TEXT NOT NULL DEFAULT 'post';
 ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS question TEXT NULL;
 ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS content TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS source_url TEXT NULL;
 ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS knowledge_entry_id UUID NULL;
 ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS excluded BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS authored_at TIMESTAMPTZ NULL;

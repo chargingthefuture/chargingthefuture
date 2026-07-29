@@ -7,6 +7,7 @@ import type { ContributedEntry } from './quora-export-intake';
 
 export type ContributionSummary = {
   id: string;
+  kind: 'links' | 'export';
   status: 'pending_review' | 'accepted' | 'declined' | 'withdrawn';
   entryCount: number;
   discardedSections: string[];
@@ -16,6 +17,7 @@ export type ContributionSummary = {
 
 type ContributionRow = {
   id: string;
+  kind: 'links' | 'export';
   status: ContributionSummary['status'];
   entry_count: number;
   discarded_sections: unknown;
@@ -26,6 +28,7 @@ type ContributionRow = {
 function mapRow(row: ContributionRow): ContributionSummary {
   return {
     id: row.id,
+    kind: row.kind,
     status: row.status,
     entryCount: row.entry_count,
     discardedSections: Array.isArray(row.discarded_sections)
@@ -48,6 +51,7 @@ function parseAuthoredAt(raw: string | null): string | null {
 // never end up stored without its consent row, or counted with entries that failed to write.
 export async function createContribution(input: {
   userId: string;
+  kind: 'links' | 'export';
   consentVersion: string;
   thirdPartyNote: string;
   discardedSections: string[];
@@ -56,11 +60,12 @@ export async function createContribution(input: {
   return withDbTransaction(async (client) => {
     const inserted = await client.query<ContributionRow>(
       `INSERT INTO comic_contributions
-         (user_id, status, consent_version, third_party_note, entry_count, discarded_sections)
-       VALUES ($1, 'pending_review', $2, $3, $4, $5::jsonb)
-       RETURNING id, status, entry_count, discarded_sections, decline_reason, created_at`,
+         (user_id, kind, status, consent_version, third_party_note, entry_count, discarded_sections)
+       VALUES ($1, $2, 'pending_review', $3, $4, $5, $6::jsonb)
+       RETURNING id, kind, status, entry_count, discarded_sections, decline_reason, created_at`,
       [
         input.userId,
+        input.kind,
         input.consentVersion,
         input.thirdPartyNote.slice(0, 4000),
         input.entries.length,
@@ -72,13 +77,14 @@ export async function createContribution(input: {
     for (const entry of input.entries) {
       await client.query(
         `INSERT INTO comic_contribution_entries
-           (contribution_id, entry_type, question, content, authored_at)
-         VALUES ($1::uuid, $2, $3, $4, $5)`,
+           (contribution_id, entry_type, question, content, source_url, authored_at)
+         VALUES ($1::uuid, $2, $3, $4, $5, $6)`,
         [
           contribution.id,
           entry.entryType,
           entry.question,
           entry.content,
+          entry.sourceUrl ?? null,
           parseAuthoredAt(entry.createdRaw),
         ],
       );
@@ -91,7 +97,7 @@ export async function createContribution(input: {
 // A member's own contribution history, for the page's "what you have sent" list.
 export async function listContributionsForUser(userId: string): Promise<ContributionSummary[]> {
   const result = await queryDb<ContributionRow>(
-    `SELECT id, status, entry_count, discarded_sections, decline_reason, created_at
+    `SELECT id, kind, status, entry_count, discarded_sections, decline_reason, created_at
      FROM comic_contributions
      WHERE user_id = $1
      ORDER BY created_at DESC

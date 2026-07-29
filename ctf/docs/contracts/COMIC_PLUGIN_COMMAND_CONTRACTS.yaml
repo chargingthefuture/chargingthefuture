@@ -194,8 +194,12 @@ contracts:
     command: comic.contribution.submit
     version: 1.0.0
     description: >-
-      Accept a member's own Quora export and keep only their public answers and posts as candidate
-      reference material for the assistant. Signed-in members. Consent is validated BEFORE the file is
+      Accept a member's own public Quora writing as candidate reference material for the assistant.
+      Signed-in members. TWO PATHS: kind=links (DEFAULT) takes posts the member picked, each with a
+      quora.com URL kept as provenance and NEVER fetched — most accounts are mixed, nothing here sorts
+      on-topic from off-topic automatically, and picking is both far less reviewer reading and a more
+      honest consent than handing over a whole account. kind=export takes the whole Quora export for
+      the rarer member whose public writing is nearly all on-topic. Consent is validated BEFORE the file is
       read at all, and the submitted consentVersion must match the current wording — a page cached
       from before a consent change is refused rather than recorded as agreement to wording it never
       displayed. The archive is parsed in memory (only index.html decompressed, entry names
@@ -205,9 +209,16 @@ contracts:
       to the assistant until a human promotes it into comic_knowledge_entries. Rate-limited to 5 per
       member per 24 hours. The audit records the CONSENT, never the content.
     inputSchema:
+      kind:
+        type: string
+        enum: [links, export]
+        required: false
+      posts:
+        type: array
+        required: false
       archive:
         type: file
-        required: true
+        required: false
       consentVersion:
         type: string
         required: true

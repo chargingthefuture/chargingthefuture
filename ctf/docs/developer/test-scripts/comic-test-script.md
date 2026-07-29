@@ -3,7 +3,7 @@
 Covers the member-facing contribute surface. The `@comic` question/answer flow and the admin review
 dashboard are exercised through the feed test script and the admin walkthroughs; this file starts
 with the contribution intake because its promises are ones a member is asked to trust before they
-hand over a file.
+hand over anything.
 
 **Read this first:** most of what follows is checking that something did *not* happen — that a
 private section was dropped, that a file was not kept, that a refusal came before a read. Those are
@@ -11,23 +11,70 @@ the tests worth running slowly.
 
 ---
 
-## CMC-C1 · Contribute your writing (the happy path)
+## CMC-C1 · Pick a few posts (the default path)
 **Role:** signed-in member · **Surfaces:** web + mobile-responsive
-**Precondition:** a real Quora export `.zip` (Settings → Privacy → Download your information).
+**Precondition:** two of your own public Quora posts.
 
 **Steps:**
 1. Open `/contribute`.
+2. Check which option is selected before you touch anything.
+3. Before ticking any consent line, try to type in a post box.
+4. Tick all six consent lines. Paste one post's Quora link and its full text, press **Add another
+   post**, and fill the second. Send.
+
+**Expected:**
+- **"Pick a few posts" is selected by default** — the whole-export option is there but is not the
+  starting point. Most people's writing is mixed, and only the author can say which posts belong.
+- At step 3 the link and text boxes are **disabled**, with "Tick all six consent lines above to add
+  your posts." Consent always comes before the content, never after.
+- There is **no single "I agree to all"** checkbox anywhere — six separate boxes.
+- After sending, a receipt names how many pieces were kept and says only what you pasted was kept —
+  nothing else from your account was read or stored.
+- The contribution appears under "What you have sent" as **Waiting to be read**.
+
+**Result:** web ☐
+
+---
+
+## CMC-C1b · Picked posts are validated, and links are never fetched
+**Role:** signed-in member
+**Steps:**
+1. Tick the six lines, then try to send a post with a link to somewhere that is not Quora.
+2. Try two boxes with the same Quora link.
+3. Try a post whose text is one short sentence.
+4. Send a valid pair, then check `comic_contribution_entries` in the database.
+5. While the request runs, watch outbound network traffic from the server.
+
+**Expected:**
+- Step 1 → refused, "Post 1 needs a link to the post on Quora."
+- Step 2 → refused as a duplicate link.
+- Step 3 → refused with "Paste the whole post — a line or two is not enough for the assistant to
+  answer from." (Not a quality judgement — the reviewer would only discard it, so saying so now saves
+  the contributor the wait.)
+- Step 4 → each row has the pasted text in `content` and the link in `source_url`. Contact details
+  and any URLs inside the text itself are redacted; the source link survives separately because it is
+  provenance a reviewer needs.
+- Step 5 → **the server never requests the Quora page.** Nothing scrapes the link. A post edited or
+  deleted between paste and read must not be able to change what was contributed.
+
+**Result:** web ☐
+
+---
+
+## CMC-C1c · Whole export (the secondary path)
+**Role:** signed-in member
+**Precondition:** a real Quora export `.zip` (Settings → Privacy → Download your information).
+
+**Steps:**
+1. On `/contribute`, choose **Send my whole Quora export**.
 2. Before ticking anything, try to choose a file.
 3. Tick all six consent lines, then choose the `.zip` and send it.
 
 **Expected:**
-- At step 2 the file picker is **disabled**, with "Tick all six consent lines above to choose a file."
-  Consent always comes before the file, never after.
-- There is **no single "I agree to all"** checkbox anywhere — six separate boxes.
-- After sending, a receipt names how many public pieces were kept, and lists what was deleted on
+- At step 2 the file picker is **disabled**.
+- After sending, the receipt names how many public pieces were kept, lists what was deleted on
   arrival (for example "your private messages, your unpublished drafts"), and says the `.zip` itself
   was not stored.
-- The contribution appears under "What you have sent" as **Waiting to be read**.
 
 **Result:** web ☐
 
@@ -80,7 +127,7 @@ the tests worth running slowly.
 3. Repeat with no `x-ctf-csrf` header.
 
 **Expected:**
-- Step 1 → 400, "Every consent statement has to be agreed to before a file can be sent."
+- Step 1 → 400, "Every consent statement has to be agreed to before anything can be sent."
 - Step 2 → 400 telling the member the wording changed and to reload and read it again. This is the
   case that matters: a page cached from before a consent change must never be recorded as agreement
   to wording it never displayed.

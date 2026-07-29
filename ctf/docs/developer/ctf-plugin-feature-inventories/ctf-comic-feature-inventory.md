@@ -175,8 +175,22 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 4. Users can rate any answer (`helpful / not_helpful / flagged`) — feeds the training loop.
 5. **Contribute your own writing (`/contribute`).** A member can lend their own public Quora
    answers and posts to the assistant's reference library, so the bot answers from more than one
-   person's experience. They get their Quora export (Settings → Privacy → Download your
-   information) and upload the `.zip` exactly as it arrived. On the same page they read and tick
+   person's experience. **Two ways, and picking a few posts is the default (owner decision,
+   2026-07-29):** most people's public writing is mixed — dating, politics, faith, memes — and
+   *nothing in this pipeline sorts on-topic from off-topic automatically*, so an export would make the
+   reviewer read hundreds of posts to find a handful. Picking puts that choice with the author, who
+   knows instantly which posts belong, and is the more honest consent: choosing three posts is
+   knowing exactly what you are giving, where handing over an archive is agreeing in bulk to things
+   you have forgotten you wrote. It also carries no upload at all.
+   - **Pick a few posts (default).** For each, paste the Quora link and the post's text (up to 20 per
+     submission). **Nothing fetches the link** — it is provenance, so a reviewer can confirm the post
+     is public and the contributor's; scraping would inherit the exact link-rot fragility that got
+     URLs stripped from the corpus in the first place. Only quora.com links are accepted, duplicates
+     within one submission are rejected, and a post under 120 characters is refused up front (not a
+     quality judgement — a couple of lines cannot ground an answer, and saying so now saves the wait).
+   - **Whole export.** For the rarer member whose public writing is nearly all on-topic: they get the
+     Quora export (Settings → Privacy → Download your information) and upload the `.zip` exactly as
+     it arrived. On the same page they read and tick
    six consent statements — one checkbox each, no bundled "agree to all" — covering: it is their own
    public writing; the one use permitted; they keep every right; they can withdraw; a human reads it
    and not everything is used; parts naming other people may be cut. An optional box asks whether
@@ -222,8 +236,10 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   via Ollama (captured as a bot turn), enqueues to `comic_review_queue`, and returns **only a
   safe holding response (HTTP 202)** — never the unreviewed draft. Safety-flagged turns skip
   generation and are queued human-first.
-- `POST /api/comic/contributions` (`comic.contribution.submit`) — signed-in member. Accepts a Quora
-  export `.zip` (multipart, 25 MB cap) plus the consent payload. **Consent is validated before the
+- `POST /api/comic/contributions` (`comic.contribution.submit`) — signed-in member. Accepts either
+  **`kind=links`** (the default: pasted posts, each with a quora.com URL as provenance — nothing is
+  fetched) or **`kind=export`** (a Quora export `.zip`, multipart, 25 MB cap), plus the consent
+  payload. **Consent is validated before the
   file is read at all**, and the submitted `consentVersion` must match the current
   `CONTRIBUTION_CONSENT_VERSION` (a cached older page is refused rather than recorded as having
   agreed to wording it never showed). The archive is read in memory — only `index.html` is
@@ -367,7 +383,8 @@ not_helpful / flagged ratings) are the **two training inputs** for the @comic as
    their posts, `entry_count`, `discarded_sections` jsonb — what the automatic strip threw away, shown
    back as the contributor's receipt, `reviewed_by`/`reviewed_at`/`decline_reason`, `granted_at` —
    set once the ServiceCredits recognition grant is made so a re-review cannot double-grant,
-   `withdrawn_at`, `created_at`, `updated_at`). Indexed on (`user_id`, `created_at` desc) and
+   `withdrawn_at`, `created_at`, `updated_at`), plus `kind` ∈ links|export — which path was used;
+  `links` is the default and carries no upload at all. Indexed on (`user_id`, `created_at` desc) and
    (`status`, `created_at` desc).
    **What is deliberately NOT stored: the uploaded `.zip`.** The archive is parsed in memory and
    discarded with the request — there is no file at rest to leak and nothing to delete later. Inbox
@@ -375,7 +392,8 @@ not_helpful / flagged ratings) are the **two training inputs** for the @comic as
    allowlist in `lib/comic/quora-export-intake.ts` before any human sees them.
 8. `comic_contribution_entries` — the surviving public entries of one contribution, held for review
    (`id` uuid pk, `contribution_id` uuid FK → `comic_contributions` ON DELETE CASCADE, `entry_type` ∈
-   answer|post|comment|submission, `question` null, `content` text, `knowledge_entry_id` uuid null —
+   answer|post|comment|submission, `question` null, `content` text, `source_url` text null — the
+   Quora link for a picked post, kept as provenance and never fetched, `knowledge_entry_id` uuid null —
    set once a reviewer promotes it, so re-running review is safe, `excluded` boolean, `authored_at`
    null, `created_at`). Indexed on `contribution_id`. **Nothing here is visible to the assistant** —
    an entry only reaches the bot once it is copied into `comic_knowledge_entries`. The gap between
@@ -635,7 +653,15 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   to requires bumping `CONTRIBUTION_CONSENT_VERSION`, and a page cached from before a change is
   refused rather than recorded as consent to wording it never showed. The file picker stays disabled
   until all six are ticked, so the order is always read-then-choose.
-  **The contributor is not asked to clean their own export.** A Quora `.zip` bundles inbox messages,
+  **Picking a few posts is the default; the whole export is the fallback (owner decision,
+  2026-07-29).** Most people's public writing is mixed — dating, politics, faith, memes — and nothing
+  in this pipeline sorts on-topic from off-topic automatically, so an export means the reviewer reads
+  hundreds of posts to find a handful. Picking moves that choice to the author, who knows instantly
+  which posts belong, and is the more honest consent: choosing three posts is knowing exactly what you
+  are giving. It also carries no upload at all, which removes the whole attack surface for the common
+  case. Picked posts are pasted as text with a quora.com link as **provenance that is never fetched** —
+  scraping would inherit the exact link-rot fragility that got URLs stripped from the corpus.
+  **On the export path, the contributor is still not asked to clean their own file.** A Quora `.zip` bundles inbox messages,
   drafts, and profile data alongside the public posts; most people would get the stripping wrong, and
   the ones who got it wrong would be the ones harmed. So it happens automatically, in
   `lib/comic/quora-export-intake.ts`, on an **allowlist** — an unrecognized section is discarded, so a
