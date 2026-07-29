@@ -1430,6 +1430,35 @@ ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS upda
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Removed feature: drop the legacy kill-switch column if a prior DB created it.
 ALTER TABLE IF EXISTS foundation_capacity_policies DROP COLUMN IF EXISTS kill_switch_enabled;
+-- === foundation_capacity_policy_events ===
+-- Append-only audit log of each capacity-policy change (issue #1960). The policy itself is a singleton
+-- row; this records who changed it, to what values, and when — with a monotonic policy_version — so the
+-- admin update has a real audit trail (the command contract's policyVersion/activatedAt outputs and its
+-- capacity_policy_event_log audit reference this table).
+CREATE TABLE IF NOT EXISTS foundation_capacity_policy_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  policy_version INTEGER NOT NULL UNIQUE,
+  max_active_threads_per_user INTEGER NOT NULL,
+  max_messages_per_minute INTEGER NOT NULL,
+  max_searches_per_minute INTEGER NOT NULL,
+  max_quote_transitions_per_minute INTEGER NOT NULL,
+  max_call_duration_minutes INTEGER NOT NULL,
+  quota_state TEXT NOT NULL CHECK (quota_state IN ('green', 'yellow', 'orange', 'red')),
+  changed_by_user_id TEXT,
+  activated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS policy_version INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_active_threads_per_user INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_messages_per_minute INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_searches_per_minute INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_quote_transitions_per_minute INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_call_duration_minutes INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS quota_state TEXT;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS changed_by_user_id TEXT;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS activated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_foundation_capacity_policy_events_activated_at
+  ON foundation_capacity_policy_events (activated_at DESC);
 CREATE TABLE IF NOT EXISTS trust_transport_status_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
@@ -2222,7 +2251,12 @@ DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('whatworks', 'trusttranspo
 -- GentlePulse decommissioned 2026-07-27 (owner decision): remove its registry row from existing DBs.
 DELETE FROM ctf_plugin_registry WHERE plugin_slug = 'gentle-pulse';
 
--- Seed plugin registry (upsert so re-running is safe)
+-- Seed plugin registry (upsert so re-running is safe).
+--
+-- THIS TABLE IS WHAT THE APPS LIST SHOWS. `fallbackPluginRegistry` in
+-- packages/web/lib/plugins/repository.ts is only used when this table is empty or unreadable, which
+-- is never true in production — so adding a plugin to that array alone puts NO tile in the launcher.
+-- A new plugin needs a row here as well, or it is invisible to members.
 INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availability_state, nav_rank, is_visible) VALUES
   ('chyme',              'Chyme',                'Live social audio rooms. Broadcast, listen, and connect in real time.',                       'implemented_shell', 10,  TRUE),
   ('skills-taxonomy',    'Skills Taxonomy',      'Browse the shared catalog of sectors, job titles, and skills.',                     'implemented_shell', 20,  TRUE),
@@ -4865,6 +4899,136 @@ CREATE INDEX IF NOT EXISTS idx_comic_knowledge_entries_search
   ON comic_knowledge_entries
   USING GIN (to_tsvector('english', COALESCE(question, '') || ' ' || COALESCE(title, '') || ' ' || content));
 CREATE INDEX IF NOT EXISTS idx_comic_knowledge_entries_active ON comic_knowledge_entries(active);
+
+-- comic_contributions: a member's offer of their own public Quora writing for the assistant's
+-- reference library, plus the consent that makes using it lawful and honest.
+--
+-- The consent columns are the point of this table, not metadata around it. They record WHAT the
+-- member agreed to and WHICH wording they read (consent_version), so a later change to the form
+-- cannot retroactively be claimed as something an earlier contributor agreed to. A contribution with
+-- no consent row is unusable by construction.
+--
+-- What is NOT here, deliberately:
+--   * the uploaded .zip — the archive is parsed in memory and never stored. There is no file at rest
+--     to leak, and nothing to delete later.
+--   * inbox messages, drafts, profile data — dropped by the allowlist in
+--     lib/comic/quora-export-intake.ts before this table is ever written.
+-- Accepted entries are copied into comic_knowledge_entries, which is a retrieval table read at
+-- answer time — NOT model weights. That is what makes withdrawal real: a row can be deactivated and
+-- the assistant stops quoting it.
+CREATE TABLE IF NOT EXISTS comic_contributions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  -- How the member sent their writing. 'links' is the DEFAULT path and the one most people should
+  -- use: they paste the two or three posts that are actually about being targeted. Most accounts are
+  -- mixed — dating, politics, faith, memes — so an export makes the reviewer read hundreds of posts
+  -- to find a handful, while the author can pick them out instantly. 'export' remains for the rarer
+  -- member whose public writing is nearly all on-topic.
+  kind TEXT NOT NULL DEFAULT 'links' CHECK (kind IN ('links', 'export')),
+  status TEXT NOT NULL DEFAULT 'pending_review'
+    CHECK (status IN ('pending_review', 'accepted', 'declined', 'withdrawn')),
+  -- Consent, captured at submit time from the form on the contribute page.
+  consent_version TEXT NOT NULL,
+  consent_granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- The member's own statement about third parties named in their posts, so a reviewer knows to look
+  -- before anything is accepted. Free text; empty when they said nobody is named.
+  third_party_note TEXT NOT NULL DEFAULT '',
+  -- Intake summary, shown back to the contributor as their receipt and kept as the record of what
+  -- the automatic strip did. `discarded_sections` names the parts thrown away (inbox, drafts, …).
+  entry_count INTEGER NOT NULL DEFAULT 0,
+  discarded_sections JSONB NOT NULL DEFAULT '[]'::jsonb,
+  -- Review outcome. reviewed_by is an admin user id; decline_reason is shown to the contributor.
+  reviewed_by TEXT NULL,
+  reviewed_at TIMESTAMPTZ NULL,
+  decline_reason TEXT NOT NULL DEFAULT '',
+  -- Set when the ServiceCredits recognition grant has been made, so a re-review cannot double-grant.
+  granted_at TIMESTAMPTZ NULL,
+  -- Set when the member asked for their material back out; the accepted knowledge rows are
+  -- deactivated at the same time.
+  withdrawn_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'links';
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending_review';
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS consent_version TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS consent_granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS third_party_note TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS entry_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS discarded_sections JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS reviewed_by TEXT NULL;
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ NULL;
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS decline_reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS granted_at TIMESTAMPTZ NULL;
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS withdrawn_at TIMESTAMPTZ NULL;
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_comic_contributions_user ON comic_contributions(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_comic_contributions_status ON comic_contributions(status, created_at DESC);
+
+-- comic_contribution_entries: the surviving public entries from one contribution, held here for
+-- review. Nothing here is visible to the assistant — only an accepted entry is copied into
+-- comic_knowledge_entries. Cascade-deletes with its contribution so a withdrawal that removes the
+-- submission cannot strand its text.
+CREATE TABLE IF NOT EXISTS comic_contribution_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  contribution_id UUID NOT NULL REFERENCES comic_contributions(id) ON DELETE CASCADE,
+  entry_type TEXT NOT NULL DEFAULT 'post'
+    CHECK (entry_type IN ('answer', 'post', 'comment', 'submission')),
+  question TEXT NULL,
+  content TEXT NOT NULL,
+  -- For a linked post: where it came from, kept as PROVENANCE so a reviewer can confirm the post is
+  -- public and belongs to the contributor. It is deliberately not a fetch target — nothing here
+  -- scrapes Quora, because a link that rots between paste and read would leave an entry nobody can
+  -- verify, and the redaction pass strips links from the content itself for the same reason.
+  source_url TEXT NULL,
+  -- Set once a reviewer promotes this entry into the knowledge base, so re-running review is safe.
+  knowledge_entry_id UUID NULL,
+  excluded BOOLEAN NOT NULL DEFAULT FALSE,
+  authored_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS contribution_id UUID;
+ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS entry_type TEXT NOT NULL DEFAULT 'post';
+ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS question TEXT NULL;
+ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS content TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS source_url TEXT NULL;
+ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS knowledge_entry_id UUID NULL;
+ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS excluded BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS authored_at TIMESTAMPTZ NULL;
+ALTER TABLE IF EXISTS comic_contribution_entries ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_comic_contribution_entries_contribution
+  ON comic_contribution_entries(contribution_id);
+
+-- Link a knowledge row back to the contribution it came from, so ACCOUNT DELETION reaches it.
+-- Withdrawal only deactivates a row (curation here is an off-switch, and a member may change their
+-- mind); deleting the account is the stronger promise and must actually remove the words. Making
+-- that a foreign key rather than a step in the deletion orchestrator means it cannot be forgotten:
+-- deleting comic_contributions cascades here automatically.
+-- NULL for everything seeded from the owner's own exports, which no member deletion touches.
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS contribution_id UUID NULL;
+DO $comic_knowledge_entries_contribution_fk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'comic_knowledge_entries_contribution_id_fkey'
+      AND constraint_schema = current_schema()
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_knowledge_entries
+        ADD CONSTRAINT comic_knowledge_entries_contribution_id_fkey
+        FOREIGN KEY (contribution_id) REFERENCES comic_contributions(id) ON DELETE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_knowledge_entries_contribution_fk$;
+CREATE INDEX IF NOT EXISTS idx_comic_knowledge_entries_contribution
+  ON comic_knowledge_entries(contribution_id);
 
 -- Named CHECK constraints for the comic_* enum/range columns. Idempotent (skip if present) so
 -- legacy DBs that predate the inline CHECKs converge. Enum values mirror lib/comic/constants.ts.
