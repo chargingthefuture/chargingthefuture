@@ -122,8 +122,8 @@ const STAT_PROVIDERS = [
         { label: 'different skills people have listed', value: distinctSkills.rows[0].n },
         { label: 'skills available to pick from in total', value: totalSkills.rows[0].n },
         {
-          label: `skills documented so far out of the ${FULL_ECONOMY_SKILL_BASELINE} a full Skills Economy needs (a full one is sized at about $300 billion in community value)`,
-          value: `${documentedNow} of ${FULL_ECONOMY_SKILL_BASELINE} documented (${pctOfBaseline}%)`,
+          label: 'documented skills toward a full Skills Economy',
+          value: `${documentedNow} of ${FULL_ECONOMY_SKILL_BASELINE} (${pctOfBaseline}%) — all ${FULL_ECONOMY_SKILL_BASELINE} would be about $300 billion in community value`,
         },
       ];
       if (topSkills.rows.length > 0) {
