@@ -111,10 +111,10 @@ export function UnlockVerifyBanner() {
                 style={s.quoraHelpLink}
                 accessibilityRole="link"
                 onPress={() => {
-                  void Linking.openURL('https://tiskillsnetwork.quora.com');
+                  void Linking.openURL('https://skillseconomy.quora.com');
                 }}
               >
-                tiskillsnetwork.quora.com
+                skillseconomy.quora.com
               </Text>{' '}
               and comment on any post asking for help — I&apos;ll reply with your profile URL.
             </Text>

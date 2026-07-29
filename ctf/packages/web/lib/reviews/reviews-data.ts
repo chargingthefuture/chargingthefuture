@@ -41,7 +41,7 @@ export const REVIEWS: Review[] = [
     author: 'Jen S.',
     source: 'Quora',
     sourceUrl:
-      'https://tiskillsnetwork.quora.com/https-www-quora-com-Have-most-AI-like-Claude-shown-to-be-openly-disbelieving-in-anything-similar-to-gang-or-organized',
+      'https://skillseconomy.quora.com/https-www-quora-com-Have-most-AI-like-Claude-shown-to-be-openly-disbelieving-in-anything-similar-to-gang-or-organized',
     quote:
       'This will make a difference in so many lives that are being tormented. I believe it will be one of the tools that will help bring this parasitic entity to an end.',
     context: 'On the community chatbot announcement',
