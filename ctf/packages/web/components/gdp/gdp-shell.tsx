@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Globe } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
 import { Badge } from "@/components/ui/badge";
@@ -111,7 +111,9 @@ export default function GdpShell() {
       // total is the full member roster; shares are a % of it, so the located countries plus the
       // "Location not set" bucket reconcile to the same member count the hero shows.
       const total = data.totalMembers ?? located;
-      const unspecified = data.unspecified ?? Math.max(0, total - located);
+      // The route owns this bucket (it already floors it at 0 and omits it when the roster read
+      // fails), so read it as sent rather than deriving a second copy here from total - located.
+      const unspecified = data.unspecified ?? 0;
       if (signal?.aborted) return;
       const mapped: GdpCountry[] = rows.map((r) => ({ country: r.country, members: r.members, share: total > 0 ? (r.members / total) * 100 : 0 }));
       if (unspecified > 0) {
@@ -136,9 +138,17 @@ export default function GdpShell() {
   }, [fetchCountries]);
 
   // Header refresh: re-pull the report and the country panel without the full-screen loading state.
+  // Track the refresh AbortController in a ref so a new refresh (or an unmount) cancels an in-flight one:
+  // the initial-load effects already abort on unmount, and this gives the refresh path the same cleanup
+  // and stops two rapid refreshes from racing.
+  const refreshControllerRef = useRef<AbortController | null>(null);
   const handleRefresh = useCallback(async () => {
-    await Promise.all([fetchReport(false), fetchCountries()]);
+    refreshControllerRef.current?.abort();
+    const controller = new AbortController();
+    refreshControllerRef.current = controller;
+    await Promise.all([fetchReport(false, controller.signal), fetchCountries(controller.signal)]);
   }, [fetchReport, fetchCountries]);
+  useEffect(() => () => refreshControllerRef.current?.abort(), []);
 
   if (loading) return <GdpLoading />;
 

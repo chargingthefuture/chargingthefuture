@@ -56,8 +56,11 @@ export function ChymeBackChannelPanel({
     const activeCall = videoClient.call(BACK_CHANNEL_CALL_TYPE, credentials.streamCallId);
     void (async () => {
       try {
-        await activeCall.join({ create: true });
+        // Disable the camera BEFORE joining so the browser never asks for camera permission (audio
+        // only). iOS prompts the moment the SDK requests a video track, so disabling after join is too
+        // late. Mic is enabled after join because a 1:1 call is a conversation — both people talk.
         try { await activeCall.camera.disable(); } catch { /* no camera */ }
+        await activeCall.join({ create: true });
         // A 1:1 call is a conversation — unlike the room, join UN-muted so both people can talk.
         try { await activeCall.microphone.enable(); } catch { /* mic unavailable */ }
         if (cancelled) return;

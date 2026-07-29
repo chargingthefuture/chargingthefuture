@@ -381,8 +381,14 @@ export async function recognizeCommunityValueIndex(): Promise<RecognitionBreakdo
   const unweighted = new Set<string>();
   const perCurrency = new Map<string, number>();
   const perSource: Array<{ pluginSlug: string; label: string; valueIndex: number }> = [];
-  for (const source of RECOGNITION_SOURCES) {
-    const volumes = await source.loadVolumes();
+  // Each source's loadVolumes() is an independent, read-only DB round trip, and this runs live on every
+  // dashboard request — so fire them concurrently instead of awaiting one at a time. Promise.all keeps
+  // result order, so the folded per-source breakdown stays in the same RECOGNITION_SOURCES order it had
+  // when this loop was sequential. Failure semantics are unchanged: if any source throws, the whole
+  // recognition rejects, exactly as the sequential await did.
+  const volumesBySource = await Promise.all(RECOGNITION_SOURCES.map((source) => source.loadVolumes()));
+  RECOGNITION_SOURCES.forEach((source, index) => {
+    const volumes = volumesBySource[index];
     const result = foldVolumesIntoIndex(volumes, weights);
     valueIndex += result.valueIndex;
     result.unweightedCurrencies.forEach((code) => unweighted.add(code));
@@ -390,7 +396,7 @@ export async function recognizeCommunityValueIndex(): Promise<RecognitionBreakdo
       perCurrency.set(volume.currencyCode, (perCurrency.get(volume.currencyCode) ?? 0) + volume.amount);
     }
     perSource.push({ pluginSlug: source.pluginSlug, label: source.label, valueIndex: result.valueIndex });
-  }
+  });
   return {
     valueIndex,
     unweightedCurrencies: [...unweighted],
