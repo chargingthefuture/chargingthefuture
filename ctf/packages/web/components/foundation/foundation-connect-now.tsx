@@ -5,6 +5,10 @@ import { PhoneCall, X } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getFoundationTokens, type ProviderView } from "./foundation-ui";
 import { useInstantCall } from "./foundation-instant-call";
+import {
+  FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS,
+  FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS,
+} from "@/lib/foundation/constants";
 
 // Whole ServiceCredits per block of N minutes, e.g. "5 ServiceCredits / 10 min". ServiceCredits is
 // one joined word per the brand lexicon. The amount is only rendered when the provider has a valid
@@ -146,10 +150,17 @@ export function ConnectNowButton({
 }
 
 // The buyer pre-authorizes a maximum number of blocks at confirm time (issue #808 task 4). The call can
-// never run past this cap in v1. These are the selectable caps; the default is 6 (matches the server
-// default FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS) and the max matches the server hard cap.
-const BLOCK_CAP_OPTIONS = [1, 2, 3, 4, 6, 8, 12, 24];
-const DEFAULT_BLOCK_CAP = 6;
+// never run past this cap in v1.
+//
+// The default and the ceiling are IMPORTED from the server constants rather than repeated here. They
+// matched before, so nothing was broken — but a comment saying "the max matches the server hard cap" is
+// only true until someone changes one side, and then the picker offers a value `normaliseAuthorizedBlocks`
+// throws `invalid_authorized_blocks` on, which the buyer sees as an opaque failure after they have already
+// consented to spend. Deriving the list means the two cannot drift.
+const BLOCK_CAP_OPTIONS = [1, 2, 3, 4, 6, 8, 12, FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS].filter(
+  (n, i, all) => n <= FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS && all.indexOf(n) === i,
+);
+const DEFAULT_BLOCK_CAP = FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS;
 
 function ConnectNowDialog({
   provider, rateLabel, intervalMinutes, onClose,
