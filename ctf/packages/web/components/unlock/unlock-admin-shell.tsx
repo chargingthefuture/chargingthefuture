@@ -475,10 +475,10 @@ export function UnlockAdminShell({
             const canRevoke = s.reviewStatus === 'approved' && !s.rewardRevokedAt;
             return (
               <div key={s.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <Key size={14} color={t.ACCENT} />
-                  {editingId === s.id ? (
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {editingId === s.id ? (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                    <Key size={14} color={t.ACCENT} style={{ flexShrink: 0, marginTop: 3 }} />
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                         <input
                           type="url"
@@ -499,11 +499,20 @@ export function UnlockAdminShell({
                         <div role="alert" style={{ fontSize: 12, color: '#EF4444' }}>{editError}</div>
                       ) : null}
                     </div>
-                  ) : (
-                    <>
-                      <a href={s.quoraProfileUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, flex: 1, wordBreak: 'break-all' }}>
+                  </div>
+                ) : (
+                  <div style={{ marginBottom: 6 }}>
+                    {/* URL on its own full-width row so a long Quora link wraps across the card width
+                        instead of being crushed to one character per line by the action pills that used
+                        to share this row (owner report, 2026-07-29). */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                      <Key size={14} color={t.ACCENT} style={{ flexShrink: 0, marginTop: 3 }} />
+                      <a href={s.quoraProfileUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, flex: 1, minWidth: 0, wordBreak: 'break-all' }}>
                         {s.quoraProfileUrl}
                       </a>
+                    </div>
+                    {/* Action pills and buttons wrap onto as many rows as they need, below the URL. */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <button type="button" aria-label="Edit URL" title="Edit URL" onClick={() => startEditUrl(s)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         <Pencil size={12} /> Edit
                       </button>
@@ -536,9 +545,9 @@ export function UnlockAdminShell({
                           Reward revoked
                         </span>
                       ) : null}
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </div>
+                )}
                 {s.quoraProfileUrlNormalized ? (
                   <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 4, display: 'flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
                     <span>Normalized:</span>
