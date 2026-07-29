@@ -139,6 +139,92 @@ the tests worth running slowly.
 
 ---
 
+## CMC-A1 · Review: accept, and what the credits do
+**Role:** admin, plus two contributors — one **verified (Unlock complete)** and one **not yet verified**
+**Steps:**
+1. Have both contributors send a contribution from `/knowledge`.
+2. Open `/admin/comic/contributions`.
+3. On the verified member's card, press **Leave out** on one entry, then press it again and confirm
+   it toggles back with **Put back**.
+4. Press **Accept N of M**.
+5. Repeat on the not-yet-verified member's card.
+6. Check `comic_knowledge_entries` and the contributors' ServiceCredits balances.
+
+**Expected:**
+- Every entry is shown **in full**, not summarised — the decision cannot be made from a count.
+- Nothing is excluded by default: entries start included and the reviewer opts one OUT. A skim must
+  not be able to silently drop someone's writing.
+- If the contributor wrote a third-party note, it appears **at the top of the card**, highlighted —
+  that is the thing to check before promoting anything.
+- After step 4: the left-out entry is **not** in `comic_knowledge_entries`; the kept ones are, each
+  carrying `contribution_id`. The screen says how many were added and that the credits were granted.
+- After step 5: the writing is in the library, and the screen says **no credits, because that member
+  is not verified yet**, and that the grant can be made once they finish Unlock. This is a decision,
+  not a failure — it must never look like a silent no-op.
+- `granted_at` is set only on the verified member's row.
+
+**Result:** web ☐
+
+---
+
+## CMC-A2 · Review cannot double-grant or accept twice
+**Role:** admin
+**Steps:**
+1. Accept a contribution.
+2. POST the same accept again to `/api/comic/admin/contributions/<id>/review`.
+3. Check the contributor's balance and `comic_knowledge_entries` for duplicates.
+
+**Expected:**
+- The second call returns 404 ("not waiting for review") — the status flip and the promotion shared
+  one transaction, so there is no half-accepted state to re-enter.
+- **The balance moved once.** `granted_at` is stamped before the mint and the mint carries a
+  per-contribution idempotency key, so a retried review, a double-click, or a crash between the two
+  cannot mint a second grant.
+- No duplicated knowledge rows.
+
+**Result:** web ☐
+
+---
+
+## CMC-A3 · Two members quoting the same passage do not duplicate it
+**Role:** admin
+**Steps:** Have two members contribute the exact same passage of text. Accept both.
+
+**Expected:** One `comic_knowledge_entries` row, not two — `content_hash` uses the same formula as the
+seed importer with ON CONFLICT DO NOTHING. Both contributions' entries point at that one row, so a
+withdrawal by either still reaches it.
+
+**Result:** web ☐
+
+---
+
+## CMC-A4 · Decline always carries a reason
+**Role:** admin, then the contributor
+**Steps:**
+1. Press **Decline** with the reason box empty.
+2. Fill a reason and decline.
+3. Sign in as the contributor and open `/knowledge`.
+
+**Expected:**
+- Step 1 → refused, "Give a reason — the contributor sees it." A decline nobody can understand reads
+  as a judgement on what they lived through.
+- Step 3 → the contribution reads **Not used** with the reason shown. Nothing was promoted.
+
+**Result:** web ☐
+
+---
+
+## CMC-A5 · The apps tile lands on the real page
+**Role:** signed-in member
+**Steps:** Open the apps launcher, find **Knowledge Library**, and tap it.
+
+**Expected:** It lands on `/knowledge` — `/apps/knowledge` redirects there, so there is one page
+rather than two copies to keep in step. The admin landing also lists **Contributed Writing**.
+
+**Result:** web ☐
+
+---
+
 ## CMC-C5 · Withdrawal actually stops the assistant quoting you
 **Role:** signed-in member (plus an admin to promote an entry, once the review surface ships)
 **Steps:**

@@ -265,6 +265,54 @@ contracts:
     idempotency: true
 
   - pluginId: comic
+    command: comic.contribution.review
+    version: 1.0.0
+    description: >-
+      Admin. Accept or decline a member's contributed writing. Accept promotes the chosen entries into
+      comic_knowledge_entries — the moment a member's writing becomes something the assistant can
+      quote — stamping contribution_id on each row so withdrawal and account deletion can still reach
+      it, and using the same content_hash formula as the seed importer with ON CONFLICT DO NOTHING so
+      two members quoting the same passage collapse onto one row. Promotion and the status flip share
+      one transaction. Decline REQUIRES a reason, which the contributor reads on their own page.
+      On accept, a flat ServiceCredits recognition grant is made — but ONLY to a member who has
+      finished Unlock (owner decision, 2026-07-29); anyone signed in may contribute, and an accepted
+      contribution from a not-yet-verified member stays accepted and ungranted. granted_at is stamped
+      before the mint and the mint carries a per-contribution idempotency key, so a retried review
+      cannot mint twice. The grant runs after promotion and may fail without undoing it: a mint outage
+      must not cost the library the writing.
+    inputSchema:
+      contributionId:
+        type: string
+        required: true
+      action:
+        type: string
+        enum: [accept, decline]
+        required: true
+      excludedEntryIds:
+        type: array
+        required: false
+      reason:
+        type: string
+        required: false
+    outputSchema:
+      status:
+        type: string
+      promoted:
+        type: integer
+      alreadyPresent:
+        type: integer
+      grant:
+        type: object
+    dataAccess:
+      - comic_contributions
+      - comic_contribution_entries
+      - comic_knowledge_entries
+      - service_credits_governance_events
+    purpose: assistant_knowledge_contribution
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: comic
     command: comic.training.export
     version: 1.1.0
     description: >-

@@ -267,3 +267,33 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  # Written on every review decision. Records counts and the grant outcome, never the contributed
+  # writing itself.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.contribution.review
+    commandVersion: 1.0.0
+    purpose: assistant_knowledge_contribution
+    policyDecision:
+      status: allow_or_deny
+      reason: accepted_or_declined
+      evidence:
+        roleCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_contribution_metadata
+      - comic_knowledge_entry_metadata
+    targetContext:
+      contributionId: contribution_identifier
+      promoted: integer
+      alreadyPresent: integer
+      excluded: integer
+      # granted | already_granted | skipped_not_unlocked | failed
+      grant: grant_outcome
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

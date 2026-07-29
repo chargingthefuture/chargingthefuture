@@ -13,7 +13,7 @@
 // HOW TO CHANGE IT: if you alter what a contributor is agreeing to — the use, the scope, the
 // revocability — bump the version. Fixing a typo that changes no meaning can keep the version.
 
-export const CONTRIBUTION_CONSENT_VERSION = '2026-07-28.1';
+export const CONTRIBUTION_CONSENT_VERSION = '2026-07-29.1';
 
 export type ConsentClause = {
   id: string;
@@ -56,9 +56,10 @@ export const CONTRIBUTION_CONSENT_CLAUSES: ConsentClause[] = [
 
 // Shown above the checkboxes. Facts the contributor needs before consenting, not terms to tick.
 export const CONTRIBUTION_CONSENT_NOTES: string[] = [
-  'Only your public answers and posts are kept. As soon as your file arrives, everything else Quora bundles into it — your private messages, your unpublished drafts, your profile details — is deleted automatically, before any person opens it. You do not have to clean the file yourself.',
-  'The file you upload is never stored. It is read once, in memory, and the archive itself is discarded — there is no copy of it sitting anywhere afterwards.',
+  'Only your public answers and posts are kept. If you send a whole export, everything else Quora bundles into it — your private messages, your unpublished drafts, your profile details — is deleted automatically as soon as it arrives, before any person opens it. You do not have to clean the file yourself.',
+  'A file you upload is never stored. It is read once, in memory, and the archive itself is discarded — there is no copy of it sitting anywhere afterwards.',
   'Your words are not used to train a model. They go into a table the assistant searches when it needs them, which is why withdrawing is something that can actually be done: the row comes out and the assistant stops quoting it. A bot trained the usual way could not honestly promise that.',
+  'An accepted contribution earns a ServiceCredits grant — an internal credits unit inside this app, not money and never cashable. You need to have finished verifying (Unlock) to receive it. You can contribute before then and your writing is used the same way; the grant simply waits.',
   'Contact details are stripped automatically — email addresses, phone numbers, links, and account handles. This narrows what gets through; it does not replace a person reading it, which is why one does.',
 ];
 

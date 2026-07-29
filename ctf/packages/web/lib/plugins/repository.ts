@@ -86,6 +86,18 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
+    // Knowledge Library — where a member lends their own public Quora writing to the assistant's
+    // reference library. The real surface is the top-level `/knowledge` page (short enough to put in
+    // an invitation post); `/apps/knowledge` redirects there, so the launcher tile works whether the
+    // registry is served from the database or this in-code fallback.
+    slug: 'knowledge',
+    name: 'Knowledge Library',
+    summary: 'Lend your own public writing so the assistant answers from more than one person.',
+    availabilityState: 'implemented_shell',
+    navRank: 66,
+    isVisible: true,
+  },
+  {
     slug: 'unlock',
     name: 'Unlock',
     summary: 'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',

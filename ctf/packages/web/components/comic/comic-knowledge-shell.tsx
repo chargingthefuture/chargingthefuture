@@ -534,6 +534,15 @@ export function ComicKnowledgeShell() {
           unit inside this app — they are not money, not cash, and cannot be cashed out. It is
           recognition for building something we all use, not a payment for your story.
         </p>
+        {/* Said plainly and up front, because finding out afterwards would feel like a bait. Anyone
+            signed in may contribute — someone still working through Unlock may have years of writing
+            worth having, and turning it away would cost the library more than it protects. The grant
+            is the part that waits. */}
+        <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6 }}>
+          You need to have finished verifying (Unlock) to receive the credits. You can contribute
+          before then — your writing is read and used the same way — and the grant can be made once
+          you are verified.
+        </p>
       </div>
     </main>
   );

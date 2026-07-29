@@ -263,3 +263,36 @@ policies:
       - actor_not_authenticated
       - contribution_not_found
       - contribution_not_owned
+
+  - pluginId: comic
+    command: comic.contribution.review
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      adminRouteGuard: required
+      # Only an accept promotes anything. Until then a contribution is inert — it cannot reach the
+      # assistant, which is what the knowledge page promises the contributor.
+      promotionRequiresHumanAccept: true
+      # A decline the contributor cannot understand reads as a judgement on what they lived through.
+      declineReasonRequired: true
+      # ServiceCredits recognition lands only for a member who has finished Unlock. Contributing is
+      # open to anyone signed in; the grant is the part that waits. This also puts a real cost in
+      # front of the obvious abuse — paying for contributions invites poisoned material.
+      grantRequiresUnlockedContributor: true
+      grantIdempotentPerContribution: true
+    consentRequirements:
+      scopes:
+        - feed_admin_governance
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_admin
+      - contribution_not_pending
+      - decline_reason_missing

@@ -208,6 +208,29 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 
 ## Target Admin / Owner Features
 
+### Contributed-writing review (`/admin/comic/contributions`, shipped 2026-07-29)
+
+1. Queue of contributions waiting to be read, each showing the **actual writing** — the decision
+   cannot be made from a summary. The contributor's own note about third parties is surfaced at the
+   top of the card, not buried with the text, because that is the thing to check before promoting.
+2. Per-entry **Leave out / Put back**. Nothing is excluded by default: the reviewer opts a post OUT
+   after reading it rather than opting each one in, so a skim cannot silently drop someone's writing.
+3. **Accept** promotes the kept entries into `comic_knowledge_entries` — the moment a member's
+   writing becomes something the assistant can quote — stamping `contribution_id` on each row so
+   withdrawal and account deletion can still reach it. `content_hash` uses the same formula as
+   `importComicKnowledge.mjs` with `ON CONFLICT DO NOTHING`, so two members quoting the same
+   widely-shared passage collapse onto one row instead of duplicating it.
+4. **Decline** requires a reason, which the contributor reads on their own page. A decline nobody can
+   understand reads as a judgement on what they lived through.
+5. **ServiceCredits recognition grant** on accept: a flat 100 credits per accepted contribution
+   (flat, not per-post — paying by volume would reward padding, and the reviewer would end up arguing
+   about counts with people already having a hard week). **Only a member who has finished Unlock
+   receives credits** (owner decision, 2026-07-29); anyone signed in may contribute. `granted_at` is
+   stamped before the mint and the mint carries a per-contribution idempotency key, so a retried
+   review, a double-click, or a crash between the two cannot mint twice. The admin screen states which
+   of granted / not-yet-verified / already-granted / failed happened, so a skipped grant never looks
+   like a silent no-op.
+
 1. **Review & correction dashboard** — queue of bot turns awaiting review; approve, edit, or
    reject; corrections become training examples. **[Web UI delivered — design `9a4a1af`; at
    `/admin/comic`. 4 states: queue / empty / loading / detail-edit.]**
@@ -254,6 +277,14 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   own contribution only (scoped inside the query, so another member's id is indistinguishable from a
   missing one). Marks it withdrawn and deactivates its `comic_knowledge_entries` rows in one
   transaction, so there is no window where it reads as withdrawn while still being quoted.
+- `GET /api/comic/admin/contributions?status=<status>` — admin. The contribution review queue, each
+  row with its entries so the reviewer reads the writing rather than a count.
+- `POST /api/comic/admin/contributions/[id]/review` (`comic.contribution.review`) — admin. Accept
+  (promoting the chosen entries into `comic_knowledge_entries` and making the ServiceCredits
+  recognition grant) or decline (a reason is **required** — the contributor reads it). Promotion and
+  the status flip share one transaction, so a half-accepted contribution cannot exist. The grant runs
+  after promotion and is allowed to fail without undoing it: a mint outage must not cost the library
+  the writing or make the reviewer redo the reading.
 - `GET /api/comic/review` (`comic.reply.generate` data surface) — admin. Paginated list of
   pending review items (asker question + draft + intent/confidence + safety category).
 - `POST /api/comic/review/[turnId]/resolve` (`comic.review.resolve`) — admin. Approve / correct
@@ -687,10 +718,18 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   New commands `comic.contribution.submit` / `comic.contribution.withdraw` in the command, access-policy,
   and audit contracts — the audit records the **consent**, never the content. New dependency: `fflate`
   (zip reading, no transitive dependencies).
-  **Not in this slice:** the admin review surface that accepts a contribution, promotes entries into
-  `comic_knowledge_entries`, and makes the ServiceCredits recognition grant. Contributions land in
-  `pending_review` and are inert until that ships — nothing a member sends can reach the assistant on
-  its own.
+  **The admin review surface ships with it** (`/admin/comic/contributions`, owner requirement before
+  launch): accept promotes the chosen entries and makes the grant, decline requires a reason the
+  contributor reads. Until a contribution is accepted there it stays inert — nothing a member sends
+  can reach the assistant on its own.
+  **Credits require Unlock (owner decision).** Anyone signed in may contribute; only a verified member
+  receives the ServiceCredits grant. An accepted contribution from a not-yet-verified member stays
+  accepted and ungranted, and the grant can be made later. Requiring verification also puts a real
+  cost in front of the obvious abuse: paying for contributions is an invitation to submit poisoned
+  material.
+  **Apps list:** registered as `knowledge` / "Knowledge Library" in the plugin registry; the launcher
+  tile at `/apps/knowledge` redirects to the top-level `/knowledge` page so there is one page rather
+  than two copies to keep in step. New admin area "Contributed Writing" on the admin landing.
 
 - 2026-07-26: **Seed corpus drops URLs — an accuracy decision, not a privacy one (owner, 2026-07-26).** The seed's value is the writing, not a link directory, and links are its most perishable part. Measured across the 1,800 seed records: **35% contain a URL, and 24% contain a URL the Quora export itself truncated with `...`** — already unusable and unfixable from this data. Others point at routes that no longer exist (e.g. `/apps/directory/public/<id>`; the Directory's public projection was removed 2026-05-18 and legacy URLs are deliberately not redirected). Worst case, a link to another member's account can rot into a safety failure: that account may be deleted, or taken over, and a bot answer sending a survivor there is not merely out-of-date. `redact()` now replaces every URL with `[link removed]` (Quora profile links keep their own `[profile link removed]` label). **Prose is untouched** — people and places are still named, so attribution survives ("Nat Morris created a list of questions…"); only the fragile pointer goes. Average answer length is unchanged at ~514 characters. The bot should tell a member to open LightHouse, not hand them a URL it cannot vouch for. Applies to both parsers and, via `scrubComicKnowledgeIdentifiers.mjs`, to the rows already imported (609 of 1,575 change).
 - 2026-07-26: **Second Quora account export parsed and staged for import (#504; data-only, no schema impact).** The owner supplied the second account's Quora export ("Pedigree101"), the last open dependency on #504. Parsed with the existing `parseQuoraExportToComicDataset.mjs`: **225 records** (43 answers, 72 space posts, 87 comments, 23 space submissions), 16 exact duplicates dropped, and a post-run scan confirming **zero** remaining emails, Signal links, or wallet addresses. Staged as a temporary data file (`ctf/scripts/data/comic-knowledge-seed-2.jsonl`) plus a one-time manually-triggered workflow (`.github/workflows/import-comic-knowledge-2.yml`), the same pattern the first import used; both are deleted after one green run (tracked on its own cleanup issue). The import is idempotent (sha256 content hash + `ON CONFLICT DO NOTHING`), so content overlapping the first account's 1,575 entries inserts nothing twice. **The companion "data" export was deliberately excluded**: it holds account metadata (139 bookmarks, 101 user follows, 11 user blocks, 25 user mutes, topic/question mutes) plus the owner's own name/email/profile URL — settings and ~137 third-party identities, not "what good help looks like". Training on it would add no answer-quality signal and would risk a fine-tuned model emitting another member's name from a block list, which #504's de-identification rule exists to prevent. Only owner-authored public content is imported.
