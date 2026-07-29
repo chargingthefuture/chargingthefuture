@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireComicReadAccess } from '../_lib';
+import { ensureMutationCsrf, requireComicContributionAccess } from '../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { logComicAudit } from 'lib/comic/audit';
 import { readQuoraExportArchive } from 'lib/comic/contribution-archive';
@@ -14,6 +14,7 @@ import {
   listContributionsForUser,
 } from 'lib/comic/contribution-repository';
 import { validateLinkedPosts } from 'lib/comic/contribution-links';
+import { linkContributionToUnlock } from 'lib/comic/contribution-unlock-link';
 import { reportError } from 'lib/observability/report';
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +32,7 @@ function badRequest(message: string, code: string = COMIC_ERROR_CODE.invalidPayl
 
 // GET: the member's own contribution history, for the page's status list.
 export async function GET() {
-  const gate = await requireComicReadAccess();
+  const gate = await requireComicContributionAccess();
   if (!gate.allowed) return gate.response;
 
   try {
@@ -56,7 +57,7 @@ export async function GET() {
 //   4. store only what survived. The uploaded archive is never written to disk and is gone as soon
 //      as this request ends.
 export async function POST(request: Request) {
-  const gate = await requireComicReadAccess();
+  const gate = await requireComicContributionAccess();
   if (!gate.allowed) return gate.response;
 
   const csrfDeny = ensureMutationCsrf(request);
@@ -175,6 +176,16 @@ export async function POST(request: Request) {
       entries,
     });
 
+    // Contributing is a route into verification: if this member has no Quora URL on file and gave
+    // one here, open an Unlock submission from it. Best-effort and AFTER the contribution is stored —
+    // the writing is already safe, and a failure here just means they verify the ordinary way.
+    // It creates a pending submission, never an approval; the owner still decides.
+    const unlockLink = await linkContributionToUnlock({
+      userId: gate.auth.userId,
+      quoraProfileUrl: typeof form.get('quoraProfileUrl') === 'string' ? String(form.get('quoraProfileUrl')) : null,
+      contributionId: contribution.id,
+    });
+
     // Audit the consent, never the content. What matters for the record is that this member agreed
     // to this version of the wording at this time.
     logComicAudit({
@@ -192,10 +203,11 @@ export async function POST(request: Request) {
         entryCount: contribution.entryCount,
         kind,
         discardedSections: discarded,
+        unlockLink: unlockLink.status,
       },
     });
 
-    return NextResponse.json({ ok: true, contribution }, { status: 201 });
+    return NextResponse.json({ ok: true, contribution, unlockLink: unlockLink.status }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'comic', op: 'contribution_submit' });
     return NextResponse.json(
