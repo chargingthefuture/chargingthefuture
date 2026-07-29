@@ -38,6 +38,12 @@
       "requiresExplicitWebShell": false
     },
     {
+      "slug": "knowledge",
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
+      "requiresExplicitWebShell": true
+    },
+    {
       "slug": "foundation",
       "mobileFeatureDirs": [],
       "requiresMobileSurface": false,
