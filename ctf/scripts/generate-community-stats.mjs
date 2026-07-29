@@ -39,6 +39,13 @@ function requireEnv(name) {
 const databaseUrl = requireEnv('DATABASE_URL');
 requireEnv('ANTHROPIC_API_KEY');
 
+// The number of documented skills a fully working Skills Economy needs. Reaching all 650 is the
+// baseline for that full economy — one we size at about $300 billion in community value (the same
+// $300B goal the GDP plugin tracks; an estimate, never money or price). The Directory shows how many
+// skills are documented so far, so the draft can report that count against this 650 baseline as a
+// percentage.
+const FULL_ECONOMY_SKILL_BASELINE = 650;
+
 const pool = new Pool({
   connectionString: databaseUrl,
   ssl: { rejectUnauthorized: false },
@@ -105,10 +112,19 @@ const STAT_PROVIDERS = [
          ORDER BY n DESC, s.name ASC
          LIMIT 5`,
       );
+      // How many skills are documented so far, measured against the 650 a full Skills Economy
+      // needs. The percentage is whole-number and can read small early on — that is fine to show
+      // plainly.
+      const documentedNow = totalSkills.rows[0].n;
+      const pctOfBaseline = Math.round((documentedNow / FULL_ECONOMY_SKILL_BASELINE) * 100);
       const facts = [
         { label: 'people listed in the Directory', value: profiles.rows[0].n },
         { label: 'different skills people have listed', value: distinctSkills.rows[0].n },
         { label: 'skills available to pick from in total', value: totalSkills.rows[0].n },
+        {
+          label: `skills documented so far out of the ${FULL_ECONOMY_SKILL_BASELINE} a full Skills Economy needs (a full one is sized at about $300 billion in community value)`,
+          value: `${documentedNow} of ${FULL_ECONOMY_SKILL_BASELINE} documented (${pctOfBaseline}%)`,
+        },
       ];
       if (topSkills.rows.length > 0) {
         const named = topSkills.rows.map((r) => `${r.name} (${r.n})`).join(', ');
@@ -237,7 +253,7 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
     messages: [
       {
         role: 'user',
-        content: `This week's whole-community totals:\n\n${statsForPrompt}\n\nWrite a community snapshot. Return ONLY a JSON object with these exact keys:\n- title: A short, plain in-list title (max 80 chars), e.g. "Community activity — ${today}".\n- quoraDraft: A 2-4 short-paragraph Quora post, written like a personal note. Lead with the SocketRelay open posts and the Directory numbers, since those show need most clearly. When you first name each app, paste its exact direct link (given above as "direct link: ...") right after the name in parentheses, so a reader can tap straight through to it. Remember an open-post count is a count of posts, not people. Plain words, ~6th-grade reading level. Make it concrete: a number, what it means, and one simple thing a reader can do (join, list a skill, answer an open post). One sentence on where the project lives, giving the GitHub URL exactly as ${repoUrl}. Do not invent numbers or links, do not sell importance, no rhetorical questions.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
+        content: `This week's whole-community totals:\n\n${statsForPrompt}\n\nWrite a community snapshot. Return ONLY a JSON object with these exact keys:\n- title: A short, plain in-list title (max 80 chars), e.g. "Community activity — ${today}".\n- quoraDraft: A 2-4 short-paragraph Quora post, written like a personal note. Lead with the SocketRelay open posts and the Directory numbers, since those show need most clearly. Work in the skills-documented-so-far line — how many of the 650 skills a full Skills Economy needs are documented now, and the percentage — since it shows how the economy is filling in; use only the exact numbers given for it. When you first name each app, paste its exact direct link (given above as "direct link: ...") right after the name in parentheses, so a reader can tap straight through to it. Remember an open-post count is a count of posts, not people. Plain words, ~6th-grade reading level. Make it concrete: a number, what it means, and one simple thing a reader can do (join, list a skill, answer an open post). One sentence on where the project lives, giving the GitHub URL exactly as ${repoUrl}. Do not invent numbers or links, do not sell importance, no rhetorical questions.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
       },
     ],
   }),
