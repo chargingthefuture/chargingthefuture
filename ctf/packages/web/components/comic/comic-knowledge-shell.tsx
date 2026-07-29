@@ -12,8 +12,12 @@ import {
 } from '../../lib/comic/contribution-consent';
 import { MAX_LINKED_POSTS } from '../../lib/comic/contribution-links';
 
-// The contribute page: where a member sends their own public Quora writing for the assistant's
-// reference library, and where the consent that permits it is given.
+// The knowledge page (`/knowledge`): where a member lends their own public Quora writing to the
+// assistant's reference library, and where the consent that permits it is given.
+//
+// Named "knowledge", not "contribute", because the Contributions plugin is a different thing
+// entirely — the fundraiser and donation surface — and two member-facing paths a word apart would be
+// a standing source of confusion (owner decision, 2026-07-29).
 //
 // The consent form is ON this page, not a separate document behind a link, because a link is a thing
 // people click past. The clauses render from lib/comic/contribution-consent.ts — the same module the
@@ -42,7 +46,7 @@ const STATUS_LABEL: Record<ContributionSummary['status'], string> = {
   withdrawn: 'Withdrawn',
 };
 
-export function ComicContributeShell() {
+export function ComicKnowledgeShell() {
   const { theme } = useTheme();
   const t = getComicTokens(theme);
 
@@ -147,7 +151,7 @@ export function ComicContributeShell() {
 
   return (
     <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Inter',system-ui,sans-serif" }}>
-      <MobileScreenHeader title="Contribute your writing" accent={t.ACCENT} icon={<Upload size={18} color={t.ACCENT} />} />
+      <MobileScreenHeader title="Knowledge library" accent={t.ACCENT} icon={<Upload size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 16px 48px' }}>
         <p style={{ fontSize: 15, lineHeight: 1.65, color: t.TEXT, marginTop: 0 }}>
           The assistant answers from one person&apos;s writing. Yours is different, and the next member

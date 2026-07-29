@@ -16,7 +16,7 @@ the tests worth running slowly.
 **Precondition:** two of your own public Quora posts.
 
 **Steps:**
-1. Open `/contribute`.
+1. Open `/knowledge`.
 2. Check which option is selected before you touch anything.
 3. Before ticking any consent line, try to type in a post box.
 4. Tick all six consent lines. Paste one post's Quora link and its full text, press **Add another
@@ -66,7 +66,7 @@ the tests worth running slowly.
 **Precondition:** a real Quora export `.zip` (Settings → Privacy → Download your information).
 
 **Steps:**
-1. On `/contribute`, choose **Send my whole Quora export**.
+1. On `/knowledge`, choose **Send my whole Quora export**.
 2. Before ticking anything, try to choose a file.
 3. Tick all six consent lines, then choose the `.zip` and send it.
 
@@ -144,7 +144,7 @@ the tests worth running slowly.
 **Steps:**
 1. With an accepted contribution whose entries are in the knowledge base, ask the assistant something
    those entries answer, and confirm a draft is grounded in them (`comic_turns.grounding_entry_ids`).
-2. On `/contribute`, press **Withdraw** on that contribution.
+2. On `/knowledge`, press **Withdraw** on that contribution.
 3. Ask the same question again.
 
 **Expected:**

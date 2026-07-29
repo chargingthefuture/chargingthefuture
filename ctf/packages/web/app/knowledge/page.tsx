@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
-import { ComicContributeShell } from '@/components/comic/comic-contribute-shell';
+import { ComicKnowledgeShell } from '@/components/comic/comic-knowledge-shell';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,13 +14,16 @@ export const dynamic = 'force-dynamic';
 // contribution has to be attributable to the person consenting, and withdrawal has to be something
 // only they can do.
 //
-// A short top-level path (`/contribute`) rather than a path under /apps, because the invitation post
-// links here from outside the app and the link should be easy to type and read.
-export default async function ContributePage() {
+// A short top-level path (`/knowledge`) rather than one under /apps, because the invitation post
+// links here from outside the app and the link should be easy to type and read. Deliberately NOT
+// `/contribute`: the Contributions plugin is a different thing entirely — the fundraiser and donation
+// surface — and two member-facing paths a word apart would be a standing source of confusion (owner
+// decision, 2026-07-29).
+export default async function KnowledgePage() {
   const decision = await evaluatePluginAccess({ minUnlockTier: 'any_authenticated', requireUsername: false });
   if (!decision.allowed) {
     redirect(getHostedSignInUrl() ?? '/sign-in');
   }
 
-  return <ComicContributeShell />;
+  return <ComicKnowledgeShell />;
 }

@@ -173,7 +173,10 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 3. When unsure, the bot shows a clear pre-approved holding response and hands the question
    to a human — the user is never shown speculative content.
 4. Users can rate any answer (`helpful / not_helpful / flagged`) — feeds the training loop.
-5. **Contribute your own writing (`/contribute`).** A member can lend their own public Quora
+5. **Contribute your own writing (`/knowledge`).** The path is `/knowledge`, deliberately **not**
+   `/contribute` — the Contributions plugin is a different thing entirely (the fundraiser and donation
+   surface), and two member-facing paths a word apart would be a standing source of confusion (owner
+   decision, 2026-07-29). The screen is titled "Knowledge library" for the same reason. A member can lend their own public Quora
    answers and posts to the assistant's reference library, so the bot answers from more than one
    person's experience. **Two ways, and picking a few posts is the default (owner decision,
    2026-07-29):** most people's public writing is mixed — dating, politics, faith, memes — and
@@ -642,7 +645,9 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 ## Change Log
 
 - 2026-07-29: **Members can contribute their own public Quora writing, with the consent form on the
-  page (`/contribute`).** The assistant answers from one person's writing; this is the intake that
+  page (`/knowledge`).** The path and the screen title avoid the word "contribute" on purpose: the
+  Contributions plugin is the fundraiser/donation surface, and two member-facing paths a word apart
+  would be a standing source of confusion (owner decision). The assistant answers from one person's writing; this is the intake that
   lets it answer from more than one. New page, two member routes, two tables.
   **The consent form is on the page itself**, not behind a link, because a link is a thing people
   click past. Six clauses, one checkbox each, no bundled "agree to all" — own public writing / the
