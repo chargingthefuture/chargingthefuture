@@ -139,7 +139,7 @@ function PublicCommunityPanel({ plugins, signInUrl }: { stats: ShellStats; plugi
       <div className={styles.heroBanner}>
         <div className={styles.heroBannerContent}>
           <p className={styles.heroBannerTag}>✦ From Survivor to Thriver</p>
-          <h1 className={styles.heroBannerTitle}>Welcome to Survivor Hub</h1>
+          <h1 className={styles.heroBannerTitle}>Welcome to Skills Economy</h1>
           <p className={styles.heroBannerSub}>Connect with your community. Access {implementedCount} live plugins for housing, work, safety, and support.</p>
         </div>
         {/* Stats are hidden on phones, where the three blocks filled a quarter of the first screen
@@ -185,7 +185,7 @@ function PublicCommunityPanel({ plugins, signInUrl }: { stats: ShellStats; plugi
             <div className={`${styles.chatBubble} ${styles.chatBubbleHub}`}>
               {isPublic
                 ? 'No community posts yet. Sign in to start the conversation.'
-                : 'To start connecting with Survivor Hub and accessing community support, please sign in.'}
+                : 'To start connecting with the community and accessing support, please sign in.'}
             </div>
           </div>
         )}
@@ -198,7 +198,7 @@ function PublicCommunityPanel({ plugins, signInUrl }: { stats: ShellStats; plugi
         <p className={styles.chatSuggestionsInfo}>
           {hasPosts
             ? 'You are reading the Commons. Sign in — free — to post, reply, and access housing, work, and safety resources.'
-            : 'Survivor Hub is free and helps you access housing, work, safety resources, and connect with others in the community.'}
+            : 'Skills Economy is free and helps you access housing, work, safety resources, and connect with others in the community.'}
         </p>
       </div>
     </div>
@@ -478,7 +478,7 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
               ) : announcementsOnly ? (
                 <>No announcements yet. Official updates from the team show here.</>
               ) : (
-                <>Survivor Hub is live. Share with the community, or type <strong>@comic</strong> to ask the AI Assistant.</>
+                <>You are connected. Share with the community, or type <strong>@comic</strong> to ask the AI Assistant.</>
               )}
             </div>
           </div>

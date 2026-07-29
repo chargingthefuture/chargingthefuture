@@ -38,7 +38,7 @@ export function ShellRightRail({ currentUser, trust, isAuthenticated = false, si
       <aside className={`${styles.panel} ${styles.rightRail}`}>
         <section className={styles.profileCard}>
           {avatar}
-          <p className={styles.profileName}>Welcome to Survivor Hub</p>
+          <p className={styles.profileName}>Welcome to Skills Economy</p>
           <p className={styles.profileMeta}>Sign in to access full features and connect with your community</p>
           <Link href={signInUrl} className={styles.profileLoginBtn}>Sign In</Link>
         </section>
@@ -49,7 +49,7 @@ export function ShellRightRail({ currentUser, trust, isAuthenticated = false, si
         </section>
 
         <section>
-          <p className={styles.rightRailSectionTitle}>About Survivor Hub</p>
+          <p className={styles.rightRailSectionTitle}>About Skills Economy</p>
           <p className={styles.sectionDesc}>Not sure where to start? Just say what you need in the chat — housing, work, safety, or someone to talk to — and we&apos;ll point you to the right place.</p>
         </section>
       </aside>
