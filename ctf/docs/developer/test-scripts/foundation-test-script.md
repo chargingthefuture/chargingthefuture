@@ -745,4 +745,19 @@ Result: web ☐
 
 ---
 
-### F
+### FDN-38 — Admin: capacity policy change is versioned and audited
+
+**Role:** Admin
+**Surface:** Web
+
+**Precondition:** Signed in as an admin. On the Foundation admin page.
+
+**Steps:**
+1. Open the capacity-policy form and change a value (e.g. the quota state or one of the five rate-limit numbers); save.
+2. Note the response / any version shown.
+3. Save a second change.
+4. Open the admin audit trail.
+
+**Expected:** Each save succeeds with the CSRF header. The update records an append-only `foundation_capacity_policy_events` row with a monotonic `policyVersion` (the second save's version is exactly one higher than the first) and an `activatedAt` timestamp, and the audit trail shows the change with the version. The saved values persist and the quota threshold reflects the new state. A non-admin is denied.
+
+Result: web ☐

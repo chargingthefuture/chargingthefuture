@@ -1595,8 +1595,22 @@ export async function getCapacityPolicy(): Promise<FoundationCapacityPolicy> {
       maxCallDurationMinutes: 45,
       quotaState: 'green',
       updatedAtIso: new Date().toISOString(),
+      policyVersion: null,
+      activatedAtIso: null,
     };
   }
+
+  // The current version comes from the append-only event log (issue #1960): the highest policy_version
+  // and when it activated. Both are null on a policy that has never been updated through the events path.
+  const latestEvent = await queryDb<{ policy_version: number; activated_at: Date }>(
+    `
+      SELECT policy_version, activated_at
+      FROM foundation_capacity_policy_events
+      ORDER BY policy_version DESC
+      LIMIT 1
+    `,
+  );
+  const eventRow = latestEvent.rows[0];
 
   return {
     maxActiveThreadsPerUser: row.max_active_threads_per_user,
@@ -1606,6 +1620,8 @@ export async function getCapacityPolicy(): Promise<FoundationCapacityPolicy> {
     maxCallDurationMinutes: row.max_call_duration_minutes,
     quotaState: row.quota_state,
     updatedAtIso: toIso(row.updated_at),
+    policyVersion: eventRow ? Number(eventRow.policy_version) : null,
+    activatedAtIso: eventRow ? toIso(eventRow.activated_at) : null,
   };
 }
 
@@ -1618,60 +1634,92 @@ export async function updateCapacityPolicy(input: {
   maxCallDurationMinutes: number;
   quotaState: 'green' | 'yellow' | 'orange' | 'red';
 }): Promise<FoundationCapacityPolicy> {
-  const updated = await queryDb<{
-    max_active_threads_per_user: number;
-    max_messages_per_minute: number;
-    max_searches_per_minute: number;
-    max_quote_transitions_per_minute: number;
-    max_call_duration_minutes: number;
-    quota_state: 'green' | 'yellow' | 'orange' | 'red';
-    updated_at: Date;
-  }>(
-    `
-      INSERT INTO foundation_capacity_policies
-        (singleton_key, max_active_threads_per_user, max_messages_per_minute, max_searches_per_minute, max_quote_transitions_per_minute, max_call_duration_minutes, quota_state, updated_by_user_id)
-      VALUES
-        (TRUE, $1, $2, $3, $4, $5, $6, $7)
-      ON CONFLICT (singleton_key)
-      DO UPDATE SET
-        max_active_threads_per_user = EXCLUDED.max_active_threads_per_user,
-        max_messages_per_minute = EXCLUDED.max_messages_per_minute,
-        max_searches_per_minute = EXCLUDED.max_searches_per_minute,
-        max_quote_transitions_per_minute = EXCLUDED.max_quote_transitions_per_minute,
-        max_call_duration_minutes = EXCLUDED.max_call_duration_minutes,
-        quota_state = EXCLUDED.quota_state,
-        updated_by_user_id = EXCLUDED.updated_by_user_id,
-        updated_at = NOW()
-      RETURNING
-        max_active_threads_per_user,
-        max_messages_per_minute,
-        max_searches_per_minute,
-        max_quote_transitions_per_minute,
-        max_call_duration_minutes,
-        quota_state,
-        updated_at
-    `,
-    [
-      input.maxActiveThreadsPerUser,
-      input.maxMessagesPerMinute,
-      input.maxSearchesPerMinute,
-      input.maxQuoteTransitionsPerMinute,
-      input.maxCallDurationMinutes,
-      input.quotaState,
-      input.actorUserId,
-    ],
-  );
+  return withDbTransaction(async (client) => {
+    const updated = await client.query<{
+      max_active_threads_per_user: number;
+      max_messages_per_minute: number;
+      max_searches_per_minute: number;
+      max_quote_transitions_per_minute: number;
+      max_call_duration_minutes: number;
+      quota_state: 'green' | 'yellow' | 'orange' | 'red';
+      updated_at: Date;
+    }>(
+      `
+        INSERT INTO foundation_capacity_policies
+          (singleton_key, max_active_threads_per_user, max_messages_per_minute, max_searches_per_minute, max_quote_transitions_per_minute, max_call_duration_minutes, quota_state, updated_by_user_id)
+        VALUES
+          (TRUE, $1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (singleton_key)
+        DO UPDATE SET
+          max_active_threads_per_user = EXCLUDED.max_active_threads_per_user,
+          max_messages_per_minute = EXCLUDED.max_messages_per_minute,
+          max_searches_per_minute = EXCLUDED.max_searches_per_minute,
+          max_quote_transitions_per_minute = EXCLUDED.max_quote_transitions_per_minute,
+          max_call_duration_minutes = EXCLUDED.max_call_duration_minutes,
+          quota_state = EXCLUDED.quota_state,
+          updated_by_user_id = EXCLUDED.updated_by_user_id,
+          updated_at = NOW()
+        RETURNING
+          max_active_threads_per_user,
+          max_messages_per_minute,
+          max_searches_per_minute,
+          max_quote_transitions_per_minute,
+          max_call_duration_minutes,
+          quota_state,
+          updated_at
+      `,
+      [
+        input.maxActiveThreadsPerUser,
+        input.maxMessagesPerMinute,
+        input.maxSearchesPerMinute,
+        input.maxQuoteTransitionsPerMinute,
+        input.maxCallDurationMinutes,
+        input.quotaState,
+        input.actorUserId,
+      ],
+    );
 
-  const row = updated.rows[0];
-  return {
-    maxActiveThreadsPerUser: row.max_active_threads_per_user,
-    maxMessagesPerMinute: row.max_messages_per_minute,
-    maxSearchesPerMinute: row.max_searches_per_minute,
-    maxQuoteTransitionsPerMinute: row.max_quote_transitions_per_minute,
-    maxCallDurationMinutes: row.max_call_duration_minutes,
-    quotaState: row.quota_state,
-    updatedAtIso: toIso(row.updated_at),
-  };
+    const row = updated.rows[0];
+
+    // Record this change as a versioned, append-only event (issue #1960): a monotonic policy_version, the
+    // full snapshot of the new values, who changed it, and when it activated. MAX+1 is safe inside this
+    // transaction — the policy is a singleton and only admins update it, so there is no real contention.
+    const versionResult = await client.query<{ next_version: string }>(
+      `SELECT (COALESCE(MAX(policy_version), 0) + 1)::text AS next_version FROM foundation_capacity_policy_events`,
+    );
+    const policyVersion = Number.parseInt(versionResult.rows[0]?.next_version ?? '1', 10);
+    const eventResult = await client.query<{ activated_at: Date }>(
+      `
+        INSERT INTO foundation_capacity_policy_events
+          (policy_version, max_active_threads_per_user, max_messages_per_minute, max_searches_per_minute,
+           max_quote_transitions_per_minute, max_call_duration_minutes, quota_state, changed_by_user_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING activated_at
+      `,
+      [
+        policyVersion,
+        row.max_active_threads_per_user,
+        row.max_messages_per_minute,
+        row.max_searches_per_minute,
+        row.max_quote_transitions_per_minute,
+        row.max_call_duration_minutes,
+        row.quota_state,
+        input.actorUserId,
+      ],
+    );
+
+    return {
+      maxActiveThreadsPerUser: row.max_active_threads_per_user,
+      maxMessagesPerMinute: row.max_messages_per_minute,
+      maxSearchesPerMinute: row.max_searches_per_minute,
+      maxQuoteTransitionsPerMinute: row.max_quote_transitions_per_minute,
+      maxCallDurationMinutes: row.max_call_duration_minutes,
+      quotaState: row.quota_state,
+      updatedAtIso: toIso(row.updated_at),
+      policyVersion,
+      activatedAtIso: toIso(eventResult.rows[0].activated_at),
+    };
+  });
 }
 
 export async function evaluateRateLimitCommand(input: {

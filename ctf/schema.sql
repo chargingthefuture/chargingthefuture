@@ -1432,6 +1432,35 @@ ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS upda
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Removed feature: drop the legacy kill-switch column if a prior DB created it.
 ALTER TABLE IF EXISTS foundation_capacity_policies DROP COLUMN IF EXISTS kill_switch_enabled;
+-- === foundation_capacity_policy_events ===
+-- Append-only audit log of each capacity-policy change (issue #1960). The policy itself is a singleton
+-- row; this records who changed it, to what values, and when — with a monotonic policy_version — so the
+-- admin update has a real audit trail (the command contract's policyVersion/activatedAt outputs and its
+-- capacity_policy_event_log audit reference this table).
+CREATE TABLE IF NOT EXISTS foundation_capacity_policy_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  policy_version INTEGER NOT NULL UNIQUE,
+  max_active_threads_per_user INTEGER NOT NULL,
+  max_messages_per_minute INTEGER NOT NULL,
+  max_searches_per_minute INTEGER NOT NULL,
+  max_quote_transitions_per_minute INTEGER NOT NULL,
+  max_call_duration_minutes INTEGER NOT NULL,
+  quota_state TEXT NOT NULL CHECK (quota_state IN ('green', 'yellow', 'orange', 'red')),
+  changed_by_user_id TEXT,
+  activated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS policy_version INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_active_threads_per_user INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_messages_per_minute INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_searches_per_minute INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_quote_transitions_per_minute INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_call_duration_minutes INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS quota_state TEXT;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS changed_by_user_id TEXT;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS activated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_foundation_capacity_policy_events_activated_at
+  ON foundation_capacity_policy_events (activated_at DESC);
 CREATE TABLE IF NOT EXISTS trust_transport_status_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
