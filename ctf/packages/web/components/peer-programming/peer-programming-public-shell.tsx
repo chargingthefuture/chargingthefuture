@@ -45,7 +45,7 @@ function MobilePeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: stri
           <Globe size={13} color={t.MUTED} />
           <span style={{ fontSize: 12, color: t.MUTED }}>Open to members worldwide</span>
         </div>
-        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>{verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}</a>
       </div>
 
       <div style={{ flex: 1, padding: '0 20px 20px', position: 'relative' }}>

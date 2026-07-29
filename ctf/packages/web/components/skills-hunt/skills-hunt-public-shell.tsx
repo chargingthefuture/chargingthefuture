@@ -36,7 +36,7 @@ function MobileSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
           This is not a referral button. You nominate someone you believe may be a survivor — first name, bio, Quora profile, skills, and professions. Their profile seeds the Directory so we can trade and stop depending on traffickers.
         </p>
 
-        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}</a>
       </div>
 
       {/* Blurred form preview + lock (neutral placeholders) */}
