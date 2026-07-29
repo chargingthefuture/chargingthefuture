@@ -37,6 +37,9 @@ export function ReviewsWidget({ endpoint = REVIEWS_ENDPOINT }: { endpoint?: stri
       return;
     }
     let cancelled = false;
+    // Held outside the promise chain so the single cleanup below can cancel it — a
+    // cleanup returned from inside .then() would go to the chain, not to useEffect.
+    let appearTimer: number | undefined;
     fetch(endpoint, { headers: { accept: 'application/json' } })
       .then((res) => (res.ok ? res.json() : { reviews: [] }))
       .then((data: { reviews?: Review[] }) => {
@@ -44,14 +47,16 @@ export function ReviewsWidget({ endpoint = REVIEWS_ENDPOINT }: { endpoint?: stri
         const list = Array.isArray(data.reviews) ? data.reviews : [];
         if (list.length === 0) return;
         setReviews(list);
-        const appear = window.setTimeout(() => setVisible(true), APPEAR_DELAY_MS);
-        return () => window.clearTimeout(appear);
+        appearTimer = window.setTimeout(() => setVisible(true), APPEAR_DELAY_MS);
       })
       .catch(() => {
         /* a decorative widget never surfaces an error */
       });
     return () => {
       cancelled = true;
+      if (appearTimer !== undefined) {
+        window.clearTimeout(appearTimer);
+      }
     };
   }, [endpoint]);
 
