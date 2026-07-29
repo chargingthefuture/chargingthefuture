@@ -1,340 +1,746 @@
 # Foundation — Manual Test Script
 
-> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+> Generated from the Foundation feature inventory and command/access-policy contracts; this is the runnable checklist for hand-testing the plugin on a real device or browser. To regenerate: `pnpm --dir ctf test-script:generate -- foundation`
 
-> Walk these steps on a real device to confirm the plugin works end to end. This script is
-> generated from the plugin's feature inventory and contracts — those files are the source of
-> truth, this is the runnable checklist derived from them. Do not edit a step here to match a
-> bug; fix the code (or the inventory) and regenerate.
->
-> **How to regenerate:** `pnpm --dir ctf test-script:generate -- foundation`
-
-| | |
+| Field | Value |
 |---|---|
 | **Plugin** | Foundation (`foundation`) |
-| **Visibility** | Member-facing |
-| **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
+| **Visibility** | Member |
+| **Roles to test** | Member (survivor), Member (acting as provider), Admin |
+| **Surfaces** | Web (Next.js) — Android surface removed 2026-07-20 (rule 105, PR #1742); plugin is now web-only (PWA) |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
-| **Generated** | 2026-07-18 (hand-updated for the fresh-DB Request Quote NOT-NULL fix; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-29 (commit 03bee30a) |
+
+---
 
 ## How to run this
 
-- Each case is **precondition → steps → expected**. Do it on each surface listed for the case.
-- Mark each surface box: ✅ pass · ❌ fail · ⛔ blocked/can't reach.
-- A ❌ becomes a row in the **Bug Reporting** plugin. Put the bug link in the notes line so the
-  next run knows it's already filed.
-- Run the **Core smoke** block every session. Run the full walkthrough when you changed this
-  plugin or on a pre-release sweep.
-
-> Note: Foundation is a sensitive survivor-provider support surface. Test with throwaway seed
-> accounts. Some flows need native code (Stream chat/video, push) and only run in an EAS dev/release
-> build, not Expo Go — mark those ⛔ on android if you are in Expo Go.
+- Mark each surface checkbox as you go: ✅ pass / ❌ fail / ⛔ blocked
+- A ❌ result becomes a row in the Bug Reporting plugin — record the case ID, the surface, the exact step that failed, and what you saw versus what was expected
+- Run **Core smoke** at the start of every test session before going further
+- "Provider account" means a second member account that has offered at least one skill via the Offer-skills tab — use the seeded provider where noted, or set one up manually
+- VAPID keys may not be configured in your environment; where Web Push is tested, note in results if push is not configured (graceful no-op is acceptable per Gaps item 10)
+- Instant-call billing moves real ServiceCredits in the test environment — confirm both accounts have sufficient balance before those cases
 
 ---
 
 ## Core smoke (every session)
 
-Foundation carries 1:1 support messaging and a paid live call — these are the can't-ship-broken
-checks. Member role unless noted.
+**1.** Sign in as a member, navigate to `/apps/foundation`. The Foundation shell loads without error and the Browse tab shows at least the seeded provider card.
+web ☐
 
-1. **Provider search loads.** Open Foundation. The provider list renders with name, headline, and
-   bio, not a spinner or error. → web ☐ mobile ☐
-2. **Messaging is scoped to a connection.** Confirm there is no 1:1 chat anywhere except inside an
-   active connection/quote between the two parties — no open inbox to message any member. → web ☐ mobile ☐
-3. **Can't connect to yourself.** On your own provider profile, "Request Quote" and "Connect now" are
-   disabled with a plain "this is your own profile" note. → web ☐ mobile ☐
-4. **No fiat equivalent on credits.** Anywhere a ServiceCredits rate or call cost shows, it is in
-   credits only — never shown as a cash/currency amount. → web ☐ mobile ☐
+**2.** The Browse tab shows provider cards with `displayName`, `headline`, and location details. No placeholder or mock data is visible (no star ratings, no price/rate field, no job count, no availability dot).
+web ☐
+
+**3.** Sign in as an admin, navigate to the Foundation admin page. The capacity policy form and audit trail load. No "admins only" error appears for a valid admin account.
+web ☐
+
+**4.** Sign out and attempt to visit `/apps/foundation`. You are redirected away from the authenticated shell — no provider data is visible to an unauthenticated visitor.
+web ☐
+
+**5.** With the seed applied, the seeded provider appears in the Browse list and their profile can be opened.
+web ☐
 
 ---
 
 ## Member walkthrough
 
-### FND-1 · Provider discovery and search
-**Role:** member · **Surfaces:** all · **Seed:** `seed:foundation`
-**Search scope (matches the shipped `searchProviders`):** a text match over provider name,
-headline, and bio, plus the offered-skill filter — there are no location, language, or
-trauma-informed filters, and no surface (including the public user guide) should claim them.
-**Steps:**
-1. Open Foundation and browse providers; filter by an offered skill chip.
-2. On desktop, set a filter (pick a trade in the sidebar, type a search term, or tap a skill chip),
-   then press "Browse All Providers" in the right rail.
-3. Reach an empty list three ways and read the empty-state copy each time: (a) a skill filter that
-   matches nobody, (b) a search term that matches nobody, and (c) no filter at all with zero providers
-   (a fresh/unseeded environment, or after clearing every filter when none exist).
-**Expected:** Only providers who opted in to offer at least one skill appear. Each card shows name,
-headline, bio, and offered-skill chips; tapping a chip filters the list by that skill with a
-clear-filter banner. Opening a provider whose directory profile has a location shows a "City, State,
-Country" line under the headline (only the parts that are set — a non-US provider may show just a
-country), read from the shared directory profile, not a Foundation-owned field. The viewer's own card
-does not offer "Connect now". Pressing "Browse All Providers" always returns to the full, unfiltered
-list — it clears the trade, search text, and skill filters and opens the Browse tab (never a no-op,
-even when Browse is already the open tab). The empty state matches the reason: a skill filter or a
-search says "No providers match" and points at trying a different skill/search or clearing the filter;
-with no filter at all it says "No providers offering skills yet" and explains members show up once
-they opt in — it never tells you to clear a filter that isn't set, and never mentions cash. Open a
-provider profile at phone width (~390px, or the mobile-responsive web layout): the whole header fits
-with no sideways scrolling — the Request Quote button, the self-profile note, and the "Accepts live
-1:1 calls" badge all sit fully on-screen (the action block wraps below the name) and are never clipped
-at the right edge. The "Good to know" note is full-width at the very bottom (below the skills and
-About), not a cramped right-hand column; on desktop it stays the right-hand sidebar.
-**Result:** web ☐ mobile ☐ — notes:
+### FDN-1 — Provider search: text query
 
-### FND-2 · Offer skills (provider opt-in)
-**Role:** member · **Surfaces:** all
-**Precondition:** the member has skills on their own claimed Directory profile.
-**Steps:**
-1. Open the Offer skills tab; toggle which of your own Directory skills you'll be contacted about; save.
-**Expected:** Only skills on the member's own claimed Directory profile can be offered. The saved set
-persists and the member then appears in provider search for those skills.
-**Result:** web ☐ mobile ☐ — notes:
+**Role:** Member (survivor)
+**Surface:** Web
 
-### FND-2b · Listing blurb (provider short description)
-**Role:** member · **Surfaces:** web
-**Precondition:** the member is a provider (offers at least one skill, per FND-2).
-**Steps:**
-1. Open the Offer skills tab; in "Your listing blurb", type a one- or two-sentence description; watch
-   the character counter; save.
-2. Try to save a description longer than 200 characters.
-3. Clear the field to empty and save.
-4. As another member, open this provider in Browse and on their profile.
-**Expected:** The blurb saves and shows "Saved". Over 200 characters the Save button is disabled and
-the counter goes negative (a server 400 is the backstop). Clearing to empty saves and removes the blurb.
-The saved blurb appears on the provider's Browse card (before the skill chips) and near the top of
-their profile (before the About section); an empty blurb shows nothing. The blurb is separate from the
-Directory headline/bio.
-**Result:** web ☐ — notes:
+**Precondition:** Signed in as a member. At least the seeded provider exists with a name, headline, and bio.
 
-### FND-3 · Quote request and Direct Line chat
-**Role:** member · **Surfaces:** all
-**Precondition:** a seeded provider other than yourself.
 **Steps:**
-1. From a provider, Request Quote (this opens a connection thread, then creates the quote on it).
-2. Land in the Direct Line and send a message; re-open the chat from a Quotes row.
-3. Stream-down resilience: with the Stream chat app unreachable (e.g. a demo account whose staging
-   Stream keys are absent/invalid), Request Quote again.
-**Expected:** Request Quote runs the two-step flow with the CSRF header and lands the member in the
-Direct Line (1:1 Stream-backed chat scoped to that connection). Messages send with delivery/read
-state. Each Quotes row re-opens its Direct Line with fresh credentials. A non-participant gets 404 on
-the thread token. When Stream is unreachable, Request Quote still succeeds — the quote is created and
-the member lands in Quotes (no "Connections are temporarily unavailable" on quote creation); only
-opening the Direct Line then reports chat is unavailable, and the server logs the underlying Stream
-error. (Note: making chat itself work in demo requires valid demo Stream staging credentials — a
-config matter, not a code fix.) On a freshly-built / demo database (schema applied from
-`schema.demo.sql`), Request Quote must create the connection thread and quote without a database error
-— it does not fail with "Connections are temporarily unavailable" because a legacy `NOT NULL` column
-(`thread_key`, `user_id`, `request_text`) was left unset.
-**Result:** web ☐ mobile ☐ — notes:
+1. Go to `/apps/foundation` → Browse tab.
+2. Type part of the seeded provider's display name into the search field.
+3. Observe the results list.
+4. Clear the search field.
+5. Observe the results list again.
 
-### FND-4 · Quote lifecycle and history
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Move a quote through its states (requested → provider_responded → closed).
-2. Open quote history and connection history.
-**Expected:** The quote timeline is immutable and shows each transition. History lists are scoped to
-the actor's own connections/quotes. When a connection/quote reaches a terminal state the chat closes
-to new messages but stays read-only for a limited window.
-**Result:** web ☐ mobile ☐ — notes:
+**Expected:** Step 3: only providers whose name, headline, or bio match the query are shown. Step 5: the full unfiltered provider list returns. No star ratings, price, job counts, or availability dots appear on any card.
 
-### FND-4b · Priced one-off quote (provider sets a price; survivor cannot)
-**Role:** member (provider and survivor) · **Surfaces:** web
-**Precondition:** a `requested` quote exists between a survivor and a provider (use FND-3 to create one).
-**Steps:**
-1. As the **provider**, open the Quotes tab and find the still-`requested` quote. Enter an amount, pick a
-   currency from the shared currency selector (ServiceCredits appears first), and tap "Send quote".
-2. Confirm the row now shows the quoted amount + currency and the status reads "Responded".
-3. Move the quote to `closed` (end the engagement).
-4. As the **survivor**, open the same quote in your Quotes tab.
-**Expected:** Only the provider sees the amount input + currency selector, and only while the quote is
-`requested`; the survivor never sees the price inputs. Sending the price posts the state transition with
-the `x-ctf-csrf: '1'` header and `transitionTo: 'provider_responded'`, `quotedAmount`, `quotedCurrency`;
-a missing/negative amount or empty currency is rejected (the Send button stays disabled, and the server
-returns 400 `FOUNDATION_INVALID_PAYLOAD` if a bad payload is forced). After close, the row shows a
-"Settled" indicator (the quote carried a value, so `settled_at` is stamped) and its settled value is
-picked up by the GDP Community Value Index per currency. A ServiceCredits-priced quote shows the amount
-with the "ServiceCredits" label, never a fiat symbol.
-**Result:** web ☐ mobile ☐ — notes:
-
-### FND-5 · Instant 1:1 paid call (Connect now)
-**Role:** member · **Surfaces:** all · **Precondition:** native build (Stream video); a provider with instant calls on and a valid rate; the caller has enough credits.
-**Steps:**
-1. On a provider with instant calls enabled, tap "Connect now"; in the consent dialog set the spend
-   limit (block cap) and read the worst-case total; place the ring.
-2. As the callee, answer from the incoming-call surface.
-3. As the caller, let a block elapse and use Extend (+N credits); then end the call.
-**Expected:** Ringing moves no credits but is blocked up front if the caller can't afford the first
-block (402) or the provider has no valid rate (409). On answer the first block is charged
-caller→provider at the locked rate. Extend charges one more block under the cap; at the cap the
-control is replaced with a clear message. Ending stops billing (no refund/proration in v1). The
-callee never sees a billing strip. Audio only — no camera.
-**Result:** web ☐ mobile ☐ — notes:
-
-### FND-6 · Notifications and preferences
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Open the Foundation notifications list (try the unread-only view); acknowledge one.
-2. Open notification preferences and quiet-hour controls; save a change.
-**Expected:** Messages, quote state changes, and incoming-call rings appear as notification events.
-Acknowledging one updates it. Preferences and quiet hours persist. (Call-alert push wakes a device
-only on a native build with VAPID/Expo keys configured; otherwise the in-app poll is the fallback.)
-**Result:** web ☐ mobile ☐ — notes:
-
-### FND-7 · Send ServiceCredits from a Foundation surface
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Send a small ServiceCredits amount to another member from the Foundation surface.
-**Expected:** The amount must be positive (else a 400). The transfer goes through the shared
-ServiceCredits primitive (idempotent per sender+key) and is recorded only in the canonical
-ServiceCredits ledger — Foundation owns no credits ledger. The send is CSRF-guarded.
-**Result:** web ☐ mobile ☐ — notes:
-
-### FND-8 · Share a provider and open the deep link (auth-gated)
-**Role:** member · **Surfaces:** web + mobile-responsive
-**Steps:**
-1. Open a provider's profile, press the "Share" control in the header, copy the link
-   (`/apps/foundation/provider/<id>`).
-2. While signed in (verified), open that link in a new tab.
-3. Also open the link as an **approved member who has not set a Clerk username** (shows as `user-<id>`).
-4. Sign out (or open the link in a private window), then open the same link.
-**Expected:** The Share popup shows the full absolute URL with Copy ("Copied!" feedback) and Open.
-While signed in and verified, the link opens Foundation with that provider's profile already open (it
-loads by id even if the provider is not on the current search page) — **including** the approved
-member with no username, who must **not** be redirected (the page no longer requires a Clerk
-username). While signed out or not-yet-verified, the link redirects to the Foundation landing
-`/apps/foundation` — no provider data is shown. A bad id, or
-a profile that is no longer an active provider, shows the search view, not a profile (the fetch 404s
-and is ignored).
-**Result:** web ☐ mobile ☐ android ⛔ — notes:
-
-### FND-9 · Refresh re-pulls providers and quotes without reopening the app
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Open Foundation, then in a second session change data that affects it (e.g. another member turns on
-   an offered skill so a new provider card appears, or a quote's status changes).
-2. Web / mobile-responsive: tap the refresh icon in the header (desktop header right side; phone header
-   next to the top actions).
-3. Android: pull down on the Browse list or the Quotes list.
-**Expected:** On web the refresh icon spins while the re-pull is in flight; on android the pull-to-refresh
-spinner shows. The provider list and quote history re-fetch and the change from the other session appears
-without closing and reopening the app. Refreshing never clears the screen to the full-screen loading
-state — the current list stays visible until the new data lands.
-The header back chevron returns to the page you came from (falling back to All Apps when opened
-directly), and the admin screen header shows a "Member view" pill opening `/apps/foundation`.
-**Result:** web ☐ mobile ☐ — notes:
+Result: web ☐
 
 ---
 
-### FND-DEL · Account deletion clears the Stream chat copy (privacy)
-**Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
-Foundation thread message; access to the Stream dashboard for the app behind `STREAM_API_KEY`.
+### FDN-2 — Provider search: skill filter
+
+**Role:** Member (survivor)
+**Surface:** Web
+
+**Precondition:** Signed in as a member. At least one provider has offered a skill. The seeded provider should satisfy this.
+
 **Steps:**
-1. As that member, send a thread message, then delete the whole account (`DELETE /api/account/full-account`,
-   or delete the user in Clerk to exercise the webhook path — both run the deletion orchestrator).
-2. In the Stream dashboard, look up the member's Stream user `foundation-<userId>` and their messages in
-   the `foundation-thread-<threadId>` channel.
-**Expected:** After the delete, the member's Postgres rows are gone **and** their Stream user
-`foundation-<userId>` is hard-deleted with messages marked deleted — no lingering Stream copy. This runs
-via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If Stream
-is down at delete time, the deletion still succeeds and the failure is logged for retry.
-**Result:** web ☐ mobile ☐ — notes:
+1. Go to Browse tab.
+2. Select a skill chip or filter that corresponds to a skill the seeded provider has offered.
+3. Observe the results.
+4. Select a skill that no provider has offered (or a different skill).
+5. Observe the results.
+
+**Expected:** Step 3: only providers offering that skill appear. Step 5: either a filtered list (if another provider matches) or the context-aware empty state — "No providers match / Try a different skill, or clear the filter…" — not a generic "no providers yet" message.
+
+Result: web ☐
 
 ---
 
-## Admin walkthrough
+### FDN-3 — Provider search: empty-state messaging
 
-### FND-A1 · Capacity policy (role-gated)
-**Role:** admin · **Surfaces:** web (admin surface)
-**Steps:**
-1. As admin, open the Foundation admin surface. On web, read the snapshot counts (android has no
-   snapshot row — see the gap note below — so skip that step there).
-2. Edit the capacity policy (quota state and the five rate-limit numbers); save. On android the save is
-   behind a confirm dialog before it runs.
-3. Attempt the same as a non-admin.
-**Expected:** The save persists with the CSRF header and the quota threshold (green/yellow/orange/red)
-reflects the policy. On android a non-admin sees the "admins only" notice; on web the non-admin is
-redirected/denied with a readable message. The web "Providers" snapshot count matches the number of
-providers shown in Browse — both count claimed, active profiles that offer at least one skill (a
-Directory member who never opted into Foundation is not counted).
-**Result:** web ☐ mobile ☐ — notes:
+**Role:** Member (survivor)
+**Surface:** Web
 
-### FND-A2 · Rate-limit evaluation and audit
-**Role:** admin · **Surfaces:** web (admin surface)
-**Steps:**
-1. Run a rate-limit evaluation for a member + command family (on android this is the "Rate-limit check"
-   card; it is confirm-gated before it runs).
-2. Open the admin audit events list (the read-only audit trail card on android).
-**Expected:** The evaluation returns the limit decision (within/over limit, count/limit, threshold band)
-for that command family. The audit list shows allow/deny outcomes with decision evidence and is
-admin-gated. The evaluation is a mutation that records an audit row and counts against the member's
-window, so the audit list gains a new entry after running it.
-**Result:** web ☐ mobile ☐ — notes:
+**Precondition:** Signed in as a member.
 
-### FND-A4 · Android admin screen gating and states (issue #1603)
-**Role:** admin, then non-admin · **Surfaces:** web
 **Steps:**
-1. As a non-admin, open the Foundation Admin screen from the feature list.
-2. As an admin, open it and confirm the capacity policy loads, the audit trail loads, and each
-   state-changing action (save policy, run rate-limit check) asks for confirmation first.
-3. Cancel a confirm dialog and confirm nothing changed; then confirm one and observe the update.
-**Expected:** The non-admin sees the "The Foundation admin tools are available to admins only." notice
-and no data. The admin sees a loading spinner, then the capacity policy card, the rate-limit check card,
-and the audit trail (empty state reads "No audit events yet." when there are none). Cancelling a confirm
-makes no change; confirming a save shows "Capacity policy saved." and the audit trail gains a row.
-**Result:** web n/a ☐ mobile ☐ — notes:
+1. Go to Browse tab with no filter or search active.
+2. If the list is empty (no providers have offered skills), note the empty state message.
+3. Enter a search term that matches nothing.
+4. Note the empty state message.
+5. Apply a skill filter that matches nothing.
+6. Note the empty state message.
 
-### FND-A3 · Quota-aware degradation
-**Role:** admin · **Surfaces:** web (admin surface)
-**Steps:**
-1. With the policy at the red threshold (or simulated), confirm core send/receive/active-thread
-   behavior still works while non-critical behavior degrades.
-**Expected:** Under red quota, core 1:1 messaging reliability is preserved; only non-critical behavior
-degrades. The threshold level is derived at evaluation time, not stored.
-**Result:** web ☐ mobile ☐ — notes:
+**Expected:**
+- No active filter/search and list is empty: "No providers offering skills yet / Everyone here opts in before they show up. Check back soon…"
+- Search term matches nothing: "No providers match / Try a different search."
+- Skill filter matches nothing: "No providers match / Try a different skill, or clear the filter…"
+Each message is distinct and context-appropriate.
+
+Result: web ☐
 
 ---
 
-## Parity check (web ↔ android)
+### FDN-4 — Provider profile: short description and location
 
-For FND-1, FND-3, FND-5, and the notifications (FND-6), the android app and the mobile-responsive web
-layout must behave the same: same provider list, same Direct Line behavior, same call ring/answer/
-billing display, same notifications. Note any drift here rather than filing separate bugs. Flows that
-need a native build (Stream chat/video, Expo push) are not testable in Expo Go — mark those ⛔, not ❌.
+**Role:** Member (survivor)
+**Surface:** Web
 
-**Result:** matches ☐ — drift notes:
+**Precondition:** The seeded provider has a `short_description` set, a city/state/country on their directory profile, and has offered at least one skill.
 
----
+**Steps:**
+1. Go to Browse tab. Find the seeded provider's card.
+2. Check whether a short blurb appears on the card (before the skill chips).
+3. Open the provider's full profile by clicking their card.
+4. Check whether the blurb appears near the top of the profile (before the About section).
+5. Check whether a location line ("City, State, Country" or partial) appears under the headline.
+6. Check whether offered skills are listed.
 
-## Known gaps — do not file these as bugs
+**Expected:** The short blurb (if set) appears on the card and the profile. Location shows only the parts that are set. No mock data (no star ratings, no hourly price, no job count, no availability dot). On phone width, the "Good to know" section appears at the bottom (full-width) below skills and About.
 
-Carried from the inventory's "Gaps and Known Technical Debt" section at authoring time. If you hit one
-of these, it is already tracked, not a new bug:
-
-- The final quote payload schema per service category is still implementation-driven, pending product
-  and compliance documentation.
-- Voice/video fallback interaction copy is pending survivor-advisory review.
-- Notification channel rollout order and region targeting are open operational decisions.
-- Capacity-policy defaults rest on monthly demand assumptions that need ongoing validation.
-- Instant-call disputes/refunds are deferred: v1 charges prepaid blocks with no in-flow refund or
-  proration; corrections go through the existing ServiceCredits dispute/adjustment tools.
-- Raising the per-session block cap mid-call (a second authorization step) is a deferred enhancement;
-  the cap is set once at ring time.
-- A completed paid 1:1 call is deliberately not surfaced as any public Trust signal (sensitive
-  wellbeing/payment context — no numeric score, ever).
-- Android/Expo native call-alert push needs an EAS native build and only sends when the optional
-  access token is provisioned; otherwise the in-app poll is the fallback.
-- Web Push call alerts need the owner to provision VAPID keys; until then the ring is in-app only and
-  every push is a no-op.
-- The android Foundation Admin screen has no snapshot counts row (providers/threads/quotes/active
-  calls/pending notifications). No admin HTTP route returns those aggregates — the web reads them
-  server-side inside the page — so the mobile screen omits the snapshot rather than inventing a route.
-
-> _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+Result: web ☐
 
 ---
 
-## Notifications
+### FDN-5 — Provider profile: own profile disables Request Quote and Connect now
 
-**1.** As member A, start a connection with a provider (member B). Sign in as member B, open the 🔔 notifications tab in the Commons, and confirm a "Someone started a connection with you on Foundation." item appears (unread) with an "Open" pill. This is the durable feed record — the live incoming-call ring is tested separately and is unchanged.
-web ☐
+**Role:** Member (acting as the provider account)
+**Surface:** Web
+
+**Precondition:** Signed in as the provider account (the same account that owns the seeded provider profile). Navigate to the seeded provider's profile.
+
+**Steps:**
+1. Open the seeded provider's profile while signed in as that provider.
+2. Look at the Request Quote button.
+3. Look for a "Connect now" button.
+
+**Expected:** The Request Quote button is disabled or replaced with a note like "This is your own profile — you can't request a quote from yourself." The "Connect now" button is not shown (or is replaced by the "Accepts live 1:1 calls" availability badge if the provider has that enabled). No enabled action button appears that would let you ring or quote yourself.
+
+Result: web ☐
+
+---
+
+### FDN-6 — Provider deep link
+
+**Role:** Member (survivor)
+**Surface:** Web
+
+**Precondition:** Signed in as a member. Know the directory-profile ID of the seeded provider.
+
+**Steps:**
+1. Navigate directly to `/apps/foundation/provider/<seededProviderId>`.
+2. Observe what loads.
+3. Sign out. Navigate to the same deep-link URL.
+4. Observe where you end up.
+
+**Expected:** Step 2: the Foundation shell loads with the seeded provider's profile open. Step 4: you are redirected to the Foundation landing (`/apps/foundation`) and no provider data is exposed.
+
+Result: web ☐
+
+---
+
+### FDN-7 — Provider profile: Share link
+
+**Role:** Member (survivor)
+**Surface:** Web
+
+**Precondition:** Signed in as a member. A provider profile is open.
+
+**Steps:**
+1. Open a provider's profile.
+2. Find and click the Share control in the profile header.
+3. Copy the link that is generated.
+4. Open the link in a new tab while still signed in.
+
+**Expected:** The Share control is present. The generated link points to `/apps/foundation/provider/<id>`. Opening it in a new signed-in tab loads the Foundation shell with that provider's profile open.
+
+Result: web ☐
+
+---
+
+### FDN-8 — Request Quote: two-step flow and Direct Line entry
+
+**Role:** Member (survivor)
+**Surface:** Web
+
+**Precondition:** Signed in as a member (not the provider). A provider with at least one skill exists. Both accounts are on the same workspace. The member account is verified.
+
+**Steps:**
+1. Open the provider's profile in the Browse tab.
+2. Click "Request Quote."
+3. Complete any required fields and confirm.
+4. Observe where the app takes you after submission.
+5. Send a message in the Direct Line that opens.
+
+**Expected:** After clicking Request Quote, a connection thread is created (POST `/api/foundation/connections/threads`) and then a quote is created (POST `/api/foundation/quotes`). The member is taken directly into the Direct Line chat for that thread, not silently bounced to the Quotes tab. The chat is Stream-backed. Sending a message succeeds. No "Connections are temporarily unavailable" error appears.
+
+Result: web ☐
+
+---
+
+### FDN-9 — Request Quote: self-request is blocked server-side
+
+**Role:** Member (acting as provider)
+**Surface:** Web
+
+**Precondition:** Signed in as the provider account. Open your own provider profile.
+
+**Steps:**
+1. Attempt to click Request Quote on your own profile (if the button appears enabled — it should not, per FDN-5, but test the server boundary).
+2. If the button is disabled, attempt to POST to `/api/foundation/connections/threads` with `providerId` equal to your own provider's `profileId` using a direct API call or browser DevTools.
+
+**Expected:** The server returns a denial (policy_denied → 403). No connection thread or quote is created. The UI does not show "Connections are temporarily unavailable" generically — if the button is correctly disabled the request never fires.
+
+Result: web ☐
+
+---
+
+### FDN-10 — Direct Line: re-open from Quotes tab
+
+**Role:** Member (survivor)
+**Surface:** Web
+
+**Precondition:** At least one quote exists from a previous Request Quote (FDN-8 or existing seed data). The member is on the Quotes tab.
+
+**Steps:**
+1. Go to the Quotes tab.
+2. Find a quote row that has an associated thread.
+3. Click the "Direct Line" control on that row.
+4. Observe whether the chat opens.
+5. Check that the thread is the correct 1:1 conversation (with the right provider).
+
+**Expected:** Clicking the Direct Line control fetches fresh Stream credentials via GET `/api/foundation/connections/threads/:threadId/token` and opens the existing chat channel. The chat shows the correct conversation history. No blank screen or error appears.
+
+Result: web ☐
+
+---
+
+### FDN-11 — Direct Line: non-participant is denied a token
+
+**Role:** Member (a third member who is not part of the thread)
+**Surface:** Web
+
+**Precondition:** A connection thread exists between member A (survivor) and the seeded provider. You are signed in as a different member (member B, not a participant).
+
+**Steps:**
+1. Obtain the `threadId` of member A's thread (from the seed data or from DevTools while logged in as A).
+2. Sign in as member B.
+3. Attempt GET `/api/foundation/connections/threads/<threadId>/token` directly (via DevTools or curl with auth cookies).
+
+**Expected:** The server returns 404 (not a participant). No Stream credentials are returned to member B.
+
+Result: web ☐
+
+---
+
+### FDN-12 — Quote lifecycle: provider responds with a price
+
+**Role:** Member (acting as provider)
+**Surface:** Web
+
+**Precondition:** A quote in `requested` state exists for this provider. Signed in as the provider account.
+
+**Steps:**
+1. Go to the Quotes tab as the provider.
+2. Find the quote in `requested` state.
+3. Locate the amount input and currency selector (visible to the provider, not the survivor).
+4. Enter a valid amount (e.g., 50) and select a currency from the catalog.
+5. Submit the `provider_responded` transition.
+6. Observe the quote's state and the displayed amount/currency.
+
+**Expected:** The quote transitions to `provider_responded`. The quoted amount and currency are displayed on the quote row. The amount input and currency selector were not visible to the survivor account (server enforces provider-only price setting).
+
+Result: web ☐
+
+---
+
+### FDN-13 — Quote lifecycle: survivor cannot set a price
+
+**Role:** Member (survivor)
+**Surface:** Web
+
+**Precondition:** A quote in `requested` state exists. Signed in as the survivor account.
+
+**Steps:**
+1. Attempt to POST to `/api/foundation/quotes/<quoteRequestId>/state` with `transitionTo: 'provider_responded'` and a `quotedAmount` + `quotedCurrency` in the body (via DevTools or curl with auth cookies as the survivor).
+
+**Expected:** The server returns 403 (policy_denied). The quote price is not set. The survivor cannot set the price regardless of what the UI shows.
+
+Result: web ☐
+
+---
+
+### FDN-14 — Quote lifecycle: missing price on provider_responded returns 400
+
+**Role:** Member (acting as provider)
+**Surface:** Web
+
+**Precondition:** A quote in `requested` state exists for this provider. Signed in as the provider.
+
+**Steps:**
+1. Attempt POST to `/api/foundation/quotes/<quoteRequestId>/state` with `transitionTo: 'provider_responded'` but omit `quotedAmount` (or send an invalid amount like a negative number or non-finite value), including the CSRF header `x-ctf-csrf: 1`.
+
+**Expected:** The server returns 400 with error code `FOUNDATION_INVALID_PAYLOAD`. The quote state does not change.
+
+Result: web ☐
+
+---
+
+### FDN-15 — Quote lifecycle: close and settled_at stamp
+
+**Role:** Member (survivor or provider — either may close)
+**Surface:** Web
+
+**Precondition:** A quote in `provider_responded` state exists with a quoted amount and currency set.
+
+**Steps:**
+1. Go to the Quotes tab.
+2. Transition the quote to `closed`.
+3. Observe the quote row.
+
+**Expected:** The quote transitions to `closed`. A "Settled" indicator appears on the row (because the quote carried a value, `settled_at` is stamped). The quoted amount and currency remain visible.
+
+Result: web ☐
+
+---
+
+### FDN-16 — Quote history list
+
+**Role:** Member (survivor) and Member (provider)
+**Surface:** Web
+
+**Precondition:** At least two quotes exist across different states (e.g., one `requested`, one `closed`).
+
+**Steps:**
+1. Sign in as the survivor. Go to the Quotes tab.
+2. Verify only quotes relevant to this survivor appear.
+3. Sign in as the provider. Go to the Quotes tab.
+4. Verify only quotes relevant to this provider appear.
+
+**Expected:** Each actor sees only their own quotes (scoped by actor ownership). Quote rows show `id`, provider name, status, and creation date. A `threadId` is present on each row so the Direct Line can be re-opened.
+
+Result: web ☐
+
+---
+
+### FDN-17 — Instant-call settings: provider opts in
+
+**Role:** Member (acting as provider)
+**Surface:** Web
+
+**Precondition:** Signed in as the provider account. On the Foundation Offer-skills tab or settings area.
+
+**Steps:**
+1. Navigate to the instant-call settings section (within the Foundation shell, Offer-skills or settings tab).
+2. Enable the instant-call toggle.
+3. Enter a valid rate (e.g., 5 ServiceCredits) and a valid interval (e.g., 10 minutes).
+4. Save.
+5. Go to the Browse tab (as a different signed-in member). Find the provider's card.
+6. Check whether "Connect now" appears on the card and profile.
+
+**Expected:** Step 4: settings save successfully. The response shows `{ enabled: true, rateCredits: 5, intervalMinutes: 10 }`. Step 6 (as a different member): a "Connect now" button or the rate/interval label appears on the provider's card and profile. The "Accepts live 1:1 calls · 5 ServiceCredits / 10 min" badge shows on the provider's own profile when you view it as yourself.
+
+Result: web ☐
+
+---
+
+### FDN-18 — Instant-call settings: invalid input returns 400
+
+**Role:** Member (acting as provider)
+**Surface:** Web
+
+**Precondition:** Signed in as the provider account.
+
+**Steps:**
+1. Attempt PUT `/api/foundation/provider/instant-call` with `{ enabled: true, rateCredits: 0, intervalMinutes: 10 }` (rate below the minimum of 1).
+2. Attempt the same with `intervalMinutes: 3` (below the minimum of 5).
+3. Attempt with `intervalMinutes: 61` (above the maximum of 60).
+
+**Expected:** Each attempt returns 400 with `FOUNDATION_INVALID_PAYLOAD`. No settings are saved.
+
+Result: web ☐
+
+---
+
+### FDN-19 — Connect now: consent dialog and block-cap selector
+
+**Role:** Member (survivor)
+**Surface:** Web
+
+**Precondition:** The provider has instant-call enabled with a valid rate. Signed in as a different member (survivor). The survivor has sufficient ServiceCredits to cover at least one block.
+
+**Steps:**
+1. Open the provider's card or profile.
+2. Click "Connect now."
+3. Observe the consent dialog that opens.
+4. Look for the spend-limit (block-cap) selector and the worst-case total display.
+5. Check the consent checkbox and read the copy.
+6. Note whether the "Start call" button is enabled.
+
+**Expected:** The dialog opens. A spend-limit selector is present (default 6 blocks). The worst-case total ("up to N ServiceCredits") updates as the cap changes. The copy honestly states that the first block is charged when the provider answers and that ringing is free. The "Start call" button is enabled (call ring/answer is live, not disabled with a "coming soon" note, as that stub was removed after task 3 shipped).
+
+Result: web ☐
+
+---
+
+### FDN-20 — Instant call: ring and callee sees incoming ring
+
+**Role:** Member (survivor, as caller) + Member (provider, as callee)
+**Surface:** Web
+
+**Precondition:** Provider has instant-call enabled with a valid rate. Caller has enough ServiceCredits to cover the first block. Both are signed in simultaneously (use two browser sessions or tabs). An existing connection thread exists between them.
+
+**Steps:**
+1. As caller (survivor): open the provider's profile, click "Connect now," set a block cap, check the consent box, and click "Start call."
+2. Observe the caller's overlay — it should show a ringing state.
+3. As callee (provider): the incoming-call overlay should appear (via the ~polling of `GET /api/foundation/connections/incoming-call`) showing an answer and a decline button.
+4. As callee: do nothing for ~60 seconds (let the ring time out).
+5. Observe both sides after the timeout.
+
+**Expected:** Step 2: caller sees a "ringing" overlay (no credits are moved yet). Step 3: within a few seconds the callee sees an incoming-ring surface with the caller's name, and answer/decline controls. Step 5: after ~60s the ring times out; both sides transition to a "timed out" terminal state. No credits are moved for a timed-out ring.
+
+Result: web ☐
+
+---
+
+### FDN-21 — Instant call: answer, first block charged, audio room
+
+**Role:** Member (survivor, caller) + Member (provider, callee)
+**Surface:** Web
+
+**Precondition:** Same as FDN-20. Both sessions ready. Caller has enough ServiceCredits for at least one block. Note the caller's ServiceCredits balance before the call.
+
+**Steps:**
+1. Caller rings the provider (as in FDN-20 steps 1–2).
+2. As callee (provider): click "Answer" on the incoming-ring overlay.
+3. Observe the caller's overlay after the answer.
+4. Observe the callee's overlay.
+5. Check the caller's ServiceCredits balance (either in Foundation or in the ServiceCredits plugin UI after the call).
+6. As either participant: click "End call."
+7. With the browser network tab open on the caller, watch the responses from
+   `GET /api/foundation/connections/instant-calls/<callId>` while the overlay says "connecting", and
+   check that the id the audio room joins is the **video** call id (`streamCallId`) and not the chat
+   channel id (`streamChannelId`) — the two come back in the same response and must not be swapped.
+
+**Expected:** Step 3: caller's overlay transitions to "connecting" then shows an in-call state with a live block countdown, "1 of N blocks paid," and an "Extend (+X credits)" control. The countdown runs from `paid_through_at`. Step 4: callee's overlay shows an in-call state with mute and end-call controls but no billing strip. Step 5: the caller's balance has decreased by exactly `rateCreditsLocked` (one block). Step 6: call ends cleanly for both; the terminal state is a plain hang-up (not "out of credits" or "paid time used up"). Step 7: the audio room joins on `streamCallId`. If that id is missing from a response, the overlay stays on "connecting" and the 2-second poll keeps going until it arrives — it must never try to join with an empty id, which would fail silently and show the caller nothing.
+
+Result: web ☐
+
+---
+
+### FDN-22 — Instant call: extend charges another block
+
+**Role:** Member (survivor, caller)
+**Surface:** Web
+
+**Precondition:** A call is in progress (answered state). The caller has enough credits for at least two blocks total.
+
+**Steps:**
+1. During an active call, while the block countdown is showing, click "Extend (+N credits)."
+2. Observe the counter update.
+3. Check the caller's ServiceCredits balance after extending.
+
+**Expected:** The block counter increments (e.g., "2 of N blocks paid"). `paid_through_at` advances by one interval. The caller's balance decreases by the locked rate. The "Extend" button remains available until the authorized cap is reached.
+
+Result: web ☐
+
+---
+
+### FDN-23 — Instant call: block cap reached disables Extend
+
+**Role:** Member (survivor, caller)
+**Surface:** Web
+
+**Precondition:** A call is in progress. The authorized block cap has been reached (all blocks paid).
+
+**Steps:**
+1. During an active call, when `blocks_charged === authorized_blocks`, observe the billing strip.
+2. Attempt to extend further.
+
+**Expected:** The "Extend" button is replaced by a clear "you've used all the blocks you authorized" message. No further extend is possible. The API would return 409 `FOUNDATION_CALL_BLOCK_CAP_REACHED` if called directly.
+
+Result: web ☐
+
+---
+
+### FDN-24 — Instant call: insufficient funds at ring time
+
+**Role:** Member (survivor, caller with zero or low ServiceCredits)
+**Surface:** Web
+
+**Precondition:** Signed in as a member with a ServiceCredits balance below the cost of one block for the target provider. Provider has instant-call enabled.
+
+**Steps:**
+1. Open the provider's profile, click "Connect now," complete the consent dialog, and click "Start call."
+
+**Expected:** The ring is rejected before it is placed. The UI shows a clear error (insufficient funds). No ring state appears on the provider's side. No credits are moved.
+
+Result: web ☐
+
+---
+
+### FDN-25 — Instant call: callee declines
+
+**Role:** Member (survivor, caller) + Member (provider, callee)
+**Surface:** Web
+
+**Precondition:** A ring is in progress (caller has rung, callee sees the incoming-ring overlay).
+
+**Steps:**
+1. As callee (provider): click "Decline" on the incoming-ring overlay.
+2. Observe both sides.
+
+**Expected:** Both sides transition to a "declined" terminal state. No credits are moved (the call was never answered). The callee's overlay dismisses cleanly.
+
+Result: web ☐
+
+---
+
+### FDN-26 — Instant call: caller cancels a ringing call
+
+**Role:** Member (survivor, caller)
+**Surface:** Web
+
+**Precondition:** A ring is in progress (callee has not answered yet).
+
+**Steps:**
+1. As caller: click "End call" or cancel while the overlay shows "ringing."
+
+**Expected:** The ring ends (transitions to `ended`). The callee's incoming-ring overlay dismisses. No credits are moved.
+
+Result: web ☐
+
+---
+
+### FDN-27 — Instant call: only one live ring per callee
+
+**Role:** Member (two different survivors) + Member (provider, callee)
+**Surface:** Web
+
+**Precondition:** Two survivor accounts both have enough credits to ring the same provider. The provider is already being rung by survivor A.
+
+**Steps:**
+1. Survivor A rings the provider (ring is active, `ringing` state).
+2. Survivor B attempts to ring the same provider simultaneously.
+
+**Expected:** Survivor B's ring attempt fails. The server returns an error (the unique partial index `foundation_call_sessions_active_ring_per_callee` allows only one live ring per callee). The provider sees only survivor A's ring.
+
+Result: web ☐
+
+---
+
+### FDN-28 — Provider description: write and read
+
+**Role:** Member (acting as provider)
+**Surface:** Web
+
+**Precondition:** Signed in as the provider account. On the Foundation Offer-skills tab.
+
+**Steps:**
+1. Find the "Your listing blurb" editor.
+2. Enter a short description (e.g., "I specialize in trauma-informed peer support for survivors.").
+3. Observe the live character counter.
+4. Save.
+5. Switch to a different member account. Open the provider's card in Browse and then their full profile.
+
+**Expected:** Step 3: the character counter updates as you type and warns or blocks at 200 characters. Step 4: save succeeds, the response includes `{ shortDescription: "...", maxLength: 200 }`. Step 5: the blurb appears on the provider's card (before the skill chips) and near the top of the profile (before the About section).
+
+Result: web ☐
+
+---
+
+### FDN-29 — Provider description: over-length rejected
+
+**Role:** Member (acting as provider)
+**Surface:** Web
+
+**Precondition:** Signed in as the provider account.
+
+**Steps:**
+1. Attempt PUT `/api/foundation/provider/description` with a `shortDescription` longer than 200 characters (include the CSRF header `x-ctf-csrf: 1`).
+
+**Expected:** The server returns 400 with `FOUNDATION_INVALID_PAYLOAD`. The stored description is unchanged.
+
+Result: web ☐
+
+---
+
+### FDN-30 — Provider description: blank clears it
+
+**Role:** Member (acting as provider)
+**Surface:** Web
+
+**Precondition:** The provider has a non-null `shortDescription` already saved.
+
+**Steps:**
+1. PUT `/api/foundation/provider/description` with `{ shortDescription: "" }` and the CSRF header.
+2. GET `/api/foundation/provider/description`.
+
+**Expected:** The PUT succeeds. The GET returns `{ shortDescription: null, maxLength: 200 }`. The blurb no longer appears on the provider's card or profile.
+
+Result: web ☐
+
+---
+
+### FDN-31 — Provider skills: offer and filter
+
+**Role:** Member (acting as provider)
+**Surface:** Web
+
+**Precondition:** Signed in as the provider account. The provider has at least one skill on their claimed Directory profile.
+
+**Steps:**
+1. Navigate to the Offer-skills tab in the Foundation shell.
+2. Toggle a skill on (offer it).
+3. Save.
+4. Switch to a survivor account. Apply the matching skill filter in Browse.
+5. Toggle the same skill off as the provider and save.
+6. Check the survivor's filtered Browse list again.
+
+**Expected:** Step 3: the skill is saved (response includes the accepted `offeredSkillIds`). Step 4: the provider appears in the filtered list. Step 5: saves successfully. Step 6: the provider no longer appears in that skill-filtered list.
+
+Result: web ☐
+
+---
+
+### FDN-32 — Connection history list
+
+**Role:** Member (survivor) and Member (provider)
+**Surface:** Web
+
+**Precondition:** At least one connection thread and one call session exist (created by earlier test cases or seed).
+
+**Steps:**
+1. Sign in as the survivor. Navigate to connection history (GET `/api/foundation/connections/history`).
+2. Verify the thread and call records scoped to this survivor appear.
+3. Sign in as the provider. Check connection history.
+4. Verify the provider sees only their own threads.
+
+**Expected:** Each actor sees only their own history. History items include thread data and call summaries where relevant.
+
+Result: web ☐
+
+---
+
+### FDN-33 — Notifications: in-app list and unread filter
+
+**Role:** Member (survivor)
+**Surface:** Web
+
+**Precondition:** The seeded notification event exists. Signed in as the member whose notification was seeded.
+
+**Steps:**
+1. Call GET `/api/foundation/notifications` (or navigate to the in-app notification surface).
+2. Observe the notification items returned.
+3. Call GET `/api/foundation/notifications?unreadOnly=true`.
+4. Observe the filtered list.
+
+**Expected:** Step 2: the seeded notification event appears in the list. Step 3: only unread/unacknowledged notifications appear. The response shape is `{ ok: true, items: [...] }`.
+
+Result: web ☐
+
+---
+
+### FDN-34 — Notifications: acknowledge an event
+
+**Role:** Member (survivor)
+**Surface:** Web
+
+**Precondition:** An unread notification event exists for this member.
+
+**Steps:**
+1. POST to `/api/foundation/notifications/<notificationEventId>/ack` with `{ status: "acknowledged" }`.
+2. Call GET `/api/foundation/notifications?unreadOnly=true` again.
+
+**Expected:** The ack POST succeeds and returns `{ notificationEventId, status: "acknowledged", updatedAt }`. The notification no longer appears in the unread-only list.
+
+Result: web ☐
+
+---
+
+### FDN-35 — Notifications: preferences update
+
+**Role:** Member (survivor)
+**Surface:** Web
+
+**Precondition:** Signed in as a member.
+
+**Steps:**
+1. PUT `/api/foundation/notifications/preferences` with `{ inAppEnabled: true, pushEnabled: false }`.
+2. PUT again with quiet hours set (e.g., `{ inAppEnabled: true, pushEnabled: true, quietHours: { start: "22:00", end: "08:00" } }`).
+
+**Expected:** Both PUTs succeed and return `{ notificationPreferenceId, updatedAt, effectiveChannels }`. The preferences are stored in `foundation_user_extension` (no separate preferences table).
+
+Result: web ☐
+
+---
+
+### FDN-36 — Web Push: VAPID public key endpoint
+
+**Role:** Member (any signed-in member)
+**Surface:** Web
+
+**Precondition:** Signed in as any member.
+
+**Steps:**
+1. GET `/api/foundation/push/vapid-public-key`.
+2. Observe the response.
+
+**Expected:** If VAPID keys are configured in the environment: `{ enabled: true, publicKey: "<non-empty string>" }`. If not configured: `{ enabled: false, publicKey: "" }`. Either outcome is correct — `enabled: false` is the declared graceful-degrade state when keys are absent.
+
+Result: web ☐
+
+---
+
+### FDN-37 — Web Push: subscribe and unsubscribe
+
+**Role:** Member (provider, to receive call alerts)
+**Surface:** Web
+
+**Precondition:** Signed in as the provider account. VAPID keys are configured (skip or mark ⛔ if `GET /api/foundation/push/vapid-public-key` returned `enabled: false`). The browser supports Web Push and notification permission is granted.
+
+**Steps:**
+1. Navigate to the instant-call settings panel in the Foundation shell.
+2. Click "Enable call alerts on this device."
+3. Grant notification permission when prompted.
+4. Observe the control's state after enabling.
+5. Click to disable call alerts on this device.
+6. Observe the control's state after disabling.
+
+**Expected:** Step 4: the control shows "On for this device" (enabled state). The browser's service worker is registered, and a push subscription is stored server-side via POST `/api/foundation/push/subscribe` (kind `'web'`). Step 6: the subscription is removed via POST `/api/foundation/push/unsubscribe`. The control returns to the "off" state. At no step does a raw error appear — the states covered are: unsupported browser, push not configured, permission denied, enabled, disabled, error.
+
+Result: web ☐
+
+---
+
+### F

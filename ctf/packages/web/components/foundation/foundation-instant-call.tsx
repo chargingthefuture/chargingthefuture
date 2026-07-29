@@ -39,6 +39,10 @@ type InstantCall = {
   endedReason: string | null;
 };
 
+// Two distinct Stream ids come back here and must not be swapped (issue #987):
+//   - streamCallId is the Stream **Video** call id the audio room joins (the route surfaces it flat, and it
+//     mirrors call.streamCallId).
+//   - streamChannelId is the Stream **Chat** channel id for the thread's Direct Line — never a call id.
 type CallStateResponse = {
   ok: boolean;
   call?: InstantCall;
@@ -46,6 +50,7 @@ type CallStateResponse = {
   streamApiKey?: string | null;
   streamUserId?: string | null;
   streamToken?: string | null;
+  streamCallId?: string;
   streamChannelId?: string;
 };
 
@@ -236,12 +241,22 @@ export function FoundationInstantCallController({
           intervalMinutesLocked: call.intervalMinutesLocked,
           endedReason: call.endedReason,
         });
-        if (call.ringStatus === "answered" && data.streamApiKey && data.streamToken && data.streamUserId) {
+        // Read the video call id from the flat response field, falling back to the nested call row. Wait for
+        // a non-empty id before joining: an empty id would send the audio room to a call that does not exist
+        // and fail with nothing shown, so keep polling until the id is there instead (issue #987).
+        const streamCallId = data.streamCallId || call.streamCallId;
+        if (
+          call.ringStatus === "answered" &&
+          data.streamApiKey &&
+          data.streamToken &&
+          data.streamUserId &&
+          streamCallId
+        ) {
           setCredentials({
             streamApiKey: data.streamApiKey,
             streamUserId: data.streamUserId,
             streamToken: data.streamToken,
-            streamCallId: call.streamCallId,
+            streamCallId,
             displayName,
           });
         }
