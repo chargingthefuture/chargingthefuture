@@ -30,6 +30,10 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/contributor-access', name: 'Contributor Access' },
   { href: '/admin/directory', name: 'Directory' },
   { href: '/admin/feed-announcements', name: 'Feed Announcements' },
+  // Review of member-contributed writing for the assistant's library. Its own area rather than a tab
+  // inside AI Assistant: it has its own queue, and a contribution waiting to be read should show up
+  // in the admin directory on its own.
+  { href: '/admin/comic/contributions', name: 'Contributed Writing' },
   { href: '/admin/foundation', name: 'Foundation' },
   { href: '/admin/level-up', name: 'LevelUp' },
   { href: '/admin/lighthouse', name: 'LightHouse' },
