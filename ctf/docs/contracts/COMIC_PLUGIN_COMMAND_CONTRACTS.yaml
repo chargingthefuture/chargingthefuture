@@ -228,12 +228,20 @@ contracts:
       thirdPartyNote:
         type: string
         required: false
+      quoraProfileUrl:
+        type: string
+        required: false
     outputSchema:
       contribution:
         type: object
+      unlockLink:
+        type: string
+        enum: [submitted, already_on_file, invalid_url, not_provided, failed]
     dataAccess:
       - comic_contributions
       - comic_contribution_entries
+      - unlock_verification_submissions
+      - unlock_audit_log
     purpose: assistant_knowledge_contribution
     retentionClass: transactional_long_lived
     idempotency: false
