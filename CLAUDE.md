@@ -389,6 +389,13 @@ issues) and `code-review-implement.yml` (turns an actionable finding into a PR).
 repo files does not uninstall the CodeRabbit GitHub App — if it is still installed at the org/UI
 level, uninstall it there so it cannot resume reviewing with default settings.
 
+**Working the findings by hand: `/cr`.** The owner asks for this most days, so the whole routine —
+find the open findings, verify each one against the code before acting, fix the real ones on a
+descriptive branch, open the PR with the title and `Parity Status:` line set at creation, pick the
+auto-merge or owner-review lane, then keep the branch up to date until it merges — lives in
+`.claude/commands/cr.md`. Follow that file when asked to work code-review issues, whether or not the
+request came in as the slash command.
+
 #### Two lanes by risk
 
 The repo has **auto-merge** and **auto-delete head branches** turned on. Pick the lane by risk:
