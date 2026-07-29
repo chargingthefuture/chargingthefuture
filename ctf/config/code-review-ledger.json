@@ -220,10 +220,15 @@
     {
       "name": "foundation",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-29T09:19:17.562Z",
+      "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/foundation",
+        "ctf/packages/web/components/foundation",
+        "ctf/packages/web/lib/foundation"
+      ]
     },
     {
       "name": "gdp",
@@ -466,6 +471,19 @@
         "ctf/packages/web/app/api/recurring-activity",
         "ctf/packages/web/components/recurring-activity",
         "ctf/packages/web/lib/recurring-activity"
+      ]
+    },
+    {
+      "name": "reviews",
+      "type": "plugin",
+      "lastReviewedAt": "2026-07-29T02:50:49.583Z",
+      "lastRunIssues": 4,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/reviews",
+        "ctf/packages/web/components/reviews",
+        "ctf/packages/web/lib/reviews"
       ]
     },
     {
