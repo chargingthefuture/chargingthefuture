@@ -15,7 +15,17 @@ import { getUnlockTokens } from './unlock-shared';
 // solid admin border. The default theme keeps the shipped hex values.
 
 type ReviewStatus = UnlockSubmission['reviewStatus'];
-type Tab = 'pending' | 'all';
+// Which slice of the loaded submissions the list shows. 'support-only' is not a review status — it is
+// the access tier a member is left on when they are not approved (rejected, marked spam, or their
+// pending window lapsed and the support-only sweep ran). The Support-only counter on the dashboard
+// above is the same set, so the tab is the way to see WHO those people are rather than just how many.
+type Tab = 'pending' | 'support-only' | 'all';
+
+const TAB_LABEL: Record<Tab, string> = {
+  pending: 'Pending',
+  'support-only': 'Support-only',
+  all: 'All submissions',
+};
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; label: string }> = {
   pending: { bg: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: 'rgba(245,158,11,0.3)', label: 'pending' },
@@ -148,7 +158,16 @@ export function UnlockAdminShell({
     }
   }
 
-  const visible = tab === 'pending' ? submissions.filter((s) => s.reviewStatus === 'pending') : submissions;
+  const visible =
+    tab === 'pending'
+      ? submissions.filter((s) => s.reviewStatus === 'pending')
+      : tab === 'support-only'
+        // Filtered on access tier, not review status, deliberately: a member lands here from more than
+        // one route (rejected, spam, or a lapsed pending window swept by supportOnlyAfterExpiry), and
+        // the tier is the single thing all of those have in common. It also matches exactly what the
+        // Support-only counter above is counting, so the number and the list can never disagree.
+        ? submissions.filter((s) => s.accessTier === 'locked_support_only')
+        : submissions;
   // Client-side search over the loaded page so an admin can find a submission by Quora URL, user id,
   // or submission number without scrolling the whole list.
   const searchQuery = search.trim().toLowerCase();
@@ -422,7 +441,7 @@ export function UnlockAdminShell({
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          {(['pending', 'all'] as const).map((tabKey) => (
+          {(['pending', 'support-only', 'all'] as const).map((tabKey) => (
             <button
               key={tabKey}
               type="button"
@@ -430,10 +449,22 @@ export function UnlockAdminShell({
               aria-pressed={tab === tabKey}
               style={{ padding: '6px 16px', borderRadius: 8, background: tab === tabKey ? t.ACCENT : t.SURFACE, border: `1px solid ${tab === tabKey ? t.ACCENT : t.BORDER_SOLID}`, color: tab === tabKey ? '#fff' : t.MUTED, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
-              {tabKey === 'pending' ? 'Pending' : 'All submissions'}
+              {TAB_LABEL[tabKey]}
             </button>
           ))}
         </div>
+
+        {/* On the support-only tab, say how many of them this page is actually showing. The page loads a
+            capped number of submissions, so once there are more than that the list can hold fewer
+            support-only rows than the counter above reports — and a short list would otherwise read as
+            "that is everyone". Say the shortfall out loud instead. */}
+        {tab === 'support-only' && !searchQuery ? (
+          <div style={{ marginTop: -8, marginBottom: 16, fontSize: 12, color: t.MUTED }}>
+            {visible.length === dashboard.lockedSupportOnlyCount
+              ? `${visible.length} member${visible.length === 1 ? '' : 's'} on support-only access`
+              : `Showing ${visible.length} of ${dashboard.lockedSupportOnlyCount} on support-only access — the rest are outside this page of submissions.`}
+          </div>
+        ) : null}
 
         {/* Search over the loaded submissions so an admin need not scroll the whole list. */}
         <div style={{ marginBottom: 16 }}>
@@ -466,7 +497,9 @@ export function UnlockAdminShell({
               ? 'No submissions match your search.'
               : tab === 'pending'
                 ? 'No submissions waiting for review.'
-                : 'No submissions yet.'}
+                : tab === 'support-only'
+                  ? 'Nobody is on support-only access. Rejected, spam, and lapsed submissions land here.'
+                  : 'No submissions yet.'}
           </div>
         ) : (
           filteredVisible.map((s) => {
@@ -517,6 +550,15 @@ export function UnlockAdminShell({
                         <Pencil size={12} /> Edit
                       </button>
                       <StatusPill status={s.reviewStatus} />
+                      {/* Access tier, shown only when it is support-only. Review status alone does not
+                          explain why a row is on this tier: a submission left `pending` past its window
+                          is swept to support-only by supportOnlyAfterExpiry, so it would read "pending"
+                          with nothing saying the member is actually locked out of the full app. */}
+                      {s.accessTier === 'locked_support_only' ? (
+                        <span title="This member is on support-only access — they can reach support surfaces but not the full app" style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(148,163,184,0.14)', color: '#94A3B8', border: '1px solid rgba(148,163,184,0.32)' }}>
+                          Support-only
+                        </span>
+                      ) : null}
                       {s.reviewStatus === 'approved' && !s.rewardRevokedAt ? <RewardPill grantedAt={s.incentiveGrantedAt} /> : null}
                       {s.sharedUrlAccountCount && s.sharedUrlAccountCount > 1 ? (
                         <span title="This Quora URL is claimed by more than one account" style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}>
