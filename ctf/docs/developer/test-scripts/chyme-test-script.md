@@ -84,11 +84,15 @@ unbounded dump or an error from an odd `limit`.
 ### CH-4 · Join, presence heartbeat, leave
 **Role:** member · **Surfaces:** all
 **Steps:**
-1. Join the call and stay in it for over a minute.
-2. Press leave.
-**Expected:** While in the call you keep counting as present (the heartbeat refreshes your row every
-35 seconds). On leave, your row is dropped and you disappear from the participant list — and any
-raised hand clears. The room shows "Live" only while at least one fresh member is present.
+1. Join the call and stay in it for over a minute. Watch the permission prompts as you join. Test on
+   iOS Safari and a saved-to-home-screen PWA in particular.
+2. Press Unmute, then press leave.
+**Expected:** Joining **never** asks for camera permission (Chyme is audio-only — the camera is
+disabled before the call joins, so no camera prompt fires on any surface, including the iOS PWA). You
+join muted; the **microphone** permission is only requested when you press Unmute (not on join). While
+in the call you keep counting as present (the heartbeat refreshes your row every 35 seconds). On leave,
+your row is dropped and you disappear from the participant list — and any raised hand clears. The room
+shows "Live" only while at least one fresh member is present.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-5 · Raise and lower hand (persistent)

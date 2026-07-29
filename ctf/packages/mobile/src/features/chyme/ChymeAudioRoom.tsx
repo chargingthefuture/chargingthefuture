@@ -116,9 +116,10 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
 
     void (async () => {
       try {
-        await activeCall.join({ create: true });
-        // Audio-only room: never publish video, and join muted so a new
-        // listener is not live until they choose to unmute.
+        // Audio-only room: disable the camera BEFORE joining so the OS is never asked for camera
+        // permission (the SDK requests a video track during join otherwise, firing the prompt too
+        // early to suppress). Disable the mic before joining too, so we join muted and the mic
+        // permission is only requested when the member presses Unmute (listen-first).
         try {
           await activeCall.camera.disable();
         } catch {
@@ -129,6 +130,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
         } catch {
           /* already muted */
         }
+        await activeCall.join({ create: true });
         if (cancelled) return;
         setClient(videoClient);
         setCall(activeCall);
