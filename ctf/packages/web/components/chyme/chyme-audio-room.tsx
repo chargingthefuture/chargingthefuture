@@ -123,11 +123,14 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
 
     void (async () => {
       try {
-        await activeCall.join({ create: true });
-        // Audio-only room: never publish video, and join muted so a new
-        // listener is not live until they choose to unmute.
+        // Audio-only room: disable the camera BEFORE joining so the browser is never asked for
+        // camera permission. iOS Safari (and a saved-to-home PWA) prompts the moment the SDK requests
+        // a video track, so disabling it after join is too late — the prompt already fired. Disable the
+        // microphone before joining too, so we join muted and the mic permission is only requested when
+        // the member actually presses Unmute (listen-first). This mirrors the guest listen path.
         try { await activeCall.camera.disable(); } catch { /* no camera to disable */ }
         try { await activeCall.microphone.disable(); } catch { /* already muted */ }
+        await activeCall.join({ create: true });
         if (cancelled) return;
         setClient(videoClient);
         setCall(activeCall);
