@@ -2,11 +2,33 @@ import { NextResponse } from 'next/server';
 import { normalizeQuoraProfileUrl, requireUnlockUserAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
 import { createOrUpdateUnlockSubmission, insertUnlockAudit } from 'lib/unlock/repository';
 import { isUnlockEarlyCommonsEnabled } from 'lib/unlock/access';
+import { restrictAccount } from 'lib/auth/account-restrictions';
+import { UNLOCK_SPAM_DENYLIST_ACTOR, UNLOCK_SPAM_RESTRICTION_REASON } from 'lib/unlock/spam-denylist';
 import { reportError } from 'lib/observability/report';
 
 type SubmissionBody = {
   quoraProfileUrl?: string;
 };
+
+// A submitted URL on the spam denylist is auto-marked spam by createOrUpdateUnlockSubmission. Apply the
+// same app-wide block the admin spam path applies, so a spammer who deleted their data and made a new
+// account is shut out again without an admin re-reviewing them. Attributed to the system (no admin
+// acted). Best-effort: a retry re-applies it, and the restriction is idempotent.
+async function applyDenylistBlockIfSpam(reviewStatus: string, targetUserId: string): Promise<void> {
+  if (reviewStatus !== 'spam') {
+    return;
+  }
+  try {
+    await restrictAccount({
+      targetUserId,
+      actorId: UNLOCK_SPAM_DENYLIST_ACTOR,
+      scope: 'all',
+      reason: UNLOCK_SPAM_RESTRICTION_REASON,
+    });
+  } catch (restrictionError) {
+    reportError(restrictionError, { area: 'unlock', op: 'submission_denylist_restrict' });
+  }
+}
 
 export async function POST(request: Request) {
   const gate = await requireUnlockUserAccess();
@@ -51,11 +73,13 @@ export async function POST(request: Request) {
       quoraProfileUrlNormalized: normalizedUrl,
     });
 
+    await applyDenylistBlockIfSpam(submission.reviewStatus, gate.auth.userId);
+
     await insertUnlockAudit({
       actorUserId: gate.auth.userId,
       command: 'unlock.verification.submit',
-      policyStatus: 'allow',
-      reason: 'ok',
+      policyStatus: submission.reviewStatus === 'spam' ? 'deny' : 'allow',
+      reason: submission.reviewStatus === 'spam' ? 'spam_denylisted' : 'ok',
       targetUserId: gate.auth.userId,
       requestId,
       metadata: { submissionId: submission.id, experimentBucket },

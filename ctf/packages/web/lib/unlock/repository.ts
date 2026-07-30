@@ -1,6 +1,7 @@
 import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
 import { recordQuoraUrlChangeStandalone } from 'lib/directory/repository';
+import { addSpamQuoraUrl, isSpamQuoraUrl, removeSpamQuoraUrl } from './spam-denylist';
 import type {
   CreateUnlockSubmissionInput,
   ReviewUnlockSubmissionInput,
@@ -211,6 +212,14 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
   const previousUrl = previous.rows[0]?.quora_profile_url ?? null;
   const previousUrlNormalized = previous.rows[0]?.quora_profile_url_normalized ?? null;
 
+  // A URL an admin has already marked spam is auto-marked spam on submission — even from a new account —
+  // so a known-bad Quora profile never re-enters the review queue. Everything else starts pending. The
+  // caller (submission route) reads the returned reviewStatus and applies the app-wide block for a spam
+  // outcome, mirroring the admin review path.
+  const denylisted = await isSpamQuoraUrl(input.quoraProfileUrlNormalized);
+  const initialReviewStatus = denylisted ? 'spam' : 'pending';
+  const initialAccessTier = denylisted ? 'locked_support_only' : 'pending_readonly';
+
   const result = await queryDb<UnlockSubmissionRow>(
     `INSERT INTO unlock_verification_submissions (
        user_id,
@@ -224,16 +233,16 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        $1,
        $2,
        $3,
-       'pending',
-       'pending_readonly',
+       $5,
+       $6,
        NOW() + (($4::text || ' hours')::interval)
      )
      ON CONFLICT (user_id) DO UPDATE
      SET
        quora_profile_url = EXCLUDED.quora_profile_url,
        quora_profile_url_normalized = EXCLUDED.quora_profile_url_normalized,
-       review_status = 'pending',
-       access_tier = 'pending_readonly',
+       review_status = EXCLUDED.review_status,
+       access_tier = EXCLUDED.access_tier,
        unlock_window_expires_at = NOW() + (($4::text || ' hours')::interval),
        reviewed_by_user_id = NULL,
        reviewed_at = NULL,
@@ -265,7 +274,14 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        reward_revoked_at,
        created_at,
        updated_at`,
-    [input.userId, input.quoraProfileUrl, input.quoraProfileUrlNormalized, String(submissionWindowHours)],
+    [
+      input.userId,
+      input.quoraProfileUrl,
+      input.quoraProfileUrlNormalized,
+      String(submissionWindowHours),
+      initialReviewStatus,
+      initialAccessTier,
+    ],
   );
 
   // Record the captured URL in the shared Quora URL history when it is the first submission or a real
@@ -409,7 +425,28 @@ export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput)
     return null;
   }
 
-  return mapUnlockSubmission(result.rows[0]);
+  const submission = mapUnlockSubmission(result.rows[0]);
+
+  // Keep the persistent spam denylist in step with the decision. Marking spam records the normalized
+  // URL so it survives the member's data deletion and blocks re-entry on a new account; approving or
+  // rejecting removes it (the spam mark is reversible). Best-effort: the verification decision is
+  // already committed above, so a denylist write failure must not fail the review — a later re-review
+  // re-applies it, and the write is idempotent.
+  try {
+    if (input.reviewStatus === 'spam') {
+      await addSpamQuoraUrl({
+        quoraProfileUrlNormalized: submission.quoraProfileUrlNormalized,
+        quoraProfileUrl: submission.quoraProfileUrl,
+        actorUserId: input.actorUserId,
+      });
+    } else {
+      await removeSpamQuoraUrl(submission.quoraProfileUrlNormalized);
+    }
+  } catch (error) {
+    reportError(error, { area: 'unlock', op: 'sync_spam_denylist', extra: { submissionId: input.submissionId } });
+  }
+
+  return submission;
 }
 
 // Admin correction path: overwrite the stored Quora profile URL (and its normalized form) for a

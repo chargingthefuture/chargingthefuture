@@ -31,6 +31,17 @@ export type UnlockSubmission = {
   updatedAt: string;
 };
 
+// One row of the persistent spam Quora-URL denylist (unlock_spam_quora_urls), as shown in the admin
+// denylist panel. Keyed on the normalized URL; holds no member id.
+export type SpamQuoraUrlEntry = {
+  quoraProfileUrlNormalized: string;
+  quoraProfileUrl: string;
+  flaggedByUserId: string | null;
+  flagCount: number;
+  firstFlaggedAt: string;
+  lastFlaggedAt: string;
+};
+
 export type RevokeUnlockRewardInput = {
   actorUserId: string;
   submissionId: number;
