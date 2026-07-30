@@ -78,6 +78,92 @@ type ExpoPushTicket = {
   details?: { error?: string };
 };
 
+type ExpoMessage = {
+  to: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown>;
+  sound: string;
+  priority: string;
+  channelId: string;
+};
+
+// Load a user's Expo device endpoints. Returns [] when there are none, or null on a DB error (the caller
+// treats null as "give up quietly" — push is best-effort).
+async function loadExpoEndpoints(userId: string): Promise<ExpoSubscriptionRow[] | null> {
+  try {
+    const result = await queryDb<ExpoSubscriptionRow>(
+      `SELECT endpoint FROM push_subscriptions WHERE user_id = $1 AND kind = 'expo'`,
+      [userId],
+    );
+    return result.rows;
+  } catch (error) {
+    reportError(error, { area: 'notifications', op: 'expo_push_load_subscriptions' });
+    return null;
+  }
+}
+
+// POST the batch to Expo and return its receipts, or null on a network error / non-OK response (already
+// reported). Never logs the body (it can echo tokens); only the status.
+async function postExpoBatch(messages: ExpoMessage[], accessToken: string | null): Promise<ExpoPushTicket[] | null> {
+  try {
+    const response = await fetch(EXPO_PUSH_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify(messages),
+    });
+    if (!response.ok) {
+      reportError(new Error(`Expo push send failed: ${response.status}`), {
+        area: 'notifications',
+        op: 'expo_push_send',
+        extra: { status: response.status },
+      });
+      return null;
+    }
+    const parsed = (await response.json().catch(() => null)) as { data?: unknown } | null;
+    return Array.isArray(parsed?.data) ? (parsed.data as ExpoPushTicket[]) : [];
+  } catch (error) {
+    reportError(error, { area: 'notifications', op: 'expo_push_send' });
+    return null;
+  }
+}
+
+// Act on one receipt. Returns the endpoint when the push landed (so its last_used can be stamped), or null
+// when it errored. A 'DeviceNotRegistered' token is dead and is pruned; other errors are reported (no token
+// logged). A non-object receipt (e.g. a bare string on an error response) is treated as a non-delivery.
+async function handleExpoReceipt(userId: string, endpoint: string, ticket: ExpoPushTicket): Promise<string | null> {
+  if (!ticket || typeof ticket !== 'object') return null;
+  if (ticket.status !== 'error') return endpoint;
+  const reason = ticket.details?.error ?? 'unknown';
+  if (reason === 'DeviceNotRegistered') {
+    await pruneDeadExpoSubscription(userId, endpoint);
+  } else {
+    reportError(new Error('Expo push receipt error'), {
+      area: 'notifications',
+      op: 'expo_push_receipt',
+      extra: { error: reason },
+    });
+  }
+  return null;
+}
+
+// Stamp last_used_at on the endpoints that received the push. Best-effort.
+async function stampExpoLastUsed(userId: string, endpoints: string[]): Promise<void> {
+  if (endpoints.length === 0) return;
+  try {
+    await queryDb(
+      `UPDATE push_subscriptions SET last_used_at = NOW() WHERE user_id = $1 AND endpoint = ANY($2::text[])`,
+      [userId, endpoints],
+    );
+  } catch (error) {
+    reportError(error, { area: 'notifications', op: 'expo_push_stamp_last_used' });
+  }
+}
+
 // Send an Expo push to every Expo device a user owns (issue #884). Best-effort and self-contained: it never
 // throws, so a caller (e.g. dispatchRingDelivery) can fire-and-forget without the push affecting its own
 // outcome.
@@ -85,20 +171,8 @@ type ExpoPushTicket = {
 //   - A 'DeviceNotRegistered' receipt: that dead token is deleted; other devices still get the push.
 // Secrets policy: never logs the device token or the Expo access token; only counts.
 export async function sendExpoPushToUser(userId: string, payload: WebPushPayload): Promise<void> {
-  let rows: ExpoSubscriptionRow[];
-  try {
-    const result = await queryDb<ExpoSubscriptionRow>(
-      `SELECT endpoint FROM push_subscriptions WHERE user_id = $1 AND kind = 'expo'`,
-      [userId],
-    );
-    rows = result.rows;
-  } catch (error) {
-    reportError(error, { area: 'notifications', op: 'expo_push_load_subscriptions' });
-    return;
-  }
-
-  if (rows.length === 0) {
-    // No Expo devices for this user. Logged once (no secrets) so an operator can see push was a no-op.
+  const rows = await loadExpoEndpoints(userId);
+  if (!rows || rows.length === 0) {
     return;
   }
 
@@ -111,7 +185,7 @@ export async function sendExpoPushToUser(userId: string, payload: WebPushPayload
   }
 
   // One batch request to Expo: an array of messages, one per device token.
-  const messages = rows.map((row) => ({
+  const messages: ExpoMessage[] = rows.map((row) => ({
     to: row.endpoint,
     title: payload.title,
     body: payload.body,
@@ -121,37 +195,15 @@ export async function sendExpoPushToUser(userId: string, payload: WebPushPayload
     channelId: 'foundation-calls',
   }));
 
-  let receipts: ExpoPushTicket[] = [];
-  try {
-    const response = await fetch(EXPO_PUSH_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      },
-      body: JSON.stringify(messages),
-    });
-    if (!response.ok) {
-      // Do not log the body (it can echo tokens); only the status.
-      reportError(new Error(`Expo push send failed: ${response.status}`), {
-        area: 'notifications',
-        op: 'expo_push_send',
-        extra: { status: response.status },
-      });
-      return;
-    }
-    const parsed = (await response.json().catch(() => null)) as { data?: unknown } | null;
-    receipts = Array.isArray(parsed?.data) ? (parsed.data as ExpoPushTicket[]) : [];
-  } catch (error) {
-    reportError(error, { area: 'notifications', op: 'expo_push_send' });
+  const receipts = await postExpoBatch(messages, accessToken);
+  if (!receipts) {
     return;
   }
 
-  // Receipts come back positionally: receipts[i] is the ticket for messages[i], and thus for rows[i].
-  // That alignment only holds when every message is accepted in the one batch. If the counts differ
-  // (a malformed/truncated body, or partial acceptance), the arrays are misaligned and processing them
-  // by index would prune or stamp the WRONG token — so bail out rather than act on a misaligned response.
+  // Receipts come back positionally: receipts[i] is the ticket for messages[i], and thus for rows[i]. That
+  // alignment only holds when every message is accepted in the one batch. If the counts differ (a
+  // malformed/truncated body, or partial acceptance), the arrays are misaligned and processing them by
+  // index would prune or stamp the WRONG token — so bail out rather than act on a misaligned response.
   if (receipts.length !== messages.length) {
     reportError(new Error('Expo push receipt count mismatch'), {
       area: 'notifications',
@@ -161,41 +213,14 @@ export async function sendExpoPushToUser(userId: string, payload: WebPushPayload
     return;
   }
 
-  // A 'DeviceNotRegistered' error means the token is dead — prune it so it is not retried. Other errors are
-  // reported (no token logged). Collect the successfully-sent endpoints from the Promise.all return value
-  // rather than pushing into a shared array, so the result never depends on callback interleaving.
+  // Collect the successfully-sent endpoints from the Promise.all return value rather than pushing into a
+  // shared array, so the result never depends on callback interleaving.
   const results = await Promise.all(
-    receipts.map(async (ticket, index): Promise<string | null> => {
+    receipts.map((ticket, index) => {
       const endpoint = rows[index]?.endpoint;
-      if (!endpoint) return null;
-      // Guard the runtime shape: a non-object receipt (e.g. a bare string on an error response) must not
-      // be read as a ticket.
-      if (!ticket || typeof ticket !== 'object') return null;
-      if (ticket.status === 'error') {
-        if (ticket.details?.error === 'DeviceNotRegistered') {
-          await pruneDeadExpoSubscription(userId, endpoint);
-        } else {
-          reportError(new Error('Expo push receipt error'), {
-            area: 'notifications',
-            op: 'expo_push_receipt',
-            extra: { error: ticket.details?.error ?? 'unknown' },
-          });
-        }
-        return null;
-      }
-      return endpoint;
+      return endpoint ? handleExpoReceipt(userId, endpoint, ticket) : Promise.resolve(null);
     }),
   );
   const usedEndpoints = results.filter((endpoint): endpoint is string => endpoint !== null);
-
-  if (usedEndpoints.length > 0) {
-    try {
-      await queryDb(
-        `UPDATE push_subscriptions SET last_used_at = NOW() WHERE user_id = $1 AND endpoint = ANY($2::text[])`,
-        [userId, usedEndpoints],
-      );
-    } catch (error) {
-      reportError(error, { area: 'notifications', op: 'expo_push_stamp_last_used' });
-    }
-  }
+  await stampExpoLastUsed(userId, usedEndpoints);
 }
