@@ -353,6 +353,21 @@ jobs:
       - name: Enforce feature-inventory coverage of tables and routes
         run: node ctf/scripts/check-inventory-drift.mjs
 
+  orphan-route-gate:
+    name: Orphan Route Gate
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The inventory gate above asks whether every route is DOCUMENTED. This one asks whether every
+      # route is CALLED. Documented-but-dead is the worse failure: the inventory then asserts a
+      # capability the product does not have. That is exactly how a member flagging an answer reached
+      # nobody — the admin route existed, was documented, and no page ever called it.
+      - name: Fail on API routes that nothing calls
+        run: node ctf/scripts/check-orphan-routes.mjs
+
   taxonomy-change-gate:
     name: Taxonomy Change Gate
     runs-on: ubuntu-latest
