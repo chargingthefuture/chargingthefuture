@@ -776,68 +776,63 @@ function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 
-export async function listFeedTimeline(
-  userId: string,
-  role: string | null,
-  pagination: { page: number; pageSize: number },
-  filters: {
-    pluginId?: string | null;
-    channel?: FeedChannel;
-    // Literal @-handle tokens (e.g. '@farah', '@user-3gysu61f') the item body must
-    // contain (case-insensitive, any one of them). Derived server-side from the
-    // authenticated user — never from client input. Null/empty means no filter.
-    mentionHandles?: string[] | null;
-    // Deep-link "load around": when set, the returned page is centered on the feed item that projects
-    // this community post / announcement, so a notification can land on a message older than the recent
-    // page. Ignored when the item is not found (falls back to the normal page). One or the other, not
-    // both — the community post form wins if both are somehow set.
-    aroundCommunityPostId?: string | null;
-    aroundAnnouncementId?: string | null;
-  },
-): Promise<{ items: FeedTimelineItem[]; pagination: FeedPagination }> {
-  return withDbTransaction(async (client) => {
-    const config = await client.query<FeedConfigRow>(
-      `
+// Shared query filter values for the feed timeline. Derived once per request from the actor's role
+// and the requested channel/plugin/mention filters, then reused by the count, "load around", and
+// main timeline queries so all three share exactly the same visibility filter.
+type FeedTimelineQueryParams = {
+  actorRole: string;
+  pluginFilter: string | null;
+  allowedItemTypes: FeedTimelineRow['item_type'][];
+  mentionPatterns: string[] | null;
+};
+
+// Load the singleton feed render config for the timeline read. Returns the mapped config, or null
+// when the config row is missing (the caller then falls back to the full allowed channel set).
+async function loadFeedTimelineConfig(client: PoolClient): Promise<FeedConfig | null> {
+  const config = await client.query<FeedConfigRow>(
+    `
         SELECT render_mode, max_timeline_page_size, enabled_channels, is_public, updated_by_user_id, updated_at
         FROM feed_render_config
         WHERE singleton_key = TRUE
         LIMIT 1
       `,
-    );
+  );
 
-    const resolvedConfig = config.rows[0] ? mapFeedConfig(config.rows[0]) : null;
+  return config.rows[0] ? mapFeedConfig(config.rows[0]) : null;
+}
 
-    const offset = (pagination.page - 1) * pagination.pageSize;
-    const actorRole = role ?? 'member';
-    const pluginFilter = normalizeNullableText(filters.pluginId);
-    const enabledChannels = resolvedConfig?.enabledChannels ?? [...FEED_ALLOWED_CHANNELS];
-    const requestedChannel = filters.channel ?? 'all';
-    const allowedChannels = requestedChannel === 'all'
-      ? enabledChannels
-      : enabledChannels.filter((channel: string) => channel === requestedChannel);
-    // Channel names are plural; feed_items.item_type is singular. Map channel -> item_type so the
-    // filter below matches the rows (an 'announcements' channel matching the 'announcement' rows).
-    const allowedItemTypes = allowedChannels.map((channel) => FEED_CHANNEL_TO_ITEM_TYPE[channel]);
-    // Mentions filter: parameterized, LIKE-escaped `%@handle%` patterns matched with
-    // ILIKE ANY (case-insensitive). Null disables the filter entirely.
-    const mentionHandles = (filters.mentionHandles ?? []).filter((handle) => handle.length > 0);
-    const mentionPatterns = mentionHandles.length > 0
-      ? mentionHandles.map((handle) => `%${escapeLikePattern(handle)}%`)
-      : null;
+// Resolve the shared visibility filter for the timeline read from the actor's role and the requested
+// channel/plugin/mention filters. Channel names are plural; feed_items.item_type is singular, so the
+// requested channels are mapped to item types. Mentions become LIKE-escaped `%@handle%` patterns
+// matched with ILIKE ANY; null disables the filter entirely.
+function resolveFeedTimelineQueryParams(
+  role: string | null,
+  filters: {
+    pluginId?: string | null;
+    channel?: FeedChannel;
+    mentionHandles?: string[] | null;
+  },
+  enabledChannels: FeedEnabledChannel[],
+): FeedTimelineQueryParams {
+  const actorRole = role ?? 'member';
+  const pluginFilter = normalizeNullableText(filters.pluginId);
+  const requestedChannel = filters.channel ?? 'all';
+  const allowedChannels = requestedChannel === 'all'
+    ? enabledChannels
+    : enabledChannels.filter((channel: string) => channel === requestedChannel);
+  const allowedItemTypes = allowedChannels.map((channel) => FEED_CHANNEL_TO_ITEM_TYPE[channel]);
+  const mentionHandles = (filters.mentionHandles ?? []).filter((handle) => handle.length > 0);
+  const mentionPatterns = mentionHandles.length > 0
+    ? mentionHandles.map((handle) => `%${escapeLikePattern(handle)}%`)
+    : null;
 
-    if (allowedItemTypes.length === 0) {
-      return {
-        items: [],
-        pagination: {
-          page: pagination.page,
-          pageSize: pagination.pageSize,
-          total: 0,
-        },
-      };
-    }
+  return { actorRole, pluginFilter, allowedItemTypes, mentionPatterns };
+}
 
-    const count = await client.query<CountRow>(
-      `
+// Count the timeline items visible under the shared filter, for pagination totals.
+async function countFeedTimeline(client: PoolClient, params: FeedTimelineQueryParams): Promise<number> {
+  const count = await client.query<CountRow>(
+    `
         SELECT COUNT(*)::text AS total
         FROM feed_items f
         WHERE f.is_active = TRUE
@@ -853,41 +848,71 @@ export async function listFeedTimeline(
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
           )
       `,
-      [actorRole, pluginFilter, allowedItemTypes, mentionPatterns],
-    );
+    [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns],
+  );
 
-    const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
+  return Number.parseInt(count.rows[0]?.total ?? '0', 10);
+}
 
-    // Deep-link "load around": center the page on the target item so a notification's "Open" lands on a
-    // message older than the recent page. Resolve the target feed item, count how many items are newer
-    // than it under the same visibility filters (its 0-indexed rank in the DESC ordering), then offset
-    // back by half a page so the target sits mid-window. Falls back to the normal page when the target
-    // is not found (deleted, expired, or outside this member's visibility).
-    const aroundCommunityPostId = normalizeUuid(filters.aroundCommunityPostId ?? null);
-    const aroundAnnouncementId = aroundCommunityPostId
-      ? null
-      : normalizeUuid(filters.aroundAnnouncementId ?? null);
-    let effectiveOffset = offset;
-    if (aroundCommunityPostId || aroundAnnouncementId) {
-      const targetColumn = aroundCommunityPostId ? 'source_community_post_id' : 'source_announcement_id';
-      const targetValue = aroundCommunityPostId ?? aroundAnnouncementId;
-      const targetRes = await client.query<{ id: string; published_at: Date }>(
-        `
+// Resolve the deep-link "load around" target to a { column, value } pair, or null when neither a
+// community post nor an announcement id is supplied (both absent, malformed, or filtered out). The
+// community post form wins when both are somehow set — the same precedence the timeline used inline.
+function resolveAroundTarget(
+  aroundCommunityPostId: string | null | undefined,
+  aroundAnnouncementId: string | null | undefined,
+): { column: 'source_community_post_id' | 'source_announcement_id'; value: string } | null {
+  const communityId = normalizeUuid(aroundCommunityPostId ?? null);
+  const announcementId = communityId ? null : normalizeUuid(aroundAnnouncementId ?? null);
+  if (communityId) {
+    return { column: 'source_community_post_id', value: communityId };
+  }
+  if (announcementId) {
+    return { column: 'source_announcement_id', value: announcementId };
+  }
+  return null;
+}
+
+// Deep-link "load around": center the page on the target item so a notification's "Open" lands on a
+// message older than the recent page. Resolve the target feed item, count how many items are newer
+// than it under the same visibility filters (its 0-indexed rank in the DESC ordering), then offset
+// back by half a page so the target sits mid-window. Falls back to the normal page when the target
+// is not found (deleted, expired, or outside this member's visibility).
+async function resolveEffectiveOffset(
+  client: PoolClient,
+  options: {
+    offset: number;
+    pageSize: number;
+    aroundCommunityPostId: string | null | undefined;
+    aroundAnnouncementId: string | null | undefined;
+    params: FeedTimelineQueryParams;
+  },
+): Promise<number> {
+  const around = resolveAroundTarget(options.aroundCommunityPostId, options.aroundAnnouncementId);
+  if (!around) {
+    return options.offset;
+  }
+
+  const targetRes = await client.query<{ id: string; published_at: Date }>(
+    `
           SELECT id, published_at
           FROM feed_items
           WHERE is_active = TRUE
             AND published_at <= NOW()
             AND (expires_at IS NULL OR expires_at > NOW())
-            AND ${targetColumn} = $1::uuid
+            AND ${around.column} = $1::uuid
           ORDER BY published_at DESC, id DESC
           LIMIT 1
         `,
-        [targetValue],
-      );
-      const target = targetRes.rows[0];
-      if (target) {
-        const rankRes = await client.query<{ rank: string }>(
-          `
+    [around.value],
+  );
+  const target = targetRes.rows[0];
+  if (!target) {
+    return options.offset;
+  }
+
+  const { params } = options;
+  const rankRes = await client.query<{ rank: string }>(
+    `
             SELECT COUNT(*)::text AS rank
             FROM feed_items f
             WHERE f.is_active = TRUE
@@ -904,15 +929,26 @@ export async function listFeedTimeline(
               )
               AND (f.published_at > $5 OR (f.published_at = $5 AND f.id > $6::uuid))
           `,
-          [actorRole, pluginFilter, allowedItemTypes, mentionPatterns, target.published_at, target.id],
-        );
-        const rank = Number.parseInt(rankRes.rows[0]?.rank ?? '0', 10);
-        effectiveOffset = Math.max(0, rank - Math.floor(pagination.pageSize / 2));
-      }
-    }
+    [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns, target.published_at, target.id],
+  );
+  const rank = Number.parseInt(rankRes.rows[0]?.rank ?? '0', 10);
+  return Math.max(0, rank - Math.floor(options.pageSize / 2));
+}
 
-    const result = await client.query<FeedTimelineRow>(
-      `
+// Run the main timeline query: the page of feed items visible under the shared filter, with the
+// requesting member's per-item read/dismissed state joined in. Returns the raw rows in feed order.
+async function queryFeedTimelineRows(
+  client: PoolClient,
+  options: {
+    userId: string;
+    params: FeedTimelineQueryParams;
+    effectiveOffset: number;
+    pageSize: number;
+  },
+): Promise<FeedTimelineRow[]> {
+  const { params } = options;
+  const result = await client.query<FeedTimelineRow>(
+    `
         SELECT
           f.id,
           f.item_type,
@@ -945,37 +981,60 @@ export async function listFeedTimeline(
         ORDER BY f.published_at DESC, f.id DESC
         OFFSET $5 LIMIT $6
       `,
-      [actorRole, pluginFilter, allowedItemTypes, userId, effectiveOffset, pagination.pageSize, mentionPatterns],
-    );
+    [params.actorRole, params.pluginFilter, params.allowedItemTypes, options.userId, options.effectiveOffset, options.pageSize, params.mentionPatterns],
+  );
 
-    const questionIds = result.rows.flatMap((row) => (row.source_question_id ? [row.source_question_id] : []));
-    const communityIds = result.rows.flatMap((row) => (row.source_community_post_id ? [row.source_community_post_id] : []));
-    const announcementIds = result.rows.flatMap((row) =>
-      row.item_type === 'announcement' && row.source_announcement_id ? [row.source_announcement_id] : [],
-    );
+  return result.rows;
+}
 
-    const questionDetails = new Map<string, FeedQuestionDetail>();
-    if (questionIds.length > 0) {
-      const [questionRows, answerRows, ratingRows, currentUserRatings] = await Promise.all([
-        client.query<FeedQuestionRow>(
-          `
+// Collect the distinct source ids referenced by a page of timeline rows, split by kind, so each
+// detail set (questions, community posts, announcements) can be batch-loaded.
+function collectTimelineSourceIds(rows: FeedTimelineRow[]): {
+  questionIds: string[];
+  communityIds: string[];
+  announcementIds: string[];
+} {
+  const questionIds = rows.flatMap((row) => (row.source_question_id ? [row.source_question_id] : []));
+  const communityIds = rows.flatMap((row) => (row.source_community_post_id ? [row.source_community_post_id] : []));
+  const announcementIds = rows.flatMap((row) =>
+    row.item_type === 'announcement' && row.source_announcement_id ? [row.source_announcement_id] : [],
+  );
+
+  return { questionIds, communityIds, announcementIds };
+}
+
+// Batch-load the question detail (body, category, location, and answers with rating summaries and
+// the requesting member's own rating) for the questions on this timeline page. Keyed by question id.
+async function loadQuestionDetails(
+  client: PoolClient,
+  questionIds: string[],
+  userId: string,
+): Promise<Map<string, FeedQuestionDetail>> {
+  const questionDetails = new Map<string, FeedQuestionDetail>();
+  if (questionIds.length === 0) {
+    return questionDetails;
+  }
+
+  const [questionRows, answerRows, ratingRows, currentUserRatings] = await Promise.all([
+    client.query<FeedQuestionRow>(
+      `
             SELECT id, asked_by_user_id, body, category, location_context, llm_consent_granted, created_at
             FROM feed_questions
             WHERE id = ANY($1::uuid[])
           `,
-          [questionIds],
-        ),
-        client.query<FeedAnswerRow>(
-          `
+      [questionIds],
+    ),
+    client.query<FeedAnswerRow>(
+      `
             SELECT id, question_id, answer_type, body, confidence::text, model_id, sources, author_user_id, created_at
             FROM feed_answers
             WHERE question_id = ANY($1::uuid[])
             ORDER BY created_at ASC
           `,
-          [questionIds],
-        ),
-        client.query<FeedAnswerRatingRow>(
-          `
+      [questionIds],
+    ),
+    client.query<FeedAnswerRatingRow>(
+      `
             SELECT answer_id, rating, COUNT(*)::text AS total
             FROM feed_answer_ratings
             WHERE answer_id IN (
@@ -983,10 +1042,10 @@ export async function listFeedTimeline(
             )
             GROUP BY answer_id, rating
           `,
-          [questionIds],
-        ),
-        client.query<{ answer_id: string; rating: FeedAnswerRatingValue }>(
-          `
+      [questionIds],
+    ),
+    client.query<{ answer_id: string; rating: FeedAnswerRatingValue }>(
+      `
             SELECT answer_id, rating
             FROM feed_answer_ratings
             WHERE user_id = $1
@@ -994,208 +1053,341 @@ export async function listFeedTimeline(
                 SELECT id FROM feed_answers WHERE question_id = ANY($2::uuid[])
               )
           `,
-          [userId, questionIds],
-        ),
-      ]);
+      [userId, questionIds],
+    ),
+  ]);
 
-      const currentUserRatingMap = new Map(currentUserRatings.rows.map((row) => [row.answer_id, row.rating]));
-      const answersByQuestion = mapAnswerRows(answerRows.rows, ratingRows.rows, currentUserRatingMap);
+  const currentUserRatingMap = new Map(currentUserRatings.rows.map((row) => [row.answer_id, row.rating]));
+  const answersByQuestion = mapAnswerRows(answerRows.rows, ratingRows.rows, currentUserRatingMap);
 
-      for (const row of questionRows.rows) {
-        const answers = answersByQuestion.get(row.id) ?? [];
-        questionDetails.set(row.id, {
-          id: row.id,
-          body: row.body,
-          category: row.category,
-          location: normalizeLocationContext(row.location_context),
-          llmConsentGranted: row.llm_consent_granted,
-          answerCount: answers.length,
-          answers,
-        });
-      }
-    }
+  for (const row of questionRows.rows) {
+    const answers = answersByQuestion.get(row.id) ?? [];
+    questionDetails.set(row.id, {
+      id: row.id,
+      body: row.body,
+      category: row.category,
+      location: normalizeLocationContext(row.location_context),
+      llmConsentGranted: row.llm_consent_granted,
+      answerCount: answers.length,
+      answers,
+    });
+  }
 
-    const communityDetails = new Map<string, FeedCommunityDetail>();
-    if (communityIds.length > 0) {
-      const [postRows, replyRows, reactionRows] = await Promise.all([
-        client.query<FeedCommunityPostRow>(
-          `
+  return questionDetails;
+}
+
+// Build post id → ordered reaction summaries from the batched reaction aggregate rows. Only emojis
+// with at least one reaction appear; posts with none get an empty array at render time.
+function groupReactionsByPost(reactionRows: FeedReactionAggregateRow[]): Map<string, FeedReactionSummary[]> {
+  const reactionsByPost = new Map<string, FeedReactionSummary[]>();
+  for (const row of reactionRows) {
+    const current = reactionsByPost.get(row.post_id) ?? [];
+    current.push({
+      emoji: row.emoji,
+      count: Number.parseInt(row.count, 10),
+      reactedByMe: row.reacted,
+    });
+    reactionsByPost.set(row.post_id, current);
+  }
+
+  return reactionsByPost;
+}
+
+// Build post id → ordered replies from the batched reply rows (created_at ascending).
+function groupRepliesByPost(replyRows: FeedCommunityReplyRow[]): Map<string, FeedCommunityReply[]> {
+  const repliesByPost = new Map<string, FeedCommunityReply[]>();
+  for (const row of replyRows) {
+    const current = repliesByPost.get(row.post_id) ?? [];
+    current.push({
+      id: row.id,
+      postId: row.post_id,
+      body: row.body,
+      authorUserId: row.author_user_id,
+      createdAtIso: toIso(row.created_at),
+    });
+    repliesByPost.set(row.post_id, current);
+  }
+
+  return repliesByPost;
+}
+
+// Resolve each quoted (replied-to) post's author handle and a short snippet of its body. The quoted
+// post may sit outside this timeline page, so look up the referenced ids directly. Returns a map
+// id → { author, snippet }.
+async function loadQuotedPosts(
+  client: PoolClient,
+  postRows: FeedCommunityPostRow[],
+): Promise<Map<string, FeedQuotedPost>> {
+  const quotedById = new Map<string, FeedQuotedPost>();
+  const quotedIds = Array.from(
+    new Set(postRows.flatMap((row) => (row.reply_to_post_id ? [row.reply_to_post_id] : []))),
+  );
+  if (quotedIds.length === 0) {
+    return quotedById;
+  }
+
+  const quotedRows = await client.query<{
+    id: string;
+    author_user_id: string | null;
+    author_username: string | null;
+    body: string;
+  }>(
+    `
+            SELECT id, author_user_id, author_username, body
+            FROM feed_community_posts
+            WHERE id = ANY($1::uuid[])
+              AND moderation_status = 'accepted'
+          `,
+    [quotedIds],
+  );
+  for (const row of quotedRows.rows) {
+    quotedById.set(row.id, {
+      author: quotedAuthorLabel(row.author_username, row.author_user_id),
+      snippet: buildQuoteSnippet(row.body),
+    });
+  }
+
+  return quotedById;
+}
+
+// Assemble a single community post detail from its row plus the pre-grouped reply/reaction/quote maps.
+function buildCommunityDetail(
+  row: FeedCommunityPostRow,
+  maps: {
+    repliesByPost: Map<string, FeedCommunityReply[]>;
+    reactionsByPost: Map<string, FeedReactionSummary[]>;
+    quotedById: Map<string, FeedQuotedPost>;
+  },
+): FeedCommunityDetail {
+  const quotedPost = row.reply_to_post_id ? maps.quotedById.get(row.reply_to_post_id) ?? null : null;
+  return {
+    id: row.id,
+    body: row.body,
+    category: row.category,
+    authorUserId: row.author_user_id,
+    authorUsername: row.author_username,
+    replyCount: row.reply_count,
+    replies: maps.repliesByPost.get(row.id) ?? [],
+    // The foreign key is ON DELETE SET NULL: if the quoted post was deleted, the
+    // reference resolves to null and no quote block is rendered.
+    replyToPostId: quotedPost ? row.reply_to_post_id : null,
+    quotedPost,
+    reactions: orderReactionsByFixedSet(maps.reactionsByPost.get(row.id) ?? []),
+  };
+}
+
+// Batch-load the community post detail (body, author, replies, quoted post, and reaction chips) for
+// the community posts on this timeline page. Keyed by community post id.
+async function loadCommunityDetails(
+  client: PoolClient,
+  communityIds: string[],
+  userId: string,
+): Promise<Map<string, FeedCommunityDetail>> {
+  const communityDetails = new Map<string, FeedCommunityDetail>();
+  if (communityIds.length === 0) {
+    return communityDetails;
+  }
+
+  const [postRows, replyRows, reactionRows] = await Promise.all([
+    client.query<FeedCommunityPostRow>(
+      `
             SELECT id, author_user_id, author_username, body, category, reply_count, reply_to_post_id, created_at
             FROM feed_community_posts
             WHERE id = ANY($1::uuid[])
               AND moderation_status = 'accepted'
           `,
-          [communityIds],
-        ),
-        client.query<FeedCommunityReplyRow>(
-          `
+      [communityIds],
+    ),
+    client.query<FeedCommunityReplyRow>(
+      `
             SELECT id, post_id, author_user_id, body, created_at
             FROM feed_community_replies
             WHERE post_id = ANY($1::uuid[])
               AND moderation_status = 'accepted'
             ORDER BY created_at ASC
           `,
-          [communityIds],
-        ),
-        // Aggregate reactions for every visible community post in one batched query.
-        // BOOL_OR(user_id = $2) tells us whether the requesting member reacted with each emoji.
-        client.query<FeedReactionAggregateRow>(
-          `
+      [communityIds],
+    ),
+    // Aggregate reactions for every visible community post in one batched query.
+    // BOOL_OR(user_id = $2) tells us whether the requesting member reacted with each emoji.
+    client.query<FeedReactionAggregateRow>(
+      `
             SELECT post_id, emoji, COUNT(*)::text AS count, BOOL_OR(user_id = $2) AS reacted
             FROM feed_community_post_reactions
             WHERE post_id = ANY($1::uuid[])
             GROUP BY post_id, emoji
           `,
-          [communityIds, userId],
-        ),
-      ]);
+      [communityIds, userId],
+    ),
+  ]);
 
-      // Build post id → ordered reaction summaries. Only emojis with at least one reaction
-      // appear; posts with none get an empty array below.
-      const reactionsByPost = new Map<string, FeedReactionSummary[]>();
-      for (const row of reactionRows.rows) {
-        const current = reactionsByPost.get(row.post_id) ?? [];
-        current.push({
-          emoji: row.emoji,
-          count: Number.parseInt(row.count, 10),
-          reactedByMe: row.reacted,
-        });
-        reactionsByPost.set(row.post_id, current);
-      }
+  const reactionsByPost = groupReactionsByPost(reactionRows.rows);
+  const repliesByPost = groupRepliesByPost(replyRows.rows);
+  const quotedById = await loadQuotedPosts(client, postRows.rows);
 
-      const repliesByPost = new Map<string, FeedCommunityReply[]>();
-      for (const row of replyRows.rows) {
-        const current = repliesByPost.get(row.post_id) ?? [];
-        current.push({
-          id: row.id,
-          postId: row.post_id,
-          body: row.body,
-          authorUserId: row.author_user_id,
-          createdAtIso: toIso(row.created_at),
-        });
-        repliesByPost.set(row.post_id, current);
-      }
+  for (const row of postRows.rows) {
+    communityDetails.set(row.id, buildCommunityDetail(row, { repliesByPost, reactionsByPost, quotedById }));
+  }
 
-      // Resolve each quoted (replied-to) post's author handle and a short snippet of its
-      // body. The quoted post may sit outside this timeline page, so look up the referenced
-      // ids directly. Build a map id → { author, snippet } once.
-      const quotedIds = Array.from(
-        new Set(postRows.rows.flatMap((row) => (row.reply_to_post_id ? [row.reply_to_post_id] : []))),
-      );
-      const quotedById = new Map<string, FeedQuotedPost>();
-      if (quotedIds.length > 0) {
-        const quotedRows = await client.query<{
-          id: string;
-          author_user_id: string | null;
-          author_username: string | null;
-          body: string;
-        }>(
-          `
-            SELECT id, author_user_id, author_username, body
-            FROM feed_community_posts
-            WHERE id = ANY($1::uuid[])
-              AND moderation_status = 'accepted'
-          `,
-          [quotedIds],
-        );
-        for (const row of quotedRows.rows) {
-          quotedById.set(row.id, {
-            author: quotedAuthorLabel(row.author_username, row.author_user_id),
-            snippet: buildQuoteSnippet(row.body),
-          });
-        }
-      }
+  return communityDetails;
+}
 
-      for (const row of postRows.rows) {
-        const quotedPost = row.reply_to_post_id ? quotedById.get(row.reply_to_post_id) ?? null : null;
-        communityDetails.set(row.id, {
-          id: row.id,
-          body: row.body,
-          category: row.category,
-          authorUserId: row.author_user_id,
-          authorUsername: row.author_username,
-          replyCount: row.reply_count,
-          replies: repliesByPost.get(row.id) ?? [],
-          // The foreign key is ON DELETE SET NULL: if the quoted post was deleted, the
-          // reference resolves to null and no quote block is rendered.
-          replyToPostId: quotedPost ? row.reply_to_post_id : null,
-          quotedPost,
-          reactions: orderReactionsByFixedSet(reactionsByPost.get(row.id) ?? []),
-        });
-      }
-    }
+// Reaction + reply aggregates for the announcements on this page, resolved for the requesting member
+// in two batched queries so each official card can render its reaction chips and a "N replies"
+// affordance without extra fetches. Keyed on the announcement id.
+async function loadAnnouncementDetails(
+  client: PoolClient,
+  announcementIds: string[],
+  userId: string,
+): Promise<Map<string, FeedAnnouncementDetail>> {
+  const announcementDetailsById = new Map<string, FeedAnnouncementDetail>();
+  if (announcementIds.length === 0) {
+    return announcementDetailsById;
+  }
 
-    // Reaction + reply aggregates for the announcements on this page, resolved for the requesting
-    // member in two batched queries so each official card can render its reaction chips and a
-    // "N replies" affordance without extra fetches. Keyed on the announcement id.
-    const announcementDetailsById = new Map<string, FeedAnnouncementDetail>();
-    if (announcementIds.length > 0) {
-      const [reactionRows, replyCountRows] = await Promise.all([
-        client.query<AnnouncementReactionAggregateRow>(
-          `
+  const [reactionRows, replyCountRows] = await Promise.all([
+    client.query<AnnouncementReactionAggregateRow>(
+      `
             SELECT announcement_id, emoji, COUNT(*)::text AS count, BOOL_OR(user_id = $2) AS reacted
             FROM announcement_reactions
             WHERE announcement_id = ANY($1::uuid[])
             GROUP BY announcement_id, emoji
           `,
-          [announcementIds, userId],
-        ),
-        client.query<AnnouncementReplyCountRow>(
-          `
+      [announcementIds, userId],
+    ),
+    client.query<AnnouncementReplyCountRow>(
+      `
             SELECT announcement_id, COUNT(*)::text AS count
             FROM announcement_replies
             WHERE announcement_id = ANY($1::uuid[])
               AND moderation_status = 'accepted'
             GROUP BY announcement_id
           `,
-          [announcementIds],
-        ),
-      ]);
+      [announcementIds],
+    ),
+  ]);
 
-      const reactionsByAnnouncement = new Map<string, FeedReactionSummary[]>();
-      for (const row of reactionRows.rows) {
-        const current = reactionsByAnnouncement.get(row.announcement_id) ?? [];
-        current.push({
-          emoji: row.emoji,
-          count: Number.parseInt(row.count, 10),
-          reactedByMe: row.reacted,
-        });
-        reactionsByAnnouncement.set(row.announcement_id, current);
-      }
+  const reactionsByAnnouncement = new Map<string, FeedReactionSummary[]>();
+  for (const row of reactionRows.rows) {
+    const current = reactionsByAnnouncement.get(row.announcement_id) ?? [];
+    current.push({
+      emoji: row.emoji,
+      count: Number.parseInt(row.count, 10),
+      reactedByMe: row.reacted,
+    });
+    reactionsByAnnouncement.set(row.announcement_id, current);
+  }
 
-      const replyCountByAnnouncement = new Map<string, number>();
-      for (const row of replyCountRows.rows) {
-        replyCountByAnnouncement.set(row.announcement_id, Number.parseInt(row.count, 10));
-      }
+  const replyCountByAnnouncement = new Map<string, number>();
+  for (const row of replyCountRows.rows) {
+    replyCountByAnnouncement.set(row.announcement_id, Number.parseInt(row.count, 10));
+  }
 
-      for (const announcementId of new Set(announcementIds)) {
-        announcementDetailsById.set(announcementId, {
-          id: announcementId,
-          reactions: orderReactionsByFixedSet(reactionsByAnnouncement.get(announcementId) ?? []),
-          replyCount: replyCountByAnnouncement.get(announcementId) ?? 0,
-        });
-      }
+  for (const announcementId of new Set(announcementIds)) {
+    announcementDetailsById.set(announcementId, {
+      id: announcementId,
+      reactions: orderReactionsByFixedSet(reactionsByAnnouncement.get(announcementId) ?? []),
+      replyCount: replyCountByAnnouncement.get(announcementId) ?? 0,
+    });
+  }
+
+  return announcementDetailsById;
+}
+
+// Project a raw timeline row into the client-facing FeedTimelineItem, attaching the matching
+// pre-loaded question/community/announcement detail (or null when the source is absent).
+function buildTimelineItem(
+  row: FeedTimelineRow,
+  details: {
+    questionDetails: Map<string, FeedQuestionDetail>;
+    communityDetails: Map<string, FeedCommunityDetail>;
+    announcementDetailsById: Map<string, FeedAnnouncementDetail>;
+  },
+): FeedTimelineItem {
+  return {
+    id: row.id,
+    itemType: row.item_type,
+    sourceAnnouncementId: row.source_announcement_id,
+    sourceQuestionId: row.source_question_id,
+    sourceCommunityPostId: row.source_community_post_id,
+    title: row.title,
+    body: row.body,
+    publishedAtIso: toIso(row.published_at),
+    expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
+    isRead: row.is_read,
+    isDismissed: row.is_dismissed,
+    question: row.source_question_id ? (details.questionDetails.get(row.source_question_id) ?? null) : null,
+    community: row.source_community_post_id ? (details.communityDetails.get(row.source_community_post_id) ?? null) : null,
+    announcement: row.item_type === 'announcement' && row.source_announcement_id
+      ? (details.announcementDetailsById.get(row.source_announcement_id) ?? null)
+      : null,
+  };
+}
+
+export async function listFeedTimeline(
+  userId: string,
+  role: string | null,
+  pagination: { page: number; pageSize: number },
+  filters: {
+    pluginId?: string | null;
+    channel?: FeedChannel;
+    // Literal @-handle tokens (e.g. '@farah', '@user-3gysu61f') the item body must
+    // contain (case-insensitive, any one of them). Derived server-side from the
+    // authenticated user — never from client input. Null/empty means no filter.
+    mentionHandles?: string[] | null;
+    // Deep-link "load around": when set, the returned page is centered on the feed item that projects
+    // this community post / announcement, so a notification can land on a message older than the recent
+    // page. Ignored when the item is not found (falls back to the normal page). One or the other, not
+    // both — the community post form wins if both are somehow set.
+    aroundCommunityPostId?: string | null;
+    aroundAnnouncementId?: string | null;
+  },
+): Promise<{ items: FeedTimelineItem[]; pagination: FeedPagination }> {
+  return withDbTransaction(async (client) => {
+    const resolvedConfig = await loadFeedTimelineConfig(client);
+    const enabledChannels = resolvedConfig?.enabledChannels ?? [...FEED_ALLOWED_CHANNELS];
+    const params = resolveFeedTimelineQueryParams(role, filters, enabledChannels);
+    const offset = (pagination.page - 1) * pagination.pageSize;
+
+    if (params.allowedItemTypes.length === 0) {
+      return {
+        items: [],
+        pagination: {
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          total: 0,
+        },
+      };
     }
 
+    const total = await countFeedTimeline(client, params);
+    const effectiveOffset = await resolveEffectiveOffset(client, {
+      offset,
+      pageSize: pagination.pageSize,
+      aroundCommunityPostId: filters.aroundCommunityPostId,
+      aroundAnnouncementId: filters.aroundAnnouncementId,
+      params,
+    });
+
+    const rows = await queryFeedTimelineRows(client, {
+      userId,
+      params,
+      effectiveOffset,
+      pageSize: pagination.pageSize,
+    });
+
+    const { questionIds, communityIds, announcementIds } = collectTimelineSourceIds(rows);
+
+    // These detail loads run sequentially (not in Promise.all) because they share one transaction
+    // client, and a single pg client cannot run overlapping queries.
+    const questionDetails = await loadQuestionDetails(client, questionIds, userId);
+    const communityDetails = await loadCommunityDetails(client, communityIds, userId);
+    const announcementDetailsById = await loadAnnouncementDetails(client, announcementIds, userId);
+
     return {
-      items: result.rows.map((row) => ({
-        id: row.id,
-        itemType: row.item_type,
-        sourceAnnouncementId: row.source_announcement_id,
-        sourceQuestionId: row.source_question_id,
-        sourceCommunityPostId: row.source_community_post_id,
-        title: row.title,
-        body: row.body,
-        publishedAtIso: toIso(row.published_at),
-        expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
-        isRead: row.is_read,
-        isDismissed: row.is_dismissed,
-        question: row.source_question_id ? (questionDetails.get(row.source_question_id) ?? null) : null,
-        community: row.source_community_post_id ? (communityDetails.get(row.source_community_post_id) ?? null) : null,
-        announcement: row.item_type === 'announcement' && row.source_announcement_id
-          ? (announcementDetailsById.get(row.source_announcement_id) ?? null)
-          : null,
-      })),
+      items: rows.map((row) =>
+        buildTimelineItem(row, { questionDetails, communityDetails, announcementDetailsById }),
+      ),
       pagination: {
         page: pagination.page,
         pageSize: pagination.pageSize,
