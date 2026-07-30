@@ -546,6 +546,34 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ### Change Log
 
+- 2026-07-30 (later): **Three standing Commons notices, three cadences.** The single notice became a
+  registry (`COMMONS_NOTICES` in `lib/feed/commons-guidance.ts`), and the milestone table is now keyed
+  `(notice_key, milestone_count)` — that composite UNIQUE is still the whole concurrency story.
+  - **What the Commons is for** — every 50 posts. Purpose and moderation.
+  - **Where things are public, and where the work happens** — every 75 posts, offset from the first so
+    the two rarely land together and a member meets one or the other roughly every 25 posts. They share
+    a multiple at 150, which is two announcements in a row — rare enough not to be worth more machinery.
+  - **Who I interact with is not a vouch** — every 21 days. Time-shaped, not volume-shaped: it is the
+    owner's standing "every few weeks" reminder, and tying it to post count would fire it repeatedly in
+    a busy week and never in a quiet one. `dueMilestoneFor` turns a day cadence into a period index
+    (days since epoch / interval) so one UNIQUE constraint serves both kinds. A time-cadence notice is
+    delivered **by the next post**, not by a clock — nothing publishes into a silent room, which is
+    intended rather than a compromise.
+  - **Two owner claims were corrected against the code before shipping**, because a notice that is
+    wrong about privacy is worse than no notice:
+    - The draft said the main **Chyme** room is public and anyone can read it. It is not: the Chyme
+      branch in `app/apps/[pluginSlug]/page.tsx` sits behind `evaluatePluginAccess`, so a signed-out
+      visitor never reaches it. The copy now says the group chat is public and Chyme needs an account.
+      If Chyme is ever opened to signed-out listening, change the copy back — not before.
+    - The draft said the owner would only look at AI Assistant messages to check the assistant is safe.
+      True, and now precise: `comic_review_queue` joins the asker's turn, so reviewing an answer does
+      show the question it answers. The notice says that rather than promising nobody ever reads them.
+  - **Naming:** the signal-vs-noise draft used "TI Skills Economy (TSE)". Corrected to **Skills
+    Economy** per the owner's earlier decision and `BRAND_VOICE_LEXICON.md`; "TI" as a label is also
+    replaced with "Target".
+  - The Commons is publicly readable only while `feed_render_config.is_public` is on (default TRUE). If
+    that is ever switched off, the public-rooms notice becomes wrong and must be edited.
+  - **Parity:** web + mobile-responsive; Android out of scope (web-only per rule 105).
 - 2026-07-30: **The Commons states its own purpose every 50 posts (owner decision).** A newcomer now
   meets the rule without anyone having to say it to them personally, and a regular is reminded without
   being singled out. `FEED_COMMONS_GUIDANCE_INTERVAL = 50`; the copy lives in

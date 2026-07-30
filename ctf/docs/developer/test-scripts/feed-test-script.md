@@ -606,6 +606,37 @@
 
 ---
 
+### FD-A23 — The other two notices, on their own cadences
+**Role:** admin | **Surface:** web
+
+**Precondition:** As FD-A19. For the time-cadence case you need either database access to
+`feed_commons_guidance_milestones` or a local build with `FEED_COMMONS_SIGNAL_INTERVAL_DAYS` lowered.
+
+**Steps:**
+1. Post until the Commons post count reaches a multiple of 75.
+2. Read the stream.
+3. Delete the `signal_vs_noise` row from `feed_commons_guidance_milestones`, then post once.
+4. Post several more times in the same day.
+5. Check `SELECT notice_key, milestone_count FROM feed_commons_guidance_milestones`.
+
+**Expected:**
+- Step 2: **Where things are public, and where the work happens** appears. Read it and confirm two
+  things the owner's draft got wrong were corrected: it says the group chat is public and that **Chyme
+  needs an account** (Chyme is gated — a signed-out visitor cannot reach it at all), and the AI Assistant
+  paragraph says the owner sees the question when checking an answer, rather than promising nobody ever
+  reads them. If either drifts back to the original claim, the notice is lying to members about privacy.
+- Step 3: **Who I interact with is not a vouch** appears on the very next post — a time-cadence notice is
+  delivered by a post, not by a clock, so nothing is published into a silent room.
+- Step 4: no repeats. Every post that day computes the same period and loses the claim.
+- Step 5: rows are keyed by `notice_key` — the three notices never share a period row and never block
+  each other.
+- Read the signal notice and confirm it says **Skills Economy**, never "TI Skills Economy (TSE)", and
+  uses "Target" rather than "TI" as a label.
+
+**Result:** web ☐
+
+---
+
 ### FD-A19 — Commons guidance notice posts itself every 50 posts
 **Role:** admin + member | **Surface:** web
 

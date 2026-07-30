@@ -1130,22 +1130,31 @@ ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderation
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
 
--- Commons guidance announcements, posted automatically every Nth community post (owner decision,
--- 2026-07-30). One row per milestone crossed, and `milestone_count` is UNIQUE — that uniqueness IS the
--- idempotency: two members posting at the same moment across the boundary cannot both publish the
--- notice, because the second insert loses the ON CONFLICT DO NOTHING race and skips.
+-- Commons guidance notices, published automatically on a cadence (owner decision, 2026-07-30). Three
+-- notices with three different rhythms: what the Commons is for, how the public rooms work, and telling
+-- signal from noise. One row per (notice, period) actually published.
+--
+-- `(notice_key, milestone_count)` is UNIQUE and that uniqueness IS the idempotency: two members posting
+-- at the same moment across a boundary both compute the same period and both try to claim it, and the
+-- second loses the ON CONFLICT DO NOTHING race and skips. `milestone_count` means the post count for a
+-- post-count cadence, and the period index (days since epoch / interval) for a time cadence — one
+-- mechanism serves both.
 CREATE TABLE IF NOT EXISTS feed_commons_guidance_milestones (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  milestone_count INTEGER NOT NULL UNIQUE,
+  notice_key TEXT NOT NULL DEFAULT 'commons_purpose',
+  milestone_count INTEGER NOT NULL,
   announcement_id UUID NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS notice_key TEXT NOT NULL DEFAULT 'commons_purpose';
 ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS milestone_count INTEGER;
 ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS announcement_id UUID NULL;
 ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-CREATE UNIQUE INDEX IF NOT EXISTS feed_commons_guidance_milestones_count_key
-  ON feed_commons_guidance_milestones (milestone_count);
+-- Drop the single-column key from the first cut of this table so the composite one can take over.
+DROP INDEX IF EXISTS feed_commons_guidance_milestones_count_key;
+CREATE UNIQUE INDEX IF NOT EXISTS feed_commons_guidance_milestones_notice_period_key
+  ON feed_commons_guidance_milestones (notice_key, milestone_count);
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 

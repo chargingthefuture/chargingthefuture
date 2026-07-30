@@ -1,54 +1,63 @@
 import type { PoolClient } from 'pg';
-import { FEED_COMMONS_GUIDANCE_INTERVAL } from 'lib/feed/constants';
+import {
+  FEED_COMMONS_GUIDANCE_INTERVAL,
+  FEED_COMMONS_ROOMS_INTERVAL,
+  FEED_COMMONS_SIGNAL_INTERVAL_DAYS,
+} from 'lib/feed/constants';
 
-// The automatic Commons guidance notice — published as an announcement every Nth community post
-// (owner decision, 2026-07-30), so a newcomer meets the rule without anyone having to say it to them
-// personally, and a regular is reminded without being singled out.
+// The automatic Commons notices — three standing messages, published as announcements on three
+// different rhythms so a newcomer meets each one without anyone having to say it to them personally,
+// and a regular is reminded without being singled out.
 //
-// Every paragraph below is load-bearing and was corrected by the owner. Do not "tidy" it:
+// Every line of every notice is the owner's wording, corrected across several passes. Do not "tidy"
+// them. What each one is protecting:
 //
-//   WHAT THE COMMONS IS. A support channel — ask in the open, get an answer. It is NOT where exchanges
-//   are arranged or recorded. Skills, trades, housing, rides and calls each live in their own plugin,
-//   and those are what count toward the economy. An earlier draft said trades get "sorted out" here;
-//   that was wrong and would have taught members to do their business in a public thread instead of in
-//   the app that actually records it.
+//   1. COMMONS PURPOSE — what this place is for, and that threads going nowhere come down.
+//      - It is a support channel, NOT where exchanges are arranged or recorded. Skills, trades,
+//        housing, rides and calls each live in their own plugin, and those are what get counted. An
+//        early draft said trades get "sorted out" here, which would have taught members to do their
+//        business in a public thread instead of in the app that records it.
+//      - "You can say what is happening to you" is the anti-scare guarantee. A rule about storytelling
+//        read alone tells a newly targeted person their experience is unwelcome — the opposite of true,
+//        and it would cost the app exactly the members it exists for.
+//      - The public rule is TOPIC, not character. An accusation posted to a whole community cannot be
+//        retracted, and being wrong about it lands on a survivor.
+//      - The exclusion is a FACT, not a feeling: traffickers are "not allowed", never "not tolerated".
+//      - The Weaver perk is the private group chat room, NOT the Commons. An earlier draft claimed
+//        Weavers "post without restriction" here, which was false.
+//      - The no-DM history is deliberately absent: the rule stands on the benefit, and the notice does
+//        not owe a whole community an account of what was done to the owner.
 //
-//   WHY IT IS OPEN. The design reason is that the owner takes no direct messages — her inbox was used to
-//   harass her, and open posting removes that channel. The FINAL COPY states only the benefit (answered
-//   once where the next person finds it, never waiting on the owner alone) and no longer explains the
-//   harassment history; the owner cut that line on 2026-07-30. Keep it cut: the rule stands on the
-//   benefit, and the notice does not owe a whole community an account of what was done to her.
+//   2. PUBLIC ROOMS — what is readable by whom, and where the real connections happen.
+//      - The Commons is publicly readable ONLY while `feed_render_config.is_public` is on. It is on by
+//        default. If that is ever switched off, this notice becomes wrong and must be edited.
+//      - **Chyme is NOT publicly readable.** The owner's draft said the main Chyme room was public;
+//        the code disagrees — the Chyme branch in `app/apps/[pluginSlug]/page.tsx` sits behind
+//        `evaluatePluginAccess`, so a signed-out visitor never reaches it. The wording here says the
+//        Commons is public and Chyme needs an account, which is what the app actually does. If Chyme
+//        is ever opened to signed-out listening, change this back — not before.
+//      - The assistant claim is precise rather than absolute. A reviewer checking an answer before it
+//        goes out does see the question it answers (`comic_review_queue` joins the asker's turn), so
+//        the notice says that, instead of promising nobody ever reads them.
 //
-//   IT MUST NOT FRIGHTEN OFF REAL SURVIVORS. This is the constraint that shapes the tone. "No
-//   storytelling" read alone tells a newly targeted person their experience is unwelcome, which is the
-//   opposite of true. So the notice says outright that you can describe what is happening to you, and
-//   draws the line at the retelling that goes nowhere and asks for nothing. The contrast with Quora is
-//   the selling point, not a complaint: there you narrate into a void, here you ask and someone answers.
-//   The Commons is a first filter, nothing heavier.
-//
-//   THE PUBLIC RULE IS TOPIC, NOT CHARACTER. Content is removed for repeatedly going nowhere — never
-//   for who somebody is suspected of being. An accusation posted to a whole community cannot be
-//   retracted, and being wrong about it lands on a survivor.
-//
-//   THE EXCLUSION IS STATED AS FACT, NOT FEELING. Traffickers are "not allowed", not "not tolerated".
-//   The owner was explicit: these people kill with impunity, and no wording here should imply they are
-//   merely unwelcome. Volume of off-topic chatter is not the problem being solved, and a perpetrator's
-//   feelings are not a consideration.
-//
-//   TONE IS A PITCH, NOT A TELLING-OFF (owner, 2026-07-30). The message was right and the delivery read
-//   as annoyed. It now leads with what makes this different from Quora — there you write into a void,
-//   here you ask and someone answers — and the rules follow as consequences of that promise rather than
-//   as complaints. Same content, same firmness on the exclusion; a newcomer should finish it wanting to
-//   join, not braced for a warning.
-//
-//   THE WEAVER PERK IS THE PRIVATE ROOM, NOT THE COMMONS. An earlier draft said Weavers of the Commons
-//   "post without restriction", which was false: the topic rule applies to the Commons for everyone. What
-//   a Weaver earns is the private Weavers group chat room, where none of it applies. Do not restore that
-//   wording — it promised members something the app does not do, which is worse than any tone problem.
+//   3. SIGNAL VS NOISE — who the owner follows or invites is not a vouch.
+//      - The owner gives people the benefit of the doubt on purpose, so an invitation is not a
+//        character reference. Members are asked to say when someone is a perp.
+//      - Uses "Skills Economy (SE)", never "TI Skills Economy (TSE)" — owner decision, and the
+//        approved naming in `ctf/docs/BRAND_VOICE_LEXICON.md`.
 
-export const COMMONS_GUIDANCE_TITLE = 'What the Commons is for';
+export type CommonsNoticeCadence =
+  | { kind: 'posts'; every: number }
+  | { kind: 'days'; every: number };
 
-export const COMMONS_GUIDANCE_BODY = [
+export type CommonsNotice = {
+  key: string;
+  title: string;
+  body: string;
+  cadence: CommonsNoticeCadence;
+};
+
+const COMMONS_PURPOSE_BODY = [
   'On Quora you write into a void. You post, and maybe nobody comes. Here you ask, and someone answers —',
   'me, or another member when I am away. We span every timezone, so somebody is usually awake. That is',
   'the difference, and it is the point of the Commons.',
@@ -74,10 +83,112 @@ export const COMMONS_GUIDANCE_BODY = [
   'room where none of this applies and you can talk about whatever you like.',
 ].join('\n');
 
-// Should the notice go out now? True only when this post lands exactly on a multiple of the interval,
-// so it appears once per milestone rather than for every post past a threshold.
+const COMMONS_ROOMS_BODY = [
+  'A couple of things to keep in mind.',
+  '',
+  'This main group chat is public — anyone can read it, whether or not they have an account, and only',
+  'signed-in members can comment. The main Chyme room needs an account to reach at all, and only members',
+  'can speak in it. Keeping the group chat readable in the open is one of the ways we make it harder for',
+  'perps to abuse us: what happens here happens in front of everyone.',
+  '',
+  'Please use these two spaces for introductions, and for asking members — or me — questions about the',
+  'app and this community.',
+  '',
+  'One note: anything you ask the AI Assistant is not public. The only time I look at those messages is to',
+  'make sure the assistant itself is safe — when I check an answer before it goes out, I see the question',
+  'it is answering. That is the whole of it. It is never to monitor you.',
+  '',
+  'And over time, as you use the features that are not public, you unlock the private audio and chat',
+  'rooms. Earning your way in like that is the best assurance we have that the people in them are not',
+  'perps.',
+].join('\n');
+
+const COMMONS_SIGNAL_BODY = [
+  'Every few weeks I post this reminder: the people I follow, invite, or interact with are not necessarily',
+  'Targets. Use Skills Economy’s built-in features to tell signal from noise.',
+  '',
+  'I recently interacted with someone who is likely a perp. I do not want to rush to conclusions — but',
+  'either way, who I follow, invite, or interact with should never be a reason to trust them.',
+  '',
+  'Here is the thinking behind that.',
+  '',
+  'Matthew was once asked by a Target on Quora, roughly: do you realise you are sometimes responding to',
+  'perps’ comments and posts? His answer, also roughly: yes — but I answered truthfully, so it does not',
+  'matter that it was a perp, because a real Target will read the same answer and get value from it.',
+  '',
+  'I follow the same reasoning. So, a periodic reminder: I give people the benefit of the doubt, which',
+  'means I sometimes invite people who might be perps into Skills Economy. Two things follow from that.',
+  '',
+  'First, it is our community’s responsibility to tell each other when someone is a perp. When I am told,',
+  'I delete their account as soon as possible.',
+  '',
+  'Second, to limit a perp’s impact in the meantime, the app gates access and shows openly who is',
+  'providing material value to the community and who is not — so you can see who is worth interacting',
+  'with.',
+  '',
+  'Matthew’s Skills Economy profile (members only):',
+  'https://app.chargingthefuture.com/apps/directory/profile/658d846b-d090-4d3e-9e4a-1176b4df37fa',
+].join('\n');
+
+// The three notices, each on its own rhythm.
 //
-// `postCount` is the total number of community posts AFTER the one just created.
+// The rhythms differ because the messages differ in how much it costs to hear one late. Missing the
+// purpose notice for a while is survivable — a member learns the topic rule on their next visit. The
+// signal-vs-noise one is the owner's standing "every few weeks" reminder and is genuinely time-shaped:
+// tying it to post volume would make it fire in bursts during a busy week and never during a quiet one.
+export const COMMONS_NOTICES: readonly CommonsNotice[] = [
+  {
+    key: 'commons_purpose',
+    title: 'What the Commons is for',
+    body: COMMONS_PURPOSE_BODY,
+    cadence: { kind: 'posts', every: FEED_COMMONS_GUIDANCE_INTERVAL },
+  },
+  {
+    key: 'public_rooms',
+    title: 'Where things are public, and where the work happens',
+    body: COMMONS_ROOMS_BODY,
+    cadence: { kind: 'posts', every: FEED_COMMONS_ROOMS_INTERVAL },
+  },
+  {
+    key: 'signal_vs_noise',
+    title: 'Who I interact with is not a vouch',
+    body: COMMONS_SIGNAL_BODY,
+    cadence: { kind: 'days', every: FEED_COMMONS_SIGNAL_INTERVAL_DAYS },
+  },
+];
+
+// Backwards-compatible aliases for the first notice, kept because the change log and test script name
+// them. The registry above is the source of truth.
+export const COMMONS_GUIDANCE_TITLE = COMMONS_NOTICES[0].title;
+export const COMMONS_GUIDANCE_BODY = COMMONS_NOTICES[0].body;
+
+// Which period a notice is currently in, or null when it is not due.
+//
+// For a post cadence: due only when the count lands EXACTLY on a multiple, so the notice appears once
+// per milestone rather than on every post past a threshold. The period is that count.
+//
+// For a day cadence: the period is the interval index (whole days since the epoch divided by the
+// interval). It becomes due the first time a post is made inside a new interval — which means a notice
+// on a time cadence is delivered by the next post, not by a clock. A reminder nobody is present for is
+// worth nothing, so this is the intended behaviour and not a compromise; in a silent room, nothing is
+// published until somebody shows up.
+export function dueMilestoneFor(
+  notice: CommonsNotice,
+  input: { postCount: number; nowMs: number },
+): number | null {
+  if (notice.cadence.kind === 'posts') {
+    const { postCount } = input;
+    if (!Number.isInteger(postCount) || postCount <= 0) {
+      return null;
+    }
+    return postCount % notice.cadence.every === 0 ? postCount : null;
+  }
+
+  const days = Math.floor(input.nowMs / 86_400_000);
+  return Math.floor(days / notice.cadence.every);
+}
+
+// Kept for the original single-notice call sites and tests.
 export function isGuidanceMilestone(postCount: number): boolean {
   if (!Number.isInteger(postCount) || postCount <= 0) {
     return false;
@@ -85,35 +196,44 @@ export function isGuidanceMilestone(postCount: number): boolean {
   return postCount % FEED_COMMONS_GUIDANCE_INTERVAL === 0;
 }
 
-// Claim a milestone. Returns true only for the caller that won it.
+// Claim one notice's period. Returns true only for the caller that won it.
 //
-// The UNIQUE constraint on `milestone_count` is the whole concurrency story: two members posting at
-// the same moment can both compute the same count, and both will try to claim it, but exactly one
+// The UNIQUE constraint on (notice_key, milestone_count) is the whole concurrency story: two members
+// posting at the same moment can both compute the same period and both try to claim it, but exactly one
 // insert survives `ON CONFLICT DO NOTHING`. The loser skips silently rather than publishing a second
 // copy of the same notice.
-export async function claimGuidanceMilestone(client: PoolClient, milestoneCount: number): Promise<boolean> {
+export async function claimGuidanceMilestone(
+  client: PoolClient,
+  milestoneCount: number,
+  noticeKey = 'commons_purpose',
+): Promise<boolean> {
   const claimed = await client.query(
     `
-      INSERT INTO feed_commons_guidance_milestones (milestone_count)
-      VALUES ($1)
-      ON CONFLICT (milestone_count) DO NOTHING
+      INSERT INTO feed_commons_guidance_milestones (notice_key, milestone_count)
+      VALUES ($2, $1)
+      ON CONFLICT (notice_key, milestone_count) DO NOTHING
       RETURNING id
     `,
-    [milestoneCount],
+    [milestoneCount, noticeKey],
   );
   return claimed.rows.length > 0;
 }
 
-// Record which announcement a claimed milestone produced, for the audit trail and so an admin can find
-// the notice that was posted. Best-effort: the claim already prevents a duplicate, so failing to stamp
-// the id must not undo a notice that is already live.
+// Record which announcement a claimed period produced, for the audit trail and so an admin can find the
+// notice that was posted. Best-effort: the claim already prevents a duplicate, so failing to stamp the
+// id must not undo a notice that is already live.
 export async function stampGuidanceAnnouncement(
   client: PoolClient,
   milestoneCount: number,
   announcementId: string,
+  noticeKey = 'commons_purpose',
 ): Promise<void> {
   await client.query(
-    'UPDATE feed_commons_guidance_milestones SET announcement_id = $2::uuid WHERE milestone_count = $1',
-    [milestoneCount, announcementId],
+    `
+      UPDATE feed_commons_guidance_milestones
+      SET announcement_id = $2::uuid
+      WHERE milestone_count = $1 AND notice_key = $3
+    `,
+    [milestoneCount, announcementId, noticeKey],
   );
 }
