@@ -606,6 +606,36 @@
 
 ---
 
+### FD-A24 — The public-rooms notice on a member's first visit
+**Role:** new member | **Surface:** web
+
+**Precondition:** An account that has never opened the Commons, or delete that member's row from
+`feed_commons_notice_seen`.
+
+**Steps:**
+1. Sign in as that member and open the Commons.
+2. Read the card at the top of the stream, then click **Got it**.
+3. Reload the Commons.
+4. Sign in as a member who has already dismissed it and open the Commons.
+5. Sign out entirely and open the Commons.
+6. Check `SELECT * FROM feed_commons_notice_seen`.
+
+**Expected:**
+- Step 1: **Where things are public, and where the work happens** appears as an inline card at the top of
+  the stream — **not a modal**. A box demanding a click over a support channel trains people to dismiss
+  it unread, and these members have every reason to distrust one.
+- Step 2/3: gone, and it stays gone.
+- Step 4: not shown.
+- Step 5: not shown to a signed-out visitor — they cannot post, so there is nothing yet to disclose.
+- Step 6: one row per member per notice.
+- The point of this case: the cadence alone cannot protect a member who posts something identifying on
+  their first visit, before any rotation reaches them. If this card stops appearing for new members, that
+  protection is gone even though the periodic notice still looks fine.
+
+**Result:** web ☐
+
+---
+
 ### FD-A23 — The other two notices, on their own cadences
 **Role:** admin | **Surface:** web
 
@@ -620,11 +650,15 @@
 5. Check `SELECT notice_key, milestone_count FROM feed_commons_guidance_milestones`.
 
 **Expected:**
-- Step 2: **Where things are public, and where the work happens** appears. Read it and confirm two
-  things the owner's draft got wrong were corrected: it says the group chat is public and that **Chyme
-  needs an account** (Chyme is gated — a signed-out visitor cannot reach it at all), and the AI Assistant
-  paragraph says the owner sees the question when checking an answer, rather than promising nobody ever
-  reads them. If either drifts back to the original claim, the notice is lying to members about privacy.
+- Step 2: **Where things are public, and where the work happens** appears. Two things to verify in it:
+  - It says the group chat **and the main Chyme room** are public — anyone can read and listen signed
+    out, and you sign in to comment or speak. Check this against the app by opening `/apps/chyme` in a
+    signed-out window: you should get the guest listen view, not a redirect. (Reading only the
+    authenticated branch of `app/apps/[pluginSlug]/page.tsx` makes Chyme look gated. It is not — the
+    public-visitor registry serves `ChymePublicShell`.)
+  - The AI Assistant paragraph says the owner sees the question when checking an answer, rather than
+    promising nobody ever reads them. If that drifts back to an absolute promise, the notice is claiming
+    more privacy than the code gives.
 - Step 3: **Who I interact with is not a vouch** appears on the very next post — a time-cadence notice is
   delivered by a post, not by a clock, so nothing is published into a silent room.
 - Step 4: no repeats. Every post that day computes the same period and loses the claim.

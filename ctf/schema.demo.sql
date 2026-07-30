@@ -1155,6 +1155,23 @@ ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS 
 DROP INDEX IF EXISTS feed_commons_guidance_milestones_count_key;
 CREATE UNIQUE INDEX IF NOT EXISTS feed_commons_guidance_milestones_notice_period_key
   ON feed_commons_guidance_milestones (notice_key, milestone_count);
+
+-- Which standing notices a member has already been shown once, on arrival (owner decision, 2026-07-30).
+--
+-- Separate from the cadence table because it answers a different question. The cadence table asks "has
+-- this period been served for the room"; this asks "has THIS MEMBER seen it yet". The public-rooms notice
+-- needs both: a member who posts before their first cadence hit could say something identifying without
+-- ever having been told the room is readable by anyone. A rotation cannot fix that — only showing it on
+-- arrival can.
+CREATE TABLE IF NOT EXISTS feed_commons_notice_seen (
+  user_id TEXT NOT NULL,
+  notice_key TEXT NOT NULL,
+  seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, notice_key)
+);
+ALTER TABLE IF EXISTS feed_commons_notice_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS feed_commons_notice_seen ADD COLUMN IF NOT EXISTS notice_key TEXT;
+ALTER TABLE IF EXISTS feed_commons_notice_seen ADD COLUMN IF NOT EXISTS seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 

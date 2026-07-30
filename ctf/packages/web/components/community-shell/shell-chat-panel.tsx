@@ -12,6 +12,7 @@ import { ComicAnswerCard, ComicPendingCard } from './comic-cards';
 import { AnnouncementCard } from './announcement-card';
 import { NotificationsPanel } from './notifications-panel';
 import { ChatReactionRow } from './chat-reaction-row';
+import { CommonsFirstVisitNotice } from './commons-first-visit-notice';
 import { ComicConsentModal } from './comic-consent-modal';
 import styles from './community-shell.module.css';
 import { feedPostLength } from '../../lib/feed/normalize';
@@ -448,6 +449,12 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
 
   return (
     <div className={styles.chatPanelWrap}>
+      {/* Shown once, on a member's first visit. The three standing notices otherwise arrive on a
+          cadence, which is fine for the topic rule but not for this one: it says the room is readable
+          by anyone, and a member who does not know that can post something identifying long before a
+          rotation reaches them. */}
+      <CommonsFirstVisitNotice />
+
       {error ? (
         <section className={styles.usernameAlert} role="status">
           {error}

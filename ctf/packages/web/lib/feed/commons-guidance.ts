@@ -1,4 +1,5 @@
 import type { PoolClient } from 'pg';
+import { queryDb } from 'lib/db/postgres';
 import {
   FEED_COMMONS_GUIDANCE_INTERVAL,
   FEED_COMMONS_ROOMS_INTERVAL,
@@ -31,11 +32,12 @@ import {
 //   2. PUBLIC ROOMS — what is readable by whom, and where the real connections happen.
 //      - The Commons is publicly readable ONLY while `feed_render_config.is_public` is on. It is on by
 //        default. If that is ever switched off, this notice becomes wrong and must be edited.
-//      - **Chyme is NOT publicly readable.** The owner's draft said the main Chyme room was public;
-//        the code disagrees — the Chyme branch in `app/apps/[pluginSlug]/page.tsx` sits behind
-//        `evaluatePluginAccess`, so a signed-out visitor never reaches it. The wording here says the
-//        Commons is public and Chyme needs an account, which is what the app actually does. If Chyme
-//        is ever opened to signed-out listening, change this back — not before.
+//      - **Chyme's main room IS publicly listenable**, and both spaces work the same way: a public room
+//        anyone can read or listen to, plus a private Weavers room. A signed-out visitor does not get
+//        the authenticated Chyme branch in `app/apps/[pluginSlug]/page.tsx` — that page falls back to
+//        `ChymePublicShell` from the public-visitor registry, which fetches `/api/chyme/public/room` and
+//        hands a guest Stream credentials through `ChymeGuestListen` ("Free to listen · Sign in to
+//        speak"). Reading only the authenticated branch makes it look gated; it is not.
 //      - The assistant claim is precise rather than absolute. A reviewer checking an answer before it
 //        goes out does see the question it answers (`comic_review_queue` joins the asker's turn), so
 //        the notice says that, instead of promising nobody ever reads them.
@@ -86,10 +88,10 @@ const COMMONS_PURPOSE_BODY = [
 const COMMONS_ROOMS_BODY = [
   'A couple of things to keep in mind.',
   '',
-  'This main group chat is public — anyone can read it, whether or not they have an account, and only',
-  'signed-in members can comment. The main Chyme room needs an account to reach at all, and only members',
-  'can speak in it. Keeping the group chat readable in the open is one of the ways we make it harder for',
-  'perps to abuse us: what happens here happens in front of everyone.',
+  'This main group chat and the main Chyme room are public. Anyone can read and listen, whether or not',
+  'they have an account, and only signed-in members can comment or speak. That is by design — keeping',
+  'these spaces public is one of the ways we make it harder for perps to abuse us: what happens here',
+  'happens in front of everyone.',
   '',
   'Please use these two spaces for introductions, and for asking members — or me — questions about the',
   'app and this community.',
@@ -236,4 +238,50 @@ export async function stampGuidanceAnnouncement(
     `,
     [milestoneCount, announcementId, noticeKey],
   );
+}
+
+// The notice a member is shown once, on their first Commons visit, in addition to the rotation.
+//
+// Only the public-rooms notice qualifies, and the reason is specific: it is the one where hearing it
+// late has a real cost. A member who does not know the room is readable by anyone — including people
+// who are not members — can say something identifying before their first cadence hit ever arrives. The
+// purpose and signal notices are fine to meet on a rotation; this one is not.
+export const COMMONS_FIRST_VISIT_NOTICE_KEY = 'public_rooms';
+
+export function firstVisitNotice(): CommonsNotice | null {
+  return COMMONS_NOTICES.find((n) => n.key === COMMONS_FIRST_VISIT_NOTICE_KEY) ?? null;
+}
+
+// Has this member already been shown the first-visit notice?
+//
+// Fails CLOSED — on a read error it reports "already seen" and shows nothing. Showing a privacy notice
+// twice is harmless, but a database hiccup should not be able to make the Commons pop a modal at a
+// member on every single visit, which is how a notice trains people to dismiss it unread.
+export async function hasSeenFirstVisitNotice(userId: string): Promise<boolean> {
+  try {
+    const result = await queryDb<{ user_id: string }>(
+      'SELECT user_id FROM feed_commons_notice_seen WHERE user_id = $1 AND notice_key = $2 LIMIT 1',
+      [userId, COMMONS_FIRST_VISIT_NOTICE_KEY],
+    );
+    return result.rows.length > 0;
+  } catch {
+    return true;
+  }
+}
+
+// Record that a member has seen it. Idempotent, and never throws: failing to record is a repeat
+// showing, which is a smaller harm than an error thrown at someone reading a notice.
+export async function markFirstVisitNoticeSeen(userId: string): Promise<void> {
+  try {
+    await queryDb(
+      `
+        INSERT INTO feed_commons_notice_seen (user_id, notice_key)
+        VALUES ($1, $2)
+        ON CONFLICT (user_id, notice_key) DO NOTHING
+      `,
+      [userId, COMMONS_FIRST_VISIT_NOTICE_KEY],
+    );
+  } catch {
+    // Deliberately swallowed — see above.
+  }
 }

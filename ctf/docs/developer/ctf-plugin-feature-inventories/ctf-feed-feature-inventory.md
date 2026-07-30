@@ -172,6 +172,14 @@ Admin routes:
 - `PUT /api/feed/admin/announcements/:announcementId`
 - `POST /api/feed/admin/announcements/:announcementId/publish`
 - `POST /api/feed/admin/announcements/:announcementId/archive`
+- `GET`/`POST /api/hub/first-visit-notice` — the one standing notice a member is shown on arrival
+  rather than on the rotation. `GET` returns `{ show, title, body }`; `POST` records that they have read
+  it (idempotent, `(user_id, notice_key)` primary key). Gated at `any_authenticated`, **deliberately**:
+  a signed-in but unverified member can already read and post in the Commons, so they are exactly who
+  needs telling first. `POST` checks `checkMutationOrigin(request) !== 'allow'` — that helper returns a
+  verdict string, and a truthiness test against it would disable the check entirely. Both directions
+  fail **closed**: a read error reports `show: false`, because a database hiccup must not be able to pop
+  the notice on every visit, which is how a notice trains people to dismiss it unread.
 - `GET /api/feed/admin/moderation` — also accepts `?author=<userId>` to show one member's entire Commons
   footprint, and returns an `authors` roster (aggregate counts per member, ordered by volume) so a
   moderator can work by person rather than by post. The roster is omitted when `?author=` is set — it
@@ -256,6 +264,11 @@ Domain tables:
     is stamped after the notice is created so an admin can find the exact announcement a milestone
     produced. **Holds no member data** — no user ids, no content — so it is retained on account
     deletion and is not in the deletion registry.
+22. `feed_commons_notice_seen` — which standing notices a member has already been shown once, on
+    arrival. Columns `user_id TEXT`, `notice_key TEXT`, `seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+    primary key `(user_id, notice_key)`. Separate from the cadence table because it answers a different
+    question: the cadence table asks whether a period has been served *for the room*, this asks whether
+    *this member* has seen it. Holds a user id, so it is deleted with the account (deletion registry).
 
 **Reserved (schema-only, no runtime reader/writer yet):**
 
@@ -561,10 +574,14 @@ All three feed channels (announcements, questions, community) are shipped on web
     intended rather than a compromise.
   - **Two owner claims were corrected against the code before shipping**, because a notice that is
     wrong about privacy is worse than no notice:
-    - The draft said the main **Chyme** room is public and anyone can read it. It is not: the Chyme
-      branch in `app/apps/[pluginSlug]/page.tsx` sits behind `evaluatePluginAccess`, so a signed-out
-      visitor never reaches it. The copy now says the group chat is public and Chyme needs an account.
-      If Chyme is ever opened to signed-out listening, change the copy back — not before.
+    - The **Chyme** claim in the draft was correct and an intermediate edit of mine broke it, then was
+      reverted. Chyme's main room *is* publicly listenable: a signed-out visitor does not get the
+      authenticated branch in `app/apps/[pluginSlug]/page.tsx`, they get `ChymePublicShell` from the
+      public-visitor registry, which fetches `/api/chyme/public/room` and hands a guest Stream
+      credentials via `ChymeGuestListen` ("Free to listen · Sign in to speak"). Both spaces have the
+      same shape — a public room anyone can read or listen to, plus a private Weavers room. Reading only
+      the authenticated branch makes Chyme look gated; check the public-visitor registry before
+      concluding that about any plugin.
     - The draft said the owner would only look at AI Assistant messages to check the assistant is safe.
       True, and now precise: `comic_review_queue` joins the asker's turn, so reviewing an answer does
       show the question it answers. The notice says that rather than promising nobody ever reads them.
