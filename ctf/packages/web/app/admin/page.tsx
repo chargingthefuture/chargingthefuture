@@ -29,6 +29,10 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/contributions', name: 'Contributions' },
   { href: '/admin/contributor-access', name: 'Contributor Access' },
   { href: '/admin/directory', name: 'Directory' },
+  // Moderating member-authored Commons posts and replies (hide / put back). Kept separate from Feed
+  // Announcements, which is an authoring tool for the owner's own announcements — this one carries a
+  // different power, over someone else's words.
+  { href: '/admin/commons', name: 'Commons Moderation' },
   { href: '/admin/feed-announcements', name: 'Feed Announcements' },
   // Review of member-contributed writing for the assistant's library. Its own area rather than a tab
   // inside AI Assistant: it has its own queue, and a contribution waiting to be read should show up

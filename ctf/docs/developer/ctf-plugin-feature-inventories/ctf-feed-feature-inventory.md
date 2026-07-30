@@ -172,6 +172,32 @@ Admin routes:
 - `PUT /api/feed/admin/announcements/:announcementId`
 - `POST /api/feed/admin/announcements/:announcementId/publish`
 - `POST /api/feed/admin/announcements/:announcementId/archive`
+- `GET /api/feed/admin/moderation` — also accepts `?author=<userId>` to show one member's entire Commons
+  footprint, and returns an `authors` roster (aggregate counts per member, ordered by volume) so a
+  moderator can work by person rather than by post. The roster is omitted when `?author=` is set — it
+  is what you use to *pick* someone, so it is dead weight once you have.
+- `GET /api/feed/admin/moderation` — admin lists member-authored Commons posts and replies for review,
+  newest first, together with the count of rows currently hidden (`listCommonsModerationQueue` +
+  `countHiddenCommonsRows` in `lib/feed/moderation.ts`). Hidden rows are included by default so a
+  moderator can find what they took down and put it back; `?hidden=1` narrows to only those. Optional
+  `?limit=` clamped to 1..200. Admin-gated (`requireFeedAdminAccess`), read-only, no audit row.
+- `POST /api/feed/admin/moderation/:target/:id` — admin hides or restores one Commons post or reply.
+  Body may also carry `reason`, one of `off_topic` / `suspected_bad_actor` / `spam` / `abusive` /
+  `other` (`FEED_MODERATION_REASON`). Validated against that fixed set, never free text — a
+  moderator's prose about a member would become a permanent unreviewable note on a survivor's
+  account. An unrecognised or absent code falls back to `other` rather than 400: a hide is
+  time-sensitive and must not fail over its label. Restoring ignores `reason` and **clears** the
+  stored reason/actor/timestamp, so a post that is visible again carries no standing accusation.
+  `:target` is `post` or `reply` (else 400); body `{ hidden: boolean }` is **required** — an absent
+  field is a 400 rather than defaulting to restore, so a malformed request can never quietly put
+  hidden content back in front of members. Admin-gated + `x-ctf-csrf: '1'`; 404 when the row is gone.
+  Sets `moderation_status` to `'hidden'` or `'accepted'` under `FOR UPDATE`, so two moderators acting
+  at once cannot both record the same transition. Returns `{ changed: false }` and writes **no** audit
+  row when the row is already in the requested state. A real transition writes
+  `feed.community.moderation.hide` or `feed.community.moderation.restore` with the previous and new
+  status in metadata (never the body — the trail is a record *about* the content, not a second copy of
+  it). **There is no admin edit route**: a moderator may take content out of view, never rewrite a
+  member's words while leaving the member's name on them.
 - `PATCH /api/feed/admin/questions/:questionId` — admin re-labels a feed question's category (`relabelQuestionCategory`). Body `{ category }` validated against the allowed feed question categories (else 400); the question id must be a UUID (else 400); admin-gated (`requireFeedAdminAccess`) + `x-ctf-csrf: '1'`; 404 when the question id is unknown. Writes a `feed.question.category.relabel` audit row.
 - `POST /api/feed/membership/events` — records a member join/leave membership event for the feed personalization layer (`emitMembershipEvent`, writing `feed_membership_events` and fanning out to Stream when configured). Body `{ userId, pluginId, eventType: 'join' | 'leave', requestId?, traceId? }` (`eventType` defaults to `join`; `userId` and `pluginId` required, else 400); admin-gated (`requireFeedAdminAccess`) + `x-ctf-csrf: '1'`. Returns `{ ok, streamEmitted }`.
 
@@ -284,6 +310,15 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 1. LLM inference for question answers runs against a single configured provider; provider failover and confidence-thresholding policy are not yet contractualized.
 2. Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files are deprecated; their continued presence is intentional historical reference and is a known cleanup item.
+3. **Questions and answers cannot be moderated.** Commons posts and replies can be hidden (2026-07-29),
+   but `feed_questions` and `feed_answers` carry no `moderation_status` column, so hiding one would
+   need a schema change. Today the only lever on a question is the admin category relabel.
+4. **Member flags route nowhere.** A member can rate an answer `flagged`
+   (`feed_answer_ratings.rating`), and `GET /api/feed/admin/questions` aggregates a `flagged_count` —
+   but no page consumes that route, so nothing puts a flagged answer in front of an admin. Wiring it
+   to the Commons Moderation surface is the natural next step; it was left out rather than half-built
+   because a flag queue for answers needs item 3 first (there is nothing an admin could *do* about a
+   flagged answer yet).
 
 ---
 
@@ -500,6 +535,57 @@ All three feed channels (announcements, questions, community) are shipped on web
     - Implementation status is tracked; detailed evidence collection deferred to post-MVP.
 
 ### Change Log
+
+- 2026-07-29 (later): **Moderation reason + moderating by member (owner: the real problem is volume of
+  off-topic Quora discussion, and most of it is a handful of accounts).** Hide/restore alone did not fit
+  a repeatable sweep. Added `moderation_reason`, `moderated_by_user_id`, `moderated_at` (all `TEXT`/
+  `TIMESTAMPTZ`, **nullable**, null on every pre-existing row) to `feed_community_posts` and
+  `feed_community_replies` via `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS` in `schema.sql` and
+  `schema.demo.sql`. The reason is a short code from `FEED_MODERATION_REASON`, defaulting to
+  `off_topic` in the UI because that is the actual day-to-day judgement — one picker for the whole
+  list, so a sweep of twenty posts is not twenty identical clicks. It rides on the Hidden pill, so a
+  later pass tells an off-topic sweep apart from an abuse removal without opening the audit log.
+  `suspected_bad_actor` is worded as *suspected* and carries **no** automatic consequence: it hides the
+  post and nothing else — no access revocation, no account flag, no score. A hunch recorded as a fact
+  is how a wrong hunch becomes permanent. New `listCommonsAuthors` powers a **By member** tab: aggregate
+  counts per author ordered by volume, so an account that has never been on topic looks different from
+  a member who wandered off once. Aggregate only — no bodies — because deciding whether to look at
+  someone should not require reading everything they wrote. `?author=` then shows that member's whole
+  footprint. **No bulk hide**: acting on many posts at once is one click away from clearing a member's
+  entire history on a wrong hunch, so each row is still its own decision. **Parity:** web +
+  mobile-responsive; Android out of scope (web-only per rule 105).
+- 2026-07-29: **Commons moderation — the first one that exists (owner request).** Until now there was
+  no moderation surface for member-authored Commons content at all: no admin UI listed posts or
+  replies, no route could hide or remove anyone else's, and `DELETE /api/hub/messages/:postId` was
+  author-only (an admin hitting it on another member's post got a 403). Removing a post meant direct
+  SQL. Worse, `moderation_status` on `feed_community_posts` / `feed_community_replies` looked like the
+  mechanism but was **dead**: no query read it and the only value ever written was `'accepted'`, so
+  setting a row to anything else left it fully visible.
+  - **The read path now honours it.** `listFeedTimeline` (posts, replies, and the quoted-post lookup)
+    and `listPublicCommunityPosts` all filter `moderation_status = 'accepted'`. This is the blocking
+    change — without it a hide control would be a button that does nothing.
+  - `FEED_MODERATION_STATUS` in `lib/feed/constants.ts` defines exactly two states, `accepted` and
+    `hidden`. Two on purpose: a third "under review but still visible" state would be a promise the
+    code does not keep.
+  - New `lib/feed/moderation.ts` — `setCommunityModerationStatus` (locks the row `FOR UPDATE`, returns
+    `unchanged` instead of pretending to act), `listCommonsModerationQueue`, `countHiddenCommonsRows`.
+  - New routes `GET /api/feed/admin/moderation` and `POST /api/feed/admin/moderation/:target/:id`.
+  - New admin surface `/admin/commons` (`components/feed-announcements/commons-moderation-admin-shell.tsx`),
+    listed on the admin landing page as **Commons Moderation**. Recent / Hidden-only tabs, hidden
+    counters, and a Hide / Put back control per row. Restoring is confirm-gated and hiding is not:
+    hiding is reversible, while putting content back in front of members is the direction worth a
+    deliberate pause.
+  - **Hide, never delete, and never edit.** Deletion is unrecoverable and takes the member's words plus
+    the reply thread with them, so a moderator acting fast on a judgement call is not making a
+    permanent one. There is no admin edit anywhere in this plugin, and the access-policy contract
+    records that as `contentImmutable: required`. Member self-deletion is unchanged.
+  - Contracts: `feed.community.moderation.list` / `.hide` / `.restore` added to the command and
+    access-policy contracts; `.hide` / `.restore` added to the audit contract with `previousStatus` /
+    `newStatus` in `targetContext`.
+  - **Not covered:** questions and answers. `feed_questions` and `feed_answers` have no
+    `moderation_status` column, so hiding one would need a schema change; and the member-submitted
+    `flagged` answer ratings still route nowhere. Recorded in Gaps rather than half-built.
+  - **Parity:** web + mobile-responsive; Android out of scope (web-only per rule 105).
 
 - 2026-07-19: **Tap a quoted reply to jump to the original message** (owner report: tapping the "you are replying to" block did nothing). `HubMessage.quotedMessage` / `ChatQuotedMessage` gained `postId` (the quoted community post id), carried from the already-resolved `FeedCommunityDetail.replyToPostId` in `GET /api/hub/messages` and echoed on `POST` for the optimistic copy. In `shell-chat-panel` each peer bubble group now carries `data-post-id={communityPostId}` and the quote block is a button that scrolls the original into view and briefly highlights it (`chatBubbleFlash`); when the quoted post is older than the loaded window the tap is a no-op (the snippet still shows what was said). The same was applied to the gated contributor channel (`gated-chat-panel`, `channel-repository` quoted message gained `postId` from `reply_to_post_id`). No schema, route-surface, or contract change — only a new field on an existing payload plus client rendering. Android carries the optional `postId` on its `HubQuotedMessage` type but the tap-to-jump (needs FlatList `scrollToIndex`) is a tracked parity follow-up.
 - 2026-06-21: Emoji reactions on Commons (Survivor Hub home channel) community posts — the first feature of the Stream-adoption initiative, using "approach b" (reactions live in our own database; Stream is not involved). New table `feed_community_post_reactions (id UUID PK, post_id UUID NOT NULL REFERENCES feed_community_posts(id) ON DELETE CASCADE, user_id TEXT NOT NULL, emoji TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())` using the CREATE TABLE IF NOT EXISTS + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS` pattern, with `idx_feed_community_post_reactions_unique (post_id, user_id, emoji)` (toggling adds/removes) and `idx_feed_community_post_reactions_post (post_id)`. A fixed quick set `FEED_REACTION_EMOJIS = ['👍','❤️','😂','🎉','🙏','😢']` is exported from `lib/feed/constants` and shared by server and client; the server rejects any emoji outside it (400). `toggleCommunityPostReaction(userId, postId, emoji)` validates the emoji and that the post exists, then `INSERT ... ON CONFLICT DO NOTHING` and removes the existing row when nothing was inserted (toggle). `listFeedTimeline` aggregates reactions for the visible community posts in one batched query (`COUNT(*)` + `BOOL_OR(user_id = $currentUser)`), attaching `FeedCommunityDetail.reactions: FeedReactionSummary[]` (new type — `{ emoji, count, reactedByMe }`), ordered by the fixed-set order, only emojis with at least one reaction; posts with none get `[]`. New route `POST /api/hub/messages/:postId/reactions` (hub access gate + `x-ctf-csrf: '1'`) returns `{ ok, reacted }`. `HubMessage.reactions` carries the aggregate; the Commons chat (`ChatMessage.reactions`, `use-home-chat` `toggleReaction`) optimistically flips the chip and reconciles via the existing 10s poll; `shell-chat-panel` renders a compact reaction row (emoji+count pills, highlighted when reacted, plus an "add reaction" picker over the fixed set) under peer bubbles that have a `communityPostId`. `schema.demo.sql` regenerated; drift gate passes. Android parity deferred.

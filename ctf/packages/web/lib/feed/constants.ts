@@ -19,6 +19,55 @@ export const FEED_ERROR_CODE = {
   moderationRejected: 'FEED_CONTENT_POLICY_VIOLATION',
 } as const;
 
+// Moderation states for member-authored Commons content (`feed_community_posts`,
+// `feed_community_replies`). The column has existed since those tables were created, defaulting to
+// 'accepted', but nothing read it — so a row set to anything else stayed fully visible and the only
+// way to take a post down was to delete it. These are the two states the read path now honours:
+// 'accepted' is visible, 'hidden' is not. Kept to two on purpose — an admin either leaves a post up
+// or takes it down, and a third "under review but still visible" state would be a promise the code
+// does not keep.
+export const FEED_MODERATION_STATUS = {
+  accepted: 'accepted',
+  hidden: 'hidden',
+} as const;
+
+export type FeedModerationStatus = (typeof FEED_MODERATION_STATUS)[keyof typeof FEED_MODERATION_STATUS];
+
+// Why a post was hidden. A short fixed code, never free text — a moderator's prose about a member
+// would become a permanent unreviewable note attached to a survivor's account.
+//
+// `off_topic` leads because it is the actual day-to-day problem (owner, 2026-07-29): people arrive and
+// hold Quora-style discussions with nothing to do with the economy. It is by far the most common
+// judgement, so it is the default in the UI and the one a bulk sweep uses.
+//
+// `suspected_bad_actor` is deliberately worded as *suspected* and carries no automatic consequence —
+// it hides the post and nothing else. It never revokes access, flags the account, or feeds any score.
+// A hunch recorded as a fact is how a wrong hunch becomes permanent.
+export const FEED_MODERATION_REASON = {
+  offTopic: 'off_topic',
+  suspectedBadActor: 'suspected_bad_actor',
+  spam: 'spam',
+  abusive: 'abusive',
+  other: 'other',
+} as const;
+
+export type FeedModerationReason = (typeof FEED_MODERATION_REASON)[keyof typeof FEED_MODERATION_REASON];
+
+export const FEED_MODERATION_REASONS: readonly FeedModerationReason[] = Object.values(FEED_MODERATION_REASON);
+
+// Member-facing wording for each code, used in the admin queue.
+export const FEED_MODERATION_REASON_LABEL: Record<FeedModerationReason, string> = {
+  off_topic: 'Off topic — not about the economy',
+  suspected_bad_actor: 'Suspected bad actor',
+  spam: 'Spam',
+  abusive: 'Abusive',
+  other: 'Other',
+};
+
+export function isFeedModerationReason(value: unknown): value is FeedModerationReason {
+  return typeof value === 'string' && (FEED_MODERATION_REASONS as readonly string[]).includes(value);
+}
+
 export const FEED_DEFAULT_PAGE = 1;
 export const FEED_DEFAULT_PAGE_SIZE = 20;
 export const FEED_MAX_PAGE_SIZE = 100;

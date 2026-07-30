@@ -604,3 +604,90 @@ contracts:
     purpose: visibility_recalculation
     retentionClass: transactional_long_lived
     idempotency: false
+
+  - pluginId: feed
+    command: feed.community.moderation.list
+    version: 1.0.0
+    description: >-
+      List member-authored Commons posts and replies for admin review, newest first, with the count of
+      rows currently hidden. Hidden rows are included by default so a moderator can see what has been
+      taken down and put it back; `hidden=1` narrows to only those. Admin only, read-only.
+    inputSchema:
+      hidden:
+        type: boolean
+        required: false
+      limit:
+        type: number
+        required: false
+    outputSchema:
+      rows:
+        type: array
+      hidden:
+        type: object
+    dataAccess:
+      - feed_community_posts
+      - feed_community_replies
+    purpose: content_moderation
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: feed
+    command: feed.community.moderation.hide
+    version: 1.0.0
+    description: >-
+      Hide one member-authored Commons post or reply from every reader by setting
+      `moderation_status = 'hidden'`. This is NOT deletion: the row is retained and the change is
+      reversible via feed.community.moderation.restore. There is deliberately no admin edit command —
+      a moderator may remove content from view but may never rewrite a member's words while leaving
+      the member's name on them. Author self-deletion is unaffected. Admin only.
+    inputSchema:
+      target:
+        type: string
+        required: true
+      id:
+        type: string
+        required: true
+      hidden:
+        type: boolean
+        required: true
+    outputSchema:
+      changed:
+        type: boolean
+      moderationStatus:
+        type: string
+    dataAccess:
+      - feed_community_posts
+      - feed_community_replies
+    purpose: content_moderation
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: feed
+    command: feed.community.moderation.restore
+    version: 1.0.0
+    description: >-
+      Put a previously hidden Commons post or reply back in front of members by setting
+      `moderation_status = 'accepted'`. Same endpoint as the hide command with `hidden: false`; named
+      separately here and in the audit trail because putting content back is a distinct decision from
+      taking it down. Admin only.
+    inputSchema:
+      target:
+        type: string
+        required: true
+      id:
+        type: string
+        required: true
+      hidden:
+        type: boolean
+        required: true
+    outputSchema:
+      changed:
+        type: boolean
+      moderationStatus:
+        type: string
+    dataAccess:
+      - feed_community_posts
+      - feed_community_replies
+    purpose: content_moderation
+    retentionClass: transactional_long_lived
+    idempotency: true

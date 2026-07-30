@@ -606,6 +606,134 @@
 
 ---
 
+### FD-A17 — Off-topic sweep: reason is recorded, and restoring clears it
+**Role:** admin | **Surface:** web
+
+**Precondition:** Several visible Commons posts, at least two of them off topic (Quora-style discussion
+with nothing to do with the economy — this is the common case).
+
+**Steps:**
+1. Open `/admin/commons`. Note the **Hide reason** picker above the list and what it defaults to.
+2. Without changing the picker, click **Hide** on two different off-topic posts in a row.
+3. Read the Hidden pill on each.
+4. Change the reason to **Abusive** and hide a third post.
+5. Click **Put back** on one of the off-topic posts and accept the confirmation.
+6. Hide that same post again.
+
+**Expected:**
+- Step 1: the picker defaults to **Off topic — not about the economy**. It is one picker for the whole
+  list, not one per row — a sweep of twenty posts must not mean twenty identical selections.
+- Step 2/3: both hidden pills read `Hidden · Off topic — not about the economy`. The reason was not
+  re-selected between them.
+- Step 4: that pill reads `Hidden · Abusive`, and the earlier two are unchanged.
+- Step 5: the post returns to the member Commons **and** its stored reason is cleared — when it next
+  appears in the list it carries no reason text. A visible post must never show a standing accusation.
+- Step 6: it is hidden again with whatever reason the picker currently holds.
+- Check the audit log: each real transition carries `previousStatus`, `newStatus`, and `reason`. Never
+  the post body.
+
+**Result:** web ☐
+
+---
+
+### FD-A18 — Moderate by member
+**Role:** admin | **Surface:** web
+
+**Precondition:** At least two members have posted in the Commons, one of them several times.
+
+**Steps:**
+1. Open `/admin/commons` and switch to the **By member** tab.
+2. Read the ordering and the per-member counts.
+3. Click the member with the most posts.
+4. Read the banner above the list, then hide one of their posts.
+5. Click **Back to members**.
+
+**Expected:**
+- Step 2: members are ordered by how much they have posted, each showing post count, reply count, how
+  many are already hidden, and first/last posted dates. **No post bodies appear on this tab** — deciding
+  whether to look at someone should not require reading everything they wrote.
+- Step 3/4: the list narrows to that member's entire footprint, posts and replies, and the banner names
+  them with their counts. Hiding works exactly as on the Recent tab and the view stays on that member
+  afterwards — it must not bounce you back to the full list mid-sweep.
+- Step 5: the roster is still populated (a single-member request returns an empty roster by design;
+  the surface must not blank the list you came from).
+- There is deliberately **no bulk "hide everything from this member"** control. Confirm it is absent:
+  one click clearing a member's whole history on a wrong hunch is the failure being avoided.
+
+**Result:** web ☐
+
+---
+
+### FD-A14 — Hide a Commons post, then put it back
+**Role:** admin + member | **Surface:** web
+
+**Precondition:** At least one member-authored Commons post exists with at least one reply. Have a
+second browser window signed in as a different member (or signed out) so you can watch the member view.
+
+**Steps:**
+1. As admin, open `/admin/commons` (it is listed as **Commons Moderation** on the admin landing page).
+2. Find the post in the Recent list. Click **Hide**.
+3. In the member window, reload the Commons.
+4. Sign out entirely and load the public Commons view, if public viewing is enabled.
+5. Back in the admin window, switch to the **Hidden only** tab.
+6. Click **Put back** and accept the confirmation.
+7. Reload the member window again.
+8. Click **Hide** twice in a row on any post — once to hide it, then hide it again without reloading.
+
+**Expected:**
+- Step 2: the row gains a "Hidden" pill and the Hidden-posts counter goes up by one.
+- Step 3: the post is **gone** from the member timeline — and so are its replies, since the whole item
+  drops out. This is the check that matters: before this feature the status column was ignored, so a
+  hidden post stayed visible.
+- Step 4: it is absent from the signed-out public list too, not just the member view.
+- Step 5: the hidden post is listed there — hiding must not be a one-way door.
+- Step 6/7: the post is back in the member timeline, replies and all. Nothing was deleted.
+- Step 8: the second hide reports "Already in that state — nothing changed." Check the server log: the
+  no-op writes **no** second `feed.community.moderation.hide` audit entry. The trail must never claim a
+  transition that did not happen.
+- Nowhere in this surface is there a control to **edit** the post. That absence is deliberate — confirm
+  it is still absent.
+
+**Result:** web ☐
+
+---
+
+### FD-A15 — Hide a Commons reply on its own
+**Role:** admin + member | **Surface:** web
+
+**Precondition:** A visible Commons post with at least two replies.
+
+**Steps:**
+1. As admin, open `/admin/commons` and find one **Reply** row (it carries a "Reply" pill and shows which
+   post it belongs to).
+2. Click **Hide** on that reply only.
+3. In the member window, reload the Commons and open the parent post's replies.
+
+**Expected:** Only that one reply is gone. The parent post is still visible and its other replies still
+render. Hiding a reply must not take the post or its siblings with it.
+
+**Result:** web ☐
+
+---
+
+### FD-A16 — Only an admin can moderate
+**Role:** member | **Surface:** web
+
+**Steps:**
+1. Signed in as an ordinary member, navigate to `/admin/commons`.
+2. With the browser dev tools, `POST /api/feed/admin/moderation/post/<any-post-id>` with body
+   `{"hidden":true}` and the `x-ctf-csrf: 1` header.
+3. Repeat the POST with the header omitted.
+4. Repeat as admin but with the body `{}` (no `hidden` field).
+
+**Expected:** Step 1: redirected away, no moderation UI. Step 2: rejected, and the post stays visible.
+Step 3: rejected for CSRF. Step 4: 400 — a missing `hidden` field must be an error, never a silent
+"restore", so a malformed request can never put hidden content back in front of members.
+
+**Result:** web ☐
+
+---
+
 ### FD-A11 — Membership event emit
 **Role:** admin | **Surface:** web
 
@@ -680,5 +808,13 @@ The following cases are the highest-signal functional checks that must remain co
 ## Known gaps — do not file these as bugs
 
 1. **LLM provider failover not contractualized.** The Q&A pipeline runs against a single configured LLM provider. If that provider is unavailable the answer generation fails. Provider failover and confidence-thresholding policy are tracked as future work — a failure here is expected behavior, not a bug.
+
+3. **Questions and answers cannot be hidden.** Commons posts and replies can be moderated (FD-A14/A15),
+   but `feed_questions` and `feed_answers` have no `moderation_status` column, so there is no hide
+   control for them. The only admin lever on a question is the category relabel (FD-A10). Not a bug.
+
+4. **Flagging an answer notifies nobody.** A member can rate an answer `flagged`, and the count is
+   aggregated by `GET /api/feed/admin/questions`, but no page reads that route — so a flag reaches no
+   admin queue. Known and tracked; do not file it.
 
 2. **Deprecated contract YAML files.** Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files remain in the repository as intentional historical reference. Their presence is not a bug; they are a known cleanup item.

@@ -720,6 +720,7 @@ export async function listPublicCommunityPosts(
       JOIN feed_community_posts c ON c.id = f.source_community_post_id
       WHERE f.item_type = 'community'
         AND f.is_active = TRUE
+        AND c.moderation_status = 'accepted'
         AND f.published_at <= NOW()
         AND (f.expires_at IS NULL OR f.expires_at > NOW())
         AND EXISTS (
@@ -1022,6 +1023,7 @@ export async function listFeedTimeline(
             SELECT id, author_user_id, author_username, body, category, reply_count, reply_to_post_id, created_at
             FROM feed_community_posts
             WHERE id = ANY($1::uuid[])
+              AND moderation_status = 'accepted'
           `,
           [communityIds],
         ),
@@ -1030,6 +1032,7 @@ export async function listFeedTimeline(
             SELECT id, post_id, author_user_id, body, created_at
             FROM feed_community_replies
             WHERE post_id = ANY($1::uuid[])
+              AND moderation_status = 'accepted'
             ORDER BY created_at ASC
           `,
           [communityIds],
@@ -1091,6 +1094,7 @@ export async function listFeedTimeline(
             SELECT id, author_user_id, author_username, body
             FROM feed_community_posts
             WHERE id = ANY($1::uuid[])
+              AND moderation_status = 'accepted'
           `,
           [quotedIds],
         );
