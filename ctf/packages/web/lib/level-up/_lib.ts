@@ -47,39 +47,26 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
   return null;
 }
 
+// Maps a known LevelUp error message to its response shape. `report` marks the
+// cases that also send the error to observability before responding.
+const LEVEL_UP_ERROR_MAP: Record<string, { code: string; message: string; status: number; report?: boolean }> = {
+  insufficient_balance: { code: 'level_up_insufficient_balance', message: 'Insufficient balance.', status: 409 },
+  invalid_payload: { code: 'level_up_invalid_payload', message: 'Invalid LevelUp payload.', status: 400 },
+  forbidden: { code: 'level_up_forbidden', message: 'You do not have access to this resource.', status: 403 },
+  not_found: { code: 'level_up_not_found', message: 'Requested resource was not found.', status: 404 },
+  invalid_state: { code: 'level_up_invalid_state', message: 'Resource is not in a valid state for this command.', status: 409 },
+  rate_limit_exceeded: { code: 'level_up_rate_limit_exceeded', message: 'Command rate limit exceeded.', status: 429 },
+  external_ledger_not_configured: { code: 'level_up_external_ledger_not_configured', message: 'External ledger is not configured.', status: 503, report: true },
+  external_ledger_unavailable: { code: 'level_up_external_ledger_unavailable', message: 'External ledger rejected or failed the command.', status: 503, report: true },
+};
+
 export function levelUpErrorResponse(error: unknown, fallbackMessage: string): NextResponse {
-  if (error instanceof Error && error.message === 'insufficient_balance') {
-    return NextResponse.json({ ok: false, code: 'level_up_insufficient_balance', message: 'Insufficient balance.' }, { status: 409 });
-  }
-
-  if (error instanceof Error && error.message === 'invalid_payload') {
-    return NextResponse.json({ ok: false, code: 'level_up_invalid_payload', message: 'Invalid LevelUp payload.' }, { status: 400 });
-  }
-
-  if (error instanceof Error && error.message === 'forbidden') {
-    return NextResponse.json({ ok: false, code: 'level_up_forbidden', message: 'You do not have access to this resource.' }, { status: 403 });
-  }
-
-  if (error instanceof Error && error.message === 'not_found') {
-    return NextResponse.json({ ok: false, code: 'level_up_not_found', message: 'Requested resource was not found.' }, { status: 404 });
-  }
-
-  if (error instanceof Error && error.message === 'invalid_state') {
-    return NextResponse.json({ ok: false, code: 'level_up_invalid_state', message: 'Resource is not in a valid state for this command.' }, { status: 409 });
-  }
-
-  if (error instanceof Error && error.message === 'rate_limit_exceeded') {
-    return NextResponse.json({ ok: false, code: 'level_up_rate_limit_exceeded', message: 'Command rate limit exceeded.' }, { status: 429 });
-  }
-
-  if (error instanceof Error && error.message === 'external_ledger_not_configured') {
-    reportError(error, { area: 'level-up', op: 'unknown' });
-    return NextResponse.json({ ok: false, code: 'level_up_external_ledger_not_configured', message: 'External ledger is not configured.' }, { status: 503 });
-  }
-
-  if (error instanceof Error && error.message === 'external_ledger_unavailable') {
-    reportError(error, { area: 'level-up', op: 'unknown' });
-    return NextResponse.json({ ok: false, code: 'level_up_external_ledger_unavailable', message: 'External ledger rejected or failed the command.' }, { status: 503 });
+  const mapped = error instanceof Error ? LEVEL_UP_ERROR_MAP[error.message] : undefined;
+  if (mapped) {
+    if (mapped.report) {
+      reportError(error, { area: 'level-up', op: 'unknown' });
+    }
+    return NextResponse.json({ ok: false, code: mapped.code, message: mapped.message }, { status: mapped.status });
   }
 
   reportError(error, { area: 'level-up', op: 'unknown' });
