@@ -5,18 +5,33 @@ import { FEED_COMMONS_GUIDANCE_INTERVAL } from 'lib/feed/constants';
 // (owner decision, 2026-07-30), so a newcomer meets the rule without anyone having to say it to them
 // personally, and a regular is reminded without being singled out.
 //
-// The wording carries a decision the owner made explicitly, and it should not be "tidied" later by
-// someone who misses the point:
+// Every paragraph below is load-bearing and was corrected by the owner. Do not "tidy" it:
 //
-//   The public rule is TOPIC, not character. Content is removed for repeatedly being off topic — never
-//   for who somebody is suspected of being. That is deliberately the gentler framing, and it is also
-//   the only one that is safe: an accusation posted to a whole community is unretractable, and being
-//   wrong about it lands on a survivor.
+//   WHAT THE COMMONS IS. A support channel — ask in the open, get an answer. It is NOT where exchanges
+//   are arranged or recorded. Skills, trades, housing, rides and calls each live in their own plugin,
+//   and those are what count toward the economy. An earlier draft said trades get "sorted out" here;
+//   that was wrong and would have taught members to do their business in a public thread instead of in
+//   the app that actually records it.
 //
-//   The stated reason underneath it is not softened, because it is the point: an open chat room with no
-//   subject is where traffickers hide. They blend into general conversation and use it to find people.
-//   Keeping the Commons to its purpose is what makes that hard, and there is no tolerance for them
-//   here. The notice says that plainly while accusing nobody in particular.
+//   WHY IT IS OPEN. The owner takes no direct messages: her inbox was used to harass her. Open posting
+//   removes that channel, and it means a question is answered once where the next person finds it, by
+//   whichever member is awake — the community spans every timezone.
+//
+//   IT MUST NOT FRIGHTEN OFF REAL SURVIVORS. This is the constraint that shapes the tone. "No
+//   storytelling" read alone tells a newly targeted person their experience is unwelcome, which is the
+//   opposite of true. So the notice says outright that you can describe what is happening to you, and
+//   draws the line at the retelling that goes nowhere and asks for nothing. The contrast with Quora is
+//   the selling point, not a complaint: there you narrate into a void, here you ask and someone answers.
+//   The Commons is a first filter, nothing heavier.
+//
+//   THE PUBLIC RULE IS TOPIC, NOT CHARACTER. Content is removed for repeatedly going nowhere — never
+//   for who somebody is suspected of being. An accusation posted to a whole community cannot be
+//   retracted, and being wrong about it lands on a survivor.
+//
+//   THE EXCLUSION IS STATED AS FACT, NOT FEELING. Traffickers are "not allowed", not "not tolerated".
+//   The owner was explicit: these people kill with impunity, and no wording here should imply they are
+//   merely unwelcome. Volume of off-topic chatter is not the problem being solved, and a perpetrator's
+//   feelings are not a consideration.
 //
 // Weavers of the Commons post without restriction. That is the incentive doing the work the rule
 // cannot: the way out of the topic limit is to contribute, not to argue.
@@ -24,20 +39,28 @@ import { FEED_COMMONS_GUIDANCE_INTERVAL } from 'lib/feed/constants';
 export const COMMONS_GUIDANCE_TITLE = 'What the Commons is for';
 
 export const COMMONS_GUIDANCE_BODY = [
-  'This app is a working economy. Survivors list real skills, trade them with each other, and build a',
-  'record of that work that holds up outside here. The Commons is where it gets arranged — asking for',
-  'a skill, offering one, sorting out an exchange.',
+  'The Commons is a support channel. Ask in the open and get an answer — from me, or from another',
+  'member when I am not around. This community spans every timezone, so someone is usually awake.',
   '',
-  'It is not a general discussion board. Conversations with nothing to do with the economy are removed',
-  'if they keep happening. This is not about tone, and it is not about disagreement — post something',
-  'unpopular about the work and it stays.',
+  'It is open on purpose. I do not take direct messages; my inbox was used to harass me and I am not',
+  'running that again. In the open, that does not work. Your question also gets answered once, where',
+  'the next person can find it, instead of me repeating myself in twenty private threads.',
   '',
-  'The reason, said plainly: an open room with no subject is where traffickers hide. They blend into',
-  'general conversation and use it to find people. Keeping the Commons to what it is for is what makes',
-  'that hard to do. There is no tolerance for it here.',
+  'If you are new and being targeted: you can say what is happening to you. Nobody is asking you to',
+  'keep it to yourself. What this is not is the endless retelling — the story with no question in it,',
+  'going nowhere, helping no one. Here you ask for something and someone answers. Quora does not offer',
+  'that in the slightest. It is most of the reason this exists.',
   '',
-  'Weavers of the Commons post without restriction. It is earned by contributing, and once you have it,',
-  'none of the above applies to you.',
+  'This is also not where the work is recorded. Skills, trades, housing, rides, calls — each has its',
+  'own app, and those are what count toward the economy. The Commons points you to them; it does not',
+  'replace them.',
+  '',
+  'Threads that never come back to any of that are removed if they keep happening. Not for tone, and',
+  'not for disagreement. The plain reason: an open room with no subject is where traffickers hide.',
+  'They blend into general talk and use it to find people. They are not allowed here. Not tolerated',
+  'less — not allowed.',
+  '',
+  'Weavers of the Commons post without restriction. It is earned by contributing.',
 ].join('\n');
 
 // Should the notice go out now? True only when this post lands exactly on a multiple of the interval,

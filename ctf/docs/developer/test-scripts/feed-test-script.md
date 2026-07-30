@@ -630,10 +630,22 @@ where you can reach the next multiple of 50 without posting hundreds of times �
   milestone produced can be found later.
 - Step 6: hidden posts still count. The milestone means "the Commons has seen this much traffic";
   moderating after the fact must not shift where the next notice falls.
-- Read the copy and check three things are present: what the app is for; that content is removed for
-  **repeatedly being off topic** (never for who someone is suspected of being); and that **Weavers of
-  the Commons post without restriction**. If a future edit drops the last one, the notice becomes a rule
-  with no way out of it — that is the check.
+- Read the copy and check all five of these survive. Each was corrected into place by the owner, and
+  losing any one of them changes what the notice does:
+  1. The Commons is a **support channel** — ask in the open, get an answer. It is **not** where trades
+     are arranged or recorded; those live in their own apps and are what count toward the economy. If
+     the notice ever implies otherwise it teaches members to do business in a public thread instead of
+     in the app that records it.
+  2. **Why it is open**: no direct messages, because the owner's inbox was used to harass her, and an
+     open question gets answered once by whoever is awake across the timezones.
+  3. **"You can say what is happening to you."** This is the anti-scare guarantee. Without it, "no
+     storytelling" reads to a newly targeted person as *your experience is unwelcome here*, which is the
+     opposite of true and would cost the app exactly the members it is for. The line it draws is the
+     retelling that asks for nothing, contrasted with Quora — where you narrate into a void.
+  4. Content is removed for **repeatedly going nowhere**, never for who someone is suspected of being.
+  5. Traffickers are **"not allowed"** — as a fact, not "not tolerated" as a feeling — and **Weavers of
+     the Commons post without restriction**. Drop the last one and the notice becomes a rule with no way
+     out of it.
 
 **Result:** web ☐
 

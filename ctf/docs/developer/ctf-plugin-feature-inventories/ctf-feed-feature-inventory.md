@@ -562,15 +562,31 @@ All three feed channels (announcements, questions, community) are shipped on web
     and a draft that never ships is the same as no notice.
   - Counts hidden posts too. The milestone means "the Commons has seen this much traffic"; moderating
     after the fact should not shift where the next notice falls.
-  - **The copy encodes a deliberate split the owner named, and it must not be "tidied" away.** The
-    public rule is TOPIC, not character: content is removed for repeatedly being off topic, never for
-    who somebody is suspected of being. That is the gentler framing and also the only safe one — an
-    accusation posted to a whole community cannot be retracted, and being wrong about it lands on a
-    survivor. The reason underneath is stated without softening, because it is the actual point: an
-    open room with no subject is where traffickers hide, they blend into general conversation and use
-    it to find people, and there is no tolerance for that here. The notice says this plainly while
-    accusing nobody in particular. The internal `suspected_bad_actor` moderation reason stays
-    admin-only and is never shown to a member — consistent with the same split.
+  - **Every paragraph of the copy is load-bearing and was corrected by the owner (2026-07-30).** The
+    first draft was wrong about what the Commons *is* and had to be rewritten:
+    - **It is a support channel, not a marketplace.** Ask in the open, get an answer. It is **not**
+      where exchanges are arranged or recorded — skills, trades, housing, rides and calls each live in
+      their own plugin, and those are what count toward the economy. The first draft said trades get
+      "sorted out" here, which would have taught members to do business in a public thread instead of
+      in the app that records it.
+    - **Why it is open**: the owner takes no direct messages, because her inbox was used to harass her.
+      Open posting removes that channel, and a question gets answered once where the next person finds
+      it, by whichever member is awake — the community spans every timezone.
+    - **It must not frighten off real survivors.** This is the constraint that shapes the tone. "No
+      storytelling" read alone tells a newly targeted person their experience is unwelcome, which is
+      the opposite of true, and would cost the app exactly the members it exists for. So the notice says
+      outright that you can describe what is happening to you, and draws the line at the retelling that
+      asks for nothing. The Quora contrast is the selling point, not a complaint: there you narrate into
+      a void; here you ask and someone answers. The Commons is a first filter, nothing heavier.
+    - **The public rule is TOPIC, not character**: content is removed for repeatedly going nowhere,
+      never for who somebody is suspected of being. An accusation posted to a whole community cannot be
+      retracted, and being wrong about it lands on a survivor. The internal `suspected_bad_actor`
+      moderation reason stays admin-only and is never shown to a member — the same split, held on both
+      sides.
+    - **The exclusion is stated as fact, not feeling**: traffickers are "not allowed", not "not
+      tolerated". The owner was explicit that these people kill with impunity and no wording should
+      imply they are merely unwelcome. Volume of off-topic chatter is not the problem being solved, and
+      a perpetrator's feelings are not a consideration.
   - **Weavers of the Commons post without restriction**, and the notice says so. That is the incentive
     doing the work the rule cannot: the way out of the topic limit is to contribute, not to argue.
   - New table `feed_commons_guidance_milestones` (see §4.2 item 21). **Parity:** web +
