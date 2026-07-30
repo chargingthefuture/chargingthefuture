@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../../_lib';
-import { FEED_ERROR_CODE, FEED_MODERATION_STATUS } from 'lib/feed/constants';
+import {
+  FEED_ERROR_CODE,
+  FEED_MODERATION_REASON,
+  FEED_MODERATION_STATUS,
+  isFeedModerationReason,
+} from 'lib/feed/constants';
 import { setCommunityModerationStatus, type FeedModerationTarget } from 'lib/feed/moderation';
 import { logFeedAudit } from 'lib/feed/audit';
 import { reportError } from 'lib/observability/report';
@@ -40,9 +45,9 @@ export async function POST(
     );
   }
 
-  let body: { hidden?: unknown };
+  let body: { hidden?: unknown; reason?: unknown };
   try {
-    body = (await request.json()) as { hidden?: unknown };
+    body = (await request.json()) as { hidden?: unknown; reason?: unknown };
   } catch {
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
@@ -61,11 +66,21 @@ export async function POST(
 
   const next = body.hidden ? FEED_MODERATION_STATUS.hidden : FEED_MODERATION_STATUS.accepted;
 
+  // A reason is only meaningful when hiding, and it is validated against the fixed code set rather
+  // than accepted as free text: a moderator's prose about a member would become a permanent,
+  // unreviewable note attached to a survivor's account. An unrecognised or absent code falls back to
+  // 'other' instead of 400 — a hide is time-sensitive and should never fail over its label.
+  const reason = body.hidden
+    ? (isFeedModerationReason(body.reason) ? body.reason : FEED_MODERATION_REASON.other)
+    : null;
+
   try {
     const outcome = await setCommunityModerationStatus({
       target: target as FeedModerationTarget,
       id,
       next,
+      reason,
+      actorUserId: gate.auth.userId,
     });
 
     if (outcome.status === 'not_found') {
@@ -94,7 +109,7 @@ export async function POST(
       errorCategory: null,
       // The statuses, not the content: an audit trail of what a member wrote would duplicate the
       // content it is meant to be a record ABOUT, in a log with a different retention story.
-      metadata: { previousStatus: outcome.previous, newStatus: outcome.next },
+      metadata: { previousStatus: outcome.previous, newStatus: outcome.next, reason },
     });
 
     return NextResponse.json({ ok: true, changed: true, moderationStatus: outcome.next }, { status: 200 });

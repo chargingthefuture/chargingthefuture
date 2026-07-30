@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireFeedAdminAccess } from '../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
-import { countHiddenCommonsRows, listCommonsModerationQueue } from 'lib/feed/moderation';
+import { countHiddenCommonsRows, listCommonsAuthors, listCommonsModerationQueue } from 'lib/feed/moderation';
 import { reportError } from 'lib/observability/report';
 
 export const dynamic = 'force-dynamic';
@@ -19,16 +19,21 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const onlyHidden = url.searchParams.get('hidden') === '1';
+  const authorUserId = url.searchParams.get('author');
   const limitParam = Number(url.searchParams.get('limit') ?? '50');
   const limit = Number.isFinite(limitParam) ? limitParam : 50;
 
   try {
-    const [rows, hidden] = await Promise.all([
-      listCommonsModerationQueue({ limit, onlyHidden }),
+    // `authors` is the by-volume roster, returned alongside the rows so the surface can offer both
+    // views from one request. Skipped when narrowing to a single author — the roster is what you use
+    // to *pick* someone, so it is dead weight once you have.
+    const [rows, hidden, authors] = await Promise.all([
+      listCommonsModerationQueue({ limit, onlyHidden, authorUserId }),
       countHiddenCommonsRows(),
+      authorUserId ? Promise.resolve([]) : listCommonsAuthors(50),
     ]);
 
-    return NextResponse.json({ ok: true, rows, hidden }, { status: 200 });
+    return NextResponse.json({ ok: true, rows, hidden, authors }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'feed', op: 'admin_moderation_list' });
     return NextResponse.json(

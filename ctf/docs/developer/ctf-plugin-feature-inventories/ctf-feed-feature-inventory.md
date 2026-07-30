@@ -172,12 +172,22 @@ Admin routes:
 - `PUT /api/feed/admin/announcements/:announcementId`
 - `POST /api/feed/admin/announcements/:announcementId/publish`
 - `POST /api/feed/admin/announcements/:announcementId/archive`
+- `GET /api/feed/admin/moderation` — also accepts `?author=<userId>` to show one member's entire Commons
+  footprint, and returns an `authors` roster (aggregate counts per member, ordered by volume) so a
+  moderator can work by person rather than by post. The roster is omitted when `?author=` is set — it
+  is what you use to *pick* someone, so it is dead weight once you have.
 - `GET /api/feed/admin/moderation` — admin lists member-authored Commons posts and replies for review,
   newest first, together with the count of rows currently hidden (`listCommonsModerationQueue` +
   `countHiddenCommonsRows` in `lib/feed/moderation.ts`). Hidden rows are included by default so a
   moderator can find what they took down and put it back; `?hidden=1` narrows to only those. Optional
   `?limit=` clamped to 1..200. Admin-gated (`requireFeedAdminAccess`), read-only, no audit row.
 - `POST /api/feed/admin/moderation/:target/:id` — admin hides or restores one Commons post or reply.
+  Body may also carry `reason`, one of `off_topic` / `suspected_bad_actor` / `spam` / `abusive` /
+  `other` (`FEED_MODERATION_REASON`). Validated against that fixed set, never free text — a
+  moderator's prose about a member would become a permanent unreviewable note on a survivor's
+  account. An unrecognised or absent code falls back to `other` rather than 400: a hide is
+  time-sensitive and must not fail over its label. Restoring ignores `reason` and **clears** the
+  stored reason/actor/timestamp, so a post that is visible again carries no standing accusation.
   `:target` is `post` or `reply` (else 400); body `{ hidden: boolean }` is **required** — an absent
   field is a 400 rather than defaulting to restore, so a malformed request can never quietly put
   hidden content back in front of members. Admin-gated + `x-ctf-csrf: '1'`; 404 when the row is gone.
@@ -526,6 +536,24 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ### Change Log
 
+- 2026-07-29 (later): **Moderation reason + moderating by member (owner: the real problem is volume of
+  off-topic Quora discussion, and most of it is a handful of accounts).** Hide/restore alone did not fit
+  a repeatable sweep. Added `moderation_reason`, `moderated_by_user_id`, `moderated_at` (all `TEXT`/
+  `TIMESTAMPTZ`, **nullable**, null on every pre-existing row) to `feed_community_posts` and
+  `feed_community_replies` via `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS` in `schema.sql` and
+  `schema.demo.sql`. The reason is a short code from `FEED_MODERATION_REASON`, defaulting to
+  `off_topic` in the UI because that is the actual day-to-day judgement — one picker for the whole
+  list, so a sweep of twenty posts is not twenty identical clicks. It rides on the Hidden pill, so a
+  later pass tells an off-topic sweep apart from an abuse removal without opening the audit log.
+  `suspected_bad_actor` is worded as *suspected* and carries **no** automatic consequence: it hides the
+  post and nothing else — no access revocation, no account flag, no score. A hunch recorded as a fact
+  is how a wrong hunch becomes permanent. New `listCommonsAuthors` powers a **By member** tab: aggregate
+  counts per author ordered by volume, so an account that has never been on topic looks different from
+  a member who wandered off once. Aggregate only — no bodies — because deciding whether to look at
+  someone should not require reading everything they wrote. `?author=` then shows that member's whole
+  footprint. **No bulk hide**: acting on many posts at once is one click away from clearing a member's
+  entire history on a wrong hunch, so each row is still its own decision. **Parity:** web +
+  mobile-responsive; Android out of scope (web-only per rule 105).
 - 2026-07-29: **Commons moderation — the first one that exists (owner request).** Until now there was
   no moderation surface for member-authored Commons content at all: no admin UI listed posts or
   replies, no route could hide or remove anyone else's, and `DELETE /api/hub/messages/:postId` was

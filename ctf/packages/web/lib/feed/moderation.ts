@@ -1,5 +1,9 @@
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
-import { FEED_MODERATION_STATUS, type FeedModerationStatus } from 'lib/feed/constants';
+import {
+  FEED_MODERATION_STATUS,
+  type FeedModerationReason,
+  type FeedModerationStatus,
+} from 'lib/feed/constants';
 import { normalizeUuid } from 'lib/feed/repository';
 
 // Commons moderation — taking a member's post or reply down, and putting it back.
@@ -36,7 +40,23 @@ export type FeedModerationQueueRow = {
   authorUsername: string | null;
   body: string;
   moderationStatus: FeedModerationStatus;
+  moderationReason: FeedModerationReason | null;
+  moderatedByUserId: string | null;
+  moderatedAtIso: string | null;
   createdAtIso: string;
+};
+
+// One member's Commons footprint, for moderating by person rather than by post. The day-to-day
+// problem is not a stray off-topic post — it is accounts that only ever post off-topic, so the useful
+// unit of review is the author (owner, 2026-07-29).
+export type FeedModerationAuthorSummary = {
+  authorUserId: string;
+  authorUsername: string | null;
+  postCount: number;
+  replyCount: number;
+  hiddenCount: number;
+  firstPostedAtIso: string;
+  lastPostedAtIso: string;
 };
 
 function toIso(value: Date | string): string {
@@ -53,6 +73,8 @@ export async function setCommunityModerationStatus(input: {
   target: FeedModerationTarget;
   id: string;
   next: FeedModerationStatus;
+  reason: FeedModerationReason | null;
+  actorUserId: string;
 }): Promise<FeedModerationOutcome> {
   const normalizedId = normalizeUuid(input.id);
   if (normalizedId === null) {
@@ -84,9 +106,21 @@ export async function setCommunityModerationStatus(input: {
       return { status: 'unchanged' as const, previous };
     }
 
+    // Restoring CLEARS the reason, actor, and timestamp rather than keeping them. Those three
+    // columns describe the row's current hidden state; leaving a reason on a post that is visible
+    // again would read as a standing accusation against a member whose post was put back.
+    const hiding = input.next === FEED_MODERATION_STATUS.hidden;
     await client.query(
-      `UPDATE ${table} SET moderation_status = $2, updated_at = NOW() WHERE id = $1::uuid`,
-      [normalizedId, input.next],
+      `
+        UPDATE ${table}
+        SET moderation_status = $2,
+            moderation_reason = $3,
+            moderated_by_user_id = $4,
+            moderated_at = CASE WHEN $5::boolean THEN NOW() ELSE NULL END,
+            updated_at = NOW()
+        WHERE id = $1::uuid
+      `,
+      [normalizedId, input.next, hiding ? input.reason : null, hiding ? input.actorUserId : null, hiding],
     );
 
     return { status: 'ok' as const, previous, next: input.next };
@@ -100,9 +134,12 @@ export async function setCommunityModerationStatus(input: {
 export async function listCommonsModerationQueue(options?: {
   limit?: number;
   onlyHidden?: boolean;
+  authorUserId?: string | null;
 }): Promise<FeedModerationQueueRow[]> {
   const limit = Math.min(Math.max(options?.limit ?? 50, 1), 200);
   const onlyHidden = options?.onlyHidden === true;
+  // Empty string would match nothing and read as "no author on file", so normalise it away.
+  const authorUserId = options?.authorUserId?.trim() || null;
 
   const result = await queryDb<{
     target: string;
@@ -112,30 +149,35 @@ export async function listCommonsModerationQueue(options?: {
     author_username: string | null;
     body: string;
     moderation_status: string;
+    moderation_reason: string | null;
+    moderated_by_user_id: string | null;
+    moderated_at: Date | null;
     created_at: Date;
   }>(
     `
       (
         SELECT 'post' AS target, id, NULL::uuid AS post_id, author_user_id, author_username,
-               body, moderation_status, created_at
+               body, moderation_status, moderation_reason, moderated_by_user_id, moderated_at, created_at
         FROM feed_community_posts
         WHERE ($1::boolean = FALSE OR moderation_status = 'hidden')
+          AND ($3::text IS NULL OR author_user_id = $3::text)
         ORDER BY created_at DESC
         LIMIT $2
       )
       UNION ALL
       (
         SELECT 'reply' AS target, id, post_id, author_user_id, NULL::text AS author_username,
-               body, moderation_status, created_at
+               body, moderation_status, moderation_reason, moderated_by_user_id, moderated_at, created_at
         FROM feed_community_replies
         WHERE ($1::boolean = FALSE OR moderation_status = 'hidden')
+          AND ($3::text IS NULL OR author_user_id = $3::text)
         ORDER BY created_at DESC
         LIMIT $2
       )
       ORDER BY created_at DESC
       LIMIT $2
     `,
-    [onlyHidden, limit],
+    [onlyHidden, limit, authorUserId],
   );
 
   return result.rows.map((row) => ({
@@ -149,7 +191,64 @@ export async function listCommonsModerationQueue(options?: {
       row.moderation_status === FEED_MODERATION_STATUS.hidden
         ? FEED_MODERATION_STATUS.hidden
         : FEED_MODERATION_STATUS.accepted,
+    moderationReason: (row.moderation_reason as FeedModerationReason | null) ?? null,
+    moderatedByUserId: row.moderated_by_user_id,
+    moderatedAtIso: row.moderated_at ? toIso(row.moderated_at) : null,
     createdAtIso: toIso(row.created_at),
+  }));
+}
+
+// Who is posting in the Commons, ordered by volume. This is the view for the actual problem: not one
+// stray off-topic post, but accounts whose whole footprint is Quora-style discussion unrelated to the
+// economy. Seeing counts per person tells you whether a member wandered off topic once or has never
+// been on topic — a distinction you cannot make from a reverse-chronological list of posts.
+//
+// Aggregate only: counts and dates, no bodies. Deciding whether to look at someone should not require
+// reading everything they ever wrote.
+export async function listCommonsAuthors(limit = 50): Promise<FeedModerationAuthorSummary[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 200);
+
+  const result = await queryDb<{
+    author_user_id: string;
+    author_username: string | null;
+    post_count: string;
+    reply_count: string;
+    hidden_count: string;
+    first_posted_at: Date;
+    last_posted_at: Date;
+  }>(
+    `
+      WITH combined AS (
+        SELECT author_user_id, author_username, moderation_status, created_at, 'post' AS kind
+        FROM feed_community_posts
+        UNION ALL
+        SELECT author_user_id, NULL::text AS author_username, moderation_status, created_at, 'reply' AS kind
+        FROM feed_community_replies
+      )
+      SELECT
+        author_user_id,
+        MAX(author_username) AS author_username,
+        COUNT(*) FILTER (WHERE kind = 'post')::text AS post_count,
+        COUNT(*) FILTER (WHERE kind = 'reply')::text AS reply_count,
+        COUNT(*) FILTER (WHERE moderation_status = 'hidden')::text AS hidden_count,
+        MIN(created_at) AS first_posted_at,
+        MAX(created_at) AS last_posted_at
+      FROM combined
+      GROUP BY author_user_id
+      ORDER BY COUNT(*) DESC, MAX(created_at) DESC
+      LIMIT $1
+    `,
+    [safeLimit],
+  );
+
+  return result.rows.map((row) => ({
+    authorUserId: row.author_user_id,
+    authorUsername: row.author_username,
+    postCount: Number(row.post_count ?? 0),
+    replyCount: Number(row.reply_count ?? 0),
+    hiddenCount: Number(row.hidden_count ?? 0),
+    firstPostedAtIso: toIso(row.first_posted_at),
+    lastPostedAtIso: toIso(row.last_posted_at),
   }));
 }
 

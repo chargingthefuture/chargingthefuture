@@ -606,6 +606,64 @@
 
 ---
 
+### FD-A17 — Off-topic sweep: reason is recorded, and restoring clears it
+**Role:** admin | **Surface:** web
+
+**Precondition:** Several visible Commons posts, at least two of them off topic (Quora-style discussion
+with nothing to do with the economy — this is the common case).
+
+**Steps:**
+1. Open `/admin/commons`. Note the **Hide reason** picker above the list and what it defaults to.
+2. Without changing the picker, click **Hide** on two different off-topic posts in a row.
+3. Read the Hidden pill on each.
+4. Change the reason to **Abusive** and hide a third post.
+5. Click **Put back** on one of the off-topic posts and accept the confirmation.
+6. Hide that same post again.
+
+**Expected:**
+- Step 1: the picker defaults to **Off topic — not about the economy**. It is one picker for the whole
+  list, not one per row — a sweep of twenty posts must not mean twenty identical selections.
+- Step 2/3: both hidden pills read `Hidden · Off topic — not about the economy`. The reason was not
+  re-selected between them.
+- Step 4: that pill reads `Hidden · Abusive`, and the earlier two are unchanged.
+- Step 5: the post returns to the member Commons **and** its stored reason is cleared — when it next
+  appears in the list it carries no reason text. A visible post must never show a standing accusation.
+- Step 6: it is hidden again with whatever reason the picker currently holds.
+- Check the audit log: each real transition carries `previousStatus`, `newStatus`, and `reason`. Never
+  the post body.
+
+**Result:** web ☐
+
+---
+
+### FD-A18 — Moderate by member
+**Role:** admin | **Surface:** web
+
+**Precondition:** At least two members have posted in the Commons, one of them several times.
+
+**Steps:**
+1. Open `/admin/commons` and switch to the **By member** tab.
+2. Read the ordering and the per-member counts.
+3. Click the member with the most posts.
+4. Read the banner above the list, then hide one of their posts.
+5. Click **Back to members**.
+
+**Expected:**
+- Step 2: members are ordered by how much they have posted, each showing post count, reply count, how
+  many are already hidden, and first/last posted dates. **No post bodies appear on this tab** — deciding
+  whether to look at someone should not require reading everything they wrote.
+- Step 3/4: the list narrows to that member's entire footprint, posts and replies, and the banner names
+  them with their counts. Hiding works exactly as on the Recent tab and the view stays on that member
+  afterwards — it must not bounce you back to the full list mid-sweep.
+- Step 5: the roster is still populated (a single-member request returns an empty roster by design;
+  the surface must not blank the list you came from).
+- There is deliberately **no bulk "hide everything from this member"** control. Confirm it is absent:
+  one click clearing a member's whole history on a wrong hunch is the failure being avoided.
+
+**Result:** web ☐
+
+---
+
 ### FD-A14 — Hide a Commons post, then put it back
 **Role:** admin + member | **Surface:** web
 

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
-import { countHiddenCommonsRows, listCommonsModerationQueue } from 'lib/feed/moderation';
+import { countHiddenCommonsRows, listCommonsAuthors, listCommonsModerationQueue } from 'lib/feed/moderation';
 import { CommonsModerationAdminShell } from '@/components/feed-announcements/commons-moderation-admin-shell';
 
 export const dynamic = 'force-dynamic';
@@ -16,10 +16,11 @@ export default async function CommonsModerationAdminPage() {
 
   // Failing soft on the read: an empty queue with a working page beats a 500 on the admin surface,
   // and the page's own reload button retries.
-  const [rows, hidden] = await Promise.all([
+  const [rows, hidden, authors] = await Promise.all([
     listCommonsModerationQueue({ limit: 50 }).catch(() => []),
     countHiddenCommonsRows().catch(() => ({ posts: 0, replies: 0 })),
+    listCommonsAuthors(50).catch(() => []),
   ]);
 
-  return <CommonsModerationAdminShell rows={rows} hidden={hidden} />;
+  return <CommonsModerationAdminShell rows={rows} hidden={hidden} authors={authors} />;
 }

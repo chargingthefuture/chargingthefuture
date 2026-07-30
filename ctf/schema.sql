@@ -1096,6 +1096,14 @@ ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS author_usern
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'general';
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+-- Why a row was hidden, who hid it, and when (Commons moderation, 2026-07-29). Nullable and null on
+-- every pre-existing row: these are only stamped when a moderator acts. The reason matters because the
+-- day-to-day moderation problem is volume of OFF-TOPIC content — Quora-style discussion that is not
+-- about the economy — so a sweep needs to record which judgement was applied, not just that something
+-- was taken down. Reason is a short code from FEED_MODERATION_REASON, never free text about a member.
+ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
+ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
+ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_count INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_to_post_id UUID REFERENCES feed_community_posts(id) ON DELETE SET NULL;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -1115,6 +1123,14 @@ ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS post_id UU
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS author_user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+-- Why a row was hidden, who hid it, and when (Commons moderation, 2026-07-29). Nullable and null on
+-- every pre-existing row: these are only stamped when a moderator acts. The reason matters because the
+-- day-to-day moderation problem is volume of OFF-TOPIC content — Quora-style discussion that is not
+-- about the economy — so a sweep needs to record which judgement was applied, not just that something
+-- was taken down. Reason is a short code from FEED_MODERATION_REASON, never free text about a member.
+ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
+ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
+ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
