@@ -246,6 +246,16 @@ Domain tables:
 18. `feed_community_replies`
 19. `feed_hub_last_seen` — per-member "last seen" marker for the Hub home channel (`user_id TEXT PRIMARY KEY`, `last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`). Drives the single "New messages" divider in the Commons chat. Read on entry, updated to now after the member has viewed the chat. Best-effort: a read/write failure never breaks the chat.
 20. `feed_community_post_reactions` — emoji reactions on Commons community posts, stored in our own database (not Stream). Columns `id UUID PK DEFAULT gen_random_uuid()`, `post_id UUID NOT NULL REFERENCES feed_community_posts(id) ON DELETE CASCADE`, `user_id TEXT NOT NULL`, `emoji TEXT NOT NULL`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`. `idx_feed_community_post_reactions_unique (post_id, user_id, emoji)` makes a reaction a toggle (one of each emoji per member per post); `idx_feed_community_post_reactions_post (post_id)` serves the batched aggregate read. The emoji is constrained to the fixed quick set (`FEED_REACTION_EMOJIS`) at the application layer.
+21. `feed_commons_guidance_milestones` — one row per Commons post-count milestone at which the
+    automatic guidance notice was published. Columns `id UUID PK DEFAULT gen_random_uuid()`,
+    `milestone_count INTEGER NOT NULL UNIQUE`, `announcement_id UUID NULL`,
+    `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`. **The UNIQUE constraint on `milestone_count` is
+    the concurrency control, not just a hygiene index**: two members posting at the same moment across
+    the boundary both compute the same count and both try to claim it, and `ON CONFLICT DO NOTHING`
+    lets exactly one win, so the notice is never published twice for one milestone. `announcement_id`
+    is stamped after the notice is created so an admin can find the exact announcement a milestone
+    produced. **Holds no member data** — no user ids, no content — so it is retained on account
+    deletion and is not in the deletion registry.
 
 **Reserved (schema-only, no runtime reader/writer yet):**
 
@@ -536,6 +546,35 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ### Change Log
 
+- 2026-07-30: **The Commons states its own purpose every 50 posts (owner decision).** A newcomer now
+  meets the rule without anyone having to say it to them personally, and a regular is reminded without
+  being singled out. `FEED_COMMONS_GUIDANCE_INTERVAL = 50`; the copy lives in
+  `lib/feed/commons-guidance.ts`. On every community post, `maybePostCommonsGuidance` counts the posts
+  and, when the total lands exactly on a multiple of 50, claims the milestone and publishes an
+  announcement — which renders inline in the Commons stream, so it appears where the behaviour is.
+  Attributed to a reserved actor (`FEED_SYSTEM_ACTOR_ID`), never to a member and specifically not to
+  the owner, who should not appear to be personally telling people off every 50 posts.
+  - **Inside the post's transaction, on purpose.** The count, the milestone claim, and the notice all
+    commit with the post that triggered them. Running it after commit would let a rolled-back post
+    leave a claimed milestone behind, silently suppressing that notice forever. It still swallows its
+    own errors — a failed reminder must never cost a member their post.
+  - Published immediately rather than as a draft: nobody is going to hand-publish this every 50 posts,
+    and a draft that never ships is the same as no notice.
+  - Counts hidden posts too. The milestone means "the Commons has seen this much traffic"; moderating
+    after the fact should not shift where the next notice falls.
+  - **The copy encodes a deliberate split the owner named, and it must not be "tidied" away.** The
+    public rule is TOPIC, not character: content is removed for repeatedly being off topic, never for
+    who somebody is suspected of being. That is the gentler framing and also the only safe one — an
+    accusation posted to a whole community cannot be retracted, and being wrong about it lands on a
+    survivor. The reason underneath is stated without softening, because it is the actual point: an
+    open room with no subject is where traffickers hide, they blend into general conversation and use
+    it to find people, and there is no tolerance for that here. The notice says this plainly while
+    accusing nobody in particular. The internal `suspected_bad_actor` moderation reason stays
+    admin-only and is never shown to a member — consistent with the same split.
+  - **Weavers of the Commons post without restriction**, and the notice says so. That is the incentive
+    doing the work the rule cannot: the way out of the topic limit is to contribute, not to argue.
+  - New table `feed_commons_guidance_milestones` (see §4.2 item 21). **Parity:** web +
+    mobile-responsive; Android out of scope (web-only per rule 105).
 - 2026-07-29 (later): **Moderation reason + moderating by member (owner: the real problem is volume of
   off-topic Quora discussion, and most of it is a handful of accounts).** Hide/restore alone did not fit
   a repeatable sweep. Added `moderation_reason`, `moderated_by_user_id`, `moderated_at` (all `TEXT`/

@@ -606,6 +606,66 @@
 
 ---
 
+### FD-A19 — Commons guidance notice posts itself every 50 posts
+**Role:** admin + member | **Surface:** web
+
+**Precondition:** You can read the total row count of `feed_community_posts`. Pick a starting count
+where you can reach the next multiple of 50 without posting hundreds of times — or temporarily lower
+`FEED_COMMONS_GUIDANCE_INTERVAL` in a local build to make this practical.
+
+**Steps:**
+1. Note `SELECT COUNT(*) FROM feed_community_posts`.
+2. Post in the Commons until the total lands exactly on a multiple of the interval.
+3. Read the Commons stream at that point.
+4. Post one more time and read the stream again.
+5. Check `SELECT milestone_count, announcement_id FROM feed_commons_guidance_milestones`.
+6. Hide one of the posts you made, then post again up to the next multiple.
+
+**Expected:**
+- Step 3: an announcement titled **What the Commons is for** appears inline in the Commons stream. It
+  is attributed to the system, **not** to you and not to any member — nobody should look like they are
+  personally telling people off every 50 posts.
+- Step 4: no second copy. The notice fires on the milestone itself, not on every post past it.
+- Step 5: one row for that milestone, with `announcement_id` filled in, so the exact announcement a
+  milestone produced can be found later.
+- Step 6: hidden posts still count. The milestone means "the Commons has seen this much traffic";
+  moderating after the fact must not shift where the next notice falls.
+- Read the copy and check three things are present: what the app is for; that content is removed for
+  **repeatedly being off topic** (never for who someone is suspected of being); and that **Weavers of
+  the Commons post without restriction**. If a future edit drops the last one, the notice becomes a rule
+  with no way out of it — that is the check.
+
+**Result:** web ☐
+
+---
+
+### FD-A20 — The notice cannot post twice for one milestone
+**Role:** admin | **Surface:** web
+
+**Precondition:** As FD-A19, sitting one post below a multiple of the interval.
+
+**Steps:**
+1. With two browser sessions signed in as two different members, submit a Commons post from both at
+   essentially the same moment — the two requests should straddle the milestone boundary.
+2. Read the Commons stream.
+3. Check `SELECT COUNT(*) FROM feed_commons_guidance_milestones WHERE milestone_count = <the multiple>`.
+4. Now force a failure: post while the database is briefly unreachable, or otherwise cause the post to
+   fail. Then post successfully up to the same milestone.
+
+**Expected:**
+- Step 2/3: exactly **one** notice and exactly **one** milestone row. The UNIQUE constraint on
+  `milestone_count` is what guarantees this — both requests compute the same count and try to claim it,
+  and only one insert survives.
+- Step 4: the milestone is still served. A post that rolled back must not leave a claimed milestone
+  behind, because that would silently suppress that notice forever. This is why the claim shares the
+  post's transaction rather than running after it commits.
+- In every case, a failure in the notice must never cost a member their post. If the notice cannot be
+  published, the post still succeeds.
+
+**Result:** web ☐
+
+---
+
 ### FD-A17 — Off-topic sweep: reason is recorded, and restoring clears it
 **Role:** admin | **Surface:** web
 

@@ -68,6 +68,14 @@ export function isFeedModerationReason(value: unknown): value is FeedModerationR
   return typeof value === 'string' && (FEED_MODERATION_REASONS as readonly string[]).includes(value);
 }
 
+// How often the automatic Commons guidance notice goes out, counted in community posts (owner
+// decision, 2026-07-30: every 50). Frequent enough that a newcomer meets the rule early, rare enough
+// that a regular is not lectured. A reserved actor id owns the notice so it is never attributed to a
+// member — including the owner, who should not appear to be personally telling people off every 50
+// posts.
+export const FEED_COMMONS_GUIDANCE_INTERVAL = 50;
+export const FEED_SYSTEM_ACTOR_ID = 'system:commons-guidance';
+
 export const FEED_DEFAULT_PAGE = 1;
 export const FEED_DEFAULT_PAGE_SIZE = 20;
 export const FEED_MAX_PAGE_SIZE = 100;

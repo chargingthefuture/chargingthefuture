@@ -1129,6 +1129,23 @@ ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderation
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
+
+-- Commons guidance announcements, posted automatically every Nth community post (owner decision,
+-- 2026-07-30). One row per milestone crossed, and `milestone_count` is UNIQUE — that uniqueness IS the
+-- idempotency: two members posting at the same moment across the boundary cannot both publish the
+-- notice, because the second insert loses the ON CONFLICT DO NOTHING race and skips.
+CREATE TABLE IF NOT EXISTS feed_commons_guidance_milestones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  milestone_count INTEGER NOT NULL UNIQUE,
+  announcement_id UUID NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS milestone_count INTEGER;
+ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS announcement_id UUID NULL;
+ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS feed_commons_guidance_milestones_count_key
+  ON feed_commons_guidance_milestones (milestone_count);
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
