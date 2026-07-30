@@ -186,14 +186,20 @@ async function loadProfileProposedSkills(client: PoolClient, profileId: string):
   return result.rows.map((row) => row.skill_label);
 }
 
-async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Promise<DirectoryProfile> {
-  const skills = await loadProfileSkills(client, row.id);
-  const nominatedPending = await loadProfilePendingSkills(client, row.id);
-  const selfProposed = await loadProfileProposedSkills(client, row.id);
+// Collapse an optional/nullable column to `value ?? null` in one place, so a row mapper can hand off
+// each `?? null` field to a call instead of spelling out the operator (which each cost complexity).
+function nullable<T>(value: T | null | undefined): T | null {
+  return value ?? null;
+}
 
-  // pendingSkills is the de-duplicated display set: SkillsHunt nominations + the member's own
-  // free-text additions, minus any that already match a selected taxonomy skill name (so a chip
-  // never appears twice). proposedSkills keeps only the self-added labels for the edit form.
+// pendingSkills is the de-duplicated display set: SkillsHunt nominations + the member's own
+// free-text additions, minus any that already match a selected taxonomy skill name (so a chip
+// never appears twice).
+function buildPendingSkills(
+  skills: DirectoryProfile['skills'],
+  nominatedPending: string[],
+  selfProposed: string[],
+): string[] {
   const taxonomyNames = new Set(skills.map((s) => s.name.trim().toLowerCase()));
   const seen = new Set<string>();
   const pendingSkills: string[] = [];
@@ -205,12 +211,24 @@ async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Prom
     seen.add(key);
     pendingSkills.push(label);
   }
+  return pendingSkills;
+}
 
+async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Promise<DirectoryProfile> {
+  const skills = await loadProfileSkills(client, row.id);
+  const nominatedPending = await loadProfilePendingSkills(client, row.id);
+  const selfProposed = await loadProfileProposedSkills(client, row.id);
+
+  // pendingSkills is the de-duplicated display set (see buildPendingSkills). proposedSkills keeps
+  // only the self-added labels for the edit form.
+  const pendingSkills = buildPendingSkills(skills, nominatedPending, selfProposed);
+
+  // Each nullable() call is the former `row.x ?? null` — an absent column maps to null.
   return {
     id: row.id,
     claimedByUserId: row.claimed_by_user_id,
     firstName: row.first_name ?? '',
-    lastName: row.last_name ?? null,
+    lastName: nullable(row.last_name),
     headline: row.headline,
     bio: row.bio,
     profileUrl: row.profile_url,
@@ -223,17 +241,17 @@ async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Prom
     proposedSkills: selfProposed,
     isActive: row.is_active,
     source: row.source ?? 'admin',
-    invitedByUsername: row.invited_by_username ?? null,
-    unclaimedHandle: row.unclaimed_handle ?? null,
+    invitedByUsername: nullable(row.invited_by_username),
+    unclaimedHandle: nullable(row.unclaimed_handle),
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
-    venmoAddress: row.venmo_address ?? null,
-    moneroAddress: row.monero_address ?? null,
-    bitcoinAddress: row.bitcoin_address ?? null,
-    serviceCreditsAddress: row.service_credits_address ?? null,
-    city: row.city ?? null,
-    state: row.state ?? null,
-    country: row.country ?? null,
+    venmoAddress: nullable(row.venmo_address),
+    moneroAddress: nullable(row.monero_address),
+    bitcoinAddress: nullable(row.bitcoin_address),
+    serviceCreditsAddress: nullable(row.service_credits_address),
+    city: nullable(row.city),
+    state: nullable(row.state),
+    country: nullable(row.country),
   };
 }
 
@@ -263,6 +281,34 @@ export function parsePaginationParams(url: string): { page: number; pageSize: nu
   return { page, pageSize };
 }
 
+// An optional text field is valid when it is absent/empty or within its length cap.
+function isWithinOptionalLength(value: string | null, max: number): boolean {
+  return !value || value.length <= max;
+}
+
+// A required text field must be present (non-empty after normalization) and within its length cap.
+function isWithinRequiredLength(value: string, max: number): boolean {
+  return value.length > 0 && value.length <= max;
+}
+
+// skillIds, when present, must be an array (the ids themselves are validated later against the taxonomy).
+function isValidSkillIds(skillIds: DirectoryProfileInput['skillIds']): boolean {
+  return !skillIds || Array.isArray(skillIds);
+}
+
+// proposedSkills, when present, must be an array within the count cap and each label within
+// the per-label length cap (measured after whitespace normalization).
+function isValidProposedSkills(proposedSkills: DirectoryProfileInput['proposedSkills']): boolean {
+  return (
+    !proposedSkills ||
+    (Array.isArray(proposedSkills) &&
+      proposedSkills.length <= DIRECTORY_MAX_PROPOSED_SKILLS &&
+      proposedSkills.every(
+        (label) => typeof label === 'string' && normalizeText(label).length <= DIRECTORY_MAX_PROPOSED_SKILL_LENGTH,
+      ))
+  );
+}
+
 export function validateProfileInput(input: DirectoryProfileInput): boolean {
   const firstName = normalizeText(input.firstName ?? '');
   const lastName = normalizeNullableText(input.lastName);
@@ -278,23 +324,16 @@ export function validateProfileInput(input: DirectoryProfileInput): boolean {
   const country = normalizeText(input.country ?? '');
 
   const checks = [
-    firstName.length > 0 && firstName.length <= DIRECTORY_MAX_NAME_LENGTH,
-    !lastName || lastName.length <= DIRECTORY_MAX_NAME_LENGTH,
-    !headline || headline.length <= DIRECTORY_MAX_HEADLINE_LENGTH,
-    !bio || bio.length <= DIRECTORY_MAX_BIO_LENGTH,
-    !profileUrl || profileUrl.length <= DIRECTORY_MAX_URL_LENGTH,
-    !city || city.length <= DIRECTORY_MAX_LOCATION_LENGTH,
-    !state || state.length <= DIRECTORY_MAX_LOCATION_LENGTH,
-    country.length > 0 && country.length <= DIRECTORY_MAX_LOCATION_LENGTH,
-    !input.skillIds || Array.isArray(input.skillIds),
-    // proposedSkills, when present, must be an array within the count cap and each label within
-    // the per-label length cap (measured after whitespace normalization).
-    !input.proposedSkills ||
-      (Array.isArray(input.proposedSkills) &&
-        input.proposedSkills.length <= DIRECTORY_MAX_PROPOSED_SKILLS &&
-        input.proposedSkills.every(
-          (label) => typeof label === 'string' && normalizeText(label).length <= DIRECTORY_MAX_PROPOSED_SKILL_LENGTH,
-        )),
+    isWithinRequiredLength(firstName, DIRECTORY_MAX_NAME_LENGTH),
+    isWithinOptionalLength(lastName, DIRECTORY_MAX_NAME_LENGTH),
+    isWithinOptionalLength(headline, DIRECTORY_MAX_HEADLINE_LENGTH),
+    isWithinOptionalLength(bio, DIRECTORY_MAX_BIO_LENGTH),
+    isWithinOptionalLength(profileUrl, DIRECTORY_MAX_URL_LENGTH),
+    isWithinOptionalLength(city, DIRECTORY_MAX_LOCATION_LENGTH),
+    isWithinOptionalLength(state, DIRECTORY_MAX_LOCATION_LENGTH),
+    isWithinRequiredLength(country, DIRECTORY_MAX_LOCATION_LENGTH),
+    isValidSkillIds(input.skillIds),
+    isValidProposedSkills(input.proposedSkills),
   ];
 
   return checks.every(Boolean);
@@ -609,6 +648,25 @@ export type UpsertOwnProfileResult = {
   quoraUrlKept: boolean;
 };
 
+// The Quora profile URL is the only social proof and can never be emptied. A member may replace it
+// with a NEW valid Quora URL — common and legitimate (Quora sometimes deletes an account and the
+// member has to re-profile) — but an empty or invalid submission KEEPS the previous URL rather than
+// clearing it, so an approved member cannot remove it to shed their identity. A first-time profile
+// must supply a valid one. Returns the resolved URL and whether the previous one was kept.
+function resolveQuoraProfileUrl(
+  submittedProfileUrl: string | null,
+  previousUrl: string | null,
+): { profileUrl: string; quoraUrlKept: boolean } {
+  const submittedNormalized = normalizeQuoraProfileUrl(submittedProfileUrl);
+  if (submittedNormalized) {
+    return { profileUrl: submittedNormalized, quoraUrlKept: false };
+  }
+  if (previousUrl && previousUrl.trim().length > 0) {
+    return { profileUrl: previousUrl, quoraUrlKept: submittedProfileUrl !== previousUrl };
+  }
+  throw new Error('directory_quora_url_required');
+}
+
 export async function upsertOwnProfile(userId: string, input: DirectoryProfileInput): Promise<UpsertOwnProfileResult> {
   return withDbTransaction(async (client) => {
     const firstName = normalizeText(input.firstName);
@@ -638,23 +696,11 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
     let profileId = existing.rows[0]?.id;
     const previousUrl = existing.rows[0]?.profile_url ?? null;
 
-    // The Quora profile URL is the only social proof and can never be emptied. A member may replace it
-    // with a NEW valid Quora URL — common and legitimate (Quora sometimes deletes an account and the
-    // member has to re-profile) — but an empty or invalid submission KEEPS the previous URL rather than
-    // clearing it, so an approved member cannot remove it to shed their identity. A first-time profile
-    // must supply a valid one. Changing the URL is not itself a red flag; the history table records the
-    // change for a human to review, it is never auto-penalized.
-    const submittedNormalized = normalizeQuoraProfileUrl(submittedProfileUrl);
-    let profileUrl: string;
-    let quoraUrlKept = false;
-    if (submittedNormalized) {
-      profileUrl = submittedNormalized;
-    } else if (previousUrl && previousUrl.trim().length > 0) {
-      profileUrl = previousUrl;
-      quoraUrlKept = submittedProfileUrl !== previousUrl;
-    } else {
-      throw new Error('directory_quora_url_required');
-    }
+    // Resolve the Quora URL (see resolveQuoraProfileUrl): a valid submission replaces it, an
+    // empty/invalid one keeps the previous URL, and a first-time profile with neither throws.
+    // Changing the URL is not itself a red flag; the history table records the change for a human to
+    // review, it is never auto-penalized.
+    const { profileUrl, quoraUrlKept } = resolveQuoraProfileUrl(submittedProfileUrl, previousUrl);
 
     // A Quora URL taken down at the person's request stays blocked until an admin lifts it — this
     // holds even for a member editing their own profile, so a suppressed URL cannot slip back in.
@@ -1392,6 +1438,13 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
   });
 }
 
+// A field the caller left out (undefined) is preserved as-is from the current row; a provided value
+// (including an explicit null) is normalized. Lets the admin edit form omit member-owned payment
+// addresses (and older clients omit location) without nulling them.
+function preserveIfUndefined(value: string | null | undefined, current: string | null): string | null {
+  return value === undefined ? current : normalizeNullableText(value);
+}
+
 export async function updateAdminProfile(
   actorId: string,
   profileId: string,
@@ -1432,14 +1485,13 @@ export async function updateAdminProfile(
     const sectorId = input.sectorId ?? null;
     const jobTitleId = input.jobTitleId ?? null;
     const skillIds = normalizeSkillIds(input.skillIds);
-    const venmoAddress = input.venmoAddress === undefined ? current.venmo_address : normalizeNullableText(input.venmoAddress);
-    const moneroAddress = input.moneroAddress === undefined ? current.monero_address : normalizeNullableText(input.moneroAddress);
-    const bitcoinAddress = input.bitcoinAddress === undefined ? current.bitcoin_address : normalizeNullableText(input.bitcoinAddress);
-    const serviceCreditsAddress =
-      input.serviceCreditsAddress === undefined ? current.service_credits_address : normalizeNullableText(input.serviceCreditsAddress);
-    const city = input.city === undefined ? current.city : normalizeNullableText(input.city);
-    const state = input.state === undefined ? current.state : normalizeNullableText(input.state);
-    const country = input.country === undefined ? current.country : normalizeNullableText(input.country);
+    const venmoAddress = preserveIfUndefined(input.venmoAddress, current.venmo_address);
+    const moneroAddress = preserveIfUndefined(input.moneroAddress, current.monero_address);
+    const bitcoinAddress = preserveIfUndefined(input.bitcoinAddress, current.bitcoin_address);
+    const serviceCreditsAddress = preserveIfUndefined(input.serviceCreditsAddress, current.service_credits_address);
+    const city = preserveIfUndefined(input.city, current.city);
+    const state = preserveIfUndefined(input.state, current.state);
+    const country = preserveIfUndefined(input.country, current.country);
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
 
