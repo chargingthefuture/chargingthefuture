@@ -262,6 +262,152 @@ export async function listWalletLedgerEntries(userId: string, limit = 50): Promi
   }));
 }
 
+// A platform restriction at 'all' or 'trading' scope blocks spending on either rail (trust & safety).
+async function assertSenderNotRestricted(client: PoolClient, senderUserId: string): Promise<void> {
+  const restriction = await client.query<{ is_restricted: boolean; restriction_scope: string }>(
+    `SELECT is_restricted, restriction_scope FROM account_restrictions WHERE user_id = $1 LIMIT 1`,
+    [senderUserId],
+  );
+  const restrictionRow = restriction.rows[0];
+  if (restrictionRow?.is_restricted && (restrictionRow.restriction_scope === 'all' || restrictionRow.restriction_scope === 'trading')) {
+    throw new Error('account_restricted');
+  }
+}
+
+// On the mutual-credit rail the sender may go negative, but only down to -(credit limit). On the
+// balance rail the floor is 0 (the prior behaviour). The buyer going negative and the seller going
+// positive net to zero, so mutual-credit issuance never inflates total supply.
+async function resolveTransferCreditFloor(
+  client: PoolClient,
+  rail: 'balance' | 'mutual_credit',
+  senderUserId: string,
+): Promise<number> {
+  if (rail !== 'mutual_credit') {
+    return 0;
+  }
+  const mutualCredit = readMutualCreditPolicy(await readTreasuryPolicy(client));
+  if (!mutualCredit.enabled) {
+    throw new Error('mutual_credit_disabled');
+  }
+  // Flat, equal line: every member's limit is the same policy defaultLimit unless an admin has set a
+  // per-account override. No behavioural score gates spending — there is no credit or social score on
+  // this platform; abuse is handled by small caps, the wallet freeze, and disputes, not by ranking.
+  return -(await readCreditLimit(client, senderUserId, mutualCredit.defaultLimit));
+}
+
+// The idempotency replay for a transfer whose row already exists (ON CONFLICT DO NOTHING returned no
+// row): re-read the completed transfer plus any escrow hold and outbox row, and rebuild the original
+// response so a retry sees the first call's result rather than re-validating changed wallet state.
+async function readExistingTransferResponse(
+  client: PoolClient,
+  senderUserId: string,
+  idempotencyKey: string,
+  rail: 'balance' | 'mutual_credit',
+) {
+  const existingTransfer = await client.query<{
+    id: string;
+    sender_user_id: string;
+    recipient_user_id: string;
+    amount: string;
+    status: 'pending' | 'completed' | 'cancelled' | 'disputed';
+  }>(
+    `SELECT id::text, sender_user_id, recipient_user_id, amount::text, status
+     FROM service_credits_transfers
+     WHERE sender_user_id = $1 AND idempotency_key = $2
+     LIMIT 1`,
+    [senderUserId, idempotencyKey],
+  );
+
+  if (!existingTransfer.rows[0]) {
+    throw new Error('transfer_conflict');
+  }
+
+  const existingEscrow = await client.query<{ id: string }>(
+    `SELECT id::text
+     FROM service_credits_escrow_holds
+     WHERE transfer_id = $1 AND status = 'held'
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [existingTransfer.rows[0].id],
+  );
+
+  const existingOutbox = await client.query<{ provider_transaction_id: string | null }>(
+    `SELECT provider_transaction_id
+     FROM service_credits_adapter_outbox
+     WHERE command_name = 'transfer.create' AND idempotency_key = $1
+     LIMIT 1`,
+    [idempotencyKey],
+  );
+
+  return {
+    id: existingTransfer.rows[0].id,
+    senderUserId: existingTransfer.rows[0].sender_user_id,
+    recipientUserId: existingTransfer.rows[0].recipient_user_id,
+    amount: Number(existingTransfer.rows[0].amount),
+    status: existingTransfer.rows[0].status,
+    escrowHoldId: existingEscrow.rows[0]?.id ?? null,
+    externalLedgerTransactionId: existingOutbox.rows[0]?.provider_transaction_id ?? null,
+    rail,
+  };
+}
+
+// Mirror the transfer to the external ledger and record the outcome in the durable outbox. Returns the
+// provider transaction id on success, or null when Formance is unavailable (a 'queued' outbox row is
+// left for the reconciliation worker; the authoritative local ledger write in the caller is not rolled
+// back).
+async function postTransferExternal(
+  client: PoolClient,
+  args: {
+    senderUserId: string;
+    recipientUserId: string;
+    amount: number;
+    idempotencyKey: string;
+    transferId: string;
+    originPlugin: string;
+    reasonCode: string;
+  },
+): Promise<string | null> {
+  try {
+    const externalLedger = await postTransferToFormance({
+      senderUserId: args.senderUserId,
+      recipientUserId: args.recipientUserId,
+      amount: args.amount,
+      idempotencyKey: args.idempotencyKey,
+    });
+    await writeAdapterOutbox(client, {
+      commandName: 'transfer.create',
+      idempotencyKey: args.idempotencyKey,
+      status: 'delivered',
+      payload: {
+        transferId: args.transferId,
+        senderUserId: args.senderUserId,
+        recipientUserId: args.recipientUserId,
+        amount: args.amount,
+        originPlugin: args.originPlugin,
+        reasonCode: args.reasonCode,
+      },
+      providerTransactionId: externalLedger.transactionId,
+    });
+    return externalLedger.transactionId;
+  } catch (error) {
+    await writeAdapterOutbox(client, {
+      commandName: 'transfer.create',
+      idempotencyKey: args.idempotencyKey,
+      status: 'queued',
+      payload: {
+        transferId: args.transferId,
+        senderUserId: args.senderUserId,
+        recipientUserId: args.recipientUserId,
+        amount: args.amount,
+      },
+      lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
+    });
+    // Formance unavailable — the authoritative local ledger write below still completes the transfer,
+    // and a durable 'queued' outbox row lets the reconciliation worker mirror it later. Do not roll back.
+    return null;
+  }
+}
+
 export async function createTransfer(input: {
   senderUserId: string;
   recipientUserId: string;
@@ -274,6 +420,8 @@ export async function createTransfer(input: {
   ensurePositiveAmount(input.amount);
 
   const rail = input.rail === 'mutual_credit' ? 'mutual_credit' : 'balance';
+  const originPlugin = input.originPlugin ?? 'service-credits';
+  const reasonCode = input.reasonCode ?? 'transfer';
 
   return withDbTransaction(async (client) => {
     // Dedup before any freeze/balance/limit check, so a valid retry returns the original transfer (with
@@ -304,32 +452,11 @@ export async function createTransfer(input: {
       [input.senderUserId],
     );
 
-    // A platform restriction at 'all' or 'trading' scope blocks spending on either rail (trust & safety).
-    const restriction = await client.query<{ is_restricted: boolean; restriction_scope: string }>(
-      `SELECT is_restricted, restriction_scope FROM account_restrictions WHERE user_id = $1 LIMIT 1`,
-      [input.senderUserId],
-    );
-    const restrictionRow = restriction.rows[0];
-    if (restrictionRow?.is_restricted && (restrictionRow.restriction_scope === 'all' || restrictionRow.restriction_scope === 'trading')) {
-      throw new Error('account_restricted');
-    }
+    await assertSenderNotRestricted(client, input.senderUserId);
 
     const senderBalance = Number(balanceResult.rows[0]?.available_balance ?? '0');
 
-    // On the mutual-credit rail the sender may go negative, but only down to -(credit limit). On the
-    // balance rail the floor is 0 (the prior behaviour). The buyer going negative and the seller going
-    // positive net to zero, so mutual-credit issuance never inflates total supply.
-    let creditFloor = 0;
-    if (rail === 'mutual_credit') {
-      const mutualCredit = readMutualCreditPolicy(await readTreasuryPolicy(client));
-      if (!mutualCredit.enabled) {
-        throw new Error('mutual_credit_disabled');
-      }
-      // Flat, equal line: every member's limit is the same policy defaultLimit unless an admin has set a
-      // per-account override. No behavioural score gates spending — there is no credit or social score on
-      // this platform; abuse is handled by small caps, the wallet freeze, and disputes, not by ranking.
-      creditFloor = -(await readCreditLimit(client, input.senderUserId, mutualCredit.defaultLimit));
-    }
+    const creditFloor = await resolveTransferCreditFloor(client, rail, input.senderUserId);
     if (senderBalance - input.amount < creditFloor) {
       throw new Error(rail === 'mutual_credit' ? 'credit_limit_exceeded' : 'insufficient_balance');
     }
@@ -353,98 +480,24 @@ export async function createTransfer(input: {
         input.recipientUserId,
         input.amount,
         input.idempotencyKey,
-        input.originPlugin ?? 'service-credits',
-        input.reasonCode ?? 'transfer',
+        originPlugin,
+        reasonCode,
       ],
     );
 
     if (!insertedTransfer.rows[0]) {
-      const existingTransfer = await client.query<{
-        id: string;
-        sender_user_id: string;
-        recipient_user_id: string;
-        amount: string;
-        status: 'pending' | 'completed' | 'cancelled' | 'disputed';
-      }>(
-        `SELECT id::text, sender_user_id, recipient_user_id, amount::text, status
-         FROM service_credits_transfers
-         WHERE sender_user_id = $1 AND idempotency_key = $2
-         LIMIT 1`,
-        [input.senderUserId, input.idempotencyKey],
-      );
-
-      if (!existingTransfer.rows[0]) {
-        throw new Error('transfer_conflict');
-      }
-
-      const existingEscrow = await client.query<{ id: string }>(
-        `SELECT id::text
-         FROM service_credits_escrow_holds
-         WHERE transfer_id = $1 AND status = 'held'
-         ORDER BY created_at DESC
-         LIMIT 1`,
-        [existingTransfer.rows[0].id],
-      );
-
-      const existingOutbox = await client.query<{ provider_transaction_id: string | null }>(
-        `SELECT provider_transaction_id
-         FROM service_credits_adapter_outbox
-         WHERE command_name = 'transfer.create' AND idempotency_key = $1
-         LIMIT 1`,
-        [input.idempotencyKey],
-      );
-
-      return {
-        id: existingTransfer.rows[0].id,
-        senderUserId: existingTransfer.rows[0].sender_user_id,
-        recipientUserId: existingTransfer.rows[0].recipient_user_id,
-        amount: Number(existingTransfer.rows[0].amount),
-        status: existingTransfer.rows[0].status,
-        escrowHoldId: existingEscrow.rows[0]?.id ?? null,
-        externalLedgerTransactionId: existingOutbox.rows[0]?.provider_transaction_id ?? null,
-        rail,
-      };
+      return readExistingTransferResponse(client, input.senderUserId, input.idempotencyKey, rail);
     }
 
-    let externalLedgerTransactionId: string | null = null;
-    try {
-      const externalLedger = await postTransferToFormance({
-        senderUserId: input.senderUserId,
-        recipientUserId: input.recipientUserId,
-        amount: input.amount,
-        idempotencyKey: input.idempotencyKey,
-      });
-      externalLedgerTransactionId = externalLedger.transactionId;
-      await writeAdapterOutbox(client, {
-        commandName: 'transfer.create',
-        idempotencyKey: input.idempotencyKey,
-        status: 'delivered',
-        payload: {
-          transferId,
-          senderUserId: input.senderUserId,
-          recipientUserId: input.recipientUserId,
-          amount: input.amount,
-          originPlugin: input.originPlugin ?? 'service-credits',
-          reasonCode: input.reasonCode ?? 'transfer',
-        },
-        providerTransactionId: externalLedgerTransactionId,
-      });
-    } catch (error) {
-      await writeAdapterOutbox(client, {
-        commandName: 'transfer.create',
-        idempotencyKey: input.idempotencyKey,
-        status: 'queued',
-        payload: {
-          transferId,
-          senderUserId: input.senderUserId,
-          recipientUserId: input.recipientUserId,
-          amount: input.amount,
-        },
-        lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
-      });
-      // Formance unavailable — the authoritative local ledger write below still completes the transfer,
-      // and a durable 'queued' outbox row lets the reconciliation worker mirror it later. Do not roll back.
-    }
+    const externalLedgerTransactionId = await postTransferExternal(client, {
+      senderUserId: input.senderUserId,
+      recipientUserId: input.recipientUserId,
+      amount: input.amount,
+      idempotencyKey: input.idempotencyKey,
+      transferId,
+      originPlugin,
+      reasonCode,
+    });
 
     // Deliver immediately: debit the sender and credit the recipient in one step (no escrow) so the
     // recipient actually receives the credits. Mirrors collectTreasuryFee's wallet -> wallet move; total
@@ -1347,6 +1400,273 @@ export async function applyDisputeAdjustment(input: {
   });
 }
 
+// Validate the deletion request timestamp and enforce the reclaim cooling-off window. Throws
+// 'invalid_payload' for an unparseable timestamp and 'reclaim_window_not_elapsed' before the window
+// closes.
+function assertReclaimEligible(requestedAt: string): void {
+  const requestedAtDate = new Date(requestedAt);
+  if (Number.isNaN(requestedAtDate.getTime())) {
+    throw new Error('invalid_payload');
+  }
+
+  const eligibleAt = new Date(requestedAtDate.getTime() + SERVICE_CREDITS_RECLAIM_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  if (Date.now() < eligibleAt.getTime()) {
+    throw new Error('reclaim_window_not_elapsed');
+  }
+}
+
+// A held escrow blocks reclaim: the credits are committed elsewhere and must resolve first. Throws
+// 'active_escrow_holds' when the account still has any held escrow.
+async function assertNoActiveEscrowHolds(client: PoolClient, accountId: string): Promise<void> {
+  const activeEscrows = await client.query<{ total: string }>(
+    `SELECT COUNT(*)::text AS total
+     FROM service_credits_escrow_holds
+     WHERE wallet_user_id = $1 AND status = 'held'`,
+    [accountId],
+  );
+
+  if (Number(activeEscrows.rows[0]?.total ?? '0') > 0) {
+    throw new Error('active_escrow_holds');
+  }
+}
+
+// Read the account's balances under a row lock and derive the reclaim figures: the amount transferred
+// to the treasury (any positive available balance) and the mutual-credit default the treasury absorbs
+// (any negative available balance).
+async function readReclaimWalletBalances(client: PoolClient, accountId: string) {
+  const wallet = await client.query<{ available_balance: string; escrow_balance: string }>(
+    `SELECT available_balance::text, escrow_balance::text
+     FROM service_credits_wallets
+     WHERE user_id = $1
+     FOR UPDATE`,
+    [accountId],
+  );
+
+  const availableBalance = Number(wallet.rows[0]?.available_balance ?? '0');
+  const escrowBalance = Number(wallet.rows[0]?.escrow_balance ?? '0');
+  const amountTransferred = Math.max(0, availableBalance);
+  // A negative balance at deletion is a mutual-credit default: the treasury (the community) absorbs
+  // the shortfall. Bounded by small per-account credit limits so a single default stays minor.
+  const mutualCreditDefault = availableBalance < 0 ? -availableBalance : 0;
+
+  return { availableBalance, escrowBalance, amountTransferred, mutualCreditDefault };
+}
+
+// The authoritative local writes for a reclaim. No external call has been made yet, so if any of these
+// mutations throws, the whole transaction rolls back with no orphaned external-ledger posting. The
+// Formance call and outbox write are deferred until after every local mutation (see postReclaimExternal).
+async function applyReclaimLocalWrites(
+  client: PoolClient,
+  args: {
+    accountId: string;
+    treasuryUserId: string;
+    deletionRequestId: string;
+    idempotencyKey: string;
+    availableBalance: number;
+    escrowBalance: number;
+    amountTransferred: number;
+    mutualCreditDefault: number;
+  },
+): Promise<{ transferId: string | null; tombstoneId: string }> {
+  if (args.amountTransferred > 0) {
+    await client.query(
+      `UPDATE service_credits_wallets
+       SET available_balance = available_balance - $2, updated_at = NOW()
+       WHERE user_id = $1`,
+      [args.accountId, args.amountTransferred],
+    );
+
+    await client.query(
+      `UPDATE service_credits_wallets
+       SET available_balance = available_balance + $2, updated_at = NOW()
+       WHERE user_id = $1`,
+      [args.treasuryUserId, args.amountTransferred],
+    );
+  }
+
+  if (args.mutualCreditDefault > 0) {
+    await client.query(
+      `UPDATE service_credits_wallets
+       SET available_balance = available_balance - $2, updated_at = NOW()
+       WHERE user_id = $1`,
+      [args.treasuryUserId, args.mutualCreditDefault],
+    );
+
+    await client.query(
+      `INSERT INTO service_credits_ledger_entries (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope, metadata)
+       VALUES ($1, $2, 'debit', $3, 'mutual_credit_default', $4, 'service_credits_non_gdp', $5::jsonb)`,
+      [
+        randomUUID(),
+        args.treasuryUserId,
+        args.mutualCreditDefault,
+        args.accountId,
+        JSON.stringify({ defaultedBy: args.accountId, deletionRequestId: args.deletionRequestId }),
+      ],
+    );
+  }
+
+  const transferId = args.amountTransferred > 0 ? randomUUID() : null;
+  if (transferId) {
+    await client.query(
+      `INSERT INTO service_credits_transfers (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, completed_at)
+       VALUES ($1, $2, $3, $4, 'completed', $5, NOW())
+       ON CONFLICT (sender_user_id, idempotency_key)
+       DO NOTHING`,
+      [transferId, args.accountId, args.treasuryUserId, args.amountTransferred, args.idempotencyKey],
+    );
+  }
+
+  const tombstoneId = randomUUID();
+  await client.query(
+    `INSERT INTO service_credits_wallet_tombstones
+      (id, account_id, deletion_request_id, final_available_balance, final_escrow_balance)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (account_id, deletion_request_id)
+     DO UPDATE SET final_available_balance = EXCLUDED.final_available_balance, final_escrow_balance = EXCLUDED.final_escrow_balance`,
+    [tombstoneId, args.accountId, args.deletionRequestId, args.availableBalance, args.escrowBalance],
+  );
+
+  await client.query(
+    `UPDATE service_credits_wallets
+     SET available_balance = 0, escrow_balance = 0, updated_at = NOW()
+     WHERE user_id = $1`,
+    [args.accountId],
+  );
+
+  return { transferId, tombstoneId };
+}
+
+// External ledger + durable outbox for a reclaim, AFTER every local mutation. Returns the provider
+// transaction id on success, or null when Formance is unavailable or when there is nothing to mirror.
+async function postReclaimExternal(
+  client: PoolClient,
+  args: {
+    accountId: string;
+    treasuryUserId: string;
+    deletionRequestId: string;
+    idempotencyKey: string;
+    requestId: string;
+    traceId: string;
+    amountTransferred: number;
+    mutualCreditDefault: number;
+  },
+): Promise<string | null> {
+  if (args.amountTransferred > 0) {
+    try {
+      const externalLedger = await postDeletionReclaimToFormance({
+        accountId: args.accountId,
+        treasuryUserId: args.treasuryUserId,
+        amount: args.amountTransferred,
+        deletionRequestId: args.deletionRequestId,
+        idempotencyKey: args.idempotencyKey,
+      });
+      await writeAdapterOutbox(client, {
+        commandName: 'account.deletion.reclaim.execute',
+        idempotencyKey: args.idempotencyKey,
+        status: 'delivered',
+        payload: {
+          accountId: args.accountId,
+          treasuryUserId: args.treasuryUserId,
+          amountTransferred: args.amountTransferred,
+          deletionRequestId: args.deletionRequestId,
+          requestId: args.requestId,
+          traceId: args.traceId,
+        },
+        providerTransactionId: externalLedger.transactionId,
+      });
+      return externalLedger.transactionId;
+    } catch (error) {
+      await writeAdapterOutbox(client, {
+        commandName: 'account.deletion.reclaim.execute',
+        idempotencyKey: args.idempotencyKey,
+        status: 'queued',
+        payload: {
+          accountId: args.accountId,
+          treasuryUserId: args.treasuryUserId,
+          amountTransferred: args.amountTransferred,
+          deletionRequestId: args.deletionRequestId,
+        },
+        lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
+      });
+      // Formance unavailable — keep the authoritative local ledger write and leave a durable
+      // 'queued' outbox row for the reconciliation worker. Do not roll back.
+      return null;
+    }
+  }
+
+  if (args.mutualCreditDefault > 0) {
+    // A mutual-credit default posts no local transfer, so the happy-path outbox write above is
+    // skipped — but the reconciliation worker still needs a record so it can emit the
+    // mutual_credit_default event to the external ledger. Without this row the external ledger
+    // diverges silently for every mutual-credit-default account. Leave a durable 'queued' row.
+    await writeAdapterOutbox(client, {
+      commandName: 'account.deletion.reclaim.execute',
+      idempotencyKey: args.idempotencyKey,
+      status: 'queued',
+      payload: {
+        accountId: args.accountId,
+        treasuryUserId: args.treasuryUserId,
+        amountTransferred: args.amountTransferred,
+        mutualCreditDefault: args.mutualCreditDefault,
+        deletionRequestId: args.deletionRequestId,
+        requestId: args.requestId,
+        traceId: args.traceId,
+      },
+    });
+  }
+
+  return null;
+}
+
+// Record the reclaim outcome: the reclaim ledger row and the treasury event, both idempotent on retry.
+async function recordReclaimResult(
+  client: PoolClient,
+  args: {
+    accountId: string;
+    treasuryUserId: string;
+    deletionRequestId: string;
+    idempotencyKey: string;
+    requestId: string;
+    traceId: string;
+    actorId: string;
+    amountTransferred: number;
+    transferId: string | null;
+    tombstoneId: string;
+    externalLedgerTransactionId: string | null;
+  },
+): Promise<void> {
+  await client.query(
+    `INSERT INTO service_credits_account_deletion_reclaims
+      (id, account_id, deletion_request_id, treasury_user_id, amount_transferred, transfer_id, tombstone_id, request_id, trace_id, actor_id, idempotency_key, provider_transaction_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+     ON CONFLICT (account_id, deletion_request_id)
+     DO UPDATE SET amount_transferred = EXCLUDED.amount_transferred, transfer_id = EXCLUDED.transfer_id, tombstone_id = EXCLUDED.tombstone_id, provider_transaction_id = EXCLUDED.provider_transaction_id`,
+    [
+      randomUUID(),
+      args.accountId,
+      args.deletionRequestId,
+      args.treasuryUserId,
+      args.amountTransferred,
+      args.transferId,
+      args.tombstoneId,
+      args.requestId,
+      args.traceId,
+      args.actorId,
+      args.idempotencyKey,
+      args.externalLedgerTransactionId,
+    ],
+  );
+
+  await client.query(
+    `INSERT INTO service_credits_treasury_events
+      (id, event_type, source_user_id, treasury_user_id, amount, transfer_id, reason_code, actor_id, idempotency_key, provider_transaction_id)
+     VALUES ($1, 'deletion_reclaim', $2, $3, $4, $5, 'account_deleted_and_returned_to_treasury', $6, $7, $8)
+     ON CONFLICT (event_type, actor_id, idempotency_key)
+     DO NOTHING`,
+    [randomUUID(), args.accountId, args.treasuryUserId, args.amountTransferred, args.transferId, args.actorId, args.idempotencyKey, args.externalLedgerTransactionId],
+  );
+}
+
 export async function executeDeletionReclaim(input: {
   actorId: string;
   accountId: string;
@@ -1370,15 +1690,7 @@ export async function executeDeletionReclaim(input: {
       return existing;
     }
 
-    const requestedAtDate = new Date(input.requestedAt);
-    if (Number.isNaN(requestedAtDate.getTime())) {
-      throw new Error('invalid_payload');
-    }
-
-    const eligibleAt = new Date(requestedAtDate.getTime() + SERVICE_CREDITS_RECLAIM_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-    if (Date.now() < eligibleAt.getTime()) {
-      throw new Error('reclaim_window_not_elapsed');
-    }
+    assertReclaimEligible(input.requestedAt);
 
     await client.query(
       `INSERT INTO service_credits_wallets (user_id)
@@ -1387,194 +1699,46 @@ export async function executeDeletionReclaim(input: {
       [input.accountId, input.treasuryUserId],
     );
 
-    const activeEscrows = await client.query<{ total: string }>(
-      `SELECT COUNT(*)::text AS total
-       FROM service_credits_escrow_holds
-       WHERE wallet_user_id = $1 AND status = 'held'`,
-      [input.accountId],
-    );
+    await assertNoActiveEscrowHolds(client, input.accountId);
 
-    if (Number(activeEscrows.rows[0]?.total ?? '0') > 0) {
-      throw new Error('active_escrow_holds');
-    }
+    const { availableBalance, escrowBalance, amountTransferred, mutualCreditDefault } =
+      await readReclaimWalletBalances(client, input.accountId);
 
-    const wallet = await client.query<{ available_balance: string; escrow_balance: string }>(
-      `SELECT available_balance::text, escrow_balance::text
-       FROM service_credits_wallets
-       WHERE user_id = $1
-       FOR UPDATE`,
-      [input.accountId],
-    );
+    const { transferId, tombstoneId } = await applyReclaimLocalWrites(client, {
+      accountId: input.accountId,
+      treasuryUserId: input.treasuryUserId,
+      deletionRequestId: input.deletionRequestId,
+      idempotencyKey: input.idempotencyKey,
+      availableBalance,
+      escrowBalance,
+      amountTransferred,
+      mutualCreditDefault,
+    });
 
-    const availableBalance = Number(wallet.rows[0]?.available_balance ?? '0');
-    const escrowBalance = Number(wallet.rows[0]?.escrow_balance ?? '0');
-    const amountTransferred = Math.max(0, availableBalance);
-    // A negative balance at deletion is a mutual-credit default: the treasury (the community) absorbs
-    // the shortfall. Bounded by small per-account credit limits so a single default stays minor.
-    const mutualCreditDefault = availableBalance < 0 ? -availableBalance : 0;
+    const externalLedgerTransactionId = await postReclaimExternal(client, {
+      accountId: input.accountId,
+      treasuryUserId: input.treasuryUserId,
+      deletionRequestId: input.deletionRequestId,
+      idempotencyKey: input.idempotencyKey,
+      requestId: input.requestId,
+      traceId: input.traceId,
+      amountTransferred,
+      mutualCreditDefault,
+    });
 
-    // --- Authoritative local writes first. No external call has been made yet, so if any of these
-    // mutations throws, the whole transaction rolls back with no orphaned external-ledger posting.
-    // The Formance call and outbox write are deferred until after every local mutation, below. ---
-
-    if (amountTransferred > 0) {
-      await client.query(
-        `UPDATE service_credits_wallets
-         SET available_balance = available_balance - $2, updated_at = NOW()
-         WHERE user_id = $1`,
-        [input.accountId, amountTransferred],
-      );
-
-      await client.query(
-        `UPDATE service_credits_wallets
-         SET available_balance = available_balance + $2, updated_at = NOW()
-         WHERE user_id = $1`,
-        [input.treasuryUserId, amountTransferred],
-      );
-    }
-
-    if (mutualCreditDefault > 0) {
-      await client.query(
-        `UPDATE service_credits_wallets
-         SET available_balance = available_balance - $2, updated_at = NOW()
-         WHERE user_id = $1`,
-        [input.treasuryUserId, mutualCreditDefault],
-      );
-
-      await client.query(
-        `INSERT INTO service_credits_ledger_entries (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope, metadata)
-         VALUES ($1, $2, 'debit', $3, 'mutual_credit_default', $4, 'service_credits_non_gdp', $5::jsonb)`,
-        [
-          randomUUID(),
-          input.treasuryUserId,
-          mutualCreditDefault,
-          input.accountId,
-          JSON.stringify({ defaultedBy: input.accountId, deletionRequestId: input.deletionRequestId }),
-        ],
-      );
-    }
-
-    const transferId = amountTransferred > 0 ? randomUUID() : null;
-    if (transferId) {
-      await client.query(
-        `INSERT INTO service_credits_transfers (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, completed_at)
-         VALUES ($1, $2, $3, $4, 'completed', $5, NOW())
-         ON CONFLICT (sender_user_id, idempotency_key)
-         DO NOTHING`,
-        [transferId, input.accountId, input.treasuryUserId, amountTransferred, input.idempotencyKey],
-      );
-    }
-
-    const tombstoneId = randomUUID();
-    await client.query(
-      `INSERT INTO service_credits_wallet_tombstones
-        (id, account_id, deletion_request_id, final_available_balance, final_escrow_balance)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (account_id, deletion_request_id)
-       DO UPDATE SET final_available_balance = EXCLUDED.final_available_balance, final_escrow_balance = EXCLUDED.final_escrow_balance`,
-      [tombstoneId, input.accountId, input.deletionRequestId, availableBalance, escrowBalance],
-    );
-
-    await client.query(
-      `UPDATE service_credits_wallets
-       SET available_balance = 0, escrow_balance = 0, updated_at = NOW()
-       WHERE user_id = $1`,
-      [input.accountId],
-    );
-
-    // --- External ledger + durable outbox, AFTER every local mutation. ---
-    let externalLedgerTransactionId: string | null = null;
-    if (amountTransferred > 0) {
-      try {
-        const externalLedger = await postDeletionReclaimToFormance({
-          accountId: input.accountId,
-          treasuryUserId: input.treasuryUserId,
-          amount: amountTransferred,
-          deletionRequestId: input.deletionRequestId,
-          idempotencyKey: input.idempotencyKey,
-        });
-        externalLedgerTransactionId = externalLedger.transactionId;
-        await writeAdapterOutbox(client, {
-          commandName: 'account.deletion.reclaim.execute',
-          idempotencyKey: input.idempotencyKey,
-          status: 'delivered',
-          payload: {
-            accountId: input.accountId,
-            treasuryUserId: input.treasuryUserId,
-            amountTransferred,
-            deletionRequestId: input.deletionRequestId,
-            requestId: input.requestId,
-            traceId: input.traceId,
-          },
-          providerTransactionId: externalLedgerTransactionId,
-        });
-      } catch (error) {
-        await writeAdapterOutbox(client, {
-          commandName: 'account.deletion.reclaim.execute',
-          idempotencyKey: input.idempotencyKey,
-          status: 'queued',
-          payload: {
-            accountId: input.accountId,
-            treasuryUserId: input.treasuryUserId,
-            amountTransferred,
-            deletionRequestId: input.deletionRequestId,
-          },
-          lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
-        });
-        // Formance unavailable — keep the authoritative local ledger write and leave a durable
-        // 'queued' outbox row for the reconciliation worker. Do not roll back.
-      }
-    } else if (mutualCreditDefault > 0) {
-      // A mutual-credit default posts no local transfer, so the happy-path outbox write above is
-      // skipped — but the reconciliation worker still needs a record so it can emit the
-      // mutual_credit_default event to the external ledger. Without this row the external ledger
-      // diverges silently for every mutual-credit-default account. Leave a durable 'queued' row.
-      await writeAdapterOutbox(client, {
-        commandName: 'account.deletion.reclaim.execute',
-        idempotencyKey: input.idempotencyKey,
-        status: 'queued',
-        payload: {
-          accountId: input.accountId,
-          treasuryUserId: input.treasuryUserId,
-          amountTransferred,
-          mutualCreditDefault,
-          deletionRequestId: input.deletionRequestId,
-          requestId: input.requestId,
-          traceId: input.traceId,
-        },
-      });
-    }
-
-    await client.query(
-      `INSERT INTO service_credits_account_deletion_reclaims
-        (id, account_id, deletion_request_id, treasury_user_id, amount_transferred, transfer_id, tombstone_id, request_id, trace_id, actor_id, idempotency_key, provider_transaction_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-       ON CONFLICT (account_id, deletion_request_id)
-       DO UPDATE SET amount_transferred = EXCLUDED.amount_transferred, transfer_id = EXCLUDED.transfer_id, tombstone_id = EXCLUDED.tombstone_id, provider_transaction_id = EXCLUDED.provider_transaction_id`,
-      [
-        randomUUID(),
-        input.accountId,
-        input.deletionRequestId,
-        input.treasuryUserId,
-        amountTransferred,
-        transferId,
-        tombstoneId,
-        input.requestId,
-        input.traceId,
-        input.actorId,
-        input.idempotencyKey,
-        externalLedgerTransactionId,
-      ],
-    );
-
-    await client.query(
-      `INSERT INTO service_credits_treasury_events
-        (id, event_type, source_user_id, treasury_user_id, amount, transfer_id, reason_code, actor_id, idempotency_key, provider_transaction_id)
-       VALUES ($1, 'deletion_reclaim', $2, $3, $4, $5, 'account_deleted_and_returned_to_treasury', $6, $7, $8)
-       ON CONFLICT (event_type, actor_id, idempotency_key)
-       DO NOTHING`,
-      [randomUUID(), input.accountId, input.treasuryUserId, amountTransferred, transferId, input.actorId, input.idempotencyKey, externalLedgerTransactionId],
-    );
+    await recordReclaimResult(client, {
+      accountId: input.accountId,
+      treasuryUserId: input.treasuryUserId,
+      deletionRequestId: input.deletionRequestId,
+      idempotencyKey: input.idempotencyKey,
+      requestId: input.requestId,
+      traceId: input.traceId,
+      actorId: input.actorId,
+      amountTransferred,
+      transferId,
+      tombstoneId,
+      externalLedgerTransactionId,
+    });
 
     const response = {
       reclaimStatus: 'completed' as const,
