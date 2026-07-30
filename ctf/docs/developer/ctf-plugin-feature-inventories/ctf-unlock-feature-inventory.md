@@ -50,6 +50,13 @@ This plugin must:
 1. List submissions by status/access-tier filters.
 2. Review with decisions: `approved`, `rejected`, `spam`.
 3. Capture reviewer and optional moderation note.
+4. A `spam` decision blocks the member from the whole app, not just the Unlock tier: in addition to
+   dropping the access tier to `locked_support_only`, it places a platform-wide (`all`-scope)
+   `account_restrictions` record (reason `unlock:spam`), which the auth gate enforces across every
+   product surface (Commons/Hub included). The member keeps only their own status and
+   account/data-deletion routes. An `approved` or `rejected` decision lifts a restriction that carries
+   the `unlock:spam` marker (leaving any unrelated admin restriction untouched), so a mistaken spam
+   mark is fully reversible.
 
 ### 2.2 Incentive Governance
 
@@ -140,6 +147,7 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
 7. Admins always pass the tier check.
 8. **Chyme is no longer granted to not-yet-unlocked members.** Chyme requires `approved_full`; degraded members are pointed at the Hub general channel and the Unlock flow instead. Chyme's anonymous public visitor shell (for signed-out browsing) is unchanged.
 9. **Duplicate-identity guard (one Quora profile, one reward).** A normalized Quora URL earns the verification reward on a single account. The shared reward grant (`grantUnlockRewardForSubmission`, used by the approval handler, the hourly reconcile, and the admin determination) checks `getUnlockRewardHolderForUrl` before minting: if another non-revoked account already holds the identity's reward, the reward is **held** (`reward_withheld_at`) for an admin determination rather than auto-minting a second reward for the same person. The admin then awards the chosen account (`grant-reward`) and/or revokes the others (`revoke`, which burns the credits back and locks the account). This blocks both honest cross-account reuse and a perp who pastes a victim's Quora URL onto an impersonation account. The reward verbs are admin-gated + CSRF-guarded and fully audited.
+10. **A `spam` decision is a whole-app block, not just a tier drop (2026-07-30).** `rejected` and `spam` both drop the Unlock tier to `locked_support_only`, which by itself still lets a member into the Commons/Hub support surface and every `any_authenticated` route. To make `spam` mean "removed from the app", the review handler (`POST /api/unlock/admin/submissions/[submissionId]/review`) additionally places a platform-wide (`all`-scope) `account_restrictions` record with reason `unlock:spam`. The central auth gate (`evaluatePluginAccess`) denies every `support_only` and `approved_full` route for an `all`-scope restriction (reason `account_restricted`), so a spammed member is shut out of the Commons and all plugins — only their own status and account/data-deletion (`any_authenticated`) routes stay reachable, preserving the right to be forgotten. A subsequent `approved` or `rejected` decision lifts the restriction **only** when the stored reason is the `unlock:spam` marker, so it never clears an unrelated admin restriction; this makes a mistaken spam mark fully reversible. The restriction upsert and its audit row are written by `restrictAccount` / `unrestrictAccount` (tables `account_restrictions`, `account_restrictions_audit`).
 
 ## 6) Web and Android Delivery Strategy
 
@@ -170,6 +178,19 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-07-30: **A `spam` decision now removes the member from the app, not just from the full tier.**
+  Before this change, marking a submission `spam` set the same `locked_support_only` tier a `rejected`
+  submission gets, which still left the member inside the Commons/Hub support surface and every
+  `any_authenticated` route — so a spammed member could keep using the support surfaces. The review
+  handler (`POST /api/unlock/admin/submissions/[submissionId]/review`) now also places a platform-wide
+  (`all`-scope) `account_restrictions` record (reason `unlock:spam`) on a `spam` decision, which the
+  central auth gate enforces across every product surface — the member is shut out of the Commons and
+  all plugins, keeping only their own status and account/data-deletion routes. An `approved` or
+  `rejected` decision lifts a restriction carrying the `unlock:spam` marker (never an unrelated admin
+  restriction), so a mistaken spam mark is fully reversible. The command contract
+  `unlock.admin.submission.review` was bumped to `1.1.0` and its `dataAccess` now lists
+  `account_restrictions` and `account_restrictions_audit`. Route logic only — no schema change (both
+  tables already exist).
 - 2026-07-29: **Quora space renamed — help links now point to `skillseconomy.quora.com`.** The owner
   renamed the network's Quora space from `tiskillsnetwork.quora.com` to `skillseconomy.quora.com`, so
   every "Can't find your Quora profile URL?" help callout that pointed members at the old address was

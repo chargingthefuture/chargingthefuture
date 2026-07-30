@@ -62,8 +62,11 @@ contracts:
 
   - pluginId: unlock
     command: unlock.admin.submission.review
-    version: 1.0.0
-    description: Apply admin moderation decision and unlock access tier transition.
+    version: 1.1.0
+    description: >-
+      Apply admin moderation decision and unlock access tier transition. A spam decision also places
+      a platform-wide ('all'-scope) account restriction so the member loses Commons/app access; an
+      approved or rejected decision lifts a restriction previously placed by a spam decision.
     inputSchema:
       submissionId:
         type: integer
@@ -86,6 +89,8 @@ contracts:
     dataAccess:
       - unlock_verification_submissions
       - unlock_audit_log
+      - account_restrictions
+      - account_restrictions_audit
     purpose: moderation_and_unlock_transition
     retentionClass: audit_long_lived
     idempotency: true

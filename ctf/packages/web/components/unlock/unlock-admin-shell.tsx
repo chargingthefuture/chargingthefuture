@@ -125,6 +125,9 @@ export function UnlockAdminShell({
   // Which submission is awaiting an explicit revoke confirmation (revoke burns the reward, so it is a
   // money action — never one-click).
   const [confirmRevokeId, setConfirmRevokeId] = useState<number | null>(null);
+  // Marking spam blocks the member from the whole app (an 'all'-scope account restriction), so it is
+  // guarded by an inline confirm the same way the reward-revoke lock is.
+  const [confirmSpamId, setConfirmSpamId] = useState<number | null>(null);
   // Quora URL history, loaded on demand per member. Which member's history panel is open, plus a
   // per-member cache and loading marker. A member who changed their social-proof URL after approval
   // (or tried to remove it — an empty submission keeps the previous URL) shows up here.
@@ -644,9 +647,21 @@ export function UnlockAdminShell({
                     <button type="button" disabled={busy} onClick={() => review(s.id, 'rejected')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
                       <XCircle size={13} /> Reject
                     </button>
-                    <button type="button" disabled={busy} onClick={() => review(s.id, 'spam')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(107,114,128,0.12)', border: '1px solid rgba(107,114,128,0.3)', color: '#9CA3AF', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
-                      <Ban size={13} /> Spam
-                    </button>
+                    {confirmSpamId === s.id ? (
+                      <>
+                        <span style={{ fontSize: 12, color: '#FCD34D' }}>Mark spam and block this member from the app?</span>
+                        <button type="button" disabled={busy} onClick={() => { setConfirmSpamId(null); review(s.id, 'spam'); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#EF4444', fontSize: 13, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                          {busy ? 'Blocking…' : 'Confirm spam + block'}
+                        </button>
+                        <button type="button" disabled={busy} onClick={() => setConfirmSpamId(null)} style={{ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" disabled={busy} onClick={() => setConfirmSpamId(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(107,114,128,0.12)', border: '1px solid rgba(107,114,128,0.3)', color: '#9CA3AF', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                        <Ban size={13} /> Spam
+                      </button>
+                    )}
                   </div>
                 ) : rewardHeld || canRevoke ? (
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
