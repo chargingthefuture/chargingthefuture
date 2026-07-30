@@ -99,6 +99,49 @@ async function loadProfilesForMatch(): Promise<LoadedProfiles> {
   return { profiles: profilesRes.rows, skillsByProfile, jobTitles: jobTitlesRes.rows, jobTitleById };
 }
 
+// Count, for one profile, how many of its skills map to each sector through the taxonomy.
+function tallySectorsBySkill(p: ProfileRow, loaded: LoadedProfiles): Map<string, number> {
+  const tally = new Map<string, number>();
+  for (const skill of loaded.skillsByProfile.get(p.profile_id) ?? []) {
+    const jt = loaded.jobTitleById.get(skill.job_title_id);
+    if (!jt) continue;
+    tally.set(jt.sector_id, (tally.get(jt.sector_id) ?? 0) + 1);
+  }
+  return tally;
+}
+
+// A candidate sector beats the current best when its count is higher, or ties on count and sorts
+// earlier by sector name (ties broken by sector name).
+function sectorWins(
+  count: number,
+  name: string,
+  bestCount: number,
+  bestId: string | null,
+  bestName: string | null,
+): boolean {
+  return count > bestCount
+    || (count === bestCount && bestId !== null && name < (bestName ?? ''));
+}
+
+// The plurality sector from a skill tally (ties broken by sector name), or null when the tally is empty.
+function pickPluralitySector(
+  tally: Map<string, number>,
+  loaded: LoadedProfiles,
+): { id: string; name: string } | null {
+  let bestId: string | null = null;
+  let bestName: string | null = null;
+  let bestCount = 0;
+  for (const [sectorId, count] of tally) {
+    const name = loaded.jobTitles.find((jt) => jt.sector_id === sectorId)?.sector_name ?? '';
+    if (sectorWins(count, name, bestCount, bestId, bestName)) {
+      bestId = sectorId;
+      bestName = name;
+      bestCount = count;
+    }
+  }
+  return bestId ? { id: bestId, name: bestName ?? '' } : null;
+}
+
 // The member's own sector, by spec precedence (mirrors computeWorkforceModel): the chosen
 // occupation's sector, else the sector the member's skills map to through the taxonomy (plurality,
 // ties broken by sector name), else the raw profile sector field.
@@ -109,27 +152,9 @@ function resolveOwnSector(
   if (p.job_title_sector_id) {
     return { id: p.job_title_sector_id, name: p.job_title_sector_name };
   }
-  const tally = new Map<string, number>();
-  for (const skill of loaded.skillsByProfile.get(p.profile_id) ?? []) {
-    const jt = loaded.jobTitleById.get(skill.job_title_id);
-    if (!jt) continue;
-    tally.set(jt.sector_id, (tally.get(jt.sector_id) ?? 0) + 1);
-  }
-  let bestId: string | null = null;
-  let bestName: string | null = null;
-  let bestCount = 0;
-  for (const [sectorId, count] of tally) {
-    const name = loaded.jobTitles.find((jt) => jt.sector_id === sectorId)?.sector_name ?? '';
-    const wins = count > bestCount
-      || (count === bestCount && bestId !== null && name < (bestName ?? ''));
-    if (wins) {
-      bestId = sectorId;
-      bestName = name;
-      bestCount = count;
-    }
-  }
-  if (bestId) {
-    return { id: bestId, name: bestName };
+  const best = pickPluralitySector(tallySectorsBySkill(p, loaded), loaded);
+  if (best) {
+    return best;
   }
   return { id: p.profile_sector_id, name: p.profile_sector_name };
 }
@@ -143,6 +168,48 @@ function displayName(p: ProfileRow): string {
 export function strongerReason(a: WorkforceMatchReason, b: WorkforceMatchReason): WorkforceMatchReason {
   const rank: Record<WorkforceMatchReason, number> = { none: 0, sector: 1, skill: 2, jobTitle: 3 };
   return rank[b] > rank[a] ? b : a;
+}
+
+// The V2 3-way rule for one profile against one occupation: jobTitle wins, else a skill registered
+// under the occupation, else the sector arm (true only when the occupation is in the profile's own
+// sector). Returns 'none' when the profile does not match the occupation.
+function occupationMatchReason(
+  p: ProfileRow,
+  jt: JobTitleRow,
+  skillJobTitleIds: Set<string>,
+  sectorArmAppliesTo: (jt: JobTitleRow) => boolean,
+): WorkforceMatchReason {
+  if (p.job_title_id && p.job_title_id === jt.id) {
+    return 'jobTitle';
+  }
+  if (skillJobTitleIds.has(jt.id)) {
+    return 'skill';
+  }
+  if (sectorArmAppliesTo(jt)) {
+    return 'sector';
+  }
+  return 'none';
+}
+
+// One matched-occupation entry. `viaSkills` is the member's skills registered under THIS occupation —
+// the evidence for a skill match, so the display never implies the member's unrelated skills caused it.
+function buildMatchingOccupation(
+  jt: JobTitleRow,
+  occReason: WorkforceMatchReason,
+  profileSkills: ProfileSkillRow[],
+  gapByJobTitleId: Map<string, number>,
+): WorkforceMatchedMember['matchingOccupations'][number] {
+  const viaSkills = occReason === 'skill'
+    ? Array.from(new Set(profileSkills.filter((s) => s.job_title_id === jt.id).map((s) => s.skill_name)))
+    : [];
+  return {
+    id: jt.id,
+    title: jt.name,
+    sector: jt.sector_name,
+    reason: occReason,
+    viaSkills,
+    gap: gapByJobTitleId.get(jt.id) ?? 0,
+  };
 }
 
 // Build a matched-member entry for one profile against a set of candidate occupations (job titles),
@@ -162,28 +229,9 @@ function buildMatch(
   let reason: WorkforceMatchReason = 'none';
 
   for (const jt of candidates) {
-    let occReason: WorkforceMatchReason = 'none';
-    if (p.job_title_id && p.job_title_id === jt.id) {
-      occReason = 'jobTitle';
-    } else if (skillJobTitleIds.has(jt.id)) {
-      occReason = 'skill';
-    } else if (sectorArmAppliesTo(jt)) {
-      occReason = 'sector';
-    }
+    const occReason = occupationMatchReason(p, jt, skillJobTitleIds, sectorArmAppliesTo);
     if (occReason !== 'none') {
-      // The member's skills registered under THIS occupation — the evidence for a skill match, so
-      // the display never implies the member's unrelated skills caused it.
-      const viaSkills = occReason === 'skill'
-        ? Array.from(new Set(profileSkills.filter((s) => s.job_title_id === jt.id).map((s) => s.skill_name)))
-        : [];
-      matchingOccupations.push({
-        id: jt.id,
-        title: jt.name,
-        sector: jt.sector_name,
-        reason: occReason,
-        viaSkills,
-        gap: gapByJobTitleId.get(jt.id) ?? 0,
-      });
+      matchingOccupations.push(buildMatchingOccupation(jt, occReason, profileSkills, gapByJobTitleId));
       reason = strongerReason(reason, occReason);
     }
   }
