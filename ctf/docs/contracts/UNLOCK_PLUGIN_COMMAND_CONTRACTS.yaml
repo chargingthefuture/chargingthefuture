@@ -1,8 +1,10 @@
 contracts:
   - pluginId: unlock
     command: unlock.verification.submit
-    version: 1.0.0
-    description: Submit or update Quora profile URL for staged unlock verification.
+    version: 1.1.0
+    description: >-
+      Submit or update Quora profile URL for staged unlock verification. A submitted URL that is on the
+      spam denylist is auto-marked spam and app-blocked instead of entering the pending queue.
     inputSchema:
       quoraProfileUrl:
         type: string
@@ -19,6 +21,9 @@ contracts:
     dataAccess:
       - unlock_verification_submissions
       - unlock_audit_log
+      - unlock_spam_quora_urls
+      - account_restrictions
+      - account_restrictions_audit
     purpose: identity_signal_submission
     retentionClass: transactional_long_lived
     idempotency: true
@@ -91,6 +96,7 @@ contracts:
       - unlock_audit_log
       - account_restrictions
       - account_restrictions_audit
+      - unlock_spam_quora_urls
     purpose: moderation_and_unlock_transition
     retentionClass: audit_long_lived
     idempotency: true

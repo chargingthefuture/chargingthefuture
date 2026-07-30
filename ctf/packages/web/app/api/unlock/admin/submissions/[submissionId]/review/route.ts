@@ -5,14 +5,10 @@ import { grantUnlockRewardForSubmission } from 'lib/unlock/reconcile-rewards';
 import { insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { grantUnleashFlagForUser } from 'lib/feature-flags/unleash-admin';
 import { getAccountRestrictionStatus, restrictAccount, unrestrictAccount } from 'lib/auth/account-restrictions';
+import { UNLOCK_SPAM_RESTRICTION_REASON } from 'lib/unlock/spam-denylist';
 import { UNLOCK_FLAGS } from '@ctf/shared';
 import type { ReviewUnlockSubmissionInput } from 'lib/unlock/types';
 import { reportError } from 'lib/observability/report';
-
-// Reason marker written on the platform-wide restriction we place when a submission is marked spam.
-// A later non-spam decision lifts the restriction only when it carries this exact marker, so an
-// unrelated admin restriction on the same member is never disturbed.
-const UNLOCK_SPAM_RESTRICTION_REASON = 'unlock:spam';
 
 type RouteParams = {
   params: Promise<{

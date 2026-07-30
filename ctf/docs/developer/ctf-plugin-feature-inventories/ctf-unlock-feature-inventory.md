@@ -57,6 +57,12 @@ This plugin must:
    account/data-deletion routes. An `approved` or `rejected` decision lifts a restriction that carries
    the `unlock:spam` marker (leaving any unrelated admin restriction untouched), so a mistaken spam
    mark is fully reversible.
+5. A `spam` decision also records the submission's normalized Quora URL on the persistent
+   `unlock_spam_quora_urls` denylist, so the admin does not have to review the same spam Quora account
+   again: the URL survives the member's account/data deletion (the denylist holds no member id and is
+   retained), and any later submission of that URL — even from a brand-new account — is auto-marked
+   `spam` and app-blocked at submission time instead of re-entering the pending queue. Approving or
+   rejecting the URL removes it from the denylist.
 
 ### 2.2 Incentive Governance
 
@@ -116,6 +122,13 @@ Admin page:
 1. `unlock_runtime_config`
 2. `unlock_verification_submissions`
 3. `unlock_audit_log`
+4. `unlock_spam_quora_urls` — persistent spam denylist of normalized Quora profile URLs. Keyed on
+   `quora_profile_url_normalized` (primary key); also stores `quora_profile_url` (last-seen original, for
+   admin readability), `flagged_by_user_id` (admin who flagged, or the system actor on an auto-block),
+   `flag_count`, `first_flagged_at`, `last_flagged_at`, `updated_at`. It holds **no member identifier**,
+   so it is retained through account/data deletion (registered `retain` in the account deletion
+   registry). Written when a submission is marked spam; a row is removed when the same URL is later
+   approved or rejected (the spam mark is reversible).
 
 Multi-currency (issue #120): `unlock_runtime_config` carries `incentive_currency` (FK → `currencies.code`),
 naming the currency of `incentive_amount`. It defaults to ServiceCredits (code `SC`) — the approval
@@ -178,6 +191,20 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-07-30: **Persistent spam Quora-URL denylist — the same spam account is never reviewed twice.**
+  Added `unlock_spam_quora_urls` (new table), keyed on the normalized Quora URL and holding no member
+  id. Marking a submission `spam` records its normalized URL here; approving/rejecting removes it. Two
+  effects: (1) the URL survives the flagged member's account/data deletion — the per-member submission
+  row is hard-deleted, but this denylist is registered `retain` in the account deletion registry — so
+  the flag is not lost; (2) a later submission of a denylisted URL (even from a new account) is
+  auto-marked `spam` and app-blocked at submission time (`createOrUpdateUnlockSubmission` sets the
+  status; the submission route places the `unlock:spam` account restriction, attributed to the system
+  actor `system:unlock-spam-denylist`) instead of re-entering the pending queue. New module
+  `lib/unlock/spam-denylist.ts` holds the denylist read/write and the shared `unlock:spam`
+  restriction-reason constant. Contracts `unlock.verification.submit` (→ `1.1.0`) and
+  `unlock.admin.submission.review` gained `unlock_spam_quora_urls` in `dataAccess` (submit also gained
+  `account_restrictions`/`account_restrictions_audit` for the auto-block). Schema adds one table; the
+  deletion registry, deletion contract, and manual test script were updated to match.
 - 2026-07-30: **A `spam` decision now removes the member from the app, not just from the full tier.**
   Before this change, marking a submission `spam` set the same `locked_support_only` tier a `rejected`
   submission gets, which still left the member inside the Commons/Hub support surface and every

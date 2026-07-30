@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { normalizeQuoraProfileUrl, requireUnlockUserAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
 import { createOrUpdateUnlockSubmission, insertUnlockAudit } from 'lib/unlock/repository';
 import { isUnlockEarlyCommonsEnabled } from 'lib/unlock/access';
+import { restrictAccount } from 'lib/auth/account-restrictions';
+import { UNLOCK_SPAM_DENYLIST_ACTOR, UNLOCK_SPAM_RESTRICTION_REASON } from 'lib/unlock/spam-denylist';
 import { reportError } from 'lib/observability/report';
 
 type SubmissionBody = {
@@ -51,11 +53,28 @@ export async function POST(request: Request) {
       quoraProfileUrlNormalized: normalizedUrl,
     });
 
+    // The submitted URL is on the spam denylist, so the row was auto-marked spam instead of pending.
+    // Apply the same app-wide block the admin spam path applies, so a spammer who deleted their data
+    // and made a new account is shut out again without an admin ever re-reviewing them. Attributed to
+    // the system (no admin acted). Best-effort: a retry re-applies it, and the restriction is idempotent.
+    if (submission.reviewStatus === 'spam') {
+      try {
+        await restrictAccount({
+          targetUserId: gate.auth.userId,
+          actorId: UNLOCK_SPAM_DENYLIST_ACTOR,
+          scope: 'all',
+          reason: UNLOCK_SPAM_RESTRICTION_REASON,
+        });
+      } catch (restrictionError) {
+        reportError(restrictionError, { area: 'unlock', op: 'submission_denylist_restrict' });
+      }
+    }
+
     await insertUnlockAudit({
       actorUserId: gate.auth.userId,
       command: 'unlock.verification.submit',
-      policyStatus: 'allow',
-      reason: 'ok',
+      policyStatus: submission.reviewStatus === 'spam' ? 'deny' : 'allow',
+      reason: submission.reviewStatus === 'spam' ? 'spam_denylisted' : 'ok',
       targetUserId: gate.auth.userId,
       requestId,
       metadata: { submissionId: submission.id, experimentBucket },

@@ -162,6 +162,26 @@ the member regains the access their new tier grants (full app on approve; Common
 restriction an admin set for any other reason is left untouched.
 **Result:** web ☐ — notes:
 
+### UNLOCK-A2c · Spam denylist — a known-spam Quora URL never re-enters the queue, and survives deletion
+**Role:** admin / reviewer + member · **Surfaces:** web (admin surface + member submission)
+**Precondition:** a member with a submission that can be marked spam; the ability to sign in as a
+second, different member.
+**Steps:**
+1. As admin, mark the first member's submission **spam** (confirm the block).
+2. As admin, delete that first member's account/data (or have them delete it).
+3. As the second member, submit the **same** Quora profile URL the first member used.
+4. As admin, open the Pending queue.
+5. As the second member, try to open the Commons / a plugin.
+**Expected:** Step 1 records the normalized URL on `unlock_spam_quora_urls`. Step 2 hard-deletes the
+first member's `unlock_verification_submissions` row but leaves the denylist row intact (it holds no
+member id and is retained). Step 3: the second member's submission is auto-marked `spam` /
+`locked_support_only` at submission time (not `pending`), and an `all`-scope `account_restrictions`
+record is placed (actor `system:unlock-spam-denylist`, reason `unlock:spam`). Step 4: the second
+member's submission does **not** appear in Pending — the admin never has to re-review the same spam
+Quora account. Step 5: the second member is blocked from the Commons and all plugins. Re-reviewing that
+URL to approved/rejected (in the admin queue) removes it from the denylist and lifts the block.
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A3 · Approval reward — granted or pending, never double
 **Role:** admin / reviewer · **Surfaces:** web (admin surface)
 **Precondition:** a freshly approved submission.
