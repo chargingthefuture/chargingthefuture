@@ -137,10 +137,29 @@ the whole set. Every listed row shows the Support-only pill.
 **Steps:**
 1. On a pending submission, choose **Approve**.
 2. On another, choose **Reject**.
-3. Confirm a third can be marked **spam** (the route accepts `approved`, `rejected`, `spam`).
+3. On a third, click **Spam**, then click **Confirm spam + block** in the inline confirm (or
+   **Cancel** to back out — the route accepts `approved`, `rejected`, `spam`).
 **Expected:** Each decision posts to the review route, records the reviewer, and refreshes the row
 to its new status. Approve moves the account to full access; reject/spam drop it out of pending.
 The decision is audited (`unlock.admin.submission.review`).
+**Result:** web ☐ — notes:
+
+### UNLOCK-A2b · Spam removes the member from the app; a later approve/reject restores access
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Precondition:** a submission that can be marked spam, and the ability to sign in as that member.
+**Steps:**
+1. Mark the submission **spam** (confirm the block).
+2. As that member, try to open the Commons / Hub general channel and any plugin.
+3. As that member, open the Unlock status page and the account / data-deletion pages.
+4. Back as admin, re-review the same submission to **Approved** (or **Rejected**).
+5. As the member, retry the Commons / a plugin (approved) or the Commons support channel (rejected).
+**Expected:** Step 1 also places a platform-wide (`all`-scope) `account_restrictions` record with
+reason `unlock:spam` (audited in `account_restrictions_audit`). Step 2: the member is denied on every
+product surface — Commons and all plugins — with reason `account_restricted`. Step 3: their own Unlock
+status and the account / data-deletion routes still load (`any_authenticated` — the block deliberately
+leaves the right to be forgotten open). Step 4/5: re-reviewing lifts the `unlock:spam` restriction, so
+the member regains the access their new tier grants (full app on approve; Commons/support on reject). A
+restriction an admin set for any other reason is left untouched.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A3 · Approval reward — granted or pending, never double
