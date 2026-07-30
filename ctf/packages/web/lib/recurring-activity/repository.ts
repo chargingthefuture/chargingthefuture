@@ -1,5 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
+import type { Currency } from 'lib/currency/types';
 import { SERVICE_CREDITS_CODE } from './constants';
 import type {
   CreateRecurringActivityInput,
@@ -82,10 +83,12 @@ async function getActivityRow(activityId: string): Promise<RecurringActivity | n
   return result.rows.length ? mapRow(result.rows[0]) : null;
 }
 
-// Create a pending recurring activity declared by the owner. Validates: no self-activity, a real
-// active currency, and that a ServiceCredits value (if any) is present only for SC lines. Fiat lines
-// never carry an amount — the value firewall is enforced here, not just in the UI.
-export async function createRecurringActivity(input: CreateRecurringActivityInput): Promise<RecurringActivity> {
+// Validate the two participants: a counterparty is required and a member cannot record an activity
+// with themselves. Returns the trimmed ids used for the insert.
+function resolveParticipants(input: CreateRecurringActivityInput): {
+  ownerUserId: string;
+  counterpartyUserId: string;
+} {
   const ownerUserId = input.ownerUserId.trim();
   const counterpartyUserId = input.counterpartyUserId.trim();
   if (!counterpartyUserId) {
@@ -94,31 +97,46 @@ export async function createRecurringActivity(input: CreateRecurringActivityInpu
   if (ownerUserId === counterpartyUserId) {
     throw new RecurringActivityValidationError('You cannot record an activity with yourself.');
   }
+  return { ownerUserId, counterpartyUserId };
+}
+
+// Enforce the value firewall for the declared amount and return the value to store. ServiceCredits
+// lines may carry an optional positive value; fiat (or any non-SC) lines must never carry an amount.
+function resolveScValue(currency: Currency, scValue: number | null | undefined): number | null {
+  const isServiceCredits = currency.isServiceCredits || currency.code === SERVICE_CREDITS_CODE;
+  if (isServiceCredits) {
+    // ServiceCredits is an internal utility token, so a declared value is allowed here (still not an
+    // executed transfer). Optional — a member may leave it blank.
+    if (scValue !== undefined && scValue !== null) {
+      // Reject zero as well as negatives: a declared value of 0 is meaningless and only useful to
+      // probe the firewall. The web form already guards > 0; enforce it server-side for every client.
+      if (!Number.isFinite(scValue) || scValue <= 0) {
+        throw new RecurringActivityValidationError('ServiceCredits value must be a positive number.');
+      }
+      return scValue;
+    }
+    return null;
+  }
+  if (scValue !== undefined && scValue !== null) {
+    // Liability firewall: a fiat (or any non-SC) line must NEVER carry an amount. Reject rather than
+    // silently drop, so a client bug can't quietly start storing recurring fiat amounts.
+    throw new RecurringActivityValidationError('A fiat recurring activity cannot carry an amount.');
+  }
+  return null;
+}
+
+// Create a pending recurring activity declared by the owner. Validates: no self-activity, a real
+// active currency, and that a ServiceCredits value (if any) is present only for SC lines. Fiat lines
+// never carry an amount — the value firewall is enforced here, not just in the UI.
+export async function createRecurringActivity(input: CreateRecurringActivityInput): Promise<RecurringActivity> {
+  const { ownerUserId, counterpartyUserId } = resolveParticipants(input);
 
   const currency = await getCurrency(input.currencyCode);
   if (!currency || !currency.isActive) {
     throw new RecurringActivityValidationError('Unknown or inactive currency.');
   }
 
-  const isServiceCredits = currency.isServiceCredits || currency.code === SERVICE_CREDITS_CODE;
-  let scValue: number | null = null;
-  if (isServiceCredits) {
-    // ServiceCredits is an internal utility token, so a declared value is allowed here (still not an
-    // executed transfer). Optional — a member may leave it blank.
-    if (input.scValue !== undefined && input.scValue !== null) {
-      // Reject zero as well as negatives: a declared value of 0 is meaningless and only useful to
-      // probe the firewall. The web form already guards > 0; enforce it server-side for every client.
-      if (!Number.isFinite(input.scValue) || input.scValue <= 0) {
-        throw new RecurringActivityValidationError('ServiceCredits value must be a positive number.');
-      }
-      scValue = input.scValue;
-    }
-  } else if (input.scValue !== undefined && input.scValue !== null) {
-    // Liability firewall: a fiat (or any non-SC) line must NEVER carry an amount. Reject rather than
-    // silently drop, so a client bug can't quietly start storing recurring fiat amounts.
-    throw new RecurringActivityValidationError('A fiat recurring activity cannot carry an amount.');
-  }
-
+  const scValue = resolveScValue(currency, input.scValue);
   const visibility: RecurringActivityVisibility = input.visibility ?? 'private';
 
   const result = await queryDb<RecurringActivityRow>(

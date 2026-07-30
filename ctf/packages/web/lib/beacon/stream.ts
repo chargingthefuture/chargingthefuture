@@ -308,6 +308,20 @@ export async function endBeaconCall(eventId: string): Promise<boolean> {
 
 export type BeaconModerationAction = 'mute' | 'ban' | 'slow_mode';
 
+// Apply the slow_mode toggle to the event chat channel: a positive cooldown enables slow-mode with
+// that cooldown, anything else (null/undefined/0/negative) disables it.
+async function applyBeaconSlowMode(
+  channel: ReturnType<StreamChat['channel']>,
+  cooldownSeconds?: number | null,
+): Promise<void> {
+  const seconds = cooldownSeconds && cooldownSeconds > 0 ? cooldownSeconds : 0;
+  if (seconds > 0) {
+    await channel.enableSlowMode(seconds);
+  } else {
+    await channel.disableSlowMode();
+  }
+}
+
 // Moderate the event chat channel: mute or ban a member, or toggle slow-mode. The admin host is the
 // channel's server-side moderator. Returns false when Stream is not configured.
 export async function moderateBeaconChat(input: {
@@ -337,12 +351,7 @@ export async function moderateBeaconChat(input: {
       return true;
     }
     if (input.action === 'slow_mode') {
-      const seconds = input.cooldownSeconds && input.cooldownSeconds > 0 ? input.cooldownSeconds : 0;
-      if (seconds > 0) {
-        await channel.enableSlowMode(seconds);
-      } else {
-        await channel.disableSlowMode();
-      }
+      await applyBeaconSlowMode(channel, input.cooldownSeconds);
       return true;
     }
     return false;
