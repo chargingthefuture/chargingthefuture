@@ -260,24 +260,41 @@ export function validateProfileInput(input: SocketRelayProfileInput): boolean {
   return Boolean(input.relayPreferences && typeof input.relayPreferences === 'object' && !Array.isArray(input.relayPreferences));
 }
 
+// Per-field validators for validateRequestInput, split out so the top-level check stays under the
+// complexity limit. Each mirrors the exact rule it replaced.
+function isValidRequestTitle(title: string): boolean {
+  return title.length > 0 && title.length <= SOCKET_RELAY_MAX_TITLE_LENGTH;
+}
+
+function isValidRequestDetails(details: string): boolean {
+  return details.length > 0 && details.length <= SOCKET_RELAY_MAX_DETAILS_LENGTH;
+}
+
+function isValidRequestTags(tags: string[]): boolean {
+  if (tags.length === 0 || tags.length > SOCKET_RELAY_MAX_TAGS_PER_REQUEST) {
+    return false;
+  }
+  return !hasOverlongTag(tags);
+}
+
+function isValidOptionalLocationField(value: string | null): boolean {
+  return !value || value.length <= 120;
+}
+
 export function validateRequestInput(input: SocketRelayRequestInput): boolean {
   const title = normalizeText(input.title);
   const details = normalizeText(input.details);
   const tags = normalizeTags(input.tags);
 
-  if (title.length === 0 || title.length > SOCKET_RELAY_MAX_TITLE_LENGTH) {
+  if (!isValidRequestTitle(title)) {
     return false;
   }
 
-  if (details.length === 0 || details.length > SOCKET_RELAY_MAX_DETAILS_LENGTH) {
+  if (!isValidRequestDetails(details)) {
     return false;
   }
 
-  if (tags.length === 0 || tags.length > SOCKET_RELAY_MAX_TAGS_PER_REQUEST) {
-    return false;
-  }
-
-  if (hasOverlongTag(tags)) {
+  if (!isValidRequestTags(tags)) {
     return false;
   }
 
@@ -288,7 +305,7 @@ export function validateRequestInput(input: SocketRelayRequestInput): boolean {
   const city = normalizeNullableText(input.city);
   const state = normalizeNullableText(input.state);
   const country = normalizeNullableText(input.country);
-  return (!city || city.length <= 120) && (!state || state.length <= 120) && (!country || country.length <= 120);
+  return isValidOptionalLocationField(city) && isValidOptionalLocationField(state) && isValidOptionalLocationField(country);
 }
 
 // Validate the chosen value type + amount against the currency catalog (issue #420). No value type
@@ -812,6 +829,22 @@ async function ensureFulfillmentParticipant(fulfillmentId: string, actorUserId: 
   return fulfillment;
 }
 
+// The status/event triples a resolve applies, derived once from the outcome so resolveFulfillment
+// does not repeat the same `reopen ? … : …` branch three times. `unsuccessful_reopen` cancels this
+// helper and puts the request back to open; every other outcome closes both.
+type ResolveOutcomePlan = {
+  fulfillmentStatus: 'cancelled' | 'closed';
+  requestStatus: 'open' | 'closed';
+  eventName: 'fulfillment_reopened' | 'fulfillment_closed';
+};
+
+function resolveOutcomePlan(outcome: SocketRelayResolveOutcome): ResolveOutcomePlan {
+  if (outcome === 'unsuccessful_reopen') {
+    return { fulfillmentStatus: 'cancelled', requestStatus: 'open', eventName: 'fulfillment_reopened' };
+  }
+  return { fulfillmentStatus: 'closed', requestStatus: 'closed', eventName: 'fulfillment_closed' };
+}
+
 // Resolve a claimed request. Only the REQUESTER (the person who posted it) or an admin may resolve —
 // a helper can chat on the Direct Line but cannot close someone else's request. The requester picks
 // one of four outcomes; `unsuccessful_reopen` cancels this helper and puts the request back to open
@@ -846,14 +879,14 @@ export async function resolveFulfillment(
     }
 
     const reopen = outcome === 'unsuccessful_reopen';
-    const fulfillmentStatus = reopen ? 'cancelled' : 'closed';
+    const plan = resolveOutcomePlan(outcome);
 
     const updated = await client.query<FulfillmentRow>(
       `UPDATE socket_relay_fulfillments
        SET status = $3, close_reason = $2, updated_at = NOW()
        WHERE id = $1::uuid AND status = 'active'
        RETURNING id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at`,
-      [fulfillmentId, outcome, fulfillmentStatus],
+      [fulfillmentId, outcome, plan.fulfillmentStatus],
     );
     if ((updated.rowCount ?? 0) === 0) {
       throw new Error('fulfillment_not_active');
@@ -883,7 +916,7 @@ export async function resolveFulfillment(
     await client.query(
       `INSERT INTO socket_relay_request_events (request_id, actor_user_id, event_name, metadata)
        VALUES ($1::uuid, $2, $3, jsonb_build_object('outcome', $4::text))`,
-      [fulfillment.requestId, actorUserId, reopen ? 'fulfillment_reopened' : 'fulfillment_closed', outcome],
+      [fulfillment.requestId, actorUserId, plan.eventName, outcome],
     );
 
     return {
@@ -891,7 +924,7 @@ export async function resolveFulfillment(
       // The requester is the request owner (see this function's doc comment).
       ownerUserId: fulfillment.requesterUserId,
       requestId: fulfillment.requestId,
-      requestStatus: reopen ? 'open' : 'closed',
+      requestStatus: plan.requestStatus,
     };
   });
 
