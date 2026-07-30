@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import type { SpamQuoraUrlEntry } from './types';
 
 // Persistent denylist of normalized Quora profile URLs an admin has marked as spam. It is deliberately
 // keyed on the normalized URL, not on any member id: the per-member submission row is hard-deleted when
@@ -51,4 +52,32 @@ export async function isSpamQuoraUrl(quoraProfileUrlNormalized: string): Promise
     [quoraProfileUrlNormalized],
   );
   return result.rows.length > 0;
+}
+
+// List the denylist for the admin panel, most-recently-flagged first.
+export async function listSpamQuoraUrls(limit = 200): Promise<SpamQuoraUrlEntry[]> {
+  const safeLimit = Number.isFinite(limit) && limit > 0 && limit <= 500 ? Math.floor(limit) : 200;
+  const result = await queryDb<{
+    quora_profile_url_normalized: string;
+    quora_profile_url: string;
+    flagged_by_user_id: string | null;
+    flag_count: number;
+    first_flagged_at: Date;
+    last_flagged_at: Date;
+  }>(
+    `SELECT quora_profile_url_normalized, quora_profile_url, flagged_by_user_id, flag_count, first_flagged_at, last_flagged_at
+     FROM unlock_spam_quora_urls
+     ORDER BY last_flagged_at DESC
+     LIMIT $1`,
+    [safeLimit],
+  );
+
+  return result.rows.map((row) => ({
+    quoraProfileUrlNormalized: row.quora_profile_url_normalized,
+    quoraProfileUrl: row.quora_profile_url,
+    flaggedByUserId: row.flagged_by_user_id,
+    flagCount: row.flag_count,
+    firstFlaggedAt: row.first_flagged_at.toISOString(),
+    lastFlaggedAt: row.last_flagged_at.toISOString(),
+  }));
 }

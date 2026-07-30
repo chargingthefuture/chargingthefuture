@@ -6,9 +6,10 @@ import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { Unlock, Key, CheckCircle, XCircle, Ban, RefreshCw, Pencil } from 'lucide-react';
 import { UNLOCK_REWARD_SLA_HOURS } from 'lib/unlock/constants';
-import type { UnlockDashboardSnapshot, UnlockExperimentBucketStat, UnlockSubmission } from 'lib/unlock/types';
+import type { SpamQuoraUrlEntry, UnlockDashboardSnapshot, UnlockExperimentBucketStat, UnlockSubmission } from 'lib/unlock/types';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens } from './unlock-shared';
+import { UnlockSpamDenylistPanel } from './unlock-spam-denylist-panel';
 
 // Admin design tokens (shared admin look from the design system) come from the theme-aware
 // Unlock tokens: accent (purple), page background, panel/header, admin card surface, and the
@@ -101,10 +102,12 @@ export function UnlockAdminShell({
   dashboard,
   submissions: initialSubmissions,
   experimentSplit = [],
+  spamDenylist = [],
 }: {
   dashboard: UnlockDashboardSnapshot;
   submissions: UnlockSubmission[];
   experimentSplit?: UnlockExperimentBucketStat[];
+  spamDenylist?: SpamQuoraUrlEntry[];
 }) {
   const router = useRouter();
   const { theme } = useTheme();
@@ -695,8 +698,10 @@ export function UnlockAdminShell({
         )}
 
         <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginTop: 16 }}>
-          Approving grants full access and mints the ServiceCredits verification reward. Rejecting or marking spam keeps the member on support-only access. Rewards are issued on approval and the background self-heal retries any that did not land within {UNLOCK_REWARD_SLA_HOURS} hours. If a reward is still showing pending, use Retry pending rewards above to grant it now. A Quora profile earns the reward on one account: if the same profile is approved on another account, its reward is <strong>held</strong> for your determination — use <strong>Grant reward</strong> to award the account you choose, and <strong>Revoke reward</strong> to claw it back from the others (a perp impersonating a victim is exactly this case).
+          Approving grants full access and mints the ServiceCredits verification reward. Rejecting keeps the member on support-only access; marking spam blocks them from the whole app and adds their Quora URL to the denylist below. Rewards are issued on approval and the background self-heal retries any that did not land within {UNLOCK_REWARD_SLA_HOURS} hours. If a reward is still showing pending, use Retry pending rewards above to grant it now. A Quora profile earns the reward on one account: if the same profile is approved on another account, its reward is <strong>held</strong> for your determination — use <strong>Grant reward</strong> to award the account you choose, and <strong>Revoke reward</strong> to claw it back from the others (a perp impersonating a victim is exactly this case).
         </p>
+
+        <UnlockSpamDenylistPanel initialEntries={spamDenylist} />
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import {
   getUnlockExperimentSplit,
   listUnlockSubmissions,
 } from 'lib/unlock/repository';
+import { listSpamQuoraUrls } from 'lib/unlock/spam-denylist';
 import { redirect } from 'next/navigation';
 import { UnlockAdminShell } from '@/components/unlock/unlock-admin-shell';
 
@@ -15,13 +16,19 @@ export default async function UnlockAdminPage() {
     redirect('/');
   }
 
-  const [dashboard, submissions, experimentSplit] = await Promise.all([
+  const [dashboard, submissions, experimentSplit, spamDenylist] = await Promise.all([
     getUnlockDashboardSnapshot(),
     listUnlockSubmissions({ limit: 50 }),
     getUnlockExperimentSplit(),
+    listSpamQuoraUrls(),
   ]);
 
   return (
-    <UnlockAdminShell dashboard={dashboard} submissions={submissions} experimentSplit={experimentSplit} />
+    <UnlockAdminShell
+      dashboard={dashboard}
+      submissions={submissions}
+      experimentSplit={experimentSplit}
+      spamDenylist={spamDenylist}
+    />
   );
 }

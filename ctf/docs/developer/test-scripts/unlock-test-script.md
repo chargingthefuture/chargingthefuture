@@ -182,6 +182,22 @@ Quora account. Step 5: the second member is blocked from the Commons and all plu
 URL to approved/rejected (in the admin queue) removes it from the denylist and lifts the block.
 **Result:** web ☐ — notes:
 
+### UNLOCK-A2d · Spam denylist panel — view and remove a URL
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Precondition:** at least one URL on the denylist (mark a submission spam first, per UNLOCK-A2c).
+**Steps:**
+1. On `/admin/unlock`, scroll to the "Spam Quora-URL denylist" panel.
+2. Confirm the flagged URL is listed with its last-flagged date (and flag count if more than one).
+3. Click **Remove**, then **Confirm remove**.
+4. Re-submit that URL as a member (per UNLOCK-A2c).
+**Expected:** Step 2: the panel lists every denylisted URL. Step 3: `POST
+/api/unlock/admin/spam-denylist/remove` deletes the row (audited
+`unlock.admin.spam_denylist.remove`) and it disappears from the panel. Step 4: because the URL is no
+longer denylisted, the submission is now accepted as `pending` (not auto-spam) — removal affects future
+submissions only; a member already blocked for that URL stays blocked until their submission is
+re-reviewed. A non-admin cannot reach the route.
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A3 · Approval reward — granted or pending, never double
 **Role:** admin / reviewer · **Surfaces:** web (admin surface)
 **Precondition:** a freshly approved submission.

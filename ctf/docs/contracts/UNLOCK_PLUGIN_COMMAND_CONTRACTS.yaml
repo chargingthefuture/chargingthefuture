@@ -102,6 +102,27 @@ contracts:
     idempotency: true
 
   - pluginId: unlock
+    command: unlock.admin.spam_denylist.remove
+    version: 1.0.0
+    description: >-
+      Remove a normalized Quora URL from the spam denylist. Stops future submissions of that URL from
+      being auto-blocked; does not lift the restriction on a member already blocked for it (that is
+      reversed by re-reviewing their submission to approved/rejected).
+    inputSchema:
+      quoraProfileUrlNormalized:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - unlock_spam_quora_urls
+      - unlock_audit_log
+    purpose: moderation_denylist_maintenance
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: unlock
     command: unlock.admin.submission.url.edit
     version: 1.0.0
     description: Admin correction of a submission's Quora profile URL (e.g. fixing a typo). Re-validates and re-normalizes the URL with the same rules as the member submit path. Does not change review status, access tier, or the verification window.
