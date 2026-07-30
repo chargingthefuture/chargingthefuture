@@ -13,9 +13,11 @@ import { FEED_COMMONS_GUIDANCE_INTERVAL } from 'lib/feed/constants';
 //   that was wrong and would have taught members to do their business in a public thread instead of in
 //   the app that actually records it.
 //
-//   WHY IT IS OPEN. The owner takes no direct messages: her inbox was used to harass her. Open posting
-//   removes that channel, and it means a question is answered once where the next person finds it, by
-//   whichever member is awake — the community spans every timezone.
+//   WHY IT IS OPEN. The design reason is that the owner takes no direct messages — her inbox was used to
+//   harass her, and open posting removes that channel. The FINAL COPY states only the benefit (answered
+//   once where the next person finds it, never waiting on the owner alone) and no longer explains the
+//   harassment history; the owner cut that line on 2026-07-30. Keep it cut: the rule stands on the
+//   benefit, and the notice does not owe a whole community an account of what was done to her.
 //
 //   IT MUST NOT FRIGHTEN OFF REAL SURVIVORS. This is the constraint that shapes the tone. "No
 //   storytelling" read alone tells a newly targeted person their experience is unwelcome, which is the
@@ -41,35 +43,35 @@ import { FEED_COMMONS_GUIDANCE_INTERVAL } from 'lib/feed/constants';
 //
 //   THE WEAVER PERK IS THE PRIVATE ROOM, NOT THE COMMONS. An earlier draft said Weavers of the Commons
 //   "post without restriction", which was false: the topic rule applies to the Commons for everyone. What
-//   a Weaver earns is the private Weavers room, where none of it applies. Do not restore the old wording
-//   — it promised members something the app does not do, which is worse than any tone problem.
+//   a Weaver earns is the private Weavers group chat room, where none of it applies. Do not restore that
+//   wording — it promised members something the app does not do, which is worse than any tone problem.
 
 export const COMMONS_GUIDANCE_TITLE = 'What the Commons is for';
 
 export const COMMONS_GUIDANCE_BODY = [
-  'On Quora you write into a void. You post, and maybe nobody comes. Here you ask, and someone answers',
-  '— me, or another member when I am away. We span every timezone, so somebody is usually awake. That',
-  'is the difference, and it is the point of the whole place.',
+  'On Quora you write into a void. You post, and maybe nobody comes. Here you ask, and someone answers —',
+  'me, or another member when I am away. We span every timezone, so somebody is usually awake. That is',
+  'the difference, and it is the point of the Commons.',
   '',
-  'Ask in the open. It works better than it sounds. I do not run direct messages, and a public question',
-  'gets answered once where the next person can find it, instead of sitting in one private thread — so',
-  'you are never waiting on me alone either.',
+  'Ask in the open. It works better than it sounds. A public question gets answered once where the next',
+  'person can find it, instead of sitting in one private thread — so you are never waiting on me alone to',
+  'answer.',
   '',
-  'You can say what is happening to you. Being targeted is why most of us are here, and nobody is asking',
-  'you to keep it quiet. What we do differently is finish the thought: say what is going on and what you',
-  'need, and someone helps with that part. A story with a question in it gets you somewhere. That is the',
-  'only difference we are asking for.',
+  'You can say what is happening to you. Being targeted is why we are here, and nobody is asking you to',
+  'keep it quiet. What we do differently is finish the thought: say what is going on and what you need,',
+  'and someone helps with that part. A story with a question in it gets you somewhere. That is the only',
+  'difference we are asking for.',
   '',
   'The work itself lives in the apps. Skills, trades, housing, rides, calls — each has its own place, and',
   'those are what build the economy and get counted. The Commons is how you find your way to them.',
   '',
   'Threads that never get to a question do come down, if they keep going. Not for tone, not for',
   'disagreement, and not for who anybody is. Keeping this a place with a purpose is also what keeps it',
-  'safe: an open room about nothing is where traffickers go to blend in and look for people. They are not',
+  'safe: an open room about nothing is where traffickers go to blend in and harass Targets. They are not',
   'allowed here — not tolerated less, not allowed.',
   '',
-  'Contribute for a while and you become a Weaver of the Commons, which comes with a private room where',
-  'none of this applies and you can talk about whatever you like.',
+  'Contribute for a while and you become a Weaver of the Commons, which comes with a private group chat',
+  'room where none of this applies and you can talk about whatever you like.',
 ].join('\n');
 
 // Should the notice go out now? True only when this post lands exactly on a multiple of the interval,

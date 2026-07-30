@@ -636,8 +636,10 @@ where you can reach the next multiple of 50 without posting hundreds of times â€
      are arranged or recorded; those live in their own apps and are what count toward the economy. If
      the notice ever implies otherwise it teaches members to do business in a public thread instead of
      in the app that records it.
-  2. **Why it is open**: no direct messages, because the owner's inbox was used to harass her, and an
-     open question gets answered once by whoever is awake across the timezones.
+  2. **Why it is open**, stated as the benefit: a public question is answered once where the next person
+     finds it, by whoever is awake across the timezones, so nobody waits on the owner alone. The copy
+     deliberately does **not** explain the harassment history behind the no-DM policy (cut 2026-07-30) â€”
+     the rule stands on the benefit, and the notice does not owe the community that account.
   3. **"You can say what is happening to you."** This is the anti-scare guarantee. Without it, "no
      storytelling" reads to a newly targeted person as *your experience is unwelcome here*, which is the
      opposite of true and would cost the app exactly the members it is for. The line it draws is the

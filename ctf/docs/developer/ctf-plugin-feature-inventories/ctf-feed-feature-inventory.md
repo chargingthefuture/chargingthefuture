@@ -569,9 +569,11 @@ All three feed channels (announcements, questions, community) are shipped on web
       their own plugin, and those are what count toward the economy. The first draft said trades get
       "sorted out" here, which would have taught members to do business in a public thread instead of
       in the app that records it.
-    - **Why it is open**: the owner takes no direct messages, because her inbox was used to harass her.
-      Open posting removes that channel, and a question gets answered once where the next person finds
-      it, by whichever member is awake — the community spans every timezone.
+    - **Why it is open**: the design reason is that the owner takes no direct messages — her inbox was
+      used to harass her. The final copy states only the benefit (answered once where the next person
+      finds it, never waiting on the owner alone) and does not explain that history; the owner cut the
+      line on 2026-07-30. Keep it cut — the rule stands on the benefit, and the notice does not owe a
+      whole community an account of what was done to her.
     - **It must not frighten off real survivors.** This is the constraint that shapes the tone. "No
       storytelling" read alone tells a newly targeted person their experience is unwelcome, which is
       the opposite of true, and would cost the app exactly the members it exists for. So the notice says
