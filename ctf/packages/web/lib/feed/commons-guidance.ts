@@ -33,34 +33,43 @@ import { FEED_COMMONS_GUIDANCE_INTERVAL } from 'lib/feed/constants';
 //   merely unwelcome. Volume of off-topic chatter is not the problem being solved, and a perpetrator's
 //   feelings are not a consideration.
 //
-// Weavers of the Commons post without restriction. That is the incentive doing the work the rule
-// cannot: the way out of the topic limit is to contribute, not to argue.
+//   TONE IS A PITCH, NOT A TELLING-OFF (owner, 2026-07-30). The message was right and the delivery read
+//   as annoyed. It now leads with what makes this different from Quora — there you write into a void,
+//   here you ask and someone answers — and the rules follow as consequences of that promise rather than
+//   as complaints. Same content, same firmness on the exclusion; a newcomer should finish it wanting to
+//   join, not braced for a warning.
+//
+//   THE WEAVER PERK IS THE PRIVATE ROOM, NOT THE COMMONS. An earlier draft said Weavers of the Commons
+//   "post without restriction", which was false: the topic rule applies to the Commons for everyone. What
+//   a Weaver earns is the private Weavers room, where none of it applies. Do not restore the old wording
+//   — it promised members something the app does not do, which is worse than any tone problem.
 
 export const COMMONS_GUIDANCE_TITLE = 'What the Commons is for';
 
 export const COMMONS_GUIDANCE_BODY = [
-  'The Commons is a support channel. Ask in the open and get an answer — from me, or from another',
-  'member when I am not around. This community spans every timezone, so someone is usually awake.',
+  'On Quora you write into a void. You post, and maybe nobody comes. Here you ask, and someone answers',
+  '— me, or another member when I am away. We span every timezone, so somebody is usually awake. That',
+  'is the difference, and it is the point of the whole place.',
   '',
-  'It is open on purpose. I do not take direct messages; my inbox was used to harass me and I am not',
-  'running that again. In the open, that does not work. Your question also gets answered once, where',
-  'the next person can find it, instead of me repeating myself in twenty private threads.',
+  'Ask in the open. It works better than it sounds. I do not run direct messages, and a public question',
+  'gets answered once where the next person can find it, instead of sitting in one private thread — so',
+  'you are never waiting on me alone either.',
   '',
-  'If you are new and being targeted: you can say what is happening to you. Nobody is asking you to',
-  'keep it to yourself. What this is not is the endless retelling — the story with no question in it,',
-  'going nowhere, helping no one. Here you ask for something and someone answers. Quora does not offer',
-  'that in the slightest. It is most of the reason this exists.',
+  'You can say what is happening to you. Being targeted is why most of us are here, and nobody is asking',
+  'you to keep it quiet. What we do differently is finish the thought: say what is going on and what you',
+  'need, and someone helps with that part. A story with a question in it gets you somewhere. That is the',
+  'only difference we are asking for.',
   '',
-  'This is also not where the work is recorded. Skills, trades, housing, rides, calls — each has its',
-  'own app, and those are what count toward the economy. The Commons points you to them; it does not',
-  'replace them.',
+  'The work itself lives in the apps. Skills, trades, housing, rides, calls — each has its own place, and',
+  'those are what build the economy and get counted. The Commons is how you find your way to them.',
   '',
-  'Threads that never come back to any of that are removed if they keep happening. Not for tone, and',
-  'not for disagreement. The plain reason: an open room with no subject is where traffickers hide.',
-  'They blend into general talk and use it to find people. They are not allowed here. Not tolerated',
-  'less — not allowed.',
+  'Threads that never get to a question do come down, if they keep going. Not for tone, not for',
+  'disagreement, and not for who anybody is. Keeping this a place with a purpose is also what keeps it',
+  'safe: an open room about nothing is where traffickers go to blend in and look for people. They are not',
+  'allowed here — not tolerated less, not allowed.',
   '',
-  'Weavers of the Commons post without restriction. It is earned by contributing.',
+  'Contribute for a while and you become a Weaver of the Commons, which comes with a private room where',
+  'none of this applies and you can talk about whatever you like.',
 ].join('\n');
 
 // Should the notice go out now? True only when this post lands exactly on a multiple of the interval,

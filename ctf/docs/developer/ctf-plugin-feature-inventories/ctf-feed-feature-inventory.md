@@ -587,6 +587,15 @@ All three feed channels (announcements, questions, community) are shipped on web
       tolerated". The owner was explicit that these people kill with impunity and no wording should
       imply they are merely unwelcome. Volume of off-topic chatter is not the problem being solved, and
       a perpetrator's feelings are not a consideration.
+    - **Tone is a pitch, not a telling-off** (owner, second pass). The message was right and the delivery
+      read as annoyed. It now opens on the Quora contrast — there you write into a void, here you ask and
+      someone answers — and the rules follow as consequences of that promise. Same content, same firmness
+      on the exclusion; firmness toward traffickers is not the same thing as a scolding tone toward
+      everyone else, and a newcomer should finish it wanting to join.
+    - **The Weaver perk is the private room, not the Commons.** An earlier draft said Weavers "post
+      without restriction", which was false — the topic rule applies to the Commons for everyone. What a
+      Weaver earns is the private Weavers room, where none of it applies. Promising members something the
+      app does not do is worse than any tone problem, so this wording must not be restored.
   - **Weavers of the Commons post without restriction**, and the notice says so. That is the incentive
     doing the work the rule cannot: the way out of the topic limit is to contribute, not to argue.
   - New table `feed_commons_guidance_milestones` (see §4.2 item 21). **Parity:** web +

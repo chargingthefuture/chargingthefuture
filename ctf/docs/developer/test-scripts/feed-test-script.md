@@ -643,9 +643,14 @@ where you can reach the next multiple of 50 without posting hundreds of times �
      opposite of true and would cost the app exactly the members it is for. The line it draws is the
      retelling that asks for nothing, contrasted with Quora — where you narrate into a void.
   4. Content is removed for **repeatedly going nowhere**, never for who someone is suspected of being.
-  5. Traffickers are **"not allowed"** — as a fact, not "not tolerated" as a feeling — and **Weavers of
-     the Commons post without restriction**. Drop the last one and the notice becomes a rule with no way
-     out of it.
+  5. Traffickers are **"not allowed"** — as a fact, not "not tolerated" as a feeling.
+  6. The Weaver perk is **the private room**, not the Commons. Check the notice does not claim Weavers
+     post without restriction *here* — the topic rule applies to the Commons for everyone, and an earlier
+     draft got this wrong. Promising members something the app does not do is worse than any tone problem.
+  7. **It reads as a pitch, not a telling-off.** It opens on the Quora contrast (there you write into a
+     void; here you ask and someone answers) and the rules follow as consequences of that promise. If an
+     edit ever makes it lead with the rules, it will read as annoyed and cost the app the members it is
+     for — the firmness on traffickers is not the same thing as a scolding tone toward everyone else.
 
 **Result:** web ☐
 
