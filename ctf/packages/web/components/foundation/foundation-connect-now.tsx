@@ -154,7 +154,7 @@ export function ConnectNowButton({
 //
 // The default and the ceiling are IMPORTED from the server constants rather than repeated here. They
 // matched before, so nothing was broken — but a comment saying "the max matches the server hard cap" is
-// only true until someone changes one side, and then the picker offers a value `normaliseAuthorizedBlocks`
+// only true until someone changes one side, and then the picker offers a value `normalizeAuthorizedBlocks`
 // throws `invalid_authorized_blocks` on, which the buyer sees as an opaque failure after they have already
 // consented to spend. Deriving the list means the two cannot drift.
 const BLOCK_CAP_OPTIONS = [1, 2, 3, 4, 6, 8, 12, FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS].filter(

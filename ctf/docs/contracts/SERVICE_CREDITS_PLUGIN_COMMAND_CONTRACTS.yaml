@@ -548,7 +548,7 @@ contracts:
   - pluginId: service-credits
     command: credit-limit.get
     version: 1.0.0
-    description: Admin-only read of a member's mutual-credit limit (the flat policy default, or a per-account override) and freeze state. No behavioural score is computed or returned — there is no credit or social score on this platform.
+    description: Admin-only read of a member's mutual-credit limit (the flat policy default, or a per-account override) and freeze state. No behavioral score is computed or returned — there is no credit or social score on this platform.
     inputSchema:
       targetUserId:
         type: string

@@ -53,7 +53,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     id: 'workforce',
     name: 'Workforce',
     kind: 'plugin',
-    summary: 'Real-time work and skills distribution amongst 5 million survivors globally.',
+    summary: 'Real-time work and skills distribution among 5 million survivors globally.',
   },
   {
     id: 'skills-hunt',

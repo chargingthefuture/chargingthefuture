@@ -284,7 +284,7 @@ policies:
       # Only an accept promotes anything. Until then a contribution is inert — it cannot reach the
       # assistant, which is what the knowledge page promises the contributor.
       promotionRequiresHumanAccept: true
-      # A decline the contributor cannot understand reads as a judgement on what they lived through.
+      # A decline the contributor cannot understand reads as a judgment on what they lived through.
       declineReasonRequired: true
       # ServiceCredits recognition lands only for a member who has finished Unlock. Contributing is
       # open to anyone signed in; the grant is the part that waits. This also puts a real cost in

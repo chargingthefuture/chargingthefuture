@@ -1,7 +1,7 @@
 // Shared chrome color tokens for plugin web shells.
 //
 // Every plugin shell paints the same chrome surfaces with the same default-dark hex values
-// (page background #0F1117, header #0D0F14, body text #E8EAF0, bright title #F9FAFB, two grey
+// (page background #0F1117, header #0D0F14, body text #E8EAF0, bright title #F9FAFB, two gray
 // text tones #9CA3AF and #6B7280, faint #4B5563, and white-alpha borders). This helper returns
 // those exact values for the default theme — so a shell renders pixel-identical when the comic
 // toggle is off — and the comic surface tokens from COMIC_THEME_TOKENS.md when it is on.

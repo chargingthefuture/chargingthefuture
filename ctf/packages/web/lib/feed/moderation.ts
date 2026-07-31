@@ -13,7 +13,7 @@ import { normalizeUuid } from 'lib/feed/repository';
 // anything but 'accepted'. So the column was decoration: the only way to remove something from the
 // Commons was to DELETE the row, which is unrecoverable and destroys the member's own words along
 // with the reply thread hanging off them. Hiding is reversible; deletion is not, and a moderator
-// acting fast on a judgement call should not be making an irreversible one.
+// acting fast on a judgment call should not be making an irreversible one.
 //
 // The read path now filters on `moderation_status = 'accepted'` in every place Commons content is
 // read (the member timeline, the signed-out public list, and the quoted-post lookup), so hiding here
@@ -153,7 +153,7 @@ export async function listCommonsModerationQueue(options?: {
 }): Promise<FeedModerationQueueRow[]> {
   const limit = Math.min(Math.max(options?.limit ?? 50, 1), 200);
   const onlyHidden = options?.onlyHidden === true;
-  // Empty string would match nothing and read as "no author on file", so normalise it away.
+  // Empty string would match nothing and read as "no author on file", so normalize it away.
   const authorUserId = options?.authorUserId?.trim() || null;
 
   const result = await queryDb<{

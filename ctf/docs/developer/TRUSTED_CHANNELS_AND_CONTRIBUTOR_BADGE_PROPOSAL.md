@@ -172,7 +172,7 @@ members something to aim for — and "you can earn it too" keeps it from reading
   consistent, broad contributor to the community. Access is earned through steady participation over
   time — anyone can earn it,"* with a short "how it's earned" link. It must **not** say "verified,"
   "vetted," or "trusted by the platform." Prefer "contribution / participation" over "value" so it
-  does not read as "big spender" or a judgement of a person's worth.
+  does not read as "big spender" or a judgment of a person's worth.
 - **Only ever the positive.** Show the badge to members who have it; never surface an absence or a
   "does not have it" state on anyone else. No shaming.
 - **Real members only.** The badge attaches to claimed profiles that earned it — not to

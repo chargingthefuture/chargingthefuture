@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
   }
   // Trim notes before validating and storing so trailing/leading whitespace can't push
-  // a note past the limit (or be stored unnormalised). Drop an empty trimmed note.
+  // a note past the limit (or be stored unnormalized). Drop an empty trimmed note.
   let notes: string | undefined;
   if (rawMetadata.notes !== undefined) {
     if (typeof rawMetadata.notes !== 'string') {

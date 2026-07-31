@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-na
 
 // Loud banner shown at the top of a mobile admin screen when the signed-in operator is a demo
 // participant. Admin tools (approve, retry rewards, mint, burn) run against whichever DB schema the
-// caller's demo flag selects, so a demo-mode operator can act on demo data without realising it —
+// caller's demo flag selects, so a demo-mode operator can act on demo data without realizing it —
 // e.g. a governance burn that hits an empty demo wallet and fails as "Insufficient balance.". This
 // makes the demo context impossible to miss. Mirrors the web AdminDemoBanner
 // (ctf/packages/web/components/shared/admin-demo-banner.tsx); rendered only in demo mode, so the

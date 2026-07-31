@@ -140,7 +140,7 @@ const COMMONS_SIGNAL_BODY = [
   ),
   para('Here is the thinking behind that.'),
   para(
-    'Matthew was once asked by a Target on Quora, roughly: do you realise you are sometimes responding to',
+    'Matthew was once asked by a Target on Quora, roughly: do you realize you are sometimes responding to',
     'perps’ comments and posts? His answer, also roughly: yes — but I answered truthfully, so it does not',
     'matter that it was a perp, because a real Target will read the same answer and get value from it.',
   ),
@@ -223,7 +223,7 @@ export const COMMONS_GUIDANCE_BODY = COMMONS_NOTICES[0].body;
 // For a day cadence: the period is the interval index (whole days since the epoch divided by the
 // interval). It becomes due the first time a post is made inside a new interval — which means a notice
 // on a time cadence is delivered by the next post, not by a clock. A reminder nobody is present for is
-// worth nothing, so this is the intended behaviour and not a compromise; in a silent room, nothing is
+// worth nothing, so this is the intended behavior and not a compromise; in a silent room, nothing is
 // published until somebody shows up.
 export function dueMilestoneFor(
   notice: CommonsNotice,

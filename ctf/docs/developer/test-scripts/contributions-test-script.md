@@ -89,7 +89,7 @@ land `pending`.
 **Precondition:** the member already holds a confirmed, credit-earning github_star.
 **Steps:**
 1. Try to submit another GitHub star claim.
-**Expected:** The star path is greyed out (`githubStarAlreadyCredited` is true); a fresh submit is
+**Expected:** The star path is grayed out (`githubStarAlreadyCredited` is true); a fresh submit is
 rejected with a plain message. A member who only has a rejected or zero-credit star is **not** locked
 out — honest retries still work.
 **Result:** web ☐ mobile ☐ — notes:
@@ -199,7 +199,7 @@ no hardcoded "50 SC" when the config says otherwise.
 ## Parity check (web ↔ android)
 
 For CON-1, CON-3, and CON-4, the android app and the mobile-responsive web layout must behave the
-same: same submit flows, the same greyed github-star path, the same inline Signal URL on
+same: same submit flows, the same grayed github-star path, the same inline Signal URL on
 confirmation, and the same claim history. Note: the mobile admin screen mirrors the day-to-day
 confirm/reject path only and shows drive and settings read-only — creating/editing a drive and the
 config knobs are web-admin only (see Known gaps). Note any drift here rather than filing separate

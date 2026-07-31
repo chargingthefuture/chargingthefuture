@@ -159,11 +159,11 @@ async function loadProviderBillingSettings(
   };
 }
 
-// Normalise the buyer-set block cap: an integer in 1..FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS,
+// Normalize the buyer-set block cap: an integer in 1..FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS,
 // defaulting to FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS when absent. Anything out of range
 // (NaN, <= 0, fractional, or above the hard max) is rejected so a call cannot pre-commit an unbounded or
 // nonsensical spend.
-function normaliseAuthorizedBlocks(value: number | undefined): number {
+function normalizeAuthorizedBlocks(value: number | undefined): number {
   if (value === undefined) {
     return FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS;
   }
@@ -237,7 +237,7 @@ async function assertRingRateLimit(client: PoolClient, callerUserId: string): Pr
 
 // Lazily expire any of THIS caller/callee pair's rings that are past their ~60s window. Run inside the
 // same transaction as a ring/poll so a never-answered ring does not linger. There is no background job;
-// the timeout is realised on the next read or write that touches the row.
+// the timeout is realized on the next read or write that touches the row.
 async function expireStaleRings(client: PoolClient, userId: string): Promise<void> {
   await client.query(
     `
@@ -361,7 +361,7 @@ export async function ringInstantCall(input: {
   callerUserId: string;
   authorizedBlocks?: number;
 }): Promise<FoundationInstantCall> {
-  const authorizedBlocks = normaliseAuthorizedBlocks(input.authorizedBlocks);
+  const authorizedBlocks = normalizeAuthorizedBlocks(input.authorizedBlocks);
 
   const call = await withDbTransaction(async (client) => {
     await expireStaleRings(client, input.callerUserId);
@@ -407,7 +407,7 @@ export async function ringInstantCall(input: {
 // Lazily end any of THIS caller/callee pair's ANSWERED calls whose prepaid window has elapsed (issue #808
 // task 4). paid_through_at = answered_at + blocks_charged * interval; once now passes it and the caller has
 // not extended, the prepaid time is used up and the call ends with reason 'paid_window_elapsed'. Mirrors
-// the lazy ring-timeout sweep: there is no background job, the expiry is realised on the next read/action
+// the lazy ring-timeout sweep: there is no background job, the expiry is realized on the next read/action
 // that touches the row. Ending only stops billing -- there is no proration or refund (prepaid blocks, v1).
 async function expirePaidWindows(client: PoolClient, userId: string): Promise<void> {
   await client.query(
@@ -450,7 +450,7 @@ async function loadParticipantCall(
   return row;
 }
 
-// Read the current state of a call for either participant (drives the caller/callee poll). Realises the
+// Read the current state of a call for either participant (drives the caller/callee poll). Realizes the
 // ring timeout lazily.
 export async function getInstantCallState(input: {
   callId: string;

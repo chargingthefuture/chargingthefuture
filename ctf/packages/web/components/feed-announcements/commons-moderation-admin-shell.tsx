@@ -147,7 +147,7 @@ function ModerationTabs({
 }
 
 // The reason applied to the next hide. One picker for the whole list rather than one per row:
-// a sweep of off-topic posts is the same judgement repeated, and asking for it on every card
+// a sweep of off-topic posts is the same judgment repeated, and asking for it on every card
 // would be twenty identical clicks. Restoring ignores this.
 function ReasonPicker({ reason, onChange }: { reason: FeedModerationReason; onChange: (r: FeedModerationReason) => void }) {
   const { theme } = useTheme();
@@ -447,7 +447,7 @@ export function CommonsModerationAdminShell({
   const [pendingFlagged, setPendingFlagged] = useState(initialPendingFlagged);
   const [focusAuthor, setFocusAuthor] = useState<FeedModerationAuthorSummary | null>(null);
   // The reason applied to the next hide. Defaults to off-topic because that is the actual
-  // day-to-day judgement — Quora-style discussion unrelated to the economy — so a sweep of twenty
+  // day-to-day judgment — Quora-style discussion unrelated to the economy — so a sweep of twenty
   // posts should not mean picking the same option twenty times.
   const [reason, setReason] = useState<FeedModerationReason>(FEED_MODERATION_REASON.offTopic);
   const [busyId, setBusyId] = useState<string | null>(null);

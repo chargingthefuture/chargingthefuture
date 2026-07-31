@@ -3,7 +3,7 @@ import styles from './admin-demo-banner.module.css';
 // Loud banner shown across every /admin screen when the signed-in operator is a demo participant.
 // Admin tools (approve, retry rewards, mint, burn) run against whichever DB schema the caller's demo
 // flag selects (getActivePool -> isDemoMode), so a demo-mode operator can act on demo data without
-// realising it — e.g. a governance burn that hits an empty demo wallet and fails as "Insufficient
+// realizing it — e.g. a governance burn that hits an empty demo wallet and fails as "Insufficient
 // balance.". This makes the demo context impossible to miss. Rendered only in demo mode, so the normal
 // production operator view is unchanged.
 //

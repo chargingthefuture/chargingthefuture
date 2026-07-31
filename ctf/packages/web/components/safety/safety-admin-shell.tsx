@@ -47,7 +47,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const message =
       payload && typeof payload === 'object' && 'message' in payload ? payload.message : 'Request failed.';
-    // Defence in depth: this admin route returns controlled messages, but never render a raw server
+    // Defense in depth: this admin route returns controlled messages, but never render a raw server
     // string unbounded — cap the length so an unexpected message (e.g. a leaked internal detail)
     // cannot flood the UI verbatim.
     const safeMessage =

@@ -101,7 +101,7 @@ export type CreditLimitResponse = {
 };
 
 // Look-up view of a member's mutual-credit limit (the flat policy default or a per-account override)
-// and freeze state. No behavioural score — there is no credit/social score on this platform.
+// and freeze state. No behavioral score — there is no credit/social score on this platform.
 export type CreditLimitLookup = {
   targetUserId: string;
   creditLimit: number;

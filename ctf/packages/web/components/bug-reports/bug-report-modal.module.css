@@ -1,6 +1,6 @@
 /* Report-a-problem modal — translated from the design's ReportAProblem* mockups
    into the app's theme tokens. The mockups used a hard-coded purple→cyan gradient
-   and fixed hex values; here every surface, border, and text colour reads from the
+   and fixed hex values; here every surface, border, and text color reads from the
    shared --ctf-* tokens so the modal follows the active theme (default and comic). */
 
 .overlay {

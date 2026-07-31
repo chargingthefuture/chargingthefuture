@@ -825,7 +825,7 @@ where you can reach the next multiple of 50 without posting hundreds of times â€
 - Step 2: the question is gone from the timeline.
 - Step 3: refused as **not found** â€” not "forbidden". A hidden question must not confirm it exists.
 - Step 4: the hidden question does **not** appear in the export. This is the check that matters: hiding
-  something is a judgement it does not belong, and exporting it into training data would launder it back
+  something is a judgment it does not belong, and exporting it into training data would launder it back
   in, with the model then answering in the register of the thing that was removed.
 - Step 5: it appears again once restored.
 

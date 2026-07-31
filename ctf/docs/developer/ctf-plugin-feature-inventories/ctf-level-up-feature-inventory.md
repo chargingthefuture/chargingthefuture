@@ -279,7 +279,7 @@ that exist today.
   address the learner, `releaseMilestoneCredits` now returns `recipientUserId` on its response
   (additive; it was already computed internally). No schema/route/contract-list change.
 - 2026-07-20: **Resolved the level-up code-review sweep findings (#1756–#1763).** No schema, route
-  list, or contract change — behaviour and security hardening only:
+  list, or contract change — behavior and security hardening only:
   - **dispute.open ownership (#1756, security).** `openDispute` now verifies the actor is the
     enrollment's learner, its assigned trainer, or an admin before creating the dispute (and before
     flipping any milestone validation to `disputed`); the route passes `isAdmin`. Previously any

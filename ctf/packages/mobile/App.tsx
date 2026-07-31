@@ -100,7 +100,7 @@ function keyEmoji(key: FeatureKey): string {
   return getPluginEmoji(key);
 }
 
-// Accent for a nav pill's active state — the plugin's own accent, so each app keeps its colour
+// Accent for a nav pill's active state — the plugin's own accent, so each app keeps its color
 // identity in the nav (matches web). Non-plugin keys fall back to the neutral accent.
 function keyAccent(key: FeatureKey, theme: ThemeName): string {
   return getAppAccent(key, theme);
