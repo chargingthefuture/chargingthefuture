@@ -146,6 +146,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('feed_questions', 'asked_by_user_id', 'Your questions.'),
       del('feed_community_replies', 'author_user_id', 'Your replies.'),
       del('feed_community_posts', 'author_user_id', 'Your community posts.'),
+      del('feed_commons_notice_seen', 'user_id', 'Which one-time Commons notices you have been shown.'),
       del('feed_user_dismissals', 'user_id', 'Items you dismissed.'),
       del('feed_user_read_state', 'user_id', 'Your read state.'),
       del('feed_membership_events', 'user_id', 'Your feed membership events.'),

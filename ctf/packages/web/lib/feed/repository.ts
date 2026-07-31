@@ -15,10 +15,17 @@ import {
   FEED_MAX_PAGE_SIZE,
   FEED_MAX_QUESTION_LENGTH,
   FEED_MAX_TITLE_LENGTH,
+  FEED_SYSTEM_ACTOR_ID,
   FEED_QUESTION_CATEGORIES,
   FEED_REACTION_EMOJIS,
   isAllowedFeedReactionEmoji,
 } from './constants';
+import {
+  COMMONS_NOTICES,
+  claimGuidanceMilestone,
+  dueMilestoneFor,
+  stampGuidanceAnnouncement,
+} from './commons-guidance';
 import { extractMentionHandles, feedAuthorHandle, feedMentionTokens } from './author-handle';
 import { normalizeMultilineText } from './normalize';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
@@ -524,6 +531,73 @@ async function syncFeedItemForQuestion(
   );
 
   await upsertDefaultFeedTargets(client, feedItemResult.rows[0].id);
+}
+
+// Publish any of the standing Commons notices whose cadence is due on this post.
+//
+// Never throws: a failure here must not lose the member's post. A notice is a reminder, and missing one
+// is a smaller harm than a rejected post — but the claim and the notice do share the post's transaction,
+// so the two can never disagree about whether a period was served.
+async function maybePostCommonsGuidance(client: PoolClient): Promise<void> {
+  try {
+    // Counts every community post, hidden ones included. A milestone means "the Commons has seen this
+    // much traffic", and moderation after the fact should not shift where the next notice falls.
+    const counted = await client.query<{ total: string }>('SELECT COUNT(*)::text AS total FROM feed_community_posts');
+    const total = Number(counted.rows[0]?.total ?? 0);
+    const nowMs = Date.now();
+
+    for (const notice of COMMONS_NOTICES) {
+      const milestone = dueMilestoneFor(notice, { postCount: total, nowMs });
+      if (milestone === null) {
+        continue;
+      }
+
+      // The claim is the gate. For a time cadence every post inside the interval computes the same
+      // period, so all but the first lose this race and skip — which is exactly what makes a "every few
+      // weeks" notice fire once per interval rather than on every post in it.
+      const won = await claimGuidanceMilestone(client, milestone, notice.key);
+      if (!won) {
+        continue;
+      }
+
+      // Published straight away rather than as a draft — nobody is going to hand-publish these on a
+      // schedule, and a draft that never ships is the same as no notice at all.
+      const announcement = await client.query<{ id: string }>(
+        `
+          INSERT INTO announcements
+            (title, body, status, published_at, targeting, linked_plugin_slugs, created_by_user_id, updated_by_user_id)
+          VALUES
+            ($1, $2, 'published', NOW(), $3::jsonb, '[]'::jsonb, $4, $4)
+          RETURNING id
+        `,
+        [notice.title, notice.body, JSON.stringify({ roles: ['member', 'admin'] }), FEED_SYSTEM_ACTOR_ID],
+      );
+
+      const announcementId = announcement.rows[0].id;
+      await client.query(
+        `
+          INSERT INTO feed_items
+            (item_type, source_announcement_id, title, body, published_at, is_active, created_by_user_id, updated_by_user_id)
+          VALUES
+            ('announcement', $1::uuid, $2, $3, NOW(), TRUE, $4, $4)
+          ON CONFLICT (source_announcement_id) DO NOTHING
+        `,
+        [announcementId, notice.title, notice.body, FEED_SYSTEM_ACTOR_ID],
+      );
+
+      const projected = await client.query<{ id: string }>(
+        'SELECT id FROM feed_items WHERE source_announcement_id = $1::uuid LIMIT 1',
+        [announcementId],
+      );
+      if (projected.rows[0]) {
+        await upsertDefaultFeedTargets(client, projected.rows[0].id);
+      }
+
+      await stampGuidanceAnnouncement(client, milestone, announcementId, notice.key);
+    }
+  } catch (error) {
+    reportError(error, { area: 'feed', op: 'commons_guidance_autopost' });
+  }
 }
 
 async function syncFeedItemForCommunityPost(
@@ -2054,6 +2128,13 @@ export async function createFeedCommunityPost(
 
     const postId = inserted.rows[0].id;
     await syncFeedItemForCommunityPost(client, actorId, postId, getCommunityTitle(category), body);
+
+    // Every Nth post, publish the Commons guidance notice. Inside this transaction on purpose: the
+    // count, the milestone claim, and the notice all commit with the post that triggered them, so a
+    // rolled-back post can never leave a claimed milestone behind that silently suppresses the notice
+    // forever. Best-effort in the sense that a failure is swallowed (below) — never in the sense of
+    // running after commit, which would open exactly that gap.
+    await maybePostCommonsGuidance(client);
 
     return {
       postId,
