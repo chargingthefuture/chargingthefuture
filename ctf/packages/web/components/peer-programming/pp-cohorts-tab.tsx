@@ -2,7 +2,7 @@
 
 import { Headphones, Users } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { getPeerProgrammingTokens, type CohortSummary, type Room } from "./pp-shared";
+import { getPeerProgrammingTokens, type CohortSummary, type PeerProgrammingTokens, type Room } from "./pp-shared";
 
 interface FeedbackFormProps {
   value: string;
@@ -66,6 +66,47 @@ function AssignedCohort({ room, memberCount, onJoin }: { room: Room; memberCount
   );
 }
 
+// Container style for a cohort row — the open row is tinted with the accent, the rest neutral.
+function cohortRowStyle(t: PeerProgrammingTokens, isOpen: boolean): React.CSSProperties {
+  return {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "12px 16px",
+    borderRadius: 12,
+    background: isOpen ? `${t.ACCENT}12` : "rgba(255,255,255,0.02)",
+    border: `1px solid ${isOpen ? `${t.ACCENT}40` : t.BORDER}`,
+  };
+}
+
+// The listen-in / viewing button for a cohort row. Split out so the row's per-open ternaries live
+// here rather than piling into CohortListRow.
+function CohortListenButton({
+  isOpen,
+  disabled,
+  onOpen,
+  label,
+}: {
+  isOpen: boolean;
+  disabled: boolean;
+  onOpen: () => void;
+  label: string;
+}) {
+  const { theme } = useTheme();
+  const t = getPeerProgrammingTokens(theme);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      disabled={disabled}
+      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, background: isOpen ? t.BORDER : `${t.ACCENT}1A`, border: `1px solid ${isOpen ? t.BORDER_HI : `${t.ACCENT}40`}`, color: isOpen ? t.MUTED : t.ACCENT, fontSize: 12, fontWeight: 700, cursor: disabled ? "default" : "pointer", whiteSpace: "nowrap" }}
+    >
+      <Headphones size={13} />
+      {label}
+    </button>
+  );
+}
+
 // One running cohort in the "listen in" list. This list is for OTHER cohorts — the viewer's own
 // cohort is shown once at the top (the "Join Session" card) and is filtered out here, so it never
 // appears twice. Anyone signed in can open another cohort read-only (the listen-in requirement); the
@@ -86,7 +127,7 @@ function CohortListRow({
   const disabled = busy || isOpen;
   const label = isOpen ? "Viewing" : "Listen in";
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 12, background: isOpen ? `${t.ACCENT}12` : "rgba(255,255,255,0.02)", border: `1px solid ${isOpen ? `${t.ACCENT}40` : t.BORDER}` }}>
+    <div style={cohortRowStyle(t, isOpen)}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>Cohort {cohort.cohortLabel}</span>
@@ -94,15 +135,7 @@ function CohortListRow({
         </div>
         <div style={{ fontSize: 12, color: t.MUTED, marginTop: 2 }}>{cohort.memberCount} member{cohort.memberCount !== 1 ? "s" : ""}</div>
       </div>
-      <button
-        type="button"
-        onClick={onOpen}
-        disabled={disabled}
-        style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, background: isOpen ? t.BORDER : `${t.ACCENT}1A`, border: `1px solid ${isOpen ? t.BORDER_HI : `${t.ACCENT}40`}`, color: isOpen ? t.MUTED : t.ACCENT, fontSize: 12, fontWeight: 700, cursor: disabled ? "default" : "pointer", whiteSpace: "nowrap" }}
-      >
-        <Headphones size={13} />
-        {label}
-      </button>
+      <CohortListenButton isOpen={isOpen} disabled={disabled} onOpen={onOpen} label={label} />
     </div>
   );
 }
