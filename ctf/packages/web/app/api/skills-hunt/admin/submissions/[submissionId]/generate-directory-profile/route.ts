@@ -8,6 +8,30 @@ type GenerateBody = {
   invitedByUsername?: string;
 };
 
+// Map a thrown repository error message to the HTTP response shape. Unknown
+// messages fall through to a 503 persistence-unavailable response.
+function mapGenerateProfileError(message: string): { status: number; code: string; responseMessage: string } {
+  if (message === 'skills_hunt_profile_already_generated') {
+    return {
+      status: 409,
+      code: SKILLS_HUNT_ERROR_CODE.profileAlreadyGenerated,
+      responseMessage: 'Directory profile was already generated for this submission.',
+    };
+  }
+  if (message === 'skills_hunt_submission_not_found') {
+    return {
+      status: 404,
+      code: SKILLS_HUNT_ERROR_CODE.submissionNotFound,
+      responseMessage: 'Accepted submission not found.',
+    };
+  }
+  return {
+    status: 503,
+    code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable,
+    responseMessage: 'Unable to generate directory profile projection.',
+  };
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ submissionId: string }> }) {
   const gate = await requireSkillsHuntModeratorAccess();
   if (!gate.allowed) {
@@ -59,20 +83,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_submissions_submissionid_generate_directory_profile' });
     const message = error instanceof Error ? error.message : 'unknown';
-
-    let status = 503;
-    let code: string = SKILLS_HUNT_ERROR_CODE.persistenceUnavailable;
-    let responseMessage = 'Unable to generate directory profile projection.';
-
-    if (message === 'skills_hunt_profile_already_generated') {
-      status = 409;
-      code = SKILLS_HUNT_ERROR_CODE.profileAlreadyGenerated;
-      responseMessage = 'Directory profile was already generated for this submission.';
-    } else if (message === 'skills_hunt_submission_not_found') {
-      status = 404;
-      code = SKILLS_HUNT_ERROR_CODE.submissionNotFound;
-      responseMessage = 'Accepted submission not found.';
-    }
+    const { status, code, responseMessage } = mapGenerateProfileError(message);
 
     return NextResponse.json({ ok: false, code, message: responseMessage }, { status });
   }

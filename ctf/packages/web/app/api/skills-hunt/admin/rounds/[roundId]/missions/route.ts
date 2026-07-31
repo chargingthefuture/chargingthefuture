@@ -10,6 +10,72 @@ import {
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
 
+const VALID_GOAL_TYPES = ['count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_distinct_sectors'] as const;
+const VALID_MISSION_STATUSES = ['draft', 'active', 'locked', 'archived'] as const;
+
+type MissionBodyResult =
+  | { ok: true; input: MissionCreateInput }
+  | { ok: false; message: string };
+
+// Runtime narrowing: every field touched by createMission gets checked before
+// construction. Malformed types fail-fast with 400. Checks are grouped across a
+// few helpers to keep each within complexity limits; each pushes to `errors`.
+function validateMissionCoreFields(body: Record<string, unknown>, errors: string[]): void {
+  if (typeof body.title !== 'string') errors.push('title must be a string');
+  if (typeof body.goalTarget !== 'number') errors.push('goalTarget must be a number');
+  if (typeof body.goalType !== 'string' || !VALID_GOAL_TYPES.includes(body.goalType as typeof VALID_GOAL_TYPES[number])) {
+    errors.push('goalType must be one of ' + VALID_GOAL_TYPES.join(' | '));
+  }
+  if (body.goalMetadata !== undefined && (typeof body.goalMetadata !== 'object' || body.goalMetadata === null || Array.isArray(body.goalMetadata))) {
+    errors.push('goalMetadata must be an object');
+  }
+}
+
+function validateMissionScoreFields(body: Record<string, unknown>, errors: string[]): void {
+  if (body.bonusPoints !== undefined && typeof body.bonusPoints !== 'number') {
+    errors.push('bonusPoints must be a number');
+  }
+  if (body.displayOrder !== undefined && typeof body.displayOrder !== 'number') {
+    errors.push('displayOrder must be a number');
+  }
+  if (body.status !== undefined && (typeof body.status !== 'string' || !VALID_MISSION_STATUSES.includes(body.status as typeof VALID_MISSION_STATUSES[number]))) {
+    errors.push('status must be one of ' + VALID_MISSION_STATUSES.join(' | '));
+  }
+}
+
+function validateMissionCopyFields(body: Record<string, unknown>, errors: string[]): void {
+  if (body.description !== undefined && body.description !== null && typeof body.description !== 'string') {
+    errors.push('description must be a string or null');
+  }
+  if (body.colorHex !== undefined && body.colorHex !== null && typeof body.colorHex !== 'string') {
+    errors.push('colorHex must be a string or null');
+  }
+}
+
+function parseMissionBody(roundId: string, body: Record<string, unknown>): MissionBodyResult {
+  const errors: string[] = [];
+  validateMissionCoreFields(body, errors);
+  validateMissionScoreFields(body, errors);
+  validateMissionCopyFields(body, errors);
+  if (errors.length) {
+    return { ok: false, message: errors.join('; ') };
+  }
+
+  const input: MissionCreateInput = {
+    roundId,
+    title: body.title as string,
+    description: (body.description as string | null | undefined) ?? null,
+    goalType: body.goalType as MissionCreateInput['goalType'],
+    goalTarget: body.goalTarget as number,
+    goalMetadata: (body.goalMetadata as Record<string, unknown> | undefined) ?? {},
+    bonusPoints: (body.bonusPoints as number | undefined) ?? 0,
+    colorHex: (body.colorHex as string | null | undefined) ?? null,
+    status: (body.status as MissionCreateInput['status'] | undefined) ?? 'active',
+    displayOrder: (body.displayOrder as number | undefined) ?? 0,
+  };
+  return { ok: true, input };
+}
+
 export async function GET(_request: Request, { params }: { params: Promise<{ roundId: string }> }) {
   const gate = await requireSkillsHuntAdminAccess();
   if (!gate.allowed) {
@@ -56,53 +122,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
     );
   }
 
-  // Runtime narrowing: every field touched by createMission gets checked
-  // before construction. Malformed types fail-fast with 400.
-  const errors: string[] = [];
-  if (typeof body.title !== 'string') errors.push('title must be a string');
-  if (typeof body.goalTarget !== 'number') errors.push('goalTarget must be a number');
-  const validGoalTypes = ['count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_distinct_sectors'] as const;
-  if (typeof body.goalType !== 'string' || !validGoalTypes.includes(body.goalType as typeof validGoalTypes[number])) {
-    errors.push('goalType must be one of ' + validGoalTypes.join(' | '));
-  }
-  if (body.description !== undefined && body.description !== null && typeof body.description !== 'string') {
-    errors.push('description must be a string or null');
-  }
-  if (body.goalMetadata !== undefined && (typeof body.goalMetadata !== 'object' || body.goalMetadata === null || Array.isArray(body.goalMetadata))) {
-    errors.push('goalMetadata must be an object');
-  }
-  if (body.bonusPoints !== undefined && typeof body.bonusPoints !== 'number') {
-    errors.push('bonusPoints must be a number');
-  }
-  if (body.colorHex !== undefined && body.colorHex !== null && typeof body.colorHex !== 'string') {
-    errors.push('colorHex must be a string or null');
-  }
-  const validStatuses = ['draft', 'active', 'locked', 'archived'] as const;
-  if (body.status !== undefined && (typeof body.status !== 'string' || !validStatuses.includes(body.status as typeof validStatuses[number]))) {
-    errors.push('status must be one of ' + validStatuses.join(' | '));
-  }
-  if (body.displayOrder !== undefined && typeof body.displayOrder !== 'number') {
-    errors.push('displayOrder must be a number');
-  }
-  if (errors.length) {
+  const parsed = parseMissionBody(roundId, body);
+  if (!parsed.ok) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: errors.join('; ') },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: parsed.message },
       { status: 400 },
     );
   }
-
-  const input: MissionCreateInput = {
-    roundId,
-    title: body.title as string,
-    description: (body.description as string | null | undefined) ?? null,
-    goalType: body.goalType as MissionCreateInput['goalType'],
-    goalTarget: body.goalTarget as number,
-    goalMetadata: (body.goalMetadata as Record<string, unknown> | undefined) ?? {},
-    bonusPoints: (body.bonusPoints as number | undefined) ?? 0,
-    colorHex: (body.colorHex as string | null | undefined) ?? null,
-    status: (body.status as MissionCreateInput['status'] | undefined) ?? 'active',
-    displayOrder: (body.displayOrder as number | undefined) ?? 0,
-  };
+  const input = parsed.input;
 
   const validation = validateMissionCreateInput(input);
   if (validation) {

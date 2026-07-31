@@ -75,54 +75,39 @@ export function parsePositiveInteger(value: string | null, fallback: number): nu
   return parsed;
 }
 
+// A non-empty trimmed idempotency key is kept as-is; anything else falls back to the caller's key.
+export function resolveIdempotencyKey(value: unknown, fallbackKey: string): string {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallbackKey;
+}
+
+// Maps a repository error message to its member-facing response shape. Keeping this as a lookup keeps
+// trustTransportErrorResponse a single table read instead of a long branch chain.
+type TrustTransportErrorResponse = { code: string; message: string; status: number };
+
+const TRUST_TRANSPORT_ERROR_RESPONSES: Record<string, TrustTransportErrorResponse> = {
+  invalid_mode: { code: TRUST_TRANSPORT_ERROR_CODE.invalidMode, message: 'Mode is invalid.', status: 400 },
+  request_not_found: { code: TRUST_TRANSPORT_ERROR_CODE.requestNotFound, message: 'Request not found.', status: 404 },
+  offer_not_found: { code: TRUST_TRANSPORT_ERROR_CODE.offerNotFound, message: 'Offer not found.', status: 404 },
+  trip_not_found: { code: TRUST_TRANSPORT_ERROR_CODE.tripNotFound, message: 'Trip not found.', status: 404 },
+  incident_not_found: { code: TRUST_TRANSPORT_ERROR_CODE.incidentNotFound, message: 'Incident not found.', status: 404 },
+  invalid_transition: { code: TRUST_TRANSPORT_ERROR_CODE.invalidTransition, message: 'Invalid status transition.', status: 409 },
+  completion_requires_confirmation: {
+    code: TRUST_TRANSPORT_ERROR_CODE.completionRequiresConfirmation,
+    message: 'Both the requester and the provider must confirm before a trip can be marked complete.',
+    status: 409,
+  },
+  policy_denied: { code: TRUST_TRANSPORT_ERROR_CODE.policyDenied, message: 'Operation denied by policy.', status: 403 },
+  insufficient_balance: { code: TRUST_TRANSPORT_ERROR_CODE.insufficientBalance, message: 'Insufficient available balance.', status: 409 },
+  account_restricted: { code: TRUST_TRANSPORT_ERROR_CODE.accountRestricted, message: 'Account is restricted.', status: 403 },
+  invalid_payload: { code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid payload.', status: 400 },
+};
+
 export function trustTransportErrorResponse(error: unknown, fallbackMessage: string) {
   const code = error instanceof Error ? error.message : '';
 
-  if (code === 'invalid_mode') {
-    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidMode, message: 'Mode is invalid.' }, { status: 400 });
-  }
-
-  if (code === 'request_not_found') {
-    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.requestNotFound, message: 'Request not found.' }, { status: 404 });
-  }
-
-  if (code === 'offer_not_found') {
-    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.offerNotFound, message: 'Offer not found.' }, { status: 404 });
-  }
-
-  if (code === 'trip_not_found') {
-    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.tripNotFound, message: 'Trip not found.' }, { status: 404 });
-  }
-
-  if (code === 'incident_not_found') {
-    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.incidentNotFound, message: 'Incident not found.' }, { status: 404 });
-  }
-
-  if (code === 'invalid_transition') {
-    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidTransition, message: 'Invalid status transition.' }, { status: 409 });
-  }
-
-  if (code === 'completion_requires_confirmation') {
-    return NextResponse.json(
-      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.completionRequiresConfirmation, message: 'Both the requester and the provider must confirm before a trip can be marked complete.' },
-      { status: 409 },
-    );
-  }
-
-  if (code === 'policy_denied') {
-    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.policyDenied, message: 'Operation denied by policy.' }, { status: 403 });
-  }
-
-  if (code === 'insufficient_balance') {
-    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.insufficientBalance, message: 'Insufficient available balance.' }, { status: 409 });
-  }
-
-  if (code === 'account_restricted') {
-    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.accountRestricted, message: 'Account is restricted.' }, { status: 403 });
-  }
-
-  if (code === 'invalid_payload') {
-    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid payload.' }, { status: 400 });
+  const mapped = TRUST_TRANSPORT_ERROR_RESPONSES[code];
+  if (mapped) {
+    return NextResponse.json({ ok: false, code: mapped.code, message: mapped.message }, { status: mapped.status });
   }
 
   reportError(error, { area: 'trust-transport', op: 'unknown' });

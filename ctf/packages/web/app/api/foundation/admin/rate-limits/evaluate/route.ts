@@ -4,6 +4,21 @@ import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { evaluateRateLimitCommand, insertFoundationAudit } from 'lib/foundation/repository';
 import { reportError } from 'lib/observability/report';
 
+type EvaluatePayload = { userId?: string; commandName?: string; limit?: number; windowSeconds?: number };
+
+type NormalizedEvaluatePayload = { userId: string; commandName: string; limit: number; windowSeconds: number };
+
+// Normalize the request body: trim the identifiers and apply the default limit (20) and window (60s)
+// when a caller omits or mistypes them.
+function normalizeEvaluatePayload(payload: EvaluatePayload): NormalizedEvaluatePayload {
+  return {
+    userId: payload.userId?.trim() ?? '',
+    commandName: payload.commandName?.trim() ?? '',
+    limit: Number.isInteger(payload.limit) ? Number(payload.limit) : 20,
+    windowSeconds: Number.isInteger(payload.windowSeconds) ? Number(payload.windowSeconds) : 60,
+  };
+}
+
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -15,7 +30,7 @@ export async function POST(request: Request) {
     return gate.response;
   }
 
-  let payload: { userId?: string; commandName?: string; limit?: number; windowSeconds?: number } = {};
+  let payload: EvaluatePayload = {};
   try {
     payload = await request.json();
   } catch {
@@ -25,10 +40,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const userId = payload.userId?.trim() ?? '';
-  const commandName = payload.commandName?.trim() ?? '';
-  const limit = Number.isInteger(payload.limit) ? Number(payload.limit) : 20;
-  const windowSeconds = Number.isInteger(payload.windowSeconds) ? Number(payload.windowSeconds) : 60;
+  const { userId, commandName, limit, windowSeconds } = normalizeEvaluatePayload(payload);
 
   if (!userId || !commandName) {
     return NextResponse.json(
