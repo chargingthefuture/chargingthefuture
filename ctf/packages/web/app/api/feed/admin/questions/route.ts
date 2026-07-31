@@ -19,7 +19,7 @@ function parseQuestionsPagination(searchParams: URLSearchParams): { page: number
   return { page, pageSize };
 }
 
-// Validate the optional category filter. Returns a 400 response for an unrecognised value, otherwise
+// Validate the optional category filter. Returns a 400 response for an unrecognized value, otherwise
 // the parsed category (or null when the filter is absent).
 function parseQuestionsCategory(
   categoryRaw: string | null,

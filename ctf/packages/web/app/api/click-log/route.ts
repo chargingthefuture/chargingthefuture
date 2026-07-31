@@ -40,7 +40,7 @@ function invalidLongitude(longitude: unknown): boolean {
 }
 
 // Trim notes before validating and storing so trailing/leading whitespace can't push a note past the
-// limit (or be stored unnormalised). Drop an empty trimmed note. Returns undefined when absent.
+// limit (or be stored unnormalized). Drop an empty trimmed note. Returns undefined when absent.
 function parseNotes(raw: unknown): { error: NextResponse } | { data: string | undefined } {
   if (raw === undefined) {
     return { data: undefined };
@@ -55,7 +55,7 @@ function parseNotes(raw: unknown): { error: NextResponse } | { data: string | un
   return { data: trimmed.length > 0 ? trimmed : undefined };
 }
 
-// Validate and normalise the optional incident metadata. metadata is optional per the command
+// Validate and normalize the optional incident metadata. metadata is optional per the command
 // contract; a client that omits it (or sends an empty body) defaults to {} rather than a 400.
 // Returns a discriminated result so the caller keeps TypeScript narrowing.
 function parseIncidentMetadata(rawBody: unknown): { error: NextResponse } | { data: IncidentMetadata } {

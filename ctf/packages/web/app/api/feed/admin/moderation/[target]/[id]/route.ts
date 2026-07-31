@@ -49,7 +49,7 @@ async function parseModerationBody(
 
   // A reason is only meaningful when hiding, and it is validated against the fixed code set rather
   // than accepted as free text: a moderator's prose about a member would become a permanent,
-  // unreviewable note attached to a survivor's account. An unrecognised or absent code falls back to
+  // unreviewable note attached to a survivor's account. An unrecognized or absent code falls back to
   // 'other' instead of 400 — a hide is time-sensitive and should never fail over its label.
   const reason = body.hidden
     ? (isFeedModerationReason(body.reason) ? body.reason : FEED_MODERATION_REASON.other)

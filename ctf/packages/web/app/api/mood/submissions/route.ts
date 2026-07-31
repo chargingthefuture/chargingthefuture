@@ -30,7 +30,7 @@ function denyInvalidPayload(actorId: string, clientId: string | undefined, messa
 }
 
 // Log the deny audit row for a failed submission (cooldown or persistence) and return the error
-// response. A cooldown denial is expected member behaviour, so it is not reported as an error.
+// response. A cooldown denial is expected member behavior, so it is not reported as an error.
 function handleSubmissionError(actorId: string, clientId: string | undefined, error: unknown): NextResponse {
   const cooldownDenied = error instanceof Error && error.message === 'cooldown_active';
   logMoodAudit({

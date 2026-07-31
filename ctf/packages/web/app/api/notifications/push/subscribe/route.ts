@@ -15,7 +15,7 @@ function invalidPayload(message: string): NextResponse {
 
 type PushSubscriptionPayload = { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown }; userAgent?: unknown };
 
-// Extract and normalise the subscription fields from the raw payload. A missing/odd endpoint becomes
+// Extract and normalize the subscription fields from the raw payload. A missing/odd endpoint becomes
 // an empty string and missing/odd keys become null, which the caller rejects with a 400. The user
 // agent is capped at 256 characters.
 function readSubscriptionFields(payload: PushSubscriptionPayload): { endpoint: string; p256dh: string | null; auth: string | null; userAgent: string | null } {

@@ -47,7 +47,7 @@ async function parsePostBody(
 }
 
 // Map an error thrown while creating the post to its response. Preserves the status code and error
-// code for each known failure, and reports anything unrecognised as a 503.
+// code for each known failure, and reports anything unrecognized as a 503.
 function mapPostError(error: unknown): NextResponse {
   const code = error instanceof Error ? error.message : 'unknown_error';
   if (code === 'rate_limit_exceeded') {

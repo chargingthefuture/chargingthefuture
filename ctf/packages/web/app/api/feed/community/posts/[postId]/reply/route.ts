@@ -45,7 +45,7 @@ async function parseReplyBody(
 }
 
 // Map an error thrown while creating the reply to its response. Preserves the status code and error
-// code for each known failure, and reports anything unrecognised as a 503.
+// code for each known failure, and reports anything unrecognized as a 503.
 function mapReplyError(error: unknown): NextResponse {
   const code = error instanceof Error ? error.message : 'unknown_error';
 
