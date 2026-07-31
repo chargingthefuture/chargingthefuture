@@ -621,9 +621,15 @@
 6. Check `SELECT * FROM feed_commons_notice_seen`.
 
 **Expected:**
-- Step 1: **Where things are public, and where the work happens** appears as an inline card at the top of
-  the stream — **not a modal**. A box demanding a click over a support channel trains people to dismiss
-  it unread, and these members have every reason to distrust one.
+- Step 1: a short card titled **Before you post** appears at the top of the stream — **not a modal**. A
+  box demanding a click over a support channel trains people to dismiss it unread, and these members
+  have every reason to distrust one.
+- **It is short and it does not scroll.** Check at phone width: the card fits without its own scrollbar,
+  the Commons header stays on screen, and the message list below it is still the part that scrolls. The
+  first build put the FULL notice in this card — it filled the screen, pushed the header off, and left
+  the member scrolling the conversation past it into empty space. The card is a heads-up (this room is
+  public, the assistant is not); the long version arrives on the rotation, where length is free because
+  an announcement scrolls with the chat instead of sitting on top of it.
 - Step 2/3: gone, and it stays gone.
 - Step 4: not shown.
 - Step 5: not shown to a signed-out visitor — they cannot post, so there is nothing yet to disclose.
@@ -631,6 +637,31 @@
 - The point of this case: the cadence alone cannot protect a member who posts something identifying on
   their first visit, before any rotation reaches them. If this card stops appearing for new members, that
   protection is gone even though the periodic notice still looks fine.
+### FD-A21 — A flagged answer reaches an admin, and can be hidden
+**Role:** member + admin | **Surface:** web
+
+**Precondition:** A question in the Commons with at least one answer.
+
+**Steps:**
+1. As a member, open the answer and rate it **flagged**.
+2. As a second member, flag the same answer.
+3. As admin, open `/admin/commons` and look at the tab row.
+4. Open the **Flagged answers** tab.
+5. Click **Hide answer**.
+6. As a member, reload the Commons and find the question.
+7. Back in the admin tab, click **Put back** and accept the confirmation.
+
+**Expected:**
+- Step 3: the tab reads **Flagged answers (1)** — the count of flagged answers still visible. Before
+  this shipped, a flag went nowhere at all: the count was aggregated by an admin route that no screen
+  ever called.
+- Step 4: the answer is listed with **2 flags**, the parent question above it, and a pill saying whether
+  it came from the assistant or a member. Ordering is by flag count, not date — triage, not a feed.
+- Step 5/6: the answer is gone from the member's view of that question, and **the question is still
+  there**. That matters: the member who asked keeps their question and can still get a better answer.
+- Step 7: the answer is visible again, and the pending count returns to 1.
+- Check the audit log: the transition carries `previousStatus`, `newStatus`, and the reason. Not the
+  answer body.
 
 **Result:** web ☐
 
@@ -666,6 +697,38 @@
   each other.
 - Read the signal notice and confirm it says **Skills Economy**, never "TI Skills Economy (TSE)", and
   uses "Target" rather than "TI" as a label.
+
+**Result:** web ☐
+
+---
+
+### FD-A25 — Notice text renders as paragraphs, never chopped mid-sentence
+**Role:** any member | **Surface:** web (check at phone width — that is where it showed)
+
+**Precondition:** A published standing notice visible in the Commons, and a member who has not dismissed
+the first-visit card.
+
+**Steps:**
+1. Open the Commons at phone width and read the first-visit card top to bottom.
+2. Read a published notice in the stream (the announcement card).
+3. Look specifically at the ends of lines within a paragraph.
+4. Find an announcement that carries a trailing "Open <Plugin>: <url>" block and read it.
+
+**Expected:**
+- Sentences wrap where the column runs out and **nowhere else**. No sentence is cut mid-clause with the
+  rest starting a new line ("whether or / not they have an account"). This is what reached members once:
+  the copy was authored as source-wrapped lines joined with `\n`, and `white-space: pre-wrap` turned
+  every one of those into a hard break.
+- Paragraphs are separated by real spacing, not by an empty line of text.
+- Step 4: the "Open <Plugin>" lines stay on **separate** lines. They are a deliberate list, not wrapped
+  prose, and the renderer must keep them apart while joining prose that was only source-wrapped.
+- Run `pnpm --dir ctf check:notice-formatting` — it fails if any notice body is built by joining lines
+  with a single `\n`, which is the authoring mistake behind all of this.
+- Run `pnpm --dir ctf preview:member-copy` — it renders every standing notice and the first-visit card
+  to PNGs at phone width in `ctf/artifacts/copy-preview/`, marks the phone fold, and **exits non-zero if
+  the first-visit card is taller than the screen**. Attach those PNGs to any PR that changes
+  member-facing copy. Both defects here — chopped sentences, and a card that swallowed the screen — were
+  obvious at a glance and invisible to every automated check, because none of them look at the output.
 
 **Result:** web ☐
 
@@ -745,6 +808,26 @@ where you can reach the next multiple of 50 without posting hundreds of times �
   post's transaction rather than running after it commits.
 - In every case, a failure in the notice must never cost a member their post. If the notice cannot be
   published, the post still succeeds.
+### FD-A22 — A hidden question stops being answerable and stops feeding training
+**Role:** member + admin | **Surface:** web
+
+**Precondition:** A question in the Commons with LLM consent granted and no answer yet.
+
+**Steps:**
+1. As admin, open `/admin/commons`, find that question and hide it.
+2. As the member who asked, reload the Commons.
+3. Attempt to generate an answer for it (`POST /api/feed/questions/<id>/answer`).
+4. As admin, run the training export (`GET /api/comic/training/export` / the questions export) and search
+   it for the hidden question's text.
+5. Put the question back and repeat step 4.
+
+**Expected:**
+- Step 2: the question is gone from the timeline.
+- Step 3: refused as **not found** — not "forbidden". A hidden question must not confirm it exists.
+- Step 4: the hidden question does **not** appear in the export. This is the check that matters: hiding
+  something is a judgement it does not belong, and exporting it into training data would launder it back
+  in, with the model then answering in the register of the thing that was removed.
+- Step 5: it appears again once restored.
 
 **Result:** web ☐
 
@@ -952,13 +1035,5 @@ The following cases are the highest-signal functional checks that must remain co
 ## Known gaps — do not file these as bugs
 
 1. **LLM provider failover not contractualized.** The Q&A pipeline runs against a single configured LLM provider. If that provider is unavailable the answer generation fails. Provider failover and confidence-thresholding policy are tracked as future work — a failure here is expected behavior, not a bug.
-
-3. **Questions and answers cannot be hidden.** Commons posts and replies can be moderated (FD-A14/A15),
-   but `feed_questions` and `feed_answers` have no `moderation_status` column, so there is no hide
-   control for them. The only admin lever on a question is the category relabel (FD-A10). Not a bug.
-
-4. **Flagging an answer notifies nobody.** A member can rate an answer `flagged`, and the count is
-   aggregated by `GET /api/feed/admin/questions`, but no page reads that route — so a flag reaches no
-   admin queue. Known and tracked; do not file it.
 
 2. **Deprecated contract YAML files.** Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files remain in the repository as intentional historical reference. Their presence is not a bug; they are a known cleanup item.

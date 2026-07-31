@@ -11,7 +11,7 @@ import {
 } from "@stream-io/video-react-sdk";
 import { Mic, MicOff, PhoneOff } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { getFoundationTokens } from "./foundation-ui";
+import { getFoundationTokens, type FoundationTokens } from "./foundation-ui";
 import { reportError } from "@/lib/observability/report";
 
 // Audio-only 1:1 call room for Foundation "Connect now" (issue #808 task 3). Reuses the same Stream Video
@@ -164,23 +164,7 @@ function CallShell({
 
       <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
         {state === "in-call" && onToggleMute ? (
-          <button
-            type="button"
-            onClick={onToggleMute}
-            aria-label={muted ? "Unmute microphone" : "Mute microphone"}
-            aria-pressed={muted}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              padding: "11px 18px", borderRadius: 12,
-              background: muted ? t.BORDER : `${t.ACCENT}1A`,
-              border: `1px solid ${muted ? "rgba(255,255,255,0.12)" : t.ACCENT + "40"}`,
-              color: muted ? t.SUBTLE : t.ACCENT,
-              fontSize: 14, fontWeight: 600, cursor: "pointer",
-            }}
-          >
-            {muted ? <MicOff size={16} /> : <Mic size={16} />}
-            <span>{muted ? "Muted" : "Mute"}</span>
-          </button>
+          <MuteButton muted={!!muted} onToggleMute={onToggleMute} t={t} />
         ) : null}
         <button
           type="button"
@@ -198,5 +182,36 @@ function CallShell({
         </button>
       </div>
     </div>
+  );
+}
+
+// The mute toggle, only shown in the in-call state.
+function MuteButton({
+  muted,
+  onToggleMute,
+  t,
+}: {
+  muted: boolean;
+  onToggleMute: () => void;
+  t: FoundationTokens;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggleMute}
+      aria-label={muted ? "Unmute microphone" : "Mute microphone"}
+      aria-pressed={muted}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 8,
+        padding: "11px 18px", borderRadius: 12,
+        background: muted ? t.BORDER : `${t.ACCENT}1A`,
+        border: `1px solid ${muted ? "rgba(255,255,255,0.12)" : t.ACCENT + "40"}`,
+        color: muted ? t.SUBTLE : t.ACCENT,
+        fontSize: 14, fontWeight: 600, cursor: "pointer",
+      }}
+    >
+      {muted ? <MicOff size={16} /> : <Mic size={16} />}
+      <span>{muted ? "Muted" : "Mute"}</span>
+    </button>
   );
 }

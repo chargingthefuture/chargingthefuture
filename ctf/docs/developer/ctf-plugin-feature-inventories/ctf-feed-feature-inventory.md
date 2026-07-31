@@ -180,6 +180,13 @@ Admin routes:
   verdict string, and a truthiness test against it would disable the check entirely. Both directions
   fail **closed**: a read error reports `show: false`, because a database hiccup must not be able to pop
   the notice on every visit, which is how a notice trains people to dismiss it unread.
+- `GET /api/feed/admin/moderation/flagged-answers` — admin lists answers members have flagged, ordered
+  by flag count then newest (`listFlaggedAnswers`), with `pending` = how many flagged answers are still
+  visible (`countPendingFlaggedAnswers`, counted in the database so it is never a page-capped
+  undercount). Each row carries the parent question, the answer, whether it came from the assistant or
+  a member, and its flag / not-helpful counts. Admin-gated, read-only. **This route is what closed the
+  gap**: members could rate an answer `flagged` from the day rating shipped, the count was aggregated by
+  `GET /api/feed/admin/questions`, and no screen ever called that route — so every flag reached nobody.
 - `GET /api/feed/admin/moderation` — also accepts `?author=<userId>` to show one member's entire Commons
   footprint, and returns an `authors` roster (aggregate counts per member, ordered by volume) so a
   moderator can work by person rather than by post. The roster is omitted when `?author=` is set — it
@@ -196,7 +203,7 @@ Admin routes:
   account. An unrecognised or absent code falls back to `other` rather than 400: a hide is
   time-sensitive and must not fail over its label. Restoring ignores `reason` and **clears** the
   stored reason/actor/timestamp, so a post that is visible again carries no standing accusation.
-  `:target` is `post` or `reply` (else 400); body `{ hidden: boolean }` is **required** — an absent
+  `:target` is `post`, `reply`, `question`, or `answer` (else 400); body `{ hidden: boolean }` is **required** — an absent
   field is a 400 rather than defaulting to restore, so a malformed request can never quietly put
   hidden content back in front of members. Admin-gated + `x-ctf-csrf: '1'`; 404 when the row is gone.
   Sets `moderation_status` to `'hidden'` or `'accepted'` under `FOR UPDATE`, so two moderators acting
@@ -333,15 +340,12 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 1. LLM inference for question answers runs against a single configured provider; provider failover and confidence-thresholding policy are not yet contractualized.
 2. Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files are deprecated; their continued presence is intentional historical reference and is a known cleanup item.
-3. **Questions and answers cannot be moderated.** Commons posts and replies can be hidden (2026-07-29),
-   but `feed_questions` and `feed_answers` carry no `moderation_status` column, so hiding one would
-   need a schema change. Today the only lever on a question is the admin category relabel.
-4. **Member flags route nowhere.** A member can rate an answer `flagged`
-   (`feed_answer_ratings.rating`), and `GET /api/feed/admin/questions` aggregates a `flagged_count` —
-   but no page consumes that route, so nothing puts a flagged answer in front of an admin. Wiring it
-   to the Commons Moderation surface is the natural next step; it was left out rather than half-built
-   because a flag queue for answers needs item 3 first (there is nothing an admin could *do* about a
-   flagged answer yet).
+3. ~~Questions and answers cannot be moderated.~~ **Closed 2026-07-30** — both tables gained
+   `moderation_status`, the read path honours it, and `/admin/commons` can hide either.
+4. ~~Member flags route nowhere.~~ **Closed 2026-07-30** — `GET /api/feed/admin/moderation/flagged-answers`
+   plus the Flagged answers tab on `/admin/commons`. `GET /api/feed/admin/questions` is still orphaned and
+   is recorded in `ctf/scripts/orphan-route-allowlist.json` as a burn-down entry: its `flagged_count` is
+   now superseded by the flag queue, so it should be either wired to a page or deleted.
 
 ---
 
@@ -557,8 +561,80 @@ All three feed channels (announcements, questions, community) are shipped on web
   - Acceptance criteria:
     - Implementation status is tracked; detailed evidence collection deferred to post-MVP.
 
+- 2026-07-30 (later): **Q&A moderation, and member flags now reach somebody.** Closes the gap flagged in
+  the previous pass, and the CI hole that let it survive.
+  - **`feed_questions` and `feed_answers` had no `moderation_status` at all.** That is why the flag queue
+    could not be built: an admin could read a flagged answer and then do nothing about it. Both tables
+    now carry `moderation_status` (default `'accepted'`) plus the same nullable
+    `moderation_reason` / `moderated_by_user_id` / `moderated_at` trio as the Commons tables, so one
+    admin surface drives all four kinds of content. New index
+    `idx_feed_answers_moderation_status (moderation_status, created_at DESC)` serves the queue.
+  - **Read path honours it**, which is the load-bearing half: the timeline's question and answer
+    queries, and `generateFeedQuestionAnswer` (a hidden question cannot be given a new answer, and
+    reports `question_not_found` rather than revealing that it exists).
+  - **`exportQuestionsByCategory` excludes hidden questions.** Hiding something is a judgement that it
+    does not belong; exporting it into training data would launder it straight back in and the model
+    would keep answering in the register of the thing that was removed.
+  - `FeedModerationTarget` widened to `post | reply | question | answer`, with a
+    `MODERATION_TABLES` map and an `isFeedModerationTarget` guard replacing the old two-way ternary, so
+    `POST /api/feed/admin/moderation/:target/:id` covers all four with no new endpoint.
+  - New `GET /api/feed/admin/moderation/flagged-answers` and a **Flagged answers** tab on
+    `/admin/commons`, with the pending count on the tab label. Ordered by flag count, not date: this is
+    triage, and the answer six people objected to matters more than the newest one. Hiding an answer
+    leaves the question up, so the member who asked still has their question and can get a better
+    answer.
+  - **Why no gate caught this**: `check-inventory-drift.mjs` asks whether a route is *documented*, not
+    whether it is *called*. Documented-but-dead is the worse failure, because the inventory then asserts
+    a capability the product does not have. Fixed by `check-orphan-routes.mjs` (`orphan-route-gate`),
+    which fails on any API route with no caller. Its first run found 91 — 3 genuinely external, 88
+    recorded as a burn-down baseline. It cannot see unread database columns, which is the other half of
+    this failure mode and how `moderation_status` sat dead for months.
+  - **Parity:** web + mobile-responsive; Android out of scope (web-only per rule 105).
 ### Change Log
 
+- 2026-07-31 (latest): **Copy preview — render member-facing text before it ships (owner request).** Two
+  defects reached members in a day (sentences chopped mid-clause; a card that swallowed the screen), and
+  every automated gate passed both, because none of them look at the OUTPUT.
+  `ctf/scripts/preview-member-copy.mjs` (`pnpm --dir ctf preview:member-copy`) renders every standing
+  notice and the first-visit card to PNGs at phone width with the phone fold marked, and **exits
+  non-zero when the first-visit card is taller than the screen** — the exact failure that happened. The
+  PNGs are attached to any PR that changes member-facing copy and are git-ignored, so the repo never
+  accumulates screenshots of superseded wording. It renders the text and the box, not the live app:
+  faithful for line breaking, paragraph spacing and overflow; it does not prove theme colours. Playwright
+  is resolved from the project or a global install rather than added as a dependency, since this is a
+  review tool and not a CI gate. The pure paragraph logic moved to `lib/feed/notice-paragraphs.ts` so the
+  script and any future test can use it without pulling in React.
+- 2026-07-31 (later): **The first-visit card is short and no longer fights the chat for the screen**
+  (owner report, with a screenshot). It was rendering the FULL standing notice inside a card that sits
+  above the message list in a fixed-height flex column. A tall card steals the flexible space, pushes
+  the Commons header off screen, and leaves the member scrolling the *conversation* to get past the
+  notice — landing in empty space below it. Two fixes: the card now has its own short copy
+  (`COMMONS_FIRST_VISIT_TITLE` / `COMMONS_FIRST_VISIT_BODY` — "Before you post": this room is public,
+  the assistant is not), and it is pinned `flex: 0 0 auto` with `overflow: visible` so it can never grow
+  into the message area or become its own scroller. The long version still arrives on the 75-post
+  rotation, where length costs nothing because an announcement scrolls with the chat instead of sitting
+  on top of it. `NoticeParagraphs` also stopped adding a trailing margin, so a one-paragraph body leaves
+  no stray space in a compact card.
+- 2026-07-31: **Notice text renders as paragraphs (bug fix — this reached members).** The notice bodies
+  were authored as an array of source-wrapped lines joined with `\n`. Under `white-space: pre-wrap`
+  every one of those source wraps rendered as a HARD line break, so members read sentences chopped
+  mid-clause. Source formatting is not content, and nothing in the codebase knew the difference.
+  - **Content fixed at the source**: paragraphs are single strings, assembled with a `para(...)` helper
+    that joins fragments with a space so the SOURCE can still wrap, and paragraphs joined with `\n\n`.
+  - **Renderer fixed too**, because a renderer should not be one stray newline from that result: new
+    `NoticeParagraphs` splits on blank lines into real `<p>` elements and collapses a lone newline to a
+    space — unless the paragraph is a deliberate line list, which keeps an announcement's trailing
+    `Open <Plugin>: <url>` block on separate lines. Used by both the first-visit card and the stream
+    announcement card.
+  - **Already-published rows are repaired.** Fixing the constant alone would have left every published
+    row broken until its next milestone — three weeks for the 21-day notice. `refreshPublishedGuidanceNotices`
+    now brings any system-authored notice back in line with its current wording on each run, matching on
+    title and restricted to `FEED_SYSTEM_ACTOR_ID` so member- or owner-authored announcements are never
+    touched.
+  - **New CI gate** `notice-formatting-gate` (`check-notice-formatting.mjs`) fails any notice body built
+    by joining lines with a single `\n`. Verified in both directions: it passes on the fixed text and
+    exits non-zero when the original mistake is reintroduced. Typecheck, lint and every other gate had
+    passed the broken version.
 - 2026-07-30 (later): **Three standing Commons notices, three cadences.** The single notice became a
   registry (`COMMONS_NOTICES` in `lib/feed/commons-guidance.ts`), and the milestone table is now keyed
   `(notice_key, milestone_count)` — that composite UNIQUE is still the whole concurrency story.

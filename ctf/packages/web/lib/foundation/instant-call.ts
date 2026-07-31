@@ -315,6 +315,39 @@ async function dispatchRingDelivery(call: FoundationInstantCall): Promise<void> 
   }
 }
 
+// Resolve and validate the ring target inside the ring transaction: work out who the callee is (the other
+// participant of the thread) and run the ring pre-check. Ringing itself moves no credits, but this rejects
+// early if the call can't even fund the first block. The provider must have opted in with a valid
+// whole-credit rate, and the caller's available balance must cover at least one block at the provider's
+// CURRENT rate. (The rate is only LOCKED at answer; this pre-check uses the live rate purely to avoid
+// placing a ring that could never be answered without an immediate failure.) Returns the callee's user id.
+async function resolveRingTarget(
+  client: PoolClient,
+  threadId: string,
+  callerUserId: string,
+): Promise<string> {
+  const thread = await loadThreadForCaller(client, threadId, callerUserId);
+  // The callee is the other participant. A member can ring the provider; the provider could equally ring
+  // the survivor. Whoever is NOT the caller is the callee.
+  const calleeUserId =
+    thread.survivorUserId === callerUserId ? thread.providerUserId : thread.survivorUserId;
+  if (!calleeUserId || calleeUserId === callerUserId) {
+    throw new Error('thread_not_found');
+  }
+
+  const providerSettings = await loadProviderBillingSettings(client, calleeUserId);
+  const rate = providerSettings.rateCredits;
+  if (!providerSettings.enabled || rate === null || !Number.isInteger(rate) || rate < 1) {
+    throw new Error('billing_misconfigured');
+  }
+  const wallet = await getOrCreateWallet(callerUserId);
+  if (wallet.availableBalance < rate) {
+    throw new Error('insufficient_balance');
+  }
+
+  return calleeUserId;
+}
+
 // Place a ring: the caller (a member who tapped "Connect now") rings the provider on an existing Direct
 // Line thread. Audio-only -> modality 'voice'. The callee learns about it two ways: by polling
 // getIncomingRing (the in-app fallback) and, when they have enabled call alerts, by a Web Push that wakes
@@ -334,29 +367,8 @@ export async function ringInstantCall(input: {
     await expireStaleRings(client, input.callerUserId);
     await assertRingRateLimit(client, input.callerUserId);
 
-    const thread = await loadThreadForCaller(client, input.threadId, input.callerUserId);
-    // The callee is the other participant. A member can ring the provider; the provider could equally ring
-    // the survivor. Whoever is NOT the caller is the callee.
-    const calleeUserId =
-      thread.survivorUserId === input.callerUserId ? thread.providerUserId : thread.survivorUserId;
-    if (!calleeUserId || calleeUserId === input.callerUserId) {
-      throw new Error('thread_not_found');
-    }
-
-    // Ring pre-check: ringing itself moves no credits, but reject early if the call can't even fund the
-    // first block. The provider must have opted in with a valid whole-credit rate, and the caller's
-    // available balance must cover at least one block at the provider's CURRENT rate. (The rate is only
-    // LOCKED at answer; this pre-check uses the live rate purely to avoid placing a ring that could never
-    // be answered without an immediate failure.)
-    const providerSettings = await loadProviderBillingSettings(client, calleeUserId);
-    const rate = providerSettings.rateCredits;
-    if (!providerSettings.enabled || rate === null || !Number.isInteger(rate) || rate < 1) {
-      throw new Error('billing_misconfigured');
-    }
-    const wallet = await getOrCreateWallet(input.callerUserId);
-    if (wallet.availableBalance < rate) {
-      throw new Error('insufficient_balance');
-    }
+    // Resolve the callee and run the ring pre-check (billing enabled + caller can fund the first block).
+    const calleeUserId = await resolveRingTarget(client, input.threadId, input.callerUserId);
 
     const ringExpiresAt = new Date(Date.now() + FOUNDATION_INSTANT_CALL_RING_TIMEOUT_SECONDS * 1000);
     const streamCallId = `foundation-call-${randomUUID()}`;

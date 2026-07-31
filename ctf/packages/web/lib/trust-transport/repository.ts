@@ -758,6 +758,14 @@ function assertTripTransition(currentStatus: TrustTransportTrip['status'], nextS
   }
 }
 
+// A trip's status may be changed only by one of its two participants (requester or provider) or an admin.
+function assertTripActorAllowed(trip: TripRow, actorUserId: string, isAdmin: boolean): void {
+  const isParticipant = trip.requester_user_id === actorUserId || trip.provider_user_id === actorUserId;
+  if (!isParticipant && !isAdmin) {
+    throw new Error('policy_denied');
+  }
+}
+
 function mapRequestStatusFromTrip(nextStatus: TrustTransportTripStatus): TrustTransportRequest['status'] {
   if (nextStatus === 'assigned' || nextStatus === 'en_route' || nextStatus === 'picked_up') {
     return 'in_progress';
@@ -800,10 +808,7 @@ export async function updateTripStatus(
     }
 
     const trip = tripResult.rows[0];
-    const isParticipant = trip.requester_user_id === actorUserId || trip.provider_user_id === actorUserId;
-    if (!isParticipant && !isAdmin) {
-      throw new Error('policy_denied');
-    }
+    assertTripActorAllowed(trip, actorUserId, isAdmin);
 
     // Neither party can unilaterally complete a trip (owner decision, 2026-07-08): completion is what
     // triggers settlement (a ServiceCredits debit from the requester, or an earnings-ledger credit for an
@@ -987,6 +992,72 @@ export async function confirmTripCompletion(
   return result;
 }
 
+// ServiceCredits rail: move credits from the requester's wallet to the provider's, idempotent by trip id,
+// then record the settlement in the admin audit trail.
+async function settleTripViaServiceCredits(
+  trip: TrustTransportTrip,
+  request: TrustTransportRequest,
+  currency: string,
+  amount: number,
+): Promise<void> {
+  const tx = await createTransfer({
+    senderUserId: request.requesterUserId,
+    recipientUserId: trip.providerUserId,
+    amount,
+    idempotencyKey: `trust-transport-settlement-${trip.id}`,
+    originPlugin: 'trust-transport',
+    reasonCode: 'trust-transport.trip.settlement',
+  });
+
+  await insertTrustTransportAudit({
+    actorId: trip.providerUserId,
+    command: 'trust-transport.trip.settlement',
+    policyStatus: 'allow',
+    reason: 'ok',
+    targetType: 'trip',
+    targetId: trip.id,
+    metadata: {
+      rail: 'service_credits',
+      currency,
+      amount,
+      fromUserId: request.requesterUserId,
+      toUserId: trip.providerUserId,
+      transferId: (tx as { id?: string }).id ?? null,
+    },
+  });
+}
+
+// Fiat/crypto rail: credit the provider's earnings ledger in the settlement currency, idempotent by trip id
+// so a re-completion cannot double-credit. Payouts draw from this per-currency balance. Only audits when a
+// new ledger row is actually inserted.
+async function settleTripViaEarningsLedger(
+  trip: TrustTransportTrip,
+  currency: string,
+  amount: number,
+): Promise<void> {
+  const credited = await queryDb(
+    `INSERT INTO trust_transport_earnings_ledger (provider_user_id, trip_id, entry_type, amount, currency, price_currency, status, metadata)
+     SELECT $1, $2::uuid, 'credit', $3, $4, $4, 'posted', jsonb_build_object('reason', 'trip_settlement')
+     WHERE NOT EXISTS (
+       SELECT 1 FROM trust_transport_earnings_ledger
+       WHERE trip_id = $2::uuid AND entry_type = 'credit' AND (metadata->>'reason') = 'trip_settlement'
+     )`,
+    [trip.providerUserId, trip.id, amount, currency],
+  );
+
+  if ((credited.rowCount ?? 0) > 0) {
+    await insertTrustTransportAudit({
+      actorId: trip.providerUserId,
+      command: 'trust-transport.trip.settlement',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'trip',
+      targetId: trip.id,
+      metadata: { rail: 'earnings_ledger', currency, amount, toUserId: trip.providerUserId },
+    });
+  }
+}
+
 // Settle a completed trip against the requester's chosen settlement. Best-effort and idempotent by trip
 // id: the trip is already completed and the work done, so a failure here (e.g. the requester lacks
 // balance) is logged for reconciliation rather than reverting the trip, and the trip-id key means a
@@ -1008,57 +1079,11 @@ async function settleTripOnCompletion(
 
   try {
     if (currency === 'SC') {
-      const tx = await createTransfer({
-        senderUserId: request.requesterUserId,
-        recipientUserId: trip.providerUserId,
-        amount,
-        idempotencyKey: `trust-transport-settlement-${trip.id}`,
-        originPlugin: 'trust-transport',
-        reasonCode: 'trust-transport.trip.settlement',
-      });
-
-      await insertTrustTransportAudit({
-        actorId: trip.providerUserId,
-        command: 'trust-transport.trip.settlement',
-        policyStatus: 'allow',
-        reason: 'ok',
-        targetType: 'trip',
-        targetId: trip.id,
-        metadata: {
-          rail: 'service_credits',
-          currency,
-          amount,
-          fromUserId: request.requesterUserId,
-          toUserId: trip.providerUserId,
-          transferId: (tx as { id?: string }).id ?? null,
-        },
-      });
+      await settleTripViaServiceCredits(trip, request, currency, amount);
       return;
     }
 
-    // Fiat/crypto: credit the provider's earnings ledger in the settlement currency, idempotent by trip id
-    // so a re-completion cannot double-credit. Payouts draw from this per-currency balance.
-    const credited = await queryDb(
-      `INSERT INTO trust_transport_earnings_ledger (provider_user_id, trip_id, entry_type, amount, currency, price_currency, status, metadata)
-       SELECT $1, $2::uuid, 'credit', $3, $4, $4, 'posted', jsonb_build_object('reason', 'trip_settlement')
-       WHERE NOT EXISTS (
-         SELECT 1 FROM trust_transport_earnings_ledger
-         WHERE trip_id = $2::uuid AND entry_type = 'credit' AND (metadata->>'reason') = 'trip_settlement'
-       )`,
-      [trip.providerUserId, trip.id, amount, currency],
-    );
-
-    if ((credited.rowCount ?? 0) > 0) {
-      await insertTrustTransportAudit({
-        actorId: trip.providerUserId,
-        command: 'trust-transport.trip.settlement',
-        policyStatus: 'allow',
-        reason: 'ok',
-        targetType: 'trip',
-        targetId: trip.id,
-        metadata: { rail: 'earnings_ledger', currency, amount, toUserId: trip.providerUserId },
-      });
-    }
+    await settleTripViaEarningsLedger(trip, currency, amount);
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'trip_settlement' });
   }

@@ -1137,6 +1137,31 @@ function canTransitionQuote(previousState: FoundationQuoteState, targetState: Fo
   return false;
 }
 
+function assertProviderResponsePayload(
+  quote: FoundationQuoteRow,
+  input: {
+    targetState: FoundationQuoteState;
+    actorUserId: string;
+    quotedAmount?: number | null;
+    quotedCurrency?: string | null;
+  },
+): void {
+  // Only the provider attaches a price, and only on the 'provider_responded' transition. The survivor
+  // may move the quote through its lifecycle but can never set the quoted amount/currency.
+  if (input.targetState === 'provider_responded') {
+    if (input.actorUserId !== quote.provider_user_id) {
+      throw new Error('policy_denied');
+    }
+    const amountOk = typeof input.quotedAmount === 'number'
+      && Number.isFinite(input.quotedAmount)
+      && input.quotedAmount >= 0;
+    const currencyOk = typeof input.quotedCurrency === 'string' && input.quotedCurrency.trim().length > 0;
+    if (!amountOk || !currencyOk) {
+      throw new Error('invalid_payload');
+    }
+  }
+}
+
 export async function updateQuoteRequestState(input: {
   quoteRequestId: string;
   actorUserId: string;
@@ -1176,24 +1201,13 @@ export async function updateQuoteRequestState(input: {
       throw new Error('policy_denied');
     }
 
-    // Only the provider attaches a price, and only on the 'provider_responded' transition. The survivor
-    // may move the quote through its lifecycle but can never set the quoted amount/currency.
-    if (input.targetState === 'provider_responded') {
-      if (input.actorUserId !== quote.provider_user_id) {
-        throw new Error('policy_denied');
-      }
-      const amountOk = typeof input.quotedAmount === 'number'
-        && Number.isFinite(input.quotedAmount)
-        && input.quotedAmount >= 0;
-      const currencyOk = typeof input.quotedCurrency === 'string' && input.quotedCurrency.trim().length > 0;
-      if (!amountOk || !currencyOk) {
-        throw new Error('invalid_payload');
-      }
-    }
+    assertProviderResponsePayload(quote, input);
 
     if (!canTransitionQuote(quote.lifecycle_state, input.targetState)) {
       throw new Error('invalid_quote_transition');
     }
+
+    const transitionReason = input.transitionReason ?? null;
 
     // Persist the price only on 'provider_responded'; stamp settled_at on 'closed' when the quote carries
     // a value (the CASE reads the pre-update quoted_amount, which is what we want). settled_at feeds GDP.
@@ -1224,7 +1238,7 @@ export async function updateQuoteRequestState(input: {
         input.quoteRequestId,
         input.targetState,
         quote.lifecycle_state,
-        input.transitionReason ?? null,
+        transitionReason,
         input.quotedAmount ?? null,
         input.quotedCurrency ?? null,
       ],
@@ -1237,7 +1251,7 @@ export async function updateQuoteRequestState(input: {
         VALUES
           ($1::uuid, $2, $3, $4, $5, '{}'::jsonb)
       `,
-      [input.quoteRequestId, input.actorUserId, quote.lifecycle_state, input.targetState, input.transitionReason ?? null],
+      [input.quoteRequestId, input.actorUserId, quote.lifecycle_state, input.targetState, transitionReason],
     );
 
     const recipient = quote.provider_user_id === input.actorUserId ? quote.survivor_user_id : quote.provider_user_id;
