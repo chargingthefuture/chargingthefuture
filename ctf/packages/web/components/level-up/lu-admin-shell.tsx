@@ -68,19 +68,461 @@ function formatQueueTime(iso: string): string {
   return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-export function LevelUpAdminShell({
-  kpis,
-  openDisputes,
-  pendingValidations,
-  pendingProposals,
+const alertBoxStyle: React.CSSProperties = { marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 };
+const noticeBoxStyle: React.CSSProperties = { marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13 };
+
+function DisputesSection({ openDisputes, t }: { openDisputes: AdminDispute[]; t: LevelUpTokens }) {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>
+        Open disputes {openDisputes.length > 0 ? `(${openDisputes.length})` : ''}
+      </h2>
+      {openDisputes.length === 0 ? (
+        <div style={{ padding: '20px 16px', textAlign: 'center', color: t.MUTED, fontSize: 13, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+          No open disputes.
+        </div>
+      ) : (
+        openDisputes.map((dispute) => (
+          <div key={dispute.id} style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>{dispute.title}</span>
+              <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>{formatQueueTime(dispute.createdAtIso)}</span>
+            </div>
+            <p style={{ fontSize: 13, color: '#D1D5DB', margin: '6px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{dispute.description}</p>
+            <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6 }}>
+              Opened by {dispute.openedByName ?? `member ${dispute.openedByUserId.slice(0, 6)}`}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function ValidationsSection({ pendingValidations, t }: { pendingValidations: AdminValidation[]; t: LevelUpTokens }) {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>
+        Pending milestone validations {pendingValidations.length > 0 ? `(${pendingValidations.length})` : ''}
+      </h2>
+      {pendingValidations.length === 0 ? (
+        <div style={{ padding: '20px 16px', textAlign: 'center', color: t.MUTED, fontSize: 13, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+          No pending validations.
+        </div>
+      ) : (
+        pendingValidations.map((validation) => (
+          <div key={validation.id} style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>Milestone {validation.milestoneId.slice(0, 8)}</span>
+              <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>{formatQueueTime(validation.createdAtIso)}</span>
+            </div>
+            {validation.validationNote ? (
+              <p style={{ fontSize: 13, color: '#D1D5DB', margin: '6px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{validation.validationNote}</p>
+            ) : null}
+            <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6 }}>Enrollment {validation.enrollmentId.slice(0, 8)}</div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function ProposalCard({
+  proposal,
+  proposalTerms,
+  setProposalTerms,
+  busyProposalId,
+  onApprove,
+  onDismiss,
+  t,
 }: {
-  kpis: AdminKpis;
-  openDisputes: AdminDispute[];
-  pendingValidations: AdminValidation[];
-  pendingProposals: AdminProposal[];
+  proposal: AdminProposal;
+  proposalTerms: Record<string, ProposalTermMonths>;
+  setProposalTerms: React.Dispatch<React.SetStateAction<Record<string, ProposalTermMonths>>>;
+  busyProposalId: string | null;
+  onApprove: (proposal: AdminProposal) => void;
+  onDismiss: (proposal: AdminProposal) => void;
+  t: LevelUpTokens;
 }) {
-  const { theme } = useTheme();
-  const t = getLevelUpTokens(theme);
+  const term = proposalTerms[proposal.id] ?? 3;
+  const busy = busyProposalId === proposal.id;
+  return (
+    <div style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 10, background: t.BG, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>#{proposal.rank} · {proposal.occupation}</span>
+        <Pill>{proposal.sector}</Pill>
+        <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>gap {Math.round(proposal.gap)}</span>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 10 }}>
+        <label style={{ fontSize: 12, color: t.MUTED }}>
+          Term:{' '}
+          <select
+            value={term}
+            disabled={busy}
+            onChange={(event) => setProposalTerms((prev) => ({ ...prev, [proposal.id]: Number(event.target.value) as ProposalTermMonths }))}
+            style={{ borderRadius: 6, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, padding: '5px 8px', fontSize: 12 }}
+          >
+            {PROPOSAL_TERM_MONTHS.map((months) => (
+              <option key={months} value={months}>{months} month{months === 1 ? '' : 's'}</option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={() => onApprove(proposal)}
+          disabled={busy}
+          style={{ marginLeft: 'auto', padding: '7px 14px', borderRadius: 7, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 12, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
+        >
+          {busy ? 'Working…' : 'Approve & open'}
+        </button>
+        <button
+          type="button"
+          onClick={() => onDismiss(proposal)}
+          disabled={busy}
+          style={{ padding: '7px 14px', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProposalsSection({
+  proposals,
+  proposalTerms,
+  setProposalTerms,
+  busyProposalId,
+  autoRunning,
+  autoError,
+  autoNotice,
+  proposalError,
+  proposalNotice,
+  onRefresh,
+  onApprove,
+  onDismiss,
+  t,
+}: {
+  proposals: AdminProposal[];
+  proposalTerms: Record<string, ProposalTermMonths>;
+  setProposalTerms: React.Dispatch<React.SetStateAction<Record<string, ProposalTermMonths>>>;
+  busyProposalId: string | null;
+  autoRunning: boolean;
+  autoError: string | null;
+  autoNotice: string | null;
+  proposalError: string | null;
+  proposalNotice: string | null;
+  onRefresh: () => void;
+  onApprove: (proposal: AdminProposal) => void;
+  onDismiss: (proposal: AdminProposal) => void;
+  t: LevelUpTokens;
+}) {
+  return (
+    <div style={{ marginBottom: 24, padding: '16px 18px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, margin: 0 }}>
+          Cohort proposals from Workforce gaps {proposals.length > 0 ? `(${proposals.length})` : ''}
+        </h2>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={autoRunning}
+          style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: 8, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: autoRunning ? 'not-allowed' : 'pointer', opacity: autoRunning ? 0.6 : 1 }}
+        >
+          {autoRunning ? 'Refreshing…' : 'Refresh proposals'}
+        </button>
+      </div>
+      <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginBottom: 14 }}>
+        The gaps are re-read on a cadence into a ranked, sector-diverse queue. Approve a proposal to
+        open a cohort — you choose the term — or dismiss it. Approving never opens two cohorts for the
+        same occupation; refreshing supersedes proposals whose gap has closed.
+      </p>
+      {autoError ? <div role="alert" style={alertBoxStyle}>{autoError}</div> : null}
+      {autoNotice ? <div style={noticeBoxStyle}>{autoNotice}</div> : null}
+      {proposalError ? <div role="alert" style={alertBoxStyle}>{proposalError}</div> : null}
+      {proposalNotice ? <div style={noticeBoxStyle}>{proposalNotice}</div> : null}
+      {proposals.length === 0 ? (
+        <div style={{ padding: '20px 16px', textAlign: 'center', color: t.MUTED, fontSize: 13, borderRadius: 10, background: t.BG, border: `1px solid ${t.BORDER_SOLID}` }}>
+          No pending proposals. Use “Refresh proposals” to re-read the current Workforce gaps.
+        </div>
+      ) : (
+        proposals.map((proposal) => (
+          <ProposalCard
+            key={proposal.id}
+            proposal={proposal}
+            proposalTerms={proposalTerms}
+            setProposalTerms={setProposalTerms}
+            busyProposalId={busyProposalId}
+            onApprove={onApprove}
+            onDismiss={onDismiss}
+            t={t}
+          />
+        ))
+      )}
+    </div>
+  );
+}
+
+function CohortsSection({ cohorts, cohortsError, t }: { cohorts: AdminCohort[] | null; cohortsError: string | null; t: LevelUpTokens }) {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>Cohorts</h2>
+      {cohortsError ? <div role="alert" style={alertBoxStyle}>{cohortsError}</div> : null}
+      {cohorts === null ? (
+        <div style={{ fontSize: 13, color: t.MUTED }}>Loading cohorts…</div>
+      ) : cohorts.length === 0 ? (
+        <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+          No cohorts yet. Trainers create cohorts from the plugin shell.
+        </div>
+      ) : (
+        cohorts.map((cohort) => (
+          <div key={cohort.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>{cohort.title}</span>
+              <Pill>{cohort.track}</Pill>
+              <Pill>{cohort.status}</Pill>
+              {cohort.autoCreated ? <Pill>auto</Pill> : null}
+              {cohort.needsTrainer ? (
+                <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#FBBF24', border: '1px solid rgba(245,158,11,0.4)' }}>
+                  needs trainer
+                </span>
+              ) : null}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 24px', fontSize: 12, color: t.MUTED }}>
+              <span>Seats: {cohort.seatsAvailable} of {cohort.seats} open</span>
+              <span>Required deposit: {cohort.requiredCredits} credits</span>
+              <span>Trainer split: {cohort.trainerSplitPercent}%</span>
+              <span>Completion bonus: {cohort.completionBonusCredits} credits</span>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function GrantFields({
+  targetUserId,
+  setTargetUserId,
+  amountText,
+  setAmountText,
+  reason,
+  setReason,
+  governanceTicketId,
+  setGovernanceTicketId,
+  confirming,
+  submitting,
+  t,
+}: {
+  targetUserId: string;
+  setTargetUserId: (v: string) => void;
+  amountText: string;
+  setAmountText: (v: string) => void;
+  reason: string;
+  setReason: (v: string) => void;
+  governanceTicketId: string;
+  setGovernanceTicketId: (v: string) => void;
+  confirming: boolean;
+  submitting: boolean;
+  t: LevelUpTokens;
+}) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+      <label style={{ display: 'block', fontSize: 12 }}>
+        <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Member user ID</span>
+        <input
+          style={inputStyle(t)}
+          value={targetUserId}
+          onChange={(event) => setTargetUserId(event.target.value)}
+          disabled={confirming || submitting}
+          placeholder="user_…"
+        />
+      </label>
+      <label style={{ display: 'block', fontSize: 12 }}>
+        <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Amount to grant (greater than zero)</span>
+        <input
+          style={inputStyle(t)}
+          value={amountText}
+          onChange={(event) => setAmountText(event.target.value)}
+          disabled={confirming || submitting}
+          inputMode="decimal"
+          min={0}
+          placeholder="e.g. 25"
+        />
+      </label>
+      <label style={{ display: 'block', fontSize: 12, gridColumn: '1 / -1' }}>
+        <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Reason</span>
+        <input
+          style={inputStyle(t)}
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          disabled={confirming || submitting}
+          placeholder="Why this adjustment is being made"
+        />
+      </label>
+      <label style={{ display: 'block', fontSize: 12, gridColumn: '1 / -1' }}>
+        <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Governance ticket ID</span>
+        <input
+          style={inputStyle(t)}
+          value={governanceTicketId}
+          onChange={(event) => setGovernanceTicketId(event.target.value)}
+          disabled={confirming || submitting}
+          placeholder="e.g. GOV-1234"
+        />
+      </label>
+    </div>
+  );
+}
+
+function ConfirmPanel({
+  magnitude,
+  targetUserId,
+  reason,
+  governanceTicketId,
+  submitting,
+  onSubmit,
+  onCancel,
+  t,
+}: {
+  magnitude: number;
+  targetUserId: string;
+  reason: string;
+  governanceTicketId: string;
+  submitting: boolean;
+  onSubmit: () => void;
+  onCancel: () => void;
+  t: LevelUpTokens;
+}) {
+  return (
+    <div style={{ marginTop: 14, padding: '14px 16px', borderRadius: 12, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.4)' }}>
+      <p style={{ fontSize: 13, fontWeight: 600, color: '#FBBF24', marginBottom: 4 }}>
+        Confirm: this will add {magnitude} ServiceCredits to member {targetUserId.trim()}.
+      </p>
+      <p style={{ fontSize: 12, color: 'rgba(251,191,36,0.85)', marginBottom: 12 }}>
+        Reason: {reason.trim()} · Governance ticket: {governanceTicketId.trim()}
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={submitting}
+          style={{ padding: '8px 16px', borderRadius: 8, background: '#F59E0B', border: '1px solid #F59E0B', color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.6 : 1 }}
+        >
+          {submitting ? 'Applying…' : `Yes, grant ${magnitude} credits`}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={submitting}
+          style={{ padding: '8px 16px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.6 : 1 }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ReviewButton({ submitting, formReady, onClick, t }: { submitting: boolean; formReady: boolean; onClick: () => void; t: LevelUpTokens }) {
+  const blocked = submitting || !formReady;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={blocked}
+      style={{ marginTop: 14, padding: '9px 18px', borderRadius: 8, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: blocked ? 'not-allowed' : 'pointer', opacity: blocked ? 0.6 : 1 }}
+    >
+      Review grant
+    </button>
+  );
+}
+
+function GrantForm({
+  targetUserId,
+  setTargetUserId,
+  amountText,
+  setAmountText,
+  reason,
+  setReason,
+  governanceTicketId,
+  setGovernanceTicketId,
+  confirming,
+  submitting,
+  formError,
+  notice,
+  formReady,
+  magnitude,
+  beginConfirm,
+  cancelConfirm,
+  submitAdjustment,
+  t,
+}: {
+  targetUserId: string;
+  setTargetUserId: (v: string) => void;
+  amountText: string;
+  setAmountText: (v: string) => void;
+  reason: string;
+  setReason: (v: string) => void;
+  governanceTicketId: string;
+  setGovernanceTicketId: (v: string) => void;
+  confirming: boolean;
+  submitting: boolean;
+  formError: string | null;
+  notice: string | null;
+  formReady: boolean;
+  magnitude: number;
+  beginConfirm: () => void;
+  cancelConfirm: () => void;
+  submitAdjustment: () => void;
+  t: LevelUpTokens;
+}) {
+  return (
+    <div style={{ padding: '16px 18px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 6 }}>Grant member ServiceCredits</h2>
+      <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginBottom: 14 }}>
+        LevelUp only ever grants ServiceCredits to a member — it never removes them. Enter an
+        amount greater than zero. Every grant is recorded against a governance ticket and is
+        written to the audit log.
+      </p>
+
+      {formError ? <div role="alert" style={alertBoxStyle}>{formError}</div> : null}
+      {notice ? <div style={noticeBoxStyle}>{notice}</div> : null}
+
+      <GrantFields
+        targetUserId={targetUserId}
+        setTargetUserId={setTargetUserId}
+        amountText={amountText}
+        setAmountText={setAmountText}
+        reason={reason}
+        setReason={setReason}
+        governanceTicketId={governanceTicketId}
+        setGovernanceTicketId={setGovernanceTicketId}
+        confirming={confirming}
+        submitting={submitting}
+        t={t}
+      />
+
+      {confirming ? (
+        <ConfirmPanel
+          magnitude={magnitude}
+          targetUserId={targetUserId}
+          reason={reason}
+          governanceTicketId={governanceTicketId}
+          submitting={submitting}
+          onSubmit={submitAdjustment}
+          onCancel={cancelConfirm}
+          t={t}
+        />
+      ) : (
+        <ReviewButton submitting={submitting} formReady={formReady} onClick={beginConfirm} t={t} />
+      )}
+    </div>
+  );
+}
+
+// All state, derived values, and mutation handlers for the admin shell. Kept as a hook so the
+// component itself stays a thin render of the extracted section components.
+function useLevelUpAdminController(pendingProposals: AdminProposal[]) {
   const [cohorts, setCohorts] = useState<AdminCohort[] | null>(null);
   const [cohortsError, setCohortsError] = useState<string | null>(null);
 
@@ -260,6 +702,88 @@ export function LevelUpAdminShell({
     [loadProposals],
   );
 
+  return {
+    cohorts,
+    cohortsError,
+    proposals,
+    proposalTerms,
+    setProposalTerms,
+    busyProposalId,
+    proposalNotice,
+    proposalError,
+    targetUserId,
+    setTargetUserId,
+    amountText,
+    setAmountText,
+    reason,
+    setReason,
+    governanceTicketId,
+    setGovernanceTicketId,
+    confirming,
+    submitting,
+    formError,
+    notice,
+    autoRunning,
+    autoNotice,
+    autoError,
+    formReady,
+    magnitude,
+    beginConfirm,
+    cancelConfirm,
+    submitAdjustment,
+    refreshProposals,
+    approveProposal,
+    dismissProposal,
+  };
+}
+
+export function LevelUpAdminShell({
+  kpis,
+  openDisputes,
+  pendingValidations,
+  pendingProposals,
+}: {
+  kpis: AdminKpis;
+  openDisputes: AdminDispute[];
+  pendingValidations: AdminValidation[];
+  pendingProposals: AdminProposal[];
+}) {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
+  const {
+    cohorts,
+    cohortsError,
+    proposals,
+    proposalTerms,
+    setProposalTerms,
+    busyProposalId,
+    proposalNotice,
+    proposalError,
+    targetUserId,
+    setTargetUserId,
+    amountText,
+    setAmountText,
+    reason,
+    setReason,
+    governanceTicketId,
+    setGovernanceTicketId,
+    confirming,
+    submitting,
+    formError,
+    notice,
+    autoRunning,
+    autoNotice,
+    autoError,
+    formReady,
+    magnitude,
+    beginConfirm,
+    cancelConfirm,
+    submitAdjustment,
+    refreshProposals,
+    approveProposal,
+    dismissProposal,
+  } = useLevelUpAdminController(pendingProposals);
+
   return (
     <div
       style={{
@@ -285,289 +809,52 @@ export function LevelUpAdminShell({
 
         {/* Review queue: open disputes. Read-only list so the admin-landing dot leads somewhere that
             shows what is new; resolving a dispute stays in the existing dispute flow. */}
-        <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>
-            Open disputes {openDisputes.length > 0 ? `(${openDisputes.length})` : ''}
-          </h2>
-          {openDisputes.length === 0 ? (
-            <div style={{ padding: '20px 16px', textAlign: 'center', color: t.MUTED, fontSize: 13, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-              No open disputes.
-            </div>
-          ) : (
-            openDisputes.map((dispute) => (
-              <div key={dispute.id} style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>{dispute.title}</span>
-                  <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>{formatQueueTime(dispute.createdAtIso)}</span>
-                </div>
-                <p style={{ fontSize: 13, color: '#D1D5DB', margin: '6px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{dispute.description}</p>
-                <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6 }}>
-                  Opened by {dispute.openedByName ?? `member ${dispute.openedByUserId.slice(0, 6)}`}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+        <DisputesSection openDisputes={openDisputes} t={t} />
 
         {/* Review queue: pending milestone validations. */}
-        <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>
-            Pending milestone validations {pendingValidations.length > 0 ? `(${pendingValidations.length})` : ''}
-          </h2>
-          {pendingValidations.length === 0 ? (
-            <div style={{ padding: '20px 16px', textAlign: 'center', color: t.MUTED, fontSize: 13, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-              No pending validations.
-            </div>
-          ) : (
-            pendingValidations.map((validation) => (
-              <div key={validation.id} style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>Milestone {validation.milestoneId.slice(0, 8)}</span>
-                  <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>{formatQueueTime(validation.createdAtIso)}</span>
-                </div>
-                {validation.validationNote ? (
-                  <p style={{ fontSize: 13, color: '#D1D5DB', margin: '6px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{validation.validationNote}</p>
-                ) : null}
-                <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6 }}>Enrollment {validation.enrollmentId.slice(0, 8)}</div>
-              </div>
-            ))
-          )}
-        </div>
+        <ValidationsSection pendingValidations={pendingValidations} t={t} />
 
         {/* Cohort proposals from Workforce gaps (issue #904) */}
-        <div style={{ marginBottom: 24, padding: '16px 18px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, margin: 0 }}>
-              Cohort proposals from Workforce gaps {proposals.length > 0 ? `(${proposals.length})` : ''}
-            </h2>
-            <button
-              type="button"
-              onClick={refreshProposals}
-              disabled={autoRunning}
-              style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: 8, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: autoRunning ? 'not-allowed' : 'pointer', opacity: autoRunning ? 0.6 : 1 }}
-            >
-              {autoRunning ? 'Refreshing…' : 'Refresh proposals'}
-            </button>
-          </div>
-          <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginBottom: 14 }}>
-            The gaps are re-read on a cadence into a ranked, sector-diverse queue. Approve a proposal to
-            open a cohort — you choose the term — or dismiss it. Approving never opens two cohorts for the
-            same occupation; refreshing supersedes proposals whose gap has closed.
-          </p>
-          {autoError ? (
-            <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
-              {autoError}
-            </div>
-          ) : null}
-          {autoNotice ? (
-            <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13 }}>
-              {autoNotice}
-            </div>
-          ) : null}
-          {proposalError ? (
-            <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
-              {proposalError}
-            </div>
-          ) : null}
-          {proposalNotice ? (
-            <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13 }}>
-              {proposalNotice}
-            </div>
-          ) : null}
-          {proposals.length === 0 ? (
-            <div style={{ padding: '20px 16px', textAlign: 'center', color: t.MUTED, fontSize: 13, borderRadius: 10, background: t.BG, border: `1px solid ${t.BORDER_SOLID}` }}>
-              No pending proposals. Use “Refresh proposals” to re-read the current Workforce gaps.
-            </div>
-          ) : (
-            proposals.map((proposal) => {
-              const term = proposalTerms[proposal.id] ?? 3;
-              const busy = busyProposalId === proposal.id;
-              return (
-                <div key={proposal.id} style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 10, background: t.BG, border: `1px solid ${t.BORDER_SOLID}` }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>#{proposal.rank} · {proposal.occupation}</span>
-                    <Pill>{proposal.sector}</Pill>
-                    <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>gap {Math.round(proposal.gap)}</span>
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 10 }}>
-                    <label style={{ fontSize: 12, color: t.MUTED }}>
-                      Term:{' '}
-                      <select
-                        value={term}
-                        disabled={busy}
-                        onChange={(event) => setProposalTerms((prev) => ({ ...prev, [proposal.id]: Number(event.target.value) as ProposalTermMonths }))}
-                        style={{ borderRadius: 6, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, padding: '5px 8px', fontSize: 12 }}
-                      >
-                        {PROPOSAL_TERM_MONTHS.map((months) => (
-                          <option key={months} value={months}>{months} month{months === 1 ? '' : 's'}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => void approveProposal(proposal)}
-                      disabled={busy}
-                      style={{ marginLeft: 'auto', padding: '7px 14px', borderRadius: 7, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 12, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
-                    >
-                      {busy ? 'Working…' : 'Approve & open'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void dismissProposal(proposal)}
-                      disabled={busy}
-                      style={{ padding: '7px 14px', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+        <ProposalsSection
+          proposals={proposals}
+          proposalTerms={proposalTerms}
+          setProposalTerms={setProposalTerms}
+          busyProposalId={busyProposalId}
+          autoRunning={autoRunning}
+          autoError={autoError}
+          autoNotice={autoNotice}
+          proposalError={proposalError}
+          proposalNotice={proposalNotice}
+          onRefresh={refreshProposals}
+          onApprove={(proposal) => void approveProposal(proposal)}
+          onDismiss={(proposal) => void dismissProposal(proposal)}
+          t={t}
+        />
 
         {/* Cohorts */}
-        <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>Cohorts</h2>
-          {cohortsError ? (
-            <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
-              {cohortsError}
-            </div>
-          ) : null}
-          {cohorts === null ? (
-            <div style={{ fontSize: 13, color: t.MUTED }}>Loading cohorts…</div>
-          ) : cohorts.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-              No cohorts yet. Trainers create cohorts from the plugin shell.
-            </div>
-          ) : (
-            cohorts.map((cohort) => (
-              <div key={cohort.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>{cohort.title}</span>
-                  <Pill>{cohort.track}</Pill>
-                  <Pill>{cohort.status}</Pill>
-                  {cohort.autoCreated ? <Pill>auto</Pill> : null}
-                  {cohort.needsTrainer ? (
-                    <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#FBBF24', border: '1px solid rgba(245,158,11,0.4)' }}>
-                      needs trainer
-                    </span>
-                  ) : null}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 24px', fontSize: 12, color: t.MUTED }}>
-                  <span>Seats: {cohort.seatsAvailable} of {cohort.seats} open</span>
-                  <span>Required deposit: {cohort.requiredCredits} credits</span>
-                  <span>Trainer split: {cohort.trainerSplitPercent}%</span>
-                  <span>Completion bonus: {cohort.completionBonusCredits} credits</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+        <CohortsSection cohorts={cohorts} cohortsError={cohortsError} t={t} />
 
         {/* ServiceCredits grant (grant-only — never removes credits) */}
-        <div style={{ padding: '16px 18px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 6 }}>Grant member ServiceCredits</h2>
-          <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginBottom: 14 }}>
-            LevelUp only ever grants ServiceCredits to a member — it never removes them. Enter an
-            amount greater than zero. Every grant is recorded against a governance ticket and is
-            written to the audit log.
-          </p>
-
-          {formError ? (
-            <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
-              {formError}
-            </div>
-          ) : null}
-          {notice ? (
-            <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13 }}>
-              {notice}
-            </div>
-          ) : null}
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-            <label style={{ display: 'block', fontSize: 12 }}>
-              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Member user ID</span>
-              <input
-                style={inputStyle(t)}
-                value={targetUserId}
-                onChange={(event) => setTargetUserId(event.target.value)}
-                disabled={confirming || submitting}
-                placeholder="user_…"
-              />
-            </label>
-            <label style={{ display: 'block', fontSize: 12 }}>
-              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Amount to grant (greater than zero)</span>
-              <input
-                style={inputStyle(t)}
-                value={amountText}
-                onChange={(event) => setAmountText(event.target.value)}
-                disabled={confirming || submitting}
-                inputMode="decimal"
-                min={0}
-                placeholder="e.g. 25"
-              />
-            </label>
-            <label style={{ display: 'block', fontSize: 12, gridColumn: '1 / -1' }}>
-              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Reason</span>
-              <input
-                style={inputStyle(t)}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                disabled={confirming || submitting}
-                placeholder="Why this adjustment is being made"
-              />
-            </label>
-            <label style={{ display: 'block', fontSize: 12, gridColumn: '1 / -1' }}>
-              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.MUTED, marginBottom: 6 }}>Governance ticket ID</span>
-              <input
-                style={inputStyle(t)}
-                value={governanceTicketId}
-                onChange={(event) => setGovernanceTicketId(event.target.value)}
-                disabled={confirming || submitting}
-                placeholder="e.g. GOV-1234"
-              />
-            </label>
-          </div>
-
-          {confirming ? (
-            <div style={{ marginTop: 14, padding: '14px 16px', borderRadius: 12, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.4)' }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#FBBF24', marginBottom: 4 }}>
-                Confirm: this will add {magnitude} ServiceCredits to member {targetUserId.trim()}.
-              </p>
-              <p style={{ fontSize: 12, color: 'rgba(251,191,36,0.85)', marginBottom: 12 }}>
-                Reason: {reason.trim()} · Governance ticket: {governanceTicketId.trim()}
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={submitAdjustment}
-                  disabled={submitting}
-                  style={{ padding: '8px 16px', borderRadius: 8, background: '#F59E0B', border: '1px solid #F59E0B', color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.6 : 1 }}
-                >
-                  {submitting ? 'Applying…' : `Yes, grant ${magnitude} credits`}
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelConfirm}
-                  disabled={submitting}
-                  style={{ padding: '8px 16px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.6 : 1 }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={beginConfirm}
-              disabled={submitting || !formReady}
-              style={{ marginTop: 14, padding: '9px 18px', borderRadius: 8, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: submitting || !formReady ? 'not-allowed' : 'pointer', opacity: submitting || !formReady ? 0.6 : 1 }}
-            >
-              Review grant
-            </button>
-          )}
-        </div>
+        <GrantForm
+          targetUserId={targetUserId}
+          setTargetUserId={setTargetUserId}
+          amountText={amountText}
+          setAmountText={setAmountText}
+          reason={reason}
+          setReason={setReason}
+          governanceTicketId={governanceTicketId}
+          setGovernanceTicketId={setGovernanceTicketId}
+          confirming={confirming}
+          submitting={submitting}
+          formError={formError}
+          notice={notice}
+          formReady={formReady}
+          magnitude={magnitude}
+          beginConfirm={beginConfirm}
+          cancelConfirm={cancelConfirm}
+          submitAdjustment={submitAdjustment}
+          t={t}
+        />
 
       </div>
     </div>

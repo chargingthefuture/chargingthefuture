@@ -186,6 +186,88 @@ function GateView({ isSignedIn, signInUrl, verifyUrl, closesLabel, t }: { isSign
   );
 }
 
+function TimeZoneRow({ tz, showTz, setShowTz, setTz, t }: { tz: string; showTz: boolean; setShowTz: (v: boolean) => void; setTz: (v: string) => void; t: Tokens }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <button onClick={() => setShowTz(!showTz)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: t.SUBTLE, fontSize: 13, fontWeight: 500, padding: 0 }}>
+        <Globe size={13} /> Times shown in {timeZoneLabel(tz)}
+        <ChevronDown size={12} style={{ transform: showTz ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+      </button>
+      {showTz && (
+        <div style={{ marginTop: 8 }}>
+          <select value={tz} onChange={(e) => setTz(e.target.value)} style={{ background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, color: t.TITLE, fontSize: 13, padding: '8px 10px', maxWidth: 320, width: '100%' }}>
+            {listTimeZones().map((z) => (
+              <option key={z} value={z}>{z.replace(/_/g, ' ')}</option>
+            ))}
+          </select>
+          <div style={{ fontSize: 11, color: t.SUBTLE, marginTop: 4 }}>Traveling or using a VPN? Pick the timezone you&apos;re actually in.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type VotePeriod = { label: string; order: number; slots: string[] };
+
+function SlotGrid({ periods, picks, atMax, toggle, tz, t }: { periods: VotePeriod[]; picks: string[]; atMax: boolean; toggle: (iso: string) => void; tz: string; t: Tokens }) {
+  return (
+    <div style={{ borderRadius: 14, border: `1px solid ${t.BORDER_SOLID}`, background: t.HEADER, marginBottom: 16, overflow: 'hidden' }}>
+      {periods.length === 0 ? (
+        <div style={{ padding: 14, color: t.SUBTLE, fontSize: 13 }}>No times on this day.</div>
+      ) : (
+        periods.map((period) => (
+          <div key={period.order} style={{ padding: '10px 14px', borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: t.SUBTLE, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{period.label}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {period.slots.map((iso) => {
+                const isSel = picks.includes(iso);
+                const isDis = !isSel && atMax;
+                return (
+                  <button key={iso} onClick={() => !isDis && toggle(iso)} style={{ padding: '5px 10px', borderRadius: 6, background: isSel ? `${t.ACCENT}22` : t.SURFACE, border: `1px solid ${isSel ? t.ACCENT : t.BORDER_SOLID}`, color: isSel ? t.ACCENT : isDis ? t.SUBTLE : t.TITLE, fontSize: 12, fontWeight: isSel ? 700 : 400, cursor: isDis ? 'not-allowed' : 'pointer', opacity: isDis ? 0.4 : 1, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {isSel && <Check size={11} />}
+                    {formatSlotTime(iso, tz)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function PicksSummary({ picks, tz, toggle, t }: { picks: string[]; tz: string; toggle: (iso: string) => void; t: Tokens }) {
+  if (picks.length === 0) return null;
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: t.SUBTLE, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your picks</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {[...picks].sort().map((iso) => (
+          <div key={iso} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', borderRadius: 6, background: `${t.ACCENT}12`, border: `1px solid ${t.ACCENT}40`, fontSize: 13, color: t.TITLE }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Clock size={12} style={{ color: t.ACCENT }} /> {formatSlotDate(iso, tz)} · {formatSlotRange(iso, tz)}
+            </span>
+            <button onClick={() => toggle(iso)} style={{ background: 'transparent', border: 'none', color: t.SUBTLE, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>remove</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SaveBar({ saving, picks, save, t }: { saving: boolean; picks: string[]; save: () => void; t: Tokens }) {
+  return (
+    <button
+      onClick={save}
+      disabled={saving}
+      style={{ padding: '10px 20px', borderRadius: 10, background: `${t.ACCENT}22`, border: `1px solid ${t.ACCENT}`, color: t.ACCENT, fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}
+    >
+      {saving ? 'Saving…' : picks.length === 0 ? 'Clear my picks' : 'Save my picks'}
+    </button>
+  );
+}
+
 function VoteView({
   event,
   tz,
@@ -305,22 +387,7 @@ function VoteView({
 
       <div style={{ borderRadius: 14, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, padding: 20, marginTop: 4 }}>
         {/* Timezone row */}
-        <div style={{ marginBottom: 18 }}>
-          <button onClick={() => setShowTz(!showTz)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: t.SUBTLE, fontSize: 13, fontWeight: 500, padding: 0 }}>
-            <Globe size={13} /> Times shown in {timeZoneLabel(tz)}
-            <ChevronDown size={12} style={{ transform: showTz ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
-          </button>
-          {showTz && (
-            <div style={{ marginTop: 8 }}>
-              <select value={tz} onChange={(e) => setTz(e.target.value)} style={{ background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, color: t.TITLE, fontSize: 13, padding: '8px 10px', maxWidth: 320, width: '100%' }}>
-                {listTimeZones().map((z) => (
-                  <option key={z} value={z}>{z.replace(/_/g, ' ')}</option>
-                ))}
-              </select>
-              <div style={{ fontSize: 11, color: t.SUBTLE, marginTop: 4 }}>Traveling or using a VPN? Pick the timezone you&apos;re actually in.</div>
-            </div>
-          )}
-        </div>
+        <TimeZoneRow tz={tz} showTz={showTz} setShowTz={setShowTz} setTz={setTz} t={t} />
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: t.TITLE }}>Pick up to {MUTUAL_TIME_MAX_PICKS} one-hour windows you&apos;re free</span>
@@ -342,56 +409,14 @@ function VoteView({
         </div>
 
         {/* Slot grid */}
-        <div style={{ borderRadius: 14, border: `1px solid ${t.BORDER_SOLID}`, background: t.HEADER, marginBottom: 16, overflow: 'hidden' }}>
-          {periods.length === 0 ? (
-            <div style={{ padding: 14, color: t.SUBTLE, fontSize: 13 }}>No times on this day.</div>
-          ) : (
-            periods.map((period) => (
-              <div key={period.order} style={{ padding: '10px 14px', borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: t.SUBTLE, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{period.label}</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {period.slots.map((iso) => {
-                    const isSel = picks.includes(iso);
-                    const isDis = !isSel && atMax;
-                    return (
-                      <button key={iso} onClick={() => !isDis && toggle(iso)} style={{ padding: '5px 10px', borderRadius: 6, background: isSel ? `${t.ACCENT}22` : t.SURFACE, border: `1px solid ${isSel ? t.ACCENT : t.BORDER_SOLID}`, color: isSel ? t.ACCENT : isDis ? t.SUBTLE : t.TITLE, fontSize: 12, fontWeight: isSel ? 700 : 400, cursor: isDis ? 'not-allowed' : 'pointer', opacity: isDis ? 0.4 : 1, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        {isSel && <Check size={11} />}
-                        {formatSlotTime(iso, tz)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+        <SlotGrid periods={periods} picks={picks} atMax={atMax} toggle={toggle} tz={tz} t={t} />
 
         {/* Picks summary */}
-        {picks.length > 0 && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: t.SUBTLE, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your picks</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {[...picks].sort().map((iso) => (
-                <div key={iso} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', borderRadius: 6, background: `${t.ACCENT}12`, border: `1px solid ${t.ACCENT}40`, fontSize: 13, color: t.TITLE }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Clock size={12} style={{ color: t.ACCENT }} /> {formatSlotDate(iso, tz)} · {formatSlotRange(iso, tz)}
-                  </span>
-                  <button onClick={() => toggle(iso)} style={{ background: 'transparent', border: 'none', color: t.SUBTLE, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>remove</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <PicksSummary picks={picks} tz={tz} toggle={toggle} t={t} />
 
         {error && <div style={{ marginBottom: 10, fontSize: 13, color: '#F87171' }}>{error}</div>}
 
-        <button
-          onClick={save}
-          disabled={saving}
-          style={{ padding: '10px 20px', borderRadius: 10, background: `${t.ACCENT}22`, border: `1px solid ${t.ACCENT}`, color: t.ACCENT, fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}
-        >
-          {saving ? 'Saving…' : picks.length === 0 ? 'Clear my picks' : 'Save my picks'}
-        </button>
+        <SaveBar saving={saving} picks={picks} save={save} t={t} />
       </div>
     </>
   );

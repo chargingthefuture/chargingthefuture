@@ -68,9 +68,213 @@ async function adminMutate<T = unknown>(url: string, method: 'POST' | 'DELETE', 
   }
 }
 
-export function BeaconAdminShell() {
+// The broadcast panel for the selected event: go-live / end, RTMP ingest, the in-browser host
+// stage, and (while live) chat moderation. Renders nothing unless an event is selected and not yet
+// ended, so the caller can render it unconditionally.
+function BroadcastSection({
+  activeEvent,
+  ingest,
+  host,
+  chat,
+  copied,
+  moderateTarget,
+  broadcastSectionRef,
+  onGoLive,
+  onEndEvent,
+  onModerate,
+  onCopy,
+  onModerateTargetChange,
+}: {
+  activeEvent: BeaconEvent | null;
+  ingest: IngestResponse | null;
+  host: BeaconHostCredentials | null;
+  chat: ChatCredentials | null;
+  copied: string | null;
+  moderateTarget: string;
+  broadcastSectionRef: React.RefObject<HTMLElement | null>;
+  onGoLive: (eventId: string) => void;
+  onEndEvent: (eventId: string) => void;
+  onModerate: (eventId: string, action: 'mute' | 'ban' | 'slow_mode', extra?: { targetUserId?: string; cooldownSeconds?: number }) => void;
+  onCopy: (label: string, value: string) => void;
+  onModerateTargetChange: (value: string) => void;
+}) {
   const { theme } = useTheme();
   const t = getBeaconTokens(theme);
+  if (!activeEvent || activeEvent.status === 'ended') {
+    return null;
+  }
+  return (
+    <section ref={broadcastSectionRef} style={cardStyle(t)}>
+      <h2 style={cardTitleStyle}>Broadcast: {activeEvent.title}</h2>
+      {activeEvent.status === 'draft' ? (
+        <button type="button" onClick={() => onGoLive(activeEvent.id)} style={primaryButtonStyle(t)}>Go live</button>
+      ) : (
+        <button type="button" onClick={() => onEndEvent(activeEvent.id)} style={{ ...primaryButtonStyle(t), background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.35)', color: '#F87171' }}>End broadcast</button>
+      )}
+
+      {ingest ? (
+        <div style={{ marginTop: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Phone demo — push to this RTMP target from a broadcaster app</div>
+          <CopyRow label="RTMP URL" value={ingest.rtmpIngestUrl} copied={copied === 'RTMP URL'} onCopy={() => onCopy('RTMP URL', ingest.rtmpIngestUrl)} />
+          <CopyRow label="Stream key" value={ingest.streamKey} copied={copied === 'Stream key'} onCopy={() => onCopy('Stream key', ingest.streamKey)} masked />
+        </div>
+      ) : null}
+
+      {host ? (
+        <div style={{ marginTop: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Computer demo — share a screen or window from this browser</div>
+          <BeaconHostStage credentials={host} eventId={activeEvent.id} />
+        </div>
+      ) : null}
+
+      {activeEvent.status === 'live' ? (
+        <div style={{ marginTop: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Moderate the chat</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input value={moderateTarget} onChange={(event) => onModerateTargetChange(event.target.value)} placeholder="member user id" style={{ ...inputStyle(t), marginBottom: 0, maxWidth: 240 }} />
+            <button type="button" onClick={() => moderateTarget && void onModerate(activeEvent.id, 'mute', { targetUserId: moderateTarget })} style={chipButtonStyle(t)}>Mute</button>
+            <button type="button" onClick={() => moderateTarget && void onModerate(activeEvent.id, 'ban', { targetUserId: moderateTarget })} style={chipButtonStyle(t)}>Ban</button>
+            <button type="button" onClick={() => void onModerate(activeEvent.id, 'slow_mode', { cooldownSeconds: 10 })} style={chipButtonStyle(t)}>Slow-mode 10s</button>
+            <button type="button" onClick={() => void onModerate(activeEvent.id, 'slow_mode', { cooldownSeconds: 0 })} style={chipButtonStyle(t)}>Slow-mode off</button>
+          </div>
+          {chat ? (
+            <div style={{ marginTop: 14, height: 360, borderRadius: 12, border: `1px solid ${t.BORDER_SOLID}`, overflow: 'hidden' }}>
+              <StreamChatPanel
+                streamApiKey={chat.streamApiKey}
+                streamToken={chat.streamToken}
+                streamUserId={chat.streamUserId}
+                streamChannelId={chat.streamChannelId}
+                channelType={chat.streamChannelType}
+                accentColor={t.ACCENT}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+// One event row in the history list, with Replay / Open / two-step Delete controls.
+function EventHistoryRow({
+  event,
+  confirmDeleteId,
+  deletingId,
+  onOpen,
+  onDelete,
+  onArmDelete,
+  onCancelDelete,
+}: {
+  event: BeaconEvent;
+  confirmDeleteId: string | null;
+  deletingId: string | null;
+  onOpen: (eventId: string) => void;
+  onDelete: (eventId: string) => void;
+  onArmDelete: (eventId: string) => void;
+  onCancelDelete: () => void;
+}) {
+  const { theme } = useTheme();
+  const t = getBeaconTokens(theme);
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.title}</div>
+        <div style={{ fontSize: 12, color: t.SUBTLE }}>
+          {event.status}
+          {event.recordingUrl ? ' · recording ready' : ''}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {event.recordingUrl ? (
+          <a href={event.recordingUrl} target="_blank" rel="noreferrer" style={chipButtonStyle(t)}>Replay</a>
+        ) : null}
+        {event.status !== 'ended' ? (
+          <button type="button" onClick={() => onOpen(event.id)} style={chipButtonStyle(t)}>Open</button>
+        ) : null}
+        {/* Delete is offered for drafts only. A draft was never broadcast — nobody saw
+            it, it has no recording, and it does not appear in the member view — so
+            removing a mistyped one destroys nothing. A live or ended event is public
+            history and is never deletable from here. */}
+        {event.status === 'draft' ? (
+          confirmDeleteId === event.id ? (
+            <>
+              <button
+                type="button"
+                onClick={() => onDelete(event.id)}
+                disabled={deletingId === event.id}
+                style={dangerButtonStyle(t)}
+              >
+                {deletingId === event.id ? 'Deleting…' : 'Confirm delete'}
+              </button>
+              <button type="button" onClick={onCancelDelete} style={chipButtonStyle(t)}>Cancel</button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onArmDelete(event.id)}
+              aria-label={`Delete the draft "${event.title}"`}
+              style={chipButtonStyle(t)}
+            >
+              Delete
+            </button>
+          )
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function EventHistorySection({
+  loading,
+  events,
+  confirmDeleteId,
+  deletingId,
+  onOpen,
+  onDelete,
+  onArmDelete,
+  onCancelDelete,
+}: {
+  loading: boolean;
+  events: BeaconEvent[];
+  confirmDeleteId: string | null;
+  deletingId: string | null;
+  onOpen: (eventId: string) => void;
+  onDelete: (eventId: string) => void;
+  onArmDelete: (eventId: string) => void;
+  onCancelDelete: () => void;
+}) {
+  const { theme } = useTheme();
+  const t = getBeaconTokens(theme);
+  return (
+    <section style={cardStyle(t)}>
+      <h2 style={cardTitleStyle}>Event history</h2>
+      {loading ? (
+        <div style={{ color: t.SUBTLE, fontSize: 14 }}>Loading…</div>
+      ) : events.length === 0 ? (
+        <div style={{ color: t.SUBTLE, fontSize: 14 }}>No events yet. Create one above.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {events.map((event) => (
+            <EventHistoryRow
+              key={event.id}
+              event={event}
+              confirmDeleteId={confirmDeleteId}
+              deletingId={deletingId}
+              onOpen={onOpen}
+              onDelete={onDelete}
+              onArmDelete={onArmDelete}
+              onCancelDelete={onCancelDelete}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// All Beacon admin state, data loading, and mutations. Split out of the component so the render
+// stays small; the component below only reads this hook and draws the sections.
+function useBeaconAdmin() {
   const [events, setEvents] = useState<BeaconEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -250,6 +454,28 @@ export function BeaconAdminShell() {
     });
   }, []);
 
+  return {
+    events, loading, error, notice,
+    title, setTitle, description, setDescription, creating,
+    setActiveEventId, ingest, host, chat, copied,
+    moderateTarget, setModerateTarget, confirmDeleteId, setConfirmDeleteId, deletingId,
+    broadcastSectionRef, activeEvent,
+    createEvent, deleteDraft, goLive, endEvent, moderate, copy,
+  };
+}
+
+export function BeaconAdminShell() {
+  const { theme } = useTheme();
+  const t = getBeaconTokens(theme);
+  const {
+    events, loading, error, notice,
+    title, setTitle, description, setDescription, creating,
+    setActiveEventId, ingest, host, chat, copied,
+    moderateTarget, setModerateTarget, confirmDeleteId, setConfirmDeleteId, deletingId,
+    broadcastSectionRef, activeEvent,
+    createEvent, deleteDraft, goLive, endEvent, moderate, copy,
+  } = useBeaconAdmin();
+
   return (
     <main
       style={{
@@ -281,115 +507,31 @@ export function BeaconAdminShell() {
           </button>
         </section>
 
-        {activeEvent && activeEvent.status !== 'ended' ? (
-          <section ref={broadcastSectionRef} style={cardStyle(t)}>
-            <h2 style={cardTitleStyle}>Broadcast: {activeEvent.title}</h2>
-            {activeEvent.status === 'draft' ? (
-              <button type="button" onClick={() => void goLive(activeEvent.id)} style={primaryButtonStyle(t)}>Go live</button>
-            ) : (
-              <button type="button" onClick={() => void endEvent(activeEvent.id)} style={{ ...primaryButtonStyle(t), background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.35)', color: '#F87171' }}>End broadcast</button>
-            )}
+        <BroadcastSection
+          activeEvent={activeEvent}
+          ingest={ingest}
+          host={host}
+          chat={chat}
+          copied={copied}
+          moderateTarget={moderateTarget}
+          broadcastSectionRef={broadcastSectionRef}
+          onGoLive={(eventId) => void goLive(eventId)}
+          onEndEvent={(eventId) => void endEvent(eventId)}
+          onModerate={(eventId, action, extra) => void moderate(eventId, action, extra)}
+          onCopy={copy}
+          onModerateTargetChange={setModerateTarget}
+        />
 
-            {ingest ? (
-              <div style={{ marginTop: 18 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Phone demo — push to this RTMP target from a broadcaster app</div>
-                <CopyRow label="RTMP URL" value={ingest.rtmpIngestUrl} copied={copied === 'RTMP URL'} onCopy={() => copy('RTMP URL', ingest.rtmpIngestUrl)} />
-                <CopyRow label="Stream key" value={ingest.streamKey} copied={copied === 'Stream key'} onCopy={() => copy('Stream key', ingest.streamKey)} masked />
-              </div>
-            ) : null}
-
-            {host ? (
-              <div style={{ marginTop: 18 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Computer demo — share a screen or window from this browser</div>
-                <BeaconHostStage credentials={host} eventId={activeEvent.id} />
-              </div>
-            ) : null}
-
-            {activeEvent.status === 'live' ? (
-              <div style={{ marginTop: 18 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Moderate the chat</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <input value={moderateTarget} onChange={(event) => setModerateTarget(event.target.value)} placeholder="member user id" style={{ ...inputStyle(t), marginBottom: 0, maxWidth: 240 }} />
-                  <button type="button" onClick={() => moderateTarget && void moderate(activeEvent.id, 'mute', { targetUserId: moderateTarget })} style={chipButtonStyle(t)}>Mute</button>
-                  <button type="button" onClick={() => moderateTarget && void moderate(activeEvent.id, 'ban', { targetUserId: moderateTarget })} style={chipButtonStyle(t)}>Ban</button>
-                  <button type="button" onClick={() => void moderate(activeEvent.id, 'slow_mode', { cooldownSeconds: 10 })} style={chipButtonStyle(t)}>Slow-mode 10s</button>
-                  <button type="button" onClick={() => void moderate(activeEvent.id, 'slow_mode', { cooldownSeconds: 0 })} style={chipButtonStyle(t)}>Slow-mode off</button>
-                </div>
-                {chat ? (
-                  <div style={{ marginTop: 14, height: 360, borderRadius: 12, border: `1px solid ${t.BORDER_SOLID}`, overflow: 'hidden' }}>
-                    <StreamChatPanel
-                      streamApiKey={chat.streamApiKey}
-                      streamToken={chat.streamToken}
-                      streamUserId={chat.streamUserId}
-                      streamChannelId={chat.streamChannelId}
-                      channelType={chat.streamChannelType}
-                      accentColor={t.ACCENT}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        <section style={cardStyle(t)}>
-          <h2 style={cardTitleStyle}>Event history</h2>
-          {loading ? (
-            <div style={{ color: t.SUBTLE, fontSize: 14 }}>Loading…</div>
-          ) : events.length === 0 ? (
-            <div style={{ color: t.SUBTLE, fontSize: 14 }}>No events yet. Create one above.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {events.map((event) => (
-                <div key={event.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.title}</div>
-                    <div style={{ fontSize: 12, color: t.SUBTLE }}>
-                      {event.status}
-                      {event.recordingUrl ? ' · recording ready' : ''}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {event.recordingUrl ? (
-                      <a href={event.recordingUrl} target="_blank" rel="noreferrer" style={chipButtonStyle(t)}>Replay</a>
-                    ) : null}
-                    {event.status !== 'ended' ? (
-                      <button type="button" onClick={() => setActiveEventId(event.id)} style={chipButtonStyle(t)}>Open</button>
-                    ) : null}
-                    {/* Delete is offered for drafts only. A draft was never broadcast — nobody saw
-                        it, it has no recording, and it does not appear in the member view — so
-                        removing a mistyped one destroys nothing. A live or ended event is public
-                        history and is never deletable from here. */}
-                    {event.status === 'draft' ? (
-                      confirmDeleteId === event.id ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => deleteDraft(event.id)}
-                            disabled={deletingId === event.id}
-                            style={dangerButtonStyle(t)}
-                          >
-                            {deletingId === event.id ? 'Deleting…' : 'Confirm delete'}
-                          </button>
-                          <button type="button" onClick={() => setConfirmDeleteId(null)} style={chipButtonStyle(t)}>Cancel</button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(event.id)}
-                          aria-label={`Delete the draft "${event.title}"`}
-                          style={chipButtonStyle(t)}
-                        >
-                          Delete
-                        </button>
-                      )
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        <EventHistorySection
+          loading={loading}
+          events={events}
+          confirmDeleteId={confirmDeleteId}
+          deletingId={deletingId}
+          onOpen={setActiveEventId}
+          onDelete={deleteDraft}
+          onArmDelete={setConfirmDeleteId}
+          onCancelDelete={() => setConfirmDeleteId(null)}
+        />
       </div>
     </main>
   );

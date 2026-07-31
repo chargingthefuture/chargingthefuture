@@ -118,29 +118,19 @@ function ExportButton({ service, isExporting, tokens, onExportService }: {
   );
 }
 
-function MobileDataView({
-  remaining, retained, pendingSlug, rowError, exportingKey, onDeleteService, onExportService, onExportAll, tokens,
-}: {
-  remaining: AccountService[];
-  retained: AccountService[];
-  pendingSlug: string | null;
+// "Download all my data" action plus its error/help line. Kept as its own component so the
+// export-in-flight and error style branches live outside MobileDataView's decision count.
+function ExportAllSection({ rowError, exportingKey, onExportAll, tokens }: {
   rowError: { slug: string; message: string } | null;
   exportingKey: string | null;
-  onDeleteService: (service: AccountService) => void;
-  onExportService: (service: AccountService) => void;
   onExportAll: () => void;
   tokens: AccountDataTokens;
 }) {
-  const { BRAND, SURFACE, BORDER, TEXT, SUBTLE } = tokens;
+  const { BRAND } = tokens;
   const exportingAll = exportingKey === 'full-account';
   const fullExportError = rowError?.slug === 'full-account' ? rowError.message : null;
   return (
     <>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 10, background: `${BRAND}06`, border: `1px solid ${BRAND}18`, marginBottom: 12 }}>
-        <Info size={13} color={BRAND} style={{ flexShrink: 0, marginTop: 1 }} />
-        <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.5 }}>Deleting from a service is permanent. Some audit records are retained for platform integrity.</div>
-      </div>
-
       {/* Take your data with you (issue #1264): one action downloads every service's data as a
           single JSON file. The per-service download sits on each card below. */}
       <button
@@ -157,6 +147,32 @@ function MobileDataView({
       ) : (
         <div style={{ fontSize: 11, color: '#4B5563', lineHeight: 1.4, marginBottom: 10 }}>One JSON file with your own rows from every service. Money ledgers and audit records are retained by design and not included.</div>
       )}
+    </>
+  );
+}
+
+function MobileDataView({
+  remaining, retained, pendingSlug, rowError, exportingKey, onDeleteService, onExportService, onExportAll, tokens,
+}: {
+  remaining: AccountService[];
+  retained: AccountService[];
+  pendingSlug: string | null;
+  rowError: { slug: string; message: string } | null;
+  exportingKey: string | null;
+  onDeleteService: (service: AccountService) => void;
+  onExportService: (service: AccountService) => void;
+  onExportAll: () => void;
+  tokens: AccountDataTokens;
+}) {
+  const { BRAND, SURFACE, BORDER, TEXT, SUBTLE } = tokens;
+  return (
+    <>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 10, background: `${BRAND}06`, border: `1px solid ${BRAND}18`, marginBottom: 12 }}>
+        <Info size={13} color={BRAND} style={{ flexShrink: 0, marginTop: 1 }} />
+        <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.5 }}>Deleting from a service is permanent. Some audit records are retained for platform integrity.</div>
+      </div>
+
+      <ExportAllSection rowError={rowError} exportingKey={exportingKey} onExportAll={onExportAll} tokens={tokens} />
 
       <div style={{ fontSize: 12, fontWeight: 700, color: SUBTLE, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Personal data — {remaining.length} {remaining.length === 1 ? 'service' : 'services'}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 24 }}>

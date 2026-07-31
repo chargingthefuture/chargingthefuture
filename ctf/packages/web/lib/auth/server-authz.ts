@@ -55,74 +55,106 @@ function normalizeRequiredRoles(requiredRoles: string[] | undefined): string[] {
     .filter((role) => role.length > 0);
 }
 
+type RequestIdentity = Awaited<ReturnType<typeof resolveRequestIdentity>>;
+
+// Normalize the role once so every admin/role comparison is case-insensitive, regardless of how a
+// future identity source cases it.
+function normalizeRoleValue(role: string | null | undefined): string | null {
+  return role?.trim().toLowerCase() ?? null;
+}
+
+// Username-required and role-membership gates. Returns a deny, or null when both pass.
+function resolveRoleAndUsernameDeny(
+  identity: RequestIdentity,
+  normalizedRole: string | null,
+  requiredRoles: string[] | undefined,
+  requireUsername: boolean,
+): PluginDenyResponse | null {
+  if (requireUsername && !identity.username) {
+    return pluginAuthDeny.forbiddenPolicy('missing_username');
+  }
+  const normalizedRequiredRoles = normalizeRequiredRoles(requiredRoles);
+  if (normalizedRequiredRoles.length > 0 && (!normalizedRole || !normalizedRequiredRoles.includes(normalizedRole))) {
+    return pluginAuthDeny.forbiddenRole(requiredRoles ?? []);
+  }
+  return null;
+}
+
+// Unlock access gate — the single source of truth for full app access. Admins always pass;
+// 'any_authenticated' routes (unlock submission/status, account/profile/deletion) skip the tier check
+// so a gated user can always submit and manage their own data. Returns a deny, or null when allowed.
+async function resolveUnlockTierDeny(
+  userId: string,
+  normalizedRole: string | null,
+  minUnlockTier: MinUnlockTier,
+): Promise<PluginDenyResponse | null> {
+  if (normalizedRole === 'admin' || minUnlockTier === 'any_authenticated') {
+    return null;
+  }
+  const tier = await getUnlockAccessTier(userId);
+  let allowed =
+    minUnlockTier === 'support_only'
+      ? tier === 'approved_full' || tier === 'locked_support_only'
+      : tier === 'approved_full';
+  // A/B experiment: a not-yet-verified member in the "early Commons access" treatment bucket is
+  // allowed into support-only surfaces (the Commons / Hub general channel) so they can ask for help
+  // before completing verification. Scoped strictly to support_only — full (approved_full) plugin
+  // surfaces are unaffected, and the flag defaults to false (control) so production is unchanged
+  // until the rollout is enabled in Unleash.
+  if (!allowed && minUnlockTier === 'support_only') {
+    allowed = await isUnlockEarlyCommonsEnabled(userId);
+  }
+  return allowed ? null : pluginAuthDeny.forbiddenPolicy('unlock_required');
+}
+
+// Platform-wide account restriction — a full-account ('all'-scope) restriction blocks every product
+// route. Skipped for admins and for 'any_authenticated' routes (account/profile/deletion, unlock
+// status), so a restricted member can still see their status and manage or delete their own data.
+// Narrower 'trading'/'contact' restrictions are enforced at the value-movement/contact points, not here.
+async function resolveAccountRestrictionDeny(
+  userId: string,
+  normalizedRole: string | null,
+  minUnlockTier: MinUnlockTier,
+): Promise<PluginDenyResponse | null> {
+  if (normalizedRole === 'admin' || minUnlockTier === 'any_authenticated') {
+    return null;
+  }
+  const restriction = await getAccountRestrictionStatus(userId, 'all');
+  return restriction.isRestricted ? pluginAuthDeny.forbiddenPolicy('account_restricted') : null;
+}
+
 export async function evaluatePluginAccess(
   options: EvaluatePluginAccessOptions = {},
 ): Promise<PluginAuthDecision> {
-  const {
-    requiredRoles,
-    requireUsername = false,
-    minUnlockTier = 'approved_full',
-  } = options;
+  const { requiredRoles, requireUsername = false, minUnlockTier = 'approved_full' } = options;
 
   const identity = await resolveRequestIdentity();
-  // Normalize the role once so every admin/role comparison below is case-insensitive,
-  // regardless of how a future identity source cases it.
-  const normalizedRole = identity.role?.trim().toLowerCase() ?? null;
-  const normalizedRequiredRoles = normalizeRequiredRoles(requiredRoles);
+  const normalizedRole = normalizeRoleValue(identity.role);
 
   if (!identity.isAuthenticated || !identity.userId) {
     return pluginAuthDeny.unauthorized();
   }
 
-  // A signed-in member reached an authorized surface — record them as active today
-  // (deduplicated to one row per member per day). This populates the `login_events`
-  // table that the active-member window reads, which PeerProgramming cohort
-  // assignment and the Weekly Performance review both depend on. Recorded before the
-  // unlock/role gates so any signed-in member counts as active, and fire-and-forget so
-  // it never blocks or breaks the access decision.
+  // A signed-in member reached an authorized surface — record them as active today (deduplicated to one
+  // row per member per day). This populates the `login_events` table the active-member window reads,
+  // which PeerProgramming cohort assignment and the Weekly Performance review both depend on. Recorded
+  // before the gates so any signed-in member counts as active, and fire-and-forget so it never blocks
+  // or breaks the access decision.
   recordLoginEvent(identity.userId);
 
-  if (requireUsername && !identity.username) {
-    return pluginAuthDeny.forbiddenPolicy('missing_username');
+  const roleDeny = resolveRoleAndUsernameDeny(identity, normalizedRole, requiredRoles, requireUsername);
+  if (roleDeny) {
+    return roleDeny;
   }
 
-  if (normalizedRequiredRoles.length > 0) {
-    if (!normalizedRole || !normalizedRequiredRoles.includes(normalizedRole)) {
-      return pluginAuthDeny.forbiddenRole(requiredRoles ?? []);
-    }
+  const unlockDeny = await resolveUnlockTierDeny(identity.userId, normalizedRole, minUnlockTier);
+  if (unlockDeny) {
+    return unlockDeny;
   }
 
-  // Unlock access gate — the single source of truth for full app access. Admins always
-  // pass. 'any_authenticated' routes (unlock submission/status, account/profile/deletion)
-  // skip the tier check so a gated user can always submit and manage their own data.
-  if (normalizedRole !== 'admin' && minUnlockTier !== 'any_authenticated') {
-    const tier = await getUnlockAccessTier(identity.userId);
-    let allowed =
-      minUnlockTier === 'support_only'
-        ? tier === 'approved_full' || tier === 'locked_support_only'
-        : tier === 'approved_full';
-    // A/B experiment: a not-yet-verified member in the "early Commons access" treatment bucket is
-    // allowed into support-only surfaces (the Commons / Hub general channel) so they can ask for help
-    // before completing verification. Scoped strictly to support_only — full (approved_full) plugin
-    // surfaces are unaffected, and the flag defaults to false (control) so production is unchanged
-    // until the rollout is enabled in Unleash.
-    if (!allowed && minUnlockTier === 'support_only') {
-      allowed = await isUnlockEarlyCommonsEnabled(identity.userId);
-    }
-    if (!allowed) {
-      return pluginAuthDeny.forbiddenPolicy('unlock_required');
-    }
-  }
-
-  // Platform-wide account restriction — a full-account ('all'-scope) restriction blocks every product
-  // route. Skipped for admins and for 'any_authenticated' routes (account/profile/deletion, unlock
-  // status), so a restricted member can still see their status and manage or delete their own data.
-  // Narrower 'trading'/'contact' restrictions are enforced at the value-movement/contact points, not here.
-  if (normalizedRole !== 'admin' && minUnlockTier !== 'any_authenticated') {
-    const restriction = await getAccountRestrictionStatus(identity.userId, 'all');
-    if (restriction.isRestricted) {
-      return pluginAuthDeny.forbiddenPolicy('account_restricted');
-    }
+  const restrictionDeny = await resolveAccountRestrictionDeny(identity.userId, normalizedRole, minUnlockTier);
+  if (restrictionDeny) {
+    return restrictionDeny;
   }
 
   return buildAllowDecision(identity.userId, identity.username, normalizedRole);
