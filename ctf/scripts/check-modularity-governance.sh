@@ -60,17 +60,20 @@ fi
 echo "Checking ${#target_files[@]} changed file(s):"
 printf '  %s\n' "${target_files[@]}"
 
-# --no-inline-config: this gate runs eslint with ONLY the complexity + max-lines rules loaded, so an
-# `// eslint-disable-next-line <plugin>/<rule>` comment in a changed file (e.g. jsx-a11y/*, which lives
-# in the separate a11y-audit config, not the base lint config) would otherwise error as "Definition for
-# rule ... was not found" and fail the gate for an unrelated reason. Ignoring inline config also means a
-# function can't dodge this gate with `// eslint-disable complexity` — which is exactly what we want.
+# This gate must enforce ONLY the two rule-116 limits (complexity, max function length) and nothing
+# else. It runs eslint against a dedicated minimal config (scripts/eslint.complexity.cjs) with
+# --no-eslintrc, so the project's full ruleset never runs here — otherwise a changed file's sanctioned
+# inline disables (e.g. an approved `@typescript-eslint/no-explicit-any`) would surface as gate failures,
+# and the base config's plugins would matter. --no-inline-config makes the gate ignore inline
+# eslint-disable comments entirely: a function can't dodge the limit with `// eslint-disable complexity`,
+# and a `// eslint-disable jsx-a11y/*` comment can't error as "rule not found" (that plugin isn't loaded
+# by this minimal config). The two rules live in the config file, not on the command line.
 if ESLINT_USE_FLAT_CONFIG=false pnpm exec eslint \
+  --no-eslintrc \
+  --config scripts/eslint.complexity.cjs \
   --quiet \
   --no-inline-config \
   --no-error-on-unmatched-pattern \
-  --rule 'complexity:["error",10]' \
-  --rule 'max-lines-per-function:["error",{"max":200,"skipBlankLines":true,"skipComments":true,"IIFEs":true}]' \
   "${target_files[@]}"; then
   echo "✅ Modularity/complexity governance check passed."
 else

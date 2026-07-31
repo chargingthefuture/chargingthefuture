@@ -10,6 +10,49 @@ import { reportError } from 'lib/observability/report';
 // both, but the operation is recorded in the audit targetContext per contract.
 const VALID_OPERATIONS = new Set(['delete', 'deactivate']);
 
+type DependencyImpactTarget = {
+  targetType: string;
+  targetId: string;
+  operation: string;
+};
+
+// Shared failure path for the preview read: reports the error, records the
+// audit outcome, and maps a missing target to 404 / everything else to 503.
+function handleDependencyImpactFailure(
+  error: unknown,
+  actorId: string,
+  target: DependencyImpactTarget,
+): NextResponse {
+  reportError(error, { area: 'skills-taxonomy', op: 'admin_dependency_impact' });
+  const errorMessage = error instanceof Error ? error.message : 'unknown_error';
+  const notFound = errorMessage.endsWith('_not_found');
+
+  logSkillsTaxonomyAudit({
+    pluginId: 'skills-taxonomy',
+    command: 'skills-taxonomy.dependency-impact.preview',
+    actorId,
+    // A missing target is a denial-of-operation (invalid_target), not an
+    // allowed-but-failed read, so the audit reflects a deny decision.
+    status: notFound ? 'deny' : 'allow',
+    reason: notFound ? 'invalid_target' : 'admin_or_taxonomy_admin',
+    target,
+    result: 'failure',
+    errorCategory: notFound ? 'not_found' : 'persistence_error',
+  });
+
+  if (notFound) {
+    return NextResponse.json(
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.notFound, message: 'Taxonomy target not found.' },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json(
+    { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to preview dependency impact.' },
+    { status: 503 },
+  );
+}
+
 export async function GET(request: Request) {
   const gate = await requireTaxonomyAdminAccess();
   if (!gate.allowed) {
@@ -20,6 +63,7 @@ export async function GET(request: Request) {
   const targetType = url.searchParams.get('targetType') ?? '';
   const targetId = url.searchParams.get('targetId') ?? '';
   const operation = url.searchParams.get('operation') ?? '';
+  const target: DependencyImpactTarget = { targetType, targetId, operation };
 
   if (!validateDependencyPreviewInput(targetType, targetId) || !VALID_OPERATIONS.has(operation)) {
     return NextResponse.json(
@@ -41,48 +85,13 @@ export async function GET(request: Request) {
       actorId: gate.auth.userId,
       status: 'allow',
       reason: 'admin_or_taxonomy_admin',
-      target: {
-        targetType,
-        targetId,
-        operation,
-      },
+      target,
       result: 'success',
       errorCategory: null,
     });
 
     return NextResponse.json(impact, { status: 200 });
   } catch (error) {
-    reportError(error, { area: 'skills-taxonomy', op: 'admin_dependency_impact' });
-    const errorMessage = error instanceof Error ? error.message : 'unknown_error';
-    const notFound = errorMessage.endsWith('_not_found');
-
-    logSkillsTaxonomyAudit({
-      pluginId: 'skills-taxonomy',
-      command: 'skills-taxonomy.dependency-impact.preview',
-      actorId: gate.auth.userId,
-      // A missing target is a denial-of-operation (invalid_target), not an
-      // allowed-but-failed read, so the audit reflects a deny decision.
-      status: notFound ? 'deny' : 'allow',
-      reason: notFound ? 'invalid_target' : 'admin_or_taxonomy_admin',
-      target: {
-        targetType,
-        targetId,
-        operation,
-      },
-      result: 'failure',
-      errorCategory: notFound ? 'not_found' : 'persistence_error',
-    });
-
-    if (notFound) {
-      return NextResponse.json(
-        { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.notFound, message: 'Taxonomy target not found.' },
-        { status: 404 },
-      );
-    }
-
-    return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to preview dependency impact.' },
-      { status: 503 },
-    );
+    return handleDependencyImpactFailure(error, gate.auth.userId, target);
   }
 }

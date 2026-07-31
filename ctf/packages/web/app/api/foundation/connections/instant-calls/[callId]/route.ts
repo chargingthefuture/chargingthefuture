@@ -7,7 +7,48 @@ import {
   getThreadChannelForCall,
 } from 'lib/foundation/instant-call';
 import type { FoundationInstantCallJoin } from 'lib/foundation/types';
+import type { AllowDecision } from 'lib/auth/server-authz';
 import { reportError } from 'lib/observability/report';
+
+type JoinCredentials = {
+  streamApiKey: string | null;
+  streamUserId: string | null;
+  streamToken: string | null;
+  streamChannelId: string;
+};
+
+// Resolve the participant-only Stream audio-join credentials for an answered call (same token path as
+// the Direct Line), plus the chat channel the audio room is anchored to.
+async function resolveJoinCredentials(auth: AllowDecision, callId: string): Promise<JoinCredentials> {
+  const channel = await getThreadChannelForCall({ callId, userId: auth.userId });
+  const credentials = await getInstantCallJoinCredentials({
+    userId: auth.userId,
+    displayName: auth.username ?? auth.userId,
+  });
+  return {
+    streamApiKey: credentials?.streamApiKey ?? null,
+    streamUserId: credentials?.streamUserId ?? null,
+    streamToken: credentials?.streamToken ?? null,
+    streamChannelId: channel.streamChannelId,
+  };
+}
+
+// Map an instant-call-state error to the matching HTTP response. Unknown errors are reported and
+// surfaced as a 503.
+function mapInstantCallStateError(error: unknown): NextResponse {
+  const code = error instanceof Error ? error.message : '';
+  if (code === 'call_not_found') {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.callNotFound, message: 'Call not found or access denied.' },
+      { status: 404 },
+    );
+  }
+  reportError(error, { area: 'foundation', op: 'connections_instant_call_state' });
+  return NextResponse.json(
+    { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Could not load the call.' },
+    { status: 503 },
+  );
+}
 
 // Poll the state of an instant 1:1 call the caller participates in (Foundation "Connect now", issue #808
 // task 3). Both the caller's "ringing…" surface and the callee's incoming-ring surface poll this to follow
@@ -34,46 +75,24 @@ export async function GET(_request: Request, context: { params: Promise<{ callId
 
     // Only hand out audio-join credentials while the call is live (answered). A ringing/terminal call has
     // nothing to join, so the Stream fields stay null until it is answered.
-    let streamApiKey: string | null = null;
-    let streamUserId: string | null = null;
-    let streamToken: string | null = null;
-    let streamChannelId = '';
-    if (call.ringStatus === 'answered') {
-      const channel = await getThreadChannelForCall({ callId, userId: gate.auth.userId });
-      streamChannelId = channel.streamChannelId;
-      const credentials = await getInstantCallJoinCredentials({
-        userId: gate.auth.userId,
-        displayName: gate.auth.username ?? gate.auth.userId,
-      });
-      streamApiKey = credentials?.streamApiKey ?? null;
-      streamUserId = credentials?.streamUserId ?? null;
-      streamToken = credentials?.streamToken ?? null;
-    }
+    const credentials: JoinCredentials =
+      call.ringStatus === 'answered'
+        ? await resolveJoinCredentials(gate.auth, callId)
+        : { streamApiKey: null, streamUserId: null, streamToken: null, streamChannelId: '' };
 
     const payload: FoundationInstantCallJoin = {
       call,
       role,
-      streamApiKey,
-      streamUserId,
-      streamToken,
+      streamApiKey: credentials.streamApiKey,
+      streamUserId: credentials.streamUserId,
+      streamToken: credentials.streamToken,
       // The Stream Video call id the audio room joins (distinct from streamChannelId, the chat channel).
       // Surfaced flat so the client does not have to reach into `call` to find it (issue #987).
       streamCallId: call.streamCallId,
-      streamChannelId,
+      streamChannelId: credentials.streamChannelId,
     };
     return NextResponse.json({ ok: true, ...payload }, { status: 200 });
   } catch (error) {
-    const code = error instanceof Error ? error.message : '';
-    if (code === 'call_not_found') {
-      return NextResponse.json(
-        { ok: false, code: FOUNDATION_ERROR_CODE.callNotFound, message: 'Call not found or access denied.' },
-        { status: 404 },
-      );
-    }
-    reportError(error, { area: 'foundation', op: 'connections_instant_call_state' });
-    return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Could not load the call.' },
-      { status: 503 },
-    );
+    return mapInstantCallStateError(error);
   }
 }

@@ -11,25 +11,41 @@ type RouteParams = {
 
 type PropertyBody = Partial<LighthousePropertyInput>;
 
+function asString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function asStringOr(value: unknown, fallback: string): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function asNumber(value: unknown): number | null {
+  return typeof value === 'number' ? value : null;
+}
+
+function asBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
 function parsePropertyInput(body: PropertyBody): LighthousePropertyInput {
   return {
-    title: typeof body.title === 'string' ? body.title : '',
-    description: typeof body.description === 'string' ? body.description : '',
-    propertyType: typeof body.propertyType === 'string' ? body.propertyType : null,
-    addressLine: typeof body.addressLine === 'string' ? body.addressLine : null,
-    city: typeof body.city === 'string' ? body.city : null,
-    state: typeof body.state === 'string' ? body.state : null,
-    country: typeof body.country === 'string' ? body.country : null,
-    zipCode: typeof body.zipCode === 'string' ? body.zipCode : null,
-    bedrooms: typeof body.bedrooms === 'number' ? body.bedrooms : null,
-    bathrooms: typeof body.bathrooms === 'number' ? body.bathrooms : null,
-    monthlyRent: typeof body.monthlyRent === 'number' ? body.monthlyRent : null,
-    availableFromIso: typeof body.availableFromIso === 'string' ? body.availableFromIso : null,
+    title: asStringOr(body.title, ''),
+    description: asStringOr(body.description, ''),
+    propertyType: asString(body.propertyType),
+    addressLine: asString(body.addressLine),
+    city: asString(body.city),
+    state: asString(body.state),
+    country: asString(body.country),
+    zipCode: asString(body.zipCode),
+    bedrooms: asNumber(body.bedrooms),
+    bathrooms: asNumber(body.bathrooms),
+    monthlyRent: asNumber(body.monthlyRent),
+    availableFromIso: asString(body.availableFromIso),
     amenities: body.amenities,
     houseRules: body.houseRules,
     photos: body.photos,
-    airbnbProfileUrl: typeof body.airbnbProfileUrl === 'string' ? body.airbnbProfileUrl : null,
-    isActive: typeof body.isActive === 'boolean' ? body.isActive : true,
+    airbnbProfileUrl: asString(body.airbnbProfileUrl),
+    isActive: asBoolean(body.isActive, true),
   };
 }
 

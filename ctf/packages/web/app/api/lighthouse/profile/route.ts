@@ -13,93 +13,54 @@ import { reportError } from 'lib/observability/report';
 
 type ProfileBody = Partial<LighthouseProfileInput>;
 
+function asString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function asNumber(value: unknown): number | null {
+  return typeof value === 'number' ? value : null;
+}
+
+function asBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
 function parseProfileInput(body: ProfileBody): LighthouseProfileInput {
   return {
     profileType: body.profileType === 'host' ? 'host' : 'seeker',
-    bio: typeof body.bio === 'string' ? body.bio : null,
-    phoneNumber: typeof body.phoneNumber === 'string' ? body.phoneNumber : null,
-    signalUrl: typeof body.signalUrl === 'string' ? body.signalUrl : null,
-    isActive: typeof body.isActive === 'boolean' ? body.isActive : true,
-    hasProperty: typeof body.hasProperty === 'boolean' ? body.hasProperty : false,
-    housingNeeds: typeof body.housingNeeds === 'string' ? body.housingNeeds : null,
-    desiredMoveInDateIso: typeof body.desiredMoveInDateIso === 'string' ? body.desiredMoveInDateIso : null,
-    budgetMin: typeof body.budgetMin === 'number' ? body.budgetMin : null,
-    budgetMax: typeof body.budgetMax === 'number' ? body.budgetMax : null,
-    desiredCountry: typeof body.desiredCountry === 'string' ? body.desiredCountry : null,
+    bio: asString(body.bio),
+    phoneNumber: asString(body.phoneNumber),
+    signalUrl: asString(body.signalUrl),
+    isActive: asBoolean(body.isActive, true),
+    hasProperty: asBoolean(body.hasProperty, false),
+    housingNeeds: asString(body.housingNeeds),
+    desiredMoveInDateIso: asString(body.desiredMoveInDateIso),
+    budgetMin: asNumber(body.budgetMin),
+    budgetMax: asNumber(body.budgetMax),
+    desiredCountry: asString(body.desiredCountry),
   };
 }
 
+// Maps a repository error code (thrown as an Error message) to the exact status/body it produced
+// before. Keeping this as a lookup table preserves each response 1:1 while avoiding a long if-chain.
+const LIGHTHOUSE_ERROR_RESPONSES: Record<string, { code: string; message: string; status: number }> = {
+  profile_not_found: { code: LIGHTHOUSE_ERROR_CODE.profileNotFound, message: 'Lighthouse profile not found.', status: 404 },
+  property_not_found: { code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: 'Lighthouse property not found.', status: 404 },
+  match_not_found: { code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: 'Lighthouse match not found.', status: 404 },
+  block_not_found: { code: LIGHTHOUSE_ERROR_CODE.blockNotFound, message: 'Lighthouse block not found.', status: 404 },
+  not_owner: { code: LIGHTHOUSE_ERROR_CODE.notOwner, message: 'Operation requires ownership.', status: 403 },
+  policy_denied: { code: LIGHTHOUSE_ERROR_CODE.policyDenied, message: 'Operation denied by policy.', status: 403 },
+  blocked_pair: { code: LIGHTHOUSE_ERROR_CODE.blockedPair, message: 'Match blocked by pair policy.', status: 403 },
+  self_block: { code: LIGHTHOUSE_ERROR_CODE.selfBlock, message: 'Cannot block your own user account.', status: 403 },
+  duplicate_match: { code: LIGHTHOUSE_ERROR_CODE.duplicateMatch, message: 'Active match request already exists.', status: 409 },
+  'invalid payload': { code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid payload.', status: 400 },
+};
+
 function lighthouseErrorResponse(error: unknown, fallbackMessage: string) {
   const code = error instanceof Error ? error.message : '';
-
-  if (code === 'profile_not_found') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.profileNotFound, message: 'Lighthouse profile not found.' },
-      { status: 404 },
-    );
-  }
-
-  if (code === 'property_not_found') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: 'Lighthouse property not found.' },
-      { status: 404 },
-    );
-  }
-
-  if (code === 'match_not_found') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: 'Lighthouse match not found.' },
-      { status: 404 },
-    );
-  }
-
-  if (code === 'block_not_found') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.blockNotFound, message: 'Lighthouse block not found.' },
-      { status: 404 },
-    );
-  }
-
-  if (code === 'not_owner') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.notOwner, message: 'Operation requires ownership.' },
-      { status: 403 },
-    );
-  }
-
-  if (code === 'policy_denied') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.policyDenied, message: 'Operation denied by policy.' },
-      { status: 403 },
-    );
-  }
-
-  if (code === 'blocked_pair') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.blockedPair, message: 'Match blocked by pair policy.' },
-      { status: 403 },
-    );
-  }
-
-  if (code === 'self_block') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.selfBlock, message: 'Cannot block your own user account.' },
-      { status: 403 },
-    );
-  }
-
-  if (code === 'duplicate_match') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.duplicateMatch, message: 'Active match request already exists.' },
-      { status: 409 },
-    );
-  }
-
-  if (code === 'invalid payload') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid payload.' },
-      { status: 400 },
-    );
+  const mapped = LIGHTHOUSE_ERROR_RESPONSES[code];
+  if (mapped) {
+    return NextResponse.json({ ok: false, code: mapped.code, message: mapped.message }, { status: mapped.status });
   }
 
   return NextResponse.json(

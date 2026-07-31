@@ -22,6 +22,7 @@ export async function POST(request: Request, { params }: RouteProps) {
   try {
     body = (await request.json()) as Record<string, unknown>;
   } catch {
+    // Body is optional here; a missing or malformed JSON body leaves the empty defaults in place.
   }
 
   const notes = typeof body.notes === 'string' ? body.notes : null;

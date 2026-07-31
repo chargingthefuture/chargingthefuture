@@ -7,11 +7,15 @@ import { reportError } from 'lib/observability/report';
 
 type RoundBody = Partial<SkillsHuntRoundInput>;
 
+function normalizeRoundStatus(status: SkillsHuntRoundInput['status'] | undefined): SkillsHuntRoundInput['status'] {
+  return status === 'active' || status === 'closed' || status === 'archived' ? status : 'draft';
+}
+
 function toRoundInput(body: RoundBody): SkillsHuntRoundInput {
   return {
     name: typeof body.name === 'string' ? body.name : '',
     description: typeof body.description === 'string' ? body.description : null,
-    status: body.status === 'active' || body.status === 'closed' || body.status === 'archived' ? body.status : 'draft',
+    status: normalizeRoundStatus(body.status),
     startsAtIso: typeof body.startsAtIso === 'string' ? body.startsAtIso : new Date().toISOString(),
     endsAtIso: typeof body.endsAtIso === 'string' ? body.endsAtIso : new Date(Date.now() + 86400000).toISOString(),
     scoringConfig: body.scoringConfig && typeof body.scoringConfig === 'object' ? body.scoringConfig : {},
