@@ -972,11 +972,16 @@ Step 3: rejected for CSRF. Step 4: 400 — a missing `hidden` field must be an e
 3. Repeat with `eventType: "leave"`.
 4. Try omitting `userId` — expect 400.
 5. Try without admin credentials — expect 403.
+6. Check the audit log after the valid calls in step 1 and step 3.
 
 **Expected:**
 - Valid payloads return `ok: true`.
 - Missing required fields return 400.
 - Non-admin caller is rejected with 403.
+- Each valid call writes one `feed.membership.event.emit` audit row that records the acting admin,
+  the target member (`userId`), the plugin, and the event type. A call that fails to emit still
+  writes the audit row with a failure result — the admin-only command never runs without leaving a
+  trail.
 
 **Result:** web ☐
 
