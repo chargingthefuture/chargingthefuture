@@ -2,7 +2,7 @@
 
 // Credit-limits panel: set a member's mutual-credit limit. The line is flat and equal by default
 // (the policy default applies to everyone); a per-account override is used only when needed — set to
-// 0 to revoke. No behavioural score. State-changing money operation, so the commit is gated behind an
+// 0 to revoke. No behavioral score. State-changing money operation, so the commit is gated behind an
 // explicit confirm step. Also offers a read-only look-up. Wired to:
 //   GET  /api/service-credits/admin/credit-limits?targetUserId=<id>
 //   POST /api/service-credits/admin/credit-limits  <- { targetUserId, creditLimit }

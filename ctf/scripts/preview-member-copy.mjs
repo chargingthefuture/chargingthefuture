@@ -11,7 +11,7 @@
 //
 // Fidelity note, stated plainly: this renders the TEXT and the box, not the live app. It faithfully shows
 // line breaking, paragraph spacing, and whether a card overflows a phone screen — the failures that have
-// actually happened. It does not prove theme colours or surrounding chrome.
+// actually happened. It does not prove theme colors or surrounding chrome.
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';

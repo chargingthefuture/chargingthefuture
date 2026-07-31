@@ -3,7 +3,7 @@
 //
 // Mirrors the web surface one-to-one: a bottom sheet with five states — form,
 // submitting, success, error, rate-limited — wired to POST /api/bug-reports with the
-// `x-ctf-csrf: 1` header. Colours come from the active theme tokens (useTheme); the
+// `x-ctf-csrf: 1` header. Colors come from the active theme tokens (useTheme); the
 // mockup's hard-coded purple→cyan gradient and fixed hex values are not used here.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';

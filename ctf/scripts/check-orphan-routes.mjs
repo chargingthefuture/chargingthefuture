@@ -72,7 +72,7 @@ function walk(dir, out = []) {
 function routePathFor(file) {
   const rel = relative(join(REPO_ROOT, 'ctf', 'packages', 'web', 'app'), file).replace(/\\/g, '/');
   const withoutFile = rel.replace(/\/route\.(ts|tsx|js)$/, '');
-  // Next.js route groups — (marketing) — are organisational and carry no URL segment.
+  // Next.js route groups — (marketing) — are organizational and carry no URL segment.
   const segments = withoutFile.split('/').filter((s) => !(s.startsWith('(') && s.endsWith(')')));
   return `/${segments.join('/')}`;
 }

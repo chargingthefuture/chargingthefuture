@@ -275,7 +275,11 @@ jobs:
           base_sha="${{ github.event.pull_request.base.sha }}"
           head_sha="${{ github.event.pull_request.head.sha }}"
 
-          changed_files=$(git diff --name-only "$base_sha" "$head_sha")
+          # Files whose entire diff is a British-to-US spelling rewrite are excluded: rewriting a
+          # word in a comment inside a Stream file consumes no Stream quota, and demanding a quota
+          # note for it would only produce a note that says "nothing changed". See
+          # ctf/scripts/changed-files.mjs — it drops dialect-only files and nothing else.
+          changed_files=$(node ctf/scripts/changed-files.mjs --base "$base_sha")
 
           if echo "$changed_files" | grep -Eiq '^ctf/.*(stream|getstream)'; then
             echo "Detected Stream-related code changes in this PR."
@@ -371,6 +375,22 @@ jobs:
       # newline that is content.
       - name: Fail on notice text that would render with unintended line breaks
         run: node ctf/scripts/check-notice-formatting.mjs
+
+  us-spelling-gate:
+    name: US Spelling Gate
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # A recurring Commons notice reached production using the British form of "realize". Every
+      # other gate passed it: a British spelling is a correctly-spelled word, so typecheck, lint,
+      # and the copy gates have nothing to say about it. The product writes US English, so this
+      # checks the dialect directly — across comments and identifiers too, since those set the
+      # example the next writer copies.
+      - name: Fail on British spellings
+        run: node ctf/scripts/check-us-spelling.mjs
 
   orphan-route-gate:
     name: Orphan Route Gate

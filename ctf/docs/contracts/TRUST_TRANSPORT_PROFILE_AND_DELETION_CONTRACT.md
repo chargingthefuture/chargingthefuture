@@ -40,7 +40,7 @@ Rule 114 baseline: TrustTransport uses a single canonical profile and plugin ext
   - field name: `availability_preferences`
     - type: jsonb
     - nullable/default: default `{}`
-    - purpose: when/how the member is available to fulfil trips
+    - purpose: when/how the member is available to fulfill trips
   - field name: `work_preferences`
     - type: jsonb
     - nullable/default: default `{}`

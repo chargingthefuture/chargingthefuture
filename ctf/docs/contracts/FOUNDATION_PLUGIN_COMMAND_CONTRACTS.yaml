@@ -341,7 +341,7 @@ contracts:
   - pluginId: foundation
     command: foundation.connection.instant-call.state.read
     version: 1.0.0
-    description: Read the current state of an instant 1:1 call the caller participates in (issue #808 task 3). Drives the caller and callee poll. When the call is answered, also returns the participant-only Stream audio-join credentials (the same token path the Direct Line uses — no parallel token path). Realises the ~60s ring timeout lazily on read.
+    description: Read the current state of an instant 1:1 call the caller participates in (issue #808 task 3). Drives the caller and callee poll. When the call is answered, also returns the participant-only Stream audio-join credentials (the same token path the Direct Line uses — no parallel token path). Realizes the ~60s ring timeout lazily on read.
     inputSchema:
       callId:
         type: string
@@ -370,7 +370,7 @@ contracts:
   - pluginId: foundation
     command: foundation.connection.incoming-call.read
     version: 1.0.0
-    description: Read the signed-in member's one live incoming instant 1:1 call ring, if any (issue #808 task 3). The in-app incoming-call surface polls this so a member being rung can answer or decline. v1 delivers the ring in-app only; out-of-app push is issue #808 task 5. Realises the ~60s ring timeout lazily on read.
+    description: Read the signed-in member's one live incoming instant 1:1 call ring, if any (issue #808 task 3). The in-app incoming-call surface polls this so a member being rung can answer or decline. v1 delivers the ring in-app only; out-of-app push is issue #808 task 5. Realizes the ~60s ring timeout lazily on read.
     inputSchema: {}
     outputSchema:
       callId:

@@ -180,7 +180,7 @@ Result: web ☐
 
 **Role:** member fulfilling a trip · **Surfaces:** web, android
 
-**Precondition:** Signed in as the member assigned to fulfil a trip (the driver/courier). Seed has a trip assigned to them that is not yet complete. There is no separate "provider" role — any member can fulfil a trip.
+**Precondition:** Signed in as the member assigned to fulfill a trip (the driver/courier). Seed has a trip assigned to them that is not yet complete. There is no separate "provider" role — any member can fulfill a trip.
 
 **Steps:**
 1. Open the **Help out** tab → "Trips you're helping with"; find your active trip.

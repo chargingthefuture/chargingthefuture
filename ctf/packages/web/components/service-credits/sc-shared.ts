@@ -34,7 +34,7 @@ export type LedgerEntry = {
   createdAt: string;
 };
 
-// Plain-language label + direction for a ledger row. Direction drives the +/- sign and colour:
+// Plain-language label + direction for a ledger row. Direction drives the +/- sign and color:
 // "in" credits the member, "out" debits, "neutral" for escrow moves that net within the member's own
 // wallet (held/released) where a signed amount would mislead. Keeps wording newcomer-friendly.
 export function describeLedgerEntry(

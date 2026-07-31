@@ -112,7 +112,7 @@ export type FundraiserSnapshot = {
   // from "turned off" (show nothing).
   bannerEnabled: boolean;
   // True when this member already holds a confirmed, credit-earning github_star contribution.
-  // The github-star path is then a once-per-member-ever lifetime grant, so the UI greys it out.
+  // The github-star path is then a once-per-member-ever lifetime grant, so the UI grays it out.
   githubStarAlreadyCredited: boolean;
 };
 

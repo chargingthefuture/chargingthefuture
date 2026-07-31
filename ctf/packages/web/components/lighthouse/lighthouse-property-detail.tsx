@@ -145,7 +145,7 @@ export function LighthousePropertyDetail({
   );
 }
 
-// Builds the POST body for a match request, normalising empty inputs to null.
+// Builds the POST body for a match request, normalizing empty inputs to null.
 function buildMatchRequestBody(propertyId: string, message: string, moveInDate: string) {
   return {
     propertyId,

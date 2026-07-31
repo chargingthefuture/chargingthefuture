@@ -51,7 +51,7 @@ export const typeScale = {
   stat: scale(24, '800'),
   /** Body copy. */
   body: scale(13, '400'),
-  /** Emphasised body copy. */
+  /** Emphasized body copy. */
   bodyStrong: scale(13, '600'),
   /** Field / meta label. */
   label: scale(12, '600'),

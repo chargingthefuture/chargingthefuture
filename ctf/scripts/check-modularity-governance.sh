@@ -36,8 +36,12 @@ collect_changed_files() {
 
   if [ -n "$base" ]; then
     merge_base="$(git merge-base "$base" HEAD 2>/dev/null || echo "$base")"
-    # Committed changes since the base (relative to cwd so paths match the eslint invocation below).
-    git diff --name-only --relative --diff-filter=ACMRTUXB "${merge_base}...HEAD" 2>/dev/null || true
+    # Committed changes since the base, minus files whose entire diff is a British-to-US spelling
+    # rewrite. A repo-wide spelling sweep edits a comment in a hundred files without changing any
+    # behavior, and without this it would drag every pre-existing complexity violation in those
+    # files into scope — failing the gate on debt the change did not create and cannot fix. See
+    # ctf/scripts/changed-files.mjs; it drops dialect-only files and nothing else.
+    node "$CTF_ROOT/scripts/changed-files.mjs" --base "$merge_base" --relative-to ctf 2>/dev/null || true
   fi
 
   # Also include any uncommitted / untracked working-tree changes so the gate is useful locally too.

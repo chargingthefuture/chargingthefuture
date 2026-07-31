@@ -263,7 +263,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   one route — rejected, marked spam, or a `pending` submission whose window lapsed and was swept by
   `supportOnlyAfterExpiry` — and the tier is the only thing all of those share. It is also exactly what
   the Support-only counter counts, so the number and the list cannot disagree. Two supporting bits: each
-  card now shows a grey `Support-only` pill when the member is on that tier (review status alone does not
+  card now shows a gray `Support-only` pill when the member is on that tier (review status alone does not
   explain a swept `pending` row), and the tab prints how many of the counter's total this page is
   actually showing, so once there are more submissions than the page cap a short list reads as a
   shortfall rather than as everyone. Client-side filter over already-loaded data; combines with the

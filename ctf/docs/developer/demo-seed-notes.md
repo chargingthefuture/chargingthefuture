@@ -22,9 +22,9 @@ seed makes that user the real counterparty to `DEMO_OWNER_ID`:
 - both-sided data is wired so each real account can act as **both** sides: an open
   TrustTransport request and an open SocketRelay request owned by *each* user, a shared
   Foundation thread, a Lighthouse seeker(owner)↔host(second-owner) match with a property,
-  a Level-Up co-enrolment, cohort/room membership, and an owner→second credit transfer.
+  a Level-Up co-enrollment, cohort/room membership, and an owner→second credit transfer.
 
-Leave `DEMO_SECOND_OWNER_ID` unset for the original single-owner behaviour.
+Leave `DEMO_SECOND_OWNER_ID` unset for the original single-owner behavior.
 
 ## Plugin coverage
 

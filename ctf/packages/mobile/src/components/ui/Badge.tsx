@@ -1,7 +1,7 @@
 // Themed pill badge — mirrors web components/ui/badge.
 //
 // A small rounded label. With an `accent` (or tone='accent') it fills with a faint tint of that
-// colour and prints the label in the accent; otherwise it uses the neutral faint border tint and
+// color and prints the label in the accent; otherwise it uses the neutral faint border tint and
 // secondary text. Corners follow tokens.radiusChip (2 in comic, 6 in default).
 
 import React from 'react';

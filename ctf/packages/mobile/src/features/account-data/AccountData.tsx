@@ -6,7 +6,7 @@
 // DELETE /api/account/full-account. Service names and summaries come from the live registry
 // projection — never hardcoded here.
 //
-// Theme: colours come from the active theme tokens (useTheme). In comic theme the panels use
+// Theme: colors come from the active theme tokens (useTheme). In comic theme the panels use
 // the ink/cream/danger palette with sharp corners and the 3px offset shadow; in default theme
 // the screen is visually unchanged from before. The theme toggle lives in this screen's header.
 //
@@ -94,7 +94,7 @@ function glyph(slug: string): string {
   return SERVICE_GLYPH[slug] ?? '📁';
 }
 
-// The Account & Data accent is the destructive-zone colour: comic-danger in comic theme,
+// The Account & Data accent is the destructive-zone color: comic-danger in comic theme,
 // the existing pink brand in default theme. Everything else is driven from the theme tokens.
 function accentFor(t: ThemeTokens): string {
   return t.isComic ? '#B91C1C' : '#D946EF';

@@ -31,7 +31,7 @@ type ButtonProps = {
   onPress?: () => void;
   disabled?: boolean;
   variant?: ButtonVariant;
-  /** Accent colour for primary fill and outline/ghost label. Defaults to tokens.gold. */
+  /** Accent color for primary fill and outline/ghost label. Defaults to tokens.gold. */
   accent?: string;
   style?: StyleProp<ViewStyle>;
 };
@@ -51,7 +51,7 @@ export function Button({
   const resolvedAccent = accent ?? tokens.gold;
   const s = makeStyles(tokens);
 
-  // Per-variant container + label colours. brand is handled specially below for the default-theme
+  // Per-variant container + label colors. brand is handled specially below for the default-theme
   // gradient fill; every other case is a flat background.
   const isBrandGradient = variant === 'brand' && !tokens.isComic;
 

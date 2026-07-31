@@ -31,7 +31,7 @@ type LiveState = { isLive: boolean; participantCount: number; roomName?: string;
 // card #041a0b, divider #052e16, mint-white title) and the green accent. The old purple/cyan accent
 // made the guest view look like a separate app.
 // Chrome tokens come from getChymeTokens(theme) (t.BG page, t.BORDER divider, t.TITLE bright
-// text, t.MUTED grey, t.ACCENT green). Two values have no token slot and stay static:
+// text, t.MUTED gray, t.ACCENT green). Two values have no token slot and stay static:
 const SURFACE = '#041a0b'; // card surface — no getter field matches this hex
 const ACCENT_CYAN = '#16A34A'; // deep-green gradient partner — no getter field matches
 

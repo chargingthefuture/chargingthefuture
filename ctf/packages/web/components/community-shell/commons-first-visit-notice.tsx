@@ -67,8 +67,8 @@ export function CommonsFirstVisitNotice() {
 
   if (!notice) return null;
 
-  // Uses the shell's own alert styling rather than hand-rolled colours: it must look like part of the
-  // Commons, and the theme here is 'default' | 'comic', not light/dark, so picking colours by theme
+  // Uses the shell's own alert styling rather than hand-rolled colors: it must look like part of the
+  // Commons, and the theme here is 'default' | 'comic', not light/dark, so picking colors by theme
   // name would have been wrong in the comic theme.
   return (
     <section

@@ -80,7 +80,7 @@ contracts:
         type: boolean
       fundraiser:
         type: object
-        note: "Snapshot object with: cycle (object or null), fiatConfirmedUsd (number), quoraCommentsConfirmed (integer), githubStarsConfirmed (integer), contributorCount (integer), bannerVisible (boolean — the full banner shows for this member now, i.e. feature on and not snoozed), bannerEnabled (boolean — the banner feature is on at all, independent of the per-member snooze; lets the phone-width UI tell snoozed from turned-off so it can show a small emoji reminder while snoozed), githubStarAlreadyCredited (boolean — true when this member already holds a confirmed, credit-earning github_star; a star is creditable at most once per member ever, so the UI greys out the GitHub-star path)."
+        note: "Snapshot object with: cycle (object or null), fiatConfirmedUsd (number), quoraCommentsConfirmed (integer), githubStarsConfirmed (integer), contributorCount (integer), bannerVisible (boolean — the full banner shows for this member now, i.e. feature on and not snoozed), bannerEnabled (boolean — the banner feature is on at all, independent of the per-member snooze; lets the phone-width UI tell snoozed from turned-off so it can show a small emoji reminder while snoozed), githubStarAlreadyCredited (boolean — true when this member already holds a confirmed, credit-earning github_star; a star is creditable at most once per member ever, so the UI grays out the GitHub-star path)."
       signalInstructions:
         type: string
         note: Member-safe Signal instructions copy (shown after a gift-card submission).
