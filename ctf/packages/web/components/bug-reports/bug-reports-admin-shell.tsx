@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Bug, ExternalLink } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
-import { getBugReportsTokens } from './bug-reports-shared';
+import { getBugReportsTokens, type BugReportsTokens } from './bug-reports-shared';
 import type { BugReportStatus, BugReportRiskLevel } from 'lib/bug-reports/constants';
 import type { BugReportRiskFlag } from 'lib/bug-reports/sanitize';
 
@@ -92,6 +92,120 @@ function StatBlock({ label, value, accent }: { label: string; value: number; acc
     <div style={{ flex: 1, minWidth: 120, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
       <div style={{ fontSize: 18, fontWeight: 800, color: accent ?? t.TITLE }}>{value}</div>
       <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+// The risk-flag chips shown on a held/flagged report. Renders nothing when there are no flags.
+function RiskFlags({ flags }: { flags: BugReportRiskFlag[] }) {
+  if (flags.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+      {flags.map((flag) => (
+        <span
+          key={flag}
+          style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: 'rgba(245,158,11,0.1)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}
+        >
+          {RISK_FLAG_LABEL[flag] ?? flag}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// The metadata footer: page, app version, and a link to the triage issue when one exists.
+function ReportFooter({ report, t }: { report: AdminBugReport; t: BugReportsTokens }) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: 10, fontSize: 12, color: t.MUTED }}>
+      {report.pageUrl ? <span>Page: {report.pageUrl}</span> : null}
+      {report.appVersion ? <span>App: {report.appVersion}</span> : null}
+      {report.issueUrl ? (
+        <Link
+          href={report.issueUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: t.ACCENT, textDecoration: 'none' }}
+        >
+          <ExternalLink size={12} /> Triage issue #{report.issueNumber ?? '?'}
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+// The release/reject action row. Renders nothing when the report is in a terminal state.
+function ReportActions({ report, busy, t, onResolve }: {
+  report: AdminBugReport;
+  busy: boolean;
+  t: BugReportsTokens;
+  onResolve: (id: string, action: 'release' | 'reject') => void;
+}) {
+  // A held report can be released to triage; a new one is already queued for the drain,
+  // so it only offers reject. Release on a new report would 409 (the update only matches
+  // held_for_review), so the button is hidden there.
+  const canRelease = report.status === 'held_for_review';
+  const canReject = report.status === 'held_for_review' || report.status === 'new';
+  if (!canRelease && !canReject) return null;
+  const cursor = busy ? 'not-allowed' : 'pointer';
+  const opacity = busy ? 0.6 : 1;
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+      {canRelease ? (
+        <button
+          type="button"
+          onClick={() => void onResolve(report.id, 'release')}
+          disabled={busy}
+          style={{ padding: '7px 12px', borderRadius: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13, fontWeight: 600, cursor, opacity }}
+        >
+          Release to triage
+        </button>
+      ) : null}
+      {canReject ? (
+        <button
+          type="button"
+          onClick={() => void onResolve(report.id, 'reject')}
+          disabled={busy}
+          style={{ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor, opacity }}
+        >
+          Reject
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+// One report card: metadata row, redacted message/context, risk flags, footer, and actions.
+function AdminReportCard({ report, busy, t, onResolve }: {
+  report: AdminBugReport;
+  busy: boolean;
+  t: BugReportsTokens;
+  onResolve: (id: string, action: 'release' | 'reject') => void;
+}) {
+  return (
+    <div style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <StatusPill status={report.status} />
+        <span style={{ fontSize: 12, color: t.MUTED }}>{formatWhen(report.createdAt)}</span>
+        <span style={{ fontSize: 12, color: t.MUTED }}>· From: {report.reporterHandle}</span>
+        {report.pluginSlug ? <span style={{ fontSize: 12, color: t.MUTED }}>· {report.pluginSlug}</span> : null}
+      </div>
+
+      <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: t.TITLE, margin: 0 }}>
+        {report.redactedMessage || '(no message)'}
+      </p>
+
+      {report.redactedContext ? (
+        <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: t.MUTED, marginTop: 8, marginBottom: 0 }}>
+          <span style={{ color: t.TITLE, fontWeight: 600 }}>What they were trying to do: </span>
+          {report.redactedContext}
+        </p>
+      ) : null}
+
+      <RiskFlags flags={report.riskFlags} />
+
+      <ReportFooter report={report} t={t} />
+
+      <ReportActions report={report} busy={busy} t={t} onResolve={onResolve} />
     </div>
   );
 }
@@ -200,88 +314,15 @@ export function BugReportsAdminShell() {
           </div>
         ) : null}
 
-        {items.map((report) => {
-          // A held report can be released to triage; a new one is already queued for the drain,
-          // so it only offers reject. Release on a new report would 409 (the update only matches
-          // held_for_review), so the button is hidden there.
-          const canRelease = report.status === 'held_for_review';
-          const canReject = report.status === 'held_for_review' || report.status === 'new';
-          const busy = busyId === report.id;
-          return (
-            <div key={report.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <StatusPill status={report.status} />
-                <span style={{ fontSize: 12, color: t.MUTED }}>{formatWhen(report.createdAt)}</span>
-                <span style={{ fontSize: 12, color: t.MUTED }}>· From: {report.reporterHandle}</span>
-                {report.pluginSlug ? <span style={{ fontSize: 12, color: t.MUTED }}>· {report.pluginSlug}</span> : null}
-              </div>
-
-              <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: t.TITLE, margin: 0 }}>
-                {report.redactedMessage || '(no message)'}
-              </p>
-
-              {report.redactedContext ? (
-                <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: t.MUTED, marginTop: 8, marginBottom: 0 }}>
-                  <span style={{ color: t.TITLE, fontWeight: 600 }}>What they were trying to do: </span>
-                  {report.redactedContext}
-                </p>
-              ) : null}
-
-              {report.riskFlags.length > 0 ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-                  {report.riskFlags.map((flag) => (
-                    <span
-                      key={flag}
-                      style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: 'rgba(245,158,11,0.1)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}
-                    >
-                      {RISK_FLAG_LABEL[flag] ?? flag}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: 10, fontSize: 12, color: t.MUTED }}>
-                {report.pageUrl ? <span>Page: {report.pageUrl}</span> : null}
-                {report.appVersion ? <span>App: {report.appVersion}</span> : null}
-                {report.issueUrl ? (
-                  <Link
-                    href={report.issueUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: t.ACCENT, textDecoration: 'none' }}
-                  >
-                    <ExternalLink size={12} /> Triage issue #{report.issueNumber ?? '?'}
-                  </Link>
-                ) : null}
-              </div>
-
-              {canRelease || canReject ? (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                  {canRelease ? (
-                    <button
-                      type="button"
-                      onClick={() => void resolve(report.id, 'release')}
-                      disabled={busy}
-                      style={{ padding: '7px 12px', borderRadius: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
-                    >
-                      Release to triage
-                    </button>
-                  ) : null}
-                  {canReject ? (
-                    <button
-                      type="button"
-                      onClick={() => void resolve(report.id, 'reject')}
-                      disabled={busy}
-                      style={{ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
-                    >
-                      Reject
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
+        {items.map((report) => (
+          <AdminReportCard
+            key={report.id}
+            report={report}
+            busy={busyId === report.id}
+            t={t}
+            onResolve={resolve}
+          />
+        ))}
       </div>
     </div>
   );
