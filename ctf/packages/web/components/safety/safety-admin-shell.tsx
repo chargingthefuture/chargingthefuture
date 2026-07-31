@@ -83,6 +83,110 @@ function StatBlock({ label, value, accent }: { label: string; value: number; acc
   );
 }
 
+// The review / dismiss buttons for an open report. The busy-dependent cursor and opacity live here
+// so the card does not repeat them per button.
+function SafetyReviewActions({
+  busy,
+  onReviewed,
+  onDismissed,
+}: {
+  busy: boolean;
+  onReviewed: () => void;
+  onDismissed: () => void;
+}) {
+  const { theme } = useTheme();
+  const t = getSafetyTokens(theme);
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+      <button
+        type="button"
+        onClick={onReviewed}
+        disabled={busy}
+        style={{ padding: '7px 12px', borderRadius: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
+      >
+        Mark reviewed
+      </button>
+      <button
+        type="button"
+        onClick={onDismissed}
+        disabled={busy}
+        style={{ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
+      >
+        Dismiss
+      </button>
+    </div>
+  );
+}
+
+// One report row in the admin queue. A repeat offender (another open report about the same reported
+// member) gets an amber border and a flag.
+function SafetyReportCard({
+  report,
+  busy,
+  onReview,
+}: {
+  report: AdminSafetyReport;
+  busy: boolean;
+  onReview: (id: string, action: 'reviewed' | 'dismissed') => void;
+}) {
+  const { theme } = useTheme();
+  const t = getSafetyTokens(theme);
+  const canAct = report.status === 'open';
+  // A repeat offender: at least one OTHER open report about the same reported member
+  // (openReportsAboutReported excludes this row, so > 0 means more than one open report).
+  const isRepeat = report.openReportsAboutReported > 0;
+  return (
+    <div style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${isRepeat ? 'rgba(245,158,11,0.4)' : t.BORDER_SOLID}` }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <StatusPill status={report.status} />
+        <span style={{ fontSize: 12, color: t.MUTED }}>{formatWhen(report.createdAtIso)}</span>
+        {isRepeat ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}>
+            <AlertTriangle size={12} /> {report.openReportsAboutReported} other open report{report.openReportsAboutReported === 1 ? '' : 's'} about this member
+          </span>
+        ) : null}
+      </div>
+
+      <div style={{ fontSize: 13, color: t.TITLE, lineHeight: 1.7 }}>
+        <span style={{ color: t.MUTED }}>Reported member: </span>
+        <span style={{ fontWeight: 700 }}>{report.reportedDisplayName}</span>
+        <span style={{ color: t.MUTED }}> ({report.reportedUserId})</span>
+      </div>
+      <div style={{ fontSize: 13, color: t.TITLE, lineHeight: 1.7 }}>
+        <span style={{ color: t.MUTED }}>Reported by: </span>
+        <span style={{ fontWeight: 600 }}>{report.reporterDisplayName}</span>
+        <span style={{ color: t.MUTED }}> ({report.reporterUserId})</span>
+      </div>
+
+      {report.detail ? (
+        <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: t.TITLE, marginTop: 8, marginBottom: 0 }}>
+          <span style={{ color: t.MUTED, fontWeight: 600 }}>What the reporter said: </span>
+          {report.detail}
+        </p>
+      ) : (
+        <p style={{ fontSize: 13, color: t.MUTED, marginTop: 8, marginBottom: 0, fontStyle: 'italic' }}>
+          No additional detail was provided.
+        </p>
+      )}
+
+      {report.status !== 'open' && report.reviewedAtIso ? (
+        <div style={{ fontSize: 12, color: t.MUTED, marginTop: 10 }}>
+          {STATUS_LABEL[report.status]} {formatWhen(report.reviewedAtIso)}
+          {report.reviewedByUserId ? ` by ${report.reviewedByUserId}` : ''}
+        </div>
+      ) : null}
+
+      {canAct ? (
+        <SafetyReviewActions
+          busy={busy}
+          onReviewed={() => onReview(report.id, 'reviewed')}
+          onDismissed={() => onReview(report.id, 'dismissed')}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 // Admin safety-report queue (issue #809, task 3). The only path by which a member block reaches the
 // admin: a member who blocked someone and flagged it as a suspected predator / human trafficker. The
 // owner reviews these so they can ban globally (the global ban itself is task 5 — this surface is
@@ -194,76 +298,14 @@ export function SafetyAdminShell() {
           </div>
         ) : null}
 
-        {reports.map((report) => {
-          const busy = busyId === report.id;
-          const canAct = report.status === 'open';
-          // A repeat offender: at least one OTHER open report about the same reported member
-          // (openReportsAboutReported excludes this row, so > 0 means more than one open report).
-          const isRepeat = report.openReportsAboutReported > 0;
-          return (
-            <div key={report.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${isRepeat ? 'rgba(245,158,11,0.4)' : t.BORDER_SOLID}` }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <StatusPill status={report.status} />
-                <span style={{ fontSize: 12, color: t.MUTED }}>{formatWhen(report.createdAtIso)}</span>
-                {isRepeat ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}>
-                    <AlertTriangle size={12} /> {report.openReportsAboutReported} other open report{report.openReportsAboutReported === 1 ? '' : 's'} about this member
-                  </span>
-                ) : null}
-              </div>
-
-              <div style={{ fontSize: 13, color: t.TITLE, lineHeight: 1.7 }}>
-                <span style={{ color: t.MUTED }}>Reported member: </span>
-                <span style={{ fontWeight: 700 }}>{report.reportedDisplayName}</span>
-                <span style={{ color: t.MUTED }}> ({report.reportedUserId})</span>
-              </div>
-              <div style={{ fontSize: 13, color: t.TITLE, lineHeight: 1.7 }}>
-                <span style={{ color: t.MUTED }}>Reported by: </span>
-                <span style={{ fontWeight: 600 }}>{report.reporterDisplayName}</span>
-                <span style={{ color: t.MUTED }}> ({report.reporterUserId})</span>
-              </div>
-
-              {report.detail ? (
-                <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: t.TITLE, marginTop: 8, marginBottom: 0 }}>
-                  <span style={{ color: t.MUTED, fontWeight: 600 }}>What the reporter said: </span>
-                  {report.detail}
-                </p>
-              ) : (
-                <p style={{ fontSize: 13, color: t.MUTED, marginTop: 8, marginBottom: 0, fontStyle: 'italic' }}>
-                  No additional detail was provided.
-                </p>
-              )}
-
-              {report.status !== 'open' && report.reviewedAtIso ? (
-                <div style={{ fontSize: 12, color: t.MUTED, marginTop: 10 }}>
-                  {STATUS_LABEL[report.status]} {formatWhen(report.reviewedAtIso)}
-                  {report.reviewedByUserId ? ` by ${report.reviewedByUserId}` : ''}
-                </div>
-              ) : null}
-
-              {canAct ? (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                  <button
-                    type="button"
-                    onClick={() => void review(report.id, 'reviewed')}
-                    disabled={busy}
-                    style={{ padding: '7px 12px', borderRadius: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
-                  >
-                    Mark reviewed
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void review(report.id, 'dismissed')}
-                    disabled={busy}
-                    style={{ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
+        {reports.map((report) => (
+          <SafetyReportCard
+            key={report.id}
+            report={report}
+            busy={busyId === report.id}
+            onReview={(id, action) => void review(id, action)}
+          />
+        ))}
       </div>
     </div>
   );

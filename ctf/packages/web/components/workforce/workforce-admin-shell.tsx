@@ -65,6 +65,14 @@ function NumberField({
   );
 }
 
+// Pick the most specific error text the server returned, falling back to a status-based message.
+function resolveErrorMessage(
+  data: { message?: string; reason?: string; code?: string } | null,
+  status: number,
+): string {
+  return data?.message ?? data?.reason ?? data?.code ?? `Request failed (${status}).`;
+}
+
 async function adminMutate(
   url: string,
   method: 'PUT',
@@ -80,7 +88,7 @@ async function adminMutate(
       | { message?: string; reason?: string; code?: string; config?: WorkforceConfig }
       | null;
     if (res.ok) return { ok: true, config: data?.config };
-    return { ok: false, message: data?.message ?? data?.reason ?? data?.code ?? `Request failed (${res.status}).` };
+    return { ok: false, message: resolveErrorMessage(data, res.status) };
   } catch {
     return { ok: false, message: 'Network error. Try again.' };
   }

@@ -13,6 +13,20 @@ import { MoodCheckin } from "./mood-checkin";
 import { MoodCommunity } from "./mood-community";
 import { MoodCrisisRail } from "./mood-crisis-rail";
 
+// True only when the caller passed a signal that has already been aborted. Pulled out so the
+// abort guards below stay single decision points instead of repeating the optional-chain check.
+function isAborted(signal?: AbortSignal): boolean {
+  return signal?.aborted === true;
+}
+
+// Fetch the eligibility payload for a pseudonymous client. Throws on a non-OK response so the
+// caller's catch can surface the error message.
+async function fetchMoodEligibility(id: string, signal?: AbortSignal): Promise<MoodEligibility> {
+  const res = await fetch(`/api/mood/eligibility?clientId=${encodeURIComponent(id)}`, { signal, cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to check eligibility.");
+  return (await res.json()) as MoodEligibility;
+}
+
 export default function MoodShell() {
   const [tab, setTab] = useState<Tab>("checkin");
   const [loading, setLoading] = useState(true);
@@ -32,14 +46,12 @@ export default function MoodShell() {
   const loadEligibility = useCallback(async (id: string, initial = false, signal?: AbortSignal) => {
     if (initial) setLoading(true);
     try {
-      const res = await fetch(`/api/mood/eligibility?clientId=${encodeURIComponent(id)}`, { signal, cache: "no-store" });
-      if (!res.ok) throw new Error("Failed to check eligibility.");
-      const data = (await res.json()) as MoodEligibility;
-      if (!signal?.aborted) setEligibility(data);
+      const data = await fetchMoodEligibility(id, signal);
+      if (!isAborted(signal)) setEligibility(data);
     } catch (e) {
-      if (!signal?.aborted) setError(e instanceof Error ? e.message : "Failed to load mood data.");
+      if (!isAborted(signal)) setError(e instanceof Error ? e.message : "Failed to load mood data.");
     } finally {
-      if (initial && !signal?.aborted) setLoading(false);
+      if (initial && !isAborted(signal)) setLoading(false);
     }
   }, []);
 
