@@ -449,10 +449,12 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
 
   return (
     <div>
-      <label style={labelStyle}>
+      {/* Section heading, not a form label for a single control (the picker has several inputs below),
+          so it is a div — keeps the exact look while satisfying jsx-a11y/label-has-associated-control. */}
+      <div style={labelStyle}>
         Specializations
         <SelectedCountBadge count={selectedNames.length} tokens={tokens} />
-      </label>
+      </div>
 
       {/* Selected picks — taxonomy skills in the app accent, proposed skills in amber, each removable. */}
       <SelectedSkillChips
