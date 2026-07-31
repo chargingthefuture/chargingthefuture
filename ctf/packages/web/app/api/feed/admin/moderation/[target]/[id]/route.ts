@@ -6,13 +6,14 @@ import {
   FEED_MODERATION_STATUS,
   isFeedModerationReason,
 } from 'lib/feed/constants';
-import { setCommunityModerationStatus, type FeedModerationTarget } from 'lib/feed/moderation';
+import { isFeedModerationTarget, setCommunityModerationStatus } from 'lib/feed/moderation';
 import { logFeedAudit } from 'lib/feed/audit';
 import { reportError } from 'lib/observability/report';
 
 export const dynamic = 'force-dynamic';
 
-// POST: hide or un-hide one Commons post or reply.
+// POST: hide or un-hide one piece of member-facing content — a Commons post or reply, or a question or
+// answer in the Q&A.
 //
 // Hiding rather than deleting is the whole point. Deletion is unrecoverable and takes the member's
 // own words plus the reply thread with it; hiding is reversible, so a moderator making a fast
@@ -38,9 +39,9 @@ export async function POST(
   }
 
   const { target, id } = await params;
-  if (target !== 'post' && target !== 'reply') {
+  if (!isFeedModerationTarget(target)) {
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Target must be post or reply.' },
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Target must be post, reply, question, or answer.' },
       { status: 400 },
     );
   }
@@ -76,7 +77,7 @@ export async function POST(
 
   try {
     const outcome = await setCommunityModerationStatus({
-      target: target as FeedModerationTarget,
+      target,
       id,
       next,
       reason,
@@ -85,7 +86,7 @@ export async function POST(
 
     if (outcome.status === 'not_found') {
       return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.notFound, message: 'That post or reply no longer exists.' },
+        { ok: false, code: FEED_ERROR_CODE.notFound, message: 'That content no longer exists.' },
         { status: 404 },
       );
     }
@@ -103,7 +104,7 @@ export async function POST(
       command: body.hidden ? 'feed.community.moderation.hide' : 'feed.community.moderation.restore',
       status: 'allow',
       reason: 'admin_moderation_allowed',
-      targetType: target === 'post' ? 'feed_community_post' : 'feed_community_reply',
+      targetType: `feed_${target}`,
       targetId: id,
       result: 'success',
       errorCategory: null,
@@ -119,7 +120,7 @@ export async function POST(
       {
         ok: false,
         code: FEED_ERROR_CODE.persistenceUnavailable,
-        message: 'Could not change that post. Nothing was altered — try again.',
+        message: 'Could not change that. Nothing was altered — try again.',
       },
       { status: 503 },
     );

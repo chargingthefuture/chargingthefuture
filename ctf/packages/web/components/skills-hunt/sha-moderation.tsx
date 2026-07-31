@@ -9,6 +9,17 @@ import { SkillsHuntAdminTable } from "./sha-table";
 
 type RewardSummary = { totalCreditsPaid: number; rewardedSubmissionCount: number };
 
+// Confirm the mass action with the real count of affected pending submissions before firing —
+// a bulk accept pays each scout and a bulk reject can trip the rejection-rate guard, so neither
+// should run on a stray click.
+function bulkConfirmMessage(action: "accept" | "reject", count: number): string {
+  const verb = action === "accept" ? "Accept" : "Reject";
+  const consequence = action === "accept"
+    ? "Each accepted nomination pays the configured reward once."
+    : "This cannot be undone.";
+  return `${verb} ${count} selected submission${count === 1 ? "" : "s"}? ${consequence}`;
+}
+
 function RewardBanner({ round, summary }: { round: SkillsHuntRound | null; summary: RewardSummary | null }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
@@ -123,14 +134,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
     const pendingIds = new Set(submissions.filter((s) => s.status === "pending").map((s) => s.id));
     const ids = Array.from(selected).filter((id) => pendingIds.has(id));
     if (ids.length === 0) return;
-    // Confirm the mass action with the real count of affected pending submissions before firing —
-    // a bulk accept pays each scout and a bulk reject can trip the rejection-rate guard, so neither
-    // should run on a stray click.
-    const verb = action === "accept" ? "Accept" : "Reject";
-    const consequence = action === "accept"
-      ? "Each accepted nomination pays the configured reward once."
-      : "This cannot be undone.";
-    if (!window.confirm(`${verb} ${ids.length} selected submission${ids.length === 1 ? "" : "s"}? ${consequence}`)) return;
+    if (!window.confirm(bulkConfirmMessage(action, ids.length))) return;
     const notes = action === "reject" ? promptRejectReason() : null;
     if (action === "reject" && notes === null) return;
     for (const id of ids) {

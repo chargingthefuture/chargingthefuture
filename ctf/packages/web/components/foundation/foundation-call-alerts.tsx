@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BellRing } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { getFoundationTokens } from "./foundation-ui";
+import { getFoundationTokens, type FoundationTokens } from "./foundation-ui";
 
 // "Enable call alerts on this device" (issue #808 task 5). A provider who allows instant 1:1 calls can
 // turn on Web Push so their device wakes when a member rings them, even with the app closed. The in-app
@@ -20,6 +20,18 @@ type Status =
   | "denied"
   | "enabled"
   | "disabled";
+
+// Informational states each show a single explanatory note; keeping the copy in a lookup keeps the
+// render free of a ternary per state.
+const STATUS_NOTES: Partial<Record<Status, string>> = {
+  checking: "Checking this device…",
+  unsupported:
+    "This browser cannot show call alerts. You will still see an incoming call when the app is open.",
+  unavailable:
+    "Call alerts are not switched on yet. You will still see an incoming call when the app is open.",
+  denied:
+    "Alerts are blocked for this site in your browser settings. Allow notifications there to turn them on, or keep the app open to see incoming calls.",
+};
 
 // A VAPID public key is a base64url string; the browser's subscribe call needs it as bytes. Backed by a
 // plain ArrayBuffer (not SharedArrayBuffer) so it satisfies the BufferSource type pushManager.subscribe
@@ -42,6 +54,126 @@ function pushSupported(): boolean {
     "serviceWorker" in navigator &&
     "PushManager" in window &&
     "Notification" in window
+  );
+}
+
+function Note({ t, children }: { t: FoundationTokens; children: string }) {
+  return <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5 }}>{children}</div>;
+}
+
+function ErrorBanner({ text }: { text: string }) {
+  return (
+    <div
+      style={{
+        padding: "8px 12px",
+        borderRadius: 10,
+        background: "rgba(239,68,68,0.1)",
+        border: "1px solid rgba(239,68,68,0.3)",
+        color: "#fecaca",
+        fontSize: 13,
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
+// Renders the single informational note for a state, or nothing when the state has an interactive block
+// of its own (disabled/enabled) instead.
+function StatusNote({ status, t }: { status: Status; t: FoundationTokens }) {
+  const text = STATUS_NOTES[status];
+  if (!text) {
+    return null;
+  }
+  return <Note t={t}>{text}</Note>;
+}
+
+type ActionButtonProps = {
+  busy: boolean;
+  onClick: () => void;
+  label: string;
+  busyLabel: string;
+  background: string;
+  color: string;
+  border: string;
+  fontWeight: number;
+};
+
+function ActionButton(props: ActionButtonProps) {
+  const { busy, onClick, label, busyLabel, background, color, border, fontWeight } = props;
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onClick}
+      style={{
+        alignSelf: "flex-start",
+        padding: "9px 16px",
+        borderRadius: 10,
+        cursor: busy ? "default" : "pointer",
+        background,
+        color,
+        fontSize: 13,
+        fontWeight,
+        border,
+        opacity: busy ? 0.6 : 1,
+      }}
+    >
+      {busy ? busyLabel : label}
+    </button>
+  );
+}
+
+function DisabledState({
+  t,
+  busy,
+  onEnable,
+}: {
+  t: FoundationTokens;
+  busy: boolean;
+  onEnable: () => void;
+}) {
+  return (
+    <>
+      <Note t={t}>Get woken to an incoming call on this device even when the app is closed.</Note>
+      <ActionButton
+        busy={busy}
+        onClick={onEnable}
+        label="Enable call alerts on this device"
+        busyLabel="Turning on…"
+        background={t.ACCENT}
+        color="#1a1205"
+        border="none"
+        fontWeight={700}
+      />
+    </>
+  );
+}
+
+function EnabledState({
+  t,
+  busy,
+  onDisable,
+}: {
+  t: FoundationTokens;
+  busy: boolean;
+  onDisable: () => void;
+}) {
+  return (
+    <>
+      <div style={{ fontSize: 13, color: t.ACCENT, fontWeight: 600 }}>On for this device</div>
+      <Note t={t}>This device will be woken when a member rings you.</Note>
+      <ActionButton
+        busy={busy}
+        onClick={onDisable}
+        label="Turn off on this device"
+        busyLabel="Turning off…"
+        background={t.BORDER}
+        color={t.TITLE}
+        border="1px solid rgba(255,255,255,0.12)"
+        fontWeight={600}
+      />
+    </>
   );
 }
 
@@ -157,10 +289,6 @@ export function CallAlerts() {
     }
   }, []);
 
-  const note = (text: string) => (
-    <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5 }}>{text}</div>
-  );
-
   return (
     <div
       style={{
@@ -178,86 +306,16 @@ export function CallAlerts() {
         <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>Call alerts on this device</span>
       </div>
 
-      {error ? (
-        <div
-          style={{
-            padding: "8px 12px",
-            borderRadius: 10,
-            background: "rgba(239,68,68,0.1)",
-            border: "1px solid rgba(239,68,68,0.3)",
-            color: "#fecaca",
-            fontSize: 13,
-          }}
-        >
-          {error}
-        </div>
-      ) : null}
+      {error ? <ErrorBanner text={error} /> : null}
 
-      {status === "checking" ? note("Checking this device…") : null}
-
-      {status === "unsupported"
-        ? note("This browser cannot show call alerts. You will still see an incoming call when the app is open.")
-        : null}
-
-      {status === "unavailable"
-        ? note("Call alerts are not switched on yet. You will still see an incoming call when the app is open.")
-        : null}
-
-      {status === "denied"
-        ? note(
-            "Alerts are blocked for this site in your browser settings. Allow notifications there to turn them on, or keep the app open to see incoming calls.",
-          )
-        : null}
+      <StatusNote status={status} t={t} />
 
       {status === "disabled" ? (
-        <>
-          {note("Get woken to an incoming call on this device even when the app is closed.")}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void enable()}
-            style={{
-              alignSelf: "flex-start",
-              padding: "9px 16px",
-              borderRadius: 10,
-              cursor: busy ? "default" : "pointer",
-              background: t.ACCENT,
-              color: "#1a1205",
-              fontSize: 13,
-              fontWeight: 700,
-              border: "none",
-              opacity: busy ? 0.6 : 1,
-            }}
-          >
-            {busy ? "Turning on…" : "Enable call alerts on this device"}
-          </button>
-        </>
+        <DisabledState t={t} busy={busy} onEnable={() => void enable()} />
       ) : null}
 
       {status === "enabled" ? (
-        <>
-          <div style={{ fontSize: 13, color: t.ACCENT, fontWeight: 600 }}>On for this device</div>
-          {note("This device will be woken when a member rings you.")}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void disable()}
-            style={{
-              alignSelf: "flex-start",
-              padding: "9px 16px",
-              borderRadius: 10,
-              cursor: busy ? "default" : "pointer",
-              background: t.BORDER,
-              color: t.TITLE,
-              fontSize: 13,
-              fontWeight: 600,
-              border: "1px solid rgba(255,255,255,0.12)",
-              opacity: busy ? 0.6 : 1,
-            }}
-          >
-            {busy ? "Turning off…" : "Turn off on this device"}
-          </button>
-        </>
+        <EnabledState t={t} busy={busy} onDisable={() => void disable()} />
       ) : null}
     </div>
   );

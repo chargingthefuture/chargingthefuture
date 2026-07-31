@@ -8,7 +8,7 @@ import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { FormField } from "@/components/shared/form-field";
 import type { Currency } from "lib/currency/types";
 import { useTheme } from '@/hooks/useTheme';
-import { getSocketRelayTokens } from './sr-shared';
+import { getSocketRelayTokens, type SocketRelayTokens } from './sr-shared';
 
 export type PostDraft = {
   title: string;
@@ -109,6 +109,26 @@ function TagEditor({
   );
 }
 
+// The primary submit button. Split from SocketRelayPost so its submitting/editing label ternaries live
+// in their own scope instead of inflating the form's complexity.
+function SubmitButton({
+  submitting,
+  editing,
+  t,
+  onSubmit,
+}: {
+  submitting: boolean;
+  editing: boolean;
+  t: SocketRelayTokens;
+  onSubmit: () => void;
+}) {
+  return (
+    <button onClick={onSubmit} disabled={submitting} style={{ padding: "14px", borderRadius: 12, background: submitting ? `${t.ACCENT}66` : t.ACCENT, border: "none", color: "#fff", fontSize: 15, fontWeight: 800, cursor: submitting ? "not-allowed" : "pointer" }}>
+      {submitting ? (editing ? "Saving…" : "Posting…") : editing ? "Save Changes" : "Post Request"}
+    </button>
+  );
+}
+
 export function SocketRelayPost({
   draft,
   editing,
@@ -183,9 +203,7 @@ export function SocketRelayPost({
         )}
         {error && <div role="alert" style={{ fontSize: 13, color: "#EF4444" }}>{error}</div>}
         {success && <div role="status" style={{ fontSize: 13, color: "#22C55E" }}>{editing ? "Saved! View it in the feed." : "Posted successfully! View it in the feed."}</div>}
-        <button onClick={onSubmit} disabled={submitting} style={{ padding: "14px", borderRadius: 12, background: submitting ? `${t.ACCENT}66` : t.ACCENT, border: "none", color: "#fff", fontSize: 15, fontWeight: 800, cursor: submitting ? "not-allowed" : "pointer" }}>
-          {submitting ? (editing ? "Saving…" : "Posting…") : editing ? "Save Changes" : "Post Request"}
-        </button>
+        <SubmitButton submitting={submitting} editing={editing} t={t} onSubmit={onSubmit} />
         {editing && (
           <button onClick={onCancelEdit} disabled={submitting} style={{ padding: "12px", borderRadius: 12, background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: t.SUBTLE, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
             Cancel Edit
