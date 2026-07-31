@@ -1028,7 +1028,21 @@ ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS sources JSONB NOT NU
 ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS author_user_id TEXT NULL;
 ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
+-- Moderation for member-facing Q&A (2026-07-30). These tables had no moderation_status at all, so a
+-- flagged answer could be read by an admin and then nothing could be done about it — the flag queue was
+-- unbuildable. Same two states and same reason vocabulary as the Commons post tables, so one admin
+-- surface can drive both. Nullable reason/actor/timestamp, null until a moderator acts.
+ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
+ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
+ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
+ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
+ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
+ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
+-- Serves the flag queue: flagged answers, newest first, without scanning every answer.
+CREATE INDEX IF NOT EXISTS idx_feed_answers_moderation_status
+  ON feed_answers (moderation_status, created_at DESC);
 CREATE TABLE IF NOT EXISTS feed_answer_ratings (
   user_id TEXT NOT NULL,
   answer_id UUID NOT NULL REFERENCES feed_answers(id) ON DELETE CASCADE,

@@ -1,11 +1,15 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { EyeOff, Eye, MessageSquare, ShieldAlert } from 'lucide-react';
+import { EyeOff, Eye, Flag, MessageSquare, ShieldAlert } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
-import type { FeedModerationAuthorSummary, FeedModerationQueueRow } from 'lib/feed/moderation';
+import type {
+  FeedFlaggedAnswerRow,
+  FeedModerationAuthorSummary,
+  FeedModerationQueueRow,
+} from 'lib/feed/moderation';
 import {
   FEED_MODERATION_REASON,
   FEED_MODERATION_REASONS,
@@ -52,17 +56,23 @@ export function CommonsModerationAdminShell({
   rows: initialRows,
   hidden: initialHidden,
   authors: initialAuthors,
+  flagged: initialFlagged,
+  pendingFlagged: initialPendingFlagged,
 }: {
   rows: FeedModerationQueueRow[];
   hidden: { posts: number; replies: number };
   authors: FeedModerationAuthorSummary[];
+  flagged: FeedFlaggedAnswerRow[];
+  pendingFlagged: number;
 }) {
   const { theme } = useTheme();
   const t = getFeedAnnouncementsTokens(theme);
   const [rows, setRows] = useState(initialRows);
   const [hidden, setHidden] = useState(initialHidden);
   const [authors, setAuthors] = useState(initialAuthors);
-  const [tab, setTab] = useState<'all' | 'hidden' | 'authors'>('all');
+  const [tab, setTab] = useState<'all' | 'hidden' | 'authors' | 'flagged'>('all');
+  const [flagged, setFlagged] = useState(initialFlagged);
+  const [pendingFlagged, setPendingFlagged] = useState(initialPendingFlagged);
   const [focusAuthor, setFocusAuthor] = useState<FeedModerationAuthorSummary | null>(null);
   // The reason applied to the next hide. Defaults to off-topic because that is the actual
   // day-to-day judgement — Quora-style discussion unrelated to the economy — so a sweep of twenty
@@ -103,10 +113,65 @@ export function CommonsModerationAdminShell({
     }
   }, []);
 
-  function switchTab(next: 'all' | 'hidden' | 'authors') {
+  const reloadFlagged = useCallback(async () => {
+    setError(null);
+    try {
+      const res = await fetch('/api/feed/admin/moderation/flagged-answers', { cache: 'no-store' });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; answers?: FeedFlaggedAnswerRow[]; pending?: number; message?: string }
+        | null;
+      if (res.ok && data?.ok && Array.isArray(data.answers)) {
+        setFlagged(data.answers);
+        if (typeof data.pending === 'number') setPendingFlagged(data.pending);
+      } else {
+        setError(data?.message ?? 'Could not load flagged answers.');
+      }
+    } catch {
+      setError('Could not load flagged answers.');
+    }
+  }, []);
+
+  function switchTab(next: 'all' | 'hidden' | 'authors' | 'flagged') {
     setTab(next);
     setFocusAuthor(null);
-    if (next !== 'authors') void reload(next === 'hidden', null);
+    if (next === 'flagged') void reloadFlagged();
+    else if (next !== 'authors') void reload(next === 'hidden', null);
+  }
+
+  // Hide or restore one flagged answer. Same endpoint as the Commons rows, target 'answer'.
+  async function setAnswerHidden(row: FeedFlaggedAnswerRow, nextHidden: boolean) {
+    if (!nextHidden && !window.confirm('Put this answer back where members can see it?')) {
+      return;
+    }
+    setBusyId(row.answerId);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/feed/admin/moderation/answer/${row.answerId}`, {
+        method: 'POST',
+        headers: CSRF_HEADERS,
+        body: JSON.stringify(nextHidden ? { hidden: true, reason } : { hidden: false }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; changed?: boolean; message?: string }
+        | null;
+      if (!res.ok || !data?.ok) {
+        setError(data?.message ?? 'Could not change that answer.');
+        return;
+      }
+      setNotice(
+        data.changed === false
+          ? 'Already in that state — nothing changed.'
+          : nextHidden
+            ? 'Answer hidden. The question stays up.'
+            : 'Answer is visible again.',
+      );
+      await reloadFlagged();
+    } catch {
+      setError('Could not change that answer.');
+    } finally {
+      setBusyId(null);
+    }
   }
 
   function openAuthor(author: FeedModerationAuthorSummary) {
@@ -182,6 +247,9 @@ export function CommonsModerationAdminShell({
           <button type="button" onClick={() => switchTab('authors')} aria-pressed={tab === 'authors'} style={tabStyle(t, tab === 'authors')}>
             By member
           </button>
+          <button type="button" onClick={() => switchTab('flagged')} aria-pressed={tab === 'flagged'} style={tabStyle(t, tab === 'flagged')}>
+            Flagged answers{pendingFlagged > 0 ? ` (${pendingFlagged})` : ''}
+          </button>
         </div>
 
         {/* The reason applied to the next hide. One picker for the whole list rather than one per row:
@@ -226,7 +294,69 @@ export function CommonsModerationAdminShell({
           <div role="status" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13 }}>{notice}</div>
         ) : null}
 
-        {tab === 'authors' ? (
+        {tab === 'flagged' ? (
+          flagged.length === 0 ? (
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+              No answers have been flagged.
+            </div>
+          ) : (
+            <>
+              <p style={{ fontSize: 12.5, color: t.MUTED, marginTop: 0, marginBottom: 12 }}>
+                Answers members flagged, most-flagged first. Until now these went nowhere — the count was
+                being collected and no screen showed it. Hiding an answer leaves the question up, so the
+                member who asked still has their question and can get a better answer.
+              </p>
+              {flagged.map((row) => {
+                const isHidden = row.moderationStatus === 'hidden';
+                const busy = busyId === row.answerId;
+                return (
+                  <div key={row.answerId} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${isHidden ? 'rgba(245,158,11,0.35)' : t.BORDER_SOLID}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                      <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)' }}>
+                        <Flag size={10} style={{ verticalAlign: '-1px', marginRight: 3 }} />
+                        {row.flaggedCount} flag{row.flaggedCount === 1 ? '' : 's'}
+                      </span>
+                      {row.notHelpfulCount > 0 ? (
+                        <span style={{ fontSize: 11.5, color: t.MUTED }}>{row.notHelpfulCount} marked not helpful</span>
+                      ) : null}
+                      <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: `${t.ACCENT}1f`, color: t.ACCENT, border: `1px solid ${t.ACCENT}4d` }}>
+                        {row.answerType === 'llm' ? 'Assistant' : 'Member'}
+                      </span>
+                      {isHidden ? (
+                        <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}>
+                          Hidden{row.moderationReason ? ` · ${FEED_MODERATION_REASON_LABEL[row.moderationReason]}` : ''}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div style={{ fontSize: 12.5, color: t.MUTED, marginBottom: 6 }}>
+                      Asked: {row.questionBody}
+                    </div>
+                    <div style={{ fontSize: 14, lineHeight: 1.6, color: t.TITLE, whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginBottom: 10 }}>
+                      {row.answerBody}
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void setAnswerHidden(row, !isHidden)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8,
+                        background: isHidden ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
+                        border: `1px solid ${isHidden ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                        color: isHidden ? '#22C55E' : '#F59E0B',
+                        fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1,
+                      }}
+                    >
+                      {isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
+                      {busy ? 'Saving…' : isHidden ? 'Put back' : 'Hide answer'}
+                    </button>
+                  </div>
+                );
+              })}
+            </>
+          )
+        ) : tab === 'authors' ? (
           authors.length === 0 ? (
             <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
               Nobody has posted in the Commons yet.

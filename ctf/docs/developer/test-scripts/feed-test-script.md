@@ -631,6 +631,31 @@
 - The point of this case: the cadence alone cannot protect a member who posts something identifying on
   their first visit, before any rotation reaches them. If this card stops appearing for new members, that
   protection is gone even though the periodic notice still looks fine.
+### FD-A21 — A flagged answer reaches an admin, and can be hidden
+**Role:** member + admin | **Surface:** web
+
+**Precondition:** A question in the Commons with at least one answer.
+
+**Steps:**
+1. As a member, open the answer and rate it **flagged**.
+2. As a second member, flag the same answer.
+3. As admin, open `/admin/commons` and look at the tab row.
+4. Open the **Flagged answers** tab.
+5. Click **Hide answer**.
+6. As a member, reload the Commons and find the question.
+7. Back in the admin tab, click **Put back** and accept the confirmation.
+
+**Expected:**
+- Step 3: the tab reads **Flagged answers (1)** — the count of flagged answers still visible. Before
+  this shipped, a flag went nowhere at all: the count was aggregated by an admin route that no screen
+  ever called.
+- Step 4: the answer is listed with **2 flags**, the parent question above it, and a pill saying whether
+  it came from the assistant or a member. Ordering is by flag count, not date — triage, not a feed.
+- Step 5/6: the answer is gone from the member's view of that question, and **the question is still
+  there**. That matters: the member who asked keeps their question and can still get a better answer.
+- Step 7: the answer is visible again, and the pending count returns to 1.
+- Check the audit log: the transition carries `previousStatus`, `newStatus`, and the reason. Not the
+  answer body.
 
 **Result:** web ☐
 
@@ -745,6 +770,26 @@ where you can reach the next multiple of 50 without posting hundreds of times �
   post's transaction rather than running after it commits.
 - In every case, a failure in the notice must never cost a member their post. If the notice cannot be
   published, the post still succeeds.
+### FD-A22 — A hidden question stops being answerable and stops feeding training
+**Role:** member + admin | **Surface:** web
+
+**Precondition:** A question in the Commons with LLM consent granted and no answer yet.
+
+**Steps:**
+1. As admin, open `/admin/commons`, find that question and hide it.
+2. As the member who asked, reload the Commons.
+3. Attempt to generate an answer for it (`POST /api/feed/questions/<id>/answer`).
+4. As admin, run the training export (`GET /api/comic/training/export` / the questions export) and search
+   it for the hidden question's text.
+5. Put the question back and repeat step 4.
+
+**Expected:**
+- Step 2: the question is gone from the timeline.
+- Step 3: refused as **not found** — not "forbidden". A hidden question must not confirm it exists.
+- Step 4: the hidden question does **not** appear in the export. This is the check that matters: hiding
+  something is a judgement it does not belong, and exporting it into training data would launder it back
+  in, with the model then answering in the register of the thing that was removed.
+- Step 5: it appears again once restored.
 
 **Result:** web ☐
 
@@ -952,13 +997,5 @@ The following cases are the highest-signal functional checks that must remain co
 ## Known gaps — do not file these as bugs
 
 1. **LLM provider failover not contractualized.** The Q&A pipeline runs against a single configured LLM provider. If that provider is unavailable the answer generation fails. Provider failover and confidence-thresholding policy are tracked as future work — a failure here is expected behavior, not a bug.
-
-3. **Questions and answers cannot be hidden.** Commons posts and replies can be moderated (FD-A14/A15),
-   but `feed_questions` and `feed_answers` have no `moderation_status` column, so there is no hide
-   control for them. The only admin lever on a question is the category relabel (FD-A10). Not a bug.
-
-4. **Flagging an answer notifies nobody.** A member can rate an answer `flagged`, and the count is
-   aggregated by `GET /api/feed/admin/questions`, but no page reads that route — so a flag reaches no
-   admin queue. Known and tracked; do not file it.
 
 2. **Deprecated contract YAML files.** Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files remain in the repository as intentional historical reference. Their presence is not a bug; they are a known cleanup item.
