@@ -69,6 +69,21 @@ function EmptyAchievements() {
   );
 }
 
+function BadgeFooter({ achievement }: { achievement: Achievement }) {
+  const { theme } = useTheme();
+  const t = getLevelUpTokens(theme);
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      {achievement.creditReward > 0 ? (
+        <span style={{ fontSize: 11, color: achievement.earned ? t.ACCENT : t.TEXT_SUBTLE, fontWeight: 600 }}>+{achievement.creditReward} SC</span>
+      ) : <span />}
+      {achievement.earned && achievement.earnedAtIso && (
+        <span style={{ fontSize: 10, color: t.FAINT }}>{formatDate(achievement.earnedAtIso)}</span>
+      )}
+    </div>
+  );
+}
+
 function BadgeTile({ achievement }: { achievement: Achievement }) {
   const { theme } = useTheme();
   const t = getLevelUpTokens(theme);
@@ -86,14 +101,7 @@ function BadgeTile({ achievement }: { achievement: Achievement }) {
       {achievement.description && (
         <div style={{ fontSize: 11, color: t.TEXT_SUBTLE, lineHeight: 1.5, marginBottom: 8 }}>{achievement.description}</div>
       )}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        {achievement.creditReward > 0 ? (
-          <span style={{ fontSize: 11, color: achievement.earned ? t.ACCENT : t.TEXT_SUBTLE, fontWeight: 600 }}>+{achievement.creditReward} SC</span>
-        ) : <span />}
-        {achievement.earned && achievement.earnedAtIso && (
-          <span style={{ fontSize: 10, color: t.FAINT }}>{formatDate(achievement.earnedAtIso)}</span>
-        )}
-      </div>
+      <BadgeFooter achievement={achievement} />
     </div>
   );
 }

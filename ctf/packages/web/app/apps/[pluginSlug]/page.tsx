@@ -1,6 +1,13 @@
-import { evaluatePluginAccess } from 'lib/auth/server-authz';
+import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
+import type { PluginDenyResponse } from 'lib/auth/deny-taxonomy';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
-import { canonicalizePluginSlug, getPluginBySlug, isAdminOnlyPlugin } from 'lib/plugins/repository';
+import {
+  canonicalizePluginSlug,
+  getPluginBySlug,
+  isAdminOnlyPlugin,
+  type PluginRegistryItem,
+} from 'lib/plugins/repository';
+import type { ReactNode } from 'react';
 import { getPublicVisitorShell } from '@/components/plugins/public-visitor-registry';
 import { ReviewsWidget } from '@/components/reviews/reviews-widget';
 import { BeaconShell } from '@/components/beacon/beacon-shell';
@@ -127,6 +134,114 @@ function GenericPluginView({
   );
 }
 
+type PluginShellContext = {
+  decision: AllowDecision;
+  plugin: PluginRegistryItem;
+  searchParams: {
+    track?: string;
+    status?: string;
+    startDate?: string;
+    cohortId?: string;
+  };
+};
+
+// Maps each plugin slug to the shell it renders once baseline access is allowed. Kept as a data
+// table so the route handler stays a simple lookup instead of a long branch chain; the props each
+// shell needs are read from the shared access context. `knowledge` and `weekly-performance`
+// redirect to their canonical routes instead of rendering a shell here. A slug with no entry falls
+// through to the generic plugin view.
+const PLUGIN_SHELL_RENDERERS: Record<string, (ctx: PluginShellContext) => ReactNode> = {
+  beacon: ({ decision }) => <BeaconShell isAdmin={decision.isAdmin} />,
+  'click-log': () => <ClickLogShell />,
+  'what-works': () => <WhatWorksShell />,
+  chyme: ({ decision }) => (
+    <ChymeShell
+      currentUser={{
+        userId: decision.userId,
+        username: decision.username,
+      }}
+    />
+  ),
+  directory: ({ decision }) => <DirectoryShell userId={decision.userId} isAdmin={decision.isAdmin} />,
+  workforce: ({ decision }) => <WorkforceShell isAdmin={decision.isAdmin} />,
+  'skills-hunt': ({ decision }) => (
+    <SkillsHuntShell
+      userId={decision.userId}
+      isAdmin={decision.isAdmin}
+      isModerator={decision.role === 'moderator'}
+    />
+  ),
+  'skills-taxonomy': () => <SkillsTaxonomyShell />,
+  foundation: ({ decision }) => <FoundationShell isAdmin={decision.isAdmin} />,
+  lighthouse: ({ decision }) => (
+    <LighthouseShell userId={decision.userId} username={decision.username} isAdmin={decision.isAdmin} />
+  ),
+  'socket-relay': ({ decision }) => (
+    <SocketRelayShell userId={decision.userId} isAdmin={decision.isAdmin} role={decision.role} />
+  ),
+  'trust-transport': ({ decision }) => <TrustTransportShell isAdmin={decision.isAdmin} />,
+  'peer-programming': ({ decision }) => <PeerProgrammingShell isAdmin={decision.isAdmin} />,
+  mood: () => <MoodShell />,
+  // The real page is the top-level /knowledge route — short enough to paste into an invitation post
+  // that is read outside the app. The launcher tile lands here and is sent on, so there is one page
+  // rather than two copies to keep in step.
+  knowledge: () => redirect('/knowledge'),
+  // Weekly Performance has no member view — the dashboard lives on the admin page only.
+  // Non-admins never reach this branch (the admin-only gate above 404s them).
+  'weekly-performance': () => redirect('/admin/weekly-performance'),
+  gdp: () => <GdpShell />,
+  'service-credits': ({ decision }) => <ServiceCreditsShell isAdmin={decision.isAdmin} />,
+  'level-up': ({ decision, searchParams }) => (
+    <LevelUpShell userId={decision.userId} isAdmin={decision.isAdmin} query={searchParams} />
+  ),
+};
+
+// A denied request either browses the plugin's public landing (anonymous or not-yet-verified) or
+// sees the informative access-denied view (other 403s). Extracted so the route handler stays flat.
+function renderAccessDenied(decision: PluginDenyResponse, plugin: PluginRegistryItem): ReactNode {
+  // Two cases see the plugin's public visitor view rather than a denial wall:
+  //  - an anonymous visitor (no session) denied with AUTH_UNAUTHORIZED, and
+  //  - a signed-in but not-yet-verified member denied with `unlock_required`.
+  // Both can browse the plugin's marketing/landing content the same way; the
+  // not-yet-verified member is nudged from there toward the Unlock flow, and the
+  // Hub general channel remains their support surface. Other 403s (e.g. a missing
+  // username or a role requirement) keep the informative access-denied view.
+  if (decision.code === 'AUTH_UNAUTHORIZED' || decision.reason === 'unlock_required') {
+    const PublicVisitorShell = getPublicVisitorShell(plugin.slug);
+    const signInUrl = getHostedSignInUrl() ?? '/sign-in';
+    // A signed-in-but-not-yet-verified member (denied with `unlock_required`)
+    // is already authenticated, so the public shell's "Sign In / Join Free"
+    // CTAs are wrong for them; pass a verifyUrl so the shell shows a single
+    // "Finish verifying" action pointing at the Unlock flow instead. An
+    // anonymous visitor (AUTH_UNAUTHORIZED) gets no verifyUrl and sees the
+    // normal sign-in / sign-up CTAs.
+    const verifyUrl = decision.reason === 'unlock_required' ? '/plugin/unlock' : undefined;
+    // The back-to-/apps control lives inside each public shell's own header
+    // row (PublicShellBackLink), so no wrapping frame is needed here.
+    return (
+      <>
+        <PublicVisitorShell
+          pluginSlug={plugin.slug}
+          pluginName={plugin.name}
+          signInUrl={signInUrl}
+          verifyUrl={verifyUrl}
+        />
+        {/* Corner reviews widget — shown on every public (signed-out) plugin page. */}
+        <ReviewsWidget />
+      </>
+    );
+  }
+
+  return (
+    <AccessDeniedView
+      status={decision.status}
+      code={decision.code}
+      reason={decision.reason}
+      requestedPluginSlug={plugin.slug}
+    />
+  );
+}
+
 export default async function PluginRoutePage({ params, searchParams }: PluginRoutePageProps) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
@@ -158,135 +273,16 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (!decision.allowed) {
-    // Two cases see the plugin's public visitor view rather than a denial wall:
-    //  - an anonymous visitor (no session) denied with AUTH_UNAUTHORIZED, and
-    //  - a signed-in but not-yet-verified member denied with `unlock_required`.
-    // Both can browse the plugin's marketing/landing content the same way; the
-    // not-yet-verified member is nudged from there toward the Unlock flow, and the
-    // Hub general channel remains their support surface. Other 403s (e.g. a missing
-    // username or a role requirement) keep the informative access-denied view.
-    if (decision.code === 'AUTH_UNAUTHORIZED' || decision.reason === 'unlock_required') {
-      const PublicVisitorShell = getPublicVisitorShell(selectedPlugin.slug);
-      const signInUrl = getHostedSignInUrl() ?? '/sign-in';
-      // A signed-in-but-not-yet-verified member (denied with `unlock_required`)
-      // is already authenticated, so the public shell's "Sign In / Join Free"
-      // CTAs are wrong for them; pass a verifyUrl so the shell shows a single
-      // "Finish verifying" action pointing at the Unlock flow instead. An
-      // anonymous visitor (AUTH_UNAUTHORIZED) gets no verifyUrl and sees the
-      // normal sign-in / sign-up CTAs.
-      const verifyUrl = decision.reason === 'unlock_required' ? '/plugin/unlock' : undefined;
-      // The back-to-/apps control lives inside each public shell's own header
-      // row (PublicShellBackLink), so no wrapping frame is needed here.
-      return (
-        <>
-          <PublicVisitorShell
-            pluginSlug={selectedPlugin.slug}
-            pluginName={selectedPlugin.name}
-            signInUrl={signInUrl}
-            verifyUrl={verifyUrl}
-          />
-          {/* Corner reviews widget — shown on every public (signed-out) plugin page. */}
-          <ReviewsWidget />
-        </>
-      );
-    }
-
-    return (
-      <AccessDeniedView
-        status={decision.status}
-        code={decision.code}
-        reason={decision.reason}
-        requestedPluginSlug={selectedPlugin.slug}
-      />
-    );
+    return renderAccessDenied(decision, selectedPlugin);
   }
 
-  if (selectedPlugin.slug === 'beacon') {
-    return <BeaconShell isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'click-log') {
-    return <ClickLogShell />;
-  }
-
-  if (selectedPlugin.slug === 'what-works') {
-    return <WhatWorksShell />;
-  }
-
-  if (selectedPlugin.slug === 'chyme') {
-    return (
-      <ChymeShell
-        currentUser={{
-          userId: decision.userId,
-          username: decision.username,
-        }}
-      />
-    );
-  }
-
-  if (selectedPlugin.slug === 'directory') {
-    return <DirectoryShell userId={decision.userId} isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'workforce') {
-    return <WorkforceShell isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'skills-hunt') {
-    return <SkillsHuntShell userId={decision.userId} isAdmin={decision.isAdmin} isModerator={decision.role === 'moderator'} />;
-  }
-
-  if (selectedPlugin.slug === 'skills-taxonomy') {
-    return <SkillsTaxonomyShell />;
-  }
-
-  if (selectedPlugin.slug === 'foundation') {
-    return <FoundationShell isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'lighthouse') {
-    return <LighthouseShell userId={decision.userId} username={decision.username} isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'socket-relay') {
-    return <SocketRelayShell userId={decision.userId} isAdmin={decision.isAdmin} role={decision.role} />;
-  }
-
-  if (selectedPlugin.slug === 'trust-transport') {
-    return <TrustTransportShell isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'peer-programming') {
-    return <PeerProgrammingShell isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'mood') {
-    return <MoodShell />;
-  }
-
-  if (selectedPlugin.slug === 'knowledge') {
-    // The real page is the top-level /knowledge route — short enough to paste into an invitation post
-    // that is read outside the app. The launcher tile lands here and is sent on, so there is one page
-    // rather than two copies to keep in step.
-    redirect('/knowledge');
-  }
-
-  if (selectedPlugin.slug === 'weekly-performance') {
-    // Weekly Performance has no member view — the dashboard lives on the admin page only.
-    // Non-admins never reach this branch (the admin-only gate above 404s them).
-    redirect('/admin/weekly-performance');
-  }
-
-  if (selectedPlugin.slug === 'gdp') {
-    return <GdpShell />;
-  }
-
-  if (selectedPlugin.slug === 'service-credits') {
-    return <ServiceCreditsShell isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'level-up') {
-    return <LevelUpShell userId={decision.userId} isAdmin={decision.isAdmin} query={resolvedSearchParams} />;
+  const renderShell = PLUGIN_SHELL_RENDERERS[selectedPlugin.slug];
+  if (renderShell) {
+    return renderShell({
+      decision,
+      plugin: selectedPlugin,
+      searchParams: resolvedSearchParams,
+    });
   }
 
   return (

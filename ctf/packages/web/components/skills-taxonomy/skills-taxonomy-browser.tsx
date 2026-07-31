@@ -6,12 +6,106 @@ import { BackChevronButton } from "@/lib/nav/back-history";
 import { useTheme } from "@/hooks/useTheme";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
-import { getSkillsTaxonomyTokens, type StSector } from "./st-shared";
+import {
+  getSkillsTaxonomyTokens,
+  type SkillsTaxonomyTokens,
+  type StJobTitle,
+  type StSector,
+  type StSkill,
+} from "./st-shared";
 import { SkillsTaxonomySectorsColumn } from "./st-sectors-column";
 import { SkillsTaxonomyTitlesColumn } from "./st-titles-column";
 import { SkillsTaxonomySkillsDetail } from "./st-skills-detail";
 import { SkillsTaxonomyEmptyState } from "./st-empty-state";
 import { SkillsTaxonomyLoading } from "./st-loading";
+
+type StMobileView = "sectors" | "titles" | "skills";
+
+// The drill-down "back" bar shown above the body on phones. It renders nothing at the top level
+// (sectors), and otherwise a button that steps one level back up the hierarchy. Kept module-scope so
+// the level-to-target/label ternaries live here rather than inflating the browser's complexity.
+function SkillsTaxonomyMobileBackBar({
+  mobileView,
+  tokens,
+  onBack,
+}: {
+  mobileView: StMobileView;
+  tokens: SkillsTaxonomyTokens;
+  onBack: (view: StMobileView) => void;
+}) {
+  if (mobileView === "sectors") return null;
+  const backTarget: StMobileView = mobileView === "skills" ? "titles" : "sectors";
+  const backLabel = mobileView === "skills" ? "Job titles" : "Sectors";
+  const t = tokens;
+  return (
+    <div style={{ padding: "0 12px 10px" }}>
+      <button type="button" onClick={() => onBack(backTarget)} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "8px 12px", borderRadius: 8, background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}`, color: t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+        <ChevronLeft size={14} /> {backLabel}
+      </button>
+    </div>
+  );
+}
+
+// The drill-down body: the error state, or one of the three hierarchy columns for the current level.
+// Kept module-scope so the level switch lives here rather than inflating the browser's complexity.
+function SkillsTaxonomyBody({
+  error,
+  mobileView,
+  sectors,
+  selectedSector,
+  selectedSectorId,
+  selectedJobTitle,
+  selectedJobTitleId,
+  visibleSkills,
+  search,
+  onSelectSector,
+  onSelectJobTitle,
+  onSearch,
+}: {
+  error: string | null;
+  mobileView: StMobileView;
+  sectors: StSector[];
+  selectedSector: StSector | null;
+  selectedSectorId: string | null;
+  selectedJobTitle: StJobTitle | null;
+  selectedJobTitleId: string | null;
+  visibleSkills: StSkill[];
+  search: string;
+  onSelectSector: (id: string) => void;
+  onSelectJobTitle: (id: string) => void;
+  onSearch: (value: string) => void;
+}) {
+  if (error) {
+    return <div style={{ padding: 24, color: "#F87171", fontSize: 14 }}>{error}</div>;
+  }
+  if (mobileView === "sectors") {
+    return (
+      <SkillsTaxonomySectorsColumn
+        sectors={sectors}
+        selectedSectorId={selectedSectorId}
+        onSelect={onSelectSector}
+      />
+    );
+  }
+  if (mobileView === "titles") {
+    return (
+      <SkillsTaxonomyTitlesColumn
+        sector={selectedSector}
+        selectedJobTitleId={selectedJobTitleId}
+        onSelect={onSelectJobTitle}
+      />
+    );
+  }
+  return (
+    <SkillsTaxonomySkillsDetail
+      sector={selectedSector}
+      jobTitle={selectedJobTitle}
+      skills={visibleSkills}
+      search={search}
+      onSearch={onSearch}
+    />
+  );
+}
 
 export function SkillsTaxonomyBrowser() {
   const [sectors, setSectors] = useState<StSector[]>([]);
@@ -22,7 +116,7 @@ export function SkillsTaxonomyBrowser() {
   const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
   const t = getSkillsTaxonomyTokens(theme);
-  const [mobileView, setMobileView] = useState<"sectors" | "titles" | "skills">("sectors");
+  const [mobileView, setMobileView] = useState<StMobileView>("sectors");
 
   // Shared by the initial-load effect and the refresh button; a refresh (initial=false) re-pulls
   // the hierarchy without flashing the full-screen loading state and keeps the current selection.
@@ -60,49 +154,32 @@ export function SkillsTaxonomyBrowser() {
   // Phones can't fit three columns side by side, so the hierarchy becomes a
   // drill-down: sectors → job titles → skills, one level at a time with a
   // back button. The column components go full-width on small screens.
-    const backTarget = mobileView === "skills" ? "titles" : "sectors";
-    const backLabel = mobileView === "skills" ? "Job titles" : "Sectors";
-    return (
-      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
-            <BackChevronButton accent={t.ACCENT} />
-            {/* Title shrinks and truncates so the trailing controls stay on screen */}
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Skills Taxonomy</span>
-            <RefreshButton onRefresh={() => load()} title="Refresh" />
-            <MobileTopActions />
-          </div>
-          {mobileView !== "sectors" && (
-            <div style={{ padding: "0 12px 10px" }}>
-              <button type="button" onClick={() => setMobileView(backTarget)} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "8px 12px", borderRadius: 8, background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}`, color: t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                <ChevronLeft size={14} /> {backLabel}
-              </button>
-            </div>
-          )}
+  return (
+    <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+          <BackChevronButton accent={t.ACCENT} />
+          {/* Title shrinks and truncates so the trailing controls stay on screen */}
+          <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Skills Taxonomy</span>
+          <RefreshButton onRefresh={() => load()} title="Refresh" />
+          <MobileTopActions />
         </div>
-        {error ? (
-          <div style={{ padding: 24, color: "#F87171", fontSize: 14 }}>{error}</div>
-        ) : mobileView === "sectors" ? (
-          <SkillsTaxonomySectorsColumn
-            sectors={sectors}
-            selectedSectorId={selectedSectorId}
-            onSelect={(id) => { setSelectedSectorId(id); setSelectedJobTitleId(null); setSearch(""); setMobileView("titles"); }}
-          />
-        ) : mobileView === "titles" ? (
-          <SkillsTaxonomyTitlesColumn
-            sector={selectedSector}
-            selectedJobTitleId={selectedJobTitleId}
-            onSelect={(id) => { setSelectedJobTitleId(id); setSearch(""); setMobileView("skills"); }}
-          />
-        ) : (
-          <SkillsTaxonomySkillsDetail
-            sector={selectedSector}
-            jobTitle={selectedJobTitle}
-            skills={visibleSkills}
-            search={search}
-            onSearch={setSearch}
-          />
-        )}
+        <SkillsTaxonomyMobileBackBar mobileView={mobileView} tokens={t} onBack={setMobileView} />
       </div>
-    );
+      <SkillsTaxonomyBody
+        error={error}
+        mobileView={mobileView}
+        sectors={sectors}
+        selectedSector={selectedSector}
+        selectedSectorId={selectedSectorId}
+        selectedJobTitle={selectedJobTitle}
+        selectedJobTitleId={selectedJobTitleId}
+        visibleSkills={visibleSkills}
+        search={search}
+        onSelectSector={(id) => { setSelectedSectorId(id); setSelectedJobTitleId(null); setSearch(""); setMobileView("titles"); }}
+        onSelectJobTitle={(id) => { setSelectedJobTitleId(id); setSearch(""); setMobileView("skills"); }}
+        onSearch={setSearch}
+      />
+    </div>
+  );
 }
