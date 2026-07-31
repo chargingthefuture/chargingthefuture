@@ -172,6 +172,14 @@ Admin routes:
 - `PUT /api/feed/admin/announcements/:announcementId`
 - `POST /api/feed/admin/announcements/:announcementId/publish`
 - `POST /api/feed/admin/announcements/:announcementId/archive`
+- `GET`/`POST /api/hub/first-visit-notice` — the one standing notice a member is shown on arrival
+  rather than on the rotation. `GET` returns `{ show, title, body }`; `POST` records that they have read
+  it (idempotent, `(user_id, notice_key)` primary key). Gated at `any_authenticated`, **deliberately**:
+  a signed-in but unverified member can already read and post in the Commons, so they are exactly who
+  needs telling first. `POST` checks `checkMutationOrigin(request) !== 'allow'` — that helper returns a
+  verdict string, and a truthiness test against it would disable the check entirely. Both directions
+  fail **closed**: a read error reports `show: false`, because a database hiccup must not be able to pop
+  the notice on every visit, which is how a notice trains people to dismiss it unread.
 - `GET /api/feed/admin/moderation` — also accepts `?author=<userId>` to show one member's entire Commons
   footprint, and returns an `authors` roster (aggregate counts per member, ordered by volume) so a
   moderator can work by person rather than by post. The roster is omitted when `?author=` is set — it
@@ -246,6 +254,21 @@ Domain tables:
 18. `feed_community_replies`
 19. `feed_hub_last_seen` — per-member "last seen" marker for the Hub home channel (`user_id TEXT PRIMARY KEY`, `last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`). Drives the single "New messages" divider in the Commons chat. Read on entry, updated to now after the member has viewed the chat. Best-effort: a read/write failure never breaks the chat.
 20. `feed_community_post_reactions` — emoji reactions on Commons community posts, stored in our own database (not Stream). Columns `id UUID PK DEFAULT gen_random_uuid()`, `post_id UUID NOT NULL REFERENCES feed_community_posts(id) ON DELETE CASCADE`, `user_id TEXT NOT NULL`, `emoji TEXT NOT NULL`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`. `idx_feed_community_post_reactions_unique (post_id, user_id, emoji)` makes a reaction a toggle (one of each emoji per member per post); `idx_feed_community_post_reactions_post (post_id)` serves the batched aggregate read. The emoji is constrained to the fixed quick set (`FEED_REACTION_EMOJIS`) at the application layer.
+21. `feed_commons_guidance_milestones` — one row per Commons post-count milestone at which the
+    automatic guidance notice was published. Columns `id UUID PK DEFAULT gen_random_uuid()`,
+    `milestone_count INTEGER NOT NULL UNIQUE`, `announcement_id UUID NULL`,
+    `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`. **The UNIQUE constraint on `milestone_count` is
+    the concurrency control, not just a hygiene index**: two members posting at the same moment across
+    the boundary both compute the same count and both try to claim it, and `ON CONFLICT DO NOTHING`
+    lets exactly one win, so the notice is never published twice for one milestone. `announcement_id`
+    is stamped after the notice is created so an admin can find the exact announcement a milestone
+    produced. **Holds no member data** — no user ids, no content — so it is retained on account
+    deletion and is not in the deletion registry.
+22. `feed_commons_notice_seen` — which standing notices a member has already been shown once, on
+    arrival. Columns `user_id TEXT`, `notice_key TEXT`, `seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+    primary key `(user_id, notice_key)`. Separate from the cadence table because it answers a different
+    question: the cadence table asks whether a period has been served *for the room*, this asks whether
+    *this member* has seen it. Holds a user id, so it is deleted with the account (deletion registry).
 
 **Reserved (schema-only, no runtime reader/writer yet):**
 
@@ -536,6 +559,94 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ### Change Log
 
+- 2026-07-30 (later): **Three standing Commons notices, three cadences.** The single notice became a
+  registry (`COMMONS_NOTICES` in `lib/feed/commons-guidance.ts`), and the milestone table is now keyed
+  `(notice_key, milestone_count)` — that composite UNIQUE is still the whole concurrency story.
+  - **What the Commons is for** — every 50 posts. Purpose and moderation.
+  - **Where things are public, and where the work happens** — every 75 posts, offset from the first so
+    the two rarely land together and a member meets one or the other roughly every 25 posts. They share
+    a multiple at 150, which is two announcements in a row — rare enough not to be worth more machinery.
+  - **Who I interact with is not a vouch** — every 21 days. Time-shaped, not volume-shaped: it is the
+    owner's standing "every few weeks" reminder, and tying it to post count would fire it repeatedly in
+    a busy week and never in a quiet one. `dueMilestoneFor` turns a day cadence into a period index
+    (days since epoch / interval) so one UNIQUE constraint serves both kinds. A time-cadence notice is
+    delivered **by the next post**, not by a clock — nothing publishes into a silent room, which is
+    intended rather than a compromise.
+  - **Two owner claims were corrected against the code before shipping**, because a notice that is
+    wrong about privacy is worse than no notice:
+    - The **Chyme** claim in the draft was correct and an intermediate edit of mine broke it, then was
+      reverted. Chyme's main room *is* publicly listenable: a signed-out visitor does not get the
+      authenticated branch in `app/apps/[pluginSlug]/page.tsx`, they get `ChymePublicShell` from the
+      public-visitor registry, which fetches `/api/chyme/public/room` and hands a guest Stream
+      credentials via `ChymeGuestListen` ("Free to listen · Sign in to speak"). Both spaces have the
+      same shape — a public room anyone can read or listen to, plus a private Weavers room. Reading only
+      the authenticated branch makes Chyme look gated; check the public-visitor registry before
+      concluding that about any plugin.
+    - The draft said the owner would only look at AI Assistant messages to check the assistant is safe.
+      True, and now precise: `comic_review_queue` joins the asker's turn, so reviewing an answer does
+      show the question it answers. The notice says that rather than promising nobody ever reads them.
+  - **Naming:** the signal-vs-noise draft used "TI Skills Economy (TSE)". Corrected to **Skills
+    Economy** per the owner's earlier decision and `BRAND_VOICE_LEXICON.md`; "TI" as a label is also
+    replaced with "Target".
+  - The Commons is publicly readable only while `feed_render_config.is_public` is on (default TRUE). If
+    that is ever switched off, the public-rooms notice becomes wrong and must be edited.
+  - **Parity:** web + mobile-responsive; Android out of scope (web-only per rule 105).
+- 2026-07-30: **The Commons states its own purpose every 50 posts (owner decision).** A newcomer now
+  meets the rule without anyone having to say it to them personally, and a regular is reminded without
+  being singled out. `FEED_COMMONS_GUIDANCE_INTERVAL = 50`; the copy lives in
+  `lib/feed/commons-guidance.ts`. On every community post, `maybePostCommonsGuidance` counts the posts
+  and, when the total lands exactly on a multiple of 50, claims the milestone and publishes an
+  announcement — which renders inline in the Commons stream, so it appears where the behaviour is.
+  Attributed to a reserved actor (`FEED_SYSTEM_ACTOR_ID`), never to a member and specifically not to
+  the owner, who should not appear to be personally telling people off every 50 posts.
+  - **Inside the post's transaction, on purpose.** The count, the milestone claim, and the notice all
+    commit with the post that triggered them. Running it after commit would let a rolled-back post
+    leave a claimed milestone behind, silently suppressing that notice forever. It still swallows its
+    own errors — a failed reminder must never cost a member their post.
+  - Published immediately rather than as a draft: nobody is going to hand-publish this every 50 posts,
+    and a draft that never ships is the same as no notice.
+  - Counts hidden posts too. The milestone means "the Commons has seen this much traffic"; moderating
+    after the fact should not shift where the next notice falls.
+  - **Every paragraph of the copy is load-bearing and was corrected by the owner (2026-07-30).** The
+    first draft was wrong about what the Commons *is* and had to be rewritten:
+    - **It is a support channel, not a marketplace.** Ask in the open, get an answer. It is **not**
+      where exchanges are arranged or recorded — skills, trades, housing, rides and calls each live in
+      their own plugin, and those are what count toward the economy. The first draft said trades get
+      "sorted out" here, which would have taught members to do business in a public thread instead of
+      in the app that records it.
+    - **Why it is open**: the design reason is that the owner takes no direct messages — her inbox was
+      used to harass her. The final copy states only the benefit (answered once where the next person
+      finds it, never waiting on the owner alone) and does not explain that history; the owner cut the
+      line on 2026-07-30. Keep it cut — the rule stands on the benefit, and the notice does not owe a
+      whole community an account of what was done to her.
+    - **It must not frighten off real survivors.** This is the constraint that shapes the tone. "No
+      storytelling" read alone tells a newly targeted person their experience is unwelcome, which is
+      the opposite of true, and would cost the app exactly the members it exists for. So the notice says
+      outright that you can describe what is happening to you, and draws the line at the retelling that
+      asks for nothing. The Quora contrast is the selling point, not a complaint: there you narrate into
+      a void; here you ask and someone answers. The Commons is a first filter, nothing heavier.
+    - **The public rule is TOPIC, not character**: content is removed for repeatedly going nowhere,
+      never for who somebody is suspected of being. An accusation posted to a whole community cannot be
+      retracted, and being wrong about it lands on a survivor. The internal `suspected_bad_actor`
+      moderation reason stays admin-only and is never shown to a member — the same split, held on both
+      sides.
+    - **The exclusion is stated as fact, not feeling**: traffickers are "not allowed", not "not
+      tolerated". The owner was explicit that these people kill with impunity and no wording should
+      imply they are merely unwelcome. Volume of off-topic chatter is not the problem being solved, and
+      a perpetrator's feelings are not a consideration.
+    - **Tone is a pitch, not a telling-off** (owner, second pass). The message was right and the delivery
+      read as annoyed. It now opens on the Quora contrast — there you write into a void, here you ask and
+      someone answers — and the rules follow as consequences of that promise. Same content, same firmness
+      on the exclusion; firmness toward traffickers is not the same thing as a scolding tone toward
+      everyone else, and a newcomer should finish it wanting to join.
+    - **The Weaver perk is the private room, not the Commons.** An earlier draft said Weavers "post
+      without restriction", which was false — the topic rule applies to the Commons for everyone. What a
+      Weaver earns is the private Weavers room, where none of it applies. Promising members something the
+      app does not do is worse than any tone problem, so this wording must not be restored.
+  - **Weavers of the Commons post without restriction**, and the notice says so. That is the incentive
+    doing the work the rule cannot: the way out of the topic limit is to contribute, not to argue.
+  - New table `feed_commons_guidance_milestones` (see §4.2 item 21). **Parity:** web +
+    mobile-responsive; Android out of scope (web-only per rule 105).
 - 2026-07-29 (later): **Moderation reason + moderating by member (owner: the real problem is volume of
   off-topic Quora discussion, and most of it is a handful of accounts).** Hide/restore alone did not fit
   a repeatable sweep. Added `moderation_reason`, `moderated_by_user_id`, `moderated_at` (all `TEXT`/
