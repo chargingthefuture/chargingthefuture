@@ -90,6 +90,49 @@ function applyReactionToggle(message: GatedChatMessage, emoji: string): GatedCha
   return { ...message, reactions: [...message.reactions, { emoji, count: 1, reactedByMe: true }] };
 }
 
+// Pull the human-readable text off a caught error, falling back to a fixed message.
+function errorMessage(caught: unknown, fallback: string): string {
+  if (caught instanceof Error) return caught.message;
+  return fallback;
+}
+
+// Best-effort disconnect that tolerates a null connection.
+function disconnectLive(live: HubLiveConnection | null): void {
+  if (live) void live.disconnect();
+}
+
+// Poll DB-backed history on a fixed cadence; transient failures are covered by the next tick.
+function startHistoryPoll(intervalMs: number, refresh: () => Promise<void>): number {
+  return window.setInterval(() => {
+    void refresh().catch(() => {
+      // Keep polling while mounted; transient failures are covered by the next tick.
+    });
+  }, intervalMs);
+}
+
+type HubLiveHandlers = {
+  onActivity: () => void;
+  onTypingChange: (typing: HubTypingUser[]) => void;
+};
+
+// Open the Stream live layer when the join response is configured; otherwise there is no live layer.
+async function connectLiveIfConfigured(
+  join: GatedJoinResponse,
+  handlers: HubLiveHandlers,
+): Promise<HubLiveConnection | null> {
+  if (!join.configured) return null;
+  return connectHubLive(
+    {
+      streamApiKey: join.streamApiKey,
+      streamToken: join.streamToken,
+      streamUserId: join.streamUserId,
+      streamChannelId: join.streamChannelId,
+      streamChannelType: join.streamChannelType,
+    },
+    handlers,
+  );
+}
+
 export function useGatedChat(currentUser: ShellCurrentUser) {
   const [messages, setMessages] = useState<GatedChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -120,67 +163,49 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
     setError(null);
     setMessages([]);
 
+    const poll = () => refreshHistoryRef.current();
+
     async function bootstrap() {
       try {
         await refreshHistory();
       } catch (loadError) {
         if (active) {
-          setError(loadError instanceof Error ? loadError.message : 'Unable to load the channel.');
+          setError(errorMessage(loadError, 'Unable to load the channel.'));
         }
       } finally {
         if (active) setIsLoading(false);
       }
 
-      const startPoll = (intervalMs: number) => {
-        pollId = window.setInterval(() => {
-          void refreshHistoryRef.current().catch(() => {
-            // Keep polling while mounted; transient failures are covered by the next tick.
-          });
-        }, intervalMs);
-      };
-
       try {
         const join = await requestJson<GatedJoinResponse>('/api/contributor-access/channel/join', { method: 'POST' });
         if (!active) return;
 
-        let live: HubLiveConnection | null = null;
-        if (join.configured) {
-          live = await connectHubLive(
-            {
-              streamApiKey: join.streamApiKey,
-              streamToken: join.streamToken,
-              streamUserId: join.streamUserId,
-              streamChannelId: join.streamChannelId,
-              streamChannelType: join.streamChannelType,
-            },
-            {
-              onActivity: () => {
-                void refreshHistoryRef.current().catch(() => undefined);
-              },
-              onTypingChange: (typing) => {
-                if (active) setTypingUsers(typing);
-              },
-            },
-          );
-        }
+        const live = await connectLiveIfConfigured(join, {
+          onActivity: () => {
+            void refreshHistoryRef.current().catch(() => undefined);
+          },
+          onTypingChange: (typing) => {
+            if (active) setTypingUsers(typing);
+          },
+        });
 
         if (!active) {
-          if (live) void live.disconnect();
+          disconnectLive(live);
           return;
         }
 
         if (live) {
           liveConnectionRef.current = live;
           setIsLive(true);
-          startPoll(POLL_INTERVAL_LIVE_MS);
+          pollId = startHistoryPoll(POLL_INTERVAL_LIVE_MS, poll);
         } else {
           setTypingUsers([]);
-          startPoll(POLL_INTERVAL_FALLBACK_MS);
+          pollId = startHistoryPoll(POLL_INTERVAL_FALLBACK_MS, poll);
         }
       } catch {
         if (!active) return;
         // The live layer is best-effort — polling keeps the channel fully functional.
-        startPoll(POLL_INTERVAL_FALLBACK_MS);
+        pollId = startHistoryPoll(POLL_INTERVAL_FALLBACK_MS, poll);
       }
     }
 
@@ -193,9 +218,7 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
       }
       const live = liveConnectionRef.current;
       liveConnectionRef.current = null;
-      if (live) {
-        void live.disconnect();
-      }
+      disconnectLive(live);
     };
   }, [currentUser.userId, refreshHistory]);
 
@@ -226,7 +249,7 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
       if (activeReply) {
         setReplyTarget(activeReply);
       }
-      setError(sendError instanceof Error ? sendError.message : 'Unable to send your message right now.');
+      setError(errorMessage(sendError, 'Unable to send your message right now.'));
     } finally {
       setIsSending(false);
     }
@@ -258,7 +281,7 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
           [...previous, ...removed].sort((a, b) => a.sentAtIso.localeCompare(b.sentAtIso)),
         );
       }
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete the message right now.');
+      setError(errorMessage(deleteError, 'Unable to delete the message right now.'));
     }
   }, [refreshHistory]);
 
@@ -302,7 +325,7 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
       setMessages((previous) =>
         previous.map((message) => (message.id === postId ? applyReactionToggle(message, emoji) : message)),
       );
-      setError(reactError instanceof Error ? reactError.message : 'Unable to update your reaction right now.');
+      setError(errorMessage(reactError, 'Unable to update your reaction right now.'));
     }
   }, []);
 

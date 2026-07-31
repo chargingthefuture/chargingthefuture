@@ -40,6 +40,12 @@ function formatReplyTime(iso: string): string {
   return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+// The reply-toggle label: a count once there are replies, otherwise the plain "Reply" call to action.
+function formatReplyLabel(count: number): string {
+  if (count <= 0) return 'Reply';
+  return `${count} ${count === 1 ? 'reply' : 'replies'}`;
+}
+
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { cache: 'no-store', ...init });
   const payload = (await response.json().catch(() => null)) as T | { message?: string } | null;
@@ -48,6 +54,147 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
     throw new Error(typeof message === 'string' ? message : 'Request failed.');
   }
   return payload as T;
+}
+
+// The clickable "Open <Plugin>" chips below the body. Nothing to show when the announcement links to
+// no plugins.
+function AnnouncementLinkedPlugins({ linkedPlugins }: { linkedPlugins?: Array<{ slug: string; name: string }> }) {
+  if (!linkedPlugins || linkedPlugins.length === 0) return null;
+  return (
+    <div className={styles.announcementChipRow}>
+      {linkedPlugins.map((plugin) => (
+        <Link key={plugin.slug} href={`/apps/${plugin.slug}`} className={styles.announcementChip}>
+          <ArrowUpRight size={13} color="currentColor" /> Open {plugin.name}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+// A single reply within the thread.
+function AnnouncementReplyItem({ reply }: { reply: HubAnnouncementReply }) {
+  return (
+    <div className={styles.announcementReply}>
+      <div className={styles.announcementReplyMeta}>
+        <span className={styles.announcementReplyAuthor}>{reply.isMine ? 'You' : reply.author}</span>
+        <span className={styles.announcementReplyTime}>{formatReplyTime(reply.sentAtIso)}</span>
+      </div>
+      <p className={styles.announcementReplyBody}>{reply.body}</p>
+    </div>
+  );
+}
+
+type AnnouncementThreadProps = {
+  loading: boolean;
+  loaded: boolean;
+  replies: HubAnnouncementReply[];
+  error: string | null;
+  replyInput: string;
+  sending: boolean;
+  onReplyInputChange: (value: string) => void;
+  onSend: () => void;
+};
+
+// The expanded reply thread: loading/empty notes, the list of replies, an error line, and the
+// composer. Loaded on demand by the parent when the thread is first opened.
+function AnnouncementThread({
+  loading,
+  loaded,
+  replies,
+  error,
+  replyInput,
+  sending,
+  onReplyInputChange,
+  onSend,
+}: AnnouncementThreadProps) {
+  const showEmpty = !loading && loaded && replies.length === 0;
+  const canSend = replyInput.trim().length > 0;
+  const sendClassName = canSend
+    ? `${styles.announcementReplySend} ${styles.announcementReplySendActive}`
+    : styles.announcementReplySend;
+  return (
+    <div className={styles.announcementThread}>
+      {loading ? <p className={styles.announcementThreadNote}>Loading replies…</p> : null}
+      {showEmpty ? (
+        <p className={styles.announcementThreadNote}>No replies yet. Be the first to reply.</p>
+      ) : null}
+      {replies.map((reply) => (
+        <AnnouncementReplyItem key={reply.id} reply={reply} />
+      ))}
+
+      {error ? <p className={styles.announcementThreadError} role="status">{error}</p> : null}
+
+      <div className={styles.announcementReplyComposer}>
+        <textarea
+          className={styles.announcementReplyInput}
+          placeholder="Write a reply…"
+          rows={1}
+          value={replyInput}
+          maxLength={FEED_MAX_COMMUNITY_REPLY_LENGTH}
+          onChange={(event) => onReplyInputChange(event.target.value)}
+          // Enter inserts a line break, it does not send — matches the main composer (owner
+          // request 2026-07-20). Sending is only via the send button.
+        />
+        <button
+          type="button"
+          className={sendClassName}
+          onClick={onSend}
+          disabled={sending || !canSend}
+          aria-label="Post reply"
+        >
+          <Send size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+type AnnouncementEngagementProps = {
+  announcementId: string;
+  reactions?: ChatReactionSummary[];
+  onToggleReaction?: (announcementId: string, emoji: string) => void;
+  threadOpen: boolean;
+  localCount: number;
+  onToggleThread: () => void;
+  thread: AnnouncementThreadProps;
+};
+
+// The reaction row plus the reply toggle, and the thread itself when open.
+function AnnouncementEngagement({
+  announcementId,
+  reactions,
+  onToggleReaction,
+  threadOpen,
+  localCount,
+  onToggleThread,
+  thread,
+}: AnnouncementEngagementProps) {
+  const replyLabel = formatReplyLabel(localCount);
+  const toggleClassName = threadOpen
+    ? `${styles.announcementReplyToggle} ${styles.announcementReplyToggleActive}`
+    : styles.announcementReplyToggle;
+  return (
+    <div className={styles.announcementEngagement}>
+      <div className={styles.announcementActions}>
+        <ChatReactionRow
+          postId={announcementId}
+          reactions={reactions}
+          onToggle={(id, emoji) => onToggleReaction?.(id, emoji)}
+        />
+        <button
+          type="button"
+          className={toggleClassName}
+          onClick={onToggleThread}
+          aria-expanded={threadOpen}
+          aria-label={threadOpen ? 'Hide replies' : `Show replies (${localCount})`}
+        >
+          <MessageCircle size={13} /> {replyLabel}
+        </button>
+      </div>
+
+      {threadOpen ? <AnnouncementThread {...thread} /> : null}
+    </div>
+  );
 }
 
 // Official Survivor Hub announcement, rendered as a distinct card (emerald treatment, shield
@@ -129,8 +276,6 @@ export function AnnouncementCard({
     }
   }, [announcementId, replyInput, sending]);
 
-  const replyLabel = localCount > 0 ? `${localCount} ${localCount === 1 ? 'reply' : 'replies'}` : 'Reply';
-
   return (
     <article
       className={styles.announcementCard}
@@ -151,77 +296,27 @@ export function AnnouncementCard({
       </div>
       {title ? <p className={styles.announcementTitle}>{title}</p> : null}
       <p className={styles.announcementBody}>{body}</p>
-      {linkedPlugins && linkedPlugins.length > 0 ? (
-        <div className={styles.announcementChipRow}>
-          {linkedPlugins.map((plugin) => (
-            <Link key={plugin.slug} href={`/apps/${plugin.slug}`} className={styles.announcementChip}>
-              <ArrowUpRight size={13} color="currentColor" /> Open {plugin.name}
-            </Link>
-          ))}
-        </div>
-      ) : null}
+      <AnnouncementLinkedPlugins linkedPlugins={linkedPlugins} />
 
       {announcementId ? (
-        <div className={styles.announcementEngagement}>
-          <div className={styles.announcementActions}>
-            <ChatReactionRow
-              postId={announcementId}
-              reactions={reactions}
-              onToggle={(id, emoji) => onToggleReaction?.(id, emoji)}
-            />
-            <button
-              type="button"
-              className={threadOpen ? `${styles.announcementReplyToggle} ${styles.announcementReplyToggleActive}` : styles.announcementReplyToggle}
-              onClick={toggleThread}
-              aria-expanded={threadOpen}
-              aria-label={threadOpen ? 'Hide replies' : `Show replies (${localCount})`}
-            >
-              <MessageCircle size={13} /> {replyLabel}
-            </button>
-          </div>
-
-          {threadOpen ? (
-            <div className={styles.announcementThread}>
-              {loading ? <p className={styles.announcementThreadNote}>Loading replies…</p> : null}
-              {!loading && loaded && replies.length === 0 ? (
-                <p className={styles.announcementThreadNote}>No replies yet. Be the first to reply.</p>
-              ) : null}
-              {replies.map((reply) => (
-                <div key={reply.id} className={styles.announcementReply}>
-                  <div className={styles.announcementReplyMeta}>
-                    <span className={styles.announcementReplyAuthor}>{reply.isMine ? 'You' : reply.author}</span>
-                    <span className={styles.announcementReplyTime}>{formatReplyTime(reply.sentAtIso)}</span>
-                  </div>
-                  <p className={styles.announcementReplyBody}>{reply.body}</p>
-                </div>
-              ))}
-
-              {error ? <p className={styles.announcementThreadError} role="status">{error}</p> : null}
-
-              <div className={styles.announcementReplyComposer}>
-                <textarea
-                  className={styles.announcementReplyInput}
-                  placeholder="Write a reply…"
-                  rows={1}
-                  value={replyInput}
-                  maxLength={FEED_MAX_COMMUNITY_REPLY_LENGTH}
-                  onChange={(event) => setReplyInput(event.target.value)}
-                  // Enter inserts a line break, it does not send — matches the main composer (owner
-                  // request 2026-07-20). Sending is only via the send button.
-                />
-                <button
-                  type="button"
-                  className={replyInput.trim() ? `${styles.announcementReplySend} ${styles.announcementReplySendActive}` : styles.announcementReplySend}
-                  onClick={() => void sendReply()}
-                  disabled={sending || !replyInput.trim()}
-                  aria-label="Post reply"
-                >
-                  <Send size={14} />
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </div>
+        <AnnouncementEngagement
+          announcementId={announcementId}
+          reactions={reactions}
+          onToggleReaction={onToggleReaction}
+          threadOpen={threadOpen}
+          localCount={localCount}
+          onToggleThread={toggleThread}
+          thread={{
+            loading,
+            loaded,
+            replies,
+            error,
+            replyInput,
+            sending,
+            onReplyInputChange: setReplyInput,
+            onSend: () => void sendReply(),
+          }}
+        />
       ) : null}
     </article>
   );
