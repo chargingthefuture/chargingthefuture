@@ -36,7 +36,7 @@ const createCohortSchema = z.object({
   requiredCredits: z.number().min(0),
   materialsCost: z.number().min(0).optional(),
   deviceSupport: z.boolean().optional(),
-  status: z.enum(['draft', 'open', 'active', 'completed', 'cancelled']).optional(),
+  status: z.enum(['draft', 'open', 'active', 'completed', 'canceled']).optional(),
   allowNoDeposit: z.boolean().optional(),
   trainerSplitPercent: z.number().min(0).max(100).optional(),
   completionBonusCredits: z.number().min(0).optional(),

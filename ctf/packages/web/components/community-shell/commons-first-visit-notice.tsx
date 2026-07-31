@@ -28,14 +28,14 @@ export function CommonsFirstVisitNotice() {
   const [dismissing, setDismissing] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     void (async () => {
       try {
         const res = await fetch('/api/hub/first-visit-notice', { cache: 'no-store' });
         const data = (await res.json().catch(() => null)) as
           | { ok?: boolean; show?: boolean; title?: string; body?: string }
           | null;
-        if (!cancelled && res.ok && data?.ok && data.show && data.title && data.body) {
+        if (!canceled && res.ok && data?.ok && data.show && data.title && data.body) {
           setNotice({ title: data.title, body: data.body });
         }
       } catch {
@@ -43,7 +43,7 @@ export function CommonsFirstVisitNotice() {
       }
     })();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
 

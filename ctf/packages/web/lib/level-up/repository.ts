@@ -129,7 +129,7 @@ type CohortRow = {
   required_credits: string;
   materials_cost: string;
   device_support: boolean;
-  status: 'draft' | 'open' | 'active' | 'completed' | 'cancelled';
+  status: 'draft' | 'open' | 'active' | 'completed' | 'canceled';
   allow_no_deposit: boolean;
   trainer_split_percent: string;
   completion_bonus_credits: string;
@@ -180,7 +180,7 @@ type CreateCohortInput = {
   requiredCredits: number;
   materialsCost?: number;
   deviceSupport?: boolean;
-  status?: 'draft' | 'open' | 'active' | 'completed' | 'cancelled';
+  status?: 'draft' | 'open' | 'active' | 'completed' | 'canceled';
   allowNoDeposit?: boolean;
   trainerSplitPercent?: number;
   completionBonusCredits?: number;

@@ -49,7 +49,7 @@ export async function createTransfer(input: CreateTransferInput) {
       sender_user_id: string;
       recipient_user_id: string;
       amount: string;
-      status: 'pending' | 'completed' | 'cancelled' | 'disputed';
+      status: 'pending' | 'completed' | 'canceled' | 'disputed';
     }>(
       `INSERT INTO service_credits_transfers
         (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, origin_plugin, reason_code, completed_at)
@@ -73,7 +73,7 @@ export async function createTransfer(input: CreateTransferInput) {
         sender_user_id: string;
         recipient_user_id: string;
         amount: string;
-        status: 'pending' | 'completed' | 'cancelled' | 'disputed';
+        status: 'pending' | 'completed' | 'canceled' | 'disputed';
       }>(
         `SELECT id::text, sender_user_id, recipient_user_id, amount::text, status
          FROM service_credits_transfers

@@ -52,7 +52,7 @@
 3. Confirm no "Active · 7d" tile appears anywhere on the page (it was removed 2026-07-11).
 
 **Expected:**
-- One hero tile labelled "Members" shows a whole number greater than zero.
+- One hero tile labeled "Members" shows a whole number greater than zero.
 - The weekly-active-members tile is absent.
 - No mock or placeholder numbers (e.g. "1,234,567") appear — the count matches what the Directory shows for total active members.
 

@@ -8,8 +8,8 @@ slice — if it is empty, take whatever is open.
 
 ## 1. Find the work
 
-List open issues labelled `code-review:actionable`, then any other open issue labelled
-`code-review` that is not already labelled `code-review:built`. Skip anything that already has an
+List open issues labeled `code-review:actionable`, then any other open issue labeled
+`code-review` that is not already labeled `code-review:built`. Skip anything that already has an
 open PR against it (the auto-PR ones carry the `code-review:auto-pr` label).
 
 If nothing is open and actionable, say exactly that and stop. Do not invent work, and do not open a

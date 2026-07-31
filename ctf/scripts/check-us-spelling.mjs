@@ -37,6 +37,12 @@ const EXEMPT_FILES = new Set([
   // package under the @img scope is named with the British spelling of "color" — and a dependency's
   // name is not ours to respell.
   'pnpm-lock.yaml',
+  // Compares against status values the Expo build API returns. A third-party API's enum values are
+  // facts about that API, not our prose; the script defends against both spellings on purpose.
+  'ctf/scripts/check-expo-build-quota.mjs',
+  // A dated point-in-time capture of the production schema, kept as a record. Rewriting a snapshot
+  // would falsify what production actually looked like on that date.
+  'ctf/schema-prod4.6.2026.sql',
 ]);
 
 const SKIP_DIRS = new Set([
@@ -111,8 +117,28 @@ for (const repoPath of trackedFiles()) {
     continue;
   }
 
+  // A `spelling:disable` / `spelling:enable` pair marks a region the gate skips. Two shapes of
+  // code legitimately need it: a data migration that must name the old British value in order to
+  // rewrite it (see the US-spelling data migration block in ctf/schema.sql), and a comparison
+  // against a third-party API's own enum values (RunPod's terminal statuses in
+  // lib/chatbot/ollama.ts), where changing the spelling breaks the comparison. The disable line
+  // must say which it is. A file
+  // that disables and never re-enables is itself a finding, so a region cannot silently swallow
+  // the rest of a file.
+  let disabled = false;
+  let disabledAtLine = 0;
   const lines = contents.split('\n');
   for (const [index, line] of lines.entries()) {
+    if (line.includes('spelling:disable')) {
+      disabled = true;
+      disabledAtLine = index + 1;
+      continue;
+    }
+    if (line.includes('spelling:enable')) {
+      disabled = false;
+      continue;
+    }
+    if (disabled) continue;
     for (const { rule, pattern } of PATTERNS) {
       pattern.lastIndex = 0;
       const match = pattern.exec(line);
@@ -125,6 +151,15 @@ for (const repoPath of trackedFiles()) {
         text: line.trim().slice(0, 140),
       });
     }
+  }
+  if (disabled) {
+    findings.push({
+      file: repoPath,
+      line: disabledAtLine,
+      found: 'spelling:disable',
+      expected: 'a matching spelling:enable before end of file',
+      text: 'region never re-enabled — the rest of the file is unchecked',
+    });
   }
 }
 

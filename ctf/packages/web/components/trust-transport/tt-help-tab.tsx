@@ -223,7 +223,7 @@ function TripActionArea({ trip, busyId, onAdvance, onConfirmed }: { trip: Provid
 function ProofSection({ trip, proofOpen, proofDone, onOpen, onProofDone }: { trip: ProviderTrip; proofOpen: boolean; proofDone: boolean; onOpen: () => void; onProofDone: () => void }) {
   const { theme } = useTheme();
   const t = getTrustTransportTokens(theme);
-  const terminal = ["completed", "cancelled", "disputed", "emergency_frozen"].includes(trip.status ?? "");
+  const terminal = ["completed", "canceled", "disputed", "emergency_frozen"].includes(trip.status ?? "");
   if (terminal) return null;
   if (proofDone) {
     return <div style={{ marginTop: 10, fontSize: 12, color: t.ACCENT, fontWeight: 600 }}>Proof saved.</div>;

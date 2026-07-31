@@ -71,7 +71,7 @@ Features:
 2. My fulfillments listing: `GET /api/socket-relay/my-fulfillments`.
 3. Fulfillment detail: `GET /api/socket-relay/fulfillments/:id`.
 4. Close fulfillment: `POST /api/socket-relay/fulfillments/:id/close`.
-5. Valid close statuses: `completed_success`, `completed_failure`, `cancelled`.
+5. Valid close statuses: `completed_success`, `completed_failure`, `canceled`.
 6. Request status is updated to `closed` after fulfillment closure flow.
 
 ### 1.4 Fulfillment Chat

@@ -492,7 +492,7 @@ export function CommunityShell(props: CommunityShellProps) {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
 
     async function loadPlugins() {
       try {
@@ -500,12 +500,12 @@ export function CommunityShell(props: CommunityShellProps) {
         if (!res.ok) throw new Error('Unable to load plugin registry.');
         const payload = (await res.json()) as PluginsApiPayload;
         if (!Array.isArray(payload.plugins)) throw new Error('Invalid plugin registry payload.');
-        if (!cancelled) {
+        if (!canceled) {
           setPlugins(payload.plugins);
           setLoadError(null);
         }
       } catch {
-        if (!cancelled) {
+        if (!canceled) {
           setLoadError('Live plugin data is temporarily unavailable. Showing last known registry snapshot.');
         }
       }
@@ -513,14 +513,14 @@ export function CommunityShell(props: CommunityShellProps) {
 
     void loadPlugins();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
 
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    let cancelled = false;
+    let canceled = false;
 
     async function loadHubData() {
       try {
@@ -528,7 +528,7 @@ export function CommunityShell(props: CommunityShellProps) {
 
         if (channelsRes.ok) {
           const channelsPayload = (await channelsRes.json()) as { channels: HubChannelInfo[] };
-          if (!cancelled) {
+          if (!canceled) {
             const loadedChannels = channelsPayload.channels ?? [];
             setChannels(loadedChannels);
             // Default the open channel to the first one (general) so the sidebar
@@ -543,7 +543,7 @@ export function CommunityShell(props: CommunityShellProps) {
 
     void loadHubData();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [isAuthenticated]);
 

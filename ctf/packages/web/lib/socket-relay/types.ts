@@ -13,7 +13,7 @@ export type SocketRelayProfileInput = {
   presenceOptIn: boolean;
 };
 
-export type SocketRelayRequestStatus = 'open' | 'claimed' | 'closed' | 'cancelled';
+export type SocketRelayRequestStatus = 'open' | 'claimed' | 'closed' | 'canceled';
 
 export type SocketRelayRequest = {
   id: string;
@@ -59,7 +59,7 @@ export type SocketRelayRequestInput = {
   priceAmount: number | null;
 };
 
-export type SocketRelayFulfillmentStatus = 'active' | 'closed' | 'cancelled';
+export type SocketRelayFulfillmentStatus = 'active' | 'closed' | 'canceled';
 
 // How the requester (the person who posted the request) resolves a claimed request. Only the
 // requester (or an admin) may resolve — a helper can chat but cannot close someone else's request.

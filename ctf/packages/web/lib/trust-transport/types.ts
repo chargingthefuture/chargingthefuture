@@ -7,7 +7,7 @@ export type TrustTransportRequestStatus =
   | 'accepted'
   | 'in_progress'
   | 'completed'
-  | 'cancelled'
+  | 'canceled'
   | 'disputed'
   | 'emergency_frozen';
 
@@ -27,7 +27,7 @@ export type TrustTransportTripStatus =
   | 'picked_up'
   | 'delivered'
   | 'completed'
-  | 'cancelled'
+  | 'canceled'
   | 'disputed'
   | 'emergency_frozen';
 
@@ -129,7 +129,7 @@ export type TrustTransportTrip = {
   mode: TrustTransportMode;
   status: TrustTransportTripStatus;
   streamChannelId: string | null;
-  cancelledReason: string | null;
+  canceledReason: string | null;
   completedAtIso: string | null;
   // Mutual completion confirmation (owner decision, 2026-07-08): once a trip is "delivered", neither
   // party alone can complete it — completion (and settlement) fires only once both have confirmed.

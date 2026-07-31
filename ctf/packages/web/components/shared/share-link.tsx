@@ -8,7 +8,7 @@ import { Share2, Copy, Check, ExternalLink } from "lucide-react";
 // copies it with clear feedback. Every "share"/"copy link" affordance in the app must use this — never a
 // bare copy button or a raw window.open. See .claude/rules/130-link-sharing-and-copy-url-rules.mdc.
 //
-// Accessibility: the trigger has aria-haspopup/aria-expanded; the popup is a labelled dialog; opening it
+// Accessibility: the trigger has aria-haspopup/aria-expanded; the popup is a labeled dialog; opening it
 // moves focus to the (selectable) URL field; Escape and an outside click close it and return focus to the
 // trigger; copy feedback is announced via aria-live.
 

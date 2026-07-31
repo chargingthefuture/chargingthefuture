@@ -15,7 +15,7 @@ const VALID_NEXT_STATUSES: TrustTransportTripStatus[] = [
   'picked_up',
   'delivered',
   'completed',
-  'cancelled',
+  'canceled',
   'disputed',
   'emergency_frozen',
 ];

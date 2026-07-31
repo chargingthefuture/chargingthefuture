@@ -132,7 +132,7 @@ Features:
 3. Host and seeker see role-specific views of their relevant matches.
 4. Host can accept/reject matches and provide host response.
 5. Seeker can cancel pending/active match based on route rules.
-6. Match status lifecycle includes: `pending`, `accepted`, `rejected`, `cancelled`, `completed`.
+6. Match status lifecycle includes: `pending`, `accepted`, `rejected`, `canceled`, `completed`.
 7. Server checks duplicate active/pending request combinations.
 
 ### 1.6 Announcements (User View)

@@ -47,7 +47,7 @@ export function ChymeBackChannelPanel({
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     const videoClient = new StreamVideoClient({
       apiKey: credentials.streamApiKey,
       user: { id: credentials.streamUserId, name: chymeHandle(currentUser.username, currentUser.userId) },
@@ -63,18 +63,18 @@ export function ChymeBackChannelPanel({
         await activeCall.join({ create: true });
         // A 1:1 call is a conversation — unlike the room, join UN-muted so both people can talk.
         try { await activeCall.microphone.enable(); } catch { /* mic unavailable */ }
-        if (cancelled) return;
+        if (canceled) return;
         setClient(videoClient);
         setCall(activeCall);
         setStatus('joined');
       } catch (error) {
-        if (cancelled) return;
+        if (canceled) return;
         reportError(error, { area: 'chyme', op: 'back_channel_join_stream', extra: { callId: credentials.streamCallId } });
         setStatus('error');
       }
     })();
     return () => {
-      cancelled = true;
+      canceled = true;
       void (async () => {
         try { await activeCall.leave(); } catch { /* already left */ }
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }

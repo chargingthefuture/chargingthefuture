@@ -114,7 +114,7 @@ Notes on sources:
   backfill uses `skill_id` as `ref_id`. The deep link is the plugin home; the label is a fixed
   "Provider offering".
 - TrustTransport `status` is a free-text column with no schema-level enum, so active filtering is done
-  defensively by excluding terminal states (cancelled / canceled / completed / closed / withdrawn /
+  defensively by excluding terminal states (canceled / completed / closed / withdrawn /
   declined / expired / rejected) rather than guessing the exact active set.
 - A missing source table in a given environment was logged and skipped by the backfill; the other
   sources still ran.

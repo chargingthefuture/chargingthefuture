@@ -232,7 +232,7 @@ const ChannelSearchBar: React.FC = () => {
 };
 
 // A message a member asked to be reminded about, plus the timer that fires the reminder. The timer id
-// is kept so the reminder can be cancelled on unmount and never fires into a torn-down panel.
+// is kept so the reminder can be canceled on unmount and never fires into a torn-down panel.
 interface ActiveReminder {
   id: string;
   label: string;

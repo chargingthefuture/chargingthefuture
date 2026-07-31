@@ -20,14 +20,14 @@ type TaxonomyCounts = { skills: number; jobTitles: number; sectors: number };
 function useTaxonomySummary(): TaxonomyCounts | null {
   const [counts, setCounts] = useState<TaxonomyCounts | null>(null);
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     (async () => {
       try {
         const res = await fetch('/api/skills-taxonomy/summary');
         if (!res.ok) return;
         const data = (await res.json()) as Partial<TaxonomyCounts>;
         if (
-          !cancelled
+          !canceled
           && typeof data.skills === 'number'
           && typeof data.jobTitles === 'number'
           && typeof data.sectors === 'number'
@@ -39,7 +39,7 @@ function useTaxonomySummary(): TaxonomyCounts | null {
       }
     })();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
   return counts;

@@ -3,7 +3,7 @@ export const LIGHTHOUSE_DEFAULT_PAGE_SIZE = 20;
 export const LIGHTHOUSE_MAX_PAGE_SIZE = 100;
 
 export const LIGHTHOUSE_PROFILE_TYPES = ['seeker', 'host'] as const;
-export const LIGHTHOUSE_MATCH_STATUSES = ['pending', 'accepted', 'rejected', 'cancelled', 'completed'] as const;
+export const LIGHTHOUSE_MATCH_STATUSES = ['pending', 'accepted', 'rejected', 'canceled', 'completed'] as const;
 
 export const LIGHTHOUSE_ERROR_CODE = {
   invalidPayload: 'LIGHTHOUSE_INVALID_PAYLOAD',

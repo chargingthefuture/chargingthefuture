@@ -16,6 +16,8 @@
 
 ---
 
+> Status spelling: since 2026-07-31 every stored status reads `canceled` (US spelling); if a step shows the British form anywhere, that is a bug.
+
 ## How to run this
 
 - Run `pnpm --dir ctf seed:socket-relay` before starting each session. The seed puts deterministic request and fulfillment rows in the DB so cases can reference predictable data.
@@ -242,7 +244,7 @@ web ☐
 **Expected:**
 - A row appears for each **active** fulfillment the member is participating in (as requester or helper).
 - A row appears for each of the member's own **open, non-expired** requests that have no active fulfillment yet — displayed as "waiting for a helper" placeholder.
-- Cancelled or closed fulfillments do not appear.
+- Canceled or closed fulfillments do not appear.
 - Claimed requests are represented by their active fulfillment row, not an extra pending row.
 - On Android, each pending-request card shows a "No helper yet" note (not a chat), explaining the request is still open on the feed.
 - Tapping an active-fulfillment row opens the chat thread (web); on Android, each active-fulfillment card shows an "Open chat" button that opens the chat (see SR-10a).
@@ -344,7 +346,7 @@ web ☐
 2. Choose "Mark Unsuccessful — Reopen".
 
 **Expected:**
-- The fulfillment is cancelled.
+- The fulfillment is canceled.
 - The request returns to `open` status and reappears in the feed for other members to claim.
 - The 28-day expiry clock is reset, so the re-opened request is claimable again (not immediately expired), even if it had aged close to expiry before the claim.
 - The Direct Line row for this fulfillment disappears.
@@ -598,7 +600,7 @@ The following cases must produce the same observable result on both surfaces. Ru
 | SR-6 | Expired request: owner sees Re-post; other member does not see card |
 | SR-7 | Claim succeeds; fulfillment visible in Direct Line |
 | SR-8 | No claim button on own request |
-| SR-9 | Direct Line shows pending requests + active fulfillments; cancelled/closed drop out |
+| SR-9 | Direct Line shows pending requests + active fulfillments; canceled/closed drop out |
 | SR-A1 | Four stat cards visible; values match between surfaces |
 | SR-A3 | Confirm dialog appears before delete executes |
 

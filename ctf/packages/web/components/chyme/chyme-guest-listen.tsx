@@ -43,7 +43,7 @@ export function ChymeGuestListen({
       return;
     }
 
-    let cancelled = false;
+    let canceled = false;
     const videoClient = new StreamVideoClient({
       apiKey: credentials.streamApiKey,
       user: { id: credentials.streamUserId, name: 'Guest listener' },
@@ -59,19 +59,19 @@ export function ChymeGuestListen({
         try { await activeCall.microphone.disable(); } catch { /* already muted */ }
         // create: false — a guest only ever joins an existing live call, never starts one.
         await activeCall.join({ create: false });
-        if (cancelled) return;
+        if (canceled) return;
         setClient(videoClient);
         setCall(activeCall);
         setStatus('joined');
       } catch (error) {
-        if (cancelled) return;
+        if (canceled) return;
         reportError(error, { area: 'chyme', op: 'guest_listen_join', extra: { streamUserId: credentials.streamUserId } });
         setStatus('error');
       }
     })();
 
     return () => {
-      cancelled = true;
+      canceled = true;
       void (async () => {
         try { await activeCall.leave(); } catch { /* already left */ }
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }

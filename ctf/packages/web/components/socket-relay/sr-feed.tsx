@@ -50,7 +50,7 @@ function CardAction({
   // closed nor claimable, so it must not read "✓ closed" (that was the bug: a claimed request looked
   // closed in the feed while its Direct Line was still live).
   if (status === "claimed") return <div style={{ fontSize: 12, color: "#F59E0B", fontWeight: 600 }}>Being helped</div>;
-  if (status === "cancelled") return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600 }}>Cancelled</div>;
+  if (status === "canceled") return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600 }}>Canceled</div>;
   if (!open) return <div style={{ fontSize: 12, color: "#22C55E", fontWeight: 600 }}>✓ closed</div>;
   if (isOwn) {
     return (

@@ -198,16 +198,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Restore any previously stored session on launch.
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     (async () => {
       const stored = await loadStoredSession();
-      if (!cancelled) {
+      if (!canceled) {
         setSession(stored);
         setIsLoading(false);
       }
     })();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
 

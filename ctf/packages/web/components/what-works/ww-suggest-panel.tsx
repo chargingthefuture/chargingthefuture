@@ -118,7 +118,7 @@ function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setPr
               {isFirst ? 'The list is empty — add what worked first.' : 'Suggest a tool that worked.'}
             </div>
             <div style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.7 }}>
-              Pick the problem your product solves, then add a specific item that worked for you — with a direct purchase link and a short note on why. Example: <span style={{ color: '#C4CAD3' }}>“Noise &amp; Verbal Harassment”</span> → a pair of noise-cancelling headphones.
+              Pick the problem your product solves, then add a specific item that worked for you — with a direct purchase link and a short note on why. Example: <span style={{ color: '#C4CAD3' }}>“Noise &amp; Verbal Harassment”</span> → a pair of noise-canceling headphones.
             </div>
           </div>
 

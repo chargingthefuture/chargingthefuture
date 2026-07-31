@@ -88,7 +88,7 @@ Two more tables are not in the service-scoped deletion registry, for two differe
 
 ### Transaction-scoped messaging retention
 
-Per platform rule 100 ("Messaging Scope and Lifecycle"), the per-trip 1:1 chat is bound to a single trip/order between exactly the two parties (rider and driver) and has no existence outside it. When the trip reaches a terminal state (completed, cancelled, disputed) the chat closes: no new messages may be sent, both parties retain read-only access for a limited window, and chat records are retained server-side for moderation and abuse evidence. On service-scoped or full-account deletion, chat bodies are hard-deleted or pseudonymized per the scopes below, while minimal moderation/abuse-evidence and Rule 114 audit metadata may be retained where policy or law requires (consistent with the retain-for-compliance scope).
+Per platform rule 100 ("Messaging Scope and Lifecycle"), the per-trip 1:1 chat is bound to a single trip/order between exactly the two parties (rider and driver) and has no existence outside it. When the trip reaches a terminal state (completed, canceled, disputed) the chat closes: no new messages may be sent, both parties retain read-only access for a limited window, and chat records are retained server-side for moderation and abuse evidence. On service-scoped or full-account deletion, chat bodies are hard-deleted or pseudonymized per the scopes below, while minimal moderation/abuse-evidence and Rule 114 audit metadata may be retained where policy or law requires (consistent with the retain-for-compliance scope).
 
 ## 5) Service-Scoped Deletion Contract
 

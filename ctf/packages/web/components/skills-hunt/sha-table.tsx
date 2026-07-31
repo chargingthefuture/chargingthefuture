@@ -31,7 +31,7 @@ function SkillsCell({ submission }: { submission: SkillsHuntSubmission }) {
   );
 }
 
-// One labelled fact (Quora / URL check / Pts / Reward) shown in the card's meta strip.
+// One labeled fact (Quora / URL check / Pts / Reward) shown in the card's meta strip.
 function MetaItem({ label, children }: { label: string; children: React.ReactNode }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
@@ -85,7 +85,7 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag, onRemove }
 }
 
 // One submission as a self-contained card: a header (select + submitter + name), the skills as
-// wrapping chips, a labelled meta strip, then the action rows. No horizontal scroll, no tiny
+// wrapping chips, a labeled meta strip, then the action rows. No horizontal scroll, no tiny
 // adjacent buttons — the whole thing stacks inside the app's single mobile-first column.
 function SubmissionCard(props: RowProps) {
   const { theme } = useTheme();

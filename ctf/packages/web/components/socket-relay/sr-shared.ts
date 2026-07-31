@@ -24,7 +24,7 @@ export function getSocketRelayTokens(theme: ThemeName): SocketRelayTokens {
 
 export type Tab = "feed" | "post" | "chat";
 
-export type SrRequestStatus = "open" | "claimed" | "closed" | "cancelled";
+export type SrRequestStatus = "open" | "claimed" | "closed" | "canceled";
 
 export type SrRequest = {
   id: string;
@@ -62,7 +62,7 @@ export type SrFulfillment = {
   // /api/socket-relay/my-fulfillments; the chat itself renders names from Stream, so these are optional.
   requesterUsername?: string | null;
   fulfillerUsername?: string | null;
-  status: "active" | "closed" | "cancelled";
+  status: "active" | "closed" | "canceled";
   closeReason: string | null;
   createdAtIso: string;
   updatedAtIso: string;
@@ -76,7 +76,7 @@ export type SrFulfillmentsResponse = { ok: boolean; items: SrFulfillment[] };
 
 // One row in the Direct Line list. Either a live conversation (an active fulfillment you can chat on)
 // or a pending request you posted that no helper has claimed yet (a placeholder — no chat until it is
-// claimed). Modelled as a discriminated union so the list can render both and only the fulfillment
+// claimed). Modeled as a discriminated union so the list can render both and only the fulfillment
 // kind opens a chat.
 export type SrDirectLine =
   | { kind: "fulfillment"; key: string; fulfillment: SrFulfillment }
@@ -85,7 +85,7 @@ export type SrDirectLine =
 // Build the unified Direct Line list: one row per request you are currently waiting on or talking
 // through. Active fulfillments (you posted it and a helper claimed it, or you offered to help) come
 // first as live conversations; then your own still-open, non-expired requests as "waiting for a
-// helper" placeholders. Cancelled/closed fulfillments and claimed/closed requests are left out — a
+// helper" placeholders. Canceled/closed fulfillments and claimed/closed requests are left out — a
 // claimed request is already represented by its active fulfillment, so there is no double row.
 export function buildDirectLines(fulfillments: SrFulfillment[], myRequests: SrRequest[]): SrDirectLine[] {
   const active: SrDirectLine[] = fulfillments

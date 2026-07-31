@@ -34,7 +34,7 @@ export function BeaconHostStage({ credentials, eventId }: { credentials: BeaconH
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     const videoClient = new StreamVideoClient({
       apiKey: credentials.streamApiKey,
       user: { id: credentials.streamUserId, name: credentials.displayName },
@@ -47,12 +47,12 @@ export function BeaconHostStage({ credentials, eventId }: { credentials: BeaconH
         // Join as the host. The server has already created the call and gone live; joining here lets
         // the host publish the screen-share track into it.
         await activeCall.join();
-        if (cancelled) return;
+        if (canceled) return;
         setClient(videoClient);
         setCall(activeCall);
         setStatus('joined');
       } catch (error) {
-        if (cancelled) return;
+        if (canceled) return;
         reportError(error, { area: 'beacon', op: 'host_join_client', extra: { callId: credentials.streamCallId } });
         setErrorMessage(error instanceof Error ? error.message : 'Could not connect to the broadcast.');
         setStatus('error');
@@ -60,7 +60,7 @@ export function BeaconHostStage({ credentials, eventId }: { credentials: BeaconH
     })();
 
     return () => {
-      cancelled = true;
+      canceled = true;
       void (async () => {
         try { await activeCall.leave(); } catch { /* already left */ }
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }

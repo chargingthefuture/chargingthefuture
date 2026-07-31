@@ -50,7 +50,7 @@ export const ChymeBackChannelCall: React.FC<{
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     const videoClient = new StreamVideoClient({
       apiKey: credentials.streamApiKey,
       user: { id: credentials.streamUserId, name: displayName },
@@ -63,17 +63,17 @@ export const ChymeBackChannelCall: React.FC<{
         try { await activeCall.camera.disable(); } catch { /* no camera */ }
         // A 1:1 call is a conversation — join un-muted (unlike the room, which joins muted).
         try { await activeCall.microphone.enable(); } catch { /* mic unavailable */ }
-        if (cancelled) return;
+        if (canceled) return;
         setClient(videoClient);
         setCall(activeCall);
         setStatus('joined');
       } catch {
-        if (cancelled) return;
+        if (canceled) return;
         setStatus('error');
       }
     })();
     return () => {
-      cancelled = true;
+      canceled = true;
       void (async () => {
         try { await activeCall.leave(); } catch { /* already left */ }
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }

@@ -166,7 +166,7 @@ export function BugReportModal({ open, onClose }: BugReportModalProps) {
         ref={modalRef}
         className={isResultView ? `${styles.modal} ${styles.modalNarrow}` : styles.modal}
       >
-        {/* A hidden labelling node so the dialog always has an accessible name,
+        {/* A hidden labeling node so the dialog always has an accessible name,
             including in the icon-only result states. */}
         <span id="bug-report-title" hidden>
           Report a problem

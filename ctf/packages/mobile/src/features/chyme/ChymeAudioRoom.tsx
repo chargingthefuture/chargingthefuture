@@ -105,7 +105,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   const backChannel = useChymeBackChannel(status === 'joined');
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
 
     const videoClient = new StreamVideoClient({
       apiKey: joinInfo.streamApiKey,
@@ -131,12 +131,12 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
           /* already muted */
         }
         await activeCall.join({ create: true });
-        if (cancelled) return;
+        if (canceled) return;
         setClient(videoClient);
         setCall(activeCall);
         setStatus('joined');
       } catch (error) {
-        if (cancelled) return;
+        if (canceled) return;
         // Surface the real Stream error verbatim so a failed join is diagnosable
         // without a repro.
         setErrorMessage(error instanceof Error ? error.message : 'Could not connect to the audio room.');
@@ -145,7 +145,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
     })();
 
     return () => {
-      cancelled = true;
+      canceled = true;
       void (async () => {
         try {
           await activeCall.leave();
@@ -193,18 +193,18 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   // refresh. Stream reactions are transient and auto-clear, so they can't carry this — the persistent
   // set rides on each member's presence row (POST /api/chyme/hand). This reads the SAME
   // GET /api/chyme/room the web room already polls, so it adds no Stream/GetStream quota: it is a
-  // database read, not a Stream call. The `cancelled` flag stops any late response from setting state
+  // database read, not a Stream call. The `canceled` flag stops any late response from setting state
   // after unmount, and clearing the interval on unmount / when leaving the room prevents a tight loop
   // and over-polling. While in a call the Android foreground service keeps the JS runtime alive when
   // backgrounded (see the heartbeat note above), so this poll keeps refreshing other members' raised
   // hands rather than going quiet when the member navigates away without closing.
   useEffect(() => {
     if (status !== 'joined') return;
-    let cancelled = false;
+    let canceled = false;
     const poll = () => {
       void getChymeRoom()
         .then((payload) => {
-          if (cancelled) return;
+          if (canceled) return;
           setRaisedHandUserIds(
             new Set((payload.participants ?? []).filter((p) => p.handRaised).map((p) => p.userId)),
           );
@@ -216,7 +216,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
     poll();
     const intervalId = setInterval(poll, 15000);
     return () => {
-      cancelled = true;
+      canceled = true;
       clearInterval(intervalId);
     };
   }, [status]);

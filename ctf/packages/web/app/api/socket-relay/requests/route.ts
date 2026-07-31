@@ -18,7 +18,7 @@ import type { SocketRelayRequestStatus } from 'lib/socket-relay/types';
 import { parseRequestInput } from 'lib/socket-relay/parse-input';
 import { reportError } from 'lib/observability/report';
 
-const REQUEST_STATUSES: SocketRelayRequestStatus[] = ['open', 'claimed', 'closed', 'cancelled'];
+const REQUEST_STATUSES: SocketRelayRequestStatus[] = ['open', 'claimed', 'closed', 'canceled'];
 
 // Parse the optional ?status= filter: a comma-separated list of request statuses, keeping only known
 // ones. Returns undefined when nothing valid was asked for, which leaves listRequests full-status.

@@ -1,7 +1,7 @@
 'use client';
 
 // Small presentational building blocks shared by the ServiceCredits admin panels:
-// a labelled text/number input and a confirm-before-commit step. Kept separate so each
+// a labeled text/number input and a confirm-before-commit step. Kept separate so each
 // action panel stays small (rule 116) and the confirm gesture is identical everywhere.
 // Dark admin design system (rule 131): ServiceCredits accent is #A855F7.
 import { useState, type ReactNode } from 'react';
