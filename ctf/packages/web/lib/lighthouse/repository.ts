@@ -1163,7 +1163,7 @@ export async function updateMatch(input: {
           throw new Error('policy_denied');
         }
       } else if (input.actorUserId === match.seeker_user_id) {
-        if (input.status !== 'cancelled') {
+        if (input.status !== 'canceled') {
           throw new Error('policy_denied');
         }
       } else {

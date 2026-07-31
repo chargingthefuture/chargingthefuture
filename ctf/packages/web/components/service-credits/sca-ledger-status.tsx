@@ -22,17 +22,17 @@ export function ServiceCreditsLedgerStatus() {
   const [status, setStatus] = useState<FormanceStatus | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     void fetch('/api/service-credits/admin/ledger-status', { cache: 'no-store' })
       .then((res) => (res.ok ? (res.json() as Promise<{ formance: FormanceStatus }>) : Promise.reject(new Error('status_unavailable'))))
       .then((data) => {
-        if (!cancelled) setStatus(data.formance);
+        if (!canceled) setStatus(data.formance);
       })
       .catch(() => {
         /* best-effort status panel */
       });
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
 

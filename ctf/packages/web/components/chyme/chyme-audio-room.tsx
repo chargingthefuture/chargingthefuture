@@ -112,7 +112,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
       return;
     }
 
-    let cancelled = false;
+    let canceled = false;
 
     const videoClient = new StreamVideoClient({
       apiKey: joinInfo.streamApiKey,
@@ -131,12 +131,12 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
         try { await activeCall.camera.disable(); } catch { /* no camera to disable */ }
         try { await activeCall.microphone.disable(); } catch { /* already muted */ }
         await activeCall.join({ create: true });
-        if (cancelled) return;
+        if (canceled) return;
         setClient(videoClient);
         setCall(activeCall);
         setStatus('joined');
       } catch (error) {
-        if (cancelled) return;
+        if (canceled) return;
         // Surface the real Stream error verbatim in the UI and report it to Sentry
         // with the call coordinates so a failed join is diagnosable without a repro.
         reportError(error, {
@@ -154,7 +154,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
     })();
 
     return () => {
-      cancelled = true;
+      canceled = true;
       void (async () => {
         try { await activeCall.leave(); } catch { /* already left */ }
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }

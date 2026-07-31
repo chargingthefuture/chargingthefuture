@@ -183,18 +183,18 @@ function useActiveCallPoll(
     if (!activeCallId) {
       return;
     }
-    let cancelled = false;
+    let canceled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const tick = async () => {
       try {
         const res = await fetch(`/api/foundation/connections/instant-calls/${activeCallId}`);
-        if (!res.ok || cancelled) {
+        if (!res.ok || canceled) {
           return;
         }
         const data = (await res.json()) as CallStateResponse;
         const call = data.call;
-        if (!call || cancelled) {
+        if (!call || canceled) {
           return;
         }
         setRingStatus(call.ringStatus);
@@ -209,20 +209,20 @@ function useActiveCallPoll(
         // Terminal: declined / timed_out / ended. Hold the final message briefly, then close.
         if (isTerminalRing(call.ringStatus)) {
           if (timer) clearTimeout(timer);
-          timer = setTimeout(() => { if (!cancelled) reset(); }, 1800);
+          timer = setTimeout(() => { if (!canceled) reset(); }, 1800);
           return;
         }
       } catch {
         /* transient — the next tick reconciles */
       }
-      if (!cancelled) {
+      if (!canceled) {
         timer = setTimeout(() => void tick(), RING_POLL_MS);
       }
     };
     void tick();
 
     return () => {
-      cancelled = true;
+      canceled = true;
       if (timer) clearTimeout(timer);
     };
   }, [activeCallId, displayName, reset]);
@@ -239,15 +239,15 @@ function useIncomingCallPoll(
     if (activeKind !== "idle") {
       return;
     }
-    let cancelled = false;
+    let canceled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const tick = async () => {
       try {
         const res = await fetch("/api/foundation/connections/incoming-call");
-        if (res.ok && !cancelled) {
+        if (res.ok && !canceled) {
           const data = (await res.json()) as { call?: InstantCall | null };
-          if (data.call && !cancelled) {
+          if (data.call && !canceled) {
             setRingStatus("ringing");
             setActive({ kind: "callee", callId: data.call.id, callerLabel: "Someone is calling you" });
             return;
@@ -256,14 +256,14 @@ function useIncomingCallPoll(
       } catch {
         /* transient — retry */
       }
-      if (!cancelled) {
+      if (!canceled) {
         timer = setTimeout(() => void tick(), INBOX_POLL_MS);
       }
     };
     void tick();
 
     return () => {
-      cancelled = true;
+      canceled = true;
       if (timer) clearTimeout(timer);
     };
   }, [activeKind]);

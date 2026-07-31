@@ -19,6 +19,8 @@
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-lighthouse-feature-inventory.md` |
 | **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display; hand-updated 2026-07-14 for the seeker "Your details" screen and "Request to stay" flow, and again 2026-07-14 for the "a member can be both host and seeker" reversal) |
 
+> Status spelling: since 2026-07-31 every stored status reads `canceled` (US spelling); if a step shows the British form anywhere, that is a bug.
+
 ## How to run this
 
 - Each case is **precondition → steps → expected**. Do it on each surface listed for the case.

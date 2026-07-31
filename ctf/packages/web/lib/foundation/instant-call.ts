@@ -721,7 +721,7 @@ export async function declineInstantCall(input: {
     const updated = await client.query<FoundationCallRow>(
       `
         UPDATE foundation_call_sessions
-        SET ring_status = 'declined', status = 'cancelled', ended_at = NOW(),
+        SET ring_status = 'declined', status = 'canceled', ended_at = NOW(),
             ended_by_user_id = $2, updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING ${CALL_ROW_COLUMNS}

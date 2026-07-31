@@ -17,6 +17,8 @@
 
 ---
 
+> Status spelling: since 2026-07-31 every stored status reads `canceled` (US spelling); if a step shows the British form anywhere, that is a bug.
+
 ## How to run this
 
 - Mark each surface checkbox as **✅ pass**, **❌ fail**, or **⛔ blocked**.

@@ -161,7 +161,7 @@ export const TERMS_DOCUMENT: PolicyDocument = {
             'deliberate safety decision. Any one-to-one chat is tied to a single active ' +
             'transaction (for example, a specific trip or fulfillment) and is limited to the ' +
             'two people in that transaction. The chat opens when the transaction starts and ' +
-            'closes when it ends (completed, cancelled, or disputed): no new messages can be ' +
+            'closes when it ends (completed, canceled, or disputed): no new messages can be ' +
             'sent, and both people keep read-only access for a limited time. Messages are ' +
             'kept on our servers for a limited period so we can review them for safety and ' +
             'abuse. Group and community rooms are not one-to-one messaging and follow the ' +

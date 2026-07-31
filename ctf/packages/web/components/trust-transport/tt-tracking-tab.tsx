@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/useTheme";
 import { getTrustTransportTokens, ttSettlementLabel, type TripRequest, type TtOffer } from "./tt-shared";
 
-const TERMINAL_STATUSES = new Set(["completed", "cancelled"]);
+const TERMINAL_STATUSES = new Set(["completed", "canceled"]);
 
 // Offers on the requester's own open request, with Accept. Accepting opens a trip and (per discovery
 // model B) is the point at which the chosen provider gains the pickup/drop-off via the trip.
@@ -253,7 +253,7 @@ function DirectLineButton({ awaitingDriver, hasMarginBottom, onClick }: { awaiti
 }
 
 function CancelRequestButton({ requestId, onCancelled }: { requestId: string; onCancelled: () => void }) {
-  const [cancelling, setCancelling] = useState(false);
+  const [canceling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
   async function handleCancel() {
@@ -275,18 +275,18 @@ function CancelRequestButton({ requestId, onCancelled }: { requestId: string; on
     }
   }
 
-  const cursor = cancelling ? "default" : "pointer";
-  const opacity = cancelling ? 0.6 : 1;
+  const cursor = canceling ? "default" : "pointer";
+  const opacity = canceling ? 0.6 : 1;
   return (
     <>
       {cancelError && <div style={{ color: "#EF4444", fontSize: 12, marginBottom: 8 }}>{cancelError}</div>}
       <button
         type="button"
         onClick={() => void handleCancel()}
-        disabled={cancelling}
+        disabled={canceling}
         style={{ width: "100%", padding: "12px", borderRadius: 10, background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444", fontSize: 13, fontWeight: 600, cursor, opacity, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
       >
-        {cancelling ? <Loader2 size={14} className="ctf-spin" /> : <X size={14} />} Cancel request
+        {canceling ? <Loader2 size={14} className="ctf-spin" /> : <X size={14} />} Cancel request
       </button>
     </>
   );

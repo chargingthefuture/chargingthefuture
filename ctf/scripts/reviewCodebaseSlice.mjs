@@ -17,7 +17,7 @@
 //   3. Send that slice's source to Claude (up to a per-run byte budget), along with the
 //      plugin's declared contracts as read-only reference, and ask for concrete, high-signal
 //      findings — including mismatches between the layers and code that violates a contract.
-//   4. File one GitHub issue per finding, labelled `code-review`. Findings the model judges
+//   4. File one GitHub issue per finding, labeled `code-review`. Findings the model judges
 //      to have a small, safe, self-contained fix also get `code-review:actionable`, which
 //      the implement workflow can turn into a pull request.
 //   5. Stamp the slice in the rotation ledger. A slice too big for one run carries over:
@@ -693,7 +693,7 @@ function buildIssueBody(slice, finding, fp) {
     '',
     '---',
     'Filed by the scheduled code-review sweep (`.github/workflows/code-review-sweep.yml`).',
-    'When labelled `code-review:actionable`, the implement workflow',
+    'When labeled `code-review:actionable`, the implement workflow',
     '(`.github/workflows/code-review-implement.yml`) can open a pull request for it. Remove',
     'that label to keep this as a tracking note only.',
     '',

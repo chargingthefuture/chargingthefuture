@@ -50,7 +50,7 @@ const PROBLEMS = [
     title: 'Noise & Verbal Harassment',
     context: 'Slurs through the wall, street harassment, or constant noise meant to wear you down.',
     products: [
-      { emoji: '🎧', name: 'Sony WH-1000XM5', kind: 'Over-ear · active noise cancelling', note: 'Blocks voices, not just hum. The only thing that quieted the through-wall talking for me.', verified: 6 },
+      { emoji: '🎧', name: 'Sony WH-1000XM5', kind: 'Over-ear · active noise canceling', note: 'Blocks voices, not just hum. The only thing that quieted the through-wall talking for me.', verified: 6 },
       { emoji: '🔇', name: 'Loop Quiet 2', kind: 'Reusable ear plugs', note: 'Discreet and comfortable enough to sleep in. Takes the edge off without total silence.', verified: 4 },
       { emoji: '🎵', name: 'JLab Go Air Pop', kind: 'Budget ANC earbuds', note: 'Cheap, pocketable, and good enough to get me through a shift.', verified: 3 },
     ],

@@ -650,7 +650,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_proposed_skill_promotions (
   -- Which app surfaced this proposal, for provenance in the filed GitHub issue. This is the
   -- single cross-app intake for "skill not in the taxonomy yet": SkillsHunt nominations and the
   -- Directory "skill not listed" box both write here. 'skills-hunt' is the default so existing
-  -- rows (all from SkillsHunt) are labelled correctly without a backfill.
+  -- rows (all from SkillsHunt) are labeled correctly without a backfill.
   source TEXT NOT NULL DEFAULT 'skills-hunt',
   suggested_sector TEXT,
   suggested_occupation TEXT,
@@ -1587,7 +1587,7 @@ CREATE TABLE IF NOT EXISTS trust_transport_trips (
   mode TEXT NOT NULL,
   status TEXT NOT NULL,
   stream_channel_id TEXT,
-  cancelled_reason TEXT,
+  canceled_reason TEXT,
   completed_at TIMESTAMPTZ,
   requester_completion_confirmed_at TIMESTAMPTZ,
   provider_completion_confirmed_at TIMESTAMPTZ,
@@ -1998,7 +1998,7 @@ CREATE TABLE IF NOT EXISTS lighthouse_matches (
   message TEXT NULL,
   proposed_move_in_date DATE NULL,
   host_response TEXT NULL,
-  status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'rejected', 'cancelled', 'completed')),
+  status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'rejected', 'canceled', 'completed')),
   stream_channel_id TEXT NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -6205,4 +6205,50 @@ ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS push_act
 ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS push_community BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS discreet_push BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+COMMIT;
+
+
+-- spelling:disable — this migration must name the old British value to rewrite it; every
+-- occurrence below is the value being migrated away from, not new usage.
+-- === US-SPELLING DATA MIGRATION: cancelled -> canceled (owner-directed, 2026-07-31) ===
+-- "cancelled" was a stored status value in several tables. The owner directed the repo-wide switch
+-- to US spelling to include stored values, so this block renames every persisted occurrence. It is
+-- idempotent and stays in the schema permanently: each deploy re-runs it, so any straggler row
+-- written by not-yet-redeployed code is corrected on the next apply. The code, contracts, and docs
+-- were renamed in the same PR, so reader and writer agree from the same deploy onward.
+BEGIN;
+
+-- Column rename: trust_transport_trips.cancelled_reason -> canceled_reason. Guarded so it runs
+-- once on a legacy database and never on a fresh one (where CREATE TABLE already used the new name).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'trust_transport_trips' AND column_name = 'cancelled_reason'
+  ) THEN
+    ALTER TABLE trust_transport_trips RENAME COLUMN cancelled_reason TO canceled_reason;
+  END IF;
+END $$;
+
+-- Status values. WHERE makes each UPDATE a no-op after the first run.
+UPDATE trust_transport_requests SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE trust_transport_trips SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE trust_transport_status_events SET event_name = 'order_canceled' WHERE event_name = 'order_cancelled';
+UPDATE trust_transport_status_events SET from_status = 'canceled' WHERE from_status = 'cancelled';
+UPDATE trust_transport_status_events SET to_status = 'canceled' WHERE to_status = 'cancelled';
+UPDATE lighthouse_matches SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE socket_relay_requests SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE socket_relay_fulfillments SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE level_up_cohorts SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE service_credits_transfers SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE foundation_call_sessions SET status = 'canceled' WHERE status = 'cancelled';
+
+-- lighthouse_matches carries the only CHECK constraint naming the old value. On a legacy database
+-- the inline constraint still allows 'cancelled' and not 'canceled', so swap it: drop whichever
+-- form exists, then re-add with the US value. Runs after the UPDATE above so validation passes.
+ALTER TABLE IF EXISTS lighthouse_matches DROP CONSTRAINT IF EXISTS lighthouse_matches_status_check;
+ALTER TABLE IF EXISTS lighthouse_matches
+  ADD CONSTRAINT lighthouse_matches_status_check
+  CHECK (status IN ('pending', 'accepted', 'rejected', 'canceled', 'completed'));
+-- spelling:enable
 COMMIT;

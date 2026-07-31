@@ -17,6 +17,8 @@
 
 ---
 
+> Status spelling: since 2026-07-31 every stored status reads `canceled` (US spelling); if a step shows the British form anywhere, that is a bug.
+
 ## How to run this
 
 - ✅ pass — behavior matches the expected result exactly
@@ -167,7 +169,7 @@ Result: web ☐
 **Precondition:** Signed in as a member. Seed includes a completed (terminal) trip with chat history.
 
 **Steps:**
-1. Open the completed/cancelled trip.
+1. Open the completed/canceled trip.
 2. Navigate to the Chat tab.
 
 **Expected:** Chat messages are visible (read-only). There is no text input field — no new messages can be sent.
@@ -256,7 +258,7 @@ Result: web ☐
 2. Tap/click "Cancel request".
 3. Confirm the explicit confirmation prompt (a `window.confirm` dialog on web, a native `Alert` on android).
 
-**Expected:** The order transitions to a cancelled terminal state and disappears from the cancellable list (the "Cancel request" control no longer shows). The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
+**Expected:** The order transitions to a canceled terminal state and disappears from the cancellable list (the "Cancel request" control no longer shows). The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
 
 Result: web ☐
 

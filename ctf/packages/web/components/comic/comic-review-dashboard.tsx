@@ -134,16 +134,16 @@ function regenerateLabel(regenerating: boolean, hasDraft: boolean): string {
 function useTrainingStats(): ComicTrainingStats | null {
   const [trainingStats, setTrainingStats] = useState<ComicTrainingStats | null>(null);
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     void requestJson<TrainingStatsResponse>('/api/comic/admin/training-stats')
       .then((payload) => {
-        if (!cancelled) setTrainingStats(payload.stats);
+        if (!canceled) setTrainingStats(payload.stats);
       })
       .catch(() => {
         /* training counter is best-effort */
       });
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
   return trainingStats;
@@ -154,10 +154,10 @@ function useTrainingStats(): ComicTrainingStats | null {
 function usePluginOptions(): PluginOption[] {
   const [pluginOptions, setPluginOptions] = useState<PluginOption[]>([]);
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     void requestJson<PluginsResponse>('/api/plugins')
       .then((payload) => {
-        if (!cancelled && Array.isArray(payload.plugins)) {
+        if (!canceled && Array.isArray(payload.plugins)) {
           setPluginOptions(payload.plugins.map((plugin) => ({ slug: plugin.slug, name: plugin.name })));
         }
       })
@@ -165,7 +165,7 @@ function usePluginOptions(): PluginOption[] {
         /* picker is best-effort */
       });
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
   return pluginOptions;

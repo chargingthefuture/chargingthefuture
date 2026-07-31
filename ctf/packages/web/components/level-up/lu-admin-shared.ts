@@ -17,7 +17,7 @@ export type AdminCohort = {
   requiredCredits: number;
   materialsCost: number;
   deviceSupport: boolean;
-  status: 'draft' | 'open' | 'active' | 'completed' | 'cancelled';
+  status: 'draft' | 'open' | 'active' | 'completed' | 'canceled';
   allowNoDeposit: boolean;
   trainerSplitPercent: number;
   completionBonusCredits: number;

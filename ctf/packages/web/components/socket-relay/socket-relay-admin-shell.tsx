@@ -18,13 +18,13 @@ const REQUEST_STATUS_COLOR: Record<string, string> = {
   open: '#22C55E',
   claimed: '#F59E0B',
   closed: '#6B7280',
-  cancelled: '#EF4444',
+  canceled: '#EF4444',
 };
 
 const FULFILLMENT_STATUS_COLOR: Record<string, string> = {
   active: '#22C55E',
   closed: '#6B7280',
-  cancelled: '#EF4444',
+  canceled: '#EF4444',
 };
 
 function Pill({ label, color }: { label: string; color: string }) {

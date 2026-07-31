@@ -215,9 +215,9 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
 
     // Non-Safari: load hls.js on demand and attach the playlist. Loading is async, so guard against a
     // URL change or unmount that happens before the import resolves.
-    let cancelled = false;
+    let canceled = false;
     void import('hls.js').then(({ default: Hls }) => {
-      if (cancelled || !videoRef.current) {
+      if (canceled || !videoRef.current) {
         return;
       }
       if (!Hls.isSupported()) {
@@ -232,7 +232,7 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
     });
 
     return () => {
-      cancelled = true;
+      canceled = true;
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;

@@ -12,7 +12,7 @@ function getPluginHref(slug: string): string {
 }
 
 // Show a badge only when a plugin is NOT yet fully available, so the badge carries
-// information. A fully-shipped plugin (implemented_shell) gets no badge — labelling
+// information. A fully-shipped plugin (implemented_shell) gets no badge — labeling
 // every card "Live" is noise when nearly everything is live.
 const PLUGIN_BADGE_LABEL: Partial<Record<PluginAvailabilityState, string>> = {
   planned: 'Coming soon',

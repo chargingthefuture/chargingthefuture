@@ -33,7 +33,7 @@ quietly ship a backup with no proven way back.
 
 - `.github/workflows/monthly-backup-restore-test-reminder.yml` runs on the 1st of each month (and on
   manual dispatch). It reads `ctf/ops/backup-systems.json` and opens one GitHub issue titled
-  `Monthly backup & restore test — <Month> <Year>`, labelled `backup-restore-test`, with a checklist
+  `Monthly backup & restore test — <Month> <Year>`, labeled `backup-restore-test`, with a checklist
   of every system's test steps.
 - The owner works through the checklist by hand: run each backup/restore, verify the restored data is
   real, tick the boxes. If a restore fails, that is a real incident — open a bug issue and link it.

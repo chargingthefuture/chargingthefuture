@@ -43,7 +43,7 @@ const TRUST_TRANSPORT_PRESENCE_DEEP_LINK = '/apps/trust-transport';
 
 // Statuses that mean a request is no longer active presence — mirrors the backfill's terminal set.
 const TRUST_TRANSPORT_TERMINAL_STATUSES = new Set([
-  'cancelled',
+  'canceled',
   'canceled',
   'completed',
   'closed',
@@ -127,7 +127,7 @@ type TripRow = {
   mode: TrustTransportMode;
   status: TrustTransportTrip['status'];
   stream_channel_id: string | null;
-  cancelled_reason: string | null;
+  canceled_reason: string | null;
   completed_at: Date | null;
   requester_completion_confirmed_at: Date | null;
   provider_completion_confirmed_at: Date | null;
@@ -146,24 +146,24 @@ type AuditInput = {
 };
 
 const REQUEST_TRANSITIONS: Record<TrustTransportRequest['status'], TrustTransportRequest['status'][]> = {
-  open: ['accepted', 'cancelled', 'emergency_frozen'],
-  accepted: ['in_progress', 'cancelled', 'disputed', 'emergency_frozen'],
-  in_progress: ['completed', 'cancelled', 'disputed', 'emergency_frozen'],
+  open: ['accepted', 'canceled', 'emergency_frozen'],
+  accepted: ['in_progress', 'canceled', 'disputed', 'emergency_frozen'],
+  in_progress: ['completed', 'canceled', 'disputed', 'emergency_frozen'],
   completed: [],
-  cancelled: [],
-  disputed: ['completed', 'cancelled'],
-  emergency_frozen: ['disputed', 'cancelled'],
+  canceled: [],
+  disputed: ['completed', 'canceled'],
+  emergency_frozen: ['disputed', 'canceled'],
 };
 
 const TRIP_TRANSITIONS: Record<TrustTransportTrip['status'], TrustTransportTripStatus[]> = {
-  assigned: ['en_route', 'cancelled', 'disputed', 'emergency_frozen'],
-  en_route: ['picked_up', 'cancelled', 'disputed', 'emergency_frozen'],
-  picked_up: ['delivered', 'cancelled', 'disputed', 'emergency_frozen'],
+  assigned: ['en_route', 'canceled', 'disputed', 'emergency_frozen'],
+  en_route: ['picked_up', 'canceled', 'disputed', 'emergency_frozen'],
+  picked_up: ['delivered', 'canceled', 'disputed', 'emergency_frozen'],
   delivered: ['completed', 'disputed', 'emergency_frozen'],
   completed: [],
-  cancelled: [],
-  disputed: ['completed', 'cancelled'],
-  emergency_frozen: ['disputed', 'cancelled'],
+  canceled: [],
+  disputed: ['completed', 'canceled'],
+  emergency_frozen: ['disputed', 'canceled'],
 };
 
 function toIso(value: Date): string {
@@ -249,7 +249,7 @@ function mapTripRow(row: TripRow): TrustTransportTrip {
     mode: row.mode,
     status: row.status,
     streamChannelId: row.stream_channel_id,
-    cancelledReason: row.cancelled_reason,
+    canceledReason: row.canceled_reason,
     completedAtIso: row.completed_at ? toIso(row.completed_at) : null,
     requesterCompletionConfirmedAtIso: row.requester_completion_confirmed_at ? toIso(row.requester_completion_confirmed_at) : null,
     providerCompletionConfirmedAtIso: row.provider_completion_confirmed_at ? toIso(row.provider_completion_confirmed_at) : null,
@@ -617,7 +617,7 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
     const offer = offerResult.rows[0];
 
     const existingTrip = await client.query<TripRow>(
-      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
+      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
        FROM trust_transport_trips
        WHERE request_id = $1::uuid
        LIMIT 1`,
@@ -650,7 +650,7 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
     const tripResult = await client.query<TripRow>(
       `INSERT INTO trust_transport_trips (request_id, offer_id, requester_user_id, provider_user_id, mode, status)
        VALUES ($1::uuid, $2::uuid, $3, $4, $5, 'assigned')
-       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
+       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
       [requestId, offerId, request.requesterUserId, offer.provider_user_id, request.mode],
     );
 
@@ -737,7 +737,7 @@ export async function listProviderTrips(providerUserId: string): Promise<TrustTr
 
 export async function getTripById(tripId: string): Promise<TrustTransportTrip | null> {
   const result = await queryDb<TripRow>(
-    `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
+    `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
      FROM trust_transport_trips
      WHERE id = $1::uuid
      LIMIT 1`,
@@ -775,8 +775,8 @@ function mapRequestStatusFromTrip(nextStatus: TrustTransportTripStatus): TrustTr
     return 'completed';
   }
 
-  if (nextStatus === 'cancelled') {
-    return 'cancelled';
+  if (nextStatus === 'canceled') {
+    return 'canceled';
   }
 
   if (nextStatus === 'disputed') {
@@ -795,7 +795,7 @@ export async function updateTripStatus(
 ): Promise<{ trip: TrustTransportTrip; request: TrustTransportRequest }> {
   const result = await withDbTransaction(async (client) => {
     const tripResult = await client.query<TripRow>(
-      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
+      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
        FROM trust_transport_trips
        WHERE id = $1::uuid
        LIMIT 1
@@ -832,11 +832,11 @@ export async function updateTripStatus(
     const updatedTripResult = await client.query<TripRow>(
       `UPDATE trust_transport_trips
        SET status = $2,
-           cancelled_reason = CASE WHEN $2 = 'cancelled' THEN $3 ELSE cancelled_reason END,
+           canceled_reason = CASE WHEN $2 = 'canceled' THEN $3 ELSE canceled_reason END,
            completed_at = CASE WHEN $2 = 'completed' THEN NOW() ELSE completed_at END,
            updated_at = NOW()
        WHERE id = $1::uuid
-       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
+       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
       [tripId, nextStatus, normalizeNullableText(note)],
     );
 
@@ -869,7 +869,7 @@ export async function updateTripStatus(
   });
 
   // Best-effort presence sync after the status change is durably committed: a trip moving the request
-  // to a terminal status (completed/cancelled) clears the rider's presence; otherwise it stays active.
+  // to a terminal status (completed/canceled) clears the rider's presence; otherwise it stays active.
   // Never breaks the status update.
   await syncTrustTransportRequestPresence(
     result.request.requesterUserId,
@@ -896,7 +896,7 @@ export async function confirmTripCompletion(
 ): Promise<{ trip: TrustTransportTrip; request: TrustTransportRequest; bothConfirmed: boolean }> {
   const result = await withDbTransaction(async (client) => {
     const tripResult = await client.query<TripRow>(
-      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
+      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
        FROM trust_transport_trips
        WHERE id = $1::uuid
        LIMIT 1
@@ -924,7 +924,7 @@ export async function confirmTripCompletion(
       `UPDATE trust_transport_trips
        SET ${column} = COALESCE(${column}, NOW()), updated_at = NOW()
        WHERE id = $1::uuid
-       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
+       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
       [tripId],
     );
 
@@ -943,7 +943,7 @@ export async function confirmTripCompletion(
         `UPDATE trust_transport_trips
          SET status = 'completed', completed_at = NOW(), updated_at = NOW()
          WHERE id = $1::uuid
-         RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
+         RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
         [tripId],
       );
       confirmedTrip = completedTripResult.rows[0];
@@ -1139,21 +1139,21 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
     throw new Error('policy_denied');
   }
 
-  if (!REQUEST_TRANSITIONS[request.status].includes('cancelled')) {
+  if (!REQUEST_TRANSITIONS[request.status].includes('canceled')) {
     throw new Error('invalid_transition');
   }
 
   await queryDb(
     `UPDATE trust_transport_requests
-     SET status = 'cancelled', updated_at = NOW()
+     SET status = 'canceled', updated_at = NOW()
      WHERE id = $1::uuid`,
     [orderId],
   );
 
   await queryDb(
     `UPDATE trust_transport_trips
-     SET status = CASE WHEN status IN ('completed', 'cancelled') THEN status ELSE 'cancelled' END,
-         cancelled_reason = COALESCE($2, cancelled_reason),
+     SET status = CASE WHEN status IN ('completed', 'canceled') THEN status ELSE 'canceled' END,
+         canceled_reason = COALESCE($2, canceled_reason),
          updated_at = NOW()
      WHERE request_id = $1::uuid`,
     [orderId, normalizeNullableText(reason)],
@@ -1161,13 +1161,13 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
 
   await queryDb(
     `INSERT INTO trust_transport_status_events (request_id, actor_user_id, event_name, from_status, to_status, metadata)
-     VALUES ($1::uuid, $2, 'order_cancelled', $3, 'cancelled', jsonb_build_object('reason', $4))`,
+     VALUES ($1::uuid, $2, 'order_cancelled', $3, 'canceled', jsonb_build_object('reason', $4))`,
     [orderId, actorUserId, request.status, normalizeNullableText(reason)],
   );
 
-  // Best-effort presence clear after the request is durably set to cancelled. The requester (rider)
+  // Best-effort presence clear after the request is durably set to canceled. The requester (rider)
   // owns the request regardless of whether an admin performed the cancel. Never breaks the cancel.
-  await syncTrustTransportRequestPresence(request.requesterUserId, orderId, 'cancelled');
+  await syncTrustTransportRequestPresence(request.requesterUserId, orderId, 'canceled');
 }
 
 // The caller's recorded earnings per currency: the total value of the trips they completed, grouped by

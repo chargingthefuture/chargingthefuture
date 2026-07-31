@@ -42,7 +42,7 @@ function lighthouseErrorResponse(error: unknown, fallbackMessage: string) {
 function parseMatchUpdateInput(body: MatchBody): LighthouseMatchUpdateInput {
   return {
     status:
-      body.status === 'accepted' || body.status === 'rejected' || body.status === 'cancelled' || body.status === 'completed'
+      body.status === 'accepted' || body.status === 'rejected' || body.status === 'canceled' || body.status === 'completed'
         ? body.status
         : 'pending',
     hostResponse: typeof body.hostResponse === 'string' ? body.hostResponse : null,

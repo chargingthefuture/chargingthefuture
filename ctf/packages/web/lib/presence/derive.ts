@@ -39,7 +39,6 @@ interface PresenceSource {
 // not one of these terminal states — mirroring the original backfill rather than guessing the active
 // set. Kept in sync with the live TrustTransport write hooks.
 const TRUST_TRANSPORT_TERMINAL_STATUSES = [
-  'cancelled',
   'canceled',
   'completed',
   'closed',

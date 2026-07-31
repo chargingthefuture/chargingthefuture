@@ -40,13 +40,13 @@ export function SkillsHuntAdminRewardCard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     (async () => {
       setLoading(true);
       setError(null);
       try {
         const card = await fetchRewardCard();
-        if (!cancelled && card) {
+        if (!canceled && card) {
           setTitle(card.title);
           setDescription(card.description);
           setCtaLabel(card.ctaLabel);
@@ -54,12 +54,12 @@ export function SkillsHuntAdminRewardCard() {
           setIsActive(card.isActive);
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Unable to load reward card.");
+        if (!canceled) setError(e instanceof Error ? e.message : "Unable to load reward card.");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!canceled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => { canceled = true; };
   }, []);
 
   async function save() {

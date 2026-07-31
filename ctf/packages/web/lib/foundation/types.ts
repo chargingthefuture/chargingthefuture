@@ -122,7 +122,7 @@ export type FoundationCallSession = {
   modality: FoundationCallModality;
   streamCallId: string;
   requestedDurationMinutes: number;
-  status: 'created' | 'active' | 'ended' | 'cancelled';
+  status: 'created' | 'active' | 'ended' | 'canceled';
   createdAtIso: string;
 };
 

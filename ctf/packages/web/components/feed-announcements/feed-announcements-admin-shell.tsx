@@ -251,11 +251,11 @@ export function FeedAnnouncementsAdminShell({
   const [pluginOptions, setPluginOptions] = useState<PluginOption[]>([]);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     void fetch('/api/plugins', { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
       .then((payload: { plugins?: Array<{ slug: string; name: string }> } | null) => {
-        if (!cancelled && payload && Array.isArray(payload.plugins)) {
+        if (!canceled && payload && Array.isArray(payload.plugins)) {
           setPluginOptions(payload.plugins.map((p) => ({ slug: p.slug, name: p.name })));
         }
       })
@@ -263,7 +263,7 @@ export function FeedAnnouncementsAdminShell({
         /* picker is best-effort */
       });
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
 

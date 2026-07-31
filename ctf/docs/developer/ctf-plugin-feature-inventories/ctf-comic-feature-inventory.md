@@ -5,13 +5,13 @@
 > removed. Rasa only attached an intent + confidence label to each turn for the reviewer; it never
 > generated answers and never gated auto-publish. Wherever this document describes a "target
 > architecture" of Rasa + Ollama, Rasa orchestration, a Rasa training/retrain loop, a Rasa SQL
-> tracker store, or Rasa-backed routing, treat it as cancelled history, not the plan.
+> tracker store, or Rasa-backed routing, treat it as canceled history, not the plan.
 >
 > Current and intended direction: generation is Ollama only; every `@comic` answer still goes
 > through human review (`policy.forceHumanReview()` is unconditionally `true`). The `engine` enum
 > still lists `rasa` and the `intent`/`nlu_confidence` columns remain, but only for historical rows
 > — nothing writes them now. The training-example export (`GET /api/comic/training/export`) is kept
-> as a portable dataset of asker questions + owner-labelled corrections for whatever model is
+> as a portable dataset of asker questions + owner-labeled corrections for whatever model is
 > trained later. The path to scale is: upgrade the self-hosted Ollama model on a GPU host (issue
 > #502), then build retrieval and a confidence/safety gate, and later fine-tune an open model on the
 > exported, de-identified dataset. A third-party API (e.g. Claude) is off the table for survivor
@@ -496,7 +496,7 @@ exported text never has to leave our infrastructure to be used for training.
 `{ trainingExamplesTotal, trainingExamplesByStatus, ratedAnswersTotal }`. The @comic review dashboard
 shows this in the queue header as "Training examples collected: N (… awaiting export · … exported ·
 … rated answers)" so the owner can see at a glance how much data has accumulated. The breakdown is
-by training-example export status; "awaiting export" was previously labelled "pending", which read
+by training-example export status; "awaiting export" was previously labeled "pending", which read
 confusingly next to the review queue's own "N pending" badge (the two count different things — export
 status vs. queued reviews). It is read-only and best-effort — if the count fails to load it is simply
 hidden, never blocking the review queue.

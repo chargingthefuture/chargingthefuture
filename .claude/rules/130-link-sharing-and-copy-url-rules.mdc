@@ -37,7 +37,7 @@ Every share / copy-link affordance MUST use the shared control — never a custo
    deep-linkable destination yet, build the destination (or the deep-link param) — do not fall back to
    the homepage.
 4. **Be accessible** (see `ctf/docs/developer/ACCESSIBLE_FORMS_STANDARD.md`): the trigger announces it
-   opens a popup (`aria-haspopup`/`aria-expanded`); the popup is a labelled dialog; focus moves into
+   opens a popup (`aria-haspopup`/`aria-expanded`); the popup is a labeled dialog; focus moves into
    the URL field on open and returns to the trigger on Escape/outside-click; copy feedback is
    announced (`aria-live`). On mobile the equivalent accessibility roles/labels apply.
 5. **Never silently no-op.** On web, if the async clipboard API is unavailable, fall back to a hidden

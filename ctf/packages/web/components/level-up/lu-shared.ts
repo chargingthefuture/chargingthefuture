@@ -63,7 +63,7 @@ export const STATUS_COLOR: Record<string, string> = {
   active: "#3B82F6",
   full: MUTED,
   completed: "#A855F7",
-  cancelled: "#EF4444",
+  canceled: "#EF4444",
   draft: MUTED,
 };
 

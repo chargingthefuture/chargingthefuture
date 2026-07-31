@@ -231,7 +231,10 @@ type RunpodJobResponse = {
   output?: { content?: string; model?: string } | null;
 };
 
+// spelling:disable — these are RunPod's own API status values; a third-party enum keeps its exact
+// spelling or the comparison silently never matches.
 const RUNPOD_TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT']);
+// spelling:enable
 const RUNPOD_POLL_INTERVAL_MS = 1_500;
 
 // Talk to a RunPod serverless endpoint: submit the chat as a job, then poll until

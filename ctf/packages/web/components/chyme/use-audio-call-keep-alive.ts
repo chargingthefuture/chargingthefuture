@@ -34,14 +34,14 @@ export function useAudioCallKeepAlive(active: boolean, title = 'Chyme audio room
   useEffect(() => {
     if (!active || typeof document === 'undefined') return;
 
-    let cancelled = false;
+    let canceled = false;
 
     const acquire = async () => {
       const wl = getWakeLock();
       if (!wl || sentinelRef.current) return;
       try {
         const sentinel = await wl.request('screen');
-        if (cancelled) {
+        if (canceled) {
           void sentinel.release().catch(() => {});
           return;
         }
@@ -81,7 +81,7 @@ export function useAudioCallKeepAlive(active: boolean, title = 'Chyme audio room
     }
 
     return () => {
-      cancelled = true;
+      canceled = true;
       document.removeEventListener('visibilitychange', onVisibility);
       release();
       if (mediaSession) {

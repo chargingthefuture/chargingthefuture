@@ -66,25 +66,25 @@ export function ContributionsAdminShell() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     async function load() {
       try {
         const [subs, cfg, cycles] = await Promise.all([fetchSubmissions('all'), fetchConfig(), fetchCycles()]);
-        if (cancelled) {
+        if (canceled) {
           return;
         }
         setSubmissions(subs);
         setConfig(cfg);
         setCurrentCycle(pickCurrentCycle(cycles));
       } catch (e) {
-        if (!cancelled) {
+        if (!canceled) {
           setLoadError(e instanceof Error ? e.message : 'Could not load the admin dashboard.');
         }
       }
     }
     void load();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [pickCurrentCycle]);
 

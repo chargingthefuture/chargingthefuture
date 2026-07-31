@@ -85,7 +85,7 @@ contracts:
     version: 1.0.0
     description: >-
       Apply a canonical forward status transition for an active trip (assigned -> en_route ->
-      picked_up -> delivered) or a terminal state (cancelled/disputed/emergency_frozen). A non-admin
+      picked_up -> delivered) or a terminal state (canceled/disputed/emergency_frozen). A non-admin
       may NOT set 'completed' here — completion requires both parties to confirm via
       trust-transport.trip.completion.confirm. Admins keep a direct override to 'completed' (which
       settles), e.g. when resolving a dispute.

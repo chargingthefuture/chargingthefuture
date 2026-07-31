@@ -309,7 +309,7 @@ async function readExistingTransferResponse(
     sender_user_id: string;
     recipient_user_id: string;
     amount: string;
-    status: 'pending' | 'completed' | 'cancelled' | 'disputed';
+    status: 'pending' | 'completed' | 'canceled' | 'disputed';
   }>(
     `SELECT id::text, sender_user_id, recipient_user_id, amount::text, status
      FROM service_credits_transfers
@@ -431,7 +431,7 @@ export async function createTransfer(input: {
       senderUserId: string;
       recipientUserId: string;
       amount: number;
-      status: 'pending' | 'completed' | 'cancelled' | 'disputed';
+      status: 'pending' | 'completed' | 'canceled' | 'disputed';
       escrowHoldId: string | null;
       externalLedgerTransactionId: string | null;
       rail: 'balance' | 'mutual_credit';
@@ -467,7 +467,7 @@ export async function createTransfer(input: {
       sender_user_id: string;
       recipient_user_id: string;
       amount: string;
-      status: 'pending' | 'completed' | 'cancelled' | 'disputed';
+      status: 'pending' | 'completed' | 'canceled' | 'disputed';
     }>(
       `INSERT INTO service_credits_transfers
         (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, origin_plugin, reason_code, completed_at)

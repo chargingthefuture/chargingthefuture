@@ -917,7 +917,7 @@ type FoundationCallSessionInsertRow = {
   modality: FoundationCallModality;
   stream_call_id: string;
   requested_duration_minutes: number;
-  status: 'created' | 'active' | 'ended' | 'cancelled';
+  status: 'created' | 'active' | 'ended' | 'canceled';
   created_at: Date;
 };
 
@@ -1401,7 +1401,7 @@ export async function listConnectionHistory(input: {
       modality: FoundationCallModality;
       stream_call_id: string;
       requested_duration_minutes: number;
-      status: 'created' | 'active' | 'ended' | 'cancelled';
+      status: 'created' | 'active' | 'ended' | 'canceled';
       created_at: Date;
     }>(
       `
@@ -1426,7 +1426,7 @@ export async function listConnectionHistory(input: {
       modality: FoundationCallModality;
       stream_call_id: string;
       requested_duration_minutes: number;
-      status: 'created' | 'active' | 'ended' | 'cancelled';
+      status: 'created' | 'active' | 'ended' | 'canceled';
       created_at: Date;
     }> };
 

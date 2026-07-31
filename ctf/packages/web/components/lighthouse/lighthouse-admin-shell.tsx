@@ -34,7 +34,7 @@ const matchStatusStyle = (t: LighthouseTokens): Record<string, { bg: string; col
   accepted: { bg: 'rgba(34,197,94,0.12)', color: '#22C55E', border: 'rgba(34,197,94,0.3)' },
   completed: { bg: 'rgba(6,182,212,0.12)', color: t.ACCENT, border: 'rgba(6,182,212,0.3)' },
   rejected: { bg: 'rgba(239,68,68,0.12)', color: '#EF4444', border: 'rgba(239,68,68,0.3)' },
-  cancelled: { bg: 'rgba(107,114,128,0.14)', color: '#9CA3AF', border: 'rgba(107,114,128,0.3)' },
+  canceled: { bg: 'rgba(107,114,128,0.14)', color: '#9CA3AF', border: 'rgba(107,114,128,0.3)' },
 });
 
 function Pill({ label, bg, color, border }: { label: string; bg: string; color: string; border: string }) {
@@ -137,14 +137,14 @@ export function LighthouseAdminShell({
       const res = await fetch(`/api/lighthouse/admin/matches/${m.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
-        body: JSON.stringify({ status: 'cancelled', hostResponse: null }),
+        body: JSON.stringify({ status: 'canceled', hostResponse: null }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { message?: string; reason?: string } | null;
         setError(data?.message ?? data?.reason ?? `Update failed (${res.status}).`);
         return;
       }
-      setMessage('Match cancelled.');
+      setMessage('Match canceled.');
       router.refresh();
     } catch {
       setError('Network error. Try again.');

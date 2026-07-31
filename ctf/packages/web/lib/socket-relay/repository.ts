@@ -82,7 +82,7 @@ type RequestRow = {
   state: string | null;
   country: string | null;
   is_public: boolean;
-  status: 'open' | 'claimed' | 'closed' | 'cancelled';
+  status: 'open' | 'claimed' | 'closed' | 'canceled';
   reopened_count: number;
   claimed_fulfillment_id: string | null;
   price_amount: string | number | null;
@@ -99,7 +99,7 @@ type FulfillmentRow = {
   fulfiller_user_id: string;
   requester_username: string | null;
   fulfiller_username: string | null;
-  status: 'active' | 'closed' | 'cancelled';
+  status: 'active' | 'closed' | 'canceled';
   close_reason: string | null;
   created_at: Date;
   updated_at: Date;
@@ -212,7 +212,7 @@ function mapRequestRow(row: RequestRow): SocketRelayRequest {
     updatedAtIso: toIso(row.updated_at),
     expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
     // A post auto-expires 28 days after it is posted or re-posted. It only counts as expired while it is
-    // still open and waiting (a claimed/closed/cancelled post is not "expired"). Derived here so the
+    // still open and waiting (a claimed/closed/canceled post is not "expired"). Derived here so the
     // whole app reads the same expiry without a scheduled job flipping a status column.
     isExpired: row.status === 'open' && row.expires_at != null && new Date(row.expires_at).getTime() < Date.now(),
   };
@@ -833,14 +833,14 @@ async function ensureFulfillmentParticipant(fulfillmentId: string, actorUserId: 
 // does not repeat the same `reopen ? … : …` branch three times. `unsuccessful_reopen` cancels this
 // helper and puts the request back to open; every other outcome closes both.
 type ResolveOutcomePlan = {
-  fulfillmentStatus: 'cancelled' | 'closed';
+  fulfillmentStatus: 'canceled' | 'closed';
   requestStatus: 'open' | 'closed';
   eventName: 'fulfillment_reopened' | 'fulfillment_closed';
 };
 
 function resolveOutcomePlan(outcome: SocketRelayResolveOutcome): ResolveOutcomePlan {
   if (outcome === 'unsuccessful_reopen') {
-    return { fulfillmentStatus: 'cancelled', requestStatus: 'open', eventName: 'fulfillment_reopened' };
+    return { fulfillmentStatus: 'canceled', requestStatus: 'open', eventName: 'fulfillment_reopened' };
   }
   return { fulfillmentStatus: 'closed', requestStatus: 'closed', eventName: 'fulfillment_closed' };
 }
@@ -894,7 +894,7 @@ export async function resolveFulfillment(
 
     if (reopen) {
       // Put the request back into the open pool for other helpers (mirrors repost) — including resetting
-      // the 28-day expiry clock. Without this a helper-cancelled reopen would keep the original
+      // the 28-day expiry clock. Without this a helper-canceled reopen would keep the original
       // expires_at, so a post that had aged close to (or past) expiry would come back already expired and
       // be immediately un-claimable, forcing the owner to re-post manually.
       await client.query(

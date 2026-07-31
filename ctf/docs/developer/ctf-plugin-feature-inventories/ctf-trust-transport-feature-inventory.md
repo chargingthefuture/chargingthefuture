@@ -81,7 +81,7 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 ### 1.5 Order/Trip Lifecycle and Communications
 
 1. Canonical lifecycle states by mode (ride/package/food) with shared status vocabulary.
-2. In-context communication channel scoped to each order/trip between exactly the two parties (rider and driver). The chat opens with the trip and closes when the trip reaches a terminal state (completed, cancelled, disputed): no new messages may be sent, both parties keep read-only access for a limited window, and messages are retained server-side for moderation/abuse evidence per the deletion contract. No 1:1 messaging exists outside an active trip (platform rule 100, "Messaging Scope and Lifecycle").
+2. In-context communication channel scoped to each order/trip between exactly the two parties (rider and driver). The chat opens with the trip and closes when the trip reaches a terminal state (completed, canceled, disputed): no new messages may be sent, both parties keep read-only access for a limited window, and messages are retained server-side for moderation/abuse evidence per the deletion contract. No 1:1 messaging exists outside an active trip (platform rule 100, "Messaging Scope and Lifecycle").
 3. Clear non-technical status and failure messaging.
 
 ### 1.6 Earnings and Completion History
@@ -292,6 +292,7 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+- 2026-07-31: **Stored status values respelled to US English (owner-directed).** `trust_transport_requests.status`, `trust_transport_trips.status`, and `trust_transport_status_events` (the cancel event's `event_name`, now `order_canceled`, plus `from_status`/`to_status`) now store `canceled`; the trip cancel-reason column was renamed to `canceled_reason`. Existing rows are migrated by the idempotent US-spelling data migration block at the end of `ctf/schema.sql`, which re-runs on every deploy. Code, contracts, and docs were renamed in the same PR.
 - 2026-07-20: **Notifications producer.** Accepting an offer now emits a best-effort notification (`notifySafe`, `trust-transport.offer.accepted`, category `safety`) to the provider — deduped on the trip id, never to the accepting requester. Emitted from the accept-offer route. No schema/contract change.
 - 2026-07-20: **Account deletion now clears the member's Stream chat copy (privacy).** TrustTransport trip-thread chat is sent directly into Stream Chat under the Stream user `trust-transport-<userId>`, so Stream kept an independent copy that the Postgres-only account-deletion registry never removed (Stream retains messages with no expiry by default). Registered `deleteTrustTransportStreamData(userId)` (in `lib/trust-transport/stream.ts` — hard-deletes the Stream user with `mark_messages_deleted`; never throws) into the shared account-deletion external-cleanup hook (`lib/account/external-cleanup-registry.ts`), which the orchestrator runs after the DB transaction commits on every whole-account deletion path (full-account route, internal delete, Clerk webhook), best-effort (a Stream outage is logged, never blocks the deletion). No schema/route/contract change.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
@@ -338,7 +339,7 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 - 2026-07-02: Cancel-request UI on both platforms. The `POST /api/trust-transport/orders/:orderId/cancel`
   route and `cancelOrder()` repository function already existed and were fully authorized (requester or
-  admin only; forward-transition-checked so a completed/cancelled request can't be re-cancelled) but had
+  admin only; forward-transition-checked so a completed/canceled request can't be re-canceled) but had
   no caller anywhere in the app — a member had no way to cancel a request they made. Added a "Cancel
   request" control to the Tracking tab (web `tt-tracking-tab.tsx`) and the Track tab (android
   `TrustTransport.tsx`, new `cancelOrder()` added to the mobile API client) for any of the member's own

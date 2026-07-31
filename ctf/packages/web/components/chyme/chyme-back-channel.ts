@@ -53,9 +53,9 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
       setState(EMPTY_STATE);
       return;
     }
-    let cancelled = false;
+    let canceled = false;
     const tick = () => {
-      if (cancelled) return;
+      if (canceled) return;
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       void refresh();
     };
@@ -66,7 +66,7 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
-      cancelled = true;
+      canceled = true;
       window.clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
     };

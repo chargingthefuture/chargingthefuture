@@ -39,14 +39,14 @@ export function ReviewsWidget({ endpoint = REVIEWS_ENDPOINT }: { endpoint?: stri
     if (window.sessionStorage.getItem(DISMISS_KEY) === '1') {
       return;
     }
-    let cancelled = false;
+    let canceled = false;
     // Held outside the promise chain so the single cleanup below can cancel it — a
     // cleanup returned from inside .then() would go to the chain, not to useEffect.
     let appearTimer: number | undefined;
     fetch(endpoint, { headers: { accept: 'application/json' } })
       .then((res) => (res.ok ? res.json() : { reviews: [] }))
       .then((data: { reviews?: Review[] }) => {
-        if (cancelled) return;
+        if (canceled) return;
         const list = Array.isArray(data.reviews) ? data.reviews : [];
         if (list.length === 0) return;
         setReviews(list);
@@ -56,7 +56,7 @@ export function ReviewsWidget({ endpoint = REVIEWS_ENDPOINT }: { endpoint?: stri
         /* a decorative widget never surfaces an error */
       });
     return () => {
-      cancelled = true;
+      canceled = true;
       if (appearTimer !== undefined) {
         window.clearTimeout(appearTimer);
       }

@@ -99,7 +99,7 @@ out — honest retries still work.
 **Steps:**
 1. Open the claim history.
 2. Read the status of each past claim.
-**Expected:** The member sees only their own claims, each labelled pending / confirmed / rejected in
+**Expected:** The member sees only their own claims, each labeled pending / confirmed / rejected in
 plain language. An empty history shows the empty state, not an error.
 **Result:** web ☐ mobile ☐ — notes:
 

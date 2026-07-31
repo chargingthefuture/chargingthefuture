@@ -264,7 +264,7 @@ export const chymeTipSource: RecognitionSource = {
  * no price/currency, so there is no money amount to sum. We recognize each successfully-completed favor
  * as one `FREE` exchange (counted by completed-exchange count, the way the index treats BARTER/FREE),
  * read from `socket_relay_fulfillments` where `close_reason = 'successful'`. Unsuccessful, reopened, or
- * cancelled favors do not count. We deliberately do NOT also count SocketRelay's standalone
+ * canceled favors do not count. We deliberately do NOT also count SocketRelay's standalone
  * ServiceCredits transfer route here: it is rare, unlinked to a fulfillment, and counting both could
  * double-count one favor; the completed-favor count is the mutual-aid value SocketRelay actually
  * settles. If `FREE` has no active contribution weight it is surfaced and excluded, never zeroed.

@@ -91,11 +91,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (didInit.current) return;
     didInit.current = true;
-    let cancelled = false;
+    let canceled = false;
 
     void (async () => {
       const local = await readStoredTheme();
-      if (cancelled) return;
+      if (canceled) return;
       if (local !== DEFAULT_THEME) {
         setThemeState(local);
       }
@@ -103,7 +103,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const res = await authedFetch(PREFERENCES_PATH);
         if (!res.ok) return;
         const data = (await res.json()) as { ok?: boolean; theme?: unknown };
-        if (!data?.ok || cancelled) return;
+        if (!data?.ok || canceled) return;
         const serverTheme = normalizeTheme(data.theme);
         if (serverTheme !== local) {
           applyTheme(serverTheme, false);
@@ -114,7 +114,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     })();
 
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [applyTheme]);
 

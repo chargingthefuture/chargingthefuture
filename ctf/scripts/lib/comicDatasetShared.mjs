@@ -43,7 +43,7 @@ export function redact(text) {
     .replace(/\b[48][0-9AB][1-9A-HJ-NP-Za-km-z]{93}\b/g, "[wallet removed]")
     // Quora profile links, with or without a scheme/host, including the
     // trailing post slug and any query string. Handled before the general URL
-    // rule so a profile link is labelled as such rather than as a bare link.
+    // rule so a profile link is labeled as such rather than as a bare link.
     .replace(
       /(?:https?:\/\/)?(?:www\.)?quora\.com\/profile\/[^\s")\]]*/gi,
       "[profile link removed]",

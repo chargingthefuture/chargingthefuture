@@ -60,7 +60,7 @@ export const LEVEL_UP_RATE_LIMIT = {
 } as const;
 
 export const LEVEL_UP_STATUS = {
-  cohort: ['draft', 'open', 'active', 'completed', 'cancelled'] as const,
+  cohort: ['draft', 'open', 'active', 'completed', 'canceled'] as const,
   enrollment: ['enrolled', 'active', 'completed', 'dropped'] as const,
   milestoneValidation: ['validated', 'released', 'disputed'] as const,
   dispute: ['open', 'under_review', 'resolved', 'dismissed'] as const,

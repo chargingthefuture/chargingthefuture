@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 
 // One audit line per WhatWorks command, matching the declared events in
-// docs/contracts/WHAT_WORKS_PLUGIN_AUDIT_CONTRACTS.yaml. Modelled on the directory/workforce
+// docs/contracts/WHAT_WORKS_PLUGIN_AUDIT_CONTRACTS.yaml. Modeled on the directory/workforce
 // audit helpers: a single structured console line that the platform log pipeline collects.
 
 // Every WhatWorks command sits at contract version 1.0.0 today; kept as a map so a future

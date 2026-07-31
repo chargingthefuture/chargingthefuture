@@ -633,7 +633,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   const source = sr.category === "Mine" ? sr.myRequests : sr.requests;
   const visible = source.filter((r) => matchesRequestFilter(r, sr.category, userId, sr.search));
   // The Direct Line list: active conversations plus your own still-open requests as pending
-  // placeholders. Cancelled/closed lines drop out — one row per request you're waiting on or talking through.
+  // placeholders. Canceled/closed lines drop out — one row per request you're waiting on or talking through.
   const directLines = buildDirectLines(sr.fulfillments, sr.myRequests);
 
   const tabs: { key: Tab; label: string }[] = [

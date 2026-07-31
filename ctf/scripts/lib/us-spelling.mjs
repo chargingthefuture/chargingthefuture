@@ -54,14 +54,18 @@ export const RULES = [
   { british: 'minimis', us: 'minimiz', requireSuffix: 'e|ed|es|ing|ation' },
   { british: 'maximis', us: 'maximiz', requireSuffix: 'e|ed|es|ing|ation' },
   { british: 'utilis', us: 'utiliz', requireSuffix: 'e|ed|es|ing|ation' },
+  // Doubled-consonant variants. These were originally excluded because "cancelled" was a persisted
+  // status value in several tables; the owner directed the rename anyway (2026-07-31), so the
+  // stored rows were migrated in ctf/schema.sql (search "US-spelling data migration") and the words
+  // joined the list. The suffix guard keeps "cancellation" — correct US English — unmatched.
+  { british: 'cancell', us: 'cancel', requireSuffix: 'ed|ing' },
+  // `notPreceded` protects `aria-labelledby`: the doubled L there is the ARIA standard's own
+  // attribute name, not prose. Rewriting it produces an attribute browsers do not recognize —
+  // screen readers silently lose the label association, which the a11y lint caught when the first
+  // pass of this sweep did exactly that.
+  { british: 'labell', us: 'label', requireSuffix: 'ed|ing', notPreceded: 'aria-' },
+  { british: 'modell', us: 'model', requireSuffix: 'ed|ing' },
 ];
-
-// Deliberately NOT listed: cancelled / cancelling / labelled / modelling. These are
-// doubled-consonant variants rather than distinct dialect words — US style prefers the single L,
-// but the double L is not wrong in US English. More importantly, `cancelled` is a persisted status
-// value in the database (LightHouse matches, TrustTransport trips, SocketRelay fulfillments) and in
-// the contract YAML that describes them. Renaming a stored value across the schema, the code, the
-// contracts, and every existing row would be a real migration risk for no member-visible gain.
 
 // The optional `un` group matters: without it "unrecognised" and "unnormalised" slip through,
 // because the word boundary a rule anchors on sits before "un", not before the root. Capturing the
@@ -69,7 +73,8 @@ export const RULES = [
 function buildPattern(rule) {
   const suffix = rule.requireSuffix ? `(?=${rule.requireSuffix})` : '';
   const boundary = rule.wholeWord ? '\\b' : '';
-  return new RegExp(`\\b(un)?${rule.british}${boundary}${suffix}`, 'gi');
+  const guard = rule.notPreceded ? `(?<!${rule.notPreceded})` : '';
+  return new RegExp(`${guard}\\b(un)?${rule.british}${boundary}${suffix}`, 'gi');
 }
 
 export const PATTERNS = RULES.map((rule) => ({ rule, pattern: buildPattern(rule) }));

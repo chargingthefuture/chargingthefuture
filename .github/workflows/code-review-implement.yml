@@ -1,7 +1,7 @@
 name: Code Review — Open PR for Actionable Finding
 
 # Turns ONE code-review finding into a pull request. It only ever runs against an issue the
-# sweep (code-review-sweep.yml) labelled `code-review:actionable` — meaning the reviewer
+# sweep (code-review-sweep.yml) labeled `code-review:actionable` — meaning the reviewer
 # judged the fix small, safe, and self-contained, so it is low-risk by construction and the
 # PR can auto-merge.
 #
@@ -9,7 +9,7 @@ name: Code Review — Open PR for Actionable Finding
 # hands-off: the sweep files issues, this builds the oldest actionable one. It can still be
 # kicked by hand, and you can target a specific issue by number.
 #
-# Hard one-at-a-time rule: every PR it opens is labelled `code-review:auto-pr`, and the run
+# Hard one-at-a-time rule: every PR it opens is labeled `code-review:auto-pr`, and the run
 # bails out cleanly if any such PR is still open — so at most one auto PR exists at a time and
 # they merge in series. The `code-review-pr-babysitter.yml` workflow keeps that one PR moving
 # (updates it when it falls behind main, resolves real conflicts) so it can't sit stuck.
@@ -108,7 +108,7 @@ jobs:
             --jq 'sort_by(.createdAt) | .[0].number // empty')
           if [ -z "$NUM" ]; then
             echo "number=" >> "$GITHUB_OUTPUT"
-            echo "No issues labelled code-review:actionable; nothing to build."
+            echo "No issues labeled code-review:actionable; nothing to build."
           else
             echo "number=$NUM" >> "$GITHUB_OUTPUT"
             echo "Selected oldest actionable issue #$NUM."

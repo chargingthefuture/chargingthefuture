@@ -205,18 +205,18 @@ export function SkillsHuntShell({
 
   // Notifications: poll every 30s for unread (GetStream is out of scope; continuity §2.11).
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     async function load() {
       try {
         const res = await fetch("/api/skills-hunt/notifications");
-        if (cancelled || !res.ok) return;
+        if (canceled || !res.ok) return;
         const data = (await res.json()) as { notifications: SkillsHuntNotification[] };
         setNotifications(data.notifications);
       } catch { /* ignore polling errors */ }
     }
     void load();
     const timer = setInterval(load, 30_000);
-    return () => { cancelled = true; clearInterval(timer); };
+    return () => { canceled = true; clearInterval(timer); };
   }, []);
 
   async function markRead(notificationId: string) {
