@@ -17,6 +17,36 @@ type RouteParams = {
   params: Promise<{ announcementId: string }>;
 };
 
+// Map a toggle-reaction failure to its response. Known error codes carry their own status; anything
+// else is reported and returned as a generic 503.
+function mapAnnouncementReactionError(error: unknown): NextResponse {
+  const code = error instanceof Error ? error.message : 'unknown_error';
+  if (code === 'reaction_emoji_invalid') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Unsupported reaction emoji.' },
+      { status: 400 },
+    );
+  }
+  if (code === 'announcement_not_found') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.notFound, message: 'The announcement you are reacting to is no longer available.' },
+      { status: 400 },
+    );
+  }
+  if (code === 'cannot_react_to_own_post') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'You can’t react to your own announcement.' },
+      { status: 403 },
+    );
+  }
+
+  reportError(error, { area: 'announcements', op: 'toggle_reaction' });
+  return NextResponse.json(
+    { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to update your reaction.' },
+    { status: 503 },
+  );
+}
+
 export async function POST(request: Request, { params }: RouteParams) {
   const gate = await requireFeedReadAccess();
   if (!gate.allowed) {
@@ -60,30 +90,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
     return NextResponse.json({ ok: true, reacted: result.reacted }, { status: 200 });
   } catch (error) {
-    const code = error instanceof Error ? error.message : 'unknown_error';
-    if (code === 'reaction_emoji_invalid') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Unsupported reaction emoji.' },
-        { status: 400 },
-      );
-    }
-    if (code === 'announcement_not_found') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.notFound, message: 'The announcement you are reacting to is no longer available.' },
-        { status: 400 },
-      );
-    }
-    if (code === 'cannot_react_to_own_post') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'You can’t react to your own announcement.' },
-        { status: 403 },
-      );
-    }
-
-    reportError(error, { area: 'announcements', op: 'toggle_reaction' });
-    return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to update your reaction.' },
-      { status: 503 },
-    );
+    return mapAnnouncementReactionError(error);
   }
 }

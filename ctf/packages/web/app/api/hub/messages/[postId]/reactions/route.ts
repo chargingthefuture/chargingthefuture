@@ -13,6 +13,38 @@ type ReactionRequestBody = {
   emoji?: unknown;
 };
 
+// Map a toggle-reaction failure to its response. Known error codes carry their own status; anything
+// else is reported to Sentry and returned as a generic 503.
+function mapHubReactionError(error: unknown): NextResponse {
+  const code = error instanceof Error ? error.message : 'unknown_error';
+  if (code === 'reaction_emoji_invalid') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Unsupported reaction emoji.' },
+      { status: 400 },
+    );
+  }
+  if (code === 'post_not_found') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.postNotFound, message: 'The post you are reacting to is no longer available.' },
+      { status: 400 },
+    );
+  }
+  if (code === 'cannot_react_to_own_post') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'You can’t react to your own post.' },
+      { status: 403 },
+    );
+  }
+
+  // Unexpected failure (e.g. a database error): caught errors do not reach Sentry on their
+  // own, so report it. The client still gets a generic message.
+  Sentry.captureException(error, { tags: { area: 'hub', op: 'toggle_reaction' } });
+  return NextResponse.json(
+    { ok: false, message: 'Unable to update your reaction.' },
+    { status: 503 },
+  );
+}
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ postId: string }> },
@@ -59,32 +91,6 @@ export async function POST(
     const result = await toggleCommunityPostReaction(gate.auth.userId, postId, emoji);
     return NextResponse.json({ ok: true, reacted: result.reacted }, { status: 200 });
   } catch (error) {
-    const code = error instanceof Error ? error.message : 'unknown_error';
-    if (code === 'reaction_emoji_invalid') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Unsupported reaction emoji.' },
-        { status: 400 },
-      );
-    }
-    if (code === 'post_not_found') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.postNotFound, message: 'The post you are reacting to is no longer available.' },
-        { status: 400 },
-      );
-    }
-    if (code === 'cannot_react_to_own_post') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'You can’t react to your own post.' },
-        { status: 403 },
-      );
-    }
-
-    // Unexpected failure (e.g. a database error): caught errors do not reach Sentry on their
-    // own, so report it. The client still gets a generic message.
-    Sentry.captureException(error, { tags: { area: 'hub', op: 'toggle_reaction' } });
-    return NextResponse.json(
-      { ok: false, message: 'Unable to update your reaction.' },
-      { status: 503 },
-    );
+    return mapHubReactionError(error);
   }
 }

@@ -19,6 +19,36 @@ type RouteParams = {
   params: Promise<{ announcementId: string }>;
 };
 
+// Map a reply-create failure to its response. Known error codes carry their own status; anything
+// else is reported and returned as a generic 503.
+function mapAnnouncementReplyError(error: unknown): NextResponse {
+  const code = error instanceof Error ? error.message : 'unknown_error';
+  if (code === 'announcement_not_found') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.notFound, message: 'The announcement you are replying to is no longer available.' },
+      { status: 400 },
+    );
+  }
+  if (code === 'content_policy_violation') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.moderationRejected, message: 'Reply blocked by content moderation.' },
+      { status: 422 },
+    );
+  }
+  if (code === 'rate_limit_exceeded') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.rateLimitExceeded, message: 'You are replying too quickly. Try again shortly.' },
+      { status: 429 },
+    );
+  }
+
+  reportError(error, { area: 'announcements', op: 'create_reply' });
+  return NextResponse.json(
+    { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to post your reply.' },
+    { status: 503 },
+  );
+}
+
 export async function GET(_request: Request, { params }: RouteParams) {
   const gate = await requireFeedReadAccess();
   if (!gate.allowed) {
@@ -110,30 +140,6 @@ export async function POST(request: Request, { params }: RouteParams) {
       { status: 201 },
     );
   } catch (error) {
-    const code = error instanceof Error ? error.message : 'unknown_error';
-    if (code === 'announcement_not_found') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.notFound, message: 'The announcement you are replying to is no longer available.' },
-        { status: 400 },
-      );
-    }
-    if (code === 'content_policy_violation') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.moderationRejected, message: 'Reply blocked by content moderation.' },
-        { status: 422 },
-      );
-    }
-    if (code === 'rate_limit_exceeded') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.rateLimitExceeded, message: 'You are replying too quickly. Try again shortly.' },
-        { status: 429 },
-      );
-    }
-
-    reportError(error, { area: 'announcements', op: 'create_reply' });
-    return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to post your reply.' },
-      { status: 503 },
-    );
+    return mapAnnouncementReplyError(error);
   }
 }
