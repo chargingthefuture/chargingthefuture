@@ -18,30 +18,38 @@ function parsePriceAmount(value: unknown): number | null {
   return null;
 }
 
-function parseRequestInput(body: Record<string, unknown>): TrustTransportRequestInput {
-  const modeValue = typeof body.mode === 'string' ? body.mode : 'ride';
-  const mode = (TRUST_TRANSPORT_MODES as readonly string[]).includes(modeValue)
+function parseMode(value: unknown): TrustTransportMode {
+  const modeValue = typeof value === 'string' ? value : 'ride';
+  return (TRUST_TRANSPORT_MODES as readonly string[]).includes(modeValue)
     ? (modeValue as TrustTransportMode)
     : 'ride';
+}
 
-  // Settlement value type (issue #420): a non-empty code names how the ride is settled; absent means
-  // none chosen. Amount is kept only as a positive finite number, so amount-less types carry no amount.
-  const priceCurrency =
-    typeof body.priceCurrency === 'string' && body.priceCurrency.trim().length > 0
-      ? body.priceCurrency.trim()
-      : null;
-  const priceAmount = parsePriceAmount(body.priceAmount);
+function stringOrDefault(value: unknown, fallback: string): string {
+  return typeof value === 'string' ? value : fallback;
+}
 
+function optionalString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+// Settlement value type (issue #420): a non-empty code names how the ride is settled; absent means
+// none chosen. Amount is kept only as a positive finite number, so amount-less types carry no amount.
+function parsePriceCurrency(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function parseRequestInput(body: Record<string, unknown>): TrustTransportRequestInput {
   return {
-    mode,
-    title: typeof body.title === 'string' ? body.title : '',
-    details: typeof body.details === 'string' ? body.details : '',
-    pickupCity: typeof body.pickupCity === 'string' ? body.pickupCity : null,
-    dropoffCity: typeof body.dropoffCity === 'string' ? body.dropoffCity : null,
-    pickupGeoRedacted: typeof body.pickupGeoRedacted === 'string' ? body.pickupGeoRedacted : null,
-    dropoffGeoRedacted: typeof body.dropoffGeoRedacted === 'string' ? body.dropoffGeoRedacted : null,
-    priceCurrency,
-    priceAmount,
+    mode: parseMode(body.mode),
+    title: stringOrDefault(body.title, ''),
+    details: stringOrDefault(body.details, ''),
+    pickupCity: optionalString(body.pickupCity),
+    dropoffCity: optionalString(body.dropoffCity),
+    pickupGeoRedacted: optionalString(body.pickupGeoRedacted),
+    dropoffGeoRedacted: optionalString(body.dropoffGeoRedacted),
+    priceCurrency: parsePriceCurrency(body.priceCurrency),
+    priceAmount: parsePriceAmount(body.priceAmount),
   };
 }
 
