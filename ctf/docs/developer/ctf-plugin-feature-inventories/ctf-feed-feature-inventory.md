@@ -592,6 +592,49 @@ All three feed channels (announcements, questions, community) are shipped on web
   - **Parity:** web + mobile-responsive; Android out of scope (web-only per rule 105).
 ### Change Log
 
+- 2026-07-31 (latest): **Copy preview — render member-facing text before it ships (owner request).** Two
+  defects reached members in a day (sentences chopped mid-clause; a card that swallowed the screen), and
+  every automated gate passed both, because none of them look at the OUTPUT.
+  `ctf/scripts/preview-member-copy.mjs` (`pnpm --dir ctf preview:member-copy`) renders every standing
+  notice and the first-visit card to PNGs at phone width with the phone fold marked, and **exits
+  non-zero when the first-visit card is taller than the screen** — the exact failure that happened. The
+  PNGs are attached to any PR that changes member-facing copy and are git-ignored, so the repo never
+  accumulates screenshots of superseded wording. It renders the text and the box, not the live app:
+  faithful for line breaking, paragraph spacing and overflow; it does not prove theme colours. Playwright
+  is resolved from the project or a global install rather than added as a dependency, since this is a
+  review tool and not a CI gate. The pure paragraph logic moved to `lib/feed/notice-paragraphs.ts` so the
+  script and any future test can use it without pulling in React.
+- 2026-07-31 (later): **The first-visit card is short and no longer fights the chat for the screen**
+  (owner report, with a screenshot). It was rendering the FULL standing notice inside a card that sits
+  above the message list in a fixed-height flex column. A tall card steals the flexible space, pushes
+  the Commons header off screen, and leaves the member scrolling the *conversation* to get past the
+  notice — landing in empty space below it. Two fixes: the card now has its own short copy
+  (`COMMONS_FIRST_VISIT_TITLE` / `COMMONS_FIRST_VISIT_BODY` — "Before you post": this room is public,
+  the assistant is not), and it is pinned `flex: 0 0 auto` with `overflow: visible` so it can never grow
+  into the message area or become its own scroller. The long version still arrives on the 75-post
+  rotation, where length costs nothing because an announcement scrolls with the chat instead of sitting
+  on top of it. `NoticeParagraphs` also stopped adding a trailing margin, so a one-paragraph body leaves
+  no stray space in a compact card.
+- 2026-07-31: **Notice text renders as paragraphs (bug fix — this reached members).** The notice bodies
+  were authored as an array of source-wrapped lines joined with `\n`. Under `white-space: pre-wrap`
+  every one of those source wraps rendered as a HARD line break, so members read sentences chopped
+  mid-clause. Source formatting is not content, and nothing in the codebase knew the difference.
+  - **Content fixed at the source**: paragraphs are single strings, assembled with a `para(...)` helper
+    that joins fragments with a space so the SOURCE can still wrap, and paragraphs joined with `\n\n`.
+  - **Renderer fixed too**, because a renderer should not be one stray newline from that result: new
+    `NoticeParagraphs` splits on blank lines into real `<p>` elements and collapses a lone newline to a
+    space — unless the paragraph is a deliberate line list, which keeps an announcement's trailing
+    `Open <Plugin>: <url>` block on separate lines. Used by both the first-visit card and the stream
+    announcement card.
+  - **Already-published rows are repaired.** Fixing the constant alone would have left every published
+    row broken until its next milestone — three weeks for the 21-day notice. `refreshPublishedGuidanceNotices`
+    now brings any system-authored notice back in line with its current wording on each run, matching on
+    title and restricted to `FEED_SYSTEM_ACTOR_ID` so member- or owner-authored announcements are never
+    touched.
+  - **New CI gate** `notice-formatting-gate` (`check-notice-formatting.mjs`) fails any notice body built
+    by joining lines with a single `\n`. Verified in both directions: it passes on the fixed text and
+    exits non-zero when the original mistake is reintroduced. Typecheck, lint and every other gate had
+    passed the broken version.
 - 2026-07-30 (later): **Three standing Commons notices, three cadences.** The single notice became a
   registry (`COMMONS_NOTICES` in `lib/feed/commons-guidance.ts`), and the milestone table is now keyed
   `(notice_key, milestone_count)` — that composite UNIQUE is still the whole concurrency story.

@@ -57,6 +57,29 @@ function ChatPane({ selected, creds, loading, error }: { selected: TripRequest |
   return null;
 }
 
+// A trip's list label: the pickup → drop-off route when either endpoint is known, otherwise the
+// trip's own title (falling back to "Your trip").
+function tripLabel(r: TripRequest): string {
+  const from = r.pickupCity ?? r.fromLocation;
+  const to = r.dropoffCity ?? r.toLocation;
+  if (from || to) {
+    return `${from ?? "—"} → ${to ?? "—"}`;
+  }
+  return r.title?.trim() || "Your trip";
+}
+
+// One selectable trip in the left rail. `active` is computed by the parent so this stays simple.
+function TripListItem({ r, active, onSelect }: { r: TripRequest; active: boolean; onSelect: (r: TripRequest) => void }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
+  return (
+    <button type="button" onClick={() => onSelect(r)} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: active ? `${t.ACCENT}18` : "transparent", border: active ? `1px solid ${t.ACCENT}30` : "1px solid transparent", marginBottom: 4 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: t.TEXT }}>{tripLabel(r)}</div>
+      <div style={{ fontSize: 11, color: t.MUTED }}>{r.status ?? "Pending"}</div>
+    </button>
+  );
+}
+
 export function TrustTransportChatTab({
   requests,
   selectedRequest,
@@ -83,19 +106,9 @@ export function TrustTransportChatTab({
     <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
       <div style={{ width: 220, borderRight: `1px solid ${t.BORDER}`, padding: "12px 8px", overflowY: "auto" }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: t.FAINT, textTransform: "uppercase", letterSpacing: "0.08em", padding: "0 8px", marginBottom: 8 }}>My Trips</div>
-        {requests.map((r) => {
-          const active = selectedRequest?.id === r.id;
-          return (
-            <button key={r.id} type="button" onClick={() => onSelect(r)} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: active ? `${t.ACCENT}18` : "transparent", border: active ? `1px solid ${t.ACCENT}30` : "1px solid transparent", marginBottom: 4 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: t.TEXT }}>
-                {(r.pickupCity ?? r.fromLocation) || (r.dropoffCity ?? r.toLocation)
-                  ? `${r.pickupCity ?? r.fromLocation ?? "—"} → ${r.dropoffCity ?? r.toLocation ?? "—"}`
-                  : (r.title?.trim() || "Your trip")}
-              </div>
-              <div style={{ fontSize: 11, color: t.MUTED }}>{r.status ?? "Pending"}</div>
-            </button>
-          );
-        })}
+        {requests.map((r) => (
+          <TripListItem key={r.id} r={r} active={selectedRequest?.id === r.id} onSelect={onSelect} />
+        ))}
       </div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <ChatPane selected={selectedRequest} creds={chatCredentials} loading={chatLoading} error={chatError} />

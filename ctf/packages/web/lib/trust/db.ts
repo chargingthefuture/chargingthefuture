@@ -99,6 +99,26 @@ function countOf(result: { rows: { count: string }[] }): number {
   return Number(result.rows[0]?.count ?? 0);
 }
 
+// Read one named numeric column off the first row, defaulting a missing row/value to 0. Keeps the
+// `?.`/`??` guards out of computeTrustSignalMetrics so that function stays flat.
+function numCol<T extends Record<string, unknown>>(result: { rows: T[] }, key: keyof T): number {
+  const raw = result.rows[0]?.[key];
+  return Number(raw ?? 0);
+}
+
+// Map the login aggregate row into its three metric fields. Extracted so the login guards don't
+// count against computeTrustSignalMetrics' complexity.
+function buildLoginMetrics(loginAgg: {
+  rows: { login_days: string; login_events: string; last_login_at: Date | null }[];
+}): { loginDays: number; loginEvents: number; lastLoginAt: string | null } {
+  const loginRow = loginAgg.rows[0];
+  return {
+    loginDays: Number(loginRow?.login_days ?? 0),
+    loginEvents: Number(loginRow?.login_events ?? 0),
+    lastLoginAt: loginRow?.last_login_at ? loginRow.last_login_at.toISOString() : null,
+  };
+}
+
 export async function computeTrustSignalMetrics(userId: string): Promise<TrustSignalMetrics> {
   const [
     loginAgg,
@@ -221,16 +241,13 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     ),
   ]);
 
-  const loginRow = loginAgg.rows[0];
   return {
-    loginDays: Number(loginRow?.login_days ?? 0),
-    loginEvents: Number(loginRow?.login_events ?? 0),
-    lastLoginAt: loginRow?.last_login_at ? loginRow.last_login_at.toISOString() : null,
-    socketRelayCompletedTrades: Number(completedTrades.rows[0]?.completed ?? 0),
-    socketRelayRequestsOpened: Number(requestsOpened.rows[0]?.opened ?? 0),
-    serviceCreditsDistinctPayers: Number(scReceived.rows[0]?.payers ?? 0),
-    serviceCreditsCompletedReceived: Number(scReceived.rows[0]?.completed ?? 0),
-    serviceCreditsDisputesAgainst: Number(scDisputes.rows[0]?.disputes ?? 0),
+    ...buildLoginMetrics(loginAgg),
+    socketRelayCompletedTrades: numCol(completedTrades, 'completed'),
+    socketRelayRequestsOpened: numCol(requestsOpened, 'opened'),
+    serviceCreditsDistinctPayers: numCol(scReceived, 'payers'),
+    serviceCreditsCompletedReceived: numCol(scReceived, 'completed'),
+    serviceCreditsDisputesAgainst: numCol(scDisputes, 'disputes'),
     lighthouseMatchesAccepted: countOf(lighthouse),
     trustTransportTripsCompleted: countOf(trustTransport),
     skillsHuntSubmissionsAccepted: countOf(skillsHunt),
@@ -245,46 +262,33 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
   };
 }
 
-// Build human-readable, NON-NUMERIC-SCORE evidence from the real metric counts. Real-data-only:
-// any signal whose backing rows are absent (count of 0 / no login) produces NO evidence item, so
-// the panel never claims activity that did not happen.
-export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string): TrustEvidenceItem[] {
-  const evidence: TrustEvidenceItem[] = [];
-
-  if (metrics.socketRelayCompletedTrades > 0) {
-    const n = metrics.socketRelayCompletedTrades;
+// Push one "verb N noun" evidence item when the count is positive. The singular/plural choice lives
+// in the caller's `summarize` callback so its ternary counts against that callback, not the builder.
+function pushCountEvidence(
+  evidence: TrustEvidenceItem[],
+  nowIso: string,
+  count: number,
+  type: string,
+  summarize: (n: number) => string,
+): void {
+  if (count > 0) {
     evidence.push({
-      type: 'engagement-socket-relay-trades',
-      summary: `Completed ${n} SocketRelay ${n === 1 ? 'trade' : 'trades'}`,
+      type,
+      summary: summarize(count),
       createdAt: nowIso,
       createdBy: 'trust-signal',
     });
   }
+}
 
-  if (metrics.socketRelayRequestsOpened > 0) {
-    const n = metrics.socketRelayRequestsOpened;
-    evidence.push({
-      type: 'engagement-socket-relay-requests',
-      summary: `Opened ${n} SocketRelay ${n === 1 ? 'request' : 'requests'}`,
-      createdAt: nowIso,
-      createdBy: 'trust-signal',
-    });
-  }
-
-  // Breadth signal: distinct members chose to pay this member in ServiceCredits.
-  if (metrics.serviceCreditsDistinctPayers > 0) {
-    const n = metrics.serviceCreditsDistinctPayers;
-    evidence.push({
-      type: 'engagement-service-credits-payers',
-      summary: `Received ServiceCredits from ${n} community ${n === 1 ? 'member' : 'members'}`,
-      createdAt: nowIso,
-      createdBy: 'trust-signal',
-    });
-  }
-
-  // Clean-record signal: only shown when there are completed received transfers and none have been
-  // disputed. A dispute withholds this positive signal rather than producing a negative badge —
-  // signal over noise, with dignity. No number is ranked; this is a categorical "clean / not shown".
+// Clean-record signal: only shown when there are completed received transfers and none have been
+// disputed. A dispute withholds this positive signal rather than producing a negative badge —
+// signal over noise, with dignity. No number is ranked; this is a categorical "clean / not shown".
+function pushCleanRecordEvidence(
+  evidence: TrustEvidenceItem[],
+  nowIso: string,
+  metrics: TrustSignalMetrics,
+): void {
   if (metrics.serviceCreditsCompletedReceived > 0 && metrics.serviceCreditsDisputesAgainst === 0) {
     const n = metrics.serviceCreditsCompletedReceived;
     evidence.push({
@@ -294,7 +298,14 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
       createdBy: 'trust-signal',
     });
   }
+}
 
+// Login-frequency signal, which additionally carries the most-recent sign-in in `details`.
+function pushLoginEvidence(
+  evidence: TrustEvidenceItem[],
+  nowIso: string,
+  metrics: TrustSignalMetrics,
+): void {
   if (metrics.loginDays > 0) {
     const n = metrics.loginDays;
     evidence.push({
@@ -305,9 +316,15 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
       createdBy: 'trust-signal',
     });
   }
+}
 
-  // Per-plugin participation signals. Data-driven so the set can grow without raising the function's
-  // complexity; each emits one categorical "verb N noun" item only when the real count is > 0.
+// Per-plugin participation signals. Data-driven so the set can grow without raising complexity; each
+// emits one categorical "verb N noun" item only when the real count is > 0.
+function pushParticipationEvidence(
+  evidence: TrustEvidenceItem[],
+  nowIso: string,
+  metrics: TrustSignalMetrics,
+): void {
   const participationSignals: { count: number; type: string; verb: string; singular: string; plural: string }[] = [
     { count: metrics.lighthouseMatchesAccepted, type: 'engagement-lighthouse-matches', verb: 'Accepted', singular: 'LightHouse match', plural: 'LightHouse matches' },
     { count: metrics.trustTransportTripsCompleted, type: 'engagement-trust-transport-trips', verb: 'Completed', singular: 'TrustTransport trip', plural: 'TrustTransport trips' },
@@ -331,6 +348,44 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
       });
     }
   }
+}
+
+// Build human-readable, NON-NUMERIC-SCORE evidence from the real metric counts. Real-data-only:
+// any signal whose backing rows are absent (count of 0 / no login) produces NO evidence item, so
+// the panel never claims activity that did not happen.
+export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string): TrustEvidenceItem[] {
+  const evidence: TrustEvidenceItem[] = [];
+
+  pushCountEvidence(
+    evidence,
+    nowIso,
+    metrics.socketRelayCompletedTrades,
+    'engagement-socket-relay-trades',
+    (n) => `Completed ${n} SocketRelay ${n === 1 ? 'trade' : 'trades'}`,
+  );
+
+  pushCountEvidence(
+    evidence,
+    nowIso,
+    metrics.socketRelayRequestsOpened,
+    'engagement-socket-relay-requests',
+    (n) => `Opened ${n} SocketRelay ${n === 1 ? 'request' : 'requests'}`,
+  );
+
+  // Breadth signal: distinct members chose to pay this member in ServiceCredits.
+  pushCountEvidence(
+    evidence,
+    nowIso,
+    metrics.serviceCreditsDistinctPayers,
+    'engagement-service-credits-payers',
+    (n) => `Received ServiceCredits from ${n} community ${n === 1 ? 'member' : 'members'}`,
+  );
+
+  pushCleanRecordEvidence(evidence, nowIso, metrics);
+
+  pushLoginEvidence(evidence, nowIso, metrics);
+
+  pushParticipationEvidence(evidence, nowIso, metrics);
 
   return evidence;
 }

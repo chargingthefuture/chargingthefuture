@@ -67,11 +67,10 @@ function roomUrl(cohortId?: string | null): string {
   return cohortId ? `/api/peer-programming/room?cohortId=${encodeURIComponent(cohortId)}` : "/api/peer-programming/room";
 }
 
-async function fetchRoomData(signal: AbortSignal, cohortId?: string | null): Promise<RoomData> {
-  const res = await fetch(roomUrl(cohortId), { signal });
-  if (!res.ok) throw new Error("Failed to load room");
-  const data = (await res.json()) as RoomApiResponse;
-  const room: Room = {
+// Map the API cohort/topic block onto the shell's Room view model. Kept separate from the full
+// RoomData mapping so each stays under the complexity budget.
+function mapRoom(data: RoomApiResponse): Room {
+  return {
     id: data.cohort?.id ?? "peer-programming-room",
     cohortId: data.cohort?.id,
     name: data.cohort?.cohortLabel,
@@ -79,8 +78,11 @@ async function fetchRoomData(signal: AbortSignal, cohortId?: string | null): Pro
     participants: [],
     ended: Boolean(data.ended),
   };
+}
+
+function mapRoomData(data: RoomApiResponse): RoomData {
   return {
-    room,
+    room: mapRoom(data),
     messages: mapMessages(data.messages ?? [], data.members ?? []),
     cohorts: data.cohorts ?? [],
     members: data.members ?? [],
@@ -89,12 +91,147 @@ async function fetchRoomData(signal: AbortSignal, cohortId?: string | null): Pro
   };
 }
 
+async function fetchRoomData(signal: AbortSignal, cohortId?: string | null): Promise<RoomData> {
+  const res = await fetch(roomUrl(cohortId), { signal });
+  if (!res.ok) throw new Error("Failed to load room");
+  const data = (await res.json()) as RoomApiResponse;
+  return mapRoomData(data);
+}
+
+// Pull a human-readable message off a thrown value, falling back when it is not an Error.
+function errorMessage(e: unknown, fallback: string): string {
+  return e instanceof Error ? e.message : fallback;
+}
+
+// Re-pull just the open cohort's messages after a successful post. Returns null when the room
+// endpoint fails, so the caller leaves the existing messages in place.
+async function fetchRoomMessages(cohortId: string | null): Promise<Message[] | null> {
+  const roomRes = await fetch(roomUrl(cohortId));
+  if (!roomRes.ok) return null;
+  const data = (await roomRes.json()) as RoomApiResponse;
+  return mapMessages(data.messages ?? [], data.members ?? []);
+}
+
 // Read an optional ?cohortId= from the URL on the client (admin "Open room →" deep links and
 // listen-in links use it). Done from window rather than useSearchParams to avoid a Suspense
 // boundary requirement on this client shell.
 function initialCohortIdFromUrl(): string | null {
   if (typeof window === "undefined") return null;
   return new URLSearchParams(window.location.search).get("cohortId");
+}
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: "cohorts", label: "Cohorts" },
+  { key: "session", label: "Session" },
+  { key: "chat", label: "Direct Line" },
+];
+
+// Full-height error message, shown when the room fails to load.
+function PeerProgrammingErrorState({ error }: { error: string }) {
+  return (
+    <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontFamily: "Inter, system-ui, sans-serif" }}>
+      {error}
+    </div>
+  );
+}
+
+// Sticky header: back control, title, admin/refresh actions, and the tab switcher.
+function PeerProgrammingHeader({ t, isAdmin, tab, onSelectTab, onRefresh }: {
+  t: ReturnType<typeof getPeerProgrammingTokens>;
+  isAdmin?: boolean;
+  tab: Tab;
+  onSelectTab: (tab: Tab) => void;
+  onRefresh: () => void | Promise<void>;
+}) {
+  return (
+    <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
+        <BackChevronButton accent={t.ACCENT} />
+        <Users size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
+        {/* Title shrinks and truncates so the trailing controls always stay on screen */}
+        <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>PeerProgramming</span>
+        <PluginAdminButton href="/admin/peer-programming" isAdmin={isAdmin} accent={t.ACCENT} />
+        <RefreshButton onRefresh={onRefresh} title="Refresh" />
+        <MobileTopActions />
+      </div>
+      <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
+        {TABS.map(({ key, label }) => (
+          <button key={key} onClick={() => onSelectTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? t.ACCENT_TINT_BG : "transparent", border: `1px solid ${tab === key ? t.ACCENT_TAB_BORDER : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Body for the active tab. Which tab is shown is driven entirely by `tab`; the other tabs render
+// nothing, matching the original inline switch.
+function PeerProgrammingTabContent(props: {
+  tab: Tab;
+  room: Room | null;
+  messages: Message[];
+  messageInput: string;
+  onMessageInput: (value: string) => void;
+  onSend: () => void;
+  submitting: boolean;
+  access: RoomAccess;
+  onJoinSession: () => void;
+  feedbackInput: string;
+  onFeedbackInput: (value: string) => void;
+  onSubmitFeedback: (e: React.FormEvent) => void;
+  feedbackSuccess: boolean;
+  feedbackError: string | null;
+  cohorts: CohortSummary[];
+  members: RoomMember[];
+  myCohortId: string | null;
+  activeCohortId: string | null;
+  onOpenCohort: (id: string | null) => void;
+  switching: boolean;
+  isAdmin?: boolean;
+}) {
+  const {
+    tab, room, messages, messageInput, onMessageInput, onSend, submitting, access,
+    onJoinSession, feedbackInput, onFeedbackInput, onSubmitFeedback, feedbackSuccess,
+    feedbackError, cohorts, members, myCohortId, activeCohortId, onOpenCohort, switching, isAdmin,
+  } = props;
+  const participants = room?.participants ?? [];
+  return (
+    <>
+      {tab === "cohorts" && (
+        <PeerProgrammingCohortsTab
+          room={room}
+          onJoinSession={onJoinSession}
+          feedback={{
+            value: feedbackInput,
+            onChange: onFeedbackInput,
+            onSubmit: onSubmitFeedback,
+            submitting,
+            success: feedbackSuccess,
+            error: feedbackError,
+          }}
+          cohorts={cohorts}
+          members={members}
+          myCohortId={myCohortId}
+          openCohortId={activeCohortId}
+          onOpenCohort={onOpenCohort}
+          switching={switching}
+          isAdmin={Boolean(isAdmin)}
+        />
+      )}
+      {tab === "session" && <PeerProgrammingSessionTab room={room} participants={participants} />}
+      {tab === "chat" && (
+        <PeerProgrammingChatTab
+          room={room}
+          messages={messages}
+          messageInput={messageInput}
+          onMessageInput={onMessageInput}
+          onSend={onSend}
+          submitting={submitting}
+          readOnly={access !== "member"}
+          ended={Boolean(room?.ended)}
+        />
+      )}
+    </>
+  );
 }
 
 export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
@@ -118,6 +255,17 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const { theme } = useTheme();
   const t = getPeerProgrammingTokens(theme);
 
+  // Commit a fetched room payload to state in one place, so every load path (initial, refresh,
+  // cohort switch) settles the same fields the same way.
+  const applyRoomData = useCallback((data: RoomData) => {
+    setRoom(data.room);
+    setMessages(data.messages);
+    setCohorts(data.cohorts);
+    setMembers(data.members);
+    setMyCohortId(data.myCohortId);
+    setAccess(data.access);
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     const deepLinked = initialCohortIdFromUrl();
@@ -131,22 +279,17 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       try {
         const data = await fetchRoomData(controller.signal, deepLinked);
         if (controller.signal.aborted) return;
-        setRoom(data.room);
-        setMessages(data.messages);
-        setCohorts(data.cohorts);
-        setMembers(data.members);
-        setMyCohortId(data.myCohortId);
-        setAccess(data.access);
+        applyRoomData(data);
       } catch (e: unknown) {
         if (controller.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
-        setError(e instanceof Error ? e.message : "Failed to load PeerProgramming data.");
+        setError(errorMessage(e, "Failed to load PeerProgramming data."));
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
     }
     void fetchData();
     return () => controller.abort();
-  }, []);
+  }, [applyRoomData]);
 
   // One controller for the latest reload/switch request. Each new request aborts the previous
   // one, so two rapid cohort switches (or a switch racing a refresh) can never settle state in
@@ -167,17 +310,12 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     try {
       const data = await fetchRoomData(signal, activeCohortId);
       if (signal.aborted) return;
-      setRoom(data.room);
-      setMessages(data.messages);
-      setCohorts(data.cohorts);
-      setMembers(data.members);
-      setMyCohortId(data.myCohortId);
-      setAccess(data.access);
+      applyRoomData(data);
     } catch (e: unknown) {
       if (signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
-      setError(e instanceof Error ? e.message : "Failed to refresh PeerProgramming data.");
+      setError(errorMessage(e, "Failed to refresh PeerProgramming data."));
     }
-  }, [activeCohortId, nextRoomRequestSignal]);
+  }, [activeCohortId, nextRoomRequestSignal, applyRoomData]);
 
   // Open another running cohort to listen in (read-only unless you are a member of it). Passing
   // null returns to your own cohort. Refetches the room for that cohort and jumps to the chat.
@@ -188,17 +326,12 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     try {
       const data = await fetchRoomData(signal, cohortId);
       if (signal.aborted) return;
-      setRoom(data.room);
-      setMessages(data.messages);
-      setCohorts(data.cohorts);
-      setMembers(data.members);
-      setMyCohortId(data.myCohortId);
-      setAccess(data.access);
+      applyRoomData(data);
       setActiveCohortId(cohortId);
       setTab("chat");
     } catch (e: unknown) {
       if (signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
-      setError(e instanceof Error ? e.message : "Failed to open that cohort.");
+      setError(errorMessage(e, "Failed to open that cohort."));
     } finally {
       // A superseded (aborted) call must not clear the spinner the newer call just turned on.
       if (!signal.aborted) setSwitching(false);
@@ -207,7 +340,8 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
 
   async function handlePostMessage() {
     if (!messageInput.trim()) return;
-    if (!room?.cohortId) { setError("You are not in a cohort yet."); return; }
+    const cohortId = room?.cohortId;
+    if (!cohortId) { setError("You are not in a cohort yet."); return; }
     if (access !== "member") { setError("You are listening in — only cohort members can post here."); return; }
     setSubmitting(true);
     setError(null);
@@ -215,18 +349,15 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       const res = await fetch("/api/peer-programming/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ cohortId: room.cohortId, body: messageInput }),
+        body: JSON.stringify({ cohortId, body: messageInput }),
       });
       if (!res.ok) throw new Error("Failed to post message");
       setMessageInput("");
       // The room endpoint is the source of truth for the open cohort's messages.
-      const roomRes = await fetch(roomUrl(activeCohortId));
-      if (roomRes.ok) {
-        const data = (await roomRes.json()) as RoomApiResponse;
-        setMessages(mapMessages(data.messages ?? [], data.members ?? []));
-      }
+      const refreshed = await fetchRoomMessages(activeCohortId);
+      if (refreshed) setMessages(refreshed);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to post message.");
+      setError(errorMessage(e, "Failed to post message."));
     } finally {
       setSubmitting(false);
     }
@@ -254,86 +385,41 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       setFeedbackSuccess(true);
       setFeedbackInput("");
     } catch (err: unknown) {
-      setFeedbackError(err instanceof Error ? err.message : "Failed to submit feedback.");
+      setFeedbackError(errorMessage(err, "Failed to submit feedback."));
     } finally {
       setSubmitting(false);
     }
   }
 
   if (loading) return <PeerProgrammingLoading />;
-  if (error) {
-    return (
-      <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontFamily: "Inter, system-ui, sans-serif" }}>
-        {error}
-      </div>
-    );
-  }
+  if (error) return <PeerProgrammingErrorState error={error} />;
 
-  const participants = room?.participants ?? [];
-
-  const content = (
-    <>
-      {tab === "cohorts" && (
-        <PeerProgrammingCohortsTab
-          room={room}
-          onJoinSession={() => setTab("session")}
-          feedback={{
-            value: feedbackInput,
-            onChange: setFeedbackInput,
-            onSubmit: (e) => void handleSubmitFeedback(e),
-            submitting,
-            success: feedbackSuccess,
-            error: feedbackError,
-          }}
-          cohorts={cohorts}
-          members={members}
-          myCohortId={myCohortId}
-          openCohortId={activeCohortId}
-          onOpenCohort={(id) => void openCohort(id)}
-          switching={switching}
-          isAdmin={Boolean(isAdmin)}
-        />
-      )}
-      {tab === "session" && <PeerProgrammingSessionTab room={room} participants={participants} />}
-      {tab === "chat" && (
-        <PeerProgrammingChatTab
-          room={room}
-          messages={messages}
-          messageInput={messageInput}
-          onMessageInput={setMessageInput}
-          onSend={() => void handlePostMessage()}
-          submitting={submitting}
-          readOnly={access !== "member"}
-          ended={Boolean(room?.ended)}
-        />
-      )}
-    </>
+  return (
+    <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+      <PeerProgrammingHeader t={t} isAdmin={isAdmin} tab={tab} onSelectTab={setTab} onRefresh={reloadRoom} />
+      <PeerProgrammingTabContent
+        tab={tab}
+        room={room}
+        messages={messages}
+        messageInput={messageInput}
+        onMessageInput={setMessageInput}
+        onSend={() => void handlePostMessage()}
+        submitting={submitting}
+        access={access}
+        onJoinSession={() => setTab("session")}
+        feedbackInput={feedbackInput}
+        onFeedbackInput={setFeedbackInput}
+        onSubmitFeedback={(e) => void handleSubmitFeedback(e)}
+        feedbackSuccess={feedbackSuccess}
+        feedbackError={feedbackError}
+        cohorts={cohorts}
+        members={members}
+        myCohortId={myCohortId}
+        activeCohortId={activeCohortId}
+        onOpenCohort={(id) => void openCohort(id)}
+        switching={switching}
+        isAdmin={isAdmin}
+      />
+    </div>
   );
-
-    const tabs: { key: Tab; label: string }[] = [
-      { key: "cohorts", label: "Cohorts" },
-      { key: "session", label: "Session" },
-      { key: "chat", label: "Direct Line" },
-    ];
-    return (
-      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
-            <BackChevronButton accent={t.ACCENT} />
-            <Users size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
-            {/* Title shrinks and truncates so the trailing controls always stay on screen */}
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>PeerProgramming</span>
-            <PluginAdminButton href="/admin/peer-programming" isAdmin={isAdmin} accent={t.ACCENT} />
-            <RefreshButton onRefresh={reloadRoom} title="Refresh" />
-            <MobileTopActions />
-          </div>
-          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
-            {tabs.map(({ key, label }) => (
-              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? t.ACCENT_TINT_BG : "transparent", border: `1px solid ${tab === key ? t.ACCENT_TAB_BORDER : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
-            ))}
-          </div>
-        </div>
-        {content}
-      </div>
-    );
 }

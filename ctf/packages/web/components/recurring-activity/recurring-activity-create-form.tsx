@@ -49,12 +49,13 @@ export function RecurringActivityCreateForm({
     }
   }, [currencies, currencyCode]);
 
-  const selectedCurrency = currencies.find((c) => c.code === currencyCode) ?? null;
-  const isServiceCredits = selectedCurrency?.isServiceCredits ?? currencyCode === 'SC';
-
-  const scNumber = Number(scValue);
-  const scValid = !isServiceCredits || scValue === '' || (Number.isFinite(scNumber) && scNumber > 0);
-  const canSubmit = !submitting && counterparty !== null && currencyCode !== '' && scValid;
+  const { isServiceCredits, scNumber, canSubmit } = deriveCreateFormState({
+    currencies,
+    currencyCode,
+    submitting,
+    counterparty,
+    scValue,
+  });
 
   const submit = useCallback(() => {
     if (!counterparty || currencyCode === '') {
@@ -138,26 +139,67 @@ export function RecurringActivityCreateForm({
 
       {error ? <div style={{ fontSize: 12, color: t.SUBTLE, marginBottom: 10 }}>{error}</div> : null}
 
-      <button
-        type="button"
-        disabled={!canSubmit}
-        onClick={submit}
-        style={{
-          width: '100%',
-          padding: '11px',
-          borderRadius: 10,
-          background: canSubmit ? t.ACCENT : `${t.ACCENT}55`,
-          border: 'none',
-          color: t.BG,
-          fontSize: 14,
-          fontWeight: 700,
-          cursor: canSubmit ? 'pointer' : 'not-allowed',
-          fontFamily: 'inherit',
-        }}
-      >
-        {submitting ? 'Recording…' : 'Acknowledge activity'}
-      </button>
+      <SubmitButton t={t} canSubmit={canSubmit} submitting={submitting} onSubmit={submit} />
     </div>
+  );
+}
+
+// Pure derivation of the create form's currency/validation state, kept out of the component so its
+// several boolean checks do not inflate the component's complexity.
+function deriveCreateFormState({
+  currencies,
+  currencyCode,
+  submitting,
+  counterparty,
+  scValue,
+}: {
+  currencies: Currency[];
+  currencyCode: string;
+  submitting: boolean;
+  counterparty: MemberOption | null;
+  scValue: string;
+}): { isServiceCredits: boolean; scNumber: number; scValid: boolean; canSubmit: boolean } {
+  const selectedCurrency = currencies.find((c) => c.code === currencyCode) ?? null;
+  const isServiceCredits = selectedCurrency?.isServiceCredits ?? currencyCode === 'SC';
+
+  const scNumber = Number(scValue);
+  const scValid = !isServiceCredits || scValue === '' || (Number.isFinite(scNumber) && scNumber > 0);
+  const canSubmit = !submitting && counterparty !== null && currencyCode !== '' && scValid;
+
+  return { isServiceCredits, scNumber, scValid, canSubmit };
+}
+
+function SubmitButton({
+  t,
+  canSubmit,
+  submitting,
+  onSubmit,
+}: {
+  t: RecurringActivityTokens;
+  canSubmit: boolean;
+  submitting: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={!canSubmit}
+      onClick={onSubmit}
+      style={{
+        width: '100%',
+        padding: '11px',
+        borderRadius: 10,
+        background: canSubmit ? t.ACCENT : `${t.ACCENT}55`,
+        border: 'none',
+        color: t.BG,
+        fontSize: 14,
+        fontWeight: 700,
+        cursor: canSubmit ? 'pointer' : 'not-allowed',
+        fontFamily: 'inherit',
+      }}
+    >
+      {submitting ? 'Recording…' : 'Acknowledge activity'}
+    </button>
   );
 }
 

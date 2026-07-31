@@ -126,6 +126,149 @@ const EMPTY_BILLING: CallBilling = {
   endedReason: null,
 };
 
+// Project the billing view out of a server call row. Kept in one place because the same mapping is used
+// after placing a ring, on every poll, and after an extend charge.
+function billingFromCall(call: InstantCall): CallBilling {
+  return {
+    authorizedBlocks: call.authorizedBlocks,
+    blocksCharged: call.blocksCharged,
+    paidThroughAtIso: call.paidThroughAtIso,
+    intervalMinutesLocked: call.intervalMinutesLocked,
+    endedReason: call.endedReason,
+  };
+}
+
+// Build the audio-room credentials once the call is answered and every Stream field is present; returns
+// null until then, so the caller keeps polling.
+function buildCredentialsIfReady(
+  data: CallStateResponse,
+  call: InstantCall,
+  displayName: string,
+): FoundationCallCredentials | null {
+  const streamCallId = data.streamCallId || call.streamCallId;
+  if (
+    call.ringStatus === "answered" &&
+    data.streamApiKey &&
+    data.streamToken &&
+    data.streamUserId &&
+    streamCallId
+  ) {
+    return {
+      streamApiKey: data.streamApiKey,
+      streamUserId: data.streamUserId,
+      streamToken: data.streamToken,
+      streamCallId,
+      displayName,
+    };
+  }
+  return null;
+}
+
+// A ring is terminal (declined / timed_out / ended) — the overlay holds the final message, then closes.
+function isTerminalRing(status: RingStatus): boolean {
+  return status === "declined" || status === "timed_out" || status === "ended";
+}
+
+// Poll the active call's state (both caller and callee follow this once a call id exists). Drives the
+// transition into the audio room on answer, and tears everything down on a terminal state.
+function useActiveCallPoll(
+  activeCallId: string | null,
+  displayName: string,
+  setRingStatus: (status: RingStatus) => void,
+  setBilling: (billing: CallBilling) => void,
+  setCredentials: (credentials: FoundationCallCredentials | null) => void,
+  reset: () => void,
+) {
+  useEffect(() => {
+    if (!activeCallId) {
+      return;
+    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const tick = async () => {
+      try {
+        const res = await fetch(`/api/foundation/connections/instant-calls/${activeCallId}`);
+        if (!res.ok || cancelled) {
+          return;
+        }
+        const data = (await res.json()) as CallStateResponse;
+        const call = data.call;
+        if (!call || cancelled) {
+          return;
+        }
+        setRingStatus(call.ringStatus);
+        setBilling(billingFromCall(call));
+        // Read the video call id from the flat response field, falling back to the nested call row. Wait for
+        // a non-empty id before joining: an empty id would send the audio room to a call that does not exist
+        // and fail with nothing shown, so keep polling until the id is there instead (issue #987).
+        const credentials = buildCredentialsIfReady(data, call, displayName);
+        if (credentials) {
+          setCredentials(credentials);
+        }
+        // Terminal: declined / timed_out / ended. Hold the final message briefly, then close.
+        if (isTerminalRing(call.ringStatus)) {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => { if (!cancelled) reset(); }, 1800);
+          return;
+        }
+      } catch {
+        /* transient — the next tick reconciles */
+      }
+      if (!cancelled) {
+        timer = setTimeout(() => void tick(), RING_POLL_MS);
+      }
+    };
+    void tick();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [activeCallId, displayName, reset]);
+}
+
+// Incoming-ring inbox poll (callee side). Only runs while idle, so a member follows their own active call
+// without also being interrupted by the inbox. When a ring appears, switch to the callee surface.
+function useIncomingCallPoll(
+  activeKind: ActiveSide["kind"],
+  setRingStatus: (status: RingStatus) => void,
+  setActive: (side: ActiveSide) => void,
+) {
+  useEffect(() => {
+    if (activeKind !== "idle") {
+      return;
+    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const tick = async () => {
+      try {
+        const res = await fetch("/api/foundation/connections/incoming-call");
+        if (res.ok && !cancelled) {
+          const data = (await res.json()) as { call?: InstantCall | null };
+          if (data.call && !cancelled) {
+            setRingStatus("ringing");
+            setActive({ kind: "callee", callId: data.call.id, callerLabel: "Someone is calling you" });
+            return;
+          }
+        }
+      } catch {
+        /* transient — retry */
+      }
+      if (!cancelled) {
+        timer = setTimeout(() => void tick(), INBOX_POLL_MS);
+      }
+    };
+    void tick();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [activeKind]);
+}
+
 export function FoundationInstantCallController({
   displayName,
   children,
@@ -206,13 +349,7 @@ export function FoundationInstantCallController({
       const rate = provider.instantCallRateCredits ?? 0;
       const rateLabel = `${rate === 1 ? "1 ServiceCredit" : `${rate} ServiceCredits`} / ${provider.instantCallIntervalMinutes} min`;
       setRingStatus("ringing");
-      setBilling({
-        authorizedBlocks: call.authorizedBlocks,
-        blocksCharged: call.blocksCharged,
-        paidThroughAtIso: call.paidThroughAtIso,
-        intervalMinutesLocked: call.intervalMinutesLocked,
-        endedReason: call.endedReason,
-      });
+      setBilling(billingFromCall(call));
       setActive({ kind: "caller", callId: call.id, providerName: provider.displayName, rateLabel, rateCredits: rate });
       return { ok: true };
     } finally {
@@ -223,106 +360,11 @@ export function FoundationInstantCallController({
   // Poll the active call's state (both caller and callee follow this once a call id exists). Drives the
   // transition into the audio room on answer, and tears everything down on a terminal state.
   const activeCallId = active.kind === "caller" || active.kind === "callee" ? active.callId : null;
-  useEffect(() => {
-    if (!activeCallId) {
-      return;
-    }
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-
-    const tick = async () => {
-      try {
-        const res = await fetch(`/api/foundation/connections/instant-calls/${activeCallId}`);
-        if (!res.ok || cancelled) {
-          return;
-        }
-        const data = (await res.json()) as CallStateResponse;
-        const call = data.call;
-        if (!call || cancelled) {
-          return;
-        }
-        setRingStatus(call.ringStatus);
-        setBilling({
-          authorizedBlocks: call.authorizedBlocks,
-          blocksCharged: call.blocksCharged,
-          paidThroughAtIso: call.paidThroughAtIso,
-          intervalMinutesLocked: call.intervalMinutesLocked,
-          endedReason: call.endedReason,
-        });
-        // Read the video call id from the flat response field, falling back to the nested call row. Wait for
-        // a non-empty id before joining: an empty id would send the audio room to a call that does not exist
-        // and fail with nothing shown, so keep polling until the id is there instead (issue #987).
-        const streamCallId = data.streamCallId || call.streamCallId;
-        if (
-          call.ringStatus === "answered" &&
-          data.streamApiKey &&
-          data.streamToken &&
-          data.streamUserId &&
-          streamCallId
-        ) {
-          setCredentials({
-            streamApiKey: data.streamApiKey,
-            streamUserId: data.streamUserId,
-            streamToken: data.streamToken,
-            streamCallId,
-            displayName,
-          });
-        }
-        // Terminal: declined / timed_out / ended. Hold the final message briefly, then close.
-        if (call.ringStatus === "declined" || call.ringStatus === "timed_out" || call.ringStatus === "ended") {
-          if (timer) clearTimeout(timer);
-          timer = setTimeout(() => { if (!cancelled) reset(); }, 1800);
-          return;
-        }
-      } catch {
-        /* transient — the next tick reconciles */
-      }
-      if (!cancelled) {
-        timer = setTimeout(() => void tick(), RING_POLL_MS);
-      }
-    };
-    void tick();
-
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
-  }, [activeCallId, displayName, reset]);
+  useActiveCallPoll(activeCallId, displayName, setRingStatus, setBilling, setCredentials, reset);
 
   // Incoming-ring inbox poll (callee side). Only runs while idle, so a member follows their own active call
   // without also being interrupted by the inbox. When a ring appears, switch to the callee surface.
-  useEffect(() => {
-    if (active.kind !== "idle") {
-      return;
-    }
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-
-    const tick = async () => {
-      try {
-        const res = await fetch("/api/foundation/connections/incoming-call");
-        if (res.ok && !cancelled) {
-          const data = (await res.json()) as { call?: InstantCall | null };
-          if (data.call && !cancelled) {
-            setRingStatus("ringing");
-            setActive({ kind: "callee", callId: data.call.id, callerLabel: "Someone is calling you" });
-            return;
-          }
-        }
-      } catch {
-        /* transient — retry */
-      }
-      if (!cancelled) {
-        timer = setTimeout(() => void tick(), INBOX_POLL_MS);
-      }
-    };
-    void tick();
-
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
-  }, [active.kind]);
+  useIncomingCallPoll(active.kind, setRingStatus, setActive);
 
   const onAnswer = useCallback(async () => {
     if (active.kind !== "callee") return;
@@ -363,13 +405,7 @@ export function FoundationInstantCallController({
       const call = data.call;
       if (call) {
         setRingStatus(call.ringStatus);
-        setBilling({
-          authorizedBlocks: call.authorizedBlocks,
-          blocksCharged: call.blocksCharged,
-          paidThroughAtIso: call.paidThroughAtIso,
-          intervalMinutesLocked: call.intervalMinutesLocked,
-          endedReason: call.endedReason,
-        });
+        setBilling(billingFromCall(call));
       }
     } finally {
       extendingRef.current = false;
@@ -426,6 +462,51 @@ function formatCountdown(seconds: number): string {
 // call does not silently drop when the prepaid time ends.
 const EXTEND_PROMPT_SECONDS = 60;
 
+type FoundationTokens = ReturnType<typeof getFoundationTokens>;
+
+// The caller's derived billing view: whether the authorized-block cap is reached, the extend cost label,
+// and whether the current block is near its end (so the Extend prompt highlights). The callee side has no
+// billing, so these collapse to their neutral values.
+function deriveBillingView(
+  side: ActiveSide,
+  billing: CallBilling,
+  secondsLeft: number | null,
+): { atCap: boolean; extendLabel: string; nearBlockEnd: boolean } {
+  const atCap = billing.authorizedBlocks !== null && billing.blocksCharged >= billing.authorizedBlocks;
+  const rateCredits = side.kind === "caller" ? side.rateCredits : 0;
+  const extendLabel = rateCredits === 1 ? "1 credit" : `${rateCredits} credits`;
+  const nearBlockEnd = secondsLeft !== null && secondsLeft <= EXTEND_PROMPT_SECONDS;
+  return { atCap, extendLabel, nearBlockEnd };
+}
+
+// The overlay's heading and subline for the current side/ring state.
+function computeHeadingSubline(side: ActiveSide, ringStatus: RingStatus): { heading: string; subline: string } {
+  if (side.kind === "caller") {
+    return {
+      heading: side.providerName,
+      subline: ringStatus === "ringing" ? `Ringing… · ${side.rateLabel}` : "",
+    };
+  }
+  if (side.kind === "callee") {
+    return {
+      heading: "Incoming call",
+      subline: ringStatus === "ringing" ? "Audio call" : "",
+    };
+  }
+  return { heading: "Connect now", subline: "" };
+}
+
+// The terminal message shown when a call has ended, or null while it is still live. Out-of-credits and
+// paid-time-elapsed take precedence over the plain ring-status endings.
+function computeTerminalLabel(billing: CallBilling, ringStatus: RingStatus): string | null {
+  if (billing.endedReason === "caller_insufficient_funds") return "Session ended — out of credits.";
+  if (billing.endedReason === "paid_window_elapsed") return "Session ended — paid time used up.";
+  if (ringStatus === "declined") return "Call declined.";
+  if (ringStatus === "timed_out") return "No answer.";
+  if (ringStatus === "ended") return "Call ended.";
+  return null;
+}
+
 // A single fixed overlay that renders every call state: the caller's "ringing…", the callee's incoming
 // answer/decline, the live audio room (with the caller's block countdown + extend prompt), and the
 // terminal (declined/timed-out/ended/out-of-credits) message. Mobile-responsive: it fills small screens
@@ -461,27 +542,9 @@ function CallOverlay({
 
   // Live countdown for the current prepaid block (caller side only — the callee does not pay or extend).
   const secondsLeft = useSecondsUntil(isCaller ? billing.paidThroughAtIso : null);
-  const atCap = billing.authorizedBlocks !== null && billing.blocksCharged >= billing.authorizedBlocks;
-  const rateCredits = side.kind === "caller" ? side.rateCredits : 0;
-  const extendLabel = rateCredits === 1 ? "1 credit" : `${rateCredits} credits`;
-  const nearBlockEnd = secondsLeft !== null && secondsLeft <= EXTEND_PROMPT_SECONDS;
-
-  let heading = "Connect now";
-  let subline = "";
-  if (isCaller && side.kind === "caller") {
-    heading = side.providerName;
-    subline = ringStatus === "ringing" ? `Ringing… · ${side.rateLabel}` : "";
-  } else if (isCallee) {
-    heading = "Incoming call";
-    subline = ringStatus === "ringing" ? "Audio call" : "";
-  }
-
-  const terminalLabel =
-    billing.endedReason === "caller_insufficient_funds" ? "Session ended — out of credits."
-      : billing.endedReason === "paid_window_elapsed" ? "Session ended — paid time used up."
-        : ringStatus === "declined" ? "Call declined."
-          : ringStatus === "timed_out" ? "No answer."
-            : ringStatus === "ended" ? "Call ended." : null;
+  const { atCap, extendLabel, nearBlockEnd } = deriveBillingView(side, billing, secondsLeft);
+  const { heading, subline } = computeHeadingSubline(side, ringStatus);
+  const terminalLabel = computeTerminalLabel(billing, ringStatus);
 
   return (
     <div
@@ -526,66 +589,138 @@ function CallOverlay({
           <div style={{ fontSize: 13, color: "#F87171", textAlign: "center" }}>{error}</div>
         ) : null}
 
-        {inCall && credentials ? (
-          <>
-            {isCaller ? (
-              <CallerBillingStrip
-                secondsLeft={secondsLeft}
-                blocksCharged={billing.blocksCharged}
-                authorizedBlocks={billing.authorizedBlocks}
-                atCap={atCap}
-                nearBlockEnd={nearBlockEnd}
-                extendLabel={extendLabel}
-                extending={extending}
-                onExtend={onExtend}
-              />
-            ) : null}
-            <FoundationCallAudio credentials={credentials} onEnd={onEnd} />
-          </>
-        ) : terminalLabel ? (
-          <div style={{ fontSize: 14, color: "#D1D5DB", textAlign: "center", padding: "8px 0" }}>{terminalLabel}</div>
-        ) : isCallee && ringStatus === "ringing" ? (
-          <div style={{ display: "flex", gap: 12, width: "100%", justifyContent: "center" }}>
-            <button
-              type="button"
-              onClick={onDecline}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", borderRadius: 12,
-                background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
-                color: "#F87171", fontSize: 14, fontWeight: 700, cursor: "pointer",
-              }}
-            >
-              <X size={16} /> Decline
-            </button>
-            <button
-              type="button"
-              onClick={onAnswer}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", borderRadius: 12,
-                background: t.ACCENT, border: "none",
-                color: "#1a1205", fontSize: 14, fontWeight: 800, cursor: "pointer",
-              }}
-            >
-              <PhoneCall size={16} /> Answer
-            </button>
-          </div>
-        ) : (
-          // Caller is ringing (or callee just answered and the audio room is connecting): a single
-          // end/cancel control covers both. Connecting is shown by FoundationCallAudio once credentials land.
-          <button
-            type="button"
-            onClick={onEnd}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", borderRadius: 12,
-              background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
-              color: "#F87171", fontSize: 14, fontWeight: 700, cursor: "pointer",
-            }}
-          >
-            <X size={16} /> {isCaller && ringStatus === "ringing" ? "Cancel" : "End call"}
-          </button>
-        )}
+        <CallOverlayContent
+          t={t}
+          inCall={inCall}
+          credentials={credentials}
+          isCaller={isCaller}
+          isCallee={isCallee}
+          ringStatus={ringStatus}
+          terminalLabel={terminalLabel}
+          billing={billing}
+          secondsLeft={secondsLeft}
+          atCap={atCap}
+          nearBlockEnd={nearBlockEnd}
+          extendLabel={extendLabel}
+          extending={extending}
+          onAnswer={onAnswer}
+          onDecline={onDecline}
+          onEnd={onEnd}
+          onExtend={onExtend}
+        />
       </div>
     </div>
+  );
+}
+
+// The switchable middle of the call card: the live audio room (with the caller's billing strip), the
+// terminal message, the callee's answer/decline pair, or the single end/cancel control while ringing.
+function CallOverlayContent({
+  t,
+  inCall,
+  credentials,
+  isCaller,
+  isCallee,
+  ringStatus,
+  terminalLabel,
+  billing,
+  secondsLeft,
+  atCap,
+  nearBlockEnd,
+  extendLabel,
+  extending,
+  onAnswer,
+  onDecline,
+  onEnd,
+  onExtend,
+}: {
+  t: FoundationTokens;
+  inCall: boolean;
+  credentials: FoundationCallCredentials | null;
+  isCaller: boolean;
+  isCallee: boolean;
+  ringStatus: RingStatus;
+  terminalLabel: string | null;
+  billing: CallBilling;
+  secondsLeft: number | null;
+  atCap: boolean;
+  nearBlockEnd: boolean;
+  extendLabel: string;
+  extending: boolean;
+  onAnswer: () => void;
+  onDecline: () => void;
+  onEnd: () => void;
+  onExtend: () => void;
+}) {
+  if (inCall && credentials) {
+    return (
+      <>
+        {isCaller ? (
+          <CallerBillingStrip
+            secondsLeft={secondsLeft}
+            blocksCharged={billing.blocksCharged}
+            authorizedBlocks={billing.authorizedBlocks}
+            atCap={atCap}
+            nearBlockEnd={nearBlockEnd}
+            extendLabel={extendLabel}
+            extending={extending}
+            onExtend={onExtend}
+          />
+        ) : null}
+        <FoundationCallAudio credentials={credentials} onEnd={onEnd} />
+      </>
+    );
+  }
+
+  if (terminalLabel) {
+    return (
+      <div style={{ fontSize: 14, color: "#D1D5DB", textAlign: "center", padding: "8px 0" }}>{terminalLabel}</div>
+    );
+  }
+
+  if (isCallee && ringStatus === "ringing") {
+    return (
+      <div style={{ display: "flex", gap: 12, width: "100%", justifyContent: "center" }}>
+        <button
+          type="button"
+          onClick={onDecline}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", borderRadius: 12,
+            background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
+            color: "#F87171", fontSize: 14, fontWeight: 700, cursor: "pointer",
+          }}
+        >
+          <X size={16} /> Decline
+        </button>
+        <button
+          type="button"
+          onClick={onAnswer}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", borderRadius: 12,
+            background: t.ACCENT, border: "none",
+            color: "#1a1205", fontSize: 14, fontWeight: 800, cursor: "pointer",
+          }}
+        >
+          <PhoneCall size={16} /> Answer
+        </button>
+      </div>
+    );
+  }
+
+  // Caller is ringing (or callee just answered and the audio room is connecting): a single
+  // end/cancel control covers both. Connecting is shown by FoundationCallAudio once credentials land.
+  return (
+    <button
+      type="button"
+      onClick={onEnd}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", borderRadius: 12,
+        background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
+        color: "#F87171", fontSize: 14, fontWeight: 700, cursor: "pointer",
+      }}
+    >
+      <X size={16} /> {isCaller && ringStatus === "ringing" ? "Cancel" : "End call"}
+    </button>
   );
 }
 
@@ -616,7 +751,6 @@ function CallerBillingStrip({
   const t = getFoundationTokens(theme);
   const countdown = secondsLeft === null ? "—" : formatCountdown(secondsLeft);
   const capText = authorizedBlocks === null ? `${blocksCharged} paid` : `${blocksCharged} of ${authorizedBlocks} blocks`;
-  const canExtend = !atCap && !extending;
 
   return (
     <div
@@ -647,26 +781,57 @@ function CallerBillingStrip({
           out.
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={onExtend}
-          disabled={!canExtend}
-          aria-disabled={!canExtend}
-          style={{
-            width: "100%",
-            padding: "10px 16px",
-            borderRadius: 10,
-            background: nearBlockEnd ? t.ACCENT : t.BORDER,
-            color: nearBlockEnd ? "#1a1205" : t.TITLE,
-            border: nearBlockEnd ? "none" : "1px solid rgba(255,255,255,0.12)",
-            fontSize: 13.5, fontWeight: 700,
-            cursor: canExtend ? "pointer" : "not-allowed",
-            opacity: canExtend ? 1 : 0.6,
-          }}
-        >
-          {extending ? "Adding block…" : `Extend (+${extendLabel})`}
-        </button>
+        <ExtendButton
+          t={t}
+          atCap={atCap}
+          nearBlockEnd={nearBlockEnd}
+          extendLabel={extendLabel}
+          extending={extending}
+          onExtend={onExtend}
+        />
       )}
     </div>
+  );
+}
+
+// The Extend control inside the caller's billing strip: pays for one more block at the locked rate. It
+// highlights as the current block nears its end, and is disabled while an extend is already in flight (or
+// at the authorized-block cap, though the strip renders a notice instead of this button in that case).
+function ExtendButton({
+  t,
+  atCap,
+  nearBlockEnd,
+  extendLabel,
+  extending,
+  onExtend,
+}: {
+  t: FoundationTokens;
+  atCap: boolean;
+  nearBlockEnd: boolean;
+  extendLabel: string;
+  extending: boolean;
+  onExtend: () => void;
+}) {
+  const canExtend = !atCap && !extending;
+  return (
+    <button
+      type="button"
+      onClick={onExtend}
+      disabled={!canExtend}
+      aria-disabled={!canExtend}
+      style={{
+        width: "100%",
+        padding: "10px 16px",
+        borderRadius: 10,
+        background: nearBlockEnd ? t.ACCENT : t.BORDER,
+        color: nearBlockEnd ? "#1a1205" : t.TITLE,
+        border: nearBlockEnd ? "none" : "1px solid rgba(255,255,255,0.12)",
+        fontSize: 13.5, fontWeight: 700,
+        cursor: canExtend ? "pointer" : "not-allowed",
+        opacity: canExtend ? 1 : 0.6,
+      }}
+    >
+      {extending ? "Adding block…" : `Extend (+${extendLabel})`}
+    </button>
   );
 }

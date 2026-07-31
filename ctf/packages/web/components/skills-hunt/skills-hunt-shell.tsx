@@ -47,6 +47,10 @@ interface ShellData {
   myFinds: SkillsHuntSubmission[];
 }
 
+function roundsLoadErrorMessage(e: unknown): string {
+  return e instanceof Error && e.message === "rounds" ? "Unable to load rounds." : "Something went wrong.";
+}
+
 function deriveShellState(args: {
   leaderboard: SkillsHuntLeaderboardItem[];
   serverCurrentUserEntry: SkillsHuntLeaderboardItem | null;
@@ -135,7 +139,7 @@ export function SkillsHuntShell({
         }
       } catch (e) {
         if (controller.signal.aborted) return;
-        setGlobalError(e instanceof Error && e.message === "rounds" ? "Unable to load rounds." : "Something went wrong.");
+        setGlobalError(roundsLoadErrorMessage(e));
       } finally {
         if (!controller.signal.aborted) setLoadingRounds(false);
       }
