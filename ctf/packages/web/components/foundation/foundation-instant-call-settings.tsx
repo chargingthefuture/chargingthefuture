@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ChangeEventHandler } from "react";
 import { PhoneCall } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getFoundationTokens, type FoundationTokens } from "./foundation-ui";
@@ -27,6 +27,90 @@ const inputStyle = (t: FoundationTokens) => ({
   color: t.TITLE,
   fontSize: 14,
 } as const);
+
+// The on/off switch that lets a provider allow instant 1:1 calls. Kept as its own component so the
+// per-state color/label ternaries live here and not in the parent panel.
+function InstantCallToggle({ t, enabled, onToggle }: { t: FoundationTokens; enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "12px 16px", borderRadius: 12, cursor: "pointer", background: enabled ? `${t.ACCENT}12` : "rgba(255,255,255,0.02)", border: `1px solid ${enabled ? t.ACCENT + "40" : t.BORDER_STRONG}` }}
+    >
+      <span style={{ width: 40, height: 22, borderRadius: 999, flexShrink: 0, display: "flex", alignItems: "center", padding: 2, justifyContent: enabled ? "flex-end" : "flex-start", background: enabled ? t.ACCENT : "rgba(255,255,255,0.12)" }}>
+        <span style={{ width: 18, height: 18, borderRadius: 999, background: enabled ? "#1a1205" : t.SUBTLE }} />
+      </span>
+      <span style={{ fontSize: 14, fontWeight: 600, color: t.TITLE }}>Allow instant 1:1 calls</span>
+      <span style={{ marginLeft: "auto", fontSize: 12, color: enabled ? t.ACCENT : t.MUTED }}>{enabled ? "On" : "Off"}</span>
+    </button>
+  );
+}
+
+// The rate and block-length inputs, shown only while instant calls are enabled. Returns null when
+// disabled so the parent does not need an inline conditional.
+function CallRateFields({
+  t,
+  enabled,
+  rate,
+  interval,
+  onRateChange,
+  onIntervalChange,
+}: {
+  t: FoundationTokens;
+  enabled: boolean;
+  rate: string;
+  interval: number;
+  onRateChange: ChangeEventHandler<HTMLInputElement>;
+  onIntervalChange: ChangeEventHandler<HTMLInputElement>;
+}) {
+  if (!enabled) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#D1D5DB" }}>Credits per {interval} minutes</span>
+        <input
+          type="number"
+          min={1}
+          step={1}
+          value={rate}
+          onChange={onRateChange}
+          placeholder="e.g. 5"
+          style={inputStyle(t)}
+        />
+      </label>
+      <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#D1D5DB" }}>Block length (minutes)</span>
+        <input
+          type="number"
+          min={5}
+          max={60}
+          step={1}
+          value={interval}
+          onChange={onIntervalChange}
+          style={inputStyle(t)}
+        />
+      </label>
+      <CallAlerts />
+    </div>
+  );
+}
+
+// The Save button plus the transient "Saved" confirmation. Owns the saving/saved ternaries.
+function SaveRow({ t, saving, saved, onSave }: { t: FoundationTokens; saving: boolean; saved: boolean; onSave: () => void }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <button
+        type="button"
+        disabled={saving}
+        onClick={onSave}
+        style={{ padding: "10px 18px", borderRadius: 10, cursor: saving ? "default" : "pointer", background: t.ACCENT, color: "#1a1205", fontSize: 14, fontWeight: 700, border: "none", opacity: saving ? 0.6 : 1 }}
+      >
+        {saving ? "Saving…" : "Save"}
+      </button>
+      {saved ? <span style={{ fontSize: 13, color: t.ACCENT }}>Saved</span> : null}
+    </div>
+  );
+}
 
 // A provider opts in to take an immediate, paid, 1:1 call (Foundation "Connect now", issue #808).
 // This panel only edits the provider's settings — the rate in ServiceCredits and the per-block
@@ -108,59 +192,22 @@ export function InstantCallSettings() {
         <div style={{ padding: "16px 0", color: t.MUTED, fontSize: 14 }}>Loading…</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <button
-            type="button"
-            onClick={() => { setEnabled((v) => !v); setSaved(false); }}
-            style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "12px 16px", borderRadius: 12, cursor: "pointer", background: enabled ? `${t.ACCENT}12` : "rgba(255,255,255,0.02)", border: `1px solid ${enabled ? t.ACCENT + "40" : t.BORDER_STRONG}` }}
-          >
-            <span style={{ width: 40, height: 22, borderRadius: 999, flexShrink: 0, display: "flex", alignItems: "center", padding: 2, justifyContent: enabled ? "flex-end" : "flex-start", background: enabled ? t.ACCENT : "rgba(255,255,255,0.12)" }}>
-              <span style={{ width: 18, height: 18, borderRadius: 999, background: enabled ? "#1a1205" : t.SUBTLE }} />
-            </span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: t.TITLE }}>Allow instant 1:1 calls</span>
-            <span style={{ marginLeft: "auto", fontSize: 12, color: enabled ? t.ACCENT : t.MUTED }}>{enabled ? "On" : "Off"}</span>
-          </button>
+          <InstantCallToggle
+            t={t}
+            enabled={enabled}
+            onToggle={() => { setEnabled((v) => !v); setSaved(false); }}
+          />
 
-          {enabled ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#D1D5DB" }}>Credits per {interval} minutes</span>
-                <input
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={rate}
-                  onChange={(e) => { setRate(e.target.value); setSaved(false); }}
-                  placeholder="e.g. 5"
-                  style={inputStyle(t)}
-                />
-              </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#D1D5DB" }}>Block length (minutes)</span>
-                <input
-                  type="number"
-                  min={5}
-                  max={60}
-                  step={1}
-                  value={interval}
-                  onChange={(e) => { setIntervalMinutes(Number(e.target.value)); setSaved(false); }}
-                  style={inputStyle(t)}
-                />
-              </label>
-              <CallAlerts />
-            </div>
-          ) : null}
+          <CallRateFields
+            t={t}
+            enabled={enabled}
+            rate={rate}
+            interval={interval}
+            onRateChange={(e) => { setRate(e.target.value); setSaved(false); }}
+            onIntervalChange={(e) => { setIntervalMinutes(Number(e.target.value)); setSaved(false); }}
+          />
 
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() => void save()}
-              style={{ padding: "10px 18px", borderRadius: 10, cursor: saving ? "default" : "pointer", background: t.ACCENT, color: "#1a1205", fontSize: 14, fontWeight: 700, border: "none", opacity: saving ? 0.6 : 1 }}
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
-            {saved ? <span style={{ fontSize: 13, color: t.ACCENT }}>Saved</span> : null}
-          </div>
+          <SaveRow t={t} saving={saving} saved={saved} onSave={() => void save()} />
         </div>
       )}
     </div>

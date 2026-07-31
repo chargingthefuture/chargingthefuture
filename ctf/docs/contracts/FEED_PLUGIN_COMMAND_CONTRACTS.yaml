@@ -627,6 +627,8 @@ contracts:
     dataAccess:
       - feed_community_posts
       - feed_community_replies
+      - feed_questions
+      - feed_answers
     purpose: content_moderation
     retentionClass: transactional_long_lived
     idempotency: true
@@ -658,6 +660,8 @@ contracts:
     dataAccess:
       - feed_community_posts
       - feed_community_replies
+      - feed_questions
+      - feed_answers
     purpose: content_moderation
     retentionClass: transactional_long_lived
     idempotency: true
@@ -688,6 +692,34 @@ contracts:
     dataAccess:
       - feed_community_posts
       - feed_community_replies
+      - feed_questions
+      - feed_answers
+    purpose: content_moderation
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: feed
+    command: feed.qa.moderation.flagged.list
+    version: 1.0.0
+    description: >-
+      List answers members have flagged, most-flagged first, with each answer's flag and not-helpful
+      counts and its parent question. Closes a gap that existed for as long as flagging did: the counts
+      were aggregated by feed.question.admin.list but no screen ever called it, so a member's flag
+      reached nobody. Hidden answers are included so a moderator can reverse their own calls. Admin
+      only, read-only.
+    inputSchema:
+      limit:
+        type: number
+        required: false
+    outputSchema:
+      answers:
+        type: array
+      pending:
+        type: number
+    dataAccess:
+      - feed_answers
+      - feed_answer_ratings
+      - feed_questions
     purpose: content_moderation
     retentionClass: transactional_long_lived
     idempotency: true

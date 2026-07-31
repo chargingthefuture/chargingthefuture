@@ -6,7 +6,7 @@ import { MapPin, Share2 } from "lucide-react";
 import { FAINT, SUBTLE, requestTags, settlementLabel, srHandle, timeAgo, type SrRequest, type SrRequestStatus } from "./sr-shared";
 import { ShareLink } from "@/components/shared/share-link";
 import { useTheme } from '@/hooks/useTheme';
-import { getSocketRelayTokens } from './sr-shared';
+import { getSocketRelayTokens, type SocketRelayTokens } from './sr-shared';
 
 const editButtonStyle = { padding: "6px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer" } as const;
 
@@ -69,6 +69,47 @@ function CardAction({
   );
 }
 
+// The badge row (tags, settlement, and status). Split from RequestCard so the several status-driven
+// ternaries live in their own scope instead of inflating the card's complexity.
+function CardBadges({
+  request: r,
+  t,
+  open,
+  expired,
+}: {
+  request: SrRequest;
+  t: SocketRelayTokens;
+  open: boolean;
+  expired: boolean;
+}) {
+  return (
+    <div style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "center", flexWrap: "wrap" }}>
+      {requestTags(r).map((tag) => (
+        <Badge key={tag} style={{ background: t.INPUT_BG, color: t.SUBTLE, border: "1px solid rgba(255,255,255,0.06)", fontSize: 11 }}>{tag}</Badge>
+      ))}
+      <Badge style={{ background: "rgba(34,197,94,0.10)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)", fontSize: 11 }}>{settlementLabel(r.priceCurrency, r.priceAmount)}</Badge>
+      <Badge style={{ background: open ? "#22C55E20" : t.INPUT_BG, color: expired ? "#F59E0B" : open ? "#22C55E" : SUBTLE, border: `1px solid ${expired ? "#F59E0B40" : open ? "#22C55E40" : t.BORDER}`, fontSize: 11, textTransform: "capitalize" }}>{expired ? "expired" : r.status}</Badge>
+    </div>
+  );
+}
+
+// The meta row (handle, location, time, share). Split from RequestCard to keep the location guard out
+// of the card's complexity budget.
+function CardMeta({ request: r, t }: { request: SrRequest; t: SocketRelayTokens }) {
+  return (
+    <div style={{ display: "flex", gap: 12, fontSize: 12, color: SUBTLE, flexWrap: "wrap", alignItems: "center" }}>
+      <span style={{ color: t.ACCENT, fontWeight: 600 }}>{srHandle(r.ownerUsername, r.id)}</span>
+      {[r.city, r.state, r.country].some((v) => v && v.trim()) && (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+          <MapPin size={11} /> {[r.city, r.state, r.country].map((v) => v?.trim()).filter(Boolean).join(", ")}
+        </span>
+      )}
+      <span>· {timeAgo(r.createdAtIso)}</span>
+      <ShareLink url={`/apps/socket-relay?request=${r.id}`} label="Share" title="Share this request" className="sr-share" />
+    </div>
+  );
+}
+
 function RequestCard({
   request,
   isOwn,
@@ -97,31 +138,65 @@ function RequestCard({
           <Share2 size={18} style={{ color: t.ACCENT }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "center", flexWrap: "wrap" }}>
-            {requestTags(r).map((tag) => (
-              <Badge key={tag} style={{ background: t.INPUT_BG, color: t.SUBTLE, border: "1px solid rgba(255,255,255,0.06)", fontSize: 11 }}>{tag}</Badge>
-            ))}
-            <Badge style={{ background: "rgba(34,197,94,0.10)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)", fontSize: 11 }}>{settlementLabel(r.priceCurrency, r.priceAmount)}</Badge>
-            <Badge style={{ background: open ? "#22C55E20" : t.INPUT_BG, color: expired ? "#F59E0B" : open ? "#22C55E" : SUBTLE, border: `1px solid ${expired ? "#F59E0B40" : open ? "#22C55E40" : t.BORDER}`, fontSize: 11, textTransform: "capitalize" }}>{expired ? "expired" : r.status}</Badge>
-          </div>
+          <CardBadges request={r} t={t} open={open} expired={expired} />
           <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 4, lineHeight: 1.4 }}>{r.title}</div>
           {r.details && <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6, lineHeight: 1.5 }}>{r.details}</div>}
-          <div style={{ display: "flex", gap: 12, fontSize: 12, color: SUBTLE, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ color: t.ACCENT, fontWeight: 600 }}>{srHandle(r.ownerUsername, r.id)}</span>
-            {[r.city, r.state, r.country].some((v) => v && v.trim()) && (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <MapPin size={11} /> {[r.city, r.state, r.country].map((v) => v?.trim()).filter(Boolean).join(", ")}
-              </span>
-            )}
-            <span>· {timeAgo(r.createdAtIso)}</span>
-            <ShareLink url={`/apps/socket-relay?request=${r.id}`} label="Share" title="Share this request" className="sr-share" />
-          </div>
+          <CardMeta request={r} t={t} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
           <CardAction status={r.status} expired={expired} isOwn={isOwn} submitting={submitting} onClaim={() => onClaim(r.id)} onEdit={() => onEdit(r)} onRepost={() => onRepost(r.id)} />
         </div>
       </div>
     </div>
+  );
+}
+
+// Shown when the feed has no cards: either the board is genuinely empty (with a Post Now shortcut) or a
+// search/filter matched nothing. Split out so its copy ternaries stay off the feed's complexity budget.
+function FeedEmptyState({
+  filterActive,
+  onPost,
+  t,
+}: {
+  filterActive: boolean;
+  onPost: () => void;
+  t: SocketRelayTokens;
+}) {
+  return (
+    <div style={{ padding: "48px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+      <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${t.ACCENT}4D`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Share2 size={20} style={{ color: `${t.ACCENT}66` }} />
+      </div>
+      <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>{filterActive ? "No matches" : "No requests yet"}</div>
+      <div style={{ fontSize: 13, color: FAINT }}>{filterActive ? "No requests match your search or filter. Try clearing it." : "Be the first to post a need or offer to your community."}</div>
+      {!filterActive && (
+        <button onClick={onPost} style={{ padding: "10px 20px", borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+          Post Now
+        </button>
+      )}
+    </div>
+  );
+}
+
+// The "Load more" button that pulls the next page of open requests. Split out so its disabled/label
+// ternaries stay off the feed's complexity budget.
+function LoadMoreButton({
+  loadingMore,
+  onLoadMore,
+  t,
+}: {
+  loadingMore: boolean;
+  onLoadMore: () => void;
+  t: SocketRelayTokens;
+}) {
+  return (
+    <button
+      onClick={onLoadMore}
+      disabled={loadingMore}
+      style={{ marginTop: 4, padding: "10px 20px", borderRadius: 10, background: "transparent", border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: loadingMore ? "not-allowed" : "pointer", alignSelf: "center" }}
+    >
+      {loadingMore ? "Loading…" : "Load more"}
+    </button>
   );
 }
 
@@ -159,31 +234,14 @@ export function SocketRelayFeed({
     <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "20px 24px" }}>
         {requests.length === 0 ? (
-          <div style={{ padding: "48px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${t.ACCENT}4D`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Share2 size={20} style={{ color: `${t.ACCENT}66` }} />
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>{filterActive ? "No matches" : "No requests yet"}</div>
-            <div style={{ fontSize: 13, color: FAINT }}>{filterActive ? "No requests match your search or filter. Try clearing it." : "Be the first to post a need or offer to your community."}</div>
-            {!filterActive && (
-              <button onClick={onPost} style={{ padding: "10px 20px", borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                Post Now
-              </button>
-            )}
-          </div>
+          <FeedEmptyState filterActive={filterActive} onPost={onPost} t={t} />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {requests.map((r) => (
               <RequestCard key={r.id} request={r} isOwn={r.ownerUserId === currentUserId} submitting={submitting} onClaim={onClaim} onEdit={onEdit} onRepost={onRepost} />
             ))}
             {hasMore && onLoadMore && (
-              <button
-                onClick={onLoadMore}
-                disabled={loadingMore}
-                style={{ marginTop: 4, padding: "10px 20px", borderRadius: 10, background: "transparent", border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: loadingMore ? "not-allowed" : "pointer", alignSelf: "center" }}
-              >
-                {loadingMore ? "Loading…" : "Load more"}
-              </button>
+              <LoadMoreButton loadingMore={loadingMore} onLoadMore={onLoadMore} t={t} />
             )}
           </div>
         )}

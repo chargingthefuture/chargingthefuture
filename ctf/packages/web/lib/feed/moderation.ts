@@ -22,7 +22,22 @@ import { normalizeUuid } from 'lib/feed/repository';
 // Deliberately NOT here: editing someone else's words. A moderator can take a post down or put it
 // back; they cannot rewrite it and leave it attributed to the author.
 
-export type FeedModerationTarget = 'post' | 'reply';
+// The four kinds of member-facing content a moderator can hide. `question` and `answer` joined the set
+// on 2026-07-30: until then neither table had a `moderation_status` column at all, so a flagged answer
+// could be read by an admin and then nothing could be done about it — which is why the flag queue could
+// not be built and member flags reached nobody.
+export type FeedModerationTarget = 'post' | 'reply' | 'question' | 'answer';
+
+const MODERATION_TABLES: Record<FeedModerationTarget, string> = {
+  post: 'feed_community_posts',
+  reply: 'feed_community_replies',
+  question: 'feed_questions',
+  answer: 'feed_answers',
+};
+
+export function isFeedModerationTarget(value: unknown): value is FeedModerationTarget {
+  return value === 'post' || value === 'reply' || value === 'question' || value === 'answer';
+}
 
 export type FeedModerationOutcome =
   | { status: 'ok'; previous: FeedModerationStatus; next: FeedModerationStatus }
@@ -81,7 +96,7 @@ export async function setCommunityModerationStatus(input: {
     return { status: 'not_found' };
   }
 
-  const table = input.target === 'post' ? 'feed_community_posts' : 'feed_community_replies';
+  const table = MODERATION_TABLES[input.target];
 
   return withDbTransaction(async (client) => {
     // Locked for the read-then-write so two moderators acting at once cannot both believe they made
@@ -250,6 +265,105 @@ export async function listCommonsAuthors(limit = 50): Promise<FeedModerationAuth
     firstPostedAtIso: toIso(row.first_posted_at),
     lastPostedAtIso: toIso(row.last_posted_at),
   }));
+}
+
+// One flagged answer awaiting review. `flaggedCount` is how many members rated it `flagged` — the
+// signal that was already being collected and reaching nobody, because no page called the route that
+// aggregated it.
+export type FeedFlaggedAnswerRow = {
+  answerId: string;
+  questionId: string;
+  questionBody: string;
+  answerType: 'llm' | 'community';
+  answerBody: string;
+  authorUserId: string | null;
+  moderationStatus: FeedModerationStatus;
+  moderationReason: FeedModerationReason | null;
+  flaggedCount: number;
+  notHelpfulCount: number;
+  createdAtIso: string;
+};
+
+// Answers members have flagged, most-flagged first, then newest.
+//
+// Ordered by flag count rather than by date on purpose: this is a triage queue, and the answer six
+// people objected to matters more than the one that arrived most recently. Hidden answers are included
+// so a moderator can see and reverse their own calls.
+export async function listFlaggedAnswers(limit = 50): Promise<FeedFlaggedAnswerRow[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 200);
+
+  const result = await queryDb<{
+    answer_id: string;
+    question_id: string;
+    question_body: string;
+    answer_type: string;
+    answer_body: string;
+    author_user_id: string | null;
+    moderation_status: string;
+    moderation_reason: string | null;
+    flagged_count: string;
+    not_helpful_count: string;
+    created_at: Date;
+  }>(
+    `
+      SELECT
+        fa.id AS answer_id,
+        fa.question_id,
+        fq.body AS question_body,
+        fa.answer_type,
+        fa.body AS answer_body,
+        fa.author_user_id,
+        fa.moderation_status,
+        fa.moderation_reason,
+        COUNT(*) FILTER (WHERE r.rating = 'flagged')::text AS flagged_count,
+        COUNT(*) FILTER (WHERE r.rating = 'not_helpful')::text AS not_helpful_count,
+        fa.created_at
+      FROM feed_answers fa
+      JOIN feed_questions fq ON fq.id = fa.question_id
+      JOIN feed_answer_ratings r ON r.answer_id = fa.id
+      GROUP BY fa.id, fa.question_id, fq.body, fa.answer_type, fa.body, fa.author_user_id,
+               fa.moderation_status, fa.moderation_reason, fa.created_at
+      HAVING COUNT(*) FILTER (WHERE r.rating = 'flagged') > 0
+      ORDER BY COUNT(*) FILTER (WHERE r.rating = 'flagged') DESC, fa.created_at DESC
+      LIMIT $1
+    `,
+    [safeLimit],
+  );
+
+  return result.rows.map((row) => ({
+    answerId: row.answer_id,
+    questionId: row.question_id,
+    questionBody: row.question_body,
+    answerType: row.answer_type === 'community' ? 'community' : 'llm',
+    answerBody: row.answer_body,
+    authorUserId: row.author_user_id,
+    moderationStatus:
+      row.moderation_status === FEED_MODERATION_STATUS.hidden
+        ? FEED_MODERATION_STATUS.hidden
+        : FEED_MODERATION_STATUS.accepted,
+    moderationReason: (row.moderation_reason as FeedModerationReason | null) ?? null,
+    flaggedCount: Number(row.flagged_count ?? 0),
+    notHelpfulCount: Number(row.not_helpful_count ?? 0),
+    createdAtIso: toIso(row.created_at),
+  }));
+}
+
+// How many flagged answers are still visible — the number that actually needs attention, as opposed to
+// the total ever flagged. Counted in the database so it is never a page-capped undercount.
+export async function countPendingFlaggedAnswers(): Promise<number> {
+  const result = await queryDb<{ total: string }>(
+    `
+      SELECT COUNT(*)::text AS total FROM (
+        SELECT fa.id
+        FROM feed_answers fa
+        JOIN feed_answer_ratings r ON r.answer_id = fa.id
+        WHERE fa.moderation_status = 'accepted'
+        GROUP BY fa.id
+        HAVING COUNT(*) FILTER (WHERE r.rating = 'flagged') > 0
+      ) pending
+    `,
+  );
+  return Number(result.rows[0]?.total ?? 0);
 }
 
 // How many Commons rows are currently hidden, for the admin dashboard counter. Counted from the

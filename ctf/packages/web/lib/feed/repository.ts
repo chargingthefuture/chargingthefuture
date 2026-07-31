@@ -15,10 +15,17 @@ import {
   FEED_MAX_PAGE_SIZE,
   FEED_MAX_QUESTION_LENGTH,
   FEED_MAX_TITLE_LENGTH,
+  FEED_SYSTEM_ACTOR_ID,
   FEED_QUESTION_CATEGORIES,
   FEED_REACTION_EMOJIS,
   isAllowedFeedReactionEmoji,
 } from './constants';
+import {
+  COMMONS_NOTICES,
+  claimGuidanceMilestone,
+  dueMilestoneFor,
+  stampGuidanceAnnouncement,
+} from './commons-guidance';
 import { extractMentionHandles, feedAuthorHandle, feedMentionTokens } from './author-handle';
 import { normalizeMultilineText } from './normalize';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
@@ -526,6 +533,111 @@ async function syncFeedItemForQuestion(
   await upsertDefaultFeedTargets(client, feedItemResult.rows[0].id);
 }
 
+// Bring every already-published standing notice back in line with its current wording.
+//
+// Matches on the notice's title, which is its stable identity — the bodies change, the titles do not.
+// Only ever updates rows authored by the reserved system actor, so an owner-written announcement that
+// happens to share a title can never be overwritten.
+async function refreshPublishedGuidanceNotices(client: PoolClient): Promise<void> {
+  for (const notice of COMMONS_NOTICES) {
+    // Updates the announcement and its projected feed row together; a mismatch between the two is what
+    // makes the Commons show text that no longer exists anywhere else.
+    await client.query(
+      `
+        UPDATE announcements
+        SET body = $2, updated_at = NOW()
+        WHERE title = $1 AND created_by_user_id = $3 AND body <> $2
+      `,
+      [notice.title, notice.body, FEED_SYSTEM_ACTOR_ID],
+    );
+    await client.query(
+      `
+        UPDATE feed_items
+        SET body = $2, updated_at = NOW()
+        WHERE title = $1 AND created_by_user_id = $3 AND body <> $2
+      `,
+      [notice.title, notice.body, FEED_SYSTEM_ACTOR_ID],
+    );
+  }
+}
+
+// Publish any of the standing Commons notices whose cadence is due on this post.
+//
+// Never throws: a failure here must not lose the member's post. A notice is a reminder, and missing one
+// is a smaller harm than a rejected post — but the claim and the notice do share the post's transaction,
+// so the two can never disagree about whether a period was served.
+async function maybePostCommonsGuidance(client: PoolClient): Promise<void> {
+  try {
+    // Counts every community post, hidden ones included. A milestone means "the Commons has seen this
+    // much traffic", and moderation after the fact should not shift where the next notice falls.
+    const counted = await client.query<{ total: string }>('SELECT COUNT(*)::text AS total FROM feed_community_posts');
+    const total = Number(counted.rows[0]?.total ?? 0);
+    const nowMs = Date.now();
+
+    // Repair notices already published under older wording before considering new ones.
+    //
+    // These are system-authored standing messages, so the constant in commons-guidance.ts is the source
+    // of truth and a published row that disagrees with it is simply out of date. This matters beyond
+    // tidiness: the first version of these bodies was authored as source-wrapped lines joined with '\n',
+    // which rendered as hard breaks mid-sentence in front of members. Fixing the constant alone would
+    // have left every already-published row broken until its next milestone came round — which for the
+    // 21-day notice is three weeks. Nothing here touches member-authored content.
+    await refreshPublishedGuidanceNotices(client);
+
+    for (const notice of COMMONS_NOTICES) {
+      const milestone = dueMilestoneFor(notice, { postCount: total, nowMs });
+      if (milestone === null) {
+        continue;
+      }
+
+      // The claim is the gate. For a time cadence every post inside the interval computes the same
+      // period, so all but the first lose this race and skip — which is exactly what makes a "every few
+      // weeks" notice fire once per interval rather than on every post in it.
+      const won = await claimGuidanceMilestone(client, milestone, notice.key);
+      if (!won) {
+        continue;
+      }
+
+      // Published straight away rather than as a draft — nobody is going to hand-publish these on a
+      // schedule, and a draft that never ships is the same as no notice at all.
+      const announcement = await client.query<{ id: string }>(
+        `
+          INSERT INTO announcements
+            (title, body, status, published_at, targeting, linked_plugin_slugs, created_by_user_id, updated_by_user_id)
+          VALUES
+            ($1, $2, 'published', NOW(), $3::jsonb, '[]'::jsonb, $4, $4)
+          RETURNING id
+        `,
+        [notice.title, notice.body, JSON.stringify({ roles: ['member', 'admin'] }), FEED_SYSTEM_ACTOR_ID],
+      );
+
+      const announcementId = announcement.rows[0].id;
+      await client.query(
+        `
+          INSERT INTO feed_items
+            (item_type, source_announcement_id, title, body, published_at, is_active, created_by_user_id, updated_by_user_id)
+          VALUES
+            ('announcement', $1::uuid, $2, $3, NOW(), TRUE, $4, $4)
+          ON CONFLICT (source_announcement_id) DO NOTHING
+        `,
+        [announcementId, notice.title, notice.body, FEED_SYSTEM_ACTOR_ID],
+      );
+
+      const projected = await client.query<{ id: string }>(
+        'SELECT id FROM feed_items WHERE source_announcement_id = $1::uuid LIMIT 1',
+        [announcementId],
+      );
+      if (projected.rows[0]) {
+        await upsertDefaultFeedTargets(client, projected.rows[0].id);
+      }
+
+      await stampGuidanceAnnouncement(client, milestone, announcementId, notice.key);
+    }
+  } catch (error) {
+    reportError(error, { area: 'feed', op: 'commons_guidance_autopost' });
+  }
+}
+
 async function syncFeedItemForCommunityPost(
   client: PoolClient,
   actorId: string,
@@ -1021,6 +1133,7 @@ async function loadQuestionDetails(
             SELECT id, asked_by_user_id, body, category, location_context, llm_consent_granted, created_at
             FROM feed_questions
             WHERE id = ANY($1::uuid[])
+              AND moderation_status = 'accepted'
           `,
       [questionIds],
     ),
@@ -1029,6 +1142,7 @@ async function loadQuestionDetails(
             SELECT id, question_id, answer_type, body, confidence::text, model_id, sources, author_user_id, created_at
             FROM feed_answers
             WHERE question_id = ANY($1::uuid[])
+              AND moderation_status = 'accepted'
             ORDER BY created_at ASC
           `,
       [questionIds],
@@ -1884,6 +1998,7 @@ export async function generateFeedQuestionAnswer(actorId: string, questionId: st
         SELECT id, asked_by_user_id, body, category, location_context, llm_consent_granted, created_at
         FROM feed_questions
         WHERE id = $1::uuid
+          AND moderation_status = 'accepted'
         LIMIT 1
       `,
       [questionId],
@@ -2054,6 +2169,13 @@ export async function createFeedCommunityPost(
 
     const postId = inserted.rows[0].id;
     await syncFeedItemForCommunityPost(client, actorId, postId, getCommunityTitle(category), body);
+
+    // Every Nth post, publish the Commons guidance notice. Inside this transaction on purpose: the
+    // count, the milestone claim, and the notice all commit with the post that triggered them, so a
+    // rolled-back post can never leave a claimed milestone behind that silently suppresses the notice
+    // forever. Best-effort in the sense that a failure is swallowed (below) — never in the sense of
+    // running after commit, which would open exactly that gap.
+    await maybePostCommonsGuidance(client);
 
     return {
       postId,
@@ -2691,11 +2813,16 @@ type QuestionExportRow = {
 };
 
 // Group every feed question by category. Used by the admin training export.
+//
+// Hidden questions are excluded. A moderator hiding something is a judgement that it does not belong in
+// the Commons; exporting it into training data would launder it straight back in, and the model would
+// keep answering in the register of the thing that was removed.
 export async function exportQuestionsByCategory(): Promise<Record<FeedQuestionCategory, string[]>> {
   const result = await queryDb<QuestionExportRow>(
     `
       SELECT id, body, category
       FROM feed_questions
+      WHERE moderation_status = 'accepted'
       ORDER BY category ASC, created_at ASC
     `,
   );

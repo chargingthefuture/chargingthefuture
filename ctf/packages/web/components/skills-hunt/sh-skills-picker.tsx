@@ -54,6 +54,18 @@ function useTaxonomy(): TaxonomyLoadState {
   return state;
 }
 
+// Read the grouped taxonomy out of the load state, defaulting to empty groupings whenever the
+// fetch is not yet ready (or failed). Keeps the picker's ternaries out of its render body.
+function readTaxonomy(taxonomy: TaxonomyLoadState): {
+  categories: Record<string, string[]>;
+  occupations: Record<string, string[]>;
+} {
+  if (taxonomy.status === "ready") {
+    return { categories: taxonomy.categories, occupations: taxonomy.occupations };
+  }
+  return { categories: {}, occupations: {} };
+}
+
 interface SkillsPickerProps {
   skills: string[];
   proposedSkills: string[];
@@ -144,15 +156,185 @@ function CategoryRow({ category, categorySkills, skills, isOpen, canAddMore, onO
   );
 }
 
+// Optional profession prefill — fills in a whole occupation's skills at once. Renders nothing
+// until the taxonomy is loaded and at least one occupation is known.
+function OccupationPrefill({ occupations, canAddMore, onAddOccupationSkills }: {
+  occupations: Record<string, string[]>;
+  canAddMore: boolean;
+  onAddOccupationSkills: (skillNames: string[]) => void;
+}) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
+  const occupationNames = Object.keys(occupations);
+  if (occupationNames.length === 0) return null;
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <label htmlFor="sh-occupation-prefill" style={{ fontSize: 11, color: t.SUBTLE, display: "block", marginBottom: 4 }}>
+        Know their profession? Add its skills <span style={{ color: t.FAINT }}>(optional — fills the skills in for you)</span>
+      </label>
+      <select
+        id="sh-occupation-prefill"
+        value=""
+        disabled={!canAddMore}
+        onChange={(e) => { const occ = e.target.value; if (occ && occupations[occ]) onAddOccupationSkills(occupations[occ]); }}
+        style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", cursor: canAddMore ? "pointer" : "default", opacity: canAddMore ? 1 : 0.5 }}
+      >
+        <option value="">Select a profession…</option>
+        {occupationNames.map((occ) => (
+          <option key={occ} value={occ}>{occ}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// The loading / error status line for the taxonomy fetch. Renders nothing once the taxonomy
+// is ready (the accordion and search take over from there).
+function TaxonomyStatus({ taxonomy }: { taxonomy: TaxonomyLoadState }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
+  if (taxonomy.status === "loading") {
+    return <div style={{ fontSize: 12, color: t.MUTED, padding: "10px 0" }}>Loading skills…</div>;
+  }
+  if (taxonomy.status === "error") {
+    return <div style={{ fontSize: 12, color: "#F59E0B", padding: "6px 0", marginBottom: 4 }}>Could not load the skills list — add skills as free text below.</div>;
+  }
+  return null;
+}
+
+// Keyword search box — only shown once the taxonomy has categories to search across.
+function SkillSearch({ taxonomy, hasCategories, search, setSearch }: {
+  taxonomy: TaxonomyLoadState;
+  hasCategories: boolean;
+  search: string;
+  setSearch: (v: string) => void;
+}) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
+  if (taxonomy.status !== "ready" || !hasCategories) return null;
+  return (
+    <div style={{ position: "relative", marginBottom: 10 }}>
+      <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: t.FAINT, pointerEvents: "none" }} />
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        aria-label="Search skills by keyword"
+        placeholder="Search skills by keyword…"
+        style={{ width: "100%", padding: "8px 32px 8px 34px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", boxSizing: "border-box" }}
+      />
+      {search && (
+        <button type="button" aria-label="Clear skill search" onClick={() => setSearch("")}
+          style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: t.FAINT, cursor: "pointer", padding: 4, lineHeight: 1 }}>
+          <X size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// When searching, a flat cross-sector result list replaces the accordion.
+function SearchResults({ taxonomy, hasCategories, query, search, matches, skills, canAddMore, onToggleSkill }: {
+  taxonomy: TaxonomyLoadState;
+  hasCategories: boolean;
+  query: string;
+  search: string;
+  matches: string[];
+  skills: string[];
+  canAddMore: boolean;
+  onToggleSkill: (s: string) => void;
+}) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
+  if (taxonomy.status !== "ready" || !hasCategories || !query) return null;
+  return (
+    <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", marginBottom: 10 }}>
+      {matches.length === 0 ? (
+        <div style={{ fontSize: 12, color: t.MUTED }}>No skills match “{search.trim()}”. Add it as a free-text skill below.</div>
+      ) : (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+          {matches.map((s) => (
+            <SkillChip key={s} skill={s} selected={skills.includes(s)} canAddMore={canAddMore} onToggleSkill={onToggleSkill} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The sector accordion — shown when the taxonomy is ready and no keyword search is active.
+function CategoryAccordion({ taxonomy, hasCategories, query, categories, skills, openCategory, canAddMore, onOpenCategory, onToggleSkill }: {
+  taxonomy: TaxonomyLoadState;
+  hasCategories: boolean;
+  query: string;
+  categories: Record<string, string[]>;
+  skills: string[];
+  openCategory: string | null;
+  canAddMore: boolean;
+  onOpenCategory: (c: string | null) => void;
+  onToggleSkill: (s: string) => void;
+}) {
+  if (taxonomy.status !== "ready" || !hasCategories || query) return null;
+  return (
+    <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden", marginBottom: 10 }}>
+      {Object.entries(categories).map(([category, categorySkills]) => (
+        <CategoryRow key={category} category={category} categorySkills={categorySkills} skills={skills} isOpen={openCategory === category} canAddMore={canAddMore} onOpenCategory={onOpenCategory} onToggleSkill={onToggleSkill} />
+      ))}
+    </div>
+  );
+}
+
+// Free-text skill entry — proposed skills an admin can later promote into the taxonomy.
+// Only shown while there is still room under the 10-skill cap.
+function FreeTextAdder({ canAddMore, freeText, onFreeText, onAddProposed }: {
+  canAddMore: boolean;
+  freeText: string;
+  onFreeText: (v: string) => void;
+  onAddProposed: () => void;
+}) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
+  if (!canAddMore) return null;
+  return (
+    <div>
+      <div style={{ fontSize: 11, color: t.FAINT, marginBottom: 6 }}>Don&apos;t see what you need? Add free-text skills (comma or newline separated — each ≤ 40 chars):</div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          value={freeText}
+          onChange={(e) => onFreeText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onAddProposed(); } }}
+          aria-label="Add free-text skills"
+          placeholder="e.g. Tie-dye, Beekeeping, Kintsugi…"
+          style={{ flex: 1, padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none" }}
+        />
+        <button type="button" onClick={onAddProposed} style={{ padding: "8px 14px", borderRadius: 8, background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", color: t.ACCENT, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Add</button>
+      </div>
+      <div style={{ fontSize: 11, color: t.FAINT, marginTop: 4 }}>Yellow chips = proposed skills — admin can promote them to the taxonomy later.</div>
+    </div>
+  );
+}
+
+// The cap notice (once 10 skills are reached) plus the running count.
+function FooterStatus({ canAddMore, allSkillCount }: {
+  canAddMore: boolean;
+  allSkillCount: number;
+}) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
+  return (
+    <>
+      {!canAddMore && <div style={{ fontSize: 11, color: t.MUTED, padding: "6px 0" }}>Maximum 10 skills reached.</div>}
+      <div style={{ fontSize: 11, color: t.FAINT, marginTop: 6 }}>{allSkillCount}/10 skills added</div>
+    </>
+  );
+}
+
 export function SkillsPicker(props: SkillsPickerProps) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
   const { skills, proposedSkills, freeText, openCategory, canAddMore, allSkillCount, onToggleSkill, onAddOccupationSkills, onRemoveProposed, onOpenCategory, onFreeText, onAddProposed } = props;
   const taxonomy = useTaxonomy();
-  const categories = taxonomy.status === "ready" ? taxonomy.categories : {};
-  const occupations = taxonomy.status === "ready" ? taxonomy.occupations : {};
+  const { categories, occupations } = readTaxonomy(taxonomy);
   const hasCategories = Object.keys(categories).length > 0;
-  const occupationNames = Object.keys(occupations);
 
   // Keyword search across every sector — a flat, de-duplicated skill list filtered
   // by substring. Local UI state only; it does not touch the form model.
@@ -174,96 +356,19 @@ export function SkillsPicker(props: SkillsPickerProps) {
 
       <SelectedChips skills={skills} proposedSkills={proposedSkills} onToggleSkill={onToggleSkill} onRemoveProposed={onRemoveProposed} />
 
-      {taxonomy.status === "ready" && occupationNames.length > 0 && (
-        <div style={{ marginBottom: 10 }}>
-          <label htmlFor="sh-occupation-prefill" style={{ fontSize: 11, color: t.SUBTLE, display: "block", marginBottom: 4 }}>
-            Know their profession? Add its skills <span style={{ color: t.FAINT }}>(optional — fills the skills in for you)</span>
-          </label>
-          <select
-            id="sh-occupation-prefill"
-            value=""
-            disabled={!canAddMore}
-            onChange={(e) => { const occ = e.target.value; if (occ && occupations[occ]) onAddOccupationSkills(occupations[occ]); }}
-            style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", cursor: canAddMore ? "pointer" : "default", opacity: canAddMore ? 1 : 0.5 }}
-          >
-            <option value="">Select a profession…</option>
-            {occupationNames.map((occ) => (
-              <option key={occ} value={occ}>{occ}</option>
-            ))}
-          </select>
-        </div>
-      )}
+      <OccupationPrefill occupations={occupations} canAddMore={canAddMore} onAddOccupationSkills={onAddOccupationSkills} />
 
-      {taxonomy.status === "loading" && (
-        <div style={{ fontSize: 12, color: t.MUTED, padding: "10px 0" }}>Loading skills…</div>
-      )}
+      <TaxonomyStatus taxonomy={taxonomy} />
 
-      {taxonomy.status === "error" && (
-        <div style={{ fontSize: 12, color: "#F59E0B", padding: "6px 0", marginBottom: 4 }}>Could not load the skills list — add skills as free text below.</div>
-      )}
+      <SkillSearch taxonomy={taxonomy} hasCategories={hasCategories} search={search} setSearch={setSearch} />
 
-      {taxonomy.status === "ready" && hasCategories && (
-        <div style={{ position: "relative", marginBottom: 10 }}>
-          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: t.FAINT, pointerEvents: "none" }} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search skills by keyword"
-            placeholder="Search skills by keyword…"
-            style={{ width: "100%", padding: "8px 32px 8px 34px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", boxSizing: "border-box" }}
-          />
-          {search && (
-            <button type="button" aria-label="Clear skill search" onClick={() => setSearch("")}
-              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: t.FAINT, cursor: "pointer", padding: 4, lineHeight: 1 }}>
-              <X size={13} />
-            </button>
-          )}
-        </div>
-      )}
+      <SearchResults taxonomy={taxonomy} hasCategories={hasCategories} query={query} search={search} matches={matches} skills={skills} canAddMore={canAddMore} onToggleSkill={onToggleSkill} />
 
-      {/* When searching, a flat cross-sector result list replaces the accordion. */}
-      {taxonomy.status === "ready" && hasCategories && query && (
-        <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", marginBottom: 10 }}>
-          {matches.length === 0 ? (
-            <div style={{ fontSize: 12, color: t.MUTED }}>No skills match “{search.trim()}”. Add it as a free-text skill below.</div>
-          ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-              {matches.map((s) => (
-                <SkillChip key={s} skill={s} selected={skills.includes(s)} canAddMore={canAddMore} onToggleSkill={onToggleSkill} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <CategoryAccordion taxonomy={taxonomy} hasCategories={hasCategories} query={query} categories={categories} skills={skills} openCategory={openCategory} canAddMore={canAddMore} onOpenCategory={onOpenCategory} onToggleSkill={onToggleSkill} />
 
-      {taxonomy.status === "ready" && hasCategories && !query && (
-        <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden", marginBottom: 10 }}>
-          {Object.entries(categories).map(([category, categorySkills]) => (
-            <CategoryRow key={category} category={category} categorySkills={categorySkills} skills={skills} isOpen={openCategory === category} canAddMore={canAddMore} onOpenCategory={onOpenCategory} onToggleSkill={onToggleSkill} />
-          ))}
-        </div>
-      )}
+      <FreeTextAdder canAddMore={canAddMore} freeText={freeText} onFreeText={onFreeText} onAddProposed={onAddProposed} />
 
-      {canAddMore && (
-        <div>
-          <div style={{ fontSize: 11, color: t.FAINT, marginBottom: 6 }}>Don&apos;t see what you need? Add free-text skills (comma or newline separated — each ≤ 40 chars):</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              value={freeText}
-              onChange={(e) => onFreeText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onAddProposed(); } }}
-              aria-label="Add free-text skills"
-              placeholder="e.g. Tie-dye, Beekeeping, Kintsugi…"
-              style={{ flex: 1, padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none" }}
-            />
-            <button type="button" onClick={onAddProposed} style={{ padding: "8px 14px", borderRadius: 8, background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", color: t.ACCENT, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Add</button>
-          </div>
-          <div style={{ fontSize: 11, color: t.FAINT, marginTop: 4 }}>Yellow chips = proposed skills — admin can promote them to the taxonomy later.</div>
-        </div>
-      )}
-
-      {!canAddMore && <div style={{ fontSize: 11, color: t.MUTED, padding: "6px 0" }}>Maximum 10 skills reached.</div>}
-      <div style={{ fontSize: 11, color: t.FAINT, marginTop: 6 }}>{allSkillCount}/10 skills added</div>
+      <FooterStatus canAddMore={canAddMore} allSkillCount={allSkillCount} />
     </div>
   );
 }
