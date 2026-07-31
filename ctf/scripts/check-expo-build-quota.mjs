@@ -28,7 +28,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const quotaPath = resolve(here, '../packages/mobile/expo-free-tier-quota.json');
+const mobileDir = resolve(here, '../packages/mobile');
+const quotaPath = resolve(mobileDir, 'expo-free-tier-quota.json');
 
 const mode = (process.argv[2] || 'scheduled').toLowerCase();
 
@@ -70,11 +71,19 @@ function countThisMonth() {
   try {
     raw = execFileSync(
       'eas',
-      ['build:list', '--platform', 'android', '--limit', '100', '--json', '--non-interactive'],
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+      // 50 is the highest --limit the EAS CLI accepts. That is far more than the
+      // 15-builds-per-month cap, so the current month is always fully covered.
+      ['build:list', '--platform', 'android', '--limit', '50', '--json', '--non-interactive'],
+      // Run inside the Expo app directory. The workflows call this script from the
+      // repo root, and there is no app config there, so `eas build:list` would exit
+      // with "EAS project not configured" and the guard would fail open.
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], cwd: mobileDir },
     );
   } catch (err) {
-    return { error: err.message };
+    // Include the CLI's own output; err.message alone only repeats the command,
+    // which hides why the read failed. The EAS CLI puts some failures on stdout.
+    const detail = [err?.stdout, err?.stderr].map((s) => String(s || '').trim()).filter(Boolean).join(' ');
+    return { error: detail ? `${err.message} ${detail}` : err.message };
   }
 
   let builds;
