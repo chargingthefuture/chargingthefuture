@@ -724,6 +724,11 @@ the first-visit card.
   prose, and the renderer must keep them apart while joining prose that was only source-wrapped.
 - Run `pnpm --dir ctf check:notice-formatting` — it fails if any notice body is built by joining lines
   with a single `\n`, which is the authoring mistake behind all of this.
+- Run `pnpm --dir ctf preview:member-copy` — it renders every standing notice and the first-visit card
+  to PNGs at phone width in `ctf/artifacts/copy-preview/`, marks the phone fold, and **exits non-zero if
+  the first-visit card is taller than the screen**. Attach those PNGs to any PR that changes
+  member-facing copy. Both defects here — chopped sentences, and a card that swallowed the screen — were
+  obvious at a glance and invisible to every automated check, because none of them look at the output.
 
 **Result:** web ☐
 

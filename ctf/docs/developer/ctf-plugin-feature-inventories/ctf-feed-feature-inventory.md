@@ -592,6 +592,18 @@ All three feed channels (announcements, questions, community) are shipped on web
   - **Parity:** web + mobile-responsive; Android out of scope (web-only per rule 105).
 ### Change Log
 
+- 2026-07-31 (latest): **Copy preview — render member-facing text before it ships (owner request).** Two
+  defects reached members in a day (sentences chopped mid-clause; a card that swallowed the screen), and
+  every automated gate passed both, because none of them look at the OUTPUT.
+  `ctf/scripts/preview-member-copy.mjs` (`pnpm --dir ctf preview:member-copy`) renders every standing
+  notice and the first-visit card to PNGs at phone width with the phone fold marked, and **exits
+  non-zero when the first-visit card is taller than the screen** — the exact failure that happened. The
+  PNGs are attached to any PR that changes member-facing copy and are git-ignored, so the repo never
+  accumulates screenshots of superseded wording. It renders the text and the box, not the live app:
+  faithful for line breaking, paragraph spacing and overflow; it does not prove theme colours. Playwright
+  is resolved from the project or a global install rather than added as a dependency, since this is a
+  review tool and not a CI gate. The pure paragraph logic moved to `lib/feed/notice-paragraphs.ts` so the
+  script and any future test can use it without pulling in React.
 - 2026-07-31 (later): **The first-visit card is short and no longer fights the chat for the screen**
   (owner report, with a screenshot). It was rendering the FULL standing notice inside a card that sits
   above the message list in a fixed-height flex column. A tall card steals the flexible space, pushes
