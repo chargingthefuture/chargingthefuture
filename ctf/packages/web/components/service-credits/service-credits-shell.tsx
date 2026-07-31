@@ -6,7 +6,7 @@ import { BackChevronButton } from "@/lib/nav/back-history";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/useTheme";
 import { AppLoading } from "@/components/shared/app-loading";
-import { BG, fmtCredits, getServiceCreditsTokens, type Tab, type WalletData } from "./sc-shared";
+import { BG, fmtCredits, getServiceCreditsTokens, type ServiceCreditsTokens, type Tab, type WalletData } from "./sc-shared";
 import { ServiceCreditsWalletTab } from "./sc-wallet-tab";
 import { ServiceCreditsEarnTab } from "./sc-earn-tab";
 import { ServiceCreditsCirculationTab } from "./sc-circulation-tab";
@@ -20,6 +20,24 @@ function CenteredNote({ color, children }: { color: string; children: React.Reac
     <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", color, fontFamily: "'Inter', system-ui, sans-serif" }}>
       {children}
     </div>
+  );
+}
+
+// One top-of-shell tab. The active tab uses the ServiceCredits accent; others stay muted.
+function TabButton({ label, active, onSelect, t }: { label: string; active: boolean; onSelect: () => void; t: ServiceCreditsTokens }) {
+  return (
+    <button onClick={onSelect} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: active ? `${t.ACCENT}1A` : "transparent", border: `1px solid ${active ? t.ACCENT + "40" : t.BORDER_STRONG}`, color: active ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+  );
+}
+
+// The active tab's body: wallet, earn, or economy.
+function ShellTabContent({ tab, balance, escrow }: { tab: Tab; balance: number; escrow: number }) {
+  return (
+    <>
+      {tab === "wallet" && <ServiceCreditsWalletTab balance={balance} escrow={escrow} />}
+      {tab === "earn" && <ServiceCreditsEarnTab />}
+      {tab === "economy" && <ServiceCreditsCirculationTab />}
+    </>
   );
 }
 
@@ -62,13 +80,7 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const balance = wallet?.availableBalance ?? 0;
   const escrow = wallet?.escrowBalance ?? 0;
 
-  const content = (
-    <>
-      {tab === "wallet" && <ServiceCreditsWalletTab balance={balance} escrow={escrow} />}
-      {tab === "earn" && <ServiceCreditsEarnTab />}
-      {tab === "economy" && <ServiceCreditsCirculationTab />}
-    </>
-  );
+  const content = <ShellTabContent tab={tab} balance={balance} escrow={escrow} />;
 
     const tabs: { key: Tab; label: string }[] = [
       { key: "wallet", label: "Wallet" },
@@ -90,7 +102,7 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (
-              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${t.ACCENT}1A` : "transparent", border: `1px solid ${tab === key ? t.ACCENT + "40" : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+              <TabButton key={key} label={label} active={tab === key} onSelect={() => setTab(key)} t={t} />
             ))}
           </div>
         </div>

@@ -11,6 +11,35 @@ type MintBody = {
   idempotencyKey?: string;
 };
 
+type MintInput = {
+  targetUserId: string;
+  amount: number;
+  grantReason: string;
+  governanceTicketId: string;
+  idempotencyKey: string;
+};
+
+function validateMintBody(body: MintBody): { error: NextResponse } | { data: MintInput } {
+  if (!body.targetUserId || typeof body.amount !== 'number' || !(body.amount > 0) || !Number.isFinite(body.amount) || !body.grantReason || !body.governanceTicketId || !body.idempotencyKey) {
+    return {
+      error: NextResponse.json(
+        { ok: false, code: 'service_credits_invalid_payload', message: 'targetUserId, amount, grantReason, governanceTicketId, and idempotencyKey are required.' },
+        { status: 400 },
+      ),
+    };
+  }
+
+  return {
+    data: {
+      targetUserId: body.targetUserId,
+      amount: body.amount,
+      grantReason: body.grantReason,
+      governanceTicketId: body.governanceTicketId,
+      idempotencyKey: body.idempotencyKey,
+    },
+  };
+}
+
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -29,21 +58,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  if (!body.targetUserId || typeof body.amount !== 'number' || !(body.amount > 0) || !Number.isFinite(body.amount) || !body.grantReason || !body.governanceTicketId || !body.idempotencyKey) {
-    return NextResponse.json(
-      { ok: false, code: 'service_credits_invalid_payload', message: 'targetUserId, amount, grantReason, governanceTicketId, and idempotencyKey are required.' },
-      { status: 400 },
-    );
+  const validation = validateMintBody(body);
+  if ('error' in validation) {
+    return validation.error;
   }
+  const input = validation.data;
 
   try {
     const grant = await mintGrant({
       actorId: gate.auth.userId,
-      targetUserId: body.targetUserId,
-      amount: body.amount,
-      grantReason: body.grantReason,
-      governanceTicketId: body.governanceTicketId,
-      idempotencyKey: body.idempotencyKey,
+      targetUserId: input.targetUserId,
+      amount: input.amount,
+      grantReason: input.grantReason,
+      governanceTicketId: input.governanceTicketId,
+      idempotencyKey: input.idempotencyKey,
     });
 
     await insertServiceCreditsAudit({
@@ -56,7 +84,7 @@ export async function POST(request: Request) {
       // Record the governing command-contract version so compliance review can tell which mint rules
       // applied. The audit-trail table has no version column, so it rides in metadata. Keep in step
       // with the governance.mint.grant version in SERVICE_CREDITS_PLUGIN_COMMAND_CONTRACTS.yaml.
-      metadata: { commandVersion: '1.1.0', targetUserId: body.targetUserId, amount: body.amount, governanceTicketId: body.governanceTicketId },
+      metadata: { commandVersion: '1.1.0', targetUserId: input.targetUserId, amount: input.amount, governanceTicketId: input.governanceTicketId },
     });
 
     return NextResponse.json({ ok: true, grant }, { status: 201 });
