@@ -8,6 +8,7 @@ import { FEED_MAX_COMMUNITY_REPLY_LENGTH } from '../../lib/feed/constants';
 import type { ChatReactionSummary } from './shell-types';
 import { ChatReactionRow } from './chat-reaction-row';
 import styles from './community-shell.module.css';
+import { NoticeParagraphs } from './notice-paragraphs';
 
 type AnnouncementCardProps = {
   // The posting authority — almost always "Survivor Hub". Passed in so the card matches whatever
@@ -295,7 +296,11 @@ export function AnnouncementCard({
         </div>
       </div>
       {title ? <p className={styles.announcementTitle}>{title}</p> : null}
-      <p className={styles.announcementBody}>{body}</p>
+      {/* Real paragraphs, not one pre-wrap blob. A body that was source-wrapped when it was authored
+          would otherwise render with hard breaks mid-sentence — which is exactly what reached members
+          once. NoticeParagraphs collapses those soft wraps while keeping a deliberate line list (the
+          trailing "Open <Plugin>: <url>" block) on separate lines. */}
+      <NoticeParagraphs body={body} className={styles.announcementBody} />
       <AnnouncementLinkedPlugins linkedPlugins={linkedPlugins} />
 
       {announcementId ? (

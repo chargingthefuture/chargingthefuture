@@ -59,78 +59,129 @@ export type CommonsNotice = {
   cadence: CommonsNoticeCadence;
 };
 
+// Join source-wrapped fragments into ONE paragraph.
+//
+// This exists because of a real bug that reached members: the notice bodies were written as an array of
+// source lines joined with '\n', so the wrapping I used to keep source lines short became HARD LINE
+// BREAKS in the rendered text — sentences chopped mid-clause ("whether or / not they have an account").
+// Source formatting is not content. Paragraphs are single strings; `para()` lets the source still wrap
+// without putting a newline into the text, and paragraphs are joined with a blank line below.
+//
+// The invariant: a notice body contains '\n\n' between paragraphs and NEVER a lone '\n' inside one.
+function para(...fragments: string[]): string {
+  return fragments.join(' ');
+}
+
 const COMMONS_PURPOSE_BODY = [
-  'On Quora you write into a void. You post, and maybe nobody comes. Here you ask, and someone answers —',
-  'me, or another member when I am away. We span every timezone, so somebody is usually awake. That is',
-  'the difference, and it is the point of the Commons.',
-  '',
-  'Ask in the open. It works better than it sounds. A public question gets answered once where the next',
-  'person can find it, instead of sitting in one private thread — so you are never waiting on me alone to',
-  'answer.',
-  '',
-  'You can say what is happening to you. Being targeted is why we are here, and nobody is asking you to',
-  'keep it quiet. What we do differently is finish the thought: say what is going on and what you need,',
-  'and someone helps with that part. A story with a question in it gets you somewhere. That is the only',
-  'difference we are asking for.',
-  '',
-  'The work itself lives in the apps. Skills, trades, housing, rides, calls — each has its own place, and',
-  'those are what build the economy and get counted. The Commons is how you find your way to them.',
-  '',
-  'Threads that never get to a question do come down, if they keep going. Not for tone, not for',
-  'disagreement, and not for who anybody is. Keeping this a place with a purpose is also what keeps it',
-  'safe: an open room about nothing is where traffickers go to blend in and harass Targets. They are not',
-  'allowed here — not tolerated less, not allowed.',
-  '',
-  'Contribute for a while and you become a Weaver of the Commons, which comes with a private group chat',
-  'room where none of this applies and you can talk about whatever you like.',
-].join('\n');
+  para(
+    'On Quora you write into a void. You post, and maybe nobody comes. Here you ask, and someone answers —',
+    'me, or another member when I am away. We span every timezone, so somebody is usually awake. That is',
+    'the difference, and it is the point of the Commons.',
+  ),
+  para(
+    'Ask in the open. It works better than it sounds. A public question gets answered once where the next',
+    'person can find it, instead of sitting in one private thread — so you are never waiting on me alone to',
+    'answer.',
+  ),
+  para(
+    'You can say what is happening to you. Being targeted is why we are here, and nobody is asking you to',
+    'keep it quiet. What we do differently is finish the thought: say what is going on and what you need,',
+    'and someone helps with that part. A story with a question in it gets you somewhere. That is the only',
+    'difference we are asking for.',
+  ),
+  para(
+    'The work itself lives in the apps. Skills, trades, housing, rides, calls — each has its own place, and',
+    'those are what build the economy and get counted. The Commons is how you find your way to them.',
+  ),
+  para(
+    'Threads that never get to a question do come down, if they keep going. Not for tone, not for',
+    'disagreement, and not for who anybody is. Keeping this a place with a purpose is also what keeps it',
+    'safe: an open room about nothing is where traffickers go to blend in and harass Targets. They are not',
+    'allowed here — not tolerated less, not allowed.',
+  ),
+  para(
+    'Contribute for a while and you become a Weaver of the Commons, which comes with a private group chat',
+    'room where none of this applies and you can talk about whatever you like.',
+  ),
+].join('\n\n');
 
 const COMMONS_ROOMS_BODY = [
-  'A couple of things to keep in mind.',
-  '',
-  'This main group chat and the main Chyme room are public. Anyone can read and listen, whether or not',
-  'they have an account, and only signed-in members can comment or speak. That is by design — keeping',
-  'these spaces public is one of the ways we make it harder for perps to abuse us: what happens here',
-  'happens in front of everyone.',
-  '',
-  'Please use these two spaces for introductions, and for asking members — or me — questions about the',
-  'app and this community.',
-  '',
-  'One note: anything you ask the AI Assistant is not public. The only time I look at those messages is to',
-  'make sure the assistant itself is safe — when I check an answer before it goes out, I see the question',
-  'it is answering. That is the whole of it. It is never to monitor you.',
-  '',
-  'And over time, as you use the features that are not public, you unlock the private audio and chat',
-  'rooms. Earning your way in like that is the best assurance we have that the people in them are not',
-  'perps.',
-].join('\n');
+  para('A couple of things to keep in mind.'),
+  para(
+    'This main group chat and the main Chyme room are public. Anyone can read and listen, whether or not',
+    'they have an account, and only signed-in members can comment or speak. That is by design — keeping',
+    'these spaces public is one of the ways we make it harder for perps to abuse us: what happens here',
+    'happens in front of everyone.',
+  ),
+  para(
+    'Please use these two spaces for introductions, and for asking members — or me — questions about the',
+    'app and this community.',
+  ),
+  para(
+    'One note: anything you ask the AI Assistant is not public. The only time I look at those messages is to',
+    'make sure the assistant itself is safe — when I check an answer before it goes out, I see the question',
+    'it is answering. That is the whole of it. It is never to monitor you.',
+  ),
+  para(
+    'And over time, as you use the features that are not public, you unlock the private audio and chat',
+    'rooms. Earning your way in like that is the best assurance we have that the people in them are not',
+    'perps.',
+  ),
+].join('\n\n');
 
 const COMMONS_SIGNAL_BODY = [
-  'Every few weeks I post this reminder: the people I follow, invite, or interact with are not necessarily',
-  'Targets. Use Skills Economy’s built-in features to tell signal from noise.',
-  '',
-  'I recently interacted with someone who is likely a perp. I do not want to rush to conclusions — but',
-  'either way, who I follow, invite, or interact with should never be a reason to trust them.',
-  '',
-  'Here is the thinking behind that.',
-  '',
-  'Matthew was once asked by a Target on Quora, roughly: do you realise you are sometimes responding to',
-  'perps’ comments and posts? His answer, also roughly: yes — but I answered truthfully, so it does not',
-  'matter that it was a perp, because a real Target will read the same answer and get value from it.',
-  '',
-  'I follow the same reasoning. So, a periodic reminder: I give people the benefit of the doubt, which',
-  'means I sometimes invite people who might be perps into Skills Economy. Two things follow from that.',
-  '',
-  'First, it is our community’s responsibility to tell each other when someone is a perp. When I am told,',
-  'I delete their account as soon as possible.',
-  '',
-  'Second, to limit a perp’s impact in the meantime, the app gates access and shows openly who is',
-  'providing material value to the community and who is not — so you can see who is worth interacting',
-  'with.',
-  '',
-  'Matthew’s Skills Economy profile (members only):',
-  'https://app.chargingthefuture.com/apps/directory/profile/658d846b-d090-4d3e-9e4a-1176b4df37fa',
-].join('\n');
+  para(
+    'Every few weeks I post this reminder: the people I follow, invite, or interact with are not necessarily',
+    'Targets. Use Skills Economy’s built-in features to tell signal from noise.',
+  ),
+  para(
+    'I recently interacted with someone who is likely a perp. I do not want to rush to conclusions — but',
+    'either way, who I follow, invite, or interact with should never be a reason to trust them.',
+  ),
+  para('Here is the thinking behind that.'),
+  para(
+    'Matthew was once asked by a Target on Quora, roughly: do you realise you are sometimes responding to',
+    'perps’ comments and posts? His answer, also roughly: yes — but I answered truthfully, so it does not',
+    'matter that it was a perp, because a real Target will read the same answer and get value from it.',
+  ),
+  para(
+    'I follow the same reasoning. So, a periodic reminder: I give people the benefit of the doubt, which',
+    'means I sometimes invite people who might be perps into Skills Economy. Two things follow from that.',
+  ),
+  para(
+    'First, it is our community’s responsibility to tell each other when someone is a perp. When I am told,',
+    'I delete their account as soon as possible.',
+  ),
+  para(
+    'Second, to limit a perp’s impact in the meantime, the app gates access and shows openly who is',
+    'providing material value to the community and who is not — so you can see who is worth interacting',
+    'with.',
+  ),
+  para(
+    'Matthew’s Skills Economy profile (members only):',
+    'https://app.chargingthefuture.com/apps/directory/profile/658d846b-d090-4d3e-9e4a-1176b4df37fa',
+  ),
+].join('\n\n');
+
+// The SHORT version shown on a member's first visit.
+//
+// Not the same text as the standing notice, on purpose. The card sits above the message stream in a
+// fixed-height column, so a long body steals the whole chat area and leaves the member scrolling the
+// conversation to get past it — which is exactly what happened when the card rendered the full notice.
+//
+// It carries only what a first-time poster needs BEFORE they type: this room is public, and the
+// assistant is not. Everything else about how the rooms work arrives on the rotation, where length is
+// free because an announcement scrolls with the conversation instead of sitting on top of it.
+export const COMMONS_FIRST_VISIT_TITLE = 'Before you post';
+
+export const COMMONS_FIRST_VISIT_BODY = [
+  para(
+    'This chat is public — anyone can read it, account or not. Only signed-in members can post.',
+  ),
+  para(
+    'What you ask the AI Assistant is private.',
+  ),
+].join('\n\n');
 
 // The three notices, each on its own rhythm.
 //
@@ -248,8 +299,11 @@ export async function stampGuidanceAnnouncement(
 // purpose and signal notices are fine to meet on a rotation; this one is not.
 export const COMMONS_FIRST_VISIT_NOTICE_KEY = 'public_rooms';
 
-export function firstVisitNotice(): CommonsNotice | null {
-  return COMMONS_NOTICES.find((n) => n.key === COMMONS_FIRST_VISIT_NOTICE_KEY) ?? null;
+// The card's own short text, not the standing notice's full body. Returns the cadence entry's key so
+// "seen" is still tracked against `public_rooms`, while the wording stays deliberately brief.
+export function firstVisitNotice(): { title: string; body: string } | null {
+  const exists = COMMONS_NOTICES.some((n) => n.key === COMMONS_FIRST_VISIT_NOTICE_KEY);
+  return exists ? { title: COMMONS_FIRST_VISIT_TITLE, body: COMMONS_FIRST_VISIT_BODY } : null;
 }
 
 // Has this member already been shown the first-visit notice?
