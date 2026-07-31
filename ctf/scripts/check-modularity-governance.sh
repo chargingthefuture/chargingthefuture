@@ -60,8 +60,14 @@ fi
 echo "Checking ${#target_files[@]} changed file(s):"
 printf '  %s\n' "${target_files[@]}"
 
+# --no-inline-config: this gate runs eslint with ONLY the complexity + max-lines rules loaded, so an
+# `// eslint-disable-next-line <plugin>/<rule>` comment in a changed file (e.g. jsx-a11y/*, which lives
+# in the separate a11y-audit config, not the base lint config) would otherwise error as "Definition for
+# rule ... was not found" and fail the gate for an unrelated reason. Ignoring inline config also means a
+# function can't dodge this gate with `// eslint-disable complexity` — which is exactly what we want.
 if ESLINT_USE_FLAT_CONFIG=false pnpm exec eslint \
   --quiet \
+  --no-inline-config \
   --no-error-on-unmatched-pattern \
   --rule 'complexity:["error",10]' \
   --rule 'max-lines-per-function:["error",{"max":200,"skipBlankLines":true,"skipComments":true,"IIFEs":true}]' \
