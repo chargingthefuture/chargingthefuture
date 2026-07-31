@@ -533,6 +533,34 @@ async function syncFeedItemForQuestion(
   await upsertDefaultFeedTargets(client, feedItemResult.rows[0].id);
 }
 
+// Bring every already-published standing notice back in line with its current wording.
+//
+// Matches on the notice's title, which is its stable identity — the bodies change, the titles do not.
+// Only ever updates rows authored by the reserved system actor, so an owner-written announcement that
+// happens to share a title can never be overwritten.
+async function refreshPublishedGuidanceNotices(client: PoolClient): Promise<void> {
+  for (const notice of COMMONS_NOTICES) {
+    // Updates the announcement and its projected feed row together; a mismatch between the two is what
+    // makes the Commons show text that no longer exists anywhere else.
+    await client.query(
+      `
+        UPDATE announcements
+        SET body = $2, updated_at = NOW()
+        WHERE title = $1 AND created_by_user_id = $3 AND body <> $2
+      `,
+      [notice.title, notice.body, FEED_SYSTEM_ACTOR_ID],
+    );
+    await client.query(
+      `
+        UPDATE feed_items
+        SET body = $2, updated_at = NOW()
+        WHERE title = $1 AND created_by_user_id = $3 AND body <> $2
+      `,
+      [notice.title, notice.body, FEED_SYSTEM_ACTOR_ID],
+    );
+  }
+}
+
 // Publish any of the standing Commons notices whose cadence is due on this post.
 //
 // Never throws: a failure here must not lose the member's post. A notice is a reminder, and missing one
@@ -545,6 +573,16 @@ async function maybePostCommonsGuidance(client: PoolClient): Promise<void> {
     const counted = await client.query<{ total: string }>('SELECT COUNT(*)::text AS total FROM feed_community_posts');
     const total = Number(counted.rows[0]?.total ?? 0);
     const nowMs = Date.now();
+
+    // Repair notices already published under older wording before considering new ones.
+    //
+    // These are system-authored standing messages, so the constant in commons-guidance.ts is the source
+    // of truth and a published row that disagrees with it is simply out of date. This matters beyond
+    // tidiness: the first version of these bodies was authored as source-wrapped lines joined with '\n',
+    // which rendered as hard breaks mid-sentence in front of members. Fixing the constant alone would
+    // have left every already-published row broken until its next milestone came round — which for the
+    // 21-day notice is three weeks. Nothing here touches member-authored content.
+    await refreshPublishedGuidanceNotices(client);
 
     for (const notice of COMMONS_NOTICES) {
       const milestone = dueMilestoneFor(notice, { postCount: total, nowMs });

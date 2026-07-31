@@ -621,9 +621,15 @@
 6. Check `SELECT * FROM feed_commons_notice_seen`.
 
 **Expected:**
-- Step 1: **Where things are public, and where the work happens** appears as an inline card at the top of
-  the stream — **not a modal**. A box demanding a click over a support channel trains people to dismiss
-  it unread, and these members have every reason to distrust one.
+- Step 1: a short card titled **Before you post** appears at the top of the stream — **not a modal**. A
+  box demanding a click over a support channel trains people to dismiss it unread, and these members
+  have every reason to distrust one.
+- **It is short and it does not scroll.** Check at phone width: the card fits without its own scrollbar,
+  the Commons header stays on screen, and the message list below it is still the part that scrolls. The
+  first build put the FULL notice in this card — it filled the screen, pushed the header off, and left
+  the member scrolling the conversation past it into empty space. The card is a heads-up (this room is
+  public, the assistant is not); the long version arrives on the rotation, where length is free because
+  an announcement scrolls with the chat instead of sitting on top of it.
 - Step 2/3: gone, and it stays gone.
 - Step 4: not shown.
 - Step 5: not shown to a signed-out visitor — they cannot post, so there is nothing yet to disclose.
@@ -691,6 +697,38 @@
   each other.
 - Read the signal notice and confirm it says **Skills Economy**, never "TI Skills Economy (TSE)", and
   uses "Target" rather than "TI" as a label.
+
+**Result:** web ☐
+
+---
+
+### FD-A25 — Notice text renders as paragraphs, never chopped mid-sentence
+**Role:** any member | **Surface:** web (check at phone width — that is where it showed)
+
+**Precondition:** A published standing notice visible in the Commons, and a member who has not dismissed
+the first-visit card.
+
+**Steps:**
+1. Open the Commons at phone width and read the first-visit card top to bottom.
+2. Read a published notice in the stream (the announcement card).
+3. Look specifically at the ends of lines within a paragraph.
+4. Find an announcement that carries a trailing "Open <Plugin>: <url>" block and read it.
+
+**Expected:**
+- Sentences wrap where the column runs out and **nowhere else**. No sentence is cut mid-clause with the
+  rest starting a new line ("whether or / not they have an account"). This is what reached members once:
+  the copy was authored as source-wrapped lines joined with `\n`, and `white-space: pre-wrap` turned
+  every one of those into a hard break.
+- Paragraphs are separated by real spacing, not by an empty line of text.
+- Step 4: the "Open <Plugin>" lines stay on **separate** lines. They are a deliberate list, not wrapped
+  prose, and the renderer must keep them apart while joining prose that was only source-wrapped.
+- Run `pnpm --dir ctf check:notice-formatting` — it fails if any notice body is built by joining lines
+  with a single `\n`, which is the authoring mistake behind all of this.
+- Run `pnpm --dir ctf preview:member-copy` — it renders every standing notice and the first-visit card
+  to PNGs at phone width in `ctf/artifacts/copy-preview/`, marks the phone fold, and **exits non-zero if
+  the first-visit card is taller than the screen**. Attach those PNGs to any PR that changes
+  member-facing copy. Both defects here — chopped sentences, and a card that swallowed the screen — were
+  obvious at a glance and invisible to every automated check, because none of them look at the output.
 
 **Result:** web ☐
 
