@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Field, ConfirmAction, Feedback } from './sca-fields';
 import { scAdminMutate, newIdempotencyKey, type DisputeAdjustmentResponse } from './sca-shared';
 import { useTheme } from '@/hooks/useTheme';
-import { getServiceCreditsTokens } from './sc-shared';
+import { getServiceCreditsTokens, type ServiceCreditsTokens } from './sc-shared';
 
 // One open dispute in the review list (mirrors ServiceCreditsAdminDispute from the repository).
 type OpenDispute = {
@@ -26,6 +26,101 @@ function formatDisputeTime(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+// The adjustment is ready once both members, a finite positive amount, and a reason are supplied.
+function isDisputeReady(
+  disputeCaseId: string,
+  sourceUserId: string,
+  destinationUserId: string,
+  value: number,
+  reason: string,
+): boolean {
+  return (
+    Boolean(disputeCaseId.trim()) &&
+    Boolean(sourceUserId.trim()) &&
+    Boolean(destinationUserId.trim()) &&
+    Number.isFinite(value) &&
+    value > 0 &&
+    Boolean(reason.trim())
+  );
+}
+
+// One row in the open-disputes review list. "Resolve" pre-fills the form's case ID.
+function OpenDisputeRow({
+  dispute,
+  onResolve,
+  t,
+}: {
+  dispute: OpenDispute;
+  onResolve: (id: string) => void;
+  t: ServiceCreditsTokens;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: 8,
+        padding: '10px 12px',
+        borderRadius: 10,
+        background: t.BG,
+        border: `1px solid ${t.BORDER_SOLID}`,
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, color: t.TITLE, fontWeight: 600 }}>{dispute.reason}</div>
+        <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>
+          Opened by {dispute.openedByName ?? `member ${dispute.openedByUserId.slice(0, 6)}`} · {formatDisputeTime(dispute.createdAtIso)}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onResolve(dispute.id)}
+        style={{
+          padding: '6px 12px',
+          borderRadius: 8,
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: 'pointer',
+          background: `${t.ACCENT}1F`,
+          color: t.ACCENT,
+          border: `1px solid ${t.ACCENT}40`,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        Resolve
+      </button>
+    </div>
+  );
+}
+
+// Open-disputes review list: a dispute with no adjustment yet. "Resolve" pre-fills the form's
+// case ID (the operator still supplies source/destination/amount). Drives the admin dot.
+function OpenDisputesList({
+  openDisputes,
+  onResolve,
+  t,
+}: {
+  openDisputes: OpenDispute[];
+  onResolve: (id: string) => void;
+  t: ServiceCreditsTokens;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <h3 style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, margin: 0 }}>
+        Open disputes {openDisputes.length > 0 ? `(${openDisputes.length})` : ''}
+      </h3>
+      {openDisputes.length === 0 ? (
+        <p style={{ fontSize: 13, color: t.MUTED, margin: 0 }}>No open disputes.</p>
+      ) : (
+        openDisputes.map((dispute) => (
+          <OpenDisputeRow key={dispute.id} dispute={dispute} onResolve={onResolve} t={t} />
+        ))
+      )}
+    </div>
+  );
 }
 
 export function ServiceCreditsDisputesPanel() {
@@ -58,8 +153,7 @@ export function ServiceCreditsDisputesPanel() {
   }, [loadOpenDisputes]);
 
   const value = Number(amount);
-  const ready =
-    disputeCaseId.trim() && sourceUserId.trim() && destinationUserId.trim() && Number.isFinite(value) && value > 0 && reason.trim();
+  const ready = isDisputeReady(disputeCaseId, sourceUserId, destinationUserId, value, reason);
 
   async function submit() {
     setBusy(true);
@@ -109,56 +203,7 @@ export function ServiceCreditsDisputesPanel() {
         </p>
       </header>
 
-      {/* Open-disputes review list: a dispute with no adjustment yet. "Resolve" pre-fills the form's
-          case ID (the operator still supplies source/destination/amount). Drives the admin dot. */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <h3 style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, margin: 0 }}>
-          Open disputes {openDisputes.length > 0 ? `(${openDisputes.length})` : ''}
-        </h3>
-        {openDisputes.length === 0 ? (
-          <p style={{ fontSize: 13, color: t.MUTED, margin: 0 }}>No open disputes.</p>
-        ) : (
-          openDisputes.map((dispute) => (
-            <div
-              key={dispute.id}
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                gap: 8,
-                padding: '10px 12px',
-                borderRadius: 10,
-                background: t.BG,
-                border: `1px solid ${t.BORDER_SOLID}`,
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, color: t.TITLE, fontWeight: 600 }}>{dispute.reason}</div>
-                <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>
-                  Opened by {dispute.openedByName ?? `member ${dispute.openedByUserId.slice(0, 6)}`} · {formatDisputeTime(dispute.createdAtIso)}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDisputeCaseId(dispute.id)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: `${t.ACCENT}1F`,
-                  color: t.ACCENT,
-                  border: `1px solid ${t.ACCENT}40`,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Resolve
-              </button>
-            </div>
-          ))
-        )}
-      </div>
+      <OpenDisputesList openDisputes={openDisputes} onResolve={setDisputeCaseId} t={t} />
 
       <Feedback error={error} notice={notice} />
 

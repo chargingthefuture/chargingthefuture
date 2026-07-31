@@ -12,6 +12,48 @@ type TreasuryFeeBody = {
   idempotencyKey?: string;
 };
 
+type TreasuryFeeInput = {
+  sourceUserId: string;
+  treasuryUserId: string;
+  amount: number;
+  feeReasonCode: string;
+  originPlugin: string;
+  idempotencyKey: string;
+};
+
+function validateTreasuryFeeBody(
+  body: TreasuryFeeBody,
+): { error: NextResponse } | { data: TreasuryFeeInput } {
+  if (
+    !body.sourceUserId
+    || !body.treasuryUserId
+    || typeof body.amount !== 'number'
+    || !(body.amount > 0)
+    || !Number.isFinite(body.amount)
+    || !body.feeReasonCode
+    || !body.originPlugin
+    || !body.idempotencyKey
+  ) {
+    return {
+      error: NextResponse.json(
+        { ok: false, code: 'service_credits_invalid_payload', message: 'sourceUserId, treasuryUserId, amount, feeReasonCode, originPlugin, and idempotencyKey are required.' },
+        { status: 400 },
+      ),
+    };
+  }
+
+  return {
+    data: {
+      sourceUserId: body.sourceUserId,
+      treasuryUserId: body.treasuryUserId,
+      amount: body.amount,
+      feeReasonCode: body.feeReasonCode,
+      originPlugin: body.originPlugin,
+      idempotencyKey: body.idempotencyKey,
+    },
+  };
+}
+
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -30,31 +72,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  if (
-    !body.sourceUserId
-    || !body.treasuryUserId
-    || typeof body.amount !== 'number'
-    || !(body.amount > 0)
-    || !Number.isFinite(body.amount)
-    || !body.feeReasonCode
-    || !body.originPlugin
-    || !body.idempotencyKey
-  ) {
-    return NextResponse.json(
-      { ok: false, code: 'service_credits_invalid_payload', message: 'sourceUserId, treasuryUserId, amount, feeReasonCode, originPlugin, and idempotencyKey are required.' },
-      { status: 400 },
-    );
+  const validation = validateTreasuryFeeBody(body);
+  if ('error' in validation) {
+    return validation.error;
   }
+  const input = validation.data;
 
   try {
     const collection = await collectTreasuryFee({
       actorId: gate.auth.userId,
-      sourceUserId: body.sourceUserId,
-      treasuryUserId: body.treasuryUserId,
-      amount: body.amount,
-      feeReasonCode: body.feeReasonCode,
-      originPlugin: body.originPlugin,
-      idempotencyKey: body.idempotencyKey,
+      sourceUserId: input.sourceUserId,
+      treasuryUserId: input.treasuryUserId,
+      amount: input.amount,
+      feeReasonCode: input.feeReasonCode,
+      originPlugin: input.originPlugin,
+      idempotencyKey: input.idempotencyKey,
     });
 
     await insertServiceCreditsAudit({
@@ -65,9 +97,9 @@ export async function POST(request: Request) {
       targetType: 'treasury_event',
       targetId: collection.treasuryEventId,
       metadata: {
-        amount: body.amount,
-        sourceUserId: body.sourceUserId,
-        treasuryUserId: body.treasuryUserId,
+        amount: input.amount,
+        sourceUserId: input.sourceUserId,
+        treasuryUserId: input.treasuryUserId,
         transferId: collection.transferId,
       },
     });
