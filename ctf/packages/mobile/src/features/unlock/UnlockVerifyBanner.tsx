@@ -15,7 +15,7 @@ type BannerStyles = ReturnType<typeof makeStyles>;
 
 // The "submit your Quora profile URL" form shown when the member has not yet submitted (or the last
 // submission was rejected). Split out of UnlockVerifyBanner so the banner stays within the rule-116
-// complexity limit; behaviour and markup are unchanged.
+// complexity limit; behavior and markup are unchanged.
 function VerifyPromptForm(props: {
   s: BannerStyles;
   textMuted: string;

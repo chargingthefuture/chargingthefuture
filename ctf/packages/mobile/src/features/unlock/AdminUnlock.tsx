@@ -74,7 +74,7 @@ function sectionHeadingText(
 }
 
 // Read-only A/B experiment readout. Split out of AdminUnlock so the screen stays within the rule-116
-// complexity limit; markup and behaviour are unchanged.
+// complexity limit; markup and behavior are unchanged.
 function ExperimentPanel({
   s,
   experiment,
