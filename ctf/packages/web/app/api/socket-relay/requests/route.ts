@@ -54,6 +54,34 @@ export async function GET(request: Request) {
   }
 }
 
+// Validate a parsed request payload. Returns an error response, or null when the payload is acceptable.
+async function validateCreateRequestPayload(
+  input: ReturnType<typeof parseRequestInput>,
+): Promise<NextResponse | null> {
+  // Answer the one payload problem a caller can act on by itself before the catch-all message below.
+  if (hasOverlongTag(input.tags)) {
+    return NextResponse.json(
+      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: SOCKET_RELAY_TAG_LENGTH_MESSAGE },
+      { status: 400 },
+    );
+  }
+
+  if (!validateRequestInput(input) || !(await isValidRequestPrice(input.priceCurrency, input.priceAmount))) {
+    return NextResponse.json(
+      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid request payload.' },
+      { status: 400 },
+    );
+  }
+
+  return null;
+}
+
+// Use the caller-supplied idempotency key when present and non-empty, otherwise derive one.
+function resolveIdempotencyKey(body: Record<string, unknown>, userId: string): string {
+  const raw = body.idempotencyKey;
+  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : `${userId}:${Date.now()}`;
+}
+
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -76,24 +104,12 @@ export async function POST(request: Request) {
   }
 
   const input = parseRequestInput(body);
-  // Answer the one payload problem a caller can act on by itself before the catch-all message below.
-  if (hasOverlongTag(input.tags)) {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: SOCKET_RELAY_TAG_LENGTH_MESSAGE },
-      { status: 400 },
-    );
+  const payloadDeny = await validateCreateRequestPayload(input);
+  if (payloadDeny) {
+    return payloadDeny;
   }
 
-  if (!validateRequestInput(input) || !(await isValidRequestPrice(input.priceCurrency, input.priceAmount))) {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid request payload.' },
-      { status: 400 },
-    );
-  }
-
-  const idempotencyKey = typeof body.idempotencyKey === 'string' && body.idempotencyKey.trim().length > 0
-    ? body.idempotencyKey.trim()
-    : `${gate.auth.userId}:${Date.now()}`;
+  const idempotencyKey = resolveIdempotencyKey(body, gate.auth.userId);
 
   try {
     const item = await createRequest(gate.auth.userId, gate.auth.username ?? null, input, idempotencyKey);

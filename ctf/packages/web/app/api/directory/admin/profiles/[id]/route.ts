@@ -10,28 +10,52 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 type AdminProfileBody = Partial<DirectoryProfileInput>;
 
+// Returns the value when it is a string, otherwise the given fallback. Keeps parseBody free of
+// per-field type-guard ternaries so it stays within the complexity budget.
+function asString<T>(value: unknown, fallback: T): string | T {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+// Maps a persistence error to the response used by PUT. A message mentioning a "_not_found" selector
+// is a client validation problem (400); anything else is a persistence failure (503).
+function mapSelectorError(error: unknown): NextResponse {
+  const message = error instanceof Error ? error.message : 'unknown';
+  const isValidation = message.includes('_not_found');
+
+  return NextResponse.json(
+    {
+      ok: false,
+      code: isValidation ? DIRECTORY_ERROR_CODE.invalidPayload : DIRECTORY_ERROR_CODE.persistenceUnavailable,
+      message: isValidation ? 'Invalid selector references in profile payload.' : 'Unable to update profile.',
+    },
+    { status: isValidation ? 400 : 503 },
+  );
+}
+
 function parseBody(body: AdminProfileBody): DirectoryProfileInput {
   return {
-    firstName: typeof body.firstName === 'string' ? body.firstName : '',
-    lastName: typeof body.lastName === 'string' ? body.lastName : null,
-    headline: typeof body.headline === 'string' ? body.headline : null,
-    bio: typeof body.bio === 'string' ? body.bio : null,
-    profileUrl: typeof body.profileUrl === 'string' ? body.profileUrl : null,
-    sectorId: typeof body.sectorId === 'string' ? body.sectorId : null,
-    jobTitleId: typeof body.jobTitleId === 'string' ? body.jobTitleId : null,
-    skillIds: Array.isArray(body.skillIds)
-      ? body.skillIds.filter((value): value is string => typeof value === 'string')
-      : [],
+    firstName: asString(body.firstName, ''),
+    lastName: asString(body.lastName, null),
+    headline: asString(body.headline, null),
+    bio: asString(body.bio, null),
+    profileUrl: asString(body.profileUrl, null),
+    sectorId: asString(body.sectorId, null),
+    jobTitleId: asString(body.jobTitleId, null),
+    skillIds: stringArray(body.skillIds),
     // Fields the admin form may leave out stay undefined so updateAdminProfile preserves
     // the stored value instead of nulling it (payment addresses are member-owned and are
     // never sent by the admin drawer; location is sent, and an empty string clears it).
-    venmoAddress: typeof body.venmoAddress === 'string' ? body.venmoAddress : undefined,
-    moneroAddress: typeof body.moneroAddress === 'string' ? body.moneroAddress : undefined,
-    bitcoinAddress: typeof body.bitcoinAddress === 'string' ? body.bitcoinAddress : undefined,
-    serviceCreditsAddress: typeof body.serviceCreditsAddress === 'string' ? body.serviceCreditsAddress : undefined,
-    city: typeof body.city === 'string' ? body.city : undefined,
-    state: typeof body.state === 'string' ? body.state : undefined,
-    country: typeof body.country === 'string' ? body.country : undefined,
+    venmoAddress: asString(body.venmoAddress, undefined),
+    moneroAddress: asString(body.moneroAddress, undefined),
+    bitcoinAddress: asString(body.bitcoinAddress, undefined),
+    serviceCreditsAddress: asString(body.serviceCreditsAddress, undefined),
+    city: asString(body.city, undefined),
+    state: asString(body.state, undefined),
+    country: asString(body.country, undefined),
   };
 }
 
@@ -78,17 +102,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_profiles_id' });
-    const message = error instanceof Error ? error.message : 'unknown';
-    const isValidation = message.includes('_not_found');
-
-    return NextResponse.json(
-      {
-        ok: false,
-        code: isValidation ? DIRECTORY_ERROR_CODE.invalidPayload : DIRECTORY_ERROR_CODE.persistenceUnavailable,
-        message: isValidation ? 'Invalid selector references in profile payload.' : 'Unable to update profile.',
-      },
-      { status: isValidation ? 400 : 503 },
-    );
+    return mapSelectorError(error);
   }
 }
 

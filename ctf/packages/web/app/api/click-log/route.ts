@@ -25,6 +25,71 @@ export async function GET() {
   return NextResponse.json({ incidents, count });
 }
 
+function badRequest(error: string): NextResponse {
+  return NextResponse.json({ error }, { status: 400 });
+}
+
+// Validate a latitude value that is present in the incident metadata.
+function invalidLatitude(latitude: unknown): boolean {
+  return typeof latitude !== 'number' || !Number.isFinite(latitude) || latitude < -90 || latitude > 90;
+}
+
+// Validate a longitude value that is present in the incident metadata.
+function invalidLongitude(longitude: unknown): boolean {
+  return typeof longitude !== 'number' || !Number.isFinite(longitude) || longitude < -180 || longitude > 180;
+}
+
+// Trim notes before validating and storing so trailing/leading whitespace can't push a note past the
+// limit (or be stored unnormalised). Drop an empty trimmed note. Returns undefined when absent.
+function parseNotes(raw: unknown): { error: NextResponse } | { data: string | undefined } {
+  if (raw === undefined) {
+    return { data: undefined };
+  }
+  if (typeof raw !== 'string') {
+    return { error: badRequest('Invalid notes') };
+  }
+  const trimmed = raw.trim();
+  if (trimmed.length > MAX_NOTES_LENGTH) {
+    return { error: badRequest('Notes too long') };
+  }
+  return { data: trimmed.length > 0 ? trimmed : undefined };
+}
+
+// Validate and normalise the optional incident metadata. metadata is optional per the command
+// contract; a client that omits it (or sends an empty body) defaults to {} rather than a 400.
+// Returns a discriminated result so the caller keeps TypeScript narrowing.
+function parseIncidentMetadata(rawBody: unknown): { error: NextResponse } | { data: IncidentMetadata } {
+  const rawMetadata = (rawBody as { metadata?: unknown })?.metadata ?? {};
+  if (typeof rawMetadata !== 'object' || Array.isArray(rawMetadata)) {
+    return { error: badRequest('Invalid metadata') };
+  }
+  const meta = rawMetadata as { latitude?: unknown; longitude?: unknown; notes?: unknown };
+  if (meta.latitude !== undefined && invalidLatitude(meta.latitude)) {
+    return { error: badRequest('Invalid latitude') };
+  }
+  if (meta.longitude !== undefined && invalidLongitude(meta.longitude)) {
+    return { error: badRequest('Invalid longitude') };
+  }
+  const notesResult = parseNotes(meta.notes);
+  if ('error' in notesResult) {
+    return notesResult;
+  }
+  return { data: buildMetadata(meta, notesResult.data) };
+}
+
+// Assemble the incident metadata, including only the fields that were provided so an omitted field is
+// stored as absent rather than as null/undefined.
+function buildMetadata(
+  meta: { latitude?: unknown; longitude?: unknown },
+  notes: string | undefined,
+): IncidentMetadata {
+  return {
+    ...(meta.latitude !== undefined ? { latitude: meta.latitude as number } : {}),
+    ...(meta.longitude !== undefined ? { longitude: meta.longitude as number } : {}),
+    ...(notes !== undefined ? { notes } : {}),
+  };
+}
+
 export async function POST(req: NextRequest) {
   const gate = await requireClickLogAccess();
   if (!gate.allowed) {
@@ -37,40 +102,11 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
-  // metadata is optional per the command contract; default it to {} so a client that
-  // omits it (or sends an empty body) is not rejected with a spurious 400.
-  const rawMetadata = body.metadata ?? {};
-  if (typeof rawMetadata !== 'object' || Array.isArray(rawMetadata)) {
-    return NextResponse.json({ error: 'Invalid metadata' }, { status: 400 });
+  const parsed = parseIncidentMetadata(body);
+  if ('error' in parsed) {
+    return parsed.error;
   }
-  if (rawMetadata.latitude !== undefined) {
-    if (typeof rawMetadata.latitude !== 'number' || !Number.isFinite(rawMetadata.latitude) || rawMetadata.latitude < -90 || rawMetadata.latitude > 90) {
-      return NextResponse.json({ error: 'Invalid latitude' }, { status: 400 });
-    }
-  }
-  if (rawMetadata.longitude !== undefined) {
-    if (typeof rawMetadata.longitude !== 'number' || !Number.isFinite(rawMetadata.longitude) || rawMetadata.longitude < -180 || rawMetadata.longitude > 180) {
-      return NextResponse.json({ error: 'Invalid longitude' }, { status: 400 });
-    }
-  }
-  // Trim notes before validating and storing so trailing/leading whitespace can't push
-  // a note past the limit (or be stored unnormalized). Drop an empty trimmed note.
-  let notes: string | undefined;
-  if (rawMetadata.notes !== undefined) {
-    if (typeof rawMetadata.notes !== 'string') {
-      return NextResponse.json({ error: 'Invalid notes' }, { status: 400 });
-    }
-    const trimmed = rawMetadata.notes.trim();
-    if (trimmed.length > MAX_NOTES_LENGTH) {
-      return NextResponse.json({ error: 'Notes too long' }, { status: 400 });
-    }
-    notes = trimmed.length > 0 ? trimmed : undefined;
-  }
-  const metadata: IncidentMetadata = {
-    ...(rawMetadata.latitude !== undefined ? { latitude: rawMetadata.latitude } : {}),
-    ...(rawMetadata.longitude !== undefined ? { longitude: rawMetadata.longitude } : {}),
-    ...(notes !== undefined ? { notes } : {}),
-  };
+  const metadata = parsed.data;
   const incident = await createIncident({ userId, metadata });
   logClickLogAudit({ actorId: userId, command: 'click-log.incident.create', result: 'success' });
   // Return the incident flat to match the command contract's outputSchema

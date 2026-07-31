@@ -17,6 +17,51 @@ type ModerateBody = {
 
 const VALID_ACTIONS: BeaconModerationAction[] = ['mute', 'ban', 'slow_mode'];
 
+// Parse and validate the moderation request body. Returns a discriminated result so the caller keeps
+// TypeScript narrowing on the validated action.
+async function parseModerateBody(
+  request: Request,
+): Promise<{ error: NextResponse } | { data: { action: BeaconModerationAction; body: ModerateBody } }> {
+  let body: ModerateBody;
+  try {
+    body = (await request.json()) as ModerateBody;
+  } catch {
+    return { error: NextResponse.json({ ok: false, code: BEACON_ERROR_CODE.invalidJson, message: 'Invalid JSON body.' }, { status: 400 }) };
+  }
+
+  const action = body.action as BeaconModerationAction | undefined;
+  if (!action || !VALID_ACTIONS.includes(action)) {
+    return {
+      error: NextResponse.json(
+        { ok: false, code: BEACON_ERROR_CODE.invalidPayload, message: 'action must be one of mute, ban, slow_mode.' },
+        { status: 400 },
+      ),
+    };
+  }
+  if ((action === 'mute' || action === 'ban') && !body.targetUserId) {
+    return {
+      error: NextResponse.json(
+        { ok: false, code: BEACON_ERROR_CODE.invalidPayload, message: 'targetUserId is required to mute or ban.' },
+        { status: 400 },
+      ),
+    };
+  }
+
+  return { data: { action, body } };
+}
+
+// Resolve the slow-mode cooldown, honouring an explicit 0 and defaulting when omitted; null for
+// non-slow-mode actions.
+function resolveCooldownSeconds(action: BeaconModerationAction, cooldownSeconds: number | null | undefined): number | null {
+  if (action !== 'slow_mode') {
+    return null;
+  }
+  if (cooldownSeconds === 0) {
+    return 0;
+  }
+  return cooldownSeconds ?? BEACON_DEFAULT_SLOW_MODE_SECONDS;
+}
+
 // Admin: moderate the live event chat — mute a member, ban a member from the event channel, or
 // toggle slow-mode.
 export async function POST(request: Request, context: RouteContext) {
@@ -32,26 +77,11 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { id } = await context.params;
 
-  let body: ModerateBody;
-  try {
-    body = (await request.json()) as ModerateBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: BEACON_ERROR_CODE.invalidJson, message: 'Invalid JSON body.' }, { status: 400 });
+  const parsed = await parseModerateBody(request);
+  if ('error' in parsed) {
+    return parsed.error;
   }
-
-  const action = body.action as BeaconModerationAction | undefined;
-  if (!action || !VALID_ACTIONS.includes(action)) {
-    return NextResponse.json(
-      { ok: false, code: BEACON_ERROR_CODE.invalidPayload, message: 'action must be one of mute, ban, slow_mode.' },
-      { status: 400 },
-    );
-  }
-  if ((action === 'mute' || action === 'ban') && !body.targetUserId) {
-    return NextResponse.json(
-      { ok: false, code: BEACON_ERROR_CODE.invalidPayload, message: 'targetUserId is required to mute or ban.' },
-      { status: 400 },
-    );
-  }
+  const { action, body } = parsed.data;
 
   try {
     const event = await getBeaconEvent(id);
@@ -62,12 +92,7 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    const cooldownSeconds =
-      action === 'slow_mode'
-        ? body.cooldownSeconds === 0
-          ? 0
-          : body.cooldownSeconds ?? BEACON_DEFAULT_SLOW_MODE_SECONDS
-        : null;
+    const cooldownSeconds = resolveCooldownSeconds(action, body.cooldownSeconds);
 
     const applied = await moderateBeaconChat({
       eventId: event.id,
