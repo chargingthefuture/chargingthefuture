@@ -5,12 +5,58 @@ import {
   FEED_MODERATION_REASON,
   FEED_MODERATION_STATUS,
   isFeedModerationReason,
+  type FeedModerationReason,
+  type FeedModerationStatus,
 } from 'lib/feed/constants';
 import { isFeedModerationTarget, setCommunityModerationStatus } from 'lib/feed/moderation';
 import { logFeedAudit } from 'lib/feed/audit';
 import { reportError } from 'lib/observability/report';
 
 export const dynamic = 'force-dynamic';
+
+// Parse and validate the moderation request body. Returns the resolved transition (next status and
+// reason) or a ready-to-return error response, so the handler keeps its narrowing via destructuring.
+async function parseModerationBody(
+  request: Request,
+): Promise<
+  | { error: NextResponse }
+  | { data: { hidden: boolean; next: FeedModerationStatus; reason: FeedModerationReason | null } }
+> {
+  let body: { hidden?: unknown; reason?: unknown };
+  try {
+    body = (await request.json()) as { hidden?: unknown; reason?: unknown };
+  } catch {
+    return {
+      error: NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+        { status: 400 },
+      ),
+    };
+  }
+
+  // Required rather than defaulted: an absent field would otherwise silently mean "un-hide", and a
+  // malformed request must never quietly put hidden content back in front of members.
+  if (typeof body.hidden !== 'boolean') {
+    return {
+      error: NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Send hidden: true or hidden: false.' },
+        { status: 400 },
+      ),
+    };
+  }
+
+  const next = body.hidden ? FEED_MODERATION_STATUS.hidden : FEED_MODERATION_STATUS.accepted;
+
+  // A reason is only meaningful when hiding, and it is validated against the fixed code set rather
+  // than accepted as free text: a moderator's prose about a member would become a permanent,
+  // unreviewable note attached to a survivor's account. An unrecognized or absent code falls back to
+  // 'other' instead of 400 — a hide is time-sensitive and should never fail over its label.
+  const reason = body.hidden
+    ? (isFeedModerationReason(body.reason) ? body.reason : FEED_MODERATION_REASON.other)
+    : null;
+
+  return { data: { hidden: body.hidden, next, reason } };
+}
 
 // POST: hide or un-hide one piece of member-facing content — a Commons post or reply, or a question or
 // answer in the Q&A.
@@ -46,34 +92,11 @@ export async function POST(
     );
   }
 
-  let body: { hidden?: unknown; reason?: unknown };
-  try {
-    body = (await request.json()) as { hidden?: unknown; reason?: unknown };
-  } catch {
-    return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
-      { status: 400 },
-    );
+  const parsed = await parseModerationBody(request);
+  if ('error' in parsed) {
+    return parsed.error;
   }
-
-  // Required rather than defaulted: an absent field would otherwise silently mean "un-hide", and a
-  // malformed request must never quietly put hidden content back in front of members.
-  if (typeof body.hidden !== 'boolean') {
-    return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Send hidden: true or hidden: false.' },
-      { status: 400 },
-    );
-  }
-
-  const next = body.hidden ? FEED_MODERATION_STATUS.hidden : FEED_MODERATION_STATUS.accepted;
-
-  // A reason is only meaningful when hiding, and it is validated against the fixed code set rather
-  // than accepted as free text: a moderator's prose about a member would become a permanent,
-  // unreviewable note attached to a survivor's account. An unrecognized or absent code falls back to
-  // 'other' instead of 400 — a hide is time-sensitive and should never fail over its label.
-  const reason = body.hidden
-    ? (isFeedModerationReason(body.reason) ? body.reason : FEED_MODERATION_REASON.other)
-    : null;
+  const { hidden, next, reason } = parsed.data;
 
   try {
     const outcome = await setCommunityModerationStatus({
@@ -101,7 +124,7 @@ export async function POST(
     logFeedAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',
-      command: body.hidden ? 'feed.community.moderation.hide' : 'feed.community.moderation.restore',
+      command: hidden ? 'feed.community.moderation.hide' : 'feed.community.moderation.restore',
       status: 'allow',
       reason: 'admin_moderation_allowed',
       targetType: `feed_${target}`,

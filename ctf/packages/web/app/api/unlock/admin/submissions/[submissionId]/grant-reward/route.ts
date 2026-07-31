@@ -13,6 +13,18 @@ type RouteParams = {
   params: Promise<{ submissionId: string }>;
 };
 
+type ParsedSubmissionId =
+  | { ok: true; submissionId: number }
+  | { ok: false; response: ReturnType<typeof unlockErrorResponse> };
+
+function parseSubmissionId(value: string): ParsedSubmissionId {
+  const submissionId = Number(value);
+  if (!Number.isInteger(submissionId) || submissionId <= 0) {
+    return { ok: false, response: unlockErrorResponse('submissionId must be a positive integer.', 400) };
+  }
+  return { ok: true, submissionId };
+}
+
 // Admin determination "winner" path. Grants a held verification reward to this account — the admin decides
 // this is the account that keeps the Quora identity. Clears the hold, then grants through the shared guard.
 // If another account STILL holds the identity's reward (it was not revoked first), the guard withholds again
@@ -32,10 +44,11 @@ export async function POST(request: Request, { params }: RouteParams) {
   const requestId = resolveUnlockRequestId(request);
 
   const resolvedParams = await params;
-  const submissionId = Number(resolvedParams.submissionId);
-  if (!Number.isInteger(submissionId) || submissionId <= 0) {
-    return unlockErrorResponse('submissionId must be a positive integer.', 400);
+  const parsedId = parseSubmissionId(resolvedParams.submissionId);
+  if (!parsedId.ok) {
+    return parsedId.response;
   }
+  const { submissionId } = parsedId;
 
   try {
     const existing = await getUnlockSubmissionById(submissionId);

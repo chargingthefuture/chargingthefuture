@@ -1,4 +1,4 @@
-import { evaluatePluginAccess } from 'lib/auth/server-authz';
+import { evaluatePluginAccess, type AllowDecision, type PluginAuthDecision } from 'lib/auth/server-authz';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
 import { canonicalizePluginSlug, getPluginBySlug, isAdminOnlyPlugin } from 'lib/plugins/repository';
 import { getPublicVisitorShell } from '@/components/plugins/public-visitor-registry';
@@ -22,6 +22,7 @@ import { WhatWorksShell } from '@/components/what-works/what-works-shell';
 import { WorkforceShell } from '@/components/workforce/workforce-shell';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
+import type { ReactNode } from 'react';
 
 type PluginRoutePageProps = {
   params: Promise<{
@@ -34,6 +35,10 @@ type PluginRoutePageProps = {
     cohortId?: string;
   }>;
 };
+
+type SelectedPlugin = NonNullable<Awaited<ReturnType<typeof getPluginBySlug>>>;
+type DenyDecision = Extract<PluginAuthDecision, { allowed: false }>;
+type PluginSearchParams = Awaited<PluginRoutePageProps['searchParams']>;
 
 type AccessDeniedProps = {
   status: number;
@@ -127,80 +132,57 @@ function GenericPluginView({
   );
 }
 
-export default async function PluginRoutePage({ params, searchParams }: PluginRoutePageProps) {
-  const resolvedParams = await params;
-  const resolvedSearchParams = await searchParams;
-  const requestedPluginSlug = canonicalizePluginSlug(resolvedParams.pluginSlug);
-  const selectedPlugin = await getPluginBySlug(requestedPluginSlug);
-
-  if (!selectedPlugin || !selectedPlugin.isVisible) {
-    notFound();
-  }
-
-  // Every plugin route requires full Unlock access (the default minUnlockTier
-  // 'approved_full'). A not-yet-verified member is denied with `unlock_required` and
-  // shown the plugin's public landing page below (not the access-denied view), which
-  // nudges them toward the Unlock flow; the Hub general channel is their support surface.
-  //
-  // No plugin route requires a username. Every plugin API already gates with
-  // `requireUsername: false`, and members can be approved on a temporary handle before they
-  // choose a username in Clerk. Requiring one here blocked those members from opening apps
-  // (a leftover: it produced a 403 `missing_username` page), so the page gate matches the
-  // APIs and does not require a username. Shells that show the handle fall back gracefully
-  // when it is null.
-  const decision = await evaluatePluginAccess({ requireUsername: false });
-
-  // Operator-only plugins (e.g. Weekly Performance) are admin-only: a non-admin gets a 404 for the
-  // route, not the public landing, since there is no approved user-facing version. Admins fall
-  // through to the normal render below.
-  if (isAdminOnlyPlugin(selectedPlugin.slug) && !(decision.allowed && decision.isAdmin)) {
-    notFound();
-  }
-
-  if (!decision.allowed) {
-    // Two cases see the plugin's public visitor view rather than a denial wall:
-    //  - an anonymous visitor (no session) denied with AUTH_UNAUTHORIZED, and
-    //  - a signed-in but not-yet-verified member denied with `unlock_required`.
-    // Both can browse the plugin's marketing/landing content the same way; the
-    // not-yet-verified member is nudged from there toward the Unlock flow, and the
-    // Hub general channel remains their support surface. Other 403s (e.g. a missing
-    // username or a role requirement) keep the informative access-denied view.
-    if (decision.code === 'AUTH_UNAUTHORIZED' || decision.reason === 'unlock_required') {
-      const PublicVisitorShell = getPublicVisitorShell(selectedPlugin.slug);
-      const signInUrl = getHostedSignInUrl() ?? '/sign-in';
-      // A signed-in-but-not-yet-verified member (denied with `unlock_required`)
-      // is already authenticated, so the public shell's "Sign In / Join Free"
-      // CTAs are wrong for them; pass a verifyUrl so the shell shows a single
-      // "Finish verifying" action pointing at the Unlock flow instead. An
-      // anonymous visitor (AUTH_UNAUTHORIZED) gets no verifyUrl and sees the
-      // normal sign-in / sign-up CTAs.
-      const verifyUrl = decision.reason === 'unlock_required' ? '/plugin/unlock' : undefined;
-      // The back-to-/apps control lives inside each public shell's own header
-      // row (PublicShellBackLink), so no wrapping frame is needed here.
-      return (
-        <>
-          <PublicVisitorShell
-            pluginSlug={selectedPlugin.slug}
-            pluginName={selectedPlugin.name}
-            signInUrl={signInUrl}
-            verifyUrl={verifyUrl}
-          />
-          {/* Corner reviews widget — shown on every public (signed-out) plugin page. */}
-          <ReviewsWidget />
-        </>
-      );
-    }
-
+// The denial render for a signed-out visitor or a not-yet-verified member.
+//
+// Two cases see the plugin's public visitor view rather than a denial wall:
+//  - an anonymous visitor (no session) denied with AUTH_UNAUTHORIZED, and
+//  - a signed-in but not-yet-verified member denied with `unlock_required`.
+// Both can browse the plugin's marketing/landing content the same way; the
+// not-yet-verified member is nudged from there toward the Unlock flow, and the
+// Hub general channel remains their support surface. Other 403s (e.g. a missing
+// username or a role requirement) keep the informative access-denied view.
+function renderAccessDenied(decision: DenyDecision, selectedPlugin: SelectedPlugin) {
+  if (decision.code === 'AUTH_UNAUTHORIZED' || decision.reason === 'unlock_required') {
+    const PublicVisitorShell = getPublicVisitorShell(selectedPlugin.slug);
+    const signInUrl = getHostedSignInUrl() ?? '/sign-in';
+    // A signed-in-but-not-yet-verified member (denied with `unlock_required`)
+    // is already authenticated, so the public shell's "Sign In / Join Free"
+    // CTAs are wrong for them; pass a verifyUrl so the shell shows a single
+    // "Finish verifying" action pointing at the Unlock flow instead. An
+    // anonymous visitor (AUTH_UNAUTHORIZED) gets no verifyUrl and sees the
+    // normal sign-in / sign-up CTAs.
+    const verifyUrl = decision.reason === 'unlock_required' ? '/plugin/unlock' : undefined;
+    // The back-to-/apps control lives inside each public shell's own header
+    // row (PublicShellBackLink), so no wrapping frame is needed here.
     return (
-      <AccessDeniedView
-        status={decision.status}
-        code={decision.code}
-        reason={decision.reason}
-        requestedPluginSlug={selectedPlugin.slug}
-      />
+      <>
+        <PublicVisitorShell
+          pluginSlug={selectedPlugin.slug}
+          pluginName={selectedPlugin.name}
+          signInUrl={signInUrl}
+          verifyUrl={verifyUrl}
+        />
+        {/* Corner reviews widget — shown on every public (signed-out) plugin page. */}
+        <ReviewsWidget />
+      </>
     );
   }
 
+  return (
+    <AccessDeniedView
+      status={decision.status}
+      code={decision.code}
+      reason={decision.reason}
+      requestedPluginSlug={selectedPlugin.slug}
+    />
+  );
+}
+
+// The shell dispatch is split across three small helpers purely to keep each function under the
+// rule-116 complexity limit; each keeps the `selectedPlugin.slug === '<slug>'` idiom that
+// check-web-android-parity.mjs scans for, so the parity gate still detects every explicit web shell.
+// A helper returns null for a slug it does not own; the caller tries them in order.
+function renderPluginShellA(selectedPlugin: SelectedPlugin, decision: AllowDecision): ReactNode | null {
   if (selectedPlugin.slug === 'beacon') {
     return <BeaconShell isAdmin={decision.isAdmin} />;
   }
@@ -232,6 +214,10 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     return <WorkforceShell isAdmin={decision.isAdmin} />;
   }
 
+  return null;
+}
+
+function renderPluginShellB(selectedPlugin: SelectedPlugin, decision: AllowDecision): ReactNode | null {
   if (selectedPlugin.slug === 'skills-hunt') {
     return <SkillsHuntShell userId={decision.userId} isAdmin={decision.isAdmin} isModerator={decision.role === 'moderator'} />;
   }
@@ -260,6 +246,14 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     return <PeerProgrammingShell isAdmin={decision.isAdmin} />;
   }
 
+  return null;
+}
+
+function renderPluginShellC(
+  selectedPlugin: SelectedPlugin,
+  decision: AllowDecision,
+  query: PluginSearchParams,
+): ReactNode | null {
   if (selectedPlugin.slug === 'mood') {
     return <MoodShell />;
   }
@@ -286,7 +280,53 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'level-up') {
-    return <LevelUpShell userId={decision.userId} isAdmin={decision.isAdmin} query={resolvedSearchParams} />;
+    return <LevelUpShell userId={decision.userId} isAdmin={decision.isAdmin} query={query} />;
+  }
+
+  return null;
+}
+
+export default async function PluginRoutePage({ params, searchParams }: PluginRoutePageProps) {
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const requestedPluginSlug = canonicalizePluginSlug(resolvedParams.pluginSlug);
+  const selectedPlugin = await getPluginBySlug(requestedPluginSlug);
+
+  if (!selectedPlugin || !selectedPlugin.isVisible) {
+    notFound();
+  }
+
+  // Every plugin route requires full Unlock access (the default minUnlockTier
+  // 'approved_full'). A not-yet-verified member is denied with `unlock_required` and
+  // shown the plugin's public landing page below (not the access-denied view), which
+  // nudges them toward the Unlock flow; the Hub general channel is their support surface.
+  //
+  // No plugin route requires a username. Every plugin API already gates with
+  // `requireUsername: false`, and members can be approved on a temporary handle before they
+  // choose a username in Clerk. Requiring one here blocked those members from opening apps
+  // (a leftover: it produced a 403 `missing_username` page), so the page gate matches the
+  // APIs and does not require a username. Shells that show the handle fall back gracefully
+  // when it is null.
+  const decision = await evaluatePluginAccess({ requireUsername: false });
+
+  // Operator-only plugins (e.g. Weekly Performance) are admin-only: a non-admin gets a 404 for the
+  // route, not the public landing, since there is no approved user-facing version. Admins fall
+  // through to the normal render below.
+  if (isAdminOnlyPlugin(selectedPlugin.slug) && !(decision.allowed && decision.isAdmin)) {
+    notFound();
+  }
+
+  if (!decision.allowed) {
+    return renderAccessDenied(decision, selectedPlugin);
+  }
+
+  const shell =
+    renderPluginShellA(selectedPlugin, decision) ??
+    renderPluginShellB(selectedPlugin, decision) ??
+    renderPluginShellC(selectedPlugin, decision, resolvedSearchParams);
+
+  if (shell) {
+    return shell;
   }
 
   return (
