@@ -592,6 +592,17 @@ All three feed channels (announcements, questions, community) are shipped on web
   - **Parity:** web + mobile-responsive; Android out of scope (web-only per rule 105).
 ### Change Log
 
+- 2026-07-31 (later): **The first-visit card is short and no longer fights the chat for the screen**
+  (owner report, with a screenshot). It was rendering the FULL standing notice inside a card that sits
+  above the message list in a fixed-height flex column. A tall card steals the flexible space, pushes
+  the Commons header off screen, and leaves the member scrolling the *conversation* to get past the
+  notice — landing in empty space below it. Two fixes: the card now has its own short copy
+  (`COMMONS_FIRST_VISIT_TITLE` / `COMMONS_FIRST_VISIT_BODY` — "Before you post": this room is public,
+  the assistant is not), and it is pinned `flex: 0 0 auto` with `overflow: visible` so it can never grow
+  into the message area or become its own scroller. The long version still arrives on the 75-post
+  rotation, where length costs nothing because an announcement scrolls with the chat instead of sitting
+  on top of it. `NoticeParagraphs` also stopped adding a trailing margin, so a one-paragraph body leaves
+  no stray space in a compact card.
 - 2026-07-31: **Notice text renders as paragraphs (bug fix — this reached members).** The notice bodies
   were authored as an array of source-wrapped lines joined with `\n`. Under `white-space: pre-wrap`
   every one of those source wraps rendered as a HARD line break, so members read sentences chopped

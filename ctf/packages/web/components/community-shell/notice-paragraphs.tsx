@@ -40,7 +40,9 @@ export function NoticeParagraphs({ body, className }: { body: string; className?
   return (
     <>
       {paragraphs.map((lines, i) => (
-        <p key={i} className={className} style={{ margin: i === 0 ? '0 0 0.75em' : '0.75em 0 0' }}>
+        // Spacing BETWEEN paragraphs only — no leading or trailing margin, so a one-paragraph body adds
+        // no stray space inside a compact card.
+        <p key={i} className={className} style={{ margin: 0, marginTop: i === 0 ? 0 : '0.75em' }}>
           {lines.map((line, j) => (
             <Fragment key={j}>
               {j > 0 ? <br /> : null}

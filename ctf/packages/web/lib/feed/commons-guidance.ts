@@ -163,6 +163,26 @@ const COMMONS_SIGNAL_BODY = [
   ),
 ].join('\n\n');
 
+// The SHORT version shown on a member's first visit.
+//
+// Not the same text as the standing notice, on purpose. The card sits above the message stream in a
+// fixed-height column, so a long body steals the whole chat area and leaves the member scrolling the
+// conversation to get past it — which is exactly what happened when the card rendered the full notice.
+//
+// It carries only what a first-time poster needs BEFORE they type: this room is public, and the
+// assistant is not. Everything else about how the rooms work arrives on the rotation, where length is
+// free because an announcement scrolls with the conversation instead of sitting on top of it.
+export const COMMONS_FIRST_VISIT_TITLE = 'Before you post';
+
+export const COMMONS_FIRST_VISIT_BODY = [
+  para(
+    'This chat is public — anyone can read it, account or not. Only signed-in members can post.',
+  ),
+  para(
+    'What you ask the AI Assistant is private.',
+  ),
+].join('\n\n');
+
 // The three notices, each on its own rhythm.
 //
 // The rhythms differ because the messages differ in how much it costs to hear one late. Missing the
@@ -279,8 +299,11 @@ export async function stampGuidanceAnnouncement(
 // purpose and signal notices are fine to meet on a rotation; this one is not.
 export const COMMONS_FIRST_VISIT_NOTICE_KEY = 'public_rooms';
 
-export function firstVisitNotice(): CommonsNotice | null {
-  return COMMONS_NOTICES.find((n) => n.key === COMMONS_FIRST_VISIT_NOTICE_KEY) ?? null;
+// The card's own short text, not the standing notice's full body. Returns the cadence entry's key so
+// "seen" is still tracked against `public_rooms`, while the wording stays deliberately brief.
+export function firstVisitNotice(): { title: string; body: string } | null {
+  const exists = COMMONS_NOTICES.some((n) => n.key === COMMONS_FIRST_VISIT_NOTICE_KEY);
+  return exists ? { title: COMMONS_FIRST_VISIT_TITLE, body: COMMONS_FIRST_VISIT_BODY } : null;
 }
 
 // Has this member already been shown the first-visit notice?

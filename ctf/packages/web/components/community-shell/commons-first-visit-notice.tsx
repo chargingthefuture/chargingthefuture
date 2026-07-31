@@ -16,6 +16,12 @@ import { NoticeParagraphs } from './notice-paragraphs';
 // Deliberately an inline card at the top of the stream, not a modal. A modal over a support channel
 // trains people to dismiss without reading, and the members here have every reason to be wary of a
 // box that appears over the content demanding a click.
+//
+// It must stay SHORT and it must never scroll. The card is a flex child of a fixed-height column whose
+// message list is the flexible part; a tall card steals that space, pushes the header off screen, and
+// leaves the member scrolling the CONVERSATION to get past the notice — into empty space below it. So:
+// `flex: 0 0 auto` (never grow, never shrink into a scroller), no internal overflow, and short copy
+// held separately from the standing notice, which is free to be long because it scrolls with the chat.
 
 export function CommonsFirstVisitNotice() {
   const [notice, setNotice] = useState<{ title: string; body: string } | null>(null);
@@ -65,10 +71,15 @@ export function CommonsFirstVisitNotice() {
   // Commons, and the theme here is 'default' | 'comic', not light/dark, so picking colours by theme
   // name would have been wrong in the comic theme.
   return (
-    <section aria-label={notice.title} className={styles.usernameAlert}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <Info size={16} aria-hidden="true" />
-        <h2 style={{ margin: 0, fontSize: 14.5, fontWeight: 800, flex: 1 }}>{notice.title}</h2>
+    <section
+      aria-label={notice.title}
+      className={styles.usernameAlert}
+      // Never grows, never becomes its own scroller. See the note at the top of this file.
+      style={{ flex: '0 0 auto', overflow: 'visible' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <Info size={15} aria-hidden="true" />
+        <h2 style={{ margin: 0, fontSize: 13.5, fontWeight: 800, flex: 1 }}>{notice.title}</h2>
         <button
           type="button"
           onClick={() => void dismiss()}
@@ -82,7 +93,7 @@ export function CommonsFirstVisitNotice() {
           <X size={12} aria-hidden="true" /> Got it
         </button>
       </div>
-      <div style={{ fontSize: 13.5, lineHeight: 1.65 }}>
+      <div style={{ fontSize: 12.5, lineHeight: 1.55 }}>
         <NoticeParagraphs body={notice.body} />
       </div>
     </section>

@@ -621,9 +621,15 @@
 6. Check `SELECT * FROM feed_commons_notice_seen`.
 
 **Expected:**
-- Step 1: **Where things are public, and where the work happens** appears as an inline card at the top of
-  the stream — **not a modal**. A box demanding a click over a support channel trains people to dismiss
-  it unread, and these members have every reason to distrust one.
+- Step 1: a short card titled **Before you post** appears at the top of the stream — **not a modal**. A
+  box demanding a click over a support channel trains people to dismiss it unread, and these members
+  have every reason to distrust one.
+- **It is short and it does not scroll.** Check at phone width: the card fits without its own scrollbar,
+  the Commons header stays on screen, and the message list below it is still the part that scrolls. The
+  first build put the FULL notice in this card — it filled the screen, pushed the header off, and left
+  the member scrolling the conversation past it into empty space. The card is a heads-up (this room is
+  public, the assistant is not); the long version arrives on the rotation, where length is free because
+  an announcement scrolls with the chat instead of sitting on top of it.
 - Step 2/3: gone, and it stays gone.
 - Step 4: not shown.
 - Step 5: not shown to a signed-out visitor — they cannot post, so there is nothing yet to disclose.
