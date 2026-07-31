@@ -1511,19 +1511,31 @@ export async function listFeedTimeline(
   });
 }
 
-export async function markFeedItemRead(userId: string, itemId: string): Promise<void> {
-  await queryDb(
+// Returns the stored read_at so the route can satisfy the feed.item.read.mark contract, whose
+// output schema includes readAt (issue #2017 — the route previously returned only ok/itemId).
+export async function markFeedItemRead(
+  userId: string,
+  itemId: string,
+): Promise<{ readAtIso: string }> {
+  const result = await queryDb<{ read_at: string }>(
     `
       INSERT INTO feed_user_read_state (user_id, item_id, read_at)
       VALUES ($1, $2::uuid, NOW())
       ON CONFLICT (user_id, item_id)
       DO UPDATE SET read_at = EXCLUDED.read_at
+      RETURNING read_at
     `,
     [userId, itemId],
   );
+  return { readAtIso: new Date(result.rows[0].read_at).toISOString() };
 }
 
-export async function dismissFeedItem(userId: string, itemId: string): Promise<'ok'> {
+// Returns the stored dismissed_at so the route can satisfy the feed.item.dismiss contract, whose
+// output schema includes dismissedAt (issue #2016 — the route previously returned only ok/itemId).
+export async function dismissFeedItem(
+  userId: string,
+  itemId: string,
+): Promise<{ dismissedAtIso: string }> {
   const result = await queryDb<{ id: string }>(
     'SELECT id FROM feed_items WHERE id = $1::uuid LIMIT 1',
     [itemId],
@@ -1533,17 +1545,18 @@ export async function dismissFeedItem(userId: string, itemId: string): Promise<'
     throw new Error('feed_item_not_found');
   }
 
-  await queryDb(
+  const dismissed = await queryDb<{ dismissed_at: string }>(
     `
       INSERT INTO feed_user_dismissals (user_id, item_id, dismissed_at)
       VALUES ($1, $2::uuid, NOW())
       ON CONFLICT (user_id, item_id)
       DO UPDATE SET dismissed_at = EXCLUDED.dismissed_at
+      RETURNING dismissed_at
     `,
     [userId, itemId],
   );
 
-  return 'ok';
+  return { dismissedAtIso: new Date(dismissed.rows[0].dismissed_at).toISOString() };
 }
 
 export async function listAnnouncements(includeArchived: boolean): Promise<Announcement[]> {
