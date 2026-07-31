@@ -104,106 +104,165 @@ export function BlockMemberButton({ targetUserId, displayName, onBlocked }: Bloc
         <Text style={s.triggerText}>🚫 Block member</Text>
       </TouchableOpacity>
 
-      <Modal visible={dialogOpen} transparent animationType="fade" onRequestClose={closeDialog}>
-        <View style={s.backdrop}>
-          <View style={s.dialog}>
-            <View style={s.dialogHeader}>
-              <View style={s.dialogHeaderIcon}>
-                <Ban size={18} color={tokens.danger} strokeWidth={2} />
-              </View>
-              <Text style={s.dialogTitle} numberOfLines={2}>Block {label}?</Text>
-              <TouchableOpacity
-                onPress={closeDialog}
-                disabled={status === 'submitting'}
-                style={s.dialogClose}
-                accessibilityRole="button"
-                accessibilityLabel="Cancel"
-              >
-                <X size={14} color={tokens.textSecondary} strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={s.dialogBody}>
-              <Text style={s.bodyText}>
-                They won&apos;t be able to see or contact you, and they won&apos;t be told. This is
-                private — no one is notified. You can unblock them later from your blocked members list.
-              </Text>
-
-              {/* Optional, clearly-secondary safety escalation. An ordinary block reaches no one; only
-                  turning this on sends a report to the admins so they can act. */}
-              <View style={s.safetyCard}>
-                <View style={s.safetyRow}>
-                  <View style={s.safetyCopy}>
-                    <Text style={s.safetyTitle}>⚠️ Report this person to the admins as a safety concern</Text>
-                    <Text style={s.safetyHelp}>
-                      Only turn this on if you believe they are a suspected predator or human trafficker.
-                      An ordinary block does not notify anyone — this sends a private report to the admins
-                      so they can review and act.
-                    </Text>
-                  </View>
-                  <Switch
-                    value={safetyConcern}
-                    disabled={status === 'submitting'}
-                    onValueChange={setSafetyConcern}
-                    accessibilityLabel="Report this person to the admins as a safety concern"
-                  />
-                </View>
-
-                {safetyConcern ? (
-                  <View style={s.detailWrap}>
-                    <Text style={s.detailLabel}>Anything the admins should know (optional)</Text>
-                    <TextInput
-                      value={safetyDetail}
-                      editable={status !== 'submitting'}
-                      onChangeText={setSafetyDetail}
-                      maxLength={SAFETY_REPORT_DETAIL_MAX_LENGTH}
-                      multiline
-                      placeholder="A short note that would help the admins (optional)"
-                      placeholderTextColor={tokens.textMuted}
-                      style={s.detailInput}
-                    />
-                  </View>
-                ) : null}
-              </View>
-
-              {status === 'error' && errorMessage ? (
-                <View style={s.errorBox}>
-                  <Text style={s.errorText}>{errorMessage}</Text>
-                </View>
-              ) : null}
-
-              <TouchableOpacity
-                onPress={handleConfirm}
-                disabled={status === 'submitting'}
-                style={s.confirmBtn}
-                accessibilityRole="button"
-              >
-                {status === 'submitting' ? (
-                  <ActivityIndicator color={tokens.danger} size="small" />
-                ) : (
-                  <Text style={s.confirmText}>🚫 {safetyConcern ? 'Block and report' : 'Block member'}</Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={closeDialog}
-                disabled={status === 'submitting'}
-                style={s.cancelBtn}
-                accessibilityRole="button"
-              >
-                <Text style={s.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <BlockConfirmDialog
+        s={s}
+        tokens={tokens}
+        open={dialogOpen}
+        status={status}
+        label={label}
+        safetyConcern={safetyConcern}
+        onSafetyConcernChange={setSafetyConcern}
+        safetyDetail={safetyDetail}
+        onSafetyDetailChange={setSafetyDetail}
+        errorMessage={errorMessage}
+        onConfirm={handleConfirm}
+        onClose={closeDialog}
+      />
     </>
   );
 }
 
+type Styles = ReturnType<typeof makeStyles>;
+
+type BlockConfirmDialogProps = {
+  s: Styles;
+  tokens: ThemeTokens;
+  open: boolean;
+  status: Status;
+  label: string;
+  safetyConcern: boolean;
+  onSafetyConcernChange: (_next: boolean) => void;
+  safetyDetail: string;
+  onSafetyDetailChange: (_next: string) => void;
+  errorMessage: string | null;
+  onConfirm: () => void;
+  onClose: () => void;
+};
+
+// The confirm sheet: header, trauma-informed body copy, the optional safety escalation, the error
+// box, and the two action buttons. Split out of BlockMemberButton so each stays within the
+// complexity budget; the rendered output is unchanged.
+function BlockConfirmDialog({
+  s,
+  tokens,
+  open,
+  status,
+  label,
+  safetyConcern,
+  onSafetyConcernChange,
+  safetyDetail,
+  onSafetyDetailChange,
+  errorMessage,
+  onConfirm,
+  onClose,
+}: BlockConfirmDialogProps) {
+  const submitting = status === 'submitting';
+  return (
+    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={s.backdrop}>
+        <View style={s.dialog}>
+          <View style={s.dialogHeader}>
+            <View style={s.dialogHeaderIcon}>
+              <Ban size={18} color={tokens.danger} strokeWidth={2} />
+            </View>
+            <Text style={s.dialogTitle} numberOfLines={2}>Block {label}?</Text>
+            <TouchableOpacity
+              onPress={onClose}
+              disabled={submitting}
+              style={s.dialogClose}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+            >
+              <X size={14} color={tokens.textSecondary} strokeWidth={2} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={s.dialogBody}>
+            <Text style={s.bodyText}>
+              They won&apos;t be able to see or contact you, and they won&apos;t be told. This is
+              private — no one is notified. You can unblock them later from your blocked members list.
+            </Text>
+
+            {/* Optional, clearly-secondary safety escalation. An ordinary block reaches no one; only
+                turning this on sends a report to the admins so they can act. */}
+            <View style={s.safetyCard}>
+              <View style={s.safetyRow}>
+                <View style={s.safetyCopy}>
+                  <Text style={s.safetyTitle}>⚠️ Report this person to the admins as a safety concern</Text>
+                  <Text style={s.safetyHelp}>
+                    Only turn this on if you believe they are a suspected predator or human trafficker.
+                    An ordinary block does not notify anyone — this sends a private report to the admins
+                    so they can review and act.
+                  </Text>
+                </View>
+                <Switch
+                  value={safetyConcern}
+                  disabled={submitting}
+                  onValueChange={onSafetyConcernChange}
+                  accessibilityLabel="Report this person to the admins as a safety concern"
+                />
+              </View>
+
+              {safetyConcern ? (
+                <View style={s.detailWrap}>
+                  <Text style={s.detailLabel}>Anything the admins should know (optional)</Text>
+                  <TextInput
+                    value={safetyDetail}
+                    editable={!submitting}
+                    onChangeText={onSafetyDetailChange}
+                    maxLength={SAFETY_REPORT_DETAIL_MAX_LENGTH}
+                    multiline
+                    placeholder="A short note that would help the admins (optional)"
+                    placeholderTextColor={tokens.textMuted}
+                    style={s.detailInput}
+                  />
+                </View>
+              ) : null}
+            </View>
+
+            {status === 'error' && errorMessage ? (
+              <View style={s.errorBox}>
+                <Text style={s.errorText}>{errorMessage}</Text>
+              </View>
+            ) : null}
+
+            <TouchableOpacity
+              onPress={onConfirm}
+              disabled={submitting}
+              style={s.confirmBtn}
+              accessibilityRole="button"
+            >
+              {submitting ? (
+                <ActivityIndicator color={tokens.danger} size="small" />
+              ) : (
+                <Text style={s.confirmText}>🚫 {safetyConcern ? 'Block and report' : 'Block member'}</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onClose}
+              disabled={submitting}
+              style={s.cancelBtn}
+              accessibilityRole="button"
+            >
+              <Text style={s.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// makeStyles is split into three grouped helpers so no single function exceeds the complexity
+// budget imposed by the many `t.isComic` branches. The merged result is identical to one
+// StyleSheet.create call over all keys.
 function makeStyles(t: ThemeTokens) {
+  return { ...makeStylesTrigger(t), ...makeStylesHeader(t), ...makeStylesBody(t) };
+}
+
+function makeStylesTrigger(t: ThemeTokens) {
   const danger = t.danger;
   const r = t.radius;
-  const rChip = t.radiusChip;
   return StyleSheet.create({
     triggerBtn: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -225,6 +284,14 @@ function makeStyles(t: ThemeTokens) {
       borderWidth: t.isComic ? 2 : 1, borderColor: t.isComic ? danger : 'rgba(239,68,68,0.3)',
       overflow: 'hidden',
     },
+  });
+}
+
+function makeStylesHeader(t: ThemeTokens) {
+  const danger = t.danger;
+  const r = t.radius;
+  const rChip = t.radiusChip;
+  return StyleSheet.create({
     dialogHeader: {
       flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18,
       borderBottomWidth: t.isComic ? 2 : 1, borderBottomColor: t.isComic ? danger : 'rgba(239,68,68,0.12)',
@@ -249,6 +316,13 @@ function makeStyles(t: ThemeTokens) {
       borderWidth: t.isComic ? 1.5 : 1, borderColor: t.isComic ? t.gold : 'rgba(245,158,11,0.22)',
       padding: 14, marginBottom: 16,
     },
+  });
+}
+
+function makeStylesBody(t: ThemeTokens) {
+  const danger = t.danger;
+  const r = t.radius;
+  return StyleSheet.create({
     safetyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
     safetyCopy: { flex: 1 },
     safetyTitle: { fontSize: 13, fontWeight: '700', fontFamily: interFamily('700'), color: t.isComic ? t.gold : '#F59E0B', marginBottom: 4 },

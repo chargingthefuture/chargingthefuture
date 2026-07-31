@@ -339,8 +339,19 @@ function ResultBody({
 
 type Styles = ReturnType<typeof makeStyles>;
 
+// makeStyles is split into grouped helpers so no single function exceeds the complexity budget
+// imposed by the many `t.isComic` branches. The merged result is identical to one
+// StyleSheet.create call over all keys.
 function makeStyles(t: ThemeTokens) {
-  const r = t.radius;
+  return {
+    ...makeStylesSheet(t),
+    ...makeStylesFields(t),
+    ...makeStylesButtons(t),
+    ...makeStylesResult(t),
+  };
+}
+
+function makeStylesSheet(t: ThemeTokens) {
   const rChip = t.radiusChip;
   return StyleSheet.create({
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
@@ -361,6 +372,12 @@ function makeStyles(t: ThemeTokens) {
     subtitle: { fontSize: 13, color: t.textSecondary, marginTop: 4, marginBottom: 18, fontFamily: interFamily('400') },
     close: { width: 30, height: 30, borderRadius: rChip, backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center' },
     closeText: { color: t.textSecondary, fontSize: 14, fontFamily: interFamily('400') },
+  });
+}
+
+function makeStylesFields(t: ThemeTokens) {
+  const r = t.radius;
+  return StyleSheet.create({
     field: { marginBottom: 14 },
     labelRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 6 },
     label: { fontSize: 13, fontWeight: '600', fontFamily: interFamily('600'), color: t.textPrimary },
@@ -385,11 +402,23 @@ function makeStyles(t: ThemeTokens) {
     inputDisabled: { opacity: 0.45 },
     privacyNote: { padding: 12, borderRadius: t.isComic ? 0 : 8, backgroundColor: t.isComic ? `${t.border}08` : 'rgba(255,255,255,0.03)', borderWidth: t.isComic ? 1.5 : 1, borderColor: t.isComic ? `${t.borderDim}40` : 'rgba(255,255,255,0.06)', marginBottom: 18 },
     privacyNoteText: { fontSize: 12, color: t.textSecondary, lineHeight: 18, fontFamily: interFamily('400') },
+  });
+}
+
+function makeStylesButtons(t: ThemeTokens) {
+  const r = t.radius;
+  return StyleSheet.create({
     primaryBtn: { paddingVertical: 13, borderRadius: r, backgroundColor: t.isComic ? `${t.gold}1A` : '#7C3AED', borderWidth: t.isComic ? 2 : 0, borderColor: t.isComic ? t.gold : 'transparent', alignItems: 'center', marginBottom: 10 },
     primaryBtnDisabled: { opacity: 0.6 },
     primaryBtnText: { color: t.isComic ? t.gold : '#FFFFFF', fontSize: 15, fontWeight: '700', fontFamily: interFamily('700'), textTransform: t.isComic ? 'uppercase' : 'none', letterSpacing: t.isComic ? 0.5 : 0 },
     ghostBtn: { paddingVertical: 11, borderRadius: r, backgroundColor: 'transparent', borderWidth: 1, borderColor: t.isComic ? t.border : 'rgba(255,255,255,0.1)', alignItems: 'center' },
     ghostBtnText: { color: t.textSecondary, fontSize: 14, fontWeight: '600', fontFamily: interFamily('600') },
+  });
+}
+
+function makeStylesResult(t: ThemeTokens) {
+  const r = t.radius;
+  return StyleSheet.create({
     resultWrap: { alignItems: 'center', paddingTop: 8, paddingBottom: 8 },
     resultIcon: { width: 64, height: 64, borderRadius: t.isComic ? 0 : 32, alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: t.isComic ? 2 : 1 },
     resultIconText: { fontSize: 28, fontWeight: '800', fontFamily: interFamily('800') },
