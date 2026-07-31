@@ -50,38 +50,46 @@ function WayRow({
   );
 }
 
-// Call-to-action buttons for the sign-in card. In verify mode (a signed-in but unverified member)
-// the single "Finish verifying" button is the only action. Otherwise both paths are shown so it is
-// clear there is a way in for new and returning members alike: "Join free" (primary sign-up) and
-// "Sign in" (secondary). Both point at the same hosted auth URL, which handles sign-up vs sign-in.
-function AuthCtas({ signInUrl, verifyUrl, t, full }: { signInUrl: string; verifyUrl?: string; t: ContributionsTokens; full?: boolean }) {
-  if (verifyUrl) {
-    return (
-      <a
-        href={verifyUrl}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 5,
-          padding: full ? '11px' : '9px 18px',
-          width: full ? '100%' : undefined,
-          borderRadius: full ? 9 : 8,
-          background: t.ACCENT,
-          border: 'none',
-          color: '#fff',
-          fontSize: full ? 14 : 13,
-          fontWeight: 600,
-          cursor: 'pointer',
-          textDecoration: 'none',
-          flexShrink: 0,
-          boxSizing: 'border-box',
-        }}
-      >
-        Finish verifying <ChevronRight size={full ? 15 : 14} />
-      </a>
-    );
-  }
+// Shared size-dependent style values for the auth buttons. The `full` variant (used in the mobile
+// sign-in card) is a wider, taller button; the compact variant is used inline elsewhere.
+function ctaSize(full?: boolean): Pick<React.CSSProperties, 'padding' | 'borderRadius' | 'fontSize'> {
+  return {
+    padding: full ? '11px' : '9px 18px',
+    borderRadius: full ? 9 : 8,
+    fontSize: full ? 14 : 13,
+  };
+}
+
+// The "Finish verifying" button shown to a signed-in but unverified member.
+function VerifyCta({ verifyUrl, t, full }: { verifyUrl: string; t: ContributionsTokens; full?: boolean }) {
+  return (
+    <a
+      href={verifyUrl}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 5,
+        ...ctaSize(full),
+        width: full ? '100%' : undefined,
+        background: t.ACCENT,
+        border: 'none',
+        color: '#fff',
+        fontWeight: 600,
+        cursor: 'pointer',
+        textDecoration: 'none',
+        flexShrink: 0,
+        boxSizing: 'border-box',
+      }}
+    >
+      Finish verifying <ChevronRight size={full ? 15 : 14} />
+    </a>
+  );
+}
+
+// "Join free" (primary sign-up) and "Sign in" (secondary). Both point at the same hosted auth URL,
+// which handles sign-up vs sign-in.
+function JoinSignInCtas({ signInUrl, t, full }: { signInUrl: string; t: ContributionsTokens; full?: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: full ? '100%' : undefined, flexShrink: 0 }}>
       <a
@@ -91,13 +99,11 @@ function AuthCtas({ signInUrl, verifyUrl, t, full }: { signInUrl: string; verify
           alignItems: 'center',
           justifyContent: 'center',
           gap: 5,
-          padding: full ? '11px' : '9px 18px',
+          ...ctaSize(full),
           flex: full ? 1 : undefined,
-          borderRadius: full ? 9 : 8,
           background: t.ACCENT,
           border: 'none',
           color: '#fff',
-          fontSize: full ? 14 : 13,
           fontWeight: 600,
           cursor: 'pointer',
           textDecoration: 'none',
@@ -112,13 +118,11 @@ function AuthCtas({ signInUrl, verifyUrl, t, full }: { signInUrl: string; verify
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: full ? '11px' : '9px 18px',
+          ...ctaSize(full),
           flex: full ? 1 : undefined,
-          borderRadius: full ? 9 : 8,
           background: 'transparent',
           border: `1px solid ${t.BORDER_SOLID}`,
           color: t.TITLE,
-          fontSize: full ? 14 : 13,
           fontWeight: 600,
           cursor: 'pointer',
           textDecoration: 'none',
@@ -129,6 +133,16 @@ function AuthCtas({ signInUrl, verifyUrl, t, full }: { signInUrl: string; verify
       </a>
     </div>
   );
+}
+
+// Call-to-action buttons for the sign-in card. In verify mode (a signed-in but unverified member)
+// the single "Finish verifying" button is the only action. Otherwise both paths are shown so it is
+// clear there is a way in for new and returning members alike.
+function AuthCtas({ signInUrl, verifyUrl, t, full }: { signInUrl: string; verifyUrl?: string; t: ContributionsTokens; full?: boolean }) {
+  if (verifyUrl) {
+    return <VerifyCta verifyUrl={verifyUrl} t={t} full={full} />;
+  }
+  return <JoinSignInCtas signInUrl={signInUrl} t={t} full={full} />;
 }
 
 function MobilePublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUrl?: string; t: ContributionsTokens }) {
