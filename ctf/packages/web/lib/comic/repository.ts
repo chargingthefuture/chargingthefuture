@@ -449,6 +449,32 @@ async function logComicInference(
   );
 }
 
+// The review-queue reason recorded for a captured question: safety-flagged questions carry their
+// category; everything else is the interim human-review marker. Extracted from routeComicMessage to
+// keep that function within the complexity budget.
+function deriveReviewReason(safety: ReturnType<typeof evaluateComicSafety>): string {
+  return safety.flagged ? `safety:${safety.category}` : 'interim_human_review';
+}
+
+// Build the caller-facing route result for a captured @comic question. Safety-flagged questions are
+// handled human-first (no draft, safety holding response); everything else returns the standard
+// review-pending holding response. Extracted from routeComicMessage to keep that function within the
+// complexity budget.
+function buildRoutedResult(
+  safety: ReturnType<typeof evaluateComicSafety>,
+  ids: { conversationId: string; userTurnId: string; reviewId: string },
+): ComicMessageRouteResult {
+  return {
+    outcome: safety.flagged ? 'human_first' : 'review_pending',
+    conversationId: ids.conversationId,
+    userTurnId: ids.userTurnId,
+    draftTurnId: null,
+    reviewId: ids.reviewId,
+    safetyCategory: safety.flagged ? safety.category : null,
+    holdingResponse: safety.flagged ? COMIC_SAFETY_HOLDING_RESPONSE : COMIC_HOLDING_RESPONSE,
+  };
+}
+
 // Route an inbound chat message. If it mentions @comic: capture the user turn, run consent +
 // moderation + safety checks, generate a draft (unless safety-flagged), enqueue to review, and
 // return only a holding response — never the unreviewed draft. No mention → no-op.
@@ -497,7 +523,7 @@ export async function routeComicMessage(
   // start can take tens of seconds) no longer blocks the request. No NLU label is attached; the
   // intent/confidence columns stay null (kept for historical data only). Every answer still goes to
   // human review — see #504 for the future confidence-gated auto-publish.
-  const reason = safety.flagged ? `safety:${safety.category}` : 'interim_human_review';
+  const reason = deriveReviewReason(safety);
   const { conversationId, userTurnId, reviewId } = await withDbTransaction(async (client) => {
     const resolvedConversationId = await resolveConversation(client, actorId, actorUsername, channel, input.conversationId ?? null);
     const insertedUserTurnId = await insertTurn(client, {
@@ -521,15 +547,7 @@ export async function routeComicMessage(
     void generateAndAttachDraft({ actorId, conversationId, reviewId, questionBody });
   }
 
-  return {
-    outcome: safety.flagged ? 'human_first' : 'review_pending',
-    conversationId,
-    userTurnId,
-    draftTurnId: null,
-    reviewId,
-    safetyCategory: safety.flagged ? safety.category : null,
-    holdingResponse: safety.flagged ? COMIC_SAFETY_HOLDING_RESPONSE : COMIC_HOLDING_RESPONSE,
-  };
+  return buildRoutedResult(safety, { conversationId, userTurnId, reviewId });
 }
 
 // Background draft generation. Called detached (not awaited) from routeComicMessage after the
@@ -750,6 +768,85 @@ function normalizeResolution(value: unknown): ComicReviewResolution | null {
   return null;
 }
 
+// Map a resolution to the review-queue status it produces. Extracted from resolveComicReview to keep
+// that transaction callback within the complexity budget.
+function computeReviewStatus(resolution: ComicReviewResolution): ComicReviewStatus {
+  if (resolution === 'approve') {
+    return 'approved';
+  }
+  if (resolution === 'correct') {
+    return 'corrected';
+  }
+  return 'rejected';
+}
+
+// Create the published answer turn (and, for a correction, the supervised training example) for a
+// resolved review, returning both new ids:
+//   - correct → a new `human` turn with the corrected body, plus a training example;
+//   - approve with an AI draft → the draft turn itself;
+//   - approve of a human-first review → a new `human` turn with the reviewer's content;
+//   - reject → neither.
+// Extracted from resolveComicReview to keep that transaction callback within the complexity budget.
+async function createComicAnswerArtifacts(
+  client: PoolClient,
+  input: {
+    resolution: ComicReviewResolution;
+    correctedBody: string | null;
+    hasDraft: boolean;
+    draftTurnId: string | null;
+    conversationId: string;
+    questionTurnId: string;
+    questionBody: string;
+    intentLabel: string;
+  },
+): Promise<{ answerTurnId: string | null; trainingExampleId: string | null }> {
+  let trainingExampleId: string | null = null;
+  let answerTurnId: string | null = null;
+
+  if (input.resolution === 'correct' && input.correctedBody) {
+    // A correction is a supervised training signal: persist the asker's question text under a
+    // coarse intent label for the training export. (Approvals/rejections are not training
+    // examples — only owner-authored corrections are.)
+    const trainingInsert = await client.query<{ id: string }>(
+      `
+        INSERT INTO comic_training_examples (source_turn_id, intent_label, text, status)
+        VALUES ($1::uuid, $2, $3, 'pending')
+        RETURNING id
+      `,
+      [input.questionTurnId, input.intentLabel, input.questionBody],
+    );
+    trainingExampleId = trainingInsert.rows[0].id;
+
+    // Record the corrected answer as a human turn so the conversation reflects the approved
+    // text and future exports can pair question → corrected answer.
+    answerTurnId = await insertTurn(client, {
+      conversationId: input.conversationId,
+      role: 'human',
+      body: input.correctedBody,
+      intent: input.intentLabel,
+      nluConfidence: null,
+      engine: 'human',
+    });
+  } else if (input.resolution === 'approve') {
+    if (input.hasDraft) {
+      // Approving publishes the AI draft turn as-is.
+      answerTurnId = input.draftTurnId;
+    } else if (input.correctedBody) {
+      // Approving a human-first review publishes the reviewer's authored content as a human turn.
+      answerTurnId = await insertTurn(client, {
+        conversationId: input.conversationId,
+        role: 'human',
+        body: input.correctedBody,
+        intent: input.intentLabel,
+        nluConfidence: null,
+        engine: 'human',
+      });
+    }
+  }
+
+  return { answerTurnId, trainingExampleId };
+}
+
 // Resolve a review: approve (publish the draft as-is), correct (reviewer edits the draft), or
 // reject. A corrected resolution persists the corrected text as a comic_training_example so the
 // CDD flywheel accumulates supervised data. Returns the new training example id when one is made.
@@ -830,8 +927,7 @@ export async function resolveComicReview(
       throw new Error('approve_requires_content');
     }
 
-    const newStatus: ComicReviewStatus =
-      resolution === 'approve' ? 'approved' : resolution === 'correct' ? 'corrected' : 'rejected';
+    const newStatus: ComicReviewStatus = computeReviewStatus(resolution);
 
     // The question turn is the queued turn itself (turn_id is never repointed off it).
     const questionBody = turn.body;
@@ -839,55 +935,22 @@ export async function resolveComicReview(
     const safetyCategory = extractSafetyCategory(review.reason);
     const intentLabel = deriveIntentLabel(safetyCategory);
 
-    let trainingExampleId: string | null = null;
     // The turn that becomes the asker's visible, rateable answer. Linked on the review row so the
     // asker stream and rating both resolve to the exact published text:
     //   - correct → a new `human` turn with the corrected body;
     //   - approve with an AI draft → the draft turn itself;
     //   - approve of a human-first review → a new `human` turn with the reviewer's content;
     //   - reject → none.
-    let answerTurnId: string | null = null;
-
-    if (resolution === 'correct' && correctedBody) {
-      // A correction is a supervised training signal: persist the asker's question text under a
-      // coarse intent label for the training export. (Approvals/rejections are not training
-      // examples — only owner-authored corrections are.)
-      const trainingInsert = await client.query<{ id: string }>(
-        `
-          INSERT INTO comic_training_examples (source_turn_id, intent_label, text, status)
-          VALUES ($1::uuid, $2, $3, 'pending')
-          RETURNING id
-        `,
-        [review.turn_id, intentLabel, questionBody],
-      );
-      trainingExampleId = trainingInsert.rows[0].id;
-
-      // Record the corrected answer as a human turn so the conversation reflects the approved
-      // text and future exports can pair question → corrected answer.
-      answerTurnId = await insertTurn(client, {
-        conversationId: turn.conversation_id,
-        role: 'human',
-        body: correctedBody,
-        intent: intentLabel,
-        nluConfidence: null,
-        engine: 'human',
-      });
-    } else if (resolution === 'approve') {
-      if (hasDraft) {
-        // Approving publishes the AI draft turn as-is.
-        answerTurnId = review.draft_turn_id;
-      } else if (correctedBody) {
-        // Approving a human-first review publishes the reviewer's authored content as a human turn.
-        answerTurnId = await insertTurn(client, {
-          conversationId: turn.conversation_id,
-          role: 'human',
-          body: correctedBody,
-          intent: intentLabel,
-          nluConfidence: null,
-          engine: 'human',
-        });
-      }
-    }
+    const { answerTurnId, trainingExampleId } = await createComicAnswerArtifacts(client, {
+      resolution,
+      correctedBody,
+      hasDraft,
+      draftTurnId: review.draft_turn_id,
+      conversationId: turn.conversation_id,
+      questionTurnId: review.turn_id,
+      questionBody,
+      intentLabel,
+    });
 
     // Tag the published answer turn with the reviewer's applicable plugins. Applies to whichever
     // turn became the answer: the reused AI draft (approve), or a freshly inserted human turn

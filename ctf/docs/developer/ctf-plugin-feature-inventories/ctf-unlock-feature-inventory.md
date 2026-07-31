@@ -50,6 +50,25 @@ This plugin must:
 1. List submissions by status/access-tier filters.
 2. Review with decisions: `approved`, `rejected`, `spam`.
 3. Capture reviewer and optional moderation note.
+4. A `spam` decision blocks the member from the whole app, not just the Unlock tier: in addition to
+   dropping the access tier to `locked_support_only`, it places a platform-wide (`all`-scope)
+   `account_restrictions` record (reason `unlock:spam`), which the auth gate enforces across every
+   product surface (Commons/Hub included). The member keeps only their own status and
+   account/data-deletion routes. An `approved` or `rejected` decision lifts a restriction that carries
+   the `unlock:spam` marker (leaving any unrelated admin restriction untouched), so a mistaken spam
+   mark is fully reversible.
+5. A `spam` decision also records the submission's normalized Quora URL on the persistent
+   `unlock_spam_quora_urls` denylist, so the admin does not have to review the same spam Quora account
+   again: the URL survives the member's account/data deletion (the denylist holds no member id and is
+   retained), and any later submission of that URL — even from a brand-new account — is auto-marked
+   `spam` and app-blocked at submission time instead of re-entering the pending queue. Approving or
+   rejecting the URL removes it from the denylist.
+6. **Spam denylist panel.** The admin shell shows a "Spam Quora-URL denylist" panel (component
+   `unlock-spam-denylist-panel.tsx`, fed by `listSpamQuoraUrls` from the admin page) listing every
+   denylisted URL with when/how many times it was flagged, and a confirm-gated **Remove** button
+   (`POST /api/unlock/admin/spam-denylist/remove`). Removing a URL only stops future submissions of it
+   from being auto-blocked; it does not unblock a member already restricted for it (re-review their
+   submission to approved/rejected for that).
 
 ### 2.2 Incentive Governance
 
@@ -76,6 +95,7 @@ This plugin must:
 7. `unlock.admin.submission.revoke`
 8. `unlock.admin.reward.grant`
 9. `unlock.admin.experiment.read`
+10. `unlock.admin.spam_denylist.remove`
 
 ### 3.2 HTTP Projection Routes
 
@@ -93,6 +113,7 @@ Admin routes:
 - `POST /api/unlock/admin/reconcile-rewards` — admin-session-gated (`requireUnlockAdminAccess`, no `CRON_SECRET`). Runs the same idempotent reward drain as the cron and returns `{ scanned, granted, alreadyGranted, withheld, failed }`. Lets an admin grant any approved-but-uncredited reward on demand from the Unlock admin screen (the "Retry pending rewards" button), independent of the GitHub cron. Audited as `unlock.admin.rewards.reconcile`.
 - `POST /api/unlock/admin/submissions/:submissionId/revoke` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'` + same-origin). Duplicate-identity determination "loser" path: claws a granted reward back (best-effort `burnCredits`, key `unlock-revoke-submission-<id>`) and sets the submission to `rejected` + `locked_support_only` with `reward_revoked_at`, so reconcile never re-grants it. Body `{ reviewNote? }`. Returns `{ ok, submission, creditsReclaimed, reclaimAmount }`; idempotent (a second call on an already-revoked submission is a no-op). Audited as `unlock.admin.submission.revoke` (+ `service-credits.governance.burn.unlock.revoke` when credits were reclaimed).
 - `POST /api/unlock/admin/submissions/:submissionId/grant-reward` — admin-session-gated + CSRF. Duplicate-identity determination "winner" path: clears the hold and grants the reward to the chosen account through the shared guard. Returns 409 `unlock_reward_still_held` (with `holderUserId`) if another account still holds the identity's reward (revoke that one first); 409 if the submission is not approved; otherwise `{ ok, submission }`. Idempotent if the reward already landed. Audited as `unlock.admin.reward.grant` (+ `service-credits.governance.mint.grant.unlock.determination` on a fresh grant).
+- `POST /api/unlock/admin/spam-denylist/remove` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'`). Removes one normalized Quora URL from `unlock_spam_quora_urls`. Body `{ quoraProfileUrlNormalized }`; returns `{ ok: true }`, 400 if missing. Only stops future submissions of that URL from being auto-blocked — it does not lift the restriction on a member already blocked for it (re-review their submission to approved/rejected for that). The denylist itself is read server-side by the admin page (`listSpamQuoraUrls`) and shown in the admin shell's denylist panel. Audited as `unlock.admin.spam_denylist.remove`.
 
 Internal (cron) routes:
 
@@ -109,6 +130,13 @@ Admin page:
 1. `unlock_runtime_config`
 2. `unlock_verification_submissions`
 3. `unlock_audit_log`
+4. `unlock_spam_quora_urls` — persistent spam denylist of normalized Quora profile URLs. Keyed on
+   `quora_profile_url_normalized` (primary key); also stores `quora_profile_url` (last-seen original, for
+   admin readability), `flagged_by_user_id` (admin who flagged, or the system actor on an auto-block),
+   `flag_count`, `first_flagged_at`, `last_flagged_at`, `updated_at`. It holds **no member identifier**,
+   so it is retained through account/data deletion (registered `retain` in the account deletion
+   registry). Written when a submission is marked spam; a row is removed when the same URL is later
+   approved or rejected (the spam mark is reversible).
 
 Multi-currency (issue #120): `unlock_runtime_config` carries `incentive_currency` (FK → `currencies.code`),
 naming the currency of `incentive_amount`. It defaults to ServiceCredits (code `SC`) — the approval
@@ -140,6 +168,7 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
 7. Admins always pass the tier check.
 8. **Chyme is no longer granted to not-yet-unlocked members.** Chyme requires `approved_full`; degraded members are pointed at the Hub general channel and the Unlock flow instead. Chyme's anonymous public visitor shell (for signed-out browsing) is unchanged.
 9. **Duplicate-identity guard (one Quora profile, one reward).** A normalized Quora URL earns the verification reward on a single account. The shared reward grant (`grantUnlockRewardForSubmission`, used by the approval handler, the hourly reconcile, and the admin determination) checks `getUnlockRewardHolderForUrl` before minting: if another non-revoked account already holds the identity's reward, the reward is **held** (`reward_withheld_at`) for an admin determination rather than auto-minting a second reward for the same person. The admin then awards the chosen account (`grant-reward`) and/or revokes the others (`revoke`, which burns the credits back and locks the account). This blocks both honest cross-account reuse and a perp who pastes a victim's Quora URL onto an impersonation account. The reward verbs are admin-gated + CSRF-guarded and fully audited.
+10. **A `spam` decision is a whole-app block, not just a tier drop (2026-07-30).** `rejected` and `spam` both drop the Unlock tier to `locked_support_only`, which by itself still lets a member into the Commons/Hub support surface and every `any_authenticated` route. To make `spam` mean "removed from the app", the review handler (`POST /api/unlock/admin/submissions/[submissionId]/review`) additionally places a platform-wide (`all`-scope) `account_restrictions` record with reason `unlock:spam`. The central auth gate (`evaluatePluginAccess`) denies every `support_only` and `approved_full` route for an `all`-scope restriction (reason `account_restricted`), so a spammed member is shut out of the Commons and all plugins — only their own status and account/data-deletion (`any_authenticated`) routes stay reachable, preserving the right to be forgotten. A subsequent `approved` or `rejected` decision lifts the restriction **only** when the stored reason is the `unlock:spam` marker, so it never clears an unrelated admin restriction; this makes a mistaken spam mark fully reversible. The restriction upsert and its audit row are written by `restrictAccount` / `unrestrictAccount` (tables `account_restrictions`, `account_restrictions_audit`).
 
 ## 6) Web and Android Delivery Strategy
 
@@ -170,6 +199,41 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-07-30: **Admin denylist panel — view and remove spam Quora URLs.** Added a "Spam Quora-URL
+  denylist" panel to the Unlock admin shell (`unlock-spam-denylist-panel.tsx`, in its own component to
+  keep the shell under the rule-116 size/complexity limits), fed by `listSpamQuoraUrls` from the admin
+  page. Each row shows the URL, when it was last flagged, and the flag count, with a confirm-gated
+  Remove that calls the new `POST /api/unlock/admin/spam-denylist/remove` (admin-gated + CSRF, audited
+  `unlock.admin.spam_denylist.remove`, command contract `unlock.admin.spam_denylist.remove` v1.0.0).
+  Removing a URL only stops future auto-blocking of it; it does not lift an existing member's
+  restriction. No schema change.
+- 2026-07-30: **Persistent spam Quora-URL denylist — the same spam account is never reviewed twice.**
+  Added `unlock_spam_quora_urls` (new table), keyed on the normalized Quora URL and holding no member
+  id. Marking a submission `spam` records its normalized URL here; approving/rejecting removes it. Two
+  effects: (1) the URL survives the flagged member's account/data deletion — the per-member submission
+  row is hard-deleted, but this denylist is registered `retain` in the account deletion registry — so
+  the flag is not lost; (2) a later submission of a denylisted URL (even from a new account) is
+  auto-marked `spam` and app-blocked at submission time (`createOrUpdateUnlockSubmission` sets the
+  status; the submission route places the `unlock:spam` account restriction, attributed to the system
+  actor `system:unlock-spam-denylist`) instead of re-entering the pending queue. New module
+  `lib/unlock/spam-denylist.ts` holds the denylist read/write and the shared `unlock:spam`
+  restriction-reason constant. Contracts `unlock.verification.submit` (→ `1.1.0`) and
+  `unlock.admin.submission.review` gained `unlock_spam_quora_urls` in `dataAccess` (submit also gained
+  `account_restrictions`/`account_restrictions_audit` for the auto-block). Schema adds one table; the
+  deletion registry, deletion contract, and manual test script were updated to match.
+- 2026-07-30: **A `spam` decision now removes the member from the app, not just from the full tier.**
+  Before this change, marking a submission `spam` set the same `locked_support_only` tier a `rejected`
+  submission gets, which still left the member inside the Commons/Hub support surface and every
+  `any_authenticated` route — so a spammed member could keep using the support surfaces. The review
+  handler (`POST /api/unlock/admin/submissions/[submissionId]/review`) now also places a platform-wide
+  (`all`-scope) `account_restrictions` record (reason `unlock:spam`) on a `spam` decision, which the
+  central auth gate enforces across every product surface — the member is shut out of the Commons and
+  all plugins, keeping only their own status and account/data-deletion routes. An `approved` or
+  `rejected` decision lifts a restriction carrying the `unlock:spam` marker (never an unrelated admin
+  restriction), so a mistaken spam mark is fully reversible. The command contract
+  `unlock.admin.submission.review` was bumped to `1.1.0` and its `dataAccess` now lists
+  `account_restrictions` and `account_restrictions_audit`. Route logic only — no schema change (both
+  tables already exist).
 - 2026-07-29: **Quora space renamed — help links now point to `skillseconomy.quora.com`.** The owner
   renamed the network's Quora space from `tiskillsnetwork.quora.com` to `skillseconomy.quora.com`, so
   every "Can't find your Quora profile URL?" help callout that pointed members at the old address was

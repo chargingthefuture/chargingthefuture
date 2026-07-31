@@ -22,31 +22,23 @@ export type MoodCommunityPulse = {
   days: MoodCommunityPulseDay[];
 };
 
-// Aggregate, anonymous community mood over the trailing window. This reads only
-// mood_value + submitted_at and groups by calendar day; it never selects
-// user_id, client_id, the note, or any row-level identifier, so nothing here can
-// be tied back to a person. When the window holds fewer than the minimum sample
-// of check-ins we report hasEnoughData=false and suppress the per-day averages.
-export async function getMoodCommunityPulse(): Promise<MoodCommunityPulse> {
-  const windowDays = MOOD_PULSE_WINDOW_DAYS;
+type MoodPulseBucket = { sum: number; count: number };
 
-  const result = await queryDb<{ day: string; avg_mood: string; count: string }>(
-    `SELECT to_char(date_trunc('day', submitted_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day,
-            AVG(mood_value)::numeric(10,4) AS avg_mood,
-            COUNT(*) AS count
-     FROM mood_submissions
-     WHERE (submitted_at AT TIME ZONE 'UTC') >= date_trunc('day', NOW() AT TIME ZONE 'UTC') - (($1::int - 1) * INTERVAL '1 day')
-       AND (submitted_at AT TIME ZONE 'UTC') <  date_trunc('day', NOW() AT TIME ZONE 'UTC') + INTERVAL '1 day'
-     GROUP BY day
-     ORDER BY day ASC`,
-    [windowDays],
-  );
+type MoodPulseRow = { day: string; avg_mood: string; count: string };
 
-  const byIso = new Map<string, { sum: number; count: number }>();
+// Fold the per-day query rows into a lookup by ISO date plus running totals.
+// Rows with a non-finite/zero count or a non-finite average are skipped, exactly
+// as the inline loop did, so nothing but real check-in data reaches the series.
+function aggregateMoodPulseRows(rows: MoodPulseRow[]): {
+  byIso: Map<string, MoodPulseBucket>;
+  totalCount: number;
+  totalSum: number;
+} {
+  const byIso = new Map<string, MoodPulseBucket>();
   let totalCount = 0;
   let totalSum = 0;
 
-  for (const row of result.rows) {
+  for (const row of rows) {
     const count = Number.parseInt(row.count, 10);
     const avg = Number.parseFloat(row.avg_mood);
     if (!Number.isFinite(count) || count <= 0 || !Number.isFinite(avg)) continue;
@@ -56,8 +48,15 @@ export async function getMoodCommunityPulse(): Promise<MoodCommunityPulse> {
     totalSum += avg * count;
   }
 
-  // Build a contiguous day series for the whole window so the chart always has
-  // one bar per day, even on days with no check-ins.
+  return { byIso, totalCount, totalSum };
+}
+
+// Build a contiguous day series for the whole window so the chart always has
+// one bar per day, even on days with no check-ins.
+function buildMoodPulseDaySeries(
+  windowDays: number,
+  byIso: Map<string, MoodPulseBucket>,
+): MoodCommunityPulseDay[] {
   const days: MoodCommunityPulseDay[] = [];
   const today = new Date();
   for (let offset = windowDays - 1; offset >= 0; offset -= 1) {
@@ -71,6 +70,31 @@ export async function getMoodCommunityPulse(): Promise<MoodCommunityPulse> {
       count: bucket ? bucket.count : 0,
     });
   }
+  return days;
+}
+
+// Aggregate, anonymous community mood over the trailing window. This reads only
+// mood_value + submitted_at and groups by calendar day; it never selects
+// user_id, client_id, the note, or any row-level identifier, so nothing here can
+// be tied back to a person. When the window holds fewer than the minimum sample
+// of check-ins we report hasEnoughData=false and suppress the per-day averages.
+export async function getMoodCommunityPulse(): Promise<MoodCommunityPulse> {
+  const windowDays = MOOD_PULSE_WINDOW_DAYS;
+
+  const result = await queryDb<MoodPulseRow>(
+    `SELECT to_char(date_trunc('day', submitted_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day,
+            AVG(mood_value)::numeric(10,4) AS avg_mood,
+            COUNT(*) AS count
+     FROM mood_submissions
+     WHERE (submitted_at AT TIME ZONE 'UTC') >= date_trunc('day', NOW() AT TIME ZONE 'UTC') - (($1::int - 1) * INTERVAL '1 day')
+       AND (submitted_at AT TIME ZONE 'UTC') <  date_trunc('day', NOW() AT TIME ZONE 'UTC') + INTERVAL '1 day'
+     GROUP BY day
+     ORDER BY day ASC`,
+    [windowDays],
+  );
+
+  const { byIso, totalCount, totalSum } = aggregateMoodPulseRows(result.rows);
+  const days = buildMoodPulseDaySeries(windowDays, byIso);
 
   const hasEnoughData = totalCount >= MOOD_PULSE_MIN_SAMPLE;
   const averageMood = hasEnoughData && totalCount > 0 ? Math.round((totalSum / totalCount) * 100) / 100 : null;

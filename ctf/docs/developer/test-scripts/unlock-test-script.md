@@ -137,10 +137,65 @@ the whole set. Every listed row shows the Support-only pill.
 **Steps:**
 1. On a pending submission, choose **Approve**.
 2. On another, choose **Reject**.
-3. Confirm a third can be marked **spam** (the route accepts `approved`, `rejected`, `spam`).
+3. On a third, click **Spam**, then click **Confirm spam + block** in the inline confirm (or
+   **Cancel** to back out — the route accepts `approved`, `rejected`, `spam`).
 **Expected:** Each decision posts to the review route, records the reviewer, and refreshes the row
 to its new status. Approve moves the account to full access; reject/spam drop it out of pending.
 The decision is audited (`unlock.admin.submission.review`).
+**Result:** web ☐ — notes:
+
+### UNLOCK-A2b · Spam removes the member from the app; a later approve/reject restores access
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Precondition:** a submission that can be marked spam, and the ability to sign in as that member.
+**Steps:**
+1. Mark the submission **spam** (confirm the block).
+2. As that member, try to open the Commons / Hub general channel and any plugin.
+3. As that member, open the Unlock status page and the account / data-deletion pages.
+4. Back as admin, re-review the same submission to **Approved** (or **Rejected**).
+5. As the member, retry the Commons / a plugin (approved) or the Commons support channel (rejected).
+**Expected:** Step 1 also places a platform-wide (`all`-scope) `account_restrictions` record with
+reason `unlock:spam` (audited in `account_restrictions_audit`). Step 2: the member is denied on every
+product surface — Commons and all plugins — with reason `account_restricted`. Step 3: their own Unlock
+status and the account / data-deletion routes still load (`any_authenticated` — the block deliberately
+leaves the right to be forgotten open). Step 4/5: re-reviewing lifts the `unlock:spam` restriction, so
+the member regains the access their new tier grants (full app on approve; Commons/support on reject). A
+restriction an admin set for any other reason is left untouched.
+**Result:** web ☐ — notes:
+
+### UNLOCK-A2c · Spam denylist — a known-spam Quora URL never re-enters the queue, and survives deletion
+**Role:** admin / reviewer + member · **Surfaces:** web (admin surface + member submission)
+**Precondition:** a member with a submission that can be marked spam; the ability to sign in as a
+second, different member.
+**Steps:**
+1. As admin, mark the first member's submission **spam** (confirm the block).
+2. As admin, delete that first member's account/data (or have them delete it).
+3. As the second member, submit the **same** Quora profile URL the first member used.
+4. As admin, open the Pending queue.
+5. As the second member, try to open the Commons / a plugin.
+**Expected:** Step 1 records the normalized URL on `unlock_spam_quora_urls`. Step 2 hard-deletes the
+first member's `unlock_verification_submissions` row but leaves the denylist row intact (it holds no
+member id and is retained). Step 3: the second member's submission is auto-marked `spam` /
+`locked_support_only` at submission time (not `pending`), and an `all`-scope `account_restrictions`
+record is placed (actor `system:unlock-spam-denylist`, reason `unlock:spam`). Step 4: the second
+member's submission does **not** appear in Pending — the admin never has to re-review the same spam
+Quora account. Step 5: the second member is blocked from the Commons and all plugins. Re-reviewing that
+URL to approved/rejected (in the admin queue) removes it from the denylist and lifts the block.
+**Result:** web ☐ — notes:
+
+### UNLOCK-A2d · Spam denylist panel — view and remove a URL
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Precondition:** at least one URL on the denylist (mark a submission spam first, per UNLOCK-A2c).
+**Steps:**
+1. On `/admin/unlock`, scroll to the "Spam Quora-URL denylist" panel.
+2. Confirm the flagged URL is listed with its last-flagged date (and flag count if more than one).
+3. Click **Remove**, then **Confirm remove**.
+4. Re-submit that URL as a member (per UNLOCK-A2c).
+**Expected:** Step 2: the panel lists every denylisted URL. Step 3: `POST
+/api/unlock/admin/spam-denylist/remove` deletes the row (audited
+`unlock.admin.spam_denylist.remove`) and it disappears from the panel. Step 4: because the URL is no
+longer denylisted, the submission is now accepted as `pending` (not auto-spam) — removal affects future
+submissions only; a member already blocked for that URL stays blocked until their submission is
+re-reviewed. A non-admin cannot reach the route.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A3 · Approval reward — granted or pending, never double

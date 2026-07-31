@@ -50,12 +50,19 @@ Unlock uses canonical identity for authentication, submission ownership, and mod
 - `unlock_runtime_config`
 - `unlock_verification_submissions`
 - `unlock_audit_log`
+- `unlock_spam_quora_urls`
 
 Retention summary:
 
 1. submission and moderation records are retained as long-lived trust/audit evidence.
 2. audit records are append-only and retained per compliance policy.
 3. no direct financial ledger ownership (service-credits remains separate owner).
+4. `unlock_spam_quora_urls` is a spam denylist keyed on the normalized Quora URL and holding **no
+   member identifier**. It is retained through account/data deletion (registered `retain` in the
+   account deletion registry) for abuse prevention, so a URL an admin flagged as spam is not lost when
+   the flagged member deletes their data. As shipped, `unlock_verification_submissions` is hard-deleted
+   on deletion (see the account deletion registry, which is the source of truth over the intent
+   described in sections 5–6 below).
 
 ## 5) Service-Scoped Deletion Contract
 

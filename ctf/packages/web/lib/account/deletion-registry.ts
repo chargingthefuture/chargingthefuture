@@ -357,6 +357,10 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     tables: [
       del('unlock_verification_submissions', 'user_id', 'Your verification submissions.'),
       retain('unlock_audit_log', 'Access/verification audit log; retained for compliance.'),
+      retain(
+        'unlock_spam_quora_urls',
+        'Spam Quora-URL denylist; keyed on the URL (holds no member id), retained for abuse prevention so a URL an admin flagged as spam is not lost when the flagged member deletes their data.',
+      ),
       // unlock_runtime_config is global.
     ],
   },

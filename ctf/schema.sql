@@ -1297,6 +1297,29 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_unlock_verification_submissions_user_id
 CREATE INDEX IF NOT EXISTS idx_unlock_verification_submissions_url_normalized
   ON unlock_verification_submissions (quora_profile_url_normalized);
 
+-- Persistent spam denylist of normalized Quora profile URLs. When an admin marks a submission spam,
+-- its normalized URL is recorded here. This serves two purposes: (1) a member's per-member submission
+-- row is hard-deleted when they delete their account/data, but this denylist is deliberately keyed on
+-- the URL (never on a member id) and retained for abuse prevention, so the spam URL survives that
+-- deletion; (2) a fresh submission of a denylisted URL (even from a new account) is auto-marked spam at
+-- submission time and never re-enters the review queue. A later approve/reject of the same URL removes
+-- it here, so a mistaken spam mark is fully reversible.
+CREATE TABLE IF NOT EXISTS unlock_spam_quora_urls (
+  quora_profile_url_normalized TEXT PRIMARY KEY,
+  quora_profile_url TEXT NOT NULL,
+  flagged_by_user_id TEXT,
+  flag_count INTEGER NOT NULL DEFAULT 1,
+  first_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS quora_profile_url TEXT;
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS flagged_by_user_id TEXT;
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS flag_count INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS first_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS last_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Add prod unlock audit/config tables if missing.
 -- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the
 -- actor_user_id/command/policy_status/reason columns and does NOT populate the legacy user_id/action
