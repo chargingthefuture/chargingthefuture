@@ -351,6 +351,14 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-07-31: **Admin membership-event route now writes its audit entry (code-review finding).**
+  `POST /api/feed/membership/events` called `emitMembershipEvent` and returned without ever calling
+  `logFeedAudit`, so this admin-only command left no audit trail even though
+  `FEED_PLUGIN_AUDIT_CONTRACTS.yaml` declares a `feed.membership.event.emit` entry for every call.
+  The route now logs that entry on both the success and the failure path, recording the acting
+  admin, the target member, the plugin, the event type, and the request/trace identifiers — matching
+  what the sibling `/api/announcements/membership/events` route already did.
+
 - 2026-07-27: **Commons composer shows how far over the character limit you are — and no longer
   destroys an over-limit message (owner report).** A member's long post silently failed: the composer
   had no character counter and no `maxLength`, and `sendMessage` cleared the input *before* the
