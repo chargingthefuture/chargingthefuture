@@ -23,6 +23,30 @@ const POINTS = [
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
+// Focus trap for a single Tab / Shift+Tab press: keep focus cycling within the dialog root.
+function cycleFocusTrap(root: HTMLElement, event: KeyboardEvent) {
+  const focusable = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (element) => element.offsetParent !== null || element === document.activeElement,
+  );
+  if (focusable.length === 0) return;
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const active = document.activeElement;
+
+  if (event.shiftKey) {
+    if (active === first || !root.contains(active)) {
+      event.preventDefault();
+      last.focus();
+    }
+    return;
+  }
+  if (active === last || !root.contains(active)) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentModalProps) {
   const confirmRef = useRef<HTMLButtonElement | null>(null);
   const modalRef = useRef<HTMLDivElement | null>(null);
@@ -53,26 +77,7 @@ export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentMo
 
       // Focus trap: keep Tab / Shift+Tab cycling within the dialog.
       const root = modalRef.current;
-      if (!root) return;
-
-      const focusable = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-        (element) => element.offsetParent !== null || element === document.activeElement,
-      );
-      if (focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-
-      if (event.shiftKey) {
-        if (active === first || !root.contains(active)) {
-          event.preventDefault();
-          last.focus();
-        }
-      } else if (active === last || !root.contains(active)) {
-        event.preventDefault();
-        first.focus();
-      }
+      if (root) cycleFocusTrap(root, event);
     }
 
     window.addEventListener('keydown', onKeyDown);
