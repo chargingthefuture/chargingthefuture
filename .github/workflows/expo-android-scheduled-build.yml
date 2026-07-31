@@ -127,7 +127,26 @@ jobs:
         working-directory: ctf/packages/mobile
         run: |
           set -euo pipefail
-          eas build --platform android --profile preview --non-interactive --wait --json > build.json
+          # The quota guard above counts this project's builds via `eas build:list`, but Expo
+          # enforces the free-plan cap per ACCOUNT and by its own attempt accounting, so the guard
+          # can undercount and let a build through that Expo then rejects (issue #2030: main went
+          # red on "This account has used its Android builds from the Free plan this month").
+          # A plan-quota rejection is an expected monthly condition, not a defect on main — catch
+          # it and skip cleanly, exactly like a guard-detected skip. Everything else still fails
+          # the job (and the autofix agent still fires for real build failures).
+          if ! eas build --platform android --profile preview --non-interactive --wait --json > build.json 2> eas-stderr.txt; then
+            cat eas-stderr.txt >&2 || true
+            if grep -qi "used its Android builds" eas-stderr.txt build.json 2>/dev/null; then
+              {
+                echo "### Android test build skipped"
+                echo ""
+                echo "Expo rejected the build: the account's free-plan Android builds for this month are used up (the pre-check undercounted — Expo's cap is account-wide). The build runs again after the monthly reset."
+              } >> "$GITHUB_STEP_SUMMARY"
+              echo "quota_exhausted=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            exit 1
+          fi
           # Two links from the finished build: the Expo "internal distribution"
           # install page (the easy phone path — open it on Android and tap
           # Install) and the direct .apk download URL. Build-page key names vary
@@ -146,7 +165,7 @@ jobs:
           echo "apk_url=${APK_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Record build in summary
-        if: ${{ steps.quota.outputs.build_allowed == 'true' && success() }}
+        if: ${{ steps.quota.outputs.build_allowed == 'true' && steps.build.outputs.quota_exhausted != 'true' && success() }}
         run: |
           {
             echo "### Android test build finished"
