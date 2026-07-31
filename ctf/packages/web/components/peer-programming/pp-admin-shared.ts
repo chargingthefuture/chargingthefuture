@@ -25,6 +25,23 @@ export type AdminMutationResult<T = unknown> =
   | { ok: true; data: T }
   | { ok: false; message: string };
 
+// Error envelope shared by plugin errors (`message`) and auth-gate denials (`reason`/`code`).
+type AdminErrorBody = { message?: string; reason?: string; code?: string };
+
+// Serialize a request body, leaving an absent body as `undefined` so fetch omits it entirely.
+function ppSerializeBody(body: unknown): string | undefined {
+  if (body === undefined) return undefined;
+  return JSON.stringify(body);
+}
+
+// Resolve the human-facing failure message from a non-OK response body, in priority order.
+function ppResolveErrorMessage(data: AdminErrorBody | null, status: number): string {
+  if (data?.message) return data.message;
+  if (data?.reason) return data.reason;
+  if (data?.code) return data.code;
+  return `Request failed (${status}).`;
+}
+
 // All peer-programming admin mutations carry the CSRF confirmation header the
 // API requires (`x-ctf-csrf: '1'`), matching lib/peer-programming/_lib.ts.
 export async function ppAdminMutate<T = unknown>(
@@ -36,19 +53,16 @@ export async function ppAdminMutate<T = unknown>(
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: ppSerializeBody(body),
     });
     // Plugin errors carry `message`; auth-gate denials carry `reason`/`code`.
     const data = (await res.json().catch(() => null)) as
-      | (Partial<T> & { message?: string; reason?: string; code?: string })
+      | (Partial<T> & AdminErrorBody)
       | null;
     if (res.ok) {
       return { ok: true, data: (data ?? {}) as T };
     }
-    return {
-      ok: false,
-      message: data?.message ?? data?.reason ?? data?.code ?? `Request failed (${res.status}).`,
-    };
+    return { ok: false, message: ppResolveErrorMessage(data, res.status) };
   } catch {
     return { ok: false, message: 'Network error. Try again.' };
   }
