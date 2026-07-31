@@ -40,6 +40,7 @@
     "check:inventory-drift": "node ./scripts/check-inventory-drift.mjs",
     "check:orphan-routes": "node ./scripts/check-orphan-routes.mjs",
     "check:notice-formatting": "node ./scripts/check-notice-formatting.mjs",
+    "check:us-spelling": "node ./scripts/check-us-spelling.mjs",
     "preview:member-copy": "node --experimental-strip-types ./scripts/preview-member-copy.mjs",
     "lint:a11y": "eslint --no-config-lookup --config ./a11y-audit.config.mjs --max-warnings=0 \"packages/web/app/**/*.tsx\" \"packages/web/components/**/*.tsx\"",
     "check:taxonomy-changes": "node ./scripts/check-taxonomy-change.mjs",

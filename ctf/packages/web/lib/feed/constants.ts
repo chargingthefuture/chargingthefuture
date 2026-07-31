@@ -38,7 +38,7 @@ export type FeedModerationStatus = (typeof FEED_MODERATION_STATUS)[keyof typeof 
 //
 // `off_topic` leads because it is the actual day-to-day problem (owner, 2026-07-29): people arrive and
 // hold Quora-style discussions with nothing to do with the economy. It is by far the most common
-// judgement, so it is the default in the UI and the one a bulk sweep uses.
+// judgment, so it is the default in the UI and the one a bulk sweep uses.
 //
 // `suspected_bad_actor` is deliberately worded as *suspected* and carries no automatic consequence —
 // it hides the post and nothing else. It never revokes access, flags the account, or feeds any score.

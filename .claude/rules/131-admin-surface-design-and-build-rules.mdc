@@ -11,7 +11,7 @@ auditing, designing, or building any `/admin` surface.
 1. The app's admin model is: a **thin `/admin` landing** — a directory of cards that link to each
    plugin's admin page — then **one dedicated admin page per plugin**, plus the **AI Review Dashboard**
    at `/admin/comic` (approve / edit / reject AI Assistant answers).
-2. There is **no "Admin Hub" / owner command-centre / everything-at-a-glance dashboard**, on desktop or
+2. There is **no "Admin Hub" / owner command-center / everything-at-a-glance dashboard**, on desktop or
    mobile. The owner rejected it. Do not build one, and do not re-introduce the `MobileAdminHub` family
    or an "AI queue" tile. Platform-health numbers live in the **Weekly Performance** admin; AI answer
    approvals live in the **AI Review Dashboard**. Nowhere else.

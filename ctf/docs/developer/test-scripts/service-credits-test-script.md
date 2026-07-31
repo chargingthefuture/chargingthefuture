@@ -385,7 +385,7 @@ Result: web ☐
 6. Now set the limit back to 0 (revoke).
 7. Confirm the read-back shows 0.
 
-**Expected:** Set succeeds. Read-back shows the override value. Setting to 0 revokes the limit. The read-back also shows `frozen` status (true or false depending on the member's state) and confirms no behavioural score is shown.
+**Expected:** Set succeeds. Read-back shows the override value. Setting to 0 revokes the limit. The read-back also shows `frozen` status (true or false depending on the member's state) and confirms no behavioral score is shown.
 
 Result: web ☐
 

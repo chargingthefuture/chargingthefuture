@@ -200,7 +200,7 @@ Admin routes:
   Body may also carry `reason`, one of `off_topic` / `suspected_bad_actor` / `spam` / `abusive` /
   `other` (`FEED_MODERATION_REASON`). Validated against that fixed set, never free text — a
   moderator's prose about a member would become a permanent unreviewable note on a survivor's
-  account. An unrecognised or absent code falls back to `other` rather than 400: a hide is
+  account. An unrecognized or absent code falls back to `other` rather than 400: a hide is
   time-sensitive and must not fail over its label. Restoring ignores `reason` and **clears** the
   stored reason/actor/timestamp, so a post that is visible again carries no standing accusation.
   `:target` is `post`, `reply`, `question`, or `answer` (else 400); body `{ hidden: boolean }` is **required** — an absent
@@ -580,7 +580,7 @@ All three feed channels (announcements, questions, community) are shipped on web
   - **Read path honours it**, which is the load-bearing half: the timeline's question and answer
     queries, and `generateFeedQuestionAnswer` (a hidden question cannot be given a new answer, and
     reports `question_not_found` rather than revealing that it exists).
-  - **`exportQuestionsByCategory` excludes hidden questions.** Hiding something is a judgement that it
+  - **`exportQuestionsByCategory` excludes hidden questions.** Hiding something is a judgment that it
     does not belong; exporting it into training data would launder it straight back in and the model
     would keep answering in the register of the thing that was removed.
   - `FeedModerationTarget` widened to `post | reply | question | answer`, with a
@@ -608,7 +608,7 @@ All three feed channels (announcements, questions, community) are shipped on web
   non-zero when the first-visit card is taller than the screen** — the exact failure that happened. The
   PNGs are attached to any PR that changes member-facing copy and are git-ignored, so the repo never
   accumulates screenshots of superseded wording. It renders the text and the box, not the live app:
-  faithful for line breaking, paragraph spacing and overflow; it does not prove theme colours. Playwright
+  faithful for line breaking, paragraph spacing and overflow; it does not prove theme colors. Playwright
   is resolved from the project or a global install rather than added as a dependency, since this is a
   review tool and not a CI gate. The pure paragraph logic moved to `lib/feed/notice-paragraphs.ts` so the
   script and any future test can use it without pulling in React.
@@ -680,7 +680,7 @@ All three feed channels (announcements, questions, community) are shipped on web
   being singled out. `FEED_COMMONS_GUIDANCE_INTERVAL = 50`; the copy lives in
   `lib/feed/commons-guidance.ts`. On every community post, `maybePostCommonsGuidance` counts the posts
   and, when the total lands exactly on a multiple of 50, claims the milestone and publishes an
-  announcement — which renders inline in the Commons stream, so it appears where the behaviour is.
+  announcement — which renders inline in the Commons stream, so it appears where the behavior is.
   Attributed to a reserved actor (`FEED_SYSTEM_ACTOR_ID`), never to a member and specifically not to
   the owner, who should not appear to be personally telling people off every 50 posts.
   - **Inside the post's transaction, on purpose.** The count, the milestone claim, and the notice all
@@ -737,7 +737,7 @@ All three feed channels (announcements, questions, community) are shipped on web
   `TIMESTAMPTZ`, **nullable**, null on every pre-existing row) to `feed_community_posts` and
   `feed_community_replies` via `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS` in `schema.sql` and
   `schema.demo.sql`. The reason is a short code from `FEED_MODERATION_REASON`, defaulting to
-  `off_topic` in the UI because that is the actual day-to-day judgement — one picker for the whole
+  `off_topic` in the UI because that is the actual day-to-day judgment — one picker for the whole
   list, so a sweep of twenty posts is not twenty identical clicks. It rides on the Hidden pill, so a
   later pass tells an off-topic sweep apart from an abuse removal without opening the audit log.
   `suspected_bad_actor` is worded as *suspected* and carries **no** automatic consequence: it hides the
@@ -771,7 +771,7 @@ All three feed channels (announcements, questions, community) are shipped on web
     hiding is reversible, while putting content back in front of members is the direction worth a
     deliberate pause.
   - **Hide, never delete, and never edit.** Deletion is unrecoverable and takes the member's words plus
-    the reply thread with them, so a moderator acting fast on a judgement call is not making a
+    the reply thread with them, so a moderator acting fast on a judgment call is not making a
     permanent one. There is no admin edit anywhere in this plugin, and the access-policy contract
     records that as `contentImmutable: required`. Member self-deletion is unchanged.
   - Contracts: `feed.community.moderation.list` / `.hide` / `.restore` added to the command and

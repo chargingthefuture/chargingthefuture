@@ -113,7 +113,7 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 - Anonymity: `suggested_by` is stored for moderation/abuse control only and is excluded from every
   reader and admin projection. No survivor identity is rendered anywhere in the plugin. The
   `getProductById` lookup selects an explicit column list that omits `suggested_by`/`reviewed_by`, so
-  those identity fields are never present on the returned object (defence in depth).
+  those identity fields are never present on the returned object (defense in depth).
 - Audit: every command emits one structured audit line via `logWhatWorksAudit`
   (`lib/what-works/audit.ts`) on its success path — reads (`what-works.list.read`,
   `what-works.public.read`, `what-works.problems.list`, the two admin list reads), mutations

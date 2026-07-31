@@ -72,7 +72,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'workforce',
     name: 'Workforce',
-    summary: 'Real-time work and skills distribution amongst 5 million survivors globally.',
+    summary: 'Real-time work and skills distribution among 5 million survivors globally.',
     availabilityState: 'implemented_shell',
     navRank: 50,
     isVisible: true,

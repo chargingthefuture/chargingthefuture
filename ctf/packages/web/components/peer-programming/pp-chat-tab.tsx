@@ -78,7 +78,7 @@ function ChatNotice({ color, children }: { color: string; children: React.ReactN
 }
 
 // Decides what sits below the message list: a notice (no cohort / ended / listening in) or the
-// composer. Early returns keep each branch flat and behaviour-identical to the old nested ternary.
+// composer. Early returns keep each branch flat and behavior-identical to the old nested ternary.
 function ChatFooter({
   hasCohort,
   ended,

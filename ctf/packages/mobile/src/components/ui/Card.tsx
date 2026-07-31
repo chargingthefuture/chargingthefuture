@@ -23,7 +23,7 @@ type CardProps = {
   dots?: boolean;
 };
 
-// The hard offset shadow colour + offset, matching web `3px 3px 0 #d4c49a` (4px at RN density).
+// The hard offset shadow color + offset, matching web `3px 3px 0 #d4c49a` (4px at RN density).
 const COMIC_SHADOW_COLOR = '#D4C49A';
 const COMIC_SHADOW_OFFSET = 4;
 

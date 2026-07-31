@@ -12,6 +12,22 @@ type RevokeBody = {
   reason?: string;
 };
 
+// Both a target userId and a non-empty reason are required (revoke is never reasonless). Returns a
+// 400 response when either is missing/blank.
+function parseRevokeBody(body: RevokeBody): { error: NextResponse } | { userId: string; reason: string } {
+  const userId = body.userId?.trim();
+  const reason = body.reason?.trim();
+  if (!userId || !reason) {
+    return {
+      error: NextResponse.json(
+        { ok: false, code: 'contributor_access_invalid_payload', message: 'userId and a non-empty reason are required.' },
+        { status: 400 },
+      ),
+    };
+  }
+  return { userId, reason };
+}
+
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -33,14 +49,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const userId = body.userId?.trim();
-  const reason = body.reason?.trim();
-  if (!userId || !reason) {
-    return NextResponse.json(
-      { ok: false, code: 'contributor_access_invalid_payload', message: 'userId and a non-empty reason are required.' },
-      { status: 400 },
-    );
+  const parsed = parseRevokeBody(body);
+  if ('error' in parsed) {
+    return parsed.error;
   }
+  const { userId, reason } = parsed;
 
   try {
     const revoked = await revokeEligibility({ userId, reason, revokedBy: gate.auth.userId });

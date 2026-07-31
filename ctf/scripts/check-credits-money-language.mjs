@@ -17,7 +17,7 @@
 // a real currency field), negations wrapped across more than two lines, and historical audit notes
 // quoting the very copy they fixed. A blocking gate at that precision would train agents to
 // allowlist rather than think. Run it when sweeping for money-framing; every finding needs human
-// judgement.
+// judgment.
 //
 // Usage: node ctf/scripts/check-credits-money-language.mjs           (report, exit 0)
 //        node ctf/scripts/check-credits-money-language.mjs --strict  (exit 1 on findings — only

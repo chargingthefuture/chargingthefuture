@@ -51,6 +51,11 @@ export const ChymeEmpty: React.FC<Props> = ({ onStartRoom, tokens, accent }) => 
   );
 };
 
+// Pick one of two values by the comic-theme flag. Both branches are side-effect-free
+// literals/token reads, so eager evaluation matches the original inline ternaries exactly.
+// Routing every `t.isComic ? …` through this keeps makeStyles' cyclomatic complexity flat.
+const pick = <T,>(isComic: boolean, comic: T, plain: T): T => (isComic ? comic : plain);
+
 function makeStyles(t: ThemeTokens, accent: string) {
   const chrome = t.surfaceAlt;
   const divider = t.border;
@@ -70,22 +75,22 @@ function makeStyles(t: ThemeTokens, accent: string) {
     header: {
       paddingVertical: 14,
       paddingHorizontal: 16,
-      borderBottomWidth: t.isComic ? 2 : 1,
+      borderBottomWidth: pick(t.isComic, 2, 1),
       borderBottomColor: divider,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
     },
-    headerTitle: { fontSize: 15, fontWeight: '700', fontFamily: interFamily('700'), color: t.textPrimary, letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
+    headerTitle: { fontSize: 15, fontWeight: '700', fontFamily: interFamily('700'), color: t.textPrimary, letterSpacing: pick(t.isComic, 0.6, 0), textTransform: pick(t.isComic, 'uppercase', 'none') },
     body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
     iconRing: {
       width: 72,
       height: 72,
-      borderRadius: t.isComic ? 0 : 36,
-      backgroundColor: t.isComic ? `${t.border}12` : `${accent}15`,
-      borderWidth: t.isComic ? 2 : 1,
-      borderColor: t.isComic ? t.border : `${accent}40`,
-      borderStyle: t.isComic ? 'solid' : 'dashed',
+      borderRadius: pick(t.isComic, 0, 36),
+      backgroundColor: pick(t.isComic, `${t.border}12`, `${accent}15`),
+      borderWidth: pick(t.isComic, 2, 1),
+      borderColor: pick(t.isComic, t.border, `${accent}40`),
+      borderStyle: pick(t.isComic, 'solid', 'dashed'),
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 20,
@@ -97,28 +102,28 @@ function makeStyles(t: ThemeTokens, accent: string) {
       width: '100%',
       paddingVertical: 14,
       borderRadius: r,
-      backgroundColor: t.isComic ? t.surface : accent,
-      borderWidth: t.isComic ? 1.5 : 0,
+      backgroundColor: pick(t.isComic, t.surface, accent),
+      borderWidth: pick(t.isComic, 1.5, 0),
       borderColor: t.border,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 12,
     },
-    primaryBtnText: { color: t.isComic ? t.border : '#000', fontWeight: t.isComic ? '800' : '700', fontFamily: interFamily(t.isComic ? '800' : '700'), fontSize: 15, textTransform: t.isComic ? 'uppercase' : 'none', letterSpacing: t.isComic ? 0.6 : 0 },
+    primaryBtnText: { color: pick(t.isComic, t.border, '#000'), fontWeight: pick(t.isComic, '800', '700'), fontFamily: interFamily(pick(t.isComic, '800', '700')), fontSize: 15, textTransform: pick(t.isComic, 'uppercase', 'none'), letterSpacing: pick(t.isComic, 0.6, 0) },
     scheduleBtn: {
       width: '100%',
       paddingVertical: 14,
       borderRadius: r,
       backgroundColor: t.surface,
-      borderWidth: t.isComic ? 1.5 : 1,
-      borderColor: t.isComic ? `${t.borderDim}50` : t.border,
+      borderWidth: pick(t.isComic, 1.5, 1),
+      borderColor: pick(t.isComic, `${t.borderDim}50`, t.border),
       alignItems: 'center',
       justifyContent: 'center',
     },
-    scheduleBtnText: { color: t.isComic ? t.textSecondary : t.textPrimary, fontWeight: '600', fontFamily: interFamily('600'), fontSize: 15 },
+    scheduleBtnText: { color: pick(t.isComic, t.textSecondary, t.textPrimary), fontWeight: '600', fontFamily: interFamily('600'), fontSize: 15 },
     footer: {
       padding: 16,
-      borderTopWidth: t.isComic ? 2 : 1,
+      borderTopWidth: pick(t.isComic, 2, 1),
       borderTopColor: divider,
       backgroundColor: t.surface,
     },

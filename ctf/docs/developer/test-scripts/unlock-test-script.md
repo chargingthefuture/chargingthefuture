@@ -120,7 +120,7 @@ not see this banner. On android the client Unlock gate lets a treatment member t
 2. Read the snapshot counts at the top.
 3. Switch between the Pending, Support-only, and All views.
 4. On the Support-only view, compare the number of rows listed against the Support-only counter in
-   the snapshot, and check that each row carries a grey "Support-only" pill.
+   the snapshot, and check that each row carries a gray "Support-only" pill.
 **Expected:** The queue lists submissions; the Pending view shows only pending rows, the All view
 shows every status. Each row shows the submitter's Quora profile link and its review status. A
 non-admin cannot reach this page (`requireUnlockAdminAccess`). Step 3/4: the Support-only view shows

@@ -93,7 +93,7 @@ flow is one-way, like gas-station reward points.
 - `GET /api/contributions/submission` — The member's own claim history.
 - `GET /api/contributions/fundraiser` — Current cycle, collective progress, banner visibility for
   the viewer, the member-safe Signal instructions copy, `githubStarAlreadyCredited` (true when the
-  viewer already holds a confirmed, credit-earning github_star — the UI greys out that path), and
+  viewer already holds a confirmed, credit-earning github_star — the UI grays out that path), and
   `ownerSignalUrl` (the owner's Signal contact from the server-only `CONTRIBUTIONS_OWNER_SIGNAL_URL`
   env var, or null to fall back to the instructions copy), and the live thank-you valuations
   `creditsPerUsd` (SC per dollar) and `creditsPerActionSc` (SC for one confirmed comment or star,
@@ -392,7 +392,7 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
   `github_star` is creditable at most once per member ever — enforced at submission create (409
   `contributions_github_star_already_credited`) and again at review confirm (duplicate star confirms
   with 0 credits, reason recorded, mint never called); the fundraiser response now carries
-  `githubStarAlreadyCredited` and the UI greys out the star path. (2) Added a server-only
+  `githubStarAlreadyCredited` and the UI grays out the star path. (2) Added a server-only
   `CONTRIBUTIONS_OWNER_SIGNAL_URL` env var (Infisical-managed, never `NEXT_PUBLIC_`, never logged),
   surfaced as `ownerSignalUrl` on the fundraiser response and shown inline on the confirmation
   screen, falling back to the editable `signal_instructions` copy when unset. Updated rule 123 and

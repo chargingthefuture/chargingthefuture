@@ -45,6 +45,77 @@ async function withCounterpartyNames(activities: RecurringActivity[], readerUser
   });
 }
 
+// A validation failure carries the audit `reason` and the member-facing `message` so the caller can
+// record the deny audit row and return the 400 in one place.
+type CreateDeny = { reason: string; message: string };
+
+type ValidatedCreateBody = {
+  counterpartyUserId: string;
+  sector: RecurringActivitySector;
+  currencyCode: string;
+  cadence: RecurringActivityCadence;
+  visibility: RecurringActivityVisibility | undefined;
+  scValue: number | null | undefined;
+};
+
+// scValue is optional; an empty string / null / undefined means "not provided". A present value must
+// parse to a finite number. Returns a discriminated result so the caller keeps narrowing.
+function parseScValue(raw: unknown): { error: CreateDeny } | { data: number | null | undefined } {
+  if (raw === undefined || raw === null || raw === '') {
+    return { data: undefined };
+  }
+  const parsed = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isFinite(parsed)) {
+    return { error: { reason: 'invalid_sc_value', message: 'scValue must be a number.' } };
+  }
+  return { data: parsed };
+}
+
+// Validate the create-activity body. Returns a discriminated result so the caller keeps TypeScript
+// narrowing on the validated fields and records the deny audit row itself on failure.
+function validateCreateBody(body: Record<string, unknown>): { error: CreateDeny } | { data: ValidatedCreateBody } {
+  const counterpartyUserId = typeof body.counterpartyUserId === 'string' ? body.counterpartyUserId.trim() : '';
+  const sector = body.sector;
+  const currencyCode = typeof body.currencyCode === 'string' ? body.currencyCode.trim() : '';
+  const cadence = body.cadence;
+  const visibility = body.visibility;
+
+  if (!counterpartyUserId) {
+    return { error: { reason: 'missing_counterparty', message: 'counterpartyUserId is required.' } };
+  }
+  if (!RECURRING_ACTIVITY_SECTORS.includes(sector as RecurringActivitySector)) {
+    return { error: { reason: 'invalid_sector', message: `sector must be one of: ${RECURRING_ACTIVITY_SECTORS.join(', ')}.` } };
+  }
+  if (!currencyCode) {
+    return { error: { reason: 'missing_currency', message: 'currencyCode is required.' } };
+  }
+  if (!RECURRING_ACTIVITY_CADENCES.includes(cadence as RecurringActivityCadence)) {
+    return { error: { reason: 'invalid_cadence', message: `cadence must be one of: ${RECURRING_ACTIVITY_CADENCES.join(', ')}.` } };
+  }
+  if (
+    visibility !== undefined &&
+    !RECURRING_ACTIVITY_VISIBILITY_VALUES.includes(visibility as RecurringActivityVisibility)
+  ) {
+    return { error: { reason: 'invalid_visibility', message: `visibility must be one of: ${RECURRING_ACTIVITY_VISIBILITY_VALUES.join(', ')}.` } };
+  }
+
+  const scValueResult = parseScValue(body.scValue);
+  if ('error' in scValueResult) {
+    return scValueResult;
+  }
+
+  return {
+    data: {
+      counterpartyUserId,
+      sector: sector as RecurringActivitySector,
+      currencyCode,
+      cadence: cadence as RecurringActivityCadence,
+      visibility: visibility as RecurringActivityVisibility | undefined,
+      scValue: scValueResult.data,
+    },
+  };
+}
+
 // GET /api/recurring-activity — the caller's own ongoing activities (both sides), newest first.
 export async function GET() {
   const gate = await requireRecurringActivityAccess();
@@ -98,49 +169,21 @@ export async function POST(request: Request) {
     return denyBadRequest('invalid_json', 'Invalid JSON body.');
   }
 
-  const counterpartyUserId = typeof body.counterpartyUserId === 'string' ? body.counterpartyUserId.trim() : '';
-  const sector = body.sector;
-  const currencyCode = typeof body.currencyCode === 'string' ? body.currencyCode.trim() : '';
-  const cadence = body.cadence;
-  const visibility = body.visibility;
-
-  if (!counterpartyUserId) {
-    return denyBadRequest('missing_counterparty', 'counterpartyUserId is required.');
+  const validated = validateCreateBody(body);
+  if ('error' in validated) {
+    return denyBadRequest(validated.error.reason, validated.error.message);
   }
-  if (!RECURRING_ACTIVITY_SECTORS.includes(sector as RecurringActivitySector)) {
-    return denyBadRequest('invalid_sector', `sector must be one of: ${RECURRING_ACTIVITY_SECTORS.join(', ')}.`);
-  }
-  if (!currencyCode) {
-    return denyBadRequest('missing_currency', 'currencyCode is required.');
-  }
-  if (!RECURRING_ACTIVITY_CADENCES.includes(cadence as RecurringActivityCadence)) {
-    return denyBadRequest('invalid_cadence', `cadence must be one of: ${RECURRING_ACTIVITY_CADENCES.join(', ')}.`);
-  }
-  if (
-    visibility !== undefined &&
-    !RECURRING_ACTIVITY_VISIBILITY_VALUES.includes(visibility as RecurringActivityVisibility)
-  ) {
-    return denyBadRequest('invalid_visibility', `visibility must be one of: ${RECURRING_ACTIVITY_VISIBILITY_VALUES.join(', ')}.`);
-  }
-
-  let scValue: number | null | undefined;
-  if (body.scValue !== undefined && body.scValue !== null && body.scValue !== '') {
-    const parsed = typeof body.scValue === 'number' ? body.scValue : Number(body.scValue);
-    if (!Number.isFinite(parsed)) {
-      return denyBadRequest('invalid_sc_value', 'scValue must be a number.');
-    }
-    scValue = parsed;
-  }
+  const { counterpartyUserId, sector, currencyCode, cadence, visibility, scValue } = validated.data;
 
   try {
     const activity = await createRecurringActivity({
       ownerUserId: userId,
       counterpartyUserId,
-      sector: sector as RecurringActivitySector,
+      sector,
       currencyCode,
-      cadence: cadence as RecurringActivityCadence,
+      cadence,
       scValue,
-      visibility: visibility as RecurringActivityVisibility | undefined,
+      visibility,
     });
     await logRecurringActivityAuditEvent({
       actorUserId: userId,

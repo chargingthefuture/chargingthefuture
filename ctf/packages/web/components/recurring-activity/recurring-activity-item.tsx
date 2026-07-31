@@ -112,7 +112,7 @@ function deriveItemFlags(activity: Activity): ItemFlags {
   const canEnd = activity.status === 'pending' || activity.status === 'active';
   const isOwner = activity.role === 'owner';
   // Visibility only applies while the activity is live; once it has ended or was declined there is
-  // nothing to surface, so hide the picker (matches the mobile behaviour and the repository guard).
+  // nothing to surface, so hide the picker (matches the mobile behavior and the repository guard).
   const canSetVisibility = isOwner && activity.status === 'active';
   const hasActions = isCounterpartyPending || canEnd || canSetVisibility;
   return { withName, isCounterpartyPending, canEnd, canSetVisibility, hasActions };

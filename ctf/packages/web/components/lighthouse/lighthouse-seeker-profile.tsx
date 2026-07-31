@@ -54,7 +54,7 @@ function dateInputValue(iso: string | null | undefined): string {
   return match ? match[0] : "";
 }
 
-// Maps a saved profile into the editable form, normalising missing values to empty strings.
+// Maps a saved profile into the editable form, normalizing missing values to empty strings.
 function profileToForm(p: Profile): SeekerForm {
   return {
     housingNeeds: p.housingNeeds ?? "",
@@ -69,7 +69,7 @@ function profileToForm(p: Profile): SeekerForm {
   };
 }
 
-// Builds the POST body for saving a seeker profile, normalising empty inputs to null.
+// Builds the POST body for saving a seeker profile, normalizing empty inputs to null.
 function buildSeekerProfileBody(form: SeekerForm, budgetMin: number | null, budgetMax: number | null) {
   return {
     profileType: "seeker",

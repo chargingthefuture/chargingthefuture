@@ -24,6 +24,44 @@ function parseLinkedPluginSlugs(value: unknown): string[] {
   return value.filter((entry): entry is string => typeof entry === 'string');
 }
 
+// Repository error codes that all mean "the resolution payload was invalid" and map to a 400.
+const INVALID_RESOLUTION_CODES = new Set([
+  'invalid_resolution',
+  'correction_required',
+  'correction_too_long',
+  'reason_too_long',
+  'approve_requires_content',
+]);
+
+// Map a thrown repository error code to its response. Unknown codes fall through to the 503.
+function mapResolveError(code: string): NextResponse {
+  if (code === 'review_not_found') {
+    return NextResponse.json(
+      { ok: false, code: COMIC_ERROR_CODE.reviewNotFound, message: 'Review item not found.' },
+      { status: 404 },
+    );
+  }
+
+  if (code === 'review_already_resolved') {
+    return NextResponse.json(
+      { ok: false, code: COMIC_ERROR_CODE.reviewAlreadyResolved, message: 'Review item already resolved.' },
+      { status: 409 },
+    );
+  }
+
+  if (INVALID_RESOLUTION_CODES.has(code)) {
+    return NextResponse.json(
+      { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Invalid review resolution payload.' },
+      { status: 400 },
+    );
+  }
+
+  return NextResponse.json(
+    { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Unable to resolve review item.' },
+    { status: 503 },
+  );
+}
+
 function parseBody(body: ResolveBody): ComicReviewResolveInput | null {
   // Reject (rather than silently coerce to 'approve') any resolution outside the allowed set so a
   // malformed/unknown value cannot accidentally publish a draft.
@@ -105,37 +143,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ tur
   } catch (error) {
     reportError(error, { area: 'comic', op: 'review_turnid_resolve' });
     const code = error instanceof Error ? error.message : 'unknown_error';
-
-    if (code === 'review_not_found') {
-      return NextResponse.json(
-        { ok: false, code: COMIC_ERROR_CODE.reviewNotFound, message: 'Review item not found.' },
-        { status: 404 },
-      );
-    }
-
-    if (code === 'review_already_resolved') {
-      return NextResponse.json(
-        { ok: false, code: COMIC_ERROR_CODE.reviewAlreadyResolved, message: 'Review item already resolved.' },
-        { status: 409 },
-      );
-    }
-
-    if (
-      code === 'invalid_resolution'
-      || code === 'correction_required'
-      || code === 'correction_too_long'
-      || code === 'reason_too_long'
-      || code === 'approve_requires_content'
-    ) {
-      return NextResponse.json(
-        { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Invalid review resolution payload.' },
-        { status: 400 },
-      );
-    }
-
-    return NextResponse.json(
-      { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Unable to resolve review item.' },
-      { status: 503 },
-    );
+    return mapResolveError(code);
   }
 }

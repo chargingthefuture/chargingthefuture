@@ -24,7 +24,7 @@ export const TEXT = "#F9FAFB";
 export const SUBTLE = "#6B7280";
 export const FAINT = "#4B5563";
 
-// Theme-aware chrome tokens for the Skills Taxonomy browser. This shell uses a solid blue-grey
+// Theme-aware chrome tokens for the Skills Taxonomy browser. This shell uses a solid blue-gray
 // divider (#1E2A3A) rather than a white-alpha border, so BORDER_SOLID carries that one extra
 // default value. The default theme returns the shipped values so it renders identically when the
 // comic toggle is off; comic uses the shared comic surfaces plus the Skills Taxonomy comic-ink accent.

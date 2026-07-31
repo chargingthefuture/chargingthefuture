@@ -722,7 +722,7 @@ export async function listPendingComicReviews(
   // q.turn_id is always the asker's question turn (never repointed), so the question is t.body
   // directly. The AI draft, when one was generated in the background, is the turn referenced by
   // q.draft_turn_id; LEFT JOIN it and fall back to the question body for human-first items (no
-  // draft), matching the prior dashboard behaviour. engine likewise prefers the draft turn's engine.
+  // draft), matching the prior dashboard behavior. engine likewise prefers the draft turn's engine.
   const result = await queryDb<ReviewRow>(
     `
       SELECT

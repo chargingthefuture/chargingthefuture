@@ -37,11 +37,49 @@ export async function GET() {
 
 type BlockBody = { blockedUserId?: unknown; safetyConcern?: unknown; safetyDetail?: unknown };
 
+type ParsedBlockRequest = { blockedUserId: string; safetyConcern: boolean; safetyDetail: string | null };
+
 function badRequest(message: string): NextResponse {
   return NextResponse.json(
     { ok: false, code: ACCOUNT_ERROR_CODE.invalidPayload, message },
     { status: 400 },
   );
+}
+
+// Parse and validate the block request body, resolving the optional safety escalation. Returns a
+// discriminated result so the caller keeps TypeScript narrowing.
+async function parseBlockRequest(request: Request): Promise<{ error: NextResponse } | { data: ParsedBlockRequest }> {
+  let body: BlockBody;
+  try {
+    body = (await request.json()) as BlockBody;
+  } catch {
+    return { error: badRequest('Invalid JSON body.') };
+  }
+
+  if (typeof body.blockedUserId !== 'string' || body.blockedUserId.trim().length === 0) {
+    return { error: badRequest('blockedUserId is required.') };
+  }
+  const blockedUserId = body.blockedUserId.trim();
+
+  // A safety escalation is opt-in. Anything other than a literal `true` is treated as an ordinary
+  // block, so a missing/odd value never accidentally raises an admin alert.
+  const safetyConcern = body.safetyConcern === true;
+
+  // The free-text context is optional even when escalating. Reject only a value that is present but
+  // not a string (a clear client bug); trim and cap an actual string, and store null when blank.
+  let safetyDetail: string | null = null;
+  if (safetyConcern && body.safetyDetail !== undefined && body.safetyDetail !== null) {
+    if (typeof body.safetyDetail !== 'string') {
+      return { error: badRequest('safetyDetail must be a string.') };
+    }
+    const trimmed = body.safetyDetail.trim();
+    if (trimmed.length > SAFETY_REPORT_DETAIL_MAX_LENGTH) {
+      return { error: badRequest(`safetyDetail must be ${SAFETY_REPORT_DETAIL_MAX_LENGTH} characters or fewer.`) };
+    }
+    safetyDetail = trimmed.length > 0 ? trimmed : null;
+  }
+
+  return { data: { blockedUserId, safetyConcern, safetyDetail } };
 }
 
 // Create a block. CSRF-protected and idempotent (blocking the same person twice is a no-op). A
@@ -65,35 +103,11 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  let body: BlockBody;
-  try {
-    body = (await request.json()) as BlockBody;
-  } catch {
-    return badRequest('Invalid JSON body.');
+  const parsed = await parseBlockRequest(request);
+  if ('error' in parsed) {
+    return parsed.error;
   }
-
-  if (typeof body.blockedUserId !== 'string' || body.blockedUserId.trim().length === 0) {
-    return badRequest('blockedUserId is required.');
-  }
-  const blockedUserId = body.blockedUserId.trim();
-
-  // A safety escalation is opt-in. Anything other than a literal `true` is treated as an ordinary
-  // block, so a missing/odd value never accidentally raises an admin alert.
-  const safetyConcern = body.safetyConcern === true;
-
-  // The free-text context is optional even when escalating. Reject only a value that is present but
-  // not a string (a clear client bug); trim and cap an actual string, and store null when blank.
-  let safetyDetail: string | null = null;
-  if (safetyConcern && body.safetyDetail !== undefined && body.safetyDetail !== null) {
-    if (typeof body.safetyDetail !== 'string') {
-      return badRequest('safetyDetail must be a string.');
-    }
-    const trimmed = body.safetyDetail.trim();
-    if (trimmed.length > SAFETY_REPORT_DETAIL_MAX_LENGTH) {
-      return badRequest(`safetyDetail must be ${SAFETY_REPORT_DETAIL_MAX_LENGTH} characters or fewer.`);
-    }
-    safetyDetail = trimmed.length > 0 ? trimmed : null;
-  }
+  const { blockedUserId, safetyConcern, safetyDetail } = parsed.data;
 
   try {
     if (safetyConcern) {

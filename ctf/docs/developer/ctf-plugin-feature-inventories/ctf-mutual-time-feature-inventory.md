@@ -155,7 +155,7 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   fallback), but there was no link to it, so admins could not reach the create/manage dashboard ("not
   linked anywhere; cannot create a poll"). Added the `mutual-time` row (nav_rank 250, visible) to the
   `schema.sql` registry seed. Takes effect when `schema.sql` is applied to the database on deploy.
-- 2026-07-22: **Code-review fixes (issues #1803–#1809).** No behaviour change to the happy path.
+- 2026-07-22: **Code-review fixes (issues #1803–#1809).** No behavior change to the happy path.
   (1) Audit lines now carry the contract's `policyDecision.evidence` (`role=admin`,
   `role=admin;owner=true`, `unlockTier=approved_full`) so the emitted audit satisfies
   `MUTUAL_TIME_PLUGIN_AUDIT_CONTRACTS.yaml` (#1807). (2) `GET /api/mutual-time/events` adds a same-origin

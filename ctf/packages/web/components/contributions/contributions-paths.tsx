@@ -265,7 +265,7 @@ function PathCard({
 
 /**
  * The three contribution-path cards plus the thank-you credits note and the active path's inline
- * form. The GitHub-star path is greyed out and non-interactive when the member has already been
+ * form. The GitHub-star path is grayed out and non-interactive when the member has already been
  * credited for a star (githubStarAlreadyCredited); the gift-card and Quora paths stay active.
  */
 export function ContributionPaths({
