@@ -25,7 +25,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { itemId } = await params;
 
   try {
-    await markFeedItemRead(gate.auth.userId, itemId);
+    const { readAtIso } = await markFeedItemRead(gate.auth.userId, itemId);
     logFeedAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',
@@ -38,7 +38,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       errorCategory: null,
     });
 
-    return NextResponse.json({ ok: true, itemId }, { status: 200 });
+    return NextResponse.json({ ok: true, itemId, readAt: readAtIso }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'feed', op: 'items_itemid_read' });
     logFeedAudit({

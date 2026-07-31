@@ -21,8 +21,11 @@ export async function GET(request: Request) {
     return gate.response;
   }
 
+  // `Number('')` is 0 and negative numbers are finite, so a bare or negative `limit` param must
+  // fall back to the intended default of 50 rather than slipping through (issue #2018). Matches
+  // the moderation-queue route's pattern; listFlaggedAnswers still clamps the upper bound.
   const limitParam = Number(new URL(request.url).searchParams.get('limit') ?? '50');
-  const limit = Number.isFinite(limitParam) ? limitParam : 50;
+  const limit = Number.isFinite(limitParam) && limitParam > 0 ? limitParam : 50;
 
   try {
     const [answers, pending] = await Promise.all([
