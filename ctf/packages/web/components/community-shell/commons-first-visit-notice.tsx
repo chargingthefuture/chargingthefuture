@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Info, X } from 'lucide-react';
 import styles from './community-shell.module.css';
+import { NoticeParagraphs } from './notice-paragraphs';
 
 // The one notice a member is shown on arrival rather than waiting for the rotation.
 //
@@ -81,7 +82,9 @@ export function CommonsFirstVisitNotice() {
           <X size={12} aria-hidden="true" /> Got it
         </button>
       </div>
-      <div style={{ fontSize: 13.5, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{notice.body}</div>
+      <div style={{ fontSize: 13.5, lineHeight: 1.65 }}>
+        <NoticeParagraphs body={notice.body} />
+      </div>
     </section>
   );
 }

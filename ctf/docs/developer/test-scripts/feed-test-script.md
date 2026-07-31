@@ -696,6 +696,33 @@
 
 ---
 
+### FD-A25 — Notice text renders as paragraphs, never chopped mid-sentence
+**Role:** any member | **Surface:** web (check at phone width — that is where it showed)
+
+**Precondition:** A published standing notice visible in the Commons, and a member who has not dismissed
+the first-visit card.
+
+**Steps:**
+1. Open the Commons at phone width and read the first-visit card top to bottom.
+2. Read a published notice in the stream (the announcement card).
+3. Look specifically at the ends of lines within a paragraph.
+4. Find an announcement that carries a trailing "Open <Plugin>: <url>" block and read it.
+
+**Expected:**
+- Sentences wrap where the column runs out and **nowhere else**. No sentence is cut mid-clause with the
+  rest starting a new line ("whether or / not they have an account"). This is what reached members once:
+  the copy was authored as source-wrapped lines joined with `\n`, and `white-space: pre-wrap` turned
+  every one of those into a hard break.
+- Paragraphs are separated by real spacing, not by an empty line of text.
+- Step 4: the "Open <Plugin>" lines stay on **separate** lines. They are a deliberate list, not wrapped
+  prose, and the renderer must keep them apart while joining prose that was only source-wrapped.
+- Run `pnpm --dir ctf check:notice-formatting` — it fails if any notice body is built by joining lines
+  with a single `\n`, which is the authoring mistake behind all of this.
+
+**Result:** web ☐
+
+---
+
 ### FD-A19 — Commons guidance notice posts itself every 50 posts
 **Role:** admin + member | **Surface:** web
 

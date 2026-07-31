@@ -39,6 +39,7 @@
     "schema:audit-queries": "node ./scripts/audit-schema-queries.mjs",
     "check:inventory-drift": "node ./scripts/check-inventory-drift.mjs",
     "check:orphan-routes": "node ./scripts/check-orphan-routes.mjs",
+    "check:notice-formatting": "node ./scripts/check-notice-formatting.mjs",
     "lint:a11y": "eslint --no-config-lookup --config ./a11y-audit.config.mjs --max-warnings=0 \"packages/web/app/**/*.tsx\" \"packages/web/components/**/*.tsx\"",
     "check:taxonomy-changes": "node ./scripts/check-taxonomy-change.mjs",
     "check:test-script-drift": "node ./scripts/check-test-script-drift.mjs",

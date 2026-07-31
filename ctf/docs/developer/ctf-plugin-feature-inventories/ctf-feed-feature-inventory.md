@@ -592,6 +592,26 @@ All three feed channels (announcements, questions, community) are shipped on web
   - **Parity:** web + mobile-responsive; Android out of scope (web-only per rule 105).
 ### Change Log
 
+- 2026-07-31: **Notice text renders as paragraphs (bug fix — this reached members).** The notice bodies
+  were authored as an array of source-wrapped lines joined with `\n`. Under `white-space: pre-wrap`
+  every one of those source wraps rendered as a HARD line break, so members read sentences chopped
+  mid-clause. Source formatting is not content, and nothing in the codebase knew the difference.
+  - **Content fixed at the source**: paragraphs are single strings, assembled with a `para(...)` helper
+    that joins fragments with a space so the SOURCE can still wrap, and paragraphs joined with `\n\n`.
+  - **Renderer fixed too**, because a renderer should not be one stray newline from that result: new
+    `NoticeParagraphs` splits on blank lines into real `<p>` elements and collapses a lone newline to a
+    space — unless the paragraph is a deliberate line list, which keeps an announcement's trailing
+    `Open <Plugin>: <url>` block on separate lines. Used by both the first-visit card and the stream
+    announcement card.
+  - **Already-published rows are repaired.** Fixing the constant alone would have left every published
+    row broken until its next milestone — three weeks for the 21-day notice. `refreshPublishedGuidanceNotices`
+    now brings any system-authored notice back in line with its current wording on each run, matching on
+    title and restricted to `FEED_SYSTEM_ACTOR_ID` so member- or owner-authored announcements are never
+    touched.
+  - **New CI gate** `notice-formatting-gate` (`check-notice-formatting.mjs`) fails any notice body built
+    by joining lines with a single `\n`. Verified in both directions: it passes on the fixed text and
+    exits non-zero when the original mistake is reintroduced. Typecheck, lint and every other gate had
+    passed the broken version.
 - 2026-07-30 (later): **Three standing Commons notices, three cadences.** The single notice became a
   registry (`COMMONS_NOTICES` in `lib/feed/commons-guidance.ts`), and the milestone table is now keyed
   `(notice_key, milestone_count)` — that composite UNIQUE is still the whole concurrency story.
