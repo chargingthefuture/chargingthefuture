@@ -39,6 +39,27 @@ function fieldStyle(t: ContributionsTokens, width?: number | string): React.CSSP
   };
 }
 
+type DriveForm = {
+  startsAt: string;
+  endsAt: string;
+  fiatGoal: string;
+  quoraGoal: string;
+  starGoal: string;
+};
+
+function initialDriveForm(cycle: ContributionsCycle | null): DriveForm {
+  if (!cycle) {
+    return { startsAt: '', endsAt: '', fiatGoal: '', quoraGoal: '', starGoal: '' };
+  }
+  return {
+    startsAt: toDateInput(cycle.startsAt),
+    endsAt: toDateInput(cycle.endsAt),
+    fiatGoal: String(cycle.fiatGoalUsd ?? ''),
+    quoraGoal: String(cycle.quoraCommentGoal ?? ''),
+    starGoal: String(cycle.githubStarGoal ?? ''),
+  };
+}
+
 /**
  * Drive management: the active cycle's window (start/end) and the three goals. Saving an existing
  * cycle issues a PUT; with no cycle yet it creates one. The drive "name" in the mockup has no
@@ -46,11 +67,12 @@ function fieldStyle(t: ContributionsTokens, width?: number | string): React.CSSP
  * backend does not store).
  */
 export function ContributionsAdminDrive({ t, cycle, saving, error, onSave }: DriveProps) {
-  const [startsAt, setStartsAt] = useState(toDateInput(cycle?.startsAt ?? null));
-  const [endsAt, setEndsAt] = useState(toDateInput(cycle?.endsAt ?? null));
-  const [fiatGoal, setFiatGoal] = useState(String(cycle?.fiatGoalUsd ?? ''));
-  const [quoraGoal, setQuoraGoal] = useState(String(cycle?.quoraCommentGoal ?? ''));
-  const [starGoal, setStarGoal] = useState(String(cycle?.githubStarGoal ?? ''));
+  const initial = initialDriveForm(cycle);
+  const [startsAt, setStartsAt] = useState(initial.startsAt);
+  const [endsAt, setEndsAt] = useState(initial.endsAt);
+  const [fiatGoal, setFiatGoal] = useState(initial.fiatGoal);
+  const [quoraGoal, setQuoraGoal] = useState(initial.quoraGoal);
+  const [starGoal, setStarGoal] = useState(initial.starGoal);
 
   function save() {
     onSave({

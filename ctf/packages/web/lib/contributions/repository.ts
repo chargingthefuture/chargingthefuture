@@ -687,6 +687,69 @@ async function applyReviewUpdate(
 }
 
 /**
+ * Confirm a locked, still-pending contribution claim. Credits = confirmedAmountUsd x
+ * credits_per_usd, clamped by the per-user-per-cycle cap; a positive grant goes through the
+ * canonical service-credits mintGrant() (idempotency key `contribution-<submissionId>`). A grant
+ * clamped to 0 still confirms the submission with credits_granted = 0.
+ */
+async function applyConfirmReview(
+  client: PoolClient,
+  row: SubmissionRow,
+  input: ReviewContributionSubmissionInput,
+): Promise<SubmissionRow> {
+  const config = await getContributionsConfigWithClient(client);
+  const confirmedAmountUsd = resolveConfirmedAmount(row, input, config);
+  const cycleId = row.cycle_id ?? (await getCurrentCycle())?.id ?? null;
+
+  // Once-per-member-ever github_star: if this member already holds a different confirmed,
+  // credit-earning star, confirming this one grants 0 credits (we still mark it confirmed and
+  // record the reason). This is defense in depth — the create gate already blocks a duplicate
+  // star at submission time — and it never double-grants.
+  const githubStarAlreadyCredited =
+    row.kind === 'github_star' && (await hasCreditedGithubStarWithClient(client, row.user_id, row.id));
+
+  const computedCredits = githubStarAlreadyCredited ? 0 : confirmedAmountUsd * config.creditsPerUsd;
+  const creditsGranted = await computeCycleCappedGrant(client, {
+    userId: row.user_id,
+    cycleId,
+    computedCredits,
+    cap: config.perUserCycleCreditCap,
+  });
+
+  const reviewNote = githubStarAlreadyCredited
+    ? [input.reviewNote, 'No credits: member already received credits for an earlier GitHub star (once-per-member limit).']
+        .filter((part): part is string => Boolean(part && part.trim()))
+        .join(' ')
+    : input.reviewNote ?? null;
+
+  let governanceEventId: string | null = null;
+  if (creditsGranted > 0) {
+    // Canonical mint path — the only way Contributions touches ServiceCredits. mintGrant is
+    // idempotent on its key, so a retried confirm cannot double-grant.
+    const grant = await mintGrant({
+      actorId: input.actorUserId,
+      targetUserId: row.user_id,
+      amount: creditsGranted,
+      grantReason: GRANT_REASON,
+      governanceTicketId: `contribution-${input.submissionId}`,
+      idempotencyKey: `contribution-${input.submissionId}`,
+    });
+    governanceEventId = grant.governanceEventId;
+  }
+
+  return applyReviewUpdate(client, {
+    submissionId: input.submissionId,
+    status: 'confirmed',
+    actorUserId: input.actorUserId,
+    reviewNote,
+    confirmedAmountUsd,
+    creditsGranted,
+    creditGovernanceEventId: governanceEventId,
+    cycleId,
+  });
+}
+
+/**
  * Confirm or reject a pending contribution claim. Exactly-once: the row is locked and must
  * still be 'pending'. On confirm, credits = confirmedAmountUsd x credits_per_usd, clamped by
  * the per-user-per-cycle cap; a positive grant goes through the canonical service-credits
@@ -726,57 +789,7 @@ export async function reviewSubmission(input: ReviewContributionSubmissionInput)
       return mapSubmissionForAdmin(updated);
     }
 
-    const config = await getContributionsConfigWithClient(client);
-    const confirmedAmountUsd = resolveConfirmedAmount(row, input, config);
-    const cycleId = row.cycle_id ?? (await getCurrentCycle())?.id ?? null;
-
-    // Once-per-member-ever github_star: if this member already holds a different confirmed,
-    // credit-earning star, confirming this one grants 0 credits (we still mark it confirmed and
-    // record the reason). This is defense in depth — the create gate already blocks a duplicate
-    // star at submission time — and it never double-grants.
-    const githubStarAlreadyCredited =
-      row.kind === 'github_star' && (await hasCreditedGithubStarWithClient(client, row.user_id, row.id));
-
-    const computedCredits = githubStarAlreadyCredited ? 0 : confirmedAmountUsd * config.creditsPerUsd;
-    const creditsGranted = await computeCycleCappedGrant(client, {
-      userId: row.user_id,
-      cycleId,
-      computedCredits,
-      cap: config.perUserCycleCreditCap,
-    });
-
-    const reviewNote = githubStarAlreadyCredited
-      ? [input.reviewNote, 'No credits: member already received credits for an earlier GitHub star (once-per-member limit).']
-          .filter((part): part is string => Boolean(part && part.trim()))
-          .join(' ')
-      : input.reviewNote ?? null;
-
-    let governanceEventId: string | null = null;
-    if (creditsGranted > 0) {
-      // Canonical mint path — the only way Contributions touches ServiceCredits. mintGrant is
-      // idempotent on its key, so a retried confirm cannot double-grant.
-      const grant = await mintGrant({
-        actorId: input.actorUserId,
-        targetUserId: row.user_id,
-        amount: creditsGranted,
-        grantReason: GRANT_REASON,
-        governanceTicketId: `contribution-${input.submissionId}`,
-        idempotencyKey: `contribution-${input.submissionId}`,
-      });
-      governanceEventId = grant.governanceEventId;
-    }
-
-    const updated = await applyReviewUpdate(client, {
-      submissionId: input.submissionId,
-      status: 'confirmed',
-      actorUserId: input.actorUserId,
-      reviewNote,
-      confirmedAmountUsd,
-      creditsGranted,
-      creditGovernanceEventId: governanceEventId,
-      cycleId,
-    });
-
+    const updated = await applyConfirmReview(client, row, input);
     return mapSubmissionForAdmin(updated);
   });
 }

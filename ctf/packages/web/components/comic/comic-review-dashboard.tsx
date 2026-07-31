@@ -49,6 +49,8 @@ type PluginsResponse = {
 
 type LoadState = 'loading' | 'ready' | 'error';
 
+type Resolution = 'approve' | 'correct' | 'reject';
+
 type ConfidenceBand = {
   label: string;
   className: string;
@@ -96,9 +98,82 @@ const REVIEWER_GUIDANCE = [
   'Reject and escalate anything involving immediate danger.',
 ];
 
-export function ComicReviewDashboard() {
-  const { theme } = useTheme();
-  const t = getComicTokens(theme);
+// Confirmation copy before any action that changes what a survivor sees: publishing (approve/correct)
+// sends the answer; reject discards the draft. A misclick must not silently push or drop a reply.
+function buildConfirmPrompt(resolution: Resolution): string {
+  if (resolution === 'reject') return 'Reject this draft? The survivor will not receive this answer.';
+  if (resolution === 'correct') return 'Approve and send your corrected answer to the survivor?';
+  return 'Approve and send this answer to the survivor?';
+}
+
+// Build the resolve request body. The corrected text rides only with a "correct"; the chosen
+// applicable plugins ride with any publish (approve/correct) so the server can validate/dedupe/cap them.
+function buildResolveBody(
+  resolution: Resolution,
+  correctedBody: string,
+  selectedPluginSlugs: string[],
+): { resolution: string; correctedBody?: string; linkedPluginSlugs?: string[] } {
+  const requestBody: { resolution: string; correctedBody?: string; linkedPluginSlugs?: string[] } = { resolution };
+  if (resolution === 'correct') {
+    requestBody.correctedBody = correctedBody.trim();
+  }
+  if (resolution === 'approve' || resolution === 'correct') {
+    requestBody.linkedPluginSlugs = selectedPluginSlugs;
+  }
+  return requestBody;
+}
+
+// Label for the regenerate/generate button: which verb, and whether a draft already exists.
+function regenerateLabel(regenerating: boolean, hasDraft: boolean): string {
+  if (regenerating) return hasDraft ? 'Regenerating…' : 'Generating…';
+  return hasDraft ? 'Regenerate draft' : 'Generate draft';
+}
+
+// At-a-glance counts of the collected training signal (owner corrections + rated answers).
+// Best-effort: a failure just leaves the counter hidden, never blocks the review queue.
+function useTrainingStats(): ComicTrainingStats | null {
+  const [trainingStats, setTrainingStats] = useState<ComicTrainingStats | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void requestJson<TrainingStatsResponse>('/api/comic/admin/training-stats')
+      .then((payload) => {
+        if (!cancelled) setTrainingStats(payload.stats);
+      })
+      .catch(() => {
+        /* training counter is best-effort */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return trainingStats;
+}
+
+// Load the plugin registry once for the "Applicable plugins" picker. Best-effort: a failure just
+// leaves the picker empty and never blocks reviewing.
+function usePluginOptions(): PluginOption[] {
+  const [pluginOptions, setPluginOptions] = useState<PluginOption[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void requestJson<PluginsResponse>('/api/plugins')
+      .then((payload) => {
+        if (!cancelled && Array.isArray(payload.plugins)) {
+          setPluginOptions(payload.plugins.map((plugin) => ({ slug: plugin.slug, name: plugin.name })));
+        }
+      })
+      .catch(() => {
+        /* picker is best-effort */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return pluginOptions;
+}
+
+// All queue state, effects, and resolve/regenerate handlers for the dashboard. Grouped in one hook so
+// the component stays a thin render, while keeping every hook in a fixed, unconditional order.
+function useComicReview() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [items, setItems] = useState<ComicReviewItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -108,16 +183,14 @@ export function ComicReviewDashboard() {
   // Whether the detail is in edit mode (Edit & approve) vs the default approve/reject view.
   const [editing, setEditing] = useState(false);
   const [resolving, setResolving] = useState(false);
-  // At-a-glance "Training examples collected" counts. Best-effort: stays null (and hidden) on failure.
-  const [trainingStats, setTrainingStats] = useState<ComicTrainingStats | null>(null);
   // "Regenerate draft" in-flight + a note shown when the engine is still unreachable.
   const [regenerating, setRegenerating] = useState(false);
   const [regenNote, setRegenNote] = useState<string | null>(null);
-  // The plugin registry options for the "Applicable plugins" picker, and the slugs the reviewer has
-  // toggled on for the selected item. The chosen slugs are sent with approve/correct so the
-  // published answer renders those plugin links.
-  const [pluginOptions, setPluginOptions] = useState<PluginOption[]>([]);
+  // The slugs the reviewer has toggled on for the selected item. The chosen slugs are sent with
+  // approve/correct so the published answer renders those plugin links.
   const [selectedPluginSlugs, setSelectedPluginSlugs] = useState<string[]>([]);
+  const trainingStats = useTrainingStats();
+  const pluginOptions = usePluginOptions();
 
   const refresh = useCallback(async () => {
     try {
@@ -166,40 +239,6 @@ export function ComicReviewDashboard() {
     return () => window.clearInterval(intervalId);
   }, [refresh, selectedId, editing, resolving]);
 
-  // At-a-glance counts of the collected training signal (owner corrections + rated answers).
-  // Best-effort: a failure just leaves the counter hidden, never blocks the review queue.
-  useEffect(() => {
-    let cancelled = false;
-    void requestJson<TrainingStatsResponse>('/api/comic/admin/training-stats')
-      .then((payload) => {
-        if (!cancelled) setTrainingStats(payload.stats);
-      })
-      .catch(() => {
-        /* training counter is best-effort */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Load the plugin registry once for the "Applicable plugins" picker. Best-effort: a failure just
-  // leaves the picker empty and never blocks reviewing.
-  useEffect(() => {
-    let cancelled = false;
-    void requestJson<PluginsResponse>('/api/plugins')
-      .then((payload) => {
-        if (!cancelled && Array.isArray(payload.plugins)) {
-          setPluginOptions(payload.plugins.map((plugin) => ({ slug: plugin.slug, name: plugin.name })));
-        }
-      })
-      .catch(() => {
-        /* picker is best-effort */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const selected = useMemo(
     () => items.find((item) => item.reviewId === selectedId) ?? null,
     [items, selectedId],
@@ -231,33 +270,15 @@ export function ComicReviewDashboard() {
   }, []);
 
   const resolveSelected = useCallback(
-    async (resolution: 'approve' | 'correct' | 'reject') => {
+    async (resolution: Resolution) => {
       if (!selected || resolving) return;
-
-      // Confirm before any action that changes what a survivor sees: publishing (approve/correct)
-      // sends the answer; reject discards the draft. A misclick must not silently push or drop a reply.
-      const confirmPrompt =
-        resolution === 'reject'
-          ? 'Reject this draft? The survivor will not receive this answer.'
-          : resolution === 'correct'
-            ? 'Approve and send your corrected answer to the survivor?'
-            : 'Approve and send this answer to the survivor?';
-      if (typeof window !== 'undefined' && !window.confirm(confirmPrompt)) {
+      if (typeof window !== 'undefined' && !window.confirm(buildConfirmPrompt(resolution))) {
         return;
       }
 
       setResolving(true);
       setError(null);
-
-      const requestBody: { resolution: string; correctedBody?: string; linkedPluginSlugs?: string[] } = { resolution };
-      if (resolution === 'correct') {
-        requestBody.correctedBody = correctedBody.trim();
-      }
-      // Send the chosen applicable plugins when publishing (approve/correct). The server validates
-      // them against the registry, dedupes, and caps before storing them on the published answer.
-      if (resolution === 'approve' || resolution === 'correct') {
-        requestBody.linkedPluginSlugs = selectedPluginSlugs;
-      }
+      const requestBody = buildResolveBody(resolution, correctedBody, selectedPluginSlugs);
 
       try {
         await requestJson(`/api/comic/review/${selected.reviewId}/resolve`, {
@@ -304,20 +325,576 @@ export function ComicReviewDashboard() {
     }
   }, [selected, regenerating, refresh]);
 
-  const pendingCount = items.length;
+  return {
+    loadState,
+    items,
+    selectedId,
+    setSelectedId,
+    error,
+    correctedBody,
+    setCorrectedBody,
+    editing,
+    setEditing,
+    resolving,
+    regenerating,
+    regenNote,
+    trainingStats,
+    pluginOptions,
+    selectedPluginSlugs,
+    selected,
+    pendingCount: items.length,
+    togglePluginSlug,
+    resolveSelected,
+    regenerateSelected,
+  };
+}
 
-  // STATE: Authenticated + Loading.
-  if (loadState === 'loading') {
+// STATE: Authenticated + Loading.
+function LoadingScreen() {
+  return (
+    <div className={styles.loadingScreen}>
+      <div className={styles.loadingInner}>
+        <div className={styles.loadingLine}>EXIT THEIR ECONOMY</div>
+        <div className={styles.loadingLine}>EXIT THE PSYOP</div>
+      </div>
+    </div>
+  );
+}
+
+function IconRail({ accent }: { accent: string }) {
+  return (
+    <aside className={styles.iconRail}>
+      <div className={styles.iconRailLogo} aria-hidden="true">
+        <ShieldCheck size={20} color={accent} />
+      </div>
+      <button type="button" className={`${styles.iconRailBtn} ${styles.iconRailBtnActive}`} aria-label="Review queue" aria-current="page">
+        <Inbox size={20} />
+      </button>
+      {/* Shared bottom of every plugin rail: back to all apps, account and settings, account menu. */}
+      <PluginRailFooter />
+    </aside>
+  );
+}
+
+function QueueItemButton({
+  item,
+  active,
+  onSelect,
+}: {
+  item: ComicReviewItem;
+  active: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const band = confidenceBand(item.nluConfidence);
+  return (
+    <button
+      type="button"
+      className={active ? `${styles.queueItem} ${styles.queueItemActive}` : styles.queueItem}
+      onClick={() => onSelect(item.reviewId)}
+      aria-current={active ? 'true' : undefined}
+    >
+      <span className={styles.queueItemQuestion}>{item.questionBody}</span>
+      <span className={styles.queueItemFooter}>
+        <span className={`${styles.queueItemConf} ${band.className}`}>
+          <span className={styles.queueItemConfDot} /> {band.label}
+        </span>
+        {item.safetyCategory ? (
+          <span className={styles.queueItemSafety}>
+            <AlertTriangle size={10} /> {item.safetyCategory.replace(/_/g, ' ')}
+          </span>
+        ) : null}
+        <span className={styles.queueItemTime}>{formatRelativeTime(item.createdAtIso)}</span>
+      </span>
+    </button>
+  );
+}
+
+function QueueEmpty() {
+  return (
+    <div className={styles.queueEmpty}>
+      <div className={styles.queueEmptyIcon} aria-hidden="true">
+        <Inbox size={20} color="#22C55E" />
+      </div>
+      <div className={styles.queueEmptyTitle}>Queue is clear</div>
+      <div className={styles.queueEmptyText}>New AI Assistant drafts will appear here for review.</div>
+    </div>
+  );
+}
+
+function QueueSidebar({
+  items,
+  selectedId,
+  onSelect,
+  pendingCount,
+  trainingStats,
+}: {
+  items: ComicReviewItem[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  pendingCount: number;
+  trainingStats: ComicTrainingStats | null;
+}) {
+  return (
+    <aside className={styles.queueSidebar}>
+      <div className={styles.queueHeader}>
+        <div className={styles.queueKicker}>Review Queue</div>
+        <div className={styles.queueSub}>AI Assistant drafts awaiting human review</div>
+        {trainingStats ? (
+          <div style={{ margin: '0 0 4px' }}>
+            <TrainingStatsBadge stats={trainingStats} />
+          </div>
+        ) : null}
+        {pendingCount > 0 ? (
+          <span className={styles.queuePendingBadge}>{pendingCount} pending</span>
+        ) : (
+          <span className={styles.queueClearBadge}>0 pending</span>
+        )}
+      </div>
+
+      {pendingCount === 0 ? (
+        <QueueEmpty />
+      ) : (
+        <div className={styles.queueList}>
+          {items.map((item) => (
+            <QueueItemButton
+              key={item.reviewId}
+              item={item}
+              active={item.reviewId === selectedId}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      )}
+    </aside>
+  );
+}
+
+function MainHeaderBar({
+  editing,
+  selected,
+  accent,
+  onExitEdit,
+}: {
+  editing: boolean;
+  selected: ComicReviewItem | null;
+  accent: string;
+  onExitEdit: () => void;
+}) {
+  const isEditingSelected = editing && selected !== null;
+  const band = selected ? confidenceBand(selected.nluConfidence) : null;
+  return (
+    <header className={styles.mainHeader}>
+      {isEditingSelected ? (
+        <button type="button" className={styles.backBtn} onClick={onExitEdit}>
+          <ArrowLeft size={14} /> Queue
+        </button>
+      ) : (
+        <Sparkles size={18} color={accent} />
+      )}
+      <div className={styles.mainHeaderText}>
+        <div className={styles.mainHeaderTitle}>
+          {isEditingSelected ? (
+            <>
+              <Pencil size={15} color={accent} /> Edit &amp; approve answer
+            </>
+          ) : (
+            'Review & Correction Dashboard'
+          )}
+        </div>
+        <div className={styles.mainHeaderSub}>Approve, correct, or reject AI Assistant answers before they reach survivors</div>
+      </div>
+      {isEditingSelected && band ? (
+        <span className={`${styles.headerConfPill} ${band.className}`}>
+          <AlertTriangle size={12} /> {band.label}
+        </span>
+      ) : null}
+      {/* Desktop-only: at phone width the shared mobile bar above already carries this pill. */}
+      <span className={styles.memberViewPill}>
+        <PluginUserShellButton href="/" accent={accent} label="Commons" />
+      </span>
+    </header>
+  );
+}
+
+function EmptyDetailState({
+  pendingCount,
+  loadState,
+  error,
+  accent,
+}: {
+  pendingCount: number;
+  loadState: LoadState;
+  error: string | null;
+  accent: string;
+}) {
+  // STATE: Authenticated + Empty (queue genuinely clear — no pending items).
+  if (pendingCount === 0 && loadState === 'ready' && !error) {
     return (
-      <div className={styles.loadingScreen}>
-        <div className={styles.loadingInner}>
-          <div className={styles.loadingLine}>EXIT THEIR ECONOMY</div>
-          <div className={styles.loadingLine}>EXIT THE PSYOP</div>
+      <div className={styles.allCaughtUp}>
+        <div className={styles.allCaughtUpIcon} aria-hidden="true">
+          <Check size={42} color="#22C55E" />
+        </div>
+        <div className={styles.allCaughtUpTitle}>All caught up</div>
+        <div className={styles.allCaughtUpText}>
+          Every AI Assistant answer has been reviewed. Survivors only ever see answers a human has approved.
         </div>
       </div>
     );
   }
+  // Items remain (or the queue failed to load) but none is selected: prompt to pick one
+  // rather than implying the queue is clear.
+  return (
+    <div className={styles.allCaughtUp}>
+      <div className={styles.allCaughtUpIcon} aria-hidden="true">
+        <Inbox size={42} color={accent} />
+      </div>
+      <div className={styles.allCaughtUpTitle}>
+        {error ? 'Queue unavailable' : 'Select an answer to review'}
+      </div>
+      <div className={styles.allCaughtUpText}>
+        {error
+          ? 'The review queue could not be loaded. Retry in a moment.'
+          : 'Choose an item from the queue to approve, correct, or reject the AI Assistant draft.'}
+      </div>
+    </div>
+  );
+}
 
+function DetailMeta({ selected }: { selected: ComicReviewItem }) {
+  return (
+    <div className={styles.detailMeta}>
+      <span className={styles.detailChannel}>@comic</span>
+      <span>Asked by {selected.askedByUsername ? `@${selected.askedByUsername}` : selected.askedByUserId}</span>
+      <span className={styles.detailTime}>{formatRelativeTime(selected.createdAtIso)}</span>
+    </div>
+  );
+}
+
+// Edit mode: original AI draft (read-only, when present) beside the editable corrected answer.
+function EditView({
+  selected,
+  correctedBody,
+  setCorrectedBody,
+}: {
+  selected: ComicReviewItem;
+  correctedBody: string;
+  setCorrectedBody: (value: string) => void;
+}) {
+  return (
+    <div className={styles.detailTwoCol}>
+      {/* Original AI draft (read-only) — only when a real AI draft exists. With no draft
+          (drafting unavailable, or safety-held), there is nothing to show beside the editor. */}
+      {selected.hasDraft ? (
+        <div className={styles.detailCol}>
+          <div className={styles.detailColHead}>
+            <span className={styles.detailLabel}>Original AI draft</span>
+            <span className={styles.needsCorrectionTag}>Needs correction</span>
+          </div>
+          <div className={styles.draftReadonly}>{selected.draftBody}</div>
+        </div>
+      ) : null}
+
+      {/* Corrected text (editable) */}
+      <div className={styles.detailCol}>
+        <div className={styles.detailColHead}>
+          <span className={styles.detailLabelCyan}>Your {selected.hasDraft ? 'corrected ' : ''}answer</span>
+          <button
+            type="button"
+            className={styles.resetBtn}
+            onClick={() => setCorrectedBody(selected.hasDraft ? selected.draftBody : '')}
+          >
+            <RotateCcw size={11} /> Reset
+          </button>
+        </div>
+        <label className={styles.visuallyHidden} htmlFor="comic-corrected">Your corrected answer</label>
+        <textarea
+          id="comic-corrected"
+          className={styles.correctedTextarea}
+          value={correctedBody}
+          onChange={(event) => setCorrectedBody(event.target.value)}
+        />
+        <div className={styles.charCount}>{correctedBody.length} characters</div>
+      </div>
+    </div>
+  );
+}
+
+// Default view: the AI draft (or the "no draft" explanation) shown read-only before any action.
+function DraftView({ selected }: { selected: ComicReviewItem }) {
+  return (
+    <div>
+      <div className={styles.detailColHead}>
+        <span className={styles.detailLabel}>{selected.hasDraft ? 'AI Assistant draft' : 'No AI draft'}</span>
+        <span className={styles.notYetSentTag}>
+          <Sparkles size={9} /> Not yet sent
+        </span>
+      </div>
+      <div className={styles.draftCard}>
+        {selected.hasDraft
+          ? selected.draftBody
+          : selected.safetyCategory
+            ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.'
+            : 'No AI draft yet — it may still be generating, or drafting was unavailable. Use Generate draft to try again, or Edit & approve to write the answer.'}
+      </div>
+    </div>
+  );
+}
+
+// Source + confidence (real fields only — no fabricated sources).
+function SourcePanel({ selected, accent }: { selected: ComicReviewItem; accent: string }) {
+  return (
+    <div className={styles.detailCol}>
+      <div className={styles.detailLabel}>Source</div>
+      <div className={styles.provenanceList}>
+        {selected.hasDraft ? (
+          <div className={styles.provenanceRow}>
+            <FileText size={13} color={accent} /> Drafted by: {selected.engine}
+          </div>
+        ) : null}
+        <div className={styles.provenanceRow}>
+          <FileText size={13} color={accent} /> Intent: {selected.intent ?? 'not classified'}
+        </div>
+        {selected.safetyCategory ? (
+          <div className={styles.provenanceRow}>
+            <AlertTriangle size={13} color="#F59E0B" /> Safety: {selected.safetyCategory.replace(/_/g, ' ')} (human-first)
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ConfidencePanel({ selected }: { selected: ComicReviewItem }) {
+  const band = confidenceBand(selected.nluConfidence);
+  return (
+    <div className={styles.confCol}>
+      <div className={styles.detailLabel}>Confidence</div>
+      <div className={styles.confCard}>
+        <div className={styles.confCardTop}>
+          <span className={`${styles.confLabel} ${band.className}`}>{band.label}</span>
+          {band.pct !== null ? (
+            <span className={`${styles.confPct} ${band.className}`}>{band.pct}%</span>
+          ) : null}
+        </div>
+        {band.pct !== null ? (
+          <div className={styles.confTrack}>
+            <div
+              className={`${styles.confFill} ${band.className}`}
+              style={{ width: `${band.pct}%` }}
+            />
+          </div>
+        ) : (
+          <div className={styles.confHint}>
+            <AlertTriangle size={13} /> No confidence score yet — every draft is held for human review.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Applicable plugins — shown in both the default (approve) view and the Edit view.
+// The chosen plugins are sent on approve/correct and render as tappable links under
+// the published answer.
+function ApplicablePlugins({
+  pluginOptions,
+  selectedPluginSlugs,
+  togglePluginSlug,
+}: {
+  pluginOptions: PluginOption[];
+  selectedPluginSlugs: string[];
+  togglePluginSlug: (slug: string) => void;
+}) {
+  return (
+    <div>
+      <div className={styles.detailLabel}>Applicable plugins</div>
+      {pluginOptions.length > 0 ? (
+        <>
+          <div className={styles.pluginPicker} role="group" aria-label="Applicable plugins">
+            {pluginOptions.map((plugin) => {
+              const active = selectedPluginSlugs.includes(plugin.slug);
+              return (
+                <button
+                  key={plugin.slug}
+                  type="button"
+                  className={active ? `${styles.pluginChip} ${styles.pluginChipActive}` : styles.pluginChip}
+                  aria-pressed={active}
+                  onClick={() => togglePluginSlug(plugin.slug)}
+                >
+                  {plugin.name}
+                </button>
+              );
+            })}
+          </div>
+          <div className={styles.pluginPickerHint}>
+            Pick the plugins this answer points to (up to 5). They show as tappable links beneath the answer.
+          </div>
+        </>
+      ) : (
+        <div className={styles.pluginPickerHint}>Plugin list unavailable right now.</div>
+      )}
+    </div>
+  );
+}
+
+function DetailActions({
+  editing,
+  selected,
+  resolving,
+  regenerating,
+  correctedBody,
+  onResolve,
+  onRegenerate,
+  onEdit,
+}: {
+  editing: boolean;
+  selected: ComicReviewItem;
+  resolving: boolean;
+  regenerating: boolean;
+  correctedBody: string;
+  onResolve: (resolution: Resolution) => void;
+  onRegenerate: () => void;
+  onEdit: () => void;
+}) {
+  if (editing) {
+    return (
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={styles.approveBtn}
+          disabled={resolving || correctedBody.trim().length === 0}
+          onClick={() => onResolve('correct')}
+        >
+          <Check size={16} /> Approve corrected answer
+        </button>
+        <button type="button" className={styles.rejectBtn} disabled={resolving} onClick={() => onResolve('reject')}>
+          <X size={15} /> Reject
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className={styles.actions}>
+      {selected.hasDraft ? (
+        <button type="button" className={styles.approveBtn} disabled={resolving} onClick={() => onResolve('approve')}>
+          <Check size={16} /> Approve &amp; send
+        </button>
+      ) : null}
+      <button type="button" className={styles.editBtn} disabled={resolving || regenerating} onClick={onRegenerate}>
+        <RotateCcw size={15} />{' '}
+        {regenerateLabel(regenerating, selected.hasDraft)}
+      </button>
+      <button type="button" className={styles.editBtn} disabled={resolving} onClick={onEdit}>
+        <Pencil size={15} /> Edit &amp; approve
+      </button>
+      <button type="button" className={styles.rejectBtn} disabled={resolving} onClick={() => onResolve('reject')}>
+        <X size={15} /> Reject
+      </button>
+    </div>
+  );
+}
+
+type ReviewDetailProps = {
+  selected: ComicReviewItem;
+  editing: boolean;
+  correctedBody: string;
+  setCorrectedBody: (value: string) => void;
+  pluginOptions: PluginOption[];
+  selectedPluginSlugs: string[];
+  togglePluginSlug: (slug: string) => void;
+  accent: string;
+  resolving: boolean;
+  regenerating: boolean;
+  regenNote: string | null;
+  onMobileBack: () => void;
+  onResolve: (resolution: Resolution) => void;
+  onRegenerate: () => void;
+  onEdit: () => void;
+};
+
+function ReviewDetail(props: ReviewDetailProps) {
+  const { selected, editing, correctedBody, setCorrectedBody, accent, regenNote } = props;
+  return (
+    <div className={styles.detail}>
+      {/* Mobile-only: return to the queue list (the sidebar is hidden at phone width). */}
+      <button type="button" className={styles.mobileQueueBack} onClick={props.onMobileBack}>
+        <ArrowLeft size={14} /> Back to queue
+      </button>
+
+      {/* Asker meta */}
+      <DetailMeta selected={selected} />
+
+      {/* Question */}
+      <div>
+        <div className={styles.detailLabel}>Survivor&apos;s question</div>
+        <div className={styles.detailQuestion}>{selected.questionBody}</div>
+      </div>
+
+      {editing ? (
+        <EditView selected={selected} correctedBody={correctedBody} setCorrectedBody={setCorrectedBody} />
+      ) : (
+        <DraftView selected={selected} />
+      )}
+
+      <div className={styles.detailTwoCol}>
+        <SourcePanel selected={selected} accent={accent} />
+        <ConfidencePanel selected={selected} />
+      </div>
+
+      <ApplicablePlugins
+        pluginOptions={props.pluginOptions}
+        selectedPluginSlugs={props.selectedPluginSlugs}
+        togglePluginSlug={props.togglePluginSlug}
+      />
+
+      <DetailActions
+        editing={editing}
+        selected={selected}
+        resolving={props.resolving}
+        regenerating={props.regenerating}
+        correctedBody={correctedBody}
+        onResolve={props.onResolve}
+        onRegenerate={props.onRegenerate}
+        onEdit={props.onEdit}
+      />
+
+      {regenNote ? (
+        <div className={styles.confHint} role="status" style={{ marginTop: 10 }}>
+          <AlertTriangle size={13} /> {regenNote}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function RightRailGuidance({ accent }: { accent: string }) {
+  return (
+    <aside className={styles.rightRail}>
+      <div className={styles.guidanceCard}>
+        <div className={styles.guidanceHead}>
+          <ShieldCheck size={15} color={accent} />
+          <span>Reviewer guidance</span>
+        </div>
+        {REVIEWER_GUIDANCE.map((g) => (
+          <div key={g} className={styles.guidanceItem}>
+            <span className={styles.guidanceBullet}>·</span> {g}
+          </div>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+export function ComicReviewDashboard() {
+  const { theme } = useTheme();
+  const t = getComicTokens(theme);
+  const review = useComicReview();
+
+  if (review.loadState === 'loading') {
+    return <LoadingScreen />;
+  }
+
+  const { selected } = review;
   return (
     <div className={styles.mobileFrame}>
       {/* Standard on-brand top bar. Self-gates on breakpoint: at phone width the left icon rail
@@ -333,366 +910,63 @@ export function ComicReviewDashboard() {
       />
       <div className={`${styles.dashboard} ${selected ? styles.dashboardDetail : styles.dashboardList}`}>
         {/* Icon rail */}
-        <aside className={styles.iconRail}>
-        <div className={styles.iconRailLogo} aria-hidden="true">
-          <ShieldCheck size={20} color={t.ACCENT} />
-        </div>
-        <button type="button" className={`${styles.iconRailBtn} ${styles.iconRailBtnActive}`} aria-label="Review queue" aria-current="page">
-          <Inbox size={20} />
-        </button>
-        {/* Shared bottom of every plugin rail: back to all apps, account and settings, account menu. */}
-        <PluginRailFooter />
-      </aside>
+        <IconRail accent={t.ACCENT} />
 
-      {/* Queue sidebar */}
-      <aside className={styles.queueSidebar}>
-        <div className={styles.queueHeader}>
-          <div className={styles.queueKicker}>Review Queue</div>
-          <div className={styles.queueSub}>AI Assistant drafts awaiting human review</div>
-          {trainingStats ? (
-            <div style={{ margin: '0 0 4px' }}>
-              <TrainingStatsBadge stats={trainingStats} />
-            </div>
-          ) : null}
-          {pendingCount > 0 ? (
-            <span className={styles.queuePendingBadge}>{pendingCount} pending</span>
-          ) : (
-            <span className={styles.queueClearBadge}>0 pending</span>
-          )}
-        </div>
+        {/* Queue sidebar */}
+        <QueueSidebar
+          items={review.items}
+          selectedId={review.selectedId}
+          onSelect={review.setSelectedId}
+          pendingCount={review.pendingCount}
+          trainingStats={review.trainingStats}
+        />
 
-        {pendingCount === 0 ? (
-          <div className={styles.queueEmpty}>
-            <div className={styles.queueEmptyIcon} aria-hidden="true">
-              <Inbox size={20} color="#22C55E" />
-            </div>
-            <div className={styles.queueEmptyTitle}>Queue is clear</div>
-            <div className={styles.queueEmptyText}>New AI Assistant drafts will appear here for review.</div>
-          </div>
-        ) : (
-          <div className={styles.queueList}>
-            {items.map((item) => {
-              const band = confidenceBand(item.nluConfidence);
-              const active = item.reviewId === selectedId;
-              return (
-                <button
-                  key={item.reviewId}
-                  type="button"
-                  className={active ? `${styles.queueItem} ${styles.queueItemActive}` : styles.queueItem}
-                  onClick={() => setSelectedId(item.reviewId)}
-                  aria-current={active ? 'true' : undefined}
-                >
-                  <span className={styles.queueItemQuestion}>{item.questionBody}</span>
-                  <span className={styles.queueItemFooter}>
-                    <span className={`${styles.queueItemConf} ${band.className}`}>
-                      <span className={styles.queueItemConfDot} /> {band.label}
-                    </span>
-                    {item.safetyCategory ? (
-                      <span className={styles.queueItemSafety}>
-                        <AlertTriangle size={10} /> {item.safetyCategory.replace(/_/g, ' ')}
-                      </span>
-                    ) : null}
-                    <span className={styles.queueItemTime}>{formatRelativeTime(item.createdAtIso)}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </aside>
+        {/* Main detail */}
+        <div className={styles.main}>
+          <MainHeaderBar
+            editing={review.editing}
+            selected={selected}
+            accent={t.ACCENT}
+            onExitEdit={() => review.setEditing(false)}
+          />
 
-      {/* Main detail */}
-      <div className={styles.main}>
-        <header className={styles.mainHeader}>
-          {editing && selected ? (
-            <button type="button" className={styles.backBtn} onClick={() => setEditing(false)}>
-              <ArrowLeft size={14} /> Queue
-            </button>
-          ) : (
-            <Sparkles size={18} color={t.ACCENT} />
-          )}
-          <div className={styles.mainHeaderText}>
-            <div className={styles.mainHeaderTitle}>
-              {editing && selected ? (
-                <>
-                  <Pencil size={15} color={t.ACCENT} /> Edit &amp; approve answer
-                </>
-              ) : (
-                'Review & Correction Dashboard'
-              )}
-            </div>
-            <div className={styles.mainHeaderSub}>Approve, correct, or reject AI Assistant answers before they reach survivors</div>
-          </div>
-          {editing && selected ? (
-            <span className={`${styles.headerConfPill} ${confidenceBand(selected.nluConfidence).className}`}>
-              <AlertTriangle size={12} /> {confidenceBand(selected.nluConfidence).label}
-            </span>
-          ) : null}
-          {/* Desktop-only: at phone width the shared mobile bar above already carries this pill. */}
-          <span className={styles.memberViewPill}>
-            <PluginUserShellButton href="/" accent={t.ACCENT} label="Commons" />
-          </span>
-        </header>
+          {review.error ? <div className={styles.errorBanner} role="status">{review.error}</div> : null}
 
-        {error ? <div className={styles.errorBanner} role="status">{error}</div> : null}
-
-        <div className={styles.mainBody}>
-          {!selected && pendingCount === 0 && loadState === 'ready' && !error ? (
-            // STATE: Authenticated + Empty (queue genuinely clear — no pending items).
-            <div className={styles.allCaughtUp}>
-              <div className={styles.allCaughtUpIcon} aria-hidden="true">
-                <Check size={42} color="#22C55E" />
-              </div>
-              <div className={styles.allCaughtUpTitle}>All caught up</div>
-              <div className={styles.allCaughtUpText}>
-                Every AI Assistant answer has been reviewed. Survivors only ever see answers a human has approved.
-              </div>
-            </div>
-          ) : !selected ? (
-            // Items remain (or the queue failed to load) but none is selected: prompt to pick one
-            // rather than implying the queue is clear.
-            <div className={styles.allCaughtUp}>
-              <div className={styles.allCaughtUpIcon} aria-hidden="true">
-                <Inbox size={42} color={t.ACCENT} />
-              </div>
-              <div className={styles.allCaughtUpTitle}>
-                {error ? 'Queue unavailable' : 'Select an answer to review'}
-              </div>
-              <div className={styles.allCaughtUpText}>
-                {error
-                  ? 'The review queue could not be loaded. Retry in a moment.'
-                  : 'Choose an item from the queue to approve, correct, or reject the AI Assistant draft.'}
-              </div>
-            </div>
-          ) : (
-            <div className={styles.detail}>
-              {/* Mobile-only: return to the queue list (the sidebar is hidden at phone width). */}
-              <button
-                type="button"
-                className={styles.mobileQueueBack}
-                onClick={() => {
-                  setEditing(false);
-                  setSelectedId(null);
+          <div className={styles.mainBody}>
+            {!selected ? (
+              <EmptyDetailState
+                pendingCount={review.pendingCount}
+                loadState={review.loadState}
+                error={review.error}
+                accent={t.ACCENT}
+              />
+            ) : (
+              <ReviewDetail
+                selected={selected}
+                editing={review.editing}
+                correctedBody={review.correctedBody}
+                setCorrectedBody={review.setCorrectedBody}
+                pluginOptions={review.pluginOptions}
+                selectedPluginSlugs={review.selectedPluginSlugs}
+                togglePluginSlug={review.togglePluginSlug}
+                accent={t.ACCENT}
+                resolving={review.resolving}
+                regenerating={review.regenerating}
+                regenNote={review.regenNote}
+                onMobileBack={() => {
+                  review.setEditing(false);
+                  review.setSelectedId(null);
                 }}
-              >
-                <ArrowLeft size={14} /> Back to queue
-              </button>
-
-              {/* Asker meta */}
-              <div className={styles.detailMeta}>
-                <span className={styles.detailChannel}>@comic</span>
-                <span>Asked by {selected.askedByUsername ? `@${selected.askedByUsername}` : selected.askedByUserId}</span>
-                <span className={styles.detailTime}>{formatRelativeTime(selected.createdAtIso)}</span>
-              </div>
-
-              {/* Question */}
-              <div>
-                <div className={styles.detailLabel}>Survivor&apos;s question</div>
-                <div className={styles.detailQuestion}>{selected.questionBody}</div>
-              </div>
-
-              {editing ? (
-                <div className={styles.detailTwoCol}>
-                  {/* Original AI draft (read-only) — only when a real AI draft exists. With no draft
-                      (drafting unavailable, or safety-held), there is nothing to show beside the editor. */}
-                  {selected.hasDraft ? (
-                    <div className={styles.detailCol}>
-                      <div className={styles.detailColHead}>
-                        <span className={styles.detailLabel}>Original AI draft</span>
-                        <span className={styles.needsCorrectionTag}>Needs correction</span>
-                      </div>
-                      <div className={styles.draftReadonly}>{selected.draftBody}</div>
-                    </div>
-                  ) : null}
-
-                  {/* Corrected text (editable) */}
-                  <div className={styles.detailCol}>
-                    <div className={styles.detailColHead}>
-                      <span className={styles.detailLabelCyan}>Your {selected.hasDraft ? 'corrected ' : ''}answer</span>
-                      <button
-                        type="button"
-                        className={styles.resetBtn}
-                        onClick={() => setCorrectedBody(selected.hasDraft ? selected.draftBody : '')}
-                      >
-                        <RotateCcw size={11} /> Reset
-                      </button>
-                    </div>
-                    <label className={styles.visuallyHidden} htmlFor="comic-corrected">Your corrected answer</label>
-                    <textarea
-                      id="comic-corrected"
-                      className={styles.correctedTextarea}
-                      value={correctedBody}
-                      onChange={(event) => setCorrectedBody(event.target.value)}
-                    />
-                    <div className={styles.charCount}>{correctedBody.length} characters</div>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <div className={styles.detailColHead}>
-                    <span className={styles.detailLabel}>{selected.hasDraft ? 'AI Assistant draft' : 'No AI draft'}</span>
-                    <span className={styles.notYetSentTag}>
-                      <Sparkles size={9} /> Not yet sent
-                    </span>
-                  </div>
-                  <div className={styles.draftCard}>
-                    {selected.hasDraft
-                      ? selected.draftBody
-                      : selected.safetyCategory
-                        ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.'
-                        : 'No AI draft yet — it may still be generating, or drafting was unavailable. Use Generate draft to try again, or Edit & approve to write the answer.'}
-                  </div>
-                </div>
-              )}
-
-              {/* Source + confidence (real fields only — no fabricated sources). */}
-              <div className={styles.detailTwoCol}>
-                <div className={styles.detailCol}>
-                  <div className={styles.detailLabel}>Source</div>
-                  <div className={styles.provenanceList}>
-                    {selected.hasDraft ? (
-                      <div className={styles.provenanceRow}>
-                        <FileText size={13} color={t.ACCENT} /> Drafted by: {selected.engine}
-                      </div>
-                    ) : null}
-                    <div className={styles.provenanceRow}>
-                      <FileText size={13} color={t.ACCENT} /> Intent: {selected.intent ?? 'not classified'}
-                    </div>
-                    {selected.safetyCategory ? (
-                      <div className={styles.provenanceRow}>
-                        <AlertTriangle size={13} color="#F59E0B" /> Safety: {selected.safetyCategory.replace(/_/g, ' ')} (human-first)
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-                <div className={styles.confCol}>
-                  <div className={styles.detailLabel}>Confidence</div>
-                  <div className={styles.confCard}>
-                    <div className={styles.confCardTop}>
-                      <span className={`${styles.confLabel} ${confidenceBand(selected.nluConfidence).className}`}>
-                        {confidenceBand(selected.nluConfidence).label}
-                      </span>
-                      {confidenceBand(selected.nluConfidence).pct !== null ? (
-                        <span className={`${styles.confPct} ${confidenceBand(selected.nluConfidence).className}`}>
-                          {confidenceBand(selected.nluConfidence).pct}%
-                        </span>
-                      ) : null}
-                    </div>
-                    {confidenceBand(selected.nluConfidence).pct !== null ? (
-                      <div className={styles.confTrack}>
-                        <div
-                          className={`${styles.confFill} ${confidenceBand(selected.nluConfidence).className}`}
-                          style={{ width: `${confidenceBand(selected.nluConfidence).pct}%` }}
-                        />
-                      </div>
-                    ) : (
-                      <div className={styles.confHint}>
-                        <AlertTriangle size={13} /> No confidence score yet — every draft is held for human review.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Applicable plugins — shown in both the default (approve) view and the Edit view.
-                  The chosen plugins are sent on approve/correct and render as tappable links under
-                  the published answer. */}
-              <div>
-                <div className={styles.detailLabel}>Applicable plugins</div>
-                {pluginOptions.length > 0 ? (
-                  <>
-                    <div className={styles.pluginPicker} role="group" aria-label="Applicable plugins">
-                      {pluginOptions.map((plugin) => {
-                        const active = selectedPluginSlugs.includes(plugin.slug);
-                        return (
-                          <button
-                            key={plugin.slug}
-                            type="button"
-                            className={active ? `${styles.pluginChip} ${styles.pluginChipActive}` : styles.pluginChip}
-                            aria-pressed={active}
-                            onClick={() => togglePluginSlug(plugin.slug)}
-                          >
-                            {plugin.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className={styles.pluginPickerHint}>
-                      Pick the plugins this answer points to (up to 5). They show as tappable links beneath the answer.
-                    </div>
-                  </>
-                ) : (
-                  <div className={styles.pluginPickerHint}>Plugin list unavailable right now.</div>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className={styles.actions}>
-                {editing ? (
-                  <>
-                    <button
-                      type="button"
-                      className={styles.approveBtn}
-                      disabled={resolving || correctedBody.trim().length === 0}
-                      onClick={() => void resolveSelected('correct')}
-                    >
-                      <Check size={16} /> Approve corrected answer
-                    </button>
-                    <button type="button" className={styles.rejectBtn} disabled={resolving} onClick={() => void resolveSelected('reject')}>
-                      <X size={15} /> Reject
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {selected.hasDraft ? (
-                      <button type="button" className={styles.approveBtn} disabled={resolving} onClick={() => void resolveSelected('approve')}>
-                        <Check size={16} /> Approve &amp; send
-                      </button>
-                    ) : null}
-                    <button type="button" className={styles.editBtn} disabled={resolving || regenerating} onClick={() => void regenerateSelected()}>
-                      <RotateCcw size={15} />{' '}
-                      {regenerating
-                        ? selected.hasDraft
-                          ? 'Regenerating…'
-                          : 'Generating…'
-                        : selected.hasDraft
-                          ? 'Regenerate draft'
-                          : 'Generate draft'}
-                    </button>
-                    <button type="button" className={styles.editBtn} disabled={resolving} onClick={() => setEditing(true)}>
-                      <Pencil size={15} /> Edit &amp; approve
-                    </button>
-                    <button type="button" className={styles.rejectBtn} disabled={resolving} onClick={() => void resolveSelected('reject')}>
-                      <X size={15} /> Reject
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {regenNote ? (
-                <div className={styles.confHint} role="status" style={{ marginTop: 10 }}>
-                  <AlertTriangle size={13} /> {regenNote}
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Right rail — reviewer guidance */}
-      <aside className={styles.rightRail}>
-        <div className={styles.guidanceCard}>
-          <div className={styles.guidanceHead}>
-            <ShieldCheck size={15} color={t.ACCENT} />
-            <span>Reviewer guidance</span>
+                onResolve={review.resolveSelected}
+                onRegenerate={review.regenerateSelected}
+                onEdit={() => review.setEditing(true)}
+              />
+            )}
           </div>
-          {REVIEWER_GUIDANCE.map((g) => (
-            <div key={g} className={styles.guidanceItem}>
-              <span className={styles.guidanceBullet}>·</span> {g}
-            </div>
-          ))}
         </div>
-      </aside>
+
+        {/* Right rail — reviewer guidance */}
+        <RightRailGuidance accent={t.ACCENT} />
       </div>
     </div>
   );

@@ -4,6 +4,129 @@ import { useState } from 'react';
 import { ExternalLink, Send, ShieldCheck } from 'lucide-react';
 import type { UnlockReviewStatus } from '../../lib/unlock/types';
 
+// The calm "under review" note shown once a submission is in the queue. The member keeps Commons
+// access while a human reviews.
+function UnlockPendingNote() {
+  return (
+    <p style={{ fontSize: 13, color: 'var(--ctf-text-secondary)', lineHeight: 1.6, margin: 0 }}>
+      Thanks — your Quora profile is submitted and a human is reviewing it. You have Commons access
+      while you wait.
+    </p>
+  );
+}
+
+type UnlockSubmitFormProps = {
+  url: string;
+  submitting: boolean;
+  error: string | null;
+  wasRejected: boolean;
+  onUrlChange: (value: string) => void;
+  onSubmit: () => void;
+};
+
+// The inline verification form: prompt copy, the Quora profile URL input, the submit button, any
+// error, and the universal help note for a member who can't find their profile URL.
+function UnlockSubmitForm({ url, submitting, error, wasRejected, onUrlChange, onSubmit }: UnlockSubmitFormProps) {
+  const disabled = url.trim().length === 0 || submitting;
+  const inputBorderColor = url ? 'rgba(192,132,252,0.5)' : 'rgba(255,255,255,0.12)';
+  const buttonBackground = disabled ? 'rgba(255,255,255,0.10)' : '#C084FC';
+  const buttonColor = disabled ? 'var(--ctf-text-secondary)' : '#1A1030';
+  const buttonCursor = disabled ? 'default' : 'pointer';
+  return (
+    <>
+      <p style={{ fontSize: 13, color: 'var(--ctf-text-secondary)', lineHeight: 1.6, margin: '0 0 10px' }}>
+        {wasRejected
+          ? 'Your last submission could not be verified. Re-submit your Quora profile URL below — a human reviews every one.'
+          : 'Submit your Quora profile URL so we can confirm you are a real person. A human reviews every submission.'}
+      </p>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flex: 1,
+            minWidth: 240,
+            padding: '10px 12px',
+            background: 'rgba(0,0,0,0.25)',
+            border: `1px solid ${inputBorderColor}`,
+            borderRadius: 10,
+          }}
+        >
+          {/* stroke defaults to currentColor, so the CSS color var themes the icon */}
+          <ExternalLink size={14} style={{ color: 'var(--ctf-text-secondary)', flexShrink: 0 }} />
+          <input
+            value={url}
+            onChange={(e) => onUrlChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onSubmit();
+            }}
+            placeholder="https://quora.com/profile/your-name"
+            aria-label="Your Quora profile URL"
+            style={{
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              fontSize: 14,
+              color: 'var(--ctf-text)',
+              fontFamily: 'inherit',
+            }}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={disabled}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 18px',
+            borderRadius: 10,
+            border: 'none',
+            background: buttonBackground,
+            color: buttonColor,
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: buttonCursor,
+          }}
+        >
+          <Send size={14} /> {submitting ? 'Submitting…' : 'Submit for verification'}
+        </button>
+      </div>
+      {error ? <div style={{ fontSize: 12, color: '#F87171', marginTop: 8 }}>{error}</div> : null}
+
+      {/* Prominent, universal help for a member who can't find their Quora profile URL. */}
+      <div
+        role="note"
+        style={{
+          marginTop: 12,
+          padding: '10px 12px',
+          borderRadius: 10,
+          background: 'rgba(192,132,252,0.12)',
+          border: '1.5px solid rgba(192,132,252,0.45)',
+          fontSize: 12.5,
+          color: 'var(--ctf-text-secondary)',
+          lineHeight: 1.55,
+        }}
+      >
+        <strong style={{ color: 'var(--ctf-text)' }}>Can’t find your Quora profile URL?</strong> Go to{' '}
+        <a
+          href="https://skillseconomy.quora.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: '#C084FC', fontWeight: 700 }}
+        >
+          skillseconomy.quora.com
+        </a>{' '}
+        and comment on any post asking for help — I&apos;ll reply with your profile URL.
+      </div>
+    </>
+  );
+}
+
 // Shown at the top of the Commons for a signed-in member who has not yet completed Quora verification
 // (including members in the early-Commons A/B treatment bucket, who now land on the Commons instead of
 // the Unlock screen). Without this, a treatment member sees the chat with no indication they still need
@@ -71,102 +194,16 @@ export function UnlockVerifyBanner({
       </div>
 
       {isPending ? (
-        <p style={{ fontSize: 13, color: 'var(--ctf-text-secondary)', lineHeight: 1.6, margin: 0 }}>
-          Thanks — your Quora profile is submitted and a human is reviewing it. You have Commons access
-          while you wait.
-        </p>
+        <UnlockPendingNote />
       ) : (
-        <>
-          <p style={{ fontSize: 13, color: 'var(--ctf-text-secondary)', lineHeight: 1.6, margin: '0 0 10px' }}>
-            {wasRejected
-              ? 'Your last submission could not be verified. Re-submit your Quora profile URL below — a human reviews every one.'
-              : 'Submit your Quora profile URL so we can confirm you are a real person. A human reviews every submission.'}
-          </p>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                flex: 1,
-                minWidth: 240,
-                padding: '10px 12px',
-                background: 'rgba(0,0,0,0.25)',
-                border: `1px solid ${url ? 'rgba(192,132,252,0.5)' : 'rgba(255,255,255,0.12)'}`,
-                borderRadius: 10,
-              }}
-            >
-              {/* stroke defaults to currentColor, so the CSS color var themes the icon */}
-              <ExternalLink size={14} style={{ color: 'var(--ctf-text-secondary)', flexShrink: 0 }} />
-              <input
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void submit();
-                }}
-                placeholder="https://quora.com/profile/your-name"
-                aria-label="Your Quora profile URL"
-                style={{
-                  flex: 1,
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: 14,
-                  color: 'var(--ctf-text)',
-                  fontFamily: 'inherit',
-                }}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => void submit()}
-              disabled={url.trim().length === 0 || submitting}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '10px 18px',
-                borderRadius: 10,
-                border: 'none',
-                background: url.trim().length === 0 || submitting ? 'rgba(255,255,255,0.10)' : '#C084FC',
-                color: url.trim().length === 0 || submitting ? 'var(--ctf-text-secondary)' : '#1A1030',
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: url.trim().length === 0 || submitting ? 'default' : 'pointer',
-              }}
-            >
-              <Send size={14} /> {submitting ? 'Submitting…' : 'Submit for verification'}
-            </button>
-          </div>
-          {error ? <div style={{ fontSize: 12, color: '#F87171', marginTop: 8 }}>{error}</div> : null}
-
-          {/* Prominent, universal help for a member who can't find their Quora profile URL. */}
-          <div
-            role="note"
-            style={{
-              marginTop: 12,
-              padding: '10px 12px',
-              borderRadius: 10,
-              background: 'rgba(192,132,252,0.12)',
-              border: '1.5px solid rgba(192,132,252,0.45)',
-              fontSize: 12.5,
-              color: 'var(--ctf-text-secondary)',
-              lineHeight: 1.55,
-            }}
-          >
-            <strong style={{ color: 'var(--ctf-text)' }}>Can’t find your Quora profile URL?</strong> Go to{' '}
-            <a
-              href="https://skillseconomy.quora.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: '#C084FC', fontWeight: 700 }}
-            >
-              skillseconomy.quora.com
-            </a>{' '}
-            and comment on any post asking for help — I&apos;ll reply with your profile URL.
-          </div>
-        </>
+        <UnlockSubmitForm
+          url={url}
+          submitting={submitting}
+          error={error}
+          wasRejected={wasRejected}
+          onUrlChange={setUrl}
+          onSubmit={() => void submit()}
+        />
       )}
     </section>
   );

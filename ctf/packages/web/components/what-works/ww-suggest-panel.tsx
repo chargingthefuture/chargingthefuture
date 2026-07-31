@@ -34,61 +34,64 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
-export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: Props) {
-  const { theme } = useTheme();
-  const t = getWhatWorksTokens(theme);
-  const inputStyle = makeInputStyle(t);
-  const [problemId, setProblemId] = useState('');
-  const [name, setName] = useState('');
-  const [link, setLink] = useState('');
-  const [why, setWhy] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [added, setAdded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const ready = problemId.trim() && name.trim() && link.trim();
-
-  async function submit(): Promise<void> {
-    if (!ready || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    const failure = await onSubmit({ problemId, name: name.trim(), purchaseUrl: link.trim(), note: why.trim() });
-    setSubmitting(false);
-    if (failure) {
-      setError(failure);
-      return;
-    }
-    setProblemId('');
-    setName('');
-    setLink('');
-    setWhy('');
-    setAdded(true);
-  }
-
-  if (added) {
-    return (
-      <div style={{ width: '100%', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Inter',system-ui", color: t.TITLE, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        <div style={{ maxWidth: 460, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, padding: '0 32px' }}>
-          <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CheckCircle size={34} color={t.ACCENT} />
-          </div>
-          <div style={{ fontSize: 24, fontWeight: 800 }}>Suggestion submitted 🎉</div>
-          <div style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.7 }}>A reviewer will check it before it joins the shared list. Each tool you add helps the next survivor find what works faster.</div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => setAdded(false)} style={{ padding: '12px 24px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#0A0E06', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-              <Plus size={15} /> Add another
+// Success confirmation shown after a suggestion is submitted for review.
+function SuggestSuccess({ t, onBack, onAddAnother }: { t: WhatWorksTokens; onBack?: () => void; onAddAnother: () => void }) {
+  return (
+    <div style={{ width: '100%', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Inter',system-ui", color: t.TITLE, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <div style={{ maxWidth: 460, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, padding: '0 32px' }}>
+        <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <CheckCircle size={34} color={t.ACCENT} />
+        </div>
+        <div style={{ fontSize: 24, fontWeight: 800 }}>Suggestion submitted 🎉</div>
+        <div style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.7 }}>A reviewer will check it before it joins the shared list. Each tool you add helps the next survivor find what works faster.</div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onAddAnother} style={{ padding: '12px 24px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#0A0E06', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <Plus size={15} /> Add another
+          </button>
+          {onBack ? (
+            <button onClick={onBack} style={{ padding: '12px 24px', borderRadius: 10, background: t.BORDER, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              Back to list
             </button>
-            {onBack ? (
-              <button onClick={onBack} style={{ padding: '12px 24px', borderRadius: 10, background: t.BORDER, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-                Back to list
-              </button>
-            ) : null}
-          </div>
+          ) : null}
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
+// Submit button — the shared "active" look is derived once from ready + submitting.
+function SuggestSubmitButton({ t, ready, submitting }: { t: WhatWorksTokens; ready: boolean; submitting: boolean }) {
+  const active = ready && !submitting;
+  return (
+    <button type="submit" disabled={!ready || submitting}
+      style={{ padding: '14px', borderRadius: 12, background: active ? t.ACCENT : t.BORDER, border: 'none', color: active ? '#0A0E06' : t.MUTED, fontSize: 15, fontWeight: 700, cursor: active ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+      <Send size={16} /> {submitting ? 'Submitting…' : 'Submit for review'}
+    </button>
+  );
+}
+
+type SuggestFormProps = {
+  t: WhatWorksTokens;
+  inputStyle: CSSProperties;
+  problems: WhatWorksProblemOption[];
+  isFirst: boolean;
+  error: string | null;
+  problemId: string;
+  setProblemId: (value: string) => void;
+  name: string;
+  setName: (value: string) => void;
+  link: string;
+  setLink: (value: string) => void;
+  why: string;
+  setWhy: (value: string) => void;
+  ready: boolean;
+  submitting: boolean;
+  onSubmit: () => void;
+  onBack?: () => void;
+};
+
+// The suggest layout: header bar, the entry form, and the guidance panel.
+function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setProblemId, name, setName, link, setLink, why, setWhy, ready, submitting, onSubmit, onBack }: SuggestFormProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Inter',system-ui", color: t.TITLE, overflow: 'hidden' }}>
       <div style={{ height: 56, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, background: t.HEADER, flexShrink: 0 }}>
@@ -124,7 +127,7 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
           ) : null}
 
           <form
-            onSubmit={(event) => { event.preventDefault(); void submit(); }}
+            onSubmit={(event) => { event.preventDefault(); onSubmit(); }}
             style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
           >
             <Field label="Problem it solves" required>
@@ -156,15 +159,70 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
               <textarea value={why} onChange={(event) => setWhy(event.target.value)} rows={3} placeholder="A short note from your experience — what it actually solved." style={{ ...inputStyle, padding: '11px 14px', background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 12, boxSizing: 'border-box', width: '100%', resize: 'none', lineHeight: 1.5 }} />
             </Field>
 
-            <button type="submit" disabled={!ready || submitting}
-              style={{ padding: '14px', borderRadius: 12, background: ready && !submitting ? t.ACCENT : t.BORDER, border: 'none', color: ready && !submitting ? '#0A0E06' : t.MUTED, fontSize: 15, fontWeight: 700, cursor: ready && !submitting ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              <Send size={16} /> {submitting ? 'Submitting…' : 'Submit for review'}
-            </button>
+            <SuggestSubmitButton t={t} ready={ready} submitting={submitting} />
           </form>
         </div>
 
         <WhatWorksSuggestGuidance />
       </div>
     </div>
+  );
+}
+
+export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: Props) {
+  const { theme } = useTheme();
+  const t = getWhatWorksTokens(theme);
+  const inputStyle = makeInputStyle(t);
+  const [problemId, setProblemId] = useState('');
+  const [name, setName] = useState('');
+  const [link, setLink] = useState('');
+  const [why, setWhy] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const ready = Boolean(problemId.trim() && name.trim() && link.trim());
+
+  async function submit(): Promise<void> {
+    if (!ready || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    const failure = await onSubmit({ problemId, name: name.trim(), purchaseUrl: link.trim(), note: why.trim() });
+    setSubmitting(false);
+    if (failure) {
+      setError(failure);
+      return;
+    }
+    setProblemId('');
+    setName('');
+    setLink('');
+    setWhy('');
+    setAdded(true);
+  }
+
+  if (added) {
+    return <SuggestSuccess t={t} onBack={onBack} onAddAnother={() => setAdded(false)} />;
+  }
+
+  return (
+    <SuggestForm
+      t={t}
+      inputStyle={inputStyle}
+      problems={problems}
+      isFirst={isFirst}
+      error={error}
+      problemId={problemId}
+      setProblemId={setProblemId}
+      name={name}
+      setName={setName}
+      link={link}
+      setLink={setLink}
+      why={why}
+      setWhy={setWhy}
+      ready={ready}
+      submitting={submitting}
+      onSubmit={() => void submit()}
+      onBack={onBack}
+    />
   );
 }

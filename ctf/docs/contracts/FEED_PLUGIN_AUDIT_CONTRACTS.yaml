@@ -489,7 +489,7 @@ auditEvents:
       - feed_community_reply_metadata
     targetContext:
       workspaceId: workspace_identifier
-      targetType: feed_community_post_or_reply
+      targetType: feed_community_post_reply_question_or_answer
       targetId: content_identifier
       previousStatus: moderation_status
       newStatus: moderation_status
@@ -519,7 +519,7 @@ auditEvents:
       - feed_community_reply_metadata
     targetContext:
       workspaceId: workspace_identifier
-      targetType: feed_community_post_or_reply
+      targetType: feed_community_post_reply_question_or_answer
       targetId: content_identifier
       previousStatus: moderation_status
       newStatus: moderation_status

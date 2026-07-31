@@ -59,6 +59,27 @@ type UnlockDashboardRow = {
   locked_support_only_count: string;
 };
 
+// Coerce the dashboard count columns (Postgres returns them as text) into numbers, defaulting any
+// missing column to 0 so an empty table still yields a well-formed snapshot. Uses destructuring
+// defaults (which apply when a value is undefined) so the caller stays flat.
+function mapUnlockDashboardSnapshot(row: Partial<UnlockDashboardRow> = {}): UnlockDashboardSnapshot {
+  const {
+    pending_count = '0',
+    approved_count = '0',
+    rejected_count = '0',
+    spam_count = '0',
+    locked_support_only_count = '0',
+  } = row;
+
+  return {
+    pendingCount: Number(pending_count),
+    approvedCount: Number(approved_count),
+    rejectedCount: Number(rejected_count),
+    spamCount: Number(spam_count),
+    lockedSupportOnlyCount: Number(locked_support_only_count),
+  };
+}
+
 function mapUnlockSubmission(row: UnlockSubmissionRow): UnlockSubmission {
   return {
     id: row.id,
@@ -603,15 +624,7 @@ export async function getUnlockDashboardSnapshot(): Promise<UnlockDashboardSnaps
      FROM unlock_verification_submissions`,
   );
 
-  const row = result.rows[0];
-
-  return {
-    pendingCount: Number(row?.pending_count ?? 0),
-    approvedCount: Number(row?.approved_count ?? 0),
-    rejectedCount: Number(row?.rejected_count ?? 0),
-    spamCount: Number(row?.spam_count ?? 0),
-    lockedSupportOnlyCount: Number(row?.locked_support_only_count ?? 0),
-  };
+  return mapUnlockDashboardSnapshot(result.rows[0]);
 }
 
 // "Early Commons access" A/B experiment readout. Buckets each member by the experimentBucket recorded

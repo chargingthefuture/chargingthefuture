@@ -407,6 +407,116 @@ function ChymeAudioRoomLive({
   );
 }
 
+// The circular avatar with its mic/headphones badge and the raised-hand marker. `audioActive` is
+// `!isGuest && publishingAudio` computed by the tile — a guest never counts as publishing, so inside
+// the member (`!isGuest`) branches `audioActive` is exactly `publishingAudio`.
+function ChymeSpeakerAvatar({
+  name,
+  speaking,
+  isSelf,
+  isGuest,
+  audioActive,
+  handRaised,
+}: {
+  name: string;
+  speaking: boolean;
+  isSelf: boolean;
+  isGuest: boolean;
+  audioActive: boolean;
+  handRaised: boolean;
+}) {
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
+  return (
+    <div style={{ position: 'relative' }}>
+      <div
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: '50%',
+          background: `${t.ACCENT}20`,
+          border: `3px solid ${speaking ? t.ACCENT : isSelf ? `${t.ACCENT}80` : 'transparent'}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: speaking ? `0 0 20px ${t.ACCENT}80` : isSelf ? `0 0 12px ${t.ACCENT}40` : 'none',
+          transition: 'box-shadow 0.15s, border-color 0.15s',
+        }}
+      >
+        <span style={{ fontSize: 20, fontWeight: 800, color: t.ACCENT }}>{initials(name)}</span>
+      </div>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 2,
+          right: 2,
+          width: 22,
+          height: 22,
+          borderRadius: '50%',
+          background: audioActive ? t.ACCENT : 'rgba(120,120,120,0.9)',
+          border: '2px solid #021006',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {isGuest ? (
+          <Headphones size={10} style={{ color: '#fff', opacity: 0.85 }} />
+        ) : (
+          <Mic size={10} style={{ color: '#fff', opacity: audioActive ? 1 : 0.5 }} />
+        )}
+      </div>
+      {handRaised && (
+        <div style={{ position: 'absolute', top: -6, right: -6, fontSize: 16 }} aria-label="hand raised">
+          ✋
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The pill under the name: "listening" for a guest, otherwise "speaking"/"muted" by audio state.
+function ChymeSpeakerStatusBadge({ isGuest, audioActive }: { isGuest: boolean; audioActive: boolean }) {
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
+  return (
+    <span
+      style={{
+        fontSize: 10,
+        background: audioActive ? `${t.ACCENT}20` : 'rgba(255,255,255,0.05)',
+        color: audioActive ? t.ACCENT : t.MUTED,
+        border: `1px solid ${audioActive ? `${t.ACCENT}35` : 'transparent'}`,
+        padding: '1px 8px',
+        borderRadius: 20,
+      }}
+    >
+      {isGuest ? 'listening' : audioActive ? 'speaking' : 'muted'}
+    </span>
+  );
+}
+
+// Tip + Back Channel actions shown under another member's tile (never the local member or a guest).
+function ChymeSpeakerActions({
+  clerkUserId,
+  name,
+  backChannel,
+  backChannelEnabled,
+}: {
+  clerkUserId: string;
+  name: string;
+  backChannel: BackChannelController;
+  backChannelEnabled: boolean;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
+      <ChymeTipButton recipientUserId={clerkUserId} recipientName={name} />
+      {backChannelEnabled ? (
+        <ChymeBackChannelButton recipientUserId={clerkUserId} controller={backChannel} />
+      ) : null}
+    </div>
+  );
+}
+
 function ChymeSpeakerTile({
   participant,
   localHandRaised = false,
@@ -422,12 +532,14 @@ function ChymeSpeakerTile({
 }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
-  const isSelf = participant.isLocalParticipant;
+  const isSelf = Boolean(participant.isLocalParticipant);
   // Signed-out guests join as listen-only (their Stream id is minted as `chyme-guest-…`). They can
   // never publish, so a mic icon is misleading — show a headphones "listening" indicator instead.
   const isGuest = participant.userId.startsWith('chyme-guest-');
   const speaking = participant.isSpeaking;
-  const publishingAudio = isPublishingAudio(participant);
+  // A guest never publishes, so an "active audio" member is one who is not a guest and is publishing.
+  // This single flag drives the mic badge, the status pill, and the badge opacity.
+  const audioActive = !isGuest && isPublishingAudio(participant);
   // The local member's raised hand is driven by their own toggle so it is reliable and instant.
   // Everyone else's comes from the server-persisted set (keyed by clerk user id): Stream ids are
   // `chyme-<clerkUserId>`, so strip the prefix and look it up. Guests never show a hand.
@@ -436,73 +548,27 @@ function ChymeSpeakerTile({
     ? localHandRaised
     : !isGuest && raisedHandUserIds.has(clerkUserId);
   const name = participant.name || participant.userId;
+  const showActions = !isSelf && !isGuest;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: 100 }}>
-      <div style={{ position: 'relative' }}>
-        <div
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: '50%',
-            background: `${t.ACCENT}20`,
-            border: `3px solid ${speaking ? t.ACCENT : isSelf ? `${t.ACCENT}80` : 'transparent'}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: speaking ? `0 0 20px ${t.ACCENT}80` : isSelf ? `0 0 12px ${t.ACCENT}40` : 'none',
-            transition: 'box-shadow 0.15s, border-color 0.15s',
-          }}
-        >
-          <span style={{ fontSize: 20, fontWeight: 800, color: t.ACCENT }}>{initials(name)}</span>
-        </div>
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 2,
-            right: 2,
-            width: 22,
-            height: 22,
-            borderRadius: '50%',
-            background: !isGuest && publishingAudio ? t.ACCENT : 'rgba(120,120,120,0.9)',
-            border: '2px solid #021006',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {isGuest ? (
-            <Headphones size={10} style={{ color: '#fff', opacity: 0.85 }} />
-          ) : (
-            <Mic size={10} style={{ color: '#fff', opacity: publishingAudio ? 1 : 0.5 }} />
-          )}
-        </div>
-        {handRaised && (
-          <div style={{ position: 'absolute', top: -6, right: -6, fontSize: 16 }} aria-label="hand raised">
-            ✋
-          </div>
-        )}
-      </div>
+      <ChymeSpeakerAvatar
+        name={name}
+        speaking={speaking}
+        isSelf={isSelf}
+        isGuest={isGuest}
+        audioActive={audioActive}
+        handRaised={handRaised}
+      />
       <div style={{ fontSize: 12, fontWeight: 600, color: t.TEXT, textAlign: 'center' }}>{name}</div>
-      <span
-        style={{
-          fontSize: 10,
-          background: !isGuest && publishingAudio ? `${t.ACCENT}20` : 'rgba(255,255,255,0.05)',
-          color: !isGuest && publishingAudio ? t.ACCENT : t.MUTED,
-          border: `1px solid ${!isGuest && publishingAudio ? `${t.ACCENT}35` : 'transparent'}`,
-          padding: '1px 8px',
-          borderRadius: 20,
-        }}
-      >
-        {isGuest ? 'listening' : publishingAudio ? 'speaking' : 'muted'}
-      </span>
-      {!isSelf && !isGuest ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <ChymeTipButton recipientUserId={clerkUserId} recipientName={name} />
-          {backChannelEnabled ? (
-            <ChymeBackChannelButton recipientUserId={clerkUserId} controller={backChannel} />
-          ) : null}
-        </div>
+      <ChymeSpeakerStatusBadge isGuest={isGuest} audioActive={audioActive} />
+      {showActions ? (
+        <ChymeSpeakerActions
+          clerkUserId={clerkUserId}
+          name={name}
+          backChannel={backChannel}
+          backChannelEnabled={backChannelEnabled}
+        />
       ) : null}
     </div>
   );

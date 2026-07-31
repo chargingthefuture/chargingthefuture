@@ -196,6 +196,73 @@ function UrlForm({
   );
 }
 
+function pathCardStyle(t: ContributionsTokens, active: boolean, disabled: boolean): React.CSSProperties {
+  return {
+    background: active ? `${t.ACCENT}10` : t.SURFACE,
+    borderRadius: 10,
+    padding: 16,
+    border: `1px solid ${active ? t.ACCENT : t.BORDER_SOLID}`,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.55 : 1,
+  };
+}
+
+function PathCardHeader({ Icon, label, active, t }: { Icon: typeof Gift; label: string; active: boolean; t: ContributionsTokens }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+      <div style={{ width: 30, height: 30, borderRadius: 8, background: active ? `${t.ACCENT}20` : t.BORDER_SOLID, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon size={14} color={active ? t.ACCENT : t.MUTED} />
+      </div>
+      <span style={{ fontSize: 14, fontWeight: 600, color: active ? t.ACCENT : t.TITLE }}>{label}</span>
+    </div>
+  );
+}
+
+function PathCardChooser({ active, t }: { active: boolean; t: ContributionsTokens }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 12, fontSize: 11, fontWeight: 600, color: active ? t.ACCENT : t.MUTED }}>
+      {active ? 'Selected — form below' : 'Choose this'}
+      <ChevronDown size={12} style={{ transform: active ? 'rotate(180deg)' : 'none', transition: 'transform 120ms' }} />
+    </div>
+  );
+}
+
+function PathCard({
+  path,
+  active,
+  disabled,
+  t,
+  onToggle,
+}: {
+  path: PathDef;
+  active: boolean;
+  disabled: boolean;
+  t: ContributionsTokens;
+  onToggle: (key: ContributionPath, disabled: boolean) => void;
+}) {
+  const { key, Icon, label, sub, credits } = path;
+  return (
+    <div
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-disabled={disabled}
+      onClick={() => onToggle(key, disabled)}
+      onKeyDown={(e) => {
+        if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onToggle(key, disabled);
+        }
+      }}
+      style={pathCardStyle(t, active, disabled)}
+    >
+      <PathCardHeader Icon={Icon} label={label} active={active} t={t} />
+      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 6 }}>{disabled ? ALREADY_CREDITED_NOTE : sub}</div>
+      {!disabled && <div style={{ fontSize: 11, color: t.ACCENT, fontWeight: 500 }}>As a thank-you: {credits}</div>}
+      {!disabled && <PathCardChooser active={active} t={t} />}
+    </div>
+  );
+}
+
 /**
  * The three contribution-path cards plus the thank-you credits note and the active path's inline
  * form. The GitHub-star path is greyed out and non-interactive when the member has already been
@@ -234,47 +301,10 @@ export function ContributionPaths({
         Pick one of the three ways below. A short form opens right underneath so you can submit your gift card, Quora comment, or GitHub star.
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
-        {paths.map(({ key, Icon, label, sub, credits }) => {
-          const disabled = key === 'github_star' && githubStarAlreadyCredited;
-          const active = activePath === key;
-          return (
-            <div
-              key={key as string}
-              role="button"
-              tabIndex={disabled ? -1 : 0}
-              aria-disabled={disabled}
-              onClick={() => toggle(key, disabled)}
-              onKeyDown={(e) => {
-                if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
-                  e.preventDefault();
-                  toggle(key, disabled);
-                }
-              }}
-              style={{
-                background: active ? `${t.ACCENT}10` : t.SURFACE,
-                borderRadius: 10,
-                padding: 16,
-                border: `1px solid ${active ? t.ACCENT : t.BORDER_SOLID}`,
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.55 : 1,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 30, height: 30, borderRadius: 8, background: active ? `${t.ACCENT}20` : t.BORDER_SOLID, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={14} color={active ? t.ACCENT : t.MUTED} />
-                </div>
-                <span style={{ fontSize: 14, fontWeight: 600, color: active ? t.ACCENT : t.TITLE }}>{label}</span>
-              </div>
-              <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 6 }}>{disabled ? ALREADY_CREDITED_NOTE : sub}</div>
-              {!disabled && <div style={{ fontSize: 11, color: t.ACCENT, fontWeight: 500 }}>As a thank-you: {credits}</div>}
-              {!disabled && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 12, fontSize: 11, fontWeight: 600, color: active ? t.ACCENT : t.MUTED }}>
-                  {active ? 'Selected — form below' : 'Choose this'}
-                  <ChevronDown size={12} style={{ transform: active ? 'rotate(180deg)' : 'none', transition: 'transform 120ms' }} />
-                </div>
-              )}
-            </div>
-          );
+        {paths.map((path) => {
+          const disabled = path.key === 'github_star' && githubStarAlreadyCredited;
+          const active = activePath === path.key;
+          return <PathCard key={path.key as string} path={path} active={active} disabled={disabled} t={t} onToggle={toggle} />;
         })}
       </div>
 

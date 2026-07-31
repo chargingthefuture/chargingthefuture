@@ -18,6 +18,89 @@ import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 
+/** GET a list endpoint and return its `items`; [] when the request fails or has no items. */
+async function fetchItems<T>(url: string): Promise<T[]> {
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  const data = (await res.json()) as { items?: T[] };
+  return data.items ?? [];
+}
+
+function LighthouseTabContent({
+  tab,
+  visibleProperties,
+  properties,
+  currencyMap,
+  creditsCount,
+  saved,
+  matches,
+  selectedMatch,
+  chatLoading,
+  chatError,
+  chatCredentials,
+  username,
+  editPropertyId,
+  onToggleSave,
+  onSelectProperty,
+  onSelectMatch,
+  onEditHandled,
+}: {
+  tab: Tab;
+  visibleProperties: Property[];
+  properties: Property[];
+  currencyMap: CurrencyMap;
+  creditsCount: number;
+  saved: string[];
+  matches: Match[];
+  selectedMatch: Match | null;
+  chatLoading: boolean;
+  chatError: string | null;
+  chatCredentials: ChatCredentials | null;
+  username: string | null;
+  editPropertyId: string | null;
+  onToggleSave: (id: string) => void;
+  onSelectProperty: (property: Property) => void;
+  onSelectMatch: (match: Match | null) => void;
+  onEditHandled: () => void;
+}) {
+  return (
+    <>
+      {tab === "browse" && (
+        <LighthouseBrowse
+          properties={visibleProperties}
+          currencies={currencyMap}
+          totalCount={properties.length}
+          creditsCount={creditsCount}
+          saved={saved}
+          onToggleSave={onToggleSave}
+          onSelect={onSelectProperty}
+        />
+      )}
+      {tab === "matches" && (
+        <LighthouseMatches matches={matches} properties={properties} onSelectProperty={onSelectProperty} />
+      )}
+      {tab === "chat" && (
+        <LighthouseChat
+          matches={matches}
+          selectedMatch={selectedMatch}
+          onSelectMatch={onSelectMatch}
+          chatLoading={chatLoading}
+          chatError={chatError}
+          chatCredentials={chatCredentials}
+        />
+      )}
+      {tab === "profile" && <LighthouseSeekerProfile />}
+      {tab === "host" && (
+        <LighthouseHost
+          username={username}
+          editPropertyId={editPropertyId}
+          onEditHandled={onEditHandled}
+        />
+      )}
+    </>
+  );
+}
+
 export function LighthouseShell({ userId, username, isAdmin }: { userId: string; username: string | null; isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -46,11 +129,9 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       // Browse shows all active public listings to seekers, so it reads the public listings
       // endpoint — not the current user's own listings. The Host tab loads the user's own
       // listings itself (LighthouseHost fetches /api/lighthouse/my-properties).
-      const browseRes = await fetch("/api/lighthouse/properties");
-      setProperties(browseRes.ok ? (await browseRes.json()).items ?? [] : []);
+      setProperties(await fetchItems<Property>("/api/lighthouse/properties"));
 
-      const matchRes = await fetch("/api/lighthouse/matches");
-      setMatches(matchRes.ok ? (await matchRes.json()).items ?? [] : []);
+      setMatches(await fetchItems<Match>("/api/lighthouse/matches"));
 
       // Currency catalog, fetched once, so the card/detail can format rent in its own currency
       // (a fiat symbol, or the ServiceCredits label — never a "$" for ServiceCredits).
@@ -145,40 +226,25 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
   }
 
   const content = (
-    <>
-      {tab === "browse" && (
-        <LighthouseBrowse
-          properties={visibleProperties}
-          currencies={currencyMap}
-          totalCount={properties.length}
-          creditsCount={creditsCount}
-          saved={saved}
-          onToggleSave={toggleSave}
-          onSelect={setSelectedProperty}
-        />
-      )}
-      {tab === "matches" && (
-        <LighthouseMatches matches={matches} properties={properties} onSelectProperty={setSelectedProperty} />
-      )}
-      {tab === "chat" && (
-        <LighthouseChat
-          matches={matches}
-          selectedMatch={selectedMatch}
-          onSelectMatch={setSelectedMatch}
-          chatLoading={chatLoading}
-          chatError={chatError}
-          chatCredentials={chatCredentials}
-        />
-      )}
-      {tab === "profile" && <LighthouseSeekerProfile />}
-      {tab === "host" && (
-        <LighthouseHost
-          username={username}
-          editPropertyId={editPropertyId}
-          onEditHandled={() => setEditPropertyId(null)}
-        />
-      )}
-    </>
+    <LighthouseTabContent
+      tab={tab}
+      visibleProperties={visibleProperties}
+      properties={properties}
+      currencyMap={currencyMap}
+      creditsCount={creditsCount}
+      saved={saved}
+      matches={matches}
+      selectedMatch={selectedMatch}
+      chatLoading={chatLoading}
+      chatError={chatError}
+      chatCredentials={chatCredentials}
+      username={username}
+      editPropertyId={editPropertyId}
+      onToggleSave={toggleSave}
+      onSelectProperty={setSelectedProperty}
+      onSelectMatch={setSelectedMatch}
+      onEditHandled={() => setEditPropertyId(null)}
+    />
   );
 
     const tabs: { key: Tab; label: string }[] = [

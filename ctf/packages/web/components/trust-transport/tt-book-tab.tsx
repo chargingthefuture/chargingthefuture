@@ -43,6 +43,17 @@ function BookedCard({ onReset }: { onReset: () => void }) {
   );
 }
 
+function BookSubmitButton({ name, submitting, hasValidAmount, onBook }: { name: string; submitting: boolean; hasValidAmount: boolean; onBook: () => void }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
+  const isDisabled = submitting || !hasValidAmount;
+  return (
+    <button type="button" onClick={onBook} disabled={isDisabled} style={{ padding: "16px", borderRadius: 14, background: isDisabled ? t.ACCENT_TAB_BORDER : t.ACCENT, border: "none", color: "#fff", fontSize: 15, fontWeight: 800, cursor: isDisabled ? "not-allowed" : "pointer" }}>
+      {submitting ? "Booking…" : `Book ${name}`}
+    </button>
+  );
+}
+
 export function TrustTransportBookTab(props: BookTabProps) {
   const { rideTypes, rideType, onRideType, from, to, onFrom, onTo, priceCurrency, priceAmount, requiresAmount, onPriceCurrency, onPriceAmount, bookingError, booked, submitting, onBook, onReset } = props;
   const { theme } = useTheme();
@@ -109,9 +120,7 @@ export function TrustTransportBookTab(props: BookTabProps) {
         {booked ? (
           <BookedCard onReset={onReset} />
         ) : (
-          <button type="button" onClick={onBook} disabled={submitting || !hasValidAmount} style={{ padding: "16px", borderRadius: 14, background: (submitting || !hasValidAmount) ? t.ACCENT_TAB_BORDER : t.ACCENT, border: "none", color: "#fff", fontSize: 15, fontWeight: 800, cursor: (submitting || !hasValidAmount) ? "not-allowed" : "pointer" }}>
-            {submitting ? "Booking…" : `Book ${name}`}
-          </button>
+          <BookSubmitButton name={name} submitting={submitting} hasValidAmount={hasValidAmount} onBook={onBook} />
         )}
       </div>
     </div>
