@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireTrustTransportReadAccess, ensureMutationCsrf } from 'lib/trust-transport/_lib';
+import { requireTrustTransportReadAccess, ensureMutationCsrf, resolveIdempotencyKey } from 'lib/trust-transport/_lib';
 import { createTransfer } from 'lib/service-credits/repository';
 import { insertTrustTransportAudit } from 'lib/trust-transport/repository';
 import { TRUST_TRANSPORT_ERROR_CODE } from 'lib/trust-transport/constants';
@@ -11,6 +11,18 @@ type TrustTransportServiceCreditsSendInput = {
   message?: string;
   idempotencyKey?: string;
 };
+
+// A transfer amount must be a positive finite number; booleans, strings, and null never qualify.
+function isValidTransferAmount(amount: unknown): amount is number {
+  return typeof amount === 'number' && Number.isFinite(amount) && amount > 0;
+}
+
+// A non-empty message marks the transfer with the message reason code; otherwise the plain reason.
+function transferReasonCode(message: unknown): string {
+  return typeof message === 'string' && message.trim().length > 0
+    ? 'trust-transport.transfer.message'
+    : 'trust-transport.transfer';
+}
 
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -30,7 +42,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON.' }, { status: 400 });
   }
 
-  if (!input.toUserId || typeof input.amount !== 'number' || !Number.isFinite(input.amount) || input.amount <= 0) {
+  if (!input.toUserId || !isValidTransferAmount(input.amount)) {
     return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid payload.' }, { status: 400 });
   }
 
@@ -41,10 +53,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const idempotencyKey =
-      typeof input.idempotencyKey === 'string' && input.idempotencyKey.trim().length > 0
-        ? input.idempotencyKey.trim()
-        : `trust-transport-${gate.auth.userId}-${Date.now()}`;
+    const idempotencyKey = resolveIdempotencyKey(
+      input.idempotencyKey,
+      `trust-transport-${gate.auth.userId}-${Date.now()}`,
+    );
 
     const tx = await createTransfer({
       senderUserId: gate.auth.userId,
@@ -52,7 +64,7 @@ export async function POST(request: Request) {
       amount: input.amount,
       idempotencyKey,
       originPlugin: 'trust-transport',
-      reasonCode: input.message && input.message.trim().length > 0 ? 'trust-transport.transfer.message' : 'trust-transport.transfer',
+      reasonCode: transferReasonCode(input.message),
     });
 
     // Cross-user credit transfers are a financial mutation inside this plugin; record an audit event so

@@ -23,6 +23,41 @@ export async function GET() {
   }
 }
 
+type CapacityPolicyPayload = {
+  maxActiveThreadsPerUser?: number;
+  maxMessagesPerMinute?: number;
+  maxSearchesPerMinute?: number;
+  maxQuoteTransitionsPerMinute?: number;
+  maxCallDurationMinutes?: number;
+  quotaState?: 'green' | 'yellow' | 'orange' | 'red';
+};
+
+type ValidatedCapacityPolicyPayload = {
+  maxActiveThreadsPerUser: number;
+  maxMessagesPerMinute: number;
+  maxSearchesPerMinute: number;
+  maxQuoteTransitionsPerMinute: number;
+  maxCallDurationMinutes: number;
+  quotaState: 'green' | 'yellow' | 'orange' | 'red';
+};
+
+// A full capacity policy requires every limit as an integer and a valid quota state; a partial or
+// mistyped body is rejected. Returns the validated payload, or null when the body is incomplete.
+function validateCapacityPolicyPayload(payload: CapacityPolicyPayload): ValidatedCapacityPolicyPayload | null {
+  if (
+    !Number.isInteger(payload.maxActiveThreadsPerUser)
+    || !Number.isInteger(payload.maxMessagesPerMinute)
+    || !Number.isInteger(payload.maxSearchesPerMinute)
+    || !Number.isInteger(payload.maxQuoteTransitionsPerMinute)
+    || !Number.isInteger(payload.maxCallDurationMinutes)
+    || (payload.quotaState !== 'green' && payload.quotaState !== 'yellow' && payload.quotaState !== 'orange' && payload.quotaState !== 'red')
+  ) {
+    return null;
+  }
+
+  return payload as ValidatedCapacityPolicyPayload;
+}
+
 export async function PUT(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -34,14 +69,7 @@ export async function PUT(request: Request) {
     return gate.response;
   }
 
-  let payload: {
-    maxActiveThreadsPerUser?: number;
-    maxMessagesPerMinute?: number;
-    maxSearchesPerMinute?: number;
-    maxQuoteTransitionsPerMinute?: number;
-    maxCallDurationMinutes?: number;
-    quotaState?: 'green' | 'yellow' | 'orange' | 'red';
-  } = {};
+  let payload: CapacityPolicyPayload = {};
   try {
     payload = await request.json();
   } catch {
@@ -51,28 +79,13 @@ export async function PUT(request: Request) {
     );
   }
 
-  if (
-    !Number.isInteger(payload.maxActiveThreadsPerUser)
-    || !Number.isInteger(payload.maxMessagesPerMinute)
-    || !Number.isInteger(payload.maxSearchesPerMinute)
-    || !Number.isInteger(payload.maxQuoteTransitionsPerMinute)
-    || !Number.isInteger(payload.maxCallDurationMinutes)
-    || (payload.quotaState !== 'green' && payload.quotaState !== 'yellow' && payload.quotaState !== 'orange' && payload.quotaState !== 'red')
-  ) {
+  const validatedPayload = validateCapacityPolicyPayload(payload);
+  if (!validatedPayload) {
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Full capacity policy payload is required.' },
       { status: 400 },
     );
   }
-
-  const validatedPayload = payload as {
-    maxActiveThreadsPerUser: number;
-    maxMessagesPerMinute: number;
-    maxSearchesPerMinute: number;
-    maxQuoteTransitionsPerMinute: number;
-    maxCallDurationMinutes: number;
-    quotaState: 'green' | 'yellow' | 'orange' | 'red';
-  };
 
   try {
     const policy = await updateCapacityPolicy({

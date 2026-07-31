@@ -18,6 +18,36 @@ function parseIncludeInactive(url: string): boolean {
   return new URL(url).searchParams.get('includeInactive') !== 'false';
 }
 
+// Shared failure path for job title creation: records the audit outcome and
+// maps a missing parent sector to 404 / everything else to 503.
+function handleJobTitleCreateFailure(error: unknown, actorId: string, sectorId: string): NextResponse {
+  const errorMessage = error instanceof Error ? error.message : 'unknown_error';
+
+  logSkillsTaxonomyAudit({
+    pluginId: 'skills-taxonomy',
+    command: 'skills-taxonomy.job-title.create',
+    actorId,
+    status: 'allow',
+    reason: 'admin_or_taxonomy_admin',
+    target: { sectorId },
+    result: 'failure',
+    errorCategory: errorMessage === 'sector_not_found' ? 'not_found' : 'persistence_error',
+  });
+
+  if (errorMessage === 'sector_not_found') {
+    return NextResponse.json(
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.notFound, message: 'Parent sector not found.' },
+      { status: 404 },
+    );
+  }
+
+  reportError(error, { area: 'skills-taxonomy', op: 'admin_job_titles' });
+  return NextResponse.json(
+    { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to create job title.' },
+    { status: 503 },
+  );
+}
+
 export async function GET(request: Request) {
   const gate = await requireTaxonomyAdminAccess();
   if (!gate.allowed) {
@@ -109,30 +139,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, jobTitle }, { status: 201 });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'unknown_error';
-
-    logSkillsTaxonomyAudit({
-      pluginId: 'skills-taxonomy',
-      command: 'skills-taxonomy.job-title.create',
-      actorId: gate.auth.userId,
-      status: 'allow',
-      reason: 'admin_or_taxonomy_admin',
-      target: { sectorId: input.sectorId },
-      result: 'failure',
-      errorCategory: errorMessage === 'sector_not_found' ? 'not_found' : 'persistence_error',
-    });
-
-    if (errorMessage === 'sector_not_found') {
-      return NextResponse.json(
-        { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.notFound, message: 'Parent sector not found.' },
-        { status: 404 },
-      );
-    }
-
-    reportError(error, { area: 'skills-taxonomy', op: 'admin_job_titles' });
-    return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to create job title.' },
-      { status: 503 },
-    );
+    return handleJobTitleCreateFailure(error, gate.auth.userId, input.sectorId);
   }
 }

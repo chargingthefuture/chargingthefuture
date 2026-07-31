@@ -19,6 +19,36 @@ function parseIncludeInactive(url: string): boolean {
   return new URL(url).searchParams.get('includeInactive') !== 'false';
 }
 
+// Shared failure path for skill creation: records the audit outcome and maps a
+// missing parent job title to 404 / everything else to 503.
+function handleSkillCreateFailure(error: unknown, actorId: string, jobTitleId: string): NextResponse {
+  const errorMessage = error instanceof Error ? error.message : 'unknown_error';
+
+  logSkillsTaxonomyAudit({
+    pluginId: 'skills-taxonomy',
+    command: 'skills-taxonomy.skill.create',
+    actorId,
+    status: 'allow',
+    reason: 'admin_or_taxonomy_admin',
+    target: { jobTitleId },
+    result: 'failure',
+    errorCategory: errorMessage === 'job_title_not_found' ? 'not_found' : 'persistence_error',
+  });
+
+  if (errorMessage === 'job_title_not_found') {
+    return NextResponse.json(
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.notFound, message: 'Parent job title not found.' },
+      { status: 404 },
+    );
+  }
+
+  reportError(error, { area: 'skills-taxonomy', op: 'admin_skills' });
+  return NextResponse.json(
+    { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to create skill.' },
+    { status: 503 },
+  );
+}
+
 export async function GET(request: Request) {
   const gate = await requireTaxonomyAdminAccess();
   if (!gate.allowed) {
@@ -111,30 +141,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, skill }, { status: 201 });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'unknown_error';
-
-    logSkillsTaxonomyAudit({
-      pluginId: 'skills-taxonomy',
-      command: 'skills-taxonomy.skill.create',
-      actorId: gate.auth.userId,
-      status: 'allow',
-      reason: 'admin_or_taxonomy_admin',
-      target: { jobTitleId: input.jobTitleId },
-      result: 'failure',
-      errorCategory: errorMessage === 'job_title_not_found' ? 'not_found' : 'persistence_error',
-    });
-
-    if (errorMessage === 'job_title_not_found') {
-      return NextResponse.json(
-        { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.notFound, message: 'Parent job title not found.' },
-        { status: 404 },
-      );
-    }
-
-    reportError(error, { area: 'skills-taxonomy', op: 'admin_skills' });
-    return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to create skill.' },
-      { status: 503 },
-    );
+    return handleSkillCreateFailure(error, gate.auth.userId, input.jobTitleId);
   }
 }

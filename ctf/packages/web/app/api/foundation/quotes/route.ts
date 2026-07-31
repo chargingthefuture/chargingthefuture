@@ -4,6 +4,47 @@ import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { createQuoteRequest, insertFoundationAudit } from 'lib/foundation/repository';
 import { reportError } from 'lib/observability/report';
 
+type CreateQuotePayload = { threadId?: string; serviceType?: string; requestDetails?: unknown; idempotencyKey?: string };
+
+// Trim an optional string field to a plain string ('' when absent).
+function trimmed(value: string | undefined): string {
+  return value?.trim() ?? '';
+}
+
+// Use the caller-supplied idempotency key when present; otherwise fall back to the deterministic key.
+function resolveIdempotencyKey(provided: string | undefined, fallback: string): string {
+  return provided?.trim() ?? fallback;
+}
+
+// Map a known repository error code to its member-facing response; returns null for anything unknown so
+// the caller can report it and answer 503.
+function mapCreateQuoteError(error: unknown): NextResponse | null {
+  const code = error instanceof Error ? error.message : '';
+
+  if (code === 'thread_not_found') {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.threadNotFound, message: 'Thread not found.' },
+      { status: 404 },
+    );
+  }
+
+  if (code === 'policy_denied') {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.policyDenied, message: 'Quote create denied by policy.' },
+      { status: 403 },
+    );
+  }
+
+  if (code === 'rate_limit_exceeded') {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.rateLimitExceeded, message: 'Quote create rate limit exceeded.' },
+      { status: 429 },
+    );
+  }
+
+  return null;
+}
+
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -15,7 +56,7 @@ export async function POST(request: Request) {
     return gate.response;
   }
 
-  let payload: { threadId?: string; serviceType?: string; requestDetails?: unknown; idempotencyKey?: string } = {};
+  let payload: CreateQuotePayload = {};
   try {
     payload = await request.json();
   } catch {
@@ -25,8 +66,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const threadId = payload.threadId?.trim() ?? '';
-  const serviceType = payload.serviceType?.trim() ?? '';
+  const threadId = trimmed(payload.threadId);
+  const serviceType = trimmed(payload.serviceType);
   if (!threadId || !serviceType) {
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'threadId and serviceType are required.' },
@@ -40,7 +81,7 @@ export async function POST(request: Request) {
       actorUserId: gate.auth.userId,
       serviceType,
       requestDetails: payload.requestDetails,
-      idempotencyKey: payload.idempotencyKey?.trim() ?? `${threadId}:${serviceType}`,
+      idempotencyKey: resolveIdempotencyKey(payload.idempotencyKey, `${threadId}:${serviceType}`),
     });
 
     await insertFoundationAudit({
@@ -55,27 +96,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, quote }, { status: 201 });
   } catch (error) {
-    const code = error instanceof Error ? error.message : '';
-
-    if (code === 'thread_not_found') {
-      return NextResponse.json(
-        { ok: false, code: FOUNDATION_ERROR_CODE.threadNotFound, message: 'Thread not found.' },
-        { status: 404 },
-      );
-    }
-
-    if (code === 'policy_denied') {
-      return NextResponse.json(
-        { ok: false, code: FOUNDATION_ERROR_CODE.policyDenied, message: 'Quote create denied by policy.' },
-        { status: 403 },
-      );
-    }
-
-    if (code === 'rate_limit_exceeded') {
-      return NextResponse.json(
-        { ok: false, code: FOUNDATION_ERROR_CODE.rateLimitExceeded, message: 'Quote create rate limit exceeded.' },
-        { status: 429 },
-      );
+    const mapped = mapCreateQuoteError(error);
+    if (mapped) {
+      return mapped;
     }
 
     reportError(error, { area: 'foundation', op: 'quotes' });
