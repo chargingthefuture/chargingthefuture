@@ -39,6 +39,57 @@ type MessageRequestBody = {
   replyToPostId?: unknown;
 };
 
+// Parse and validate the posting body: a required message text within the channel length limit and
+// an optional quoted-reply target. Returns a 400 response when the text is missing or too long.
+function parseChannelMessageInput(
+  body: MessageRequestBody,
+): { error: NextResponse } | { text: string; replyToPostId: string | null } {
+  const text = typeof body.text === 'string' ? body.text.trim() : '';
+  const replyToPostId = typeof body.replyToPostId === 'string' && body.replyToPostId.trim().length > 0
+    ? body.replyToPostId.trim()
+    : null;
+  if (!text || !validateGatedChannelPostBody(text)) {
+    return {
+      error: NextResponse.json(
+        { ok: false, message: 'Message text is required and must fit the channel length limit.' },
+        { status: 400 },
+      ),
+    };
+  }
+  return { text, replyToPostId };
+}
+
+// Map a create-post failure to its response. Known error codes carry their own status; anything
+// else is reported and returned as a generic 503.
+function mapChannelPostError(error: unknown): NextResponse {
+  const code = error instanceof Error ? error.message : 'unknown_error';
+  if (code === 'rate_limit_exceeded') {
+    // Same limiter shape and threshold as the Commons community-post route (8 per 30 minutes,
+    // counted per member in the database); the client shows this as the same error banner the
+    // Commons shows when its posting limit trips.
+    return NextResponse.json(
+      { ok: false, code: 'rate_limit_exceeded', message: 'Channel posting rate limit exceeded. Wait a little before posting again.' },
+      { status: 429 },
+    );
+  }
+  if (code === 'content_policy_violation') {
+    // Same content gate as the Commons (no raw <> markup, at most three links): the post is
+    // refused outright and never stored, so it is never visible to anyone.
+    return NextResponse.json(
+      { ok: false, code: 'content_policy_violation', message: 'Message blocked by content moderation.' },
+      { status: 422 },
+    );
+  }
+  if (code === 'reply_target_not_found') {
+    return NextResponse.json(
+      { ok: false, message: 'The message you are replying to is no longer available.' },
+      { status: 400 },
+    );
+  }
+  reportError(error, { area: 'contributor-access', op: 'channel_message_create' });
+  return NextResponse.json({ ok: false, message: 'Unable to send message.' }, { status: 503 });
+}
+
 export async function POST(request: Request) {
   const gate = await requireGatedChannelAccess();
   if (!gate.allowed) {
@@ -57,16 +108,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: 'Invalid JSON payload.' }, { status: 400 });
   }
 
-  const text = typeof body.text === 'string' ? body.text.trim() : '';
-  const replyToPostId = typeof body.replyToPostId === 'string' && body.replyToPostId.trim().length > 0
-    ? body.replyToPostId.trim()
-    : null;
-  if (!text || !validateGatedChannelPostBody(text)) {
-    return NextResponse.json(
-      { ok: false, message: 'Message text is required and must fit the channel length limit.' },
-      { status: 400 },
-    );
+  const parsed = parseChannelMessageInput(body);
+  if ('error' in parsed) {
+    return parsed.error;
   }
+  const { text, replyToPostId } = parsed;
 
   try {
     const authorUsername = gate.auth.username ?? null;
@@ -91,31 +137,6 @@ export async function POST(request: Request) {
     };
     return NextResponse.json({ ok: true, message }, { status: 201 });
   } catch (error) {
-    const code = error instanceof Error ? error.message : 'unknown_error';
-    if (code === 'rate_limit_exceeded') {
-      // Same limiter shape and threshold as the Commons community-post route (8 per 30 minutes,
-      // counted per member in the database); the client shows this as the same error banner the
-      // Commons shows when its posting limit trips.
-      return NextResponse.json(
-        { ok: false, code: 'rate_limit_exceeded', message: 'Channel posting rate limit exceeded. Wait a little before posting again.' },
-        { status: 429 },
-      );
-    }
-    if (code === 'content_policy_violation') {
-      // Same content gate as the Commons (no raw <> markup, at most three links): the post is
-      // refused outright and never stored, so it is never visible to anyone.
-      return NextResponse.json(
-        { ok: false, code: 'content_policy_violation', message: 'Message blocked by content moderation.' },
-        { status: 422 },
-      );
-    }
-    if (code === 'reply_target_not_found') {
-      return NextResponse.json(
-        { ok: false, message: 'The message you are replying to is no longer available.' },
-        { status: 400 },
-      );
-    }
-    reportError(error, { area: 'contributor-access', op: 'channel_message_create' });
-    return NextResponse.json({ ok: false, message: 'Unable to send message.' }, { status: 503 });
+    return mapChannelPostError(error);
   }
 }
