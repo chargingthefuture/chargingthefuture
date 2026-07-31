@@ -5,6 +5,36 @@ import { listAdminQuestions, isValidFeedQuestionCategory } from 'lib/feed/reposi
 import type { FeedQuestionCategory } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
 
+// Resolve page and page size from the query string, applying the same defaults and the maximum cap
+// as before.
+function parseQuestionsPagination(searchParams: URLSearchParams): { page: number; pageSize: number } {
+  const pageRaw = Number.parseInt(searchParams.get('page') ?? '', 10);
+  const pageSizeRaw = Number.parseInt(searchParams.get('pageSize') ?? '', 10);
+
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : FEED_DEFAULT_PAGE;
+  const pageSize = Math.min(
+    Number.isFinite(pageSizeRaw) && pageSizeRaw > 0 ? pageSizeRaw : FEED_DEFAULT_PAGE_SIZE,
+    FEED_MAX_PAGE_SIZE,
+  );
+  return { page, pageSize };
+}
+
+// Validate the optional category filter. Returns a 400 response for an unrecognized value, otherwise
+// the parsed category (or null when the filter is absent).
+function parseQuestionsCategory(
+  categoryRaw: string | null,
+): { error: NextResponse } | { data: FeedQuestionCategory | null } {
+  if (categoryRaw !== null && !isValidFeedQuestionCategory(categoryRaw)) {
+    return {
+      error: NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid category value.' },
+        { status: 400 },
+      ),
+    };
+  }
+  return { data: categoryRaw as FeedQuestionCategory | null };
+}
+
 export async function GET(request: Request) {
   const gate = await requireFeedAdminAccess();
   if (!gate.allowed) {
@@ -12,22 +42,13 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const pageRaw = Number.parseInt(searchParams.get('page') ?? '', 10);
-  const pageSizeRaw = Number.parseInt(searchParams.get('pageSize') ?? '', 10);
-  const categoryRaw = searchParams.get('category');
+  const { page, pageSize } = parseQuestionsPagination(searchParams);
 
-  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : FEED_DEFAULT_PAGE;
-  const pageSize = Math.min(
-    Number.isFinite(pageSizeRaw) && pageSizeRaw > 0 ? pageSizeRaw : FEED_DEFAULT_PAGE_SIZE,
-    FEED_MAX_PAGE_SIZE,
-  );
-  if (categoryRaw !== null && !isValidFeedQuestionCategory(categoryRaw)) {
-    return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid category value.' },
-      { status: 400 },
-    );
+  const parsedCategory = parseQuestionsCategory(searchParams.get('category'));
+  if ('error' in parsedCategory) {
+    return parsedCategory.error;
   }
-  const category = categoryRaw as FeedQuestionCategory | null;
+  const category = parsedCategory.data;
 
   try {
     const result = await listAdminQuestions({ page, pageSize }, { category });

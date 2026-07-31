@@ -75,107 +75,36 @@ export function parsePositiveInteger(value: string | null, fallback: number): nu
   return parsed;
 }
 
+// Maps a thrown error code (the Error message) to its canonical response code, member-facing message,
+// and HTTP status. The resolve-flow entries (actor_not_requester, fulfillment_not_active,
+// invalid_outcome) are here for a reason: without them, an authorization denial (a helper trying to
+// resolve) and a conflict (resolving an already-resolved fulfillment) both fell through to the 503
+// default branch — reporting an authz/conflict as a server outage and firing a spurious error alert.
+const SOCKET_RELAY_ERROR_RESPONSES: Record<string, { code: string; message: string; status: number }> = {
+  request_not_found: { code: SOCKET_RELAY_ERROR_CODE.requestNotFound, message: 'SocketRelay request not found.', status: 404 },
+  fulfillment_not_found: { code: SOCKET_RELAY_ERROR_CODE.fulfillmentNotFound, message: 'SocketRelay fulfillment not found.', status: 404 },
+  profile_not_found: { code: SOCKET_RELAY_ERROR_CODE.profileNotFound, message: 'SocketRelay profile not found.', status: 404 },
+  not_owner: { code: SOCKET_RELAY_ERROR_CODE.notOwner, message: 'Operation requires ownership.', status: 403 },
+  request_not_claimable: { code: SOCKET_RELAY_ERROR_CODE.requestNotClaimable, message: 'Request is not claimable.', status: 409 },
+  request_expired: { code: SOCKET_RELAY_ERROR_CODE.requestExpired, message: 'This request has expired. The person who posted it can re-post it.', status: 409 },
+  request_not_repostable: { code: SOCKET_RELAY_ERROR_CODE.requestNotRepostable, message: 'This request has an active helper — resolve the Direct Line before re-posting.', status: 409 },
+  actor_not_requester: { code: SOCKET_RELAY_ERROR_CODE.actorNotRequester, message: 'Only the person who posted this request can resolve it.', status: 403 },
+  fulfillment_not_active: { code: SOCKET_RELAY_ERROR_CODE.fulfillmentNotActive, message: 'This Direct Line is already resolved.', status: 409 },
+  invalid_outcome: { code: SOCKET_RELAY_ERROR_CODE.invalidOutcome, message: 'Choose how to resolve this request.', status: 400 },
+  actor_is_owner: { code: SOCKET_RELAY_ERROR_CODE.actorIsOwner, message: 'Request owner cannot claim fulfillment.', status: 403 },
+  actor_not_participant: { code: SOCKET_RELAY_ERROR_CODE.actorNotParticipant, message: 'Not a fulfillment participant.', status: 403 },
+  prohibited_content_detected: { code: SOCKET_RELAY_ERROR_CODE.prohibitedContent, message: 'Message rejected by moderation policy.', status: 400 },
+  'invalid payload': { code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid payload.', status: 400 },
+};
+
 export function socketRelayErrorResponse(error: unknown, fallbackMessage: string) {
   const code = error instanceof Error ? error.message : '';
 
-  if (code === 'request_not_found') {
+  const mapped = SOCKET_RELAY_ERROR_RESPONSES[code];
+  if (mapped) {
     return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.requestNotFound, message: 'SocketRelay request not found.' },
-      { status: 404 },
-    );
-  }
-
-  if (code === 'fulfillment_not_found') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.fulfillmentNotFound, message: 'SocketRelay fulfillment not found.' },
-      { status: 404 },
-    );
-  }
-
-  if (code === 'profile_not_found') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.profileNotFound, message: 'SocketRelay profile not found.' },
-      { status: 404 },
-    );
-  }
-
-  if (code === 'not_owner') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.notOwner, message: 'Operation requires ownership.' },
-      { status: 403 },
-    );
-  }
-
-  if (code === 'request_not_claimable') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.requestNotClaimable, message: 'Request is not claimable.' },
-      { status: 409 },
-    );
-  }
-
-  if (code === 'request_expired') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.requestExpired, message: 'This request has expired. The person who posted it can re-post it.' },
-      { status: 409 },
-    );
-  }
-
-  if (code === 'request_not_repostable') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.requestNotRepostable, message: 'This request has an active helper — resolve the Direct Line before re-posting.' },
-      { status: 409 },
-    );
-  }
-
-  // Resolve-flow errors from resolveFulfillment. Without these, an authorization denial (a helper trying
-  // to resolve) and a conflict (resolving an already-resolved fulfillment) both fell through to the 503
-  // default branch — reporting an authz/conflict as a server outage and firing a spurious error alert.
-  if (code === 'actor_not_requester') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.actorNotRequester, message: 'Only the person who posted this request can resolve it.' },
-      { status: 403 },
-    );
-  }
-
-  if (code === 'fulfillment_not_active') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.fulfillmentNotActive, message: 'This Direct Line is already resolved.' },
-      { status: 409 },
-    );
-  }
-
-  if (code === 'invalid_outcome') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidOutcome, message: 'Choose how to resolve this request.' },
-      { status: 400 },
-    );
-  }
-
-  if (code === 'actor_is_owner') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.actorIsOwner, message: 'Request owner cannot claim fulfillment.' },
-      { status: 403 },
-    );
-  }
-
-  if (code === 'actor_not_participant') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.actorNotParticipant, message: 'Not a fulfillment participant.' },
-      { status: 403 },
-    );
-  }
-
-  if (code === 'prohibited_content_detected') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.prohibitedContent, message: 'Message rejected by moderation policy.' },
-      { status: 400 },
-    );
-  }
-
-  if (code === 'invalid payload') {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid payload.' },
-      { status: 400 },
+      { ok: false, code: mapped.code, message: mapped.message },
+      { status: mapped.status },
     );
   }
 

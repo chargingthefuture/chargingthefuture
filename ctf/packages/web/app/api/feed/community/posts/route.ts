@@ -16,6 +16,68 @@ function parseBody(body: CommunityBody): FeedCommunityPostInput {
   };
 }
 
+// Parse and validate the community post body. Returns the validated input or a ready-to-return error
+// response.
+async function parsePostBody(
+  request: Request,
+): Promise<{ error: NextResponse } | { data: FeedCommunityPostInput }> {
+  let body: CommunityBody;
+  try {
+    body = (await request.json()) as CommunityBody;
+  } catch {
+    return {
+      error: NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+        { status: 400 },
+      ),
+    };
+  }
+
+  const input = parseBody(body);
+  if (!validateFeedCommunityPostInput(input)) {
+    return {
+      error: NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid community post payload.' },
+        { status: 400 },
+      ),
+    };
+  }
+
+  return { data: input };
+}
+
+// Map an error thrown while creating the post to its response. Preserves the status code and error
+// code for each known failure, and reports anything unrecognized as a 503.
+function mapPostError(error: unknown): NextResponse {
+  const code = error instanceof Error ? error.message : 'unknown_error';
+  if (code === 'rate_limit_exceeded') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.rateLimitExceeded, message: 'Community posting rate limit exceeded.' },
+      { status: 429 },
+    );
+  }
+
+  if (code === 'content_policy_violation') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.moderationRejected, message: 'Community post blocked by content moderation.' },
+      { status: 422 },
+    );
+  }
+
+  if (code === 'reply_target_invalid' || code === 'reply_target_not_found') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'The post you are replying to is no longer available.' },
+      { status: 400 },
+    );
+  }
+
+  reportError(error, { area: 'feed', op: 'community_posts' });
+  return NextResponse.json(
+    { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to create community post.' },
+    { status: 503 },
+  );
+}
+
 export async function POST(request: Request) {
   const gate = await requireFeedReadAccess();
   if (!gate.allowed) {
@@ -27,23 +89,11 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  let body: CommunityBody;
-  try {
-    body = (await request.json()) as CommunityBody;
-  } catch {
-    return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
-      { status: 400 },
-    );
+  const parsed = await parsePostBody(request);
+  if ('error' in parsed) {
+    return parsed.error;
   }
-
-  const input = parseBody(body);
-  if (!validateFeedCommunityPostInput(input)) {
-    return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid community post payload.' },
-      { status: 400 },
-    );
-  }
+  const input = parsed.data;
 
   try {
     const result = await createFeedCommunityPost(gate.auth.userId, input, gate.auth.username ?? null);
@@ -61,32 +111,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, postId: result.postId, createdAt: result.createdAtIso, status: 'published' }, { status: 201 });
   } catch (error) {
-    const code = error instanceof Error ? error.message : 'unknown_error';
-    if (code === 'rate_limit_exceeded') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.rateLimitExceeded, message: 'Community posting rate limit exceeded.' },
-        { status: 429 },
-      );
-    }
-
-    if (code === 'content_policy_violation') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.moderationRejected, message: 'Community post blocked by content moderation.' },
-        { status: 422 },
-      );
-    }
-
-    if (code === 'reply_target_invalid' || code === 'reply_target_not_found') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'The post you are replying to is no longer available.' },
-        { status: 400 },
-      );
-    }
-
-    reportError(error, { area: 'feed', op: 'community_posts' });
-    return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to create community post.' },
-      { status: 503 },
-    );
+    return mapPostError(error);
   }
 }
