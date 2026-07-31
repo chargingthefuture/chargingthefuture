@@ -219,7 +219,7 @@ precedence: (a) the persisted admin setting
 this env flag; (c) else the built-in default (ON). An admin flips the setting from the PeerProgramming
 admin surface (`POST /api/peer-programming/admin/single-open-cohort`), which supersedes this env flag
 without a redeploy; clearing the admin setting (null) reverts to the env flag, then the default. With
-no admin setting and no env override, behaviour is unchanged: ON.
+no admin setting and no env override, behavior is unchanged: ON.
 
 - **Defaults ON (temporary low-population mode).** Unset or empty is treated as ON. Only the explicit
   values `0` or `false` (case-insensitive) turn it OFF. The default is ON on purpose: while there are

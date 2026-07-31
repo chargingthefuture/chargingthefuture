@@ -2814,7 +2814,7 @@ type QuestionExportRow = {
 
 // Group every feed question by category. Used by the admin training export.
 //
-// Hidden questions are excluded. A moderator hiding something is a judgement that it does not belong in
+// Hidden questions are excluded. A moderator hiding something is a judgment that it does not belong in
 // the Commons; exporting it into training data would launder it straight back in, and the model would
 // keep answering in the register of the thing that was removed.
 export async function exportQuestionsByCategory(): Promise<Record<FeedQuestionCategory, string[]>> {

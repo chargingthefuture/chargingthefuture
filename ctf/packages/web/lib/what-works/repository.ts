@@ -177,7 +177,7 @@ export async function getProblemById(id: string): Promise<WhatWorksProblem | nul
 // Identity columns (`suggested_by`, `reviewed_by`) are deliberately omitted: the anonymity
 // contract excludes them from every reader and admin projection, and no caller of this lookup
 // needs them. Selecting an explicit column list keeps those fields out of the returned object
-// entirely, so a future route cannot accidentally serialise or forward them.
+// entirely, so a future route cannot accidentally serialize or forward them.
 export type WhatWorksProductLookup = Omit<WhatWorksProduct, 'suggested_by' | 'reviewed_by'>;
 
 export async function getProductById(id: string): Promise<WhatWorksProductLookup | null> {

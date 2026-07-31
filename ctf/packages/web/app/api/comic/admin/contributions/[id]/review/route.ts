@@ -62,7 +62,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (body.action === 'decline') {
       const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
       if (reason.length === 0) {
-        // A decline the contributor cannot understand reads as a judgement on what they lived
+        // A decline the contributor cannot understand reads as a judgment on what they lived
         // through. The reason is shown to them on their own page, so it is required.
         return NextResponse.json(
           { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Give a reason — the contributor sees it.' },

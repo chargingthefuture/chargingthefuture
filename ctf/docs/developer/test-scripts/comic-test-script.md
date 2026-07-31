@@ -82,7 +82,7 @@ the tests worth running slowly.
 - Step 1 → refused, "Post 1 needs a link to the post on Quora."
 - Step 2 → refused as a duplicate link.
 - Step 3 → refused with "Paste the whole post — a line or two is not enough for the assistant to
-  answer from." (Not a quality judgement — the reviewer would only discard it, so saying so now saves
+  answer from." (Not a quality judgment — the reviewer would only discard it, so saying so now saves
   the contributor the wait.)
 - Step 4 → each row has the pasted text in `content` and the link in `source_url`. Contact details
   and any URLs inside the text itself are redacted; the source link survives separately because it is
@@ -184,7 +184,7 @@ the tests worth running slowly.
 6. Check `comic_knowledge_entries` and the contributors' ServiceCredits balances.
 
 **Expected:**
-- Every entry is shown **in full**, not summarised — the decision cannot be made from a count.
+- Every entry is shown **in full**, not summarized — the decision cannot be made from a count.
 - Nothing is excluded by default: entries start included and the reviewer opts one OUT. A skim must
   not be able to silently drop someone's writing.
 - If the contributor wrote a third-party note, it appears **at the top of the card**, highlighted —
@@ -240,7 +240,7 @@ withdrawal by either still reaches it.
 
 **Expected:**
 - Step 1 → refused, "Give a reason — the contributor sees it." A decline nobody can understand reads
-  as a judgement on what they lived through.
+  as a judgment on what they lived through.
 - Step 3 → the contribution reads **Not used** with the reason shown. Nothing was promoted.
 
 **Result:** web ☐

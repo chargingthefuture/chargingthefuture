@@ -11,9 +11,9 @@
  *   tested. Set DEMO_SECOND_OWNER_ID to a SECOND real Clerk user id and the seed
  *   makes that user the real counterparty to DEMO_OWNER_ID: it gives them a member
  *   profile and wires up both-sided data (open requests each can act on, a shared
- *   Foundation thread, a Lighthouse seeker↔host match, a co-enrolment, etc.), so
+ *   Foundation thread, a Lighthouse seeker↔host match, a co-enrollment, etc.), so
  *   two real accounts can each test both sides. Leave it unset for the original
- *   single-owner behaviour (unchanged).
+ *   single-owner behavior (unchanged).
  *
  *   Access note: the seed grants the approved_full unlock tier to both real owners
  *   (an unlock_verification_submissions row), so neither needs the
@@ -1010,7 +1010,7 @@ async function seedSocketRelay(c) {
     // owner+idempotency_key), so each can browse and fulfill the other's request.
     const openRelay = [
       [sha256id('sr-open-req', OWNER), OWNER, 'demo-sr-open-owner', 'Need a hand assembling furniture', 'Flat-pack wardrobe — could use a second pair of hands for an hour.'],
-      [sha256id('sr-open-req', OWNER2), OWNER2, 'demo-sr-open-owner2', 'Ride to the community centre', 'Looking for someone headed downtown on Saturday morning.'],
+      [sha256id('sr-open-req', OWNER2), OWNER2, 'demo-sr-open-owner2', 'Ride to the community center', 'Looking for someone headed downtown on Saturday morning.'],
     ];
     for (const [id, uid, idem, title, details] of openRelay) {
       await c.query(

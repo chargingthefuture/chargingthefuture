@@ -74,7 +74,7 @@ function validateSinglePost(raw: unknown, position: number, seenUrls: Set<string
   }
   const trimmed = text.trim();
   if (trimmed.length < MIN_POST_LENGTH) {
-    // Not a quality judgement — a couple of lines cannot ground an answer to anything, and the
+    // Not a quality judgment — a couple of lines cannot ground an answer to anything, and the
     // reviewer would only discard it. Saying so now saves the contributor the wait.
     return {
       ok: false,

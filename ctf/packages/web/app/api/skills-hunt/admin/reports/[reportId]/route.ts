@@ -10,7 +10,7 @@ type ResolveReportBodyResult =
   | { ok: false; message: string };
 
 // Validate the report-resolution body: status must be one of the three allowed
-// values, resolutionNotes must be a string, null, or absent (normalised to null).
+// values, resolutionNotes must be a string, null, or absent (normalized to null).
 function validateResolveReportBody(body: Partial<ResolveReportInput>): ResolveReportBodyResult {
   if (body.status !== 'dismissed' && body.status !== 'archived' && body.status !== 'removed') {
     return { ok: false, message: 'status must be dismissed | archived | removed' };

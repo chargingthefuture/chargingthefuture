@@ -2960,7 +2960,7 @@
    as off-brand against the flat cream/ink comic look (comic has no gradients/glow). Keep the purple
    hue (owner: purple is fine) but flatten the gradient to a solid fill and add the same cream border
    the own-bubble comic treatment uses, so the two bubble types read as one comic system — differing
-   only by fill colour, not by design language. */
+   only by fill color, not by design language. */
 :global([data-theme='comic']) .chatBubbleHub {
   background: #6d28d9;
   border: 1.5px solid var(--ctf-border);

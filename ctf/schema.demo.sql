@@ -1111,7 +1111,7 @@ ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderation_s
 -- Why a row was hidden, who hid it, and when (Commons moderation, 2026-07-29). Nullable and null on
 -- every pre-existing row: these are only stamped when a moderator acts. The reason matters because the
 -- day-to-day moderation problem is volume of OFF-TOPIC content — Quora-style discussion that is not
--- about the economy — so a sweep needs to record which judgement was applied, not just that something
+-- about the economy — so a sweep needs to record which judgment was applied, not just that something
 -- was taken down. Reason is a short code from FEED_MODERATION_REASON, never free text about a member.
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
@@ -1138,7 +1138,7 @@ ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderation
 -- Why a row was hidden, who hid it, and when (Commons moderation, 2026-07-29). Nullable and null on
 -- every pre-existing row: these are only stamped when a moderator acts. The reason matters because the
 -- day-to-day moderation problem is volume of OFF-TOPIC content — Quora-style discussion that is not
--- about the economy — so a sweep needs to record which judgement was applied, not just that something
+-- about the economy — so a sweep needs to record which judgment was applied, not just that something
 -- was taken down. Reason is a short code from FEED_MODERATION_REASON, never free text about a member.
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
@@ -1884,7 +1884,7 @@ CREATE TABLE IF NOT EXISTS service_credits_credit_limits (
 ALTER TABLE IF EXISTS service_credits_credit_limits ADD COLUMN IF NOT EXISTS credit_limit NUMERIC NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS service_credits_credit_limits ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT;
 ALTER TABLE IF EXISTS service_credits_credit_limits ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Enforce non-negative limits on legacy tables too (idempotent; the constraint inverts floor behaviour if negative).
+-- Enforce non-negative limits on legacy tables too (idempotent; the constraint inverts floor behavior if negative).
 DO $service_credits_credit_limits_non_negative$
 BEGIN
   IF NOT EXISTS (
@@ -2334,7 +2334,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('chyme',              'Chyme',                'Live social audio rooms. Broadcast, listen, and connect in real time.',                       'implemented_shell', 10,  TRUE),
   ('skills-taxonomy',    'Skills Taxonomy',      'Browse the shared catalog of sectors, job titles, and skills.',                     'implemented_shell', 20,  TRUE),
   ('directory',          'Directory',            'Browse skills across the survivor community.',                      'implemented_shell', 30,  TRUE),
-  ('workforce',          'Workforce',            'Real-time work and skills distribution amongst 5 million survivors globally.',                           'implemented_shell', 50,  TRUE),
+  ('workforce',          'Workforce',            'Real-time work and skills distribution among 5 million survivors globally.',                           'implemented_shell', 50,  TRUE),
   ('skills-hunt',        'SkillsHunt',          'Nominate survivors to build the Directory and grow the economy.', 'implemented_shell', 60,  TRUE),
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
   ('knowledge',          'Knowledge Library',    'Lend your own public writing so the assistant answers from more than one person.', 'implemented_shell', 66,  TRUE),

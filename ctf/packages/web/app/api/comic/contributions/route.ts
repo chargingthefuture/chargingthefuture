@@ -20,7 +20,7 @@ import { reportError } from 'lib/observability/report';
 export const dynamic = 'force-dynamic';
 
 // A Quora export zip is compressed HTML; even a heavy account lands far under this. The cap is the
-// first line of defence and is enforced before a single byte is decompressed.
+// first line of defense and is enforced before a single byte is decompressed.
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 // Parsing an archive costs real memory, so a signed-in account cannot do it in a loop.

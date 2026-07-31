@@ -590,7 +590,7 @@
   line-height: 1.45;
 }
 
-/* Confidence bands (colour applied via currentColor on dots/labels/fills). */
+/* Confidence bands (color applied via currentColor on dots/labels/fills). */
 .confHigh { color: #22C55E; }
 .confMedium { color: #F59E0B; }
 .confLow { color: #EF4444; }
@@ -855,7 +855,7 @@
  * design/artifacts/mockup-sandbox/COMIC_THEME_TOKENS.md — no gradients, no glow/neon,
  * and the 3px 3px 0 offset shadow for elevation. This is the AI review dashboard, so the
  * standard cyan accent (#0EA5E9 / #7DD3FC) becomes the warm ink-dim accent (#7A6A50,
- * the comic AI/Assistant colour from §6 — no blue in comic theme). Status colours the
+ * the comic AI/Assistant color from §6 — no blue in comic theme). Status colors the
  * spec keeps across themes stay as shipped: success green (queue-clear, all-caught-up,
  * high-confidence) and danger red (errors, rejects, safety flags, low-confidence). The
  * loading screen is left untouched (§11 — loading screens are never themed).

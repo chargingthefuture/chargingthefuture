@@ -45,7 +45,7 @@ trick (e.g. `${t.ACCENT}20`) that CSS `var()` cannot express — hence the JS to
 
 **F1 — Comic theme is the primary cohesion failure (systemic, but partial).**
 Of the web `.tsx` files that contain inline hex (233), **201 are "true violators"**: they hardcode
-hex AND consume **no** theme helper, so they render identical greys/surfaces under both themes ⇒
+hex AND consume **no** theme helper, so they render identical grays/surfaces under both themes ⇒
 toggling comic produces a half-themed UI. **32** files already adopt the helpers (many shells are
 done). 19 plugin dirs already have a `*-shared.ts` token file but still have unconverted sibling
 components. Full inventory in the Appendix.

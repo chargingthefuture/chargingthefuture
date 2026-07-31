@@ -256,7 +256,7 @@ const ReminderToast: React.FC<{ text: string; onDismiss: () => void }> = ({ text
   </div>
 );
 
-// Builds the conversation's message-action menu and reminder behaviour, scoped to one channel.
+// Builds the conversation's message-action menu and reminder behavior, scoped to one channel.
 //
 // stream-chat-react 12.16 / stream-chat 8.60 do not yet ship Stream's server-backed message
 // reminders (the per-message reminder API — client.reminders / message.reminder — and the built-in

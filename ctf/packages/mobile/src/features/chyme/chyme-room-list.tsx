@@ -2,7 +2,7 @@
  * ChymeRoomList — renders the Chyme room-directory screen.
  * Bound to real data from GET /api/chyme/room:
  *   - roomName, participants, callActive.
- * Theme: colours come from the active theme tokens (passed in from ChymeRoom). Default
+ * Theme: colors come from the active theme tokens (passed in from ChymeRoom). Default
  * theme keeps the deep-green Chyme chrome; comic theme uses the ink/cream palette with
  * sharp corners per ComicChyme.tsx.
  * Omissions from mockup (no backing API field):

@@ -83,7 +83,7 @@ export async function setPeerProgrammingSingleOpenCohort(input: {
 //   (a) the persisted admin setting if set (non-null) → use it;
 //   (b) else the env flag PEER_PROGRAMMING_SINGLE_OPEN_COHORT;
 //   (c) else default ON.
-// This is async because it now reads the DB. The three behaviour call sites (getMyCohort,
+// This is async because it now reads the DB. The three behavior call sites (getMyCohort,
 // listActiveCohorts, runWeeklyAssignment) await isSingleOpenCohortModeEnabled().
 export async function resolveSingleOpenCohortMode(): Promise<SingleOpenCohortMode> {
   const envFlagEnabled = isPeerProgrammingSingleOpenCohortEnabled();
@@ -108,7 +108,7 @@ export async function resolveSingleOpenCohortMode(): Promise<SingleOpenCohortMod
   };
 }
 
-// Boolean-only convenience over resolveSingleOpenCohortMode for the behaviour call sites that only
+// Boolean-only convenience over resolveSingleOpenCohortMode for the behavior call sites that only
 // need the on/off decision.
 export async function isSingleOpenCohortModeEnabled(): Promise<boolean> {
   const mode = await resolveSingleOpenCohortMode();

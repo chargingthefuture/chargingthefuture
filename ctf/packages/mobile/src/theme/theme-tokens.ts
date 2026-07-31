@@ -3,7 +3,7 @@
 // Two themes are supported: the original dark UI ('default') and a comic-book dark
 // theme ('comic'). The web drives surface colors through CSS custom properties; React
 // Native has no CSS variables, so this module also exposes a flat palette object
-// (getThemeTokens) that each screen reads to colour its StyleSheet. The theme name
+// (getThemeTokens) that each screen reads to color its StyleSheet. The theme name
 // type, storage key, and per-plugin accent table match the web verbatim so a user's
 // choice stays in sync across web and mobile through /api/account/ui-preferences.
 //
@@ -66,13 +66,13 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
 const FALLBACK_ACCENT: AccentPair = { standard: '#6B7280', comic: '#7A6A50' };
 
 // Resolve a plugin's accent for the active theme. Unknown slugs fall back to a
-// neutral grey (standard) / inkDim (comic) so a new plugin never renders unstyled.
+// neutral gray (standard) / inkDim (comic) so a new plugin never renders unstyled.
 export function getAppAccent(slug: string, theme: ThemeName): string {
   const pair = PLUGIN_ACCENTS[slug] ?? FALLBACK_ACCENT;
   return theme === 'comic' ? pair.comic : pair.standard;
 }
 
-// Flat palette a screen reads to colour its StyleSheet. The comic side is copied
+// Flat palette a screen reads to color its StyleSheet. The comic side is copied
 // verbatim from COMIC_THEME_TOKENS.md sections 1-2; the default side keeps the existing
 // dark palette the shipped screens already use so 'default' is visually unchanged.
 export type ThemeTokens = {
@@ -82,9 +82,9 @@ export type ThemeTokens = {
   surface: string;
   /** Deepest chrome — icon rail / status bar (darker than surface). */
   surfaceAlt: string;
-  /** Primary hard border colour. */
+  /** Primary hard border color. */
   border: string;
-  /** Dimmed / secondary border colour. */
+  /** Dimmed / secondary border color. */
   borderDim: string;
   /** Very faint row-divider tint. */
   borderFaint: string;
@@ -96,7 +96,7 @@ export type ThemeTokens = {
   textSecondary: string;
   /** Deeply muted text — disabled / fine print. */
   textMuted: string;
-  /** Destructive / danger colour. */
+  /** Destructive / danger color. */
   danger: string;
   /** Success / live indicator. */
   success: string;
@@ -105,7 +105,7 @@ export type ThemeTokens = {
   gold: string;
   /** Brand hue. Mirrors web `--ctf-brand` (pink `#E91E8C` in default, warm gold `#C8A84B` in comic). */
   brand: string;
-  /** Text/icon colour that sits on a `brand` fill. Mirrors web `--ctf-brand-text`. */
+  /** Text/icon color that sits on a `brand` fill. Mirrors web `--ctf-brand-text`. */
   brandText: string;
   /** Border radius applied to cards (0 in comic theme). Mirrors web `--ctf-card-radius`. */
   radius: number;

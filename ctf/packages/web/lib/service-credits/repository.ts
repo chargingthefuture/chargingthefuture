@@ -275,7 +275,7 @@ async function assertSenderNotRestricted(client: PoolClient, senderUserId: strin
 }
 
 // On the mutual-credit rail the sender may go negative, but only down to -(credit limit). On the
-// balance rail the floor is 0 (the prior behaviour). The buyer going negative and the seller going
+// balance rail the floor is 0 (the prior behavior). The buyer going negative and the seller going
 // positive net to zero, so mutual-credit issuance never inflates total supply.
 async function resolveTransferCreditFloor(
   client: PoolClient,
@@ -290,7 +290,7 @@ async function resolveTransferCreditFloor(
     throw new Error('mutual_credit_disabled');
   }
   // Flat, equal line: every member's limit is the same policy defaultLimit unless an admin has set a
-  // per-account override. No behavioural score gates spending — there is no credit or social score on
+  // per-account override. No behavioral score gates spending — there is no credit or social score on
   // this platform; abuse is handled by small caps, the wallet freeze, and disputes, not by ranking.
   return -(await readCreditLimit(client, senderUserId, mutualCredit.defaultLimit));
 }
@@ -1987,7 +1987,7 @@ export async function setCreditLimit(input: { actorId: string; targetUserId: str
 }
 
 // Admin-only: read a member's mutual-credit limit (the flat policy default, or a per-account override)
-// and freeze state. No behavioural score is computed or returned — there is no credit/social score.
+// and freeze state. No behavioral score is computed or returned — there is no credit/social score.
 export async function getCreditLimitInfo(userId: string) {
   const policy = readMutualCreditPolicy(await getTreasuryConfig());
 

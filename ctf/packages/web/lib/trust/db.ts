@@ -11,7 +11,7 @@ import type {
 
 // The Postgres driver normally parses a JSONB column into a JS array, but a raw-text fallback (some
 // driver/pool configs return JSONB as a string) would otherwise reach the client as a string and
-// render empty or break serialisation. Coerce defensively: parse a string, keep an array, drop
+// render empty or break serialization. Coerce defensively: parse a string, keep an array, drop
 // anything else to an empty list.
 function coerceTrustEvidence(value: unknown): TrustEvidenceItem[] {
   if (Array.isArray(value)) {

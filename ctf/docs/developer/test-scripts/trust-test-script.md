@@ -419,7 +419,7 @@ The following cases must produce consistent data across surfaces since both read
 2. **`member_since` and active-plugin-count fields absent.** The design references "Member Since" and active-plugin-count stats; these are omitted because no backing API field exists yet. Do not file as a bug.
 3. **Android visibility update is display-only.** The visibility dropdown on the Android Trust screen renders but does not yet call `POST /api/trust/visibility`. The backend is implemented; the Android UI wiring is a planned follow-up. Do not file the display-only state as a bug.
 4. **Trust evidence JSONB schema unpublished.** Evidence content is structured JSONB; no rich-text schema or attachment storage contract has been published. Variations in item structure are expected.
-5. **No dedicated seed script for Trust.** Trust has no seed data of its own; it derives from upstream plugins. If upstream tables are empty the evidence list will be empty — that is correct behaviour, not a bug.
+5. **No dedicated seed script for Trust.** Trust has no seed data of its own; it derives from upstream plugins. If upstream tables are empty the evidence list will be empty — that is correct behavior, not a bug.
 
 ## Recurring Activity signal (2026-07-04, issue #885; model `cross_plugin_engagement_v4`)
 
