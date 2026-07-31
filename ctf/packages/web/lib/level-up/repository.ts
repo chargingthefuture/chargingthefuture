@@ -21,6 +21,12 @@ function roundCurrency(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+// Nullish-coalescing as a helper so a call site adds no branch to its enclosing function's
+// complexity (identical semantics to `value ?? fallback`).
+function orDefault<T>(value: T | null | undefined, fallback: T): T {
+  return value ?? fallback;
+}
+
 function calculateTrainerPayout(learnerReleaseAmount: number, trainerSplitPercent: number): number {
   if (trainerSplitPercent <= 0) {
     return 0;
@@ -159,7 +165,10 @@ function mapCohort(row: CohortRow) {
   };
 }
 
-export async function createCohort(input: {
+type CohortCurriculumItemInput = { title: string; description?: string; required?: boolean };
+type CohortMilestoneInput = { name: string; percentRelease: number; requiredTask: string };
+
+type CreateCohortInput = {
   actorId: string;
   idempotencyKey: string;
   title: string;
@@ -183,92 +192,104 @@ export async function createCohort(input: {
   refundPolicyJson?: Record<string, unknown>;
   payoutPolicyJson?: Record<string, unknown>;
   policyJson?: Record<string, unknown>;
-  curriculumItems?: Array<{ title: string; description?: string; required?: boolean }>;
-  milestones?: Array<{ name: string; percentRelease: number; requiredTask: string }>;
+  curriculumItems?: Array<CohortCurriculumItemInput>;
+  milestones?: Array<CohortMilestoneInput>;
   autoCreated?: boolean;
   sourceJobTitleId?: string | null;
   sourceSector?: string | null;
   sourceGapAtCreation?: number | null;
-}) {
+};
+
+async function insertCohortRow(client: PoolClient, cohortId: string, input: CreateCohortInput) {
+  const status = orDefault(input.status, 'draft');
+  const trainerSplitPercent = orDefault(input.trainerSplitPercent, LEVEL_UP_DEFAULT_TRAINER_SPLIT_PERCENT);
+
+  await client.query(
+    `INSERT INTO level_up_cohorts
+      (id, title, description, track, seats, start_date, end_date, required_credits, materials_cost, device_support, status, allow_no_deposit,
+       trainer_split_percent, completion_bonus_credits, stipend_mode, stipend_amount_per_payout, stipend_interval_days, microgrant_mode,
+       microgrant_amount, refund_policy_json, payout_policy_json, policy_json, created_by_user_id,
+       auto_created, source_job_title_id, source_sector, source_gap_at_creation)
+     VALUES
+      ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, $11, $12,
+       $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21::jsonb, $22::jsonb, $23,
+       $24, $25, $26, $27)`,
+    [
+      cohortId,
+      input.title,
+      input.description,
+      input.track,
+      input.seats,
+      input.startDate,
+      input.endDate,
+      input.requiredCredits,
+      orDefault(input.materialsCost, 0),
+      orDefault(input.deviceSupport, false),
+      status,
+      orDefault(input.allowNoDeposit, false),
+      trainerSplitPercent,
+      orDefault(input.completionBonusCredits, 0),
+      orDefault(input.stipendMode, 'none'),
+      orDefault(input.stipendAmountPerPayout, 0),
+      orDefault<number | null>(input.stipendIntervalDays, null),
+      orDefault(input.micrograntMode, 'none'),
+      orDefault(input.micrograntAmount, 0),
+      JSON.stringify(orDefault(input.refundPolicyJson, {})),
+      JSON.stringify(orDefault(input.payoutPolicyJson, {})),
+      JSON.stringify(orDefault(input.policyJson, {})),
+      input.actorId,
+      orDefault(input.autoCreated, false),
+      orDefault<string | null>(input.sourceJobTitleId, null),
+      orDefault<string | null>(input.sourceSector, null),
+      orDefault<number | null>(input.sourceGapAtCreation, null),
+    ],
+  );
+}
+
+async function insertCohortCurriculumItems(client: PoolClient, cohortId: string, items: Array<CohortCurriculumItemInput>) {
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i];
+    await client.query(
+      `INSERT INTO level_up_curriculum_items (id, cohort_id, title, description, sequence_no, required)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [randomUUID(), cohortId, item.title, orDefault(item.description, ''), i + 1, orDefault(item.required, true)],
+    );
+  }
+}
+
+async function insertCohortMilestones(client: PoolClient, cohortId: string, milestones: Array<CohortMilestoneInput>) {
+  for (let i = 0; i < milestones.length; i += 1) {
+    const milestone = milestones[i];
+    await client.query(
+      `INSERT INTO level_up_milestones (id, cohort_id, name, percent_release, required_task, sequence_no)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [randomUUID(), cohortId, milestone.name, milestone.percentRelease, milestone.requiredTask, i + 1],
+    );
+  }
+}
+
+async function createCohortTx(client: PoolClient, input: CreateCohortInput) {
+  const existing = await readCommandIdempotency<{ cohortId: string }>(client, input.actorId, 'level-up.cohort.create', input.idempotencyKey);
+  if (existing) {
+    return existing;
+  }
+
+  const cohortId = randomUUID();
+  await insertCohortRow(client, cohortId, input);
+  await insertCohortCurriculumItems(client, cohortId, orDefault(input.curriculumItems, []));
+  await insertCohortMilestones(client, cohortId, orDefault(input.milestones, []));
+
+  const response = { cohortId };
+  await writeCommandIdempotency(client, input.actorId, 'level-up.cohort.create', input.idempotencyKey, response);
+  return response;
+}
+
+export async function createCohort(input: CreateCohortInput) {
   if (!input.title || !input.track || input.seats <= 0) {
     throw new Error('invalid_payload');
   }
 
-  return withDbTransaction(async (client) => {
-    const existing = await readCommandIdempotency<{ cohortId: string }>(client, input.actorId, 'level-up.cohort.create', input.idempotencyKey);
-    if (existing) {
-      return existing;
-    }
-
-    const cohortId = randomUUID();
-    const status = input.status ?? 'draft';
-    const trainerSplitPercent = input.trainerSplitPercent ?? LEVEL_UP_DEFAULT_TRAINER_SPLIT_PERCENT;
-
-    await client.query(
-      `INSERT INTO level_up_cohorts
-        (id, title, description, track, seats, start_date, end_date, required_credits, materials_cost, device_support, status, allow_no_deposit,
-         trainer_split_percent, completion_bonus_credits, stipend_mode, stipend_amount_per_payout, stipend_interval_days, microgrant_mode,
-         microgrant_amount, refund_policy_json, payout_policy_json, policy_json, created_by_user_id,
-         auto_created, source_job_title_id, source_sector, source_gap_at_creation)
-       VALUES
-        ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, $11, $12,
-         $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21::jsonb, $22::jsonb, $23,
-         $24, $25, $26, $27)`,
-      [
-        cohortId,
-        input.title,
-        input.description,
-        input.track,
-        input.seats,
-        input.startDate,
-        input.endDate,
-        input.requiredCredits,
-        input.materialsCost ?? 0,
-        input.deviceSupport ?? false,
-        status,
-        input.allowNoDeposit ?? false,
-        trainerSplitPercent,
-        input.completionBonusCredits ?? 0,
-        input.stipendMode ?? 'none',
-        input.stipendAmountPerPayout ?? 0,
-        input.stipendIntervalDays ?? null,
-        input.micrograntMode ?? 'none',
-        input.micrograntAmount ?? 0,
-        JSON.stringify(input.refundPolicyJson ?? {}),
-        JSON.stringify(input.payoutPolicyJson ?? {}),
-        JSON.stringify(input.policyJson ?? {}),
-        input.actorId,
-        input.autoCreated ?? false,
-        input.sourceJobTitleId ?? null,
-        input.sourceSector ?? null,
-        input.sourceGapAtCreation ?? null,
-      ],
-    );
-
-    const curriculumItems = input.curriculumItems ?? [];
-    for (let i = 0; i < curriculumItems.length; i += 1) {
-      const item = curriculumItems[i];
-      await client.query(
-        `INSERT INTO level_up_curriculum_items (id, cohort_id, title, description, sequence_no, required)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [randomUUID(), cohortId, item.title, item.description ?? '', i + 1, item.required ?? true],
-      );
-    }
-
-    const milestones = input.milestones ?? [];
-    for (let i = 0; i < milestones.length; i += 1) {
-      const milestone = milestones[i];
-      await client.query(
-        `INSERT INTO level_up_milestones (id, cohort_id, name, percent_release, required_task, sequence_no)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [randomUUID(), cohortId, milestone.name, milestone.percentRelease, milestone.requiredTask, i + 1],
-      );
-    }
-
-    const response = { cohortId };
-    await writeCommandIdempotency(client, input.actorId, 'level-up.cohort.create', input.idempotencyKey, response);
-    return response;
-  });
+  return withDbTransaction((client) => createCohortTx(client, input));
 }
 
 export async function listCohorts(filter: CohortFilter) {
@@ -431,144 +452,168 @@ export async function isTrainerForCohort(actorId: string, cohortId: string): Pro
   return cohort.rows[0]?.created_by_user_id === actorId;
 }
 
-export async function enrollInCohort(input: {
+type EnrollInCohortInput = {
   actorId: string;
   cohortId: string;
   idempotencyKey: string;
   depositCredits?: number;
   allowWithoutDeposit?: boolean;
   assignedTrainerId?: string | null;
-}) {
-  type EnrollmentCreateResponse = {
-    enrollmentId: string;
-    status: 'enrolled';
-    depositRequested: number;
-    milestones: Array<{ id: string; percentRelease: number; sequenceNo: number }>;
-  };
+};
 
-  const draft = await withDbTransaction(async (client) => {
-    const existing = await readCommandIdempotency<EnrollmentCreateResponse>(client, input.actorId, 'level-up.enrollment.create', input.idempotencyKey);
-    if (existing) {
-      return existing;
-    }
+type EnrollmentCreateResponse = {
+  enrollmentId: string;
+  status: 'enrolled';
+  depositRequested: number;
+  milestones: Array<{ id: string; percentRelease: number; sequenceNo: number }>;
+};
 
-    const rateLimit = await evaluateRateLimit(client, {
-      userId: input.actorId,
-      commandName: 'level-up.enrollment.create',
-      limit: 6,
-      windowSeconds: 60,
-    });
-    if (!rateLimit.allowed) {
-      throw new Error('rate_limit_exceeded');
-    }
+type EnrollableCohortRow = {
+  seats: number;
+  status: string;
+  required_credits: string;
+  allow_no_deposit: boolean;
+  created_by_user_id: string;
+  auto_created: boolean;
+};
 
-    const cohort = await client.query<{
-      seats: number;
-      status: string;
-      required_credits: string;
-      allow_no_deposit: boolean;
-      created_by_user_id: string;
-      auto_created: boolean;
-    }>(
-      `SELECT seats, status, required_credits::text, allow_no_deposit, created_by_user_id, auto_created
-       FROM level_up_cohorts
-       WHERE id = $1::uuid
-       FOR UPDATE`,
-      [input.cohortId],
-    );
+async function loadEnrollableCohort(client: PoolClient, cohortId: string): Promise<EnrollableCohortRow> {
+  const cohort = await client.query<EnrollableCohortRow>(
+    `SELECT seats, status, required_credits::text, allow_no_deposit, created_by_user_id, auto_created
+     FROM level_up_cohorts
+     WHERE id = $1::uuid
+     FOR UPDATE`,
+    [cohortId],
+  );
 
-    if (!cohort.rows[0]) {
-      throw new Error('not_found');
-    }
+  if (!cohort.rows[0]) {
+    throw new Error('not_found');
+  }
 
-    if (!['open', 'active'].includes(cohort.rows[0].status)) {
-      throw new Error('invalid_state');
-    }
+  if (!['open', 'active'].includes(cohort.rows[0].status)) {
+    throw new Error('invalid_state');
+  }
 
-    const enrollmentExisting = await client.query<{ id: string }>(
-      `SELECT id::text
-       FROM level_up_enrollments
-       WHERE cohort_id = $1::uuid AND user_id = $2
-       LIMIT 1`,
-      [input.cohortId, input.actorId],
-    );
-    if (enrollmentExisting.rows[0]) {
-      const response: EnrollmentCreateResponse = {
-        enrollmentId: enrollmentExisting.rows[0].id,
-        status: 'enrolled',
-        depositRequested: 0,
-        milestones: [],
-      };
-      await writeCommandIdempotency(client, input.actorId, 'level-up.enrollment.create', input.idempotencyKey, response);
-      return response;
-    }
+  return cohort.rows[0];
+}
 
-    const enrolled = await client.query<{ total: string }>(
-      `SELECT COUNT(*)::text AS total
-       FROM level_up_enrollments
-       WHERE cohort_id = $1::uuid AND status IN ('enrolled', 'active')`,
-      [input.cohortId],
-    );
+async function assertEnrollmentSeatAvailable(client: PoolClient, cohortId: string, seats: number) {
+  const enrolled = await client.query<{ total: string }>(
+    `SELECT COUNT(*)::text AS total
+     FROM level_up_enrollments
+     WHERE cohort_id = $1::uuid AND status IN ('enrolled', 'active')`,
+    [cohortId],
+  );
 
-    if (Number(enrolled.rows[0]?.total ?? '0') >= Number(cohort.rows[0].seats)) {
-      throw new Error('invalid_state');
-    }
+  if (Number(enrolled.rows[0]?.total ?? '0') >= Number(seats)) {
+    throw new Error('invalid_state');
+  }
+}
 
-    const requiredCredits = toNumber(cohort.rows[0].required_credits);
-    const depositRequested = roundCurrency(input.depositCredits ?? requiredCredits);
-    if (!cohort.rows[0].allow_no_deposit && depositRequested <= 0) {
-      throw new Error('invalid_payload');
-    }
-    if (!cohort.rows[0].allow_no_deposit && depositRequested < requiredCredits) {
-      throw new Error('invalid_payload');
-    }
-    // A no-deposit cohort with a *nonzero* required amount still needs the caller to explicitly opt
-    // into skipping that deposit (allowWithoutDeposit). But a genuinely free cohort (requiredCredits
-    // === 0) has nothing to deposit, so a zero deposit is the normal path and must not require the
-    // opt-in flag — otherwise one-tap "Enroll" on a 0 SC cohort fails with invalid_payload.
-    if (cohort.rows[0].allow_no_deposit && requiredCredits > 0 && !input.allowWithoutDeposit && depositRequested <= 0) {
-      throw new Error('invalid_payload');
-    }
+function resolveEnrollmentDeposit(cohort: EnrollableCohortRow, input: EnrollInCohortInput): number {
+  const requiredCredits = toNumber(cohort.required_credits);
+  const depositRequested = roundCurrency(orDefault(input.depositCredits, requiredCredits));
+  if (!cohort.allow_no_deposit && depositRequested <= 0) {
+    throw new Error('invalid_payload');
+  }
+  if (!cohort.allow_no_deposit && depositRequested < requiredCredits) {
+    throw new Error('invalid_payload');
+  }
+  // A no-deposit cohort with a *nonzero* required amount still needs the caller to explicitly opt
+  // into skipping that deposit (allowWithoutDeposit). But a genuinely free cohort (requiredCredits
+  // === 0) has nothing to deposit, so a zero deposit is the normal path and must not require the
+  // opt-in flag — otherwise one-tap "Enroll" on a 0 SC cohort fails with invalid_payload.
+  if (cohort.allow_no_deposit && requiredCredits > 0 && !input.allowWithoutDeposit && depositRequested <= 0) {
+    throw new Error('invalid_payload');
+  }
+  return depositRequested;
+}
 
-    // Trainer of record for the enrollment (drives the milestone-release payout). Prefer an explicitly
-    // supplied trainer; otherwise, for an auto-created cohort a trainer has claimed (its
-    // created_by_user_id is no longer the scheduler placeholder), default to that claiming trainer so
-    // their split actually settles on milestone release. Admin/human-built cohorts get null unless a
-    // trainer is passed in (created_by there may be an admin, not the trainer).
-    const claimedAutoTrainer =
-      cohort.rows[0].auto_created && cohort.rows[0].created_by_user_id !== LEVEL_UP_AUTO_COHORT_ACTOR_ID
-        ? cohort.rows[0].created_by_user_id
-        : null;
-    const resolvedTrainerId = input.assignedTrainerId ?? claimedAutoTrainer;
+function resolveEnrollmentTrainerId(cohort: EnrollableCohortRow, input: EnrollInCohortInput): string | null {
+  // Trainer of record for the enrollment (drives the milestone-release payout). Prefer an explicitly
+  // supplied trainer; otherwise, for an auto-created cohort a trainer has claimed (its
+  // created_by_user_id is no longer the scheduler placeholder), default to that claiming trainer so
+  // their split actually settles on milestone release. Admin/human-built cohorts get null unless a
+  // trainer is passed in (created_by there may be an admin, not the trainer).
+  const claimedAutoTrainer =
+    cohort.auto_created && cohort.created_by_user_id !== LEVEL_UP_AUTO_COHORT_ACTOR_ID
+      ? cohort.created_by_user_id
+      : null;
+  return input.assignedTrainerId ?? claimedAutoTrainer;
+}
 
-    const enrollmentId = randomUUID();
-    await client.query(
-      `INSERT INTO level_up_enrollments (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
-       VALUES ($1, $2::uuid, $3, 'enrolled', $4, $5)`,
-      [enrollmentId, input.cohortId, input.actorId, Math.max(depositRequested, 0), resolvedTrainerId],
-    );
+async function createEnrollmentDraftTx(client: PoolClient, input: EnrollInCohortInput): Promise<EnrollmentCreateResponse> {
+  const existing = await readCommandIdempotency<EnrollmentCreateResponse>(client, input.actorId, 'level-up.enrollment.create', input.idempotencyKey);
+  if (existing) {
+    return existing;
+  }
 
-    const milestones = await client.query(
-      `SELECT id::text, percent_release::text, sequence_no
-       FROM level_up_milestones
-       WHERE cohort_id = $1::uuid
-       ORDER BY sequence_no ASC`,
-      [input.cohortId],
-    );
+  const rateLimit = await evaluateRateLimit(client, {
+    userId: input.actorId,
+    commandName: 'level-up.enrollment.create',
+    limit: 6,
+    windowSeconds: 60,
+  });
+  if (!rateLimit.allowed) {
+    throw new Error('rate_limit_exceeded');
+  }
 
+  const cohort = await loadEnrollableCohort(client, input.cohortId);
+
+  const enrollmentExisting = await client.query<{ id: string }>(
+    `SELECT id::text
+     FROM level_up_enrollments
+     WHERE cohort_id = $1::uuid AND user_id = $2
+     LIMIT 1`,
+    [input.cohortId, input.actorId],
+  );
+  if (enrollmentExisting.rows[0]) {
     const response: EnrollmentCreateResponse = {
-      enrollmentId,
+      enrollmentId: enrollmentExisting.rows[0].id,
       status: 'enrolled',
-      depositRequested,
-      milestones: milestones.rows.map((row) => ({
-        id: row.id,
-        percentRelease: toNumber(row.percent_release),
-        sequenceNo: row.sequence_no,
-      })),
+      depositRequested: 0,
+      milestones: [],
     };
     await writeCommandIdempotency(client, input.actorId, 'level-up.enrollment.create', input.idempotencyKey, response);
     return response;
-  });
+  }
+
+  await assertEnrollmentSeatAvailable(client, input.cohortId, cohort.seats);
+
+  const depositRequested = resolveEnrollmentDeposit(cohort, input);
+  const resolvedTrainerId = resolveEnrollmentTrainerId(cohort, input);
+
+  const enrollmentId = randomUUID();
+  await client.query(
+    `INSERT INTO level_up_enrollments (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
+     VALUES ($1, $2::uuid, $3, 'enrolled', $4, $5)`,
+    [enrollmentId, input.cohortId, input.actorId, Math.max(depositRequested, 0), resolvedTrainerId],
+  );
+
+  const milestones = await client.query<{ id: string; percent_release: string; sequence_no: number }>(
+    `SELECT id::text, percent_release::text, sequence_no
+     FROM level_up_milestones
+     WHERE cohort_id = $1::uuid
+     ORDER BY sequence_no ASC`,
+    [input.cohortId],
+  );
+
+  const response: EnrollmentCreateResponse = {
+    enrollmentId,
+    status: 'enrolled',
+    depositRequested,
+    milestones: milestones.rows.map((row) => ({
+      id: row.id,
+      percentRelease: toNumber(row.percent_release),
+      sequenceNo: row.sequence_no,
+    })),
+  };
+  await writeCommandIdempotency(client, input.actorId, 'level-up.enrollment.create', input.idempotencyKey, response);
+  return response;
+}
+
+export async function enrollInCohort(input: EnrollInCohortInput) {
+  const draft = await withDbTransaction((client) => createEnrollmentDraftTx(client, input));
 
   if (draft.depositRequested <= 0) {
     return {
@@ -692,38 +737,167 @@ export async function validateMilestone(input: {
   });
 }
 
-export async function releaseMilestoneCredits(input: {
+type ReleaseMilestoneInput = {
   actorId: string;
   enrollmentId: string;
   milestoneId: string;
   idempotencyKey: string;
-}) {
-  type MilestoneReleaseDraft = {
-    enrollmentId: string;
-    milestoneId: string;
-    escrowId: string;
-    recipientUserId: string;
-    trainerUserId: string | null;
-    cohortId: string;
-    releasedAmount: number;
-    trainerPayoutAmount: number;
-    completionBonusAmount: number;
-    isFinalMilestone: boolean;
-  };
+};
 
-  type MilestoneReleaseResponse = {
-    enrollmentId: string;
-    milestoneId: string;
-    // The learner the released credits go to — surfaced so the route can notify them.
-    recipientUserId: string;
-    userTransferId: string;
-    trainerPayoutGovernanceId: string | null;
-    completionBonusGovernanceId: string | null;
-    releasedAmount: number;
-    trainerPayoutAmount: number;
-    completionBonusAmount: number;
-  };
+type MilestoneReleaseDraft = {
+  enrollmentId: string;
+  milestoneId: string;
+  escrowId: string;
+  recipientUserId: string;
+  trainerUserId: string | null;
+  cohortId: string;
+  releasedAmount: number;
+  trainerPayoutAmount: number;
+  completionBonusAmount: number;
+  isFinalMilestone: boolean;
+};
 
+type MilestoneReleaseResponse = {
+  enrollmentId: string;
+  milestoneId: string;
+  // The learner the released credits go to — surfaced so the route can notify them.
+  recipientUserId: string;
+  userTransferId: string;
+  trainerPayoutGovernanceId: string | null;
+  completionBonusGovernanceId: string | null;
+  releasedAmount: number;
+  trainerPayoutAmount: number;
+  completionBonusAmount: number;
+};
+
+type ReleaseEnrollmentRow = {
+  user_id: string;
+  assigned_trainer_id: string | null;
+  cohort_id: string;
+  status: string;
+};
+
+type ReleaseEscrowRow = { escrow_id: string; held_amount: string; release_status: string };
+type ReleaseCohortRow = { trainer_split_percent: string; completion_bonus_credits: string };
+
+async function assertMilestoneReleasable(client: PoolClient, enrollmentId: string, milestoneId: string) {
+  const validation = await client.query<{ status: string }>(
+    `SELECT status
+     FROM level_up_milestone_validations
+     WHERE enrollment_id = $1::uuid AND milestone_id = $2::uuid
+     FOR UPDATE`,
+    [enrollmentId, milestoneId],
+  );
+
+  if (!validation.rows[0]) {
+    throw new Error('not_found');
+  }
+
+  if (validation.rows[0].status === 'released') {
+    throw new Error('invalid_state');
+  }
+
+  if (validation.rows[0].status !== 'validated') {
+    throw new Error('invalid_state');
+  }
+}
+
+async function loadEnrollmentForRelease(client: PoolClient, enrollmentId: string): Promise<ReleaseEnrollmentRow> {
+  const enrollment = await client.query<ReleaseEnrollmentRow>(
+    `SELECT user_id, assigned_trainer_id, cohort_id::text, status
+     FROM level_up_enrollments
+     WHERE id = $1::uuid
+     FOR UPDATE`,
+    [enrollmentId],
+  );
+
+  if (!enrollment.rows[0]) {
+    throw new Error('not_found');
+  }
+
+  return enrollment.rows[0];
+}
+
+async function loadHeldEscrowForRelease(client: PoolClient, enrollmentId: string, milestoneId: string): Promise<ReleaseEscrowRow> {
+  const escrow = await client.query<ReleaseEscrowRow>(
+    `SELECT escrow_id::text, held_amount::text, release_status
+     FROM level_up_enrollment_milestone_escrows
+     WHERE enrollment_id = $1::uuid AND milestone_id = $2::uuid
+     FOR UPDATE`,
+    [enrollmentId, milestoneId],
+  );
+
+  if (!escrow.rows[0]) {
+    throw new Error('not_found');
+  }
+
+  if (escrow.rows[0].release_status !== 'held') {
+    throw new Error('invalid_state');
+  }
+
+  return escrow.rows[0];
+}
+
+async function loadCohortForRelease(client: PoolClient, cohortId: string): Promise<ReleaseCohortRow> {
+  const cohort = await client.query<ReleaseCohortRow>(
+    `SELECT trainer_split_percent::text, completion_bonus_credits::text
+     FROM level_up_cohorts
+     WHERE id = $1::uuid
+     LIMIT 1`,
+    [cohortId],
+  );
+
+  if (!cohort.rows[0]) {
+    throw new Error('not_found');
+  }
+
+  return cohort.rows[0];
+}
+
+async function isFinalMilestoneForEnrollment(client: PoolClient, enrollmentId: string, cohortId: string): Promise<boolean> {
+  const allMilestones = await client.query<{ total: string; released: string }>(
+    `SELECT
+       COUNT(*)::text AS total,
+       COUNT(*) FILTER (WHERE v.status = 'released')::text AS released
+     FROM level_up_milestones m
+     LEFT JOIN level_up_milestone_validations v
+       ON v.milestone_id = m.id AND v.enrollment_id = $1::uuid
+     WHERE m.cohort_id = $2::uuid`,
+    [enrollmentId, cohortId],
+  );
+
+  const totalMilestones = Number(allMilestones.rows[0]?.total ?? '0');
+  const alreadyReleased = Number(allMilestones.rows[0]?.released ?? '0');
+  return totalMilestones > 0 && alreadyReleased + 1 >= totalMilestones;
+}
+
+async function buildMilestoneReleaseDraft(client: PoolClient, input: ReleaseMilestoneInput): Promise<MilestoneReleaseDraft> {
+  await assertMilestoneReleasable(client, input.enrollmentId, input.milestoneId);
+  const enrollment = await loadEnrollmentForRelease(client, input.enrollmentId);
+  const escrow = await loadHeldEscrowForRelease(client, input.enrollmentId, input.milestoneId);
+  const cohort = await loadCohortForRelease(client, enrollment.cohort_id);
+
+  const heldAmount = toNumber(escrow.held_amount);
+  const trainerSplitPercent = toNumber(cohort.trainer_split_percent);
+  const trainerPayoutAmount = calculateTrainerPayout(heldAmount, trainerSplitPercent);
+
+  const isFinalMilestone = await isFinalMilestoneForEnrollment(client, input.enrollmentId, enrollment.cohort_id);
+
+  return {
+    enrollmentId: input.enrollmentId,
+    milestoneId: input.milestoneId,
+    escrowId: escrow.escrow_id,
+    recipientUserId: enrollment.user_id,
+    trainerUserId: enrollment.assigned_trainer_id,
+    cohortId: enrollment.cohort_id,
+    releasedAmount: heldAmount,
+    trainerPayoutAmount,
+    completionBonusAmount: isFinalMilestone ? toNumber(cohort.completion_bonus_credits) : 0,
+    isFinalMilestone,
+  };
+}
+
+export async function releaseMilestoneCredits(input: ReleaseMilestoneInput) {
   const existingRelease = await queryDb<{ response_payload: MilestoneReleaseResponse }>(
     `SELECT response_payload
      FROM level_up_command_idempotency
@@ -735,101 +909,7 @@ export async function releaseMilestoneCredits(input: {
     return existingRelease.rows[0].response_payload;
   }
 
-  const releaseDraft = await withDbTransaction(async (client: PoolClient) => {
-    const validation = await client.query(
-      `SELECT status
-       FROM level_up_milestone_validations
-       WHERE enrollment_id = $1::uuid AND milestone_id = $2::uuid
-       FOR UPDATE`,
-      [input.enrollmentId, input.milestoneId],
-    );
-
-    if (!validation.rows[0]) {
-      throw new Error('not_found');
-    }
-
-    if (validation.rows[0].status === 'released') {
-      throw new Error('invalid_state');
-    }
-
-    if (validation.rows[0].status !== 'validated') {
-      throw new Error('invalid_state');
-    }
-
-    const enrollment = await client.query(
-      `SELECT user_id, assigned_trainer_id, cohort_id::text, status
-       FROM level_up_enrollments
-       WHERE id = $1::uuid
-       FOR UPDATE`,
-      [input.enrollmentId],
-    );
-
-    if (!enrollment.rows[0]) {
-      throw new Error('not_found');
-    }
-
-    const escrow = await client.query(
-      `SELECT escrow_id::text, held_amount::text, release_status
-       FROM level_up_enrollment_milestone_escrows
-       WHERE enrollment_id = $1::uuid AND milestone_id = $2::uuid
-       FOR UPDATE`,
-      [input.enrollmentId, input.milestoneId],
-    );
-
-    if (!escrow.rows[0]) {
-      throw new Error('not_found');
-    }
-
-    if (escrow.rows[0].release_status !== 'held') {
-      throw new Error('invalid_state');
-    }
-
-    const cohort = await client.query(
-      `SELECT trainer_split_percent::text, completion_bonus_credits::text
-       FROM level_up_cohorts
-       WHERE id = $1::uuid
-       LIMIT 1`,
-      [enrollment.rows[0].cohort_id],
-    );
-
-    if (!cohort.rows[0]) {
-      throw new Error('not_found');
-    }
-
-    const heldAmount = toNumber(escrow.rows[0].held_amount);
-    const trainerSplitPercent = toNumber(cohort.rows[0].trainer_split_percent);
-    const trainerPayoutAmount = calculateTrainerPayout(heldAmount, trainerSplitPercent);
-
-    const allMilestones = await client.query(
-      `SELECT
-         COUNT(*)::text AS total,
-         COUNT(*) FILTER (WHERE v.status = 'released')::text AS released
-       FROM level_up_milestones m
-       LEFT JOIN level_up_milestone_validations v
-         ON v.milestone_id = m.id AND v.enrollment_id = $1::uuid
-       WHERE m.cohort_id = $2::uuid`,
-      [input.enrollmentId, enrollment.rows[0].cohort_id],
-    );
-
-    const totalMilestones = Number(allMilestones.rows[0]?.total ?? '0');
-    const alreadyReleased = Number(allMilestones.rows[0]?.released ?? '0');
-    const isFinalMilestone = totalMilestones > 0 && alreadyReleased + 1 >= totalMilestones;
-
-    const response: MilestoneReleaseDraft = {
-      enrollmentId: input.enrollmentId,
-      milestoneId: input.milestoneId,
-      escrowId: escrow.rows[0].escrow_id,
-      recipientUserId: enrollment.rows[0].user_id,
-      trainerUserId: enrollment.rows[0].assigned_trainer_id,
-      cohortId: enrollment.rows[0].cohort_id,
-      releasedAmount: heldAmount,
-      trainerPayoutAmount,
-      completionBonusAmount: isFinalMilestone ? toNumber(cohort.rows[0].completion_bonus_credits) : 0,
-      isFinalMilestone,
-    };
-
-    return response;
-  });
+  const releaseDraft = await withDbTransaction((client) => buildMilestoneReleaseDraft(client, input));
 
   // Business rule: milestone release returns escrowed credits to the learner first.
   const userRelease = await releaseEscrow({

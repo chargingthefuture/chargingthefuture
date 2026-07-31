@@ -606,6 +606,150 @@
 
 ---
 
+### FD-A24 — The public-rooms notice on a member's first visit
+**Role:** new member | **Surface:** web
+
+**Precondition:** An account that has never opened the Commons, or delete that member's row from
+`feed_commons_notice_seen`.
+
+**Steps:**
+1. Sign in as that member and open the Commons.
+2. Read the card at the top of the stream, then click **Got it**.
+3. Reload the Commons.
+4. Sign in as a member who has already dismissed it and open the Commons.
+5. Sign out entirely and open the Commons.
+6. Check `SELECT * FROM feed_commons_notice_seen`.
+
+**Expected:**
+- Step 1: **Where things are public, and where the work happens** appears as an inline card at the top of
+  the stream — **not a modal**. A box demanding a click over a support channel trains people to dismiss
+  it unread, and these members have every reason to distrust one.
+- Step 2/3: gone, and it stays gone.
+- Step 4: not shown.
+- Step 5: not shown to a signed-out visitor — they cannot post, so there is nothing yet to disclose.
+- Step 6: one row per member per notice.
+- The point of this case: the cadence alone cannot protect a member who posts something identifying on
+  their first visit, before any rotation reaches them. If this card stops appearing for new members, that
+  protection is gone even though the periodic notice still looks fine.
+
+**Result:** web ☐
+
+---
+
+### FD-A23 — The other two notices, on their own cadences
+**Role:** admin | **Surface:** web
+
+**Precondition:** As FD-A19. For the time-cadence case you need either database access to
+`feed_commons_guidance_milestones` or a local build with `FEED_COMMONS_SIGNAL_INTERVAL_DAYS` lowered.
+
+**Steps:**
+1. Post until the Commons post count reaches a multiple of 75.
+2. Read the stream.
+3. Delete the `signal_vs_noise` row from `feed_commons_guidance_milestones`, then post once.
+4. Post several more times in the same day.
+5. Check `SELECT notice_key, milestone_count FROM feed_commons_guidance_milestones`.
+
+**Expected:**
+- Step 2: **Where things are public, and where the work happens** appears. Two things to verify in it:
+  - It says the group chat **and the main Chyme room** are public — anyone can read and listen signed
+    out, and you sign in to comment or speak. Check this against the app by opening `/apps/chyme` in a
+    signed-out window: you should get the guest listen view, not a redirect. (Reading only the
+    authenticated branch of `app/apps/[pluginSlug]/page.tsx` makes Chyme look gated. It is not — the
+    public-visitor registry serves `ChymePublicShell`.)
+  - The AI Assistant paragraph says the owner sees the question when checking an answer, rather than
+    promising nobody ever reads them. If that drifts back to an absolute promise, the notice is claiming
+    more privacy than the code gives.
+- Step 3: **Who I interact with is not a vouch** appears on the very next post — a time-cadence notice is
+  delivered by a post, not by a clock, so nothing is published into a silent room.
+- Step 4: no repeats. Every post that day computes the same period and loses the claim.
+- Step 5: rows are keyed by `notice_key` — the three notices never share a period row and never block
+  each other.
+- Read the signal notice and confirm it says **Skills Economy**, never "TI Skills Economy (TSE)", and
+  uses "Target" rather than "TI" as a label.
+
+**Result:** web ☐
+
+---
+
+### FD-A19 — Commons guidance notice posts itself every 50 posts
+**Role:** admin + member | **Surface:** web
+
+**Precondition:** You can read the total row count of `feed_community_posts`. Pick a starting count
+where you can reach the next multiple of 50 without posting hundreds of times — or temporarily lower
+`FEED_COMMONS_GUIDANCE_INTERVAL` in a local build to make this practical.
+
+**Steps:**
+1. Note `SELECT COUNT(*) FROM feed_community_posts`.
+2. Post in the Commons until the total lands exactly on a multiple of the interval.
+3. Read the Commons stream at that point.
+4. Post one more time and read the stream again.
+5. Check `SELECT milestone_count, announcement_id FROM feed_commons_guidance_milestones`.
+6. Hide one of the posts you made, then post again up to the next multiple.
+
+**Expected:**
+- Step 3: an announcement titled **What the Commons is for** appears inline in the Commons stream. It
+  is attributed to the system, **not** to you and not to any member — nobody should look like they are
+  personally telling people off every 50 posts.
+- Step 4: no second copy. The notice fires on the milestone itself, not on every post past it.
+- Step 5: one row for that milestone, with `announcement_id` filled in, so the exact announcement a
+  milestone produced can be found later.
+- Step 6: hidden posts still count. The milestone means "the Commons has seen this much traffic";
+  moderating after the fact must not shift where the next notice falls.
+- Read the copy and check all five of these survive. Each was corrected into place by the owner, and
+  losing any one of them changes what the notice does:
+  1. The Commons is a **support channel** — ask in the open, get an answer. It is **not** where trades
+     are arranged or recorded; those live in their own apps and are what count toward the economy. If
+     the notice ever implies otherwise it teaches members to do business in a public thread instead of
+     in the app that records it.
+  2. **Why it is open**, stated as the benefit: a public question is answered once where the next person
+     finds it, by whoever is awake across the timezones, so nobody waits on the owner alone. The copy
+     deliberately does **not** explain the harassment history behind the no-DM policy (cut 2026-07-30) —
+     the rule stands on the benefit, and the notice does not owe the community that account.
+  3. **"You can say what is happening to you."** This is the anti-scare guarantee. Without it, "no
+     storytelling" reads to a newly targeted person as *your experience is unwelcome here*, which is the
+     opposite of true and would cost the app exactly the members it is for. The line it draws is the
+     retelling that asks for nothing, contrasted with Quora — where you narrate into a void.
+  4. Content is removed for **repeatedly going nowhere**, never for who someone is suspected of being.
+  5. Traffickers are **"not allowed"** — as a fact, not "not tolerated" as a feeling.
+  6. The Weaver perk is **the private room**, not the Commons. Check the notice does not claim Weavers
+     post without restriction *here* — the topic rule applies to the Commons for everyone, and an earlier
+     draft got this wrong. Promising members something the app does not do is worse than any tone problem.
+  7. **It reads as a pitch, not a telling-off.** It opens on the Quora contrast (there you write into a
+     void; here you ask and someone answers) and the rules follow as consequences of that promise. If an
+     edit ever makes it lead with the rules, it will read as annoyed and cost the app the members it is
+     for — the firmness on traffickers is not the same thing as a scolding tone toward everyone else.
+
+**Result:** web ☐
+
+---
+
+### FD-A20 — The notice cannot post twice for one milestone
+**Role:** admin | **Surface:** web
+
+**Precondition:** As FD-A19, sitting one post below a multiple of the interval.
+
+**Steps:**
+1. With two browser sessions signed in as two different members, submit a Commons post from both at
+   essentially the same moment — the two requests should straddle the milestone boundary.
+2. Read the Commons stream.
+3. Check `SELECT COUNT(*) FROM feed_commons_guidance_milestones WHERE milestone_count = <the multiple>`.
+4. Now force a failure: post while the database is briefly unreachable, or otherwise cause the post to
+   fail. Then post successfully up to the same milestone.
+
+**Expected:**
+- Step 2/3: exactly **one** notice and exactly **one** milestone row. The UNIQUE constraint on
+  `milestone_count` is what guarantees this — both requests compute the same count and try to claim it,
+  and only one insert survives.
+- Step 4: the milestone is still served. A post that rolled back must not leave a claimed milestone
+  behind, because that would silently suppress that notice forever. This is why the claim shares the
+  post's transaction rather than running after it commits.
+- In every case, a failure in the notice must never cost a member their post. If the notice cannot be
+  published, the post still succeeds.
+
+**Result:** web ☐
+
+---
+
 ### FD-A17 — Off-topic sweep: reason is recorded, and restoring clears it
 **Role:** admin | **Surface:** web
 
