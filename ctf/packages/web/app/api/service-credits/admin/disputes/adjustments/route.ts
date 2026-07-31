@@ -12,6 +12,48 @@ type DisputeAdjustmentBody = {
   idempotencyKey?: string;
 };
 
+type DisputeAdjustmentInput = {
+  disputeCaseId: string;
+  sourceUserId: string;
+  destinationUserId: string;
+  amount: number;
+  adjustmentReason: string;
+  idempotencyKey: string;
+};
+
+function validateDisputeAdjustmentBody(
+  body: DisputeAdjustmentBody,
+): { error: NextResponse } | { data: DisputeAdjustmentInput } {
+  if (
+    !body.disputeCaseId
+    || !body.sourceUserId
+    || !body.destinationUserId
+    || typeof body.amount !== 'number'
+    || !(body.amount > 0)
+    || !Number.isFinite(body.amount)
+    || !body.adjustmentReason
+    || !body.idempotencyKey
+  ) {
+    return {
+      error: NextResponse.json(
+        { ok: false, code: 'service_credits_invalid_payload', message: 'disputeCaseId, sourceUserId, destinationUserId, amount, adjustmentReason, and idempotencyKey are required.' },
+        { status: 400 },
+      ),
+    };
+  }
+
+  return {
+    data: {
+      disputeCaseId: body.disputeCaseId,
+      sourceUserId: body.sourceUserId,
+      destinationUserId: body.destinationUserId,
+      amount: body.amount,
+      adjustmentReason: body.adjustmentReason,
+      idempotencyKey: body.idempotencyKey,
+    },
+  };
+}
+
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -30,31 +72,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  if (
-    !body.disputeCaseId
-    || !body.sourceUserId
-    || !body.destinationUserId
-    || typeof body.amount !== 'number'
-    || !(body.amount > 0)
-    || !Number.isFinite(body.amount)
-    || !body.adjustmentReason
-    || !body.idempotencyKey
-  ) {
-    return NextResponse.json(
-      { ok: false, code: 'service_credits_invalid_payload', message: 'disputeCaseId, sourceUserId, destinationUserId, amount, adjustmentReason, and idempotencyKey are required.' },
-      { status: 400 },
-    );
+  const validation = validateDisputeAdjustmentBody(body);
+  if ('error' in validation) {
+    return validation.error;
   }
+  const input = validation.data;
 
   try {
     const adjustment = await applyDisputeAdjustment({
       actorId: gate.auth.userId,
-      disputeCaseId: body.disputeCaseId,
-      sourceUserId: body.sourceUserId,
-      destinationUserId: body.destinationUserId,
-      amount: body.amount,
-      adjustmentReason: body.adjustmentReason,
-      idempotencyKey: body.idempotencyKey,
+      disputeCaseId: input.disputeCaseId,
+      sourceUserId: input.sourceUserId,
+      destinationUserId: input.destinationUserId,
+      amount: input.amount,
+      adjustmentReason: input.adjustmentReason,
+      idempotencyKey: input.idempotencyKey,
     });
 
     await insertServiceCreditsAudit({
@@ -65,9 +97,9 @@ export async function POST(request: Request) {
       targetType: 'dispute_adjustment',
       targetId: adjustment.adjustmentId,
       metadata: {
-        disputeCaseId: body.disputeCaseId,
+        disputeCaseId: input.disputeCaseId,
         transferId: adjustment.transferId,
-        amount: body.amount,
+        amount: input.amount,
       },
     });
 

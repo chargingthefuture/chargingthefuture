@@ -26,10 +26,11 @@ function isAuthorized(request: Request, secret: string): boolean {
   return request.headers.get('authorization') === `Bearer ${secret}`;
 }
 
-export async function POST(request: Request) {
-  // Distinguish "not configured" (503 — secret missing in the app runtime) from "wrong/no secret"
-  // (403) so the workflow's error message can point at the right fix. This is the ONLY presence check;
-  // isAuthorized below assumes a configured secret and only verifies the supplied token.
+// Presence + Bearer gate. Distinguish "not configured" (503 — secret missing in the app runtime) from
+// "wrong/no secret" (403) so the workflow's error message can point at the right fix. This is the ONLY
+// presence check; isAuthorized assumes a configured secret and only verifies the supplied token.
+// Returns a ready error response, or null when the caller is authorized.
+function authorizeRequest(request: Request): NextResponse | null {
   const secret = process.env.ACCOUNT_DELETE_SECRET?.trim() ?? '';
   if (secret.length === 0) {
     return NextResponse.json(
@@ -43,7 +44,15 @@ export async function POST(request: Request) {
       { status: 403 },
     );
   }
+  return null;
+}
 
+type ParsedDeleteRequest = { userId: string; deleteClerk: boolean; target: 'demo' | 'public'; targetLabel: string };
+
+// Parse + validate the request body and derive the deletion target. Returns a ready error response
+// (missing userId) or the validated inputs; status code and code string are unchanged from the inline
+// version.
+async function parseDeleteRequest(request: Request): Promise<{ error: NextResponse } | { data: ParsedDeleteRequest }> {
   let body: { userId?: unknown; deleteClerk?: unknown; target?: unknown };
   try {
     body = (await request.json()) as { userId?: unknown; deleteClerk?: unknown; target?: unknown };
@@ -52,10 +61,12 @@ export async function POST(request: Request) {
   }
   const userId = typeof body.userId === 'string' ? body.userId.trim() : '';
   if (userId.length === 0) {
-    return NextResponse.json(
-      { ok: false, code: 'account_delete_bad_request', message: 'userId is required.' },
-      { status: 400 },
-    );
+    return {
+      error: NextResponse.json(
+        { ok: false, code: 'account_delete_bad_request', message: 'userId is required.' },
+        { status: 400 },
+      ),
+    };
   }
   // Default true: a duplicate account should be fully gone (data + Clerk identity) in one run. Pass
   // `{ "deleteClerk": false }` to delete only the database data and keep the Clerk account.
@@ -70,6 +81,45 @@ export async function POST(request: Request) {
   const target = body.target === 'demo' ? 'demo' : 'public';
   const targetLabel = target === 'demo' ? 'demo' : 'production';
 
+  return { data: { userId, deleteClerk, target, targetLabel } };
+}
+
+// Optionally delete the Clerk identity after the DB deletion has already succeeded. Runs only when
+// requested; a Clerk failure is surfaced (clerkError) without failing the request so the operator can
+// retry just the Clerk side (e.g. the user was already removed there).
+async function deleteClerkAccountIfRequested(
+  userId: string,
+  deleteClerk: boolean,
+): Promise<{ clerkDeleted: boolean; clerkError: string | null }> {
+  if (!deleteClerk) {
+    return { clerkDeleted: false, clerkError: null };
+  }
+  const secretKey = getClerkSecretKey();
+  if (!secretKey) {
+    return { clerkDeleted: false, clerkError: 'clerk_secret_not_configured' };
+  }
+  try {
+    await createClerkClient({ secretKey }).users.deleteUser(userId);
+    return { clerkDeleted: true, clerkError: null };
+  } catch (error) {
+    // The DB deletion already succeeded; surface the Clerk failure without failing the request
+    // so the operator can retry just the Clerk side (e.g. the user was already removed there).
+    return { clerkDeleted: false, clerkError: error instanceof Error ? error.message : 'clerk_delete_failed' };
+  }
+}
+
+export async function POST(request: Request) {
+  const authError = authorizeRequest(request);
+  if (authError) {
+    return authError;
+  }
+
+  const parsed = await parseDeleteRequest(request);
+  if ('error' in parsed) {
+    return parsed.error;
+  }
+  const { userId, deleteClerk, target, targetLabel } = parsed.data;
+
   // Track which step is running so a failure response can say whether the ServiceCredits reclaim
   // request or the data deletion threw — the generic 503 alone was undiagnosable from the Actions log.
   let step = 'reclaim_request';
@@ -80,23 +130,7 @@ export async function POST(request: Request) {
       return deleteAllAccountData(userId, reclaim.requestedAtIso);
     });
 
-    let clerkDeleted = false;
-    let clerkError: string | null = null;
-    if (deleteClerk) {
-      const secretKey = getClerkSecretKey();
-      if (!secretKey) {
-        clerkError = 'clerk_secret_not_configured';
-      } else {
-        try {
-          await createClerkClient({ secretKey }).users.deleteUser(userId);
-          clerkDeleted = true;
-        } catch (error) {
-          // The DB deletion already succeeded; surface the Clerk failure without failing the request
-          // so the operator can retry just the Clerk side (e.g. the user was already removed there).
-          clerkError = error instanceof Error ? error.message : 'clerk_delete_failed';
-        }
-      }
-    }
+    const { clerkDeleted, clerkError } = await deleteClerkAccountIfRequested(userId, deleteClerk);
 
     logChymeAudit({
       pluginId: 'chyme',
