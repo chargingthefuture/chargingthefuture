@@ -19,6 +19,9 @@ type SkillOption = { id: string; name: string; jobTitleId: string };
 // every selected id that shares the name (which also self-heals a profile that already holds two).
 type SkillEntry = { name: string; ids: string[] };
 
+// One accordion section: a sector name plus the de-duplicated skill entries grouped under it.
+type SkillCategory = { sector: string; entries: SkillEntry[] };
+
 // Skills that cannot be traced back to a sector (missing/inactive job title) still need a home in
 // the accordion so they remain selectable. They go under this bucket, sorted last.
 const OTHER_SECTOR = "Other";
@@ -160,6 +163,211 @@ function SectorRow({
   );
 }
 
+// The "N selected" hint that trails the section label. Hidden when nothing is picked.
+function SelectedCountBadge({ count, tokens }: { count: number; tokens: DirectoryTokens }) {
+  if (count === 0) return null;
+  return <span style={{ marginLeft: 8, color: tokens.ACCENT, fontWeight: 700 }}>{count} selected</span>;
+}
+
+// The row of removable picks — taxonomy skills in the app accent, proposed skills in amber. Renders
+// nothing until there is at least one of either kind.
+function SelectedSkillChips({ selectedNames, proposedSkills, tokens, onToggleSkill, onRemoveProposed }: {
+  selectedNames: SkillEntry[];
+  proposedSkills: string[];
+  tokens: DirectoryTokens;
+  onToggleSkill: (id: string) => void;
+  onRemoveProposed?: (label: string) => void;
+}) {
+  if (selectedNames.length === 0 && proposedSkills.length === 0) return null;
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+      {selectedNames.map((entry) => (
+        <span key={entry.name} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, background: `${tokens.ACCENT}20`, border: `1px solid ${tokens.ACCENT}40`, fontSize: 12, color: tokens.ACCENT, fontWeight: 600 }}>
+          {entry.name}
+          <button type="button" aria-label={`Remove ${entry.name}`} onClick={() => entry.ids.forEach((id) => onToggleSkill(id))} style={{ background: "none", border: "none", color: tokens.ACCENT, cursor: "pointer", padding: 0, lineHeight: 1, display: "flex" }}>
+            <X size={11} />
+          </button>
+        </span>
+      ))}
+      {proposedSkills.map((s) => (
+        <span key={s} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", fontSize: 12, color: "#FBBF24", fontWeight: 600 }}>
+          {s} <span style={{ fontSize: 10, opacity: 0.7 }}>✎</span>
+          <button type="button" aria-label={`Remove ${s}`} onClick={() => onRemoveProposed?.(s)} style={{ background: "none", border: "none", color: "#FBBF24", cursor: "pointer", padding: 0, lineHeight: 1, display: "flex" }}>
+            <X size={11} />
+          </button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// "Loading skills…" line, shown only while the taxonomy fetch is in flight.
+function LoadingNotice({ loading, tokens }: { loading: boolean; tokens: DirectoryTokens }) {
+  if (!loading) return null;
+  return <div style={{ fontSize: 12, color: tokens.MUTED, padding: "10px 0" }}>Loading skills…</div>;
+}
+
+// Shown when the fetch finished but returned no categories: the taxonomy is unavailable. The message
+// differs by whether the member can fall back to free-text proposals.
+function SkillsUnavailableNotice({ loading, categoryCount, allowProposed, tokens }: {
+  loading: boolean;
+  categoryCount: number;
+  allowProposed: boolean;
+  tokens: DirectoryTokens;
+}) {
+  if (loading || categoryCount > 0) return null;
+  return (
+    <div style={{ fontSize: 12, color: tokens.SUBTLE, padding: "6px 0", marginBottom: 4 }}>
+      {allowProposed
+        ? "The skills list is unavailable right now — add skills as free text below."
+        : "The skills list is unavailable right now. Existing picks are preserved on save."}
+    </div>
+  );
+}
+
+// Keyword search — type to find a skill across every sector without opening accordions. Only shown
+// once there is a taxonomy to search.
+function SkillKeywordSearch({ categoryCount, search, onSearchChange, tokens }: {
+  categoryCount: number;
+  search: string;
+  onSearchChange: (value: string) => void;
+  tokens: DirectoryTokens;
+}) {
+  if (categoryCount === 0) return null;
+  return (
+    <div style={{ position: "relative", marginBottom: 10 }}>
+      <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: tokens.FAINT, pointerEvents: "none" }} />
+      <input
+        value={search}
+        onChange={(e) => onSearchChange(e.target.value)}
+        aria-label="Search skills by keyword"
+        placeholder="Search skills by keyword…"
+        style={{ width: "100%", padding: "9px 32px 9px 34px", background: tokens.INPUT_BG, border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 8, fontSize: 13, color: tokens.TEXT, outline: "none", boxSizing: "border-box" }}
+      />
+      {search && (
+        <button type="button" aria-label="Clear skill search" onClick={() => onSearchChange("")}
+          style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: tokens.FAINT, cursor: "pointer", padding: 4, lineHeight: 1, display: "flex" }}>
+          <X size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// While searching, a flat cross-sector result list replaces the accordion. Rendered only when there
+// is a taxonomy and a live query.
+function SkillSearchResults({ categoryCount, query, search, allEntries, selectedIds, allowProposed, tokens, onToggleEntry }: {
+  categoryCount: number;
+  query: string;
+  search: string;
+  allEntries: SkillEntry[];
+  selectedIds: Set<string>;
+  allowProposed: boolean;
+  tokens: DirectoryTokens;
+  onToggleEntry: (entry: SkillEntry) => void;
+}) {
+  if (categoryCount === 0 || query.length === 0) return null;
+  const matches = allEntries.filter((e) => e.name.toLowerCase().includes(query));
+  return (
+    <div style={{ border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
+      {matches.length === 0 ? (
+        <div style={{ fontSize: 12, color: tokens.MUTED }}>
+          No skills match “{search.trim()}”.{allowProposed ? " Add it as a free-text skill below." : ""}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+          {matches.map((e) => (
+            <SkillChip key={e.name} entry={e} active={e.ids.some((id) => selectedIds.has(id))} tokens={tokens} onToggleEntry={onToggleEntry} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Sector accordion — one sector open at a time, each showing only its own skills. Hidden while a
+// keyword search is active (the flat result list takes its place).
+function SkillSectorAccordion({ categoryCount, query, categories, selectedIds, openSector, tokens, onSectorToggle, onToggleEntry }: {
+  categoryCount: number;
+  query: string;
+  categories: SkillCategory[];
+  selectedIds: Set<string>;
+  openSector: string | null;
+  tokens: DirectoryTokens;
+  onSectorToggle: (sector: string) => void;
+  onToggleEntry: (entry: SkillEntry) => void;
+}) {
+  if (categoryCount === 0 || query.length > 0) return null;
+  return (
+    <div style={{ border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
+      {categories.map(({ sector, entries }) => (
+        <SectorRow
+          key={sector}
+          sector={sector}
+          entries={entries}
+          selectedIds={selectedIds}
+          isOpen={openSector === sector}
+          tokens={tokens}
+          onToggle={() => onSectorToggle(sector)}
+          onToggleEntry={onToggleEntry}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Free-text fallback for a skill the taxonomy does not have yet (member self-edit only).
+function ProposedSkillsField({ allowProposed, proposedInput, proposedFull, tokens, onProposedInputChange, onAddProposed }: {
+  allowProposed: boolean;
+  proposedInput: string;
+  proposedFull: boolean;
+  tokens: DirectoryTokens;
+  onProposedInputChange?: (value: string) => void;
+  onAddProposed?: () => void;
+}) {
+  if (!allowProposed) return null;
+  // Hoisted once: the Add control is disabled when the list is full or the input is empty.
+  const addDisabled = proposedFull || proposedInput.trim().length === 0;
+  return (
+    <>
+      <label htmlFor="dpe-proposed" style={{ fontSize: 11, color: tokens.SUBTLE, display: "block", marginBottom: 6 }}>
+        Don&apos;t see what you need? Add it (each ≤ {DIRECTORY_MAX_PROPOSED_SKILL_LENGTH} chars)
+      </label>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          id="dpe-proposed"
+          value={proposedInput}
+          onChange={(e) => onProposedInputChange?.(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onAddProposed?.(); } }}
+          maxLength={DIRECTORY_MAX_PROPOSED_SKILL_LENGTH}
+          disabled={proposedFull}
+          aria-label="Add a skill that is not in the list"
+          placeholder="e.g. Game design, Kintsugi…"
+          style={{ flex: 1, padding: "9px 12px", background: tokens.INPUT_BG, border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 8, fontSize: 13, color: tokens.TEXT, outline: "none", opacity: proposedFull ? 0.6 : 1, boxSizing: "border-box" }}
+        />
+        <button
+          type="button"
+          onClick={onAddProposed}
+          disabled={addDisabled}
+          style={{
+            padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
+            background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", color: "#FBBF24",
+            cursor: addDisabled ? "not-allowed" : "pointer",
+            opacity: addDisabled ? 0.5 : 1,
+          }}
+        >
+          Add
+        </button>
+      </div>
+      <div style={{ fontSize: 11, color: tokens.FAINT, marginTop: 6, lineHeight: 1.5 }}>
+        {proposedFull
+          ? `That's the most you can add (${DIRECTORY_MAX_PROPOSED_SKILLS}). Remove one to add another.`
+          : "Yellow chips = pending review — they show on your profile until an admin adds them to the official list."}
+      </div>
+    </>
+  );
+}
+
 // The Directory profile's skill picker. Selected chips, a keyword search, a one-open-at-a-time sector
 // accordion, and a free-text fallback. Unlike the SkillsHunt Scout picker there is no "add a
 // profession's skills" prefill — a member authors their own profile, so the third-party "know their
@@ -192,6 +400,11 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
     }
   }
 
+  // One-open-at-a-time: toggling the currently-open sector closes it, otherwise opens the new one.
+  function handleSectorToggle(sector: string) {
+    setOpenSector(openSector === sector ? null : sector);
+  }
+
   // Keyword search across every sector — a flat, name-de-duplicated skill list filtered by substring.
   // Local UI state only; it does not touch the form model. While a query is present the accordion is
   // replaced by this flat result list (mirrors the SkillsHunt picker).
@@ -213,7 +426,6 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
       .map((name) => ({ name, ids: byName.get(name) ?? [] }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [skills]);
-  const matches = query ? allEntries.filter((e) => e.name.toLowerCase().includes(query)) : [];
 
   // The selected picks, de-duplicated by name: a profile that already holds two ids for one name
   // shows a single chip, and removing it clears every id behind that name.
@@ -239,138 +451,69 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
     <div>
       <label style={labelStyle}>
         Specializations
-        {selectedNames.length > 0 && (
-          <span style={{ marginLeft: 8, color: tokens.ACCENT, fontWeight: 700 }}>{selectedNames.length} selected</span>
-        )}
+        <SelectedCountBadge count={selectedNames.length} tokens={tokens} />
       </label>
 
       {/* Selected picks — taxonomy skills in the app accent, proposed skills in amber, each removable. */}
-      {(selectedNames.length > 0 || proposedSkills.length > 0) && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-          {selectedNames.map((entry) => (
-            <span key={entry.name} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, background: `${tokens.ACCENT}20`, border: `1px solid ${tokens.ACCENT}40`, fontSize: 12, color: tokens.ACCENT, fontWeight: 600 }}>
-              {entry.name}
-              <button type="button" aria-label={`Remove ${entry.name}`} onClick={() => entry.ids.forEach((id) => onToggleSkill(id))} style={{ background: "none", border: "none", color: tokens.ACCENT, cursor: "pointer", padding: 0, lineHeight: 1, display: "flex" }}>
-                <X size={11} />
-              </button>
-            </span>
-          ))}
-          {proposedSkills.map((s) => (
-            <span key={s} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", fontSize: 12, color: "#FBBF24", fontWeight: 600 }}>
-              {s} <span style={{ fontSize: 10, opacity: 0.7 }}>✎</span>
-              <button type="button" aria-label={`Remove ${s}`} onClick={() => onRemoveProposed?.(s)} style={{ background: "none", border: "none", color: "#FBBF24", cursor: "pointer", padding: 0, lineHeight: 1, display: "flex" }}>
-                <X size={11} />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
+      <SelectedSkillChips
+        selectedNames={selectedNames}
+        proposedSkills={proposedSkills}
+        tokens={tokens}
+        onToggleSkill={onToggleSkill}
+        onRemoveProposed={onRemoveProposed}
+      />
 
-      {loading && <div style={{ fontSize: 12, color: tokens.MUTED, padding: "10px 0" }}>Loading skills…</div>}
+      <LoadingNotice loading={loading} tokens={tokens} />
 
-      {!loading && categories.length === 0 && (
-        <div style={{ fontSize: 12, color: tokens.SUBTLE, padding: "6px 0", marginBottom: 4 }}>
-          {allowProposed
-            ? "The skills list is unavailable right now — add skills as free text below."
-            : "The skills list is unavailable right now. Existing picks are preserved on save."}
-        </div>
-      )}
+      <SkillsUnavailableNotice
+        loading={loading}
+        categoryCount={categories.length}
+        allowProposed={allowProposed}
+        tokens={tokens}
+      />
 
       {/* Keyword search — type to find a skill across every sector without opening accordions. */}
-      {categories.length > 0 && (
-        <div style={{ position: "relative", marginBottom: 10 }}>
-          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: tokens.FAINT, pointerEvents: "none" }} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search skills by keyword"
-            placeholder="Search skills by keyword…"
-            style={{ width: "100%", padding: "9px 32px 9px 34px", background: tokens.INPUT_BG, border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 8, fontSize: 13, color: tokens.TEXT, outline: "none", boxSizing: "border-box" }}
-          />
-          {search && (
-            <button type="button" aria-label="Clear skill search" onClick={() => setSearch("")}
-              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: tokens.FAINT, cursor: "pointer", padding: 4, lineHeight: 1, display: "flex" }}>
-              <X size={13} />
-            </button>
-          )}
-        </div>
-      )}
+      <SkillKeywordSearch
+        categoryCount={categories.length}
+        search={search}
+        onSearchChange={setSearch}
+        tokens={tokens}
+      />
 
       {/* While searching, a flat cross-sector result list replaces the accordion. */}
-      {categories.length > 0 && query && (
-        <div style={{ border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
-          {matches.length === 0 ? (
-            <div style={{ fontSize: 12, color: tokens.MUTED }}>
-              No skills match “{search.trim()}”.{allowProposed ? " Add it as a free-text skill below." : ""}
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-              {matches.map((e) => (
-                <SkillChip key={e.name} entry={e} active={e.ids.some((id) => selectedIds.has(id))} tokens={tokens} onToggleEntry={toggleEntry} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <SkillSearchResults
+        categoryCount={categories.length}
+        query={query}
+        search={search}
+        allEntries={allEntries}
+        selectedIds={selectedIds}
+        allowProposed={allowProposed}
+        tokens={tokens}
+        onToggleEntry={toggleEntry}
+      />
 
       {/* Sector accordion — one sector open at a time, each showing only its own skills. Hidden
           while a keyword search is active (the flat result list above takes its place). */}
-      {categories.length > 0 && !query && (
-        <div style={{ border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
-          {categories.map(({ sector, entries }) => (
-            <SectorRow
-              key={sector}
-              sector={sector}
-              entries={entries}
-              selectedIds={selectedIds}
-              isOpen={openSector === sector}
-              tokens={tokens}
-              onToggle={() => setOpenSector(openSector === sector ? null : sector)}
-              onToggleEntry={toggleEntry}
-            />
-          ))}
-        </div>
-      )}
+      <SkillSectorAccordion
+        categoryCount={categories.length}
+        query={query}
+        categories={categories}
+        selectedIds={selectedIds}
+        openSector={openSector}
+        tokens={tokens}
+        onSectorToggle={handleSectorToggle}
+        onToggleEntry={toggleEntry}
+      />
 
       {/* Free-text fallback for a skill the taxonomy does not have yet (member self-edit only). */}
-      {allowProposed && (
-        <>
-          <label htmlFor="dpe-proposed" style={{ fontSize: 11, color: tokens.SUBTLE, display: "block", marginBottom: 6 }}>
-            Don&apos;t see what you need? Add it (each ≤ {DIRECTORY_MAX_PROPOSED_SKILL_LENGTH} chars)
-          </label>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              id="dpe-proposed"
-              value={proposedInput}
-              onChange={(e) => onProposedInputChange?.(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onAddProposed?.(); } }}
-              maxLength={DIRECTORY_MAX_PROPOSED_SKILL_LENGTH}
-              disabled={proposedFull}
-              aria-label="Add a skill that is not in the list"
-              placeholder="e.g. Game design, Kintsugi…"
-              style={{ flex: 1, padding: "9px 12px", background: tokens.INPUT_BG, border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 8, fontSize: 13, color: tokens.TEXT, outline: "none", opacity: proposedFull ? 0.6 : 1, boxSizing: "border-box" }}
-            />
-            <button
-              type="button"
-              onClick={onAddProposed}
-              disabled={proposedFull || proposedInput.trim().length === 0}
-              style={{
-                padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
-                background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", color: "#FBBF24",
-                cursor: proposedFull || proposedInput.trim().length === 0 ? "not-allowed" : "pointer",
-                opacity: proposedFull || proposedInput.trim().length === 0 ? 0.5 : 1,
-              }}
-            >
-              Add
-            </button>
-          </div>
-          <div style={{ fontSize: 11, color: tokens.FAINT, marginTop: 6, lineHeight: 1.5 }}>
-            {proposedFull
-              ? `That's the most you can add (${DIRECTORY_MAX_PROPOSED_SKILLS}). Remove one to add another.`
-              : "Yellow chips = pending review — they show on your profile until an admin adds them to the official list."}
-          </div>
-        </>
-      )}
+      <ProposedSkillsField
+        allowProposed={allowProposed}
+        proposedInput={proposedInput}
+        proposedFull={proposedFull}
+        tokens={tokens}
+        onProposedInputChange={onProposedInputChange}
+        onAddProposed={onAddProposed}
+      />
     </div>
   );
 }
