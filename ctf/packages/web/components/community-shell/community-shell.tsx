@@ -91,6 +91,35 @@ function parseStoredUsageCounts(value: string | null): Record<string, number> {
   }
 }
 
+// Optional shell flags resolved to concrete values so the component body carries no
+// destructuring defaults (each default counts toward complexity). Behavior matches the
+// former `= default` params: an undefined flag falls back exactly as before.
+type NormalizedShellFlags = {
+  initialSection: ShellSection;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  signInUrl: string;
+  verification: ShellVerification | null;
+};
+
+function normalizeShellProps(props: CommunityShellProps): NormalizedShellFlags {
+  return {
+    initialSection: props.initialSection ?? 'chat',
+    isAuthenticated: props.isAuthenticated ?? false,
+    isAdmin: props.isAdmin ?? false,
+    signInUrl: props.signInUrl ?? '/sign-in',
+    verification: props.verification ?? null,
+  };
+}
+
+function sectionTabClass(isActive: boolean): string {
+  return isActive ? `${styles.mobileBarSectionBtn} ${styles.mobileBarSectionBtnActive}` : styles.mobileBarSectionBtn;
+}
+
+function channelSwitchClass(isActive: boolean): string {
+  return isActive ? `${styles.channelSwitchBtn} ${styles.channelSwitchBtnActive}` : styles.channelSwitchBtn;
+}
+
 function sortPluginsForUi(
   items: PluginRegistryItem[],
   sortMode: PluginSortMode,
@@ -132,7 +161,296 @@ function sortPluginsForUi(
   });
 }
 
-export function CommunityShell({ initialPlugins, shellStats, currentUser, trust, initialSection = 'chat', isAuthenticated = false, isAdmin = false, signInUrl = '/sign-in', verification = null }: CommunityShellProps) {
+type MobileTopBarProps = {
+  section: ShellSection;
+  onSectionChange: (section: ShellSection) => void;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  signInUrl: string;
+};
+
+function MobileTopBar({ section, onSectionChange, isAuthenticated, isAdmin, signInUrl }: MobileTopBarProps) {
+  return (
+    <header className={styles.mobileBar}>
+      {/* Brand mark on the phone bar: it is the first product identity a member sees on a phone.
+          It sits on the left; the section tabs keep their margin-left:auto so the tabs + controls
+          cluster on the right. The Skills Economy "Stack" mark matches the site title in layout.tsx. */}
+      <div className={styles.mobileBarLogo}>
+        <SeMark size={26} />
+      </div>
+      {/* Signed out, the bar carries far fewer controls (no gift reminder, help, settings or
+          avatar), so the full "SE / SKILLS ECONOMY" lockup fits beside the mark and a first-time
+          visitor sees the product name, not just a symbol. Signed in, the name is dropped again
+          so the mark, gift reminder, tabs and account controls all fit a 390px phone. */}
+      {!isAuthenticated ? (
+        <span className={styles.mobileBarWordmark} aria-hidden="true">
+          <span className={styles.mobileBarWordmarkInitials}>SE</span>
+          <span className={styles.mobileBarWordmarkName}>Skills Economy</span>
+        </span>
+      ) : null}
+      {/* Fundraiser gift reminder — sits between the brand mark and the section tabs (owner
+          placement). Renders only on phone widths while a drive is active and the full banner is
+          dismissed or snoozed; the banner itself (when open) stays in the content area below. */}
+      {isAuthenticated ? <ContributionsGiftTrigger /> : null}
+      <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={section === 'chat'}
+          className={sectionTabClass(section === 'chat')}
+          onClick={() => onSectionChange('chat')}
+        >
+          Commons
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={section === 'apps'}
+          className={sectionTabClass(section === 'apps')}
+          onClick={() => onSectionChange('apps')}
+        >
+          Apps
+        </button>
+      </div>
+      {/* Admins reach /admin straight from the top bar on phones — the left rail
+          (which used to carry this link) is hidden on phones, so this replaces the
+          extra tap through the drawer. Admins only; hidden for everyone else. */}
+      {isAdmin ? (
+        <Link href="/admin" className={styles.mobileBarAdminBtn} aria-label="Admin" title="Admin — manage plugins and review queues">
+          <SlidersHorizontal size={15} aria-hidden="true" />
+          {/* Label hidden at phone widths so the full bar (tabs + admin + help + settings +
+              avatar) fits without pushing the avatar off the right edge. */}
+          <span className={styles.mobileBarAdminLabel}>Admin</span>
+        </Link>
+      ) : null}
+      <div className={styles.mobileBarAuth}>
+        {/* Help control on the phone-width top bar: the desktop icon rail (which
+            hosts it) is hidden below 900px, so signed-in members reach the
+            "Report a problem" modal from here instead. */}
+        {isAuthenticated ? <HelpControl /> : null}
+        {/* Account hub link on the phone-width bar: the desktop icon rail's
+            account button (which leads to /account — identity, trust, profile,
+            data, blocked members) is hidden below 900px, so this gear restores
+            the one tap to the full account page. The avatar's own menu only
+            edits Clerk identity, so it is not a substitute for this link. */}
+        {isAuthenticated ? (
+          <Link href="/account" className={styles.iconRailBtn} aria-label="Account and settings" title="Account and settings">
+            <Settings size={18} aria-hidden="true" />
+          </Link>
+        ) : null}
+        {isAuthenticated ? (
+          // Clerk's account widget on the phone-width bar too: avatar opens
+          // Clerk's menu; "Manage account" edits name, username, and email.
+          <span className={styles.clerkAvatarSlot} title="Your account — edit name, username, and email">
+            <UserButton appearance={{ elements: { avatarBox: styles.clerkMobileAvatarBox } }} />
+          </span>
+        ) : (
+          <Link className={styles.mobileBarSignIn} href={signInUrl}>Sign in</Link>
+        )}
+      </div>
+    </header>
+  );
+}
+
+type ChannelSwitchRowProps = {
+  channels: HubChannelInfo[];
+  activeChannel: string | null;
+  onChannelSelect: (slug: string) => void;
+  onLockedChannelClick: () => void;
+};
+
+// Channel switch pills — phone widths only (the desktop channel rail is hidden there).
+// The general channel is always shown. The contributor channel is shown to everyone:
+// eligible members get it as a real, selectable chip (the server includes it in their
+// channel list); everyone else gets a locked chip that opens the same "Weavers of the
+// Commons" explainer the Directory braided badge shows — so the space is visible and
+// its bar is public, never a hidden back-room.
+function ChannelSwitchRow({ channels, activeChannel, onChannelSelect, onLockedChannelClick }: ChannelSwitchRowProps) {
+  const fallbackSlug = activeChannel ?? channels[0]?.slug;
+  const hasGatedChannel = channels.some((ch) => ch.slug === GATED_CHANNEL_SLUG);
+
+  return (
+    <div className={styles.channelSwitchRow} role="tablist" aria-label="Channels">
+      {channels.map((ch) => (
+        <button
+          key={ch.slug}
+          type="button"
+          role="tab"
+          aria-selected={fallbackSlug === ch.slug}
+          className={channelSwitchClass(fallbackSlug === ch.slug)}
+          onClick={() => onChannelSelect(ch.slug)}
+        >
+          #{ch.slug}
+        </button>
+      ))}
+      {!hasGatedChannel ? (
+        <button
+          type="button"
+          className={`${styles.channelSwitchBtn} ${styles.channelSwitchBtnLocked}`}
+          onClick={onLockedChannelClick}
+          aria-haspopup="dialog"
+          title="Weavers of the Commons"
+        >
+          <WeaversBadge size={13} />
+          <span>#{GATED_CHANNEL_SLUG}</span>
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+type ChatSectionProps = {
+  activeChannel: string | null;
+  currentUser: ShellCurrentUser;
+  isAdmin: boolean;
+  shellStats: ShellStats;
+  filteredPlugins: PluginRegistryItem[];
+  isAuthenticated: boolean;
+  signInUrl: string;
+};
+
+function ChatSection({ activeChannel, currentUser, isAdmin, shellStats, filteredPlugins, isAuthenticated, signInUrl }: ChatSectionProps) {
+  if (activeChannel === GATED_CHANNEL_SLUG) {
+    return <GatedChatPanel currentUser={currentUser} isAdmin={isAdmin} />;
+  }
+  return <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} isAdmin={isAdmin} signInUrl={signInUrl} />;
+}
+
+type ShellMainContentProps = {
+  section: ShellSection;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  signInUrl: string;
+  verification: ShellVerification | null;
+  loadError: string | null;
+  channels: HubChannelInfo[];
+  activeChannel: string | null;
+  onChannelSelect: (slug: string) => void;
+  onLockedChannelClick: () => void;
+  shellStats: ShellStats;
+  filteredPlugins: PluginRegistryItem[];
+  currentUser: ShellCurrentUser;
+  activeApp: string | null;
+  onAppSelect: (slug: string | null) => void;
+  sortMode: PluginSortMode;
+  onSortModeChange: (mode: PluginSortMode) => void;
+  query: string;
+  onQueryChange: (value: string) => void;
+};
+
+function ShellMainContent({
+  section,
+  isAuthenticated,
+  isAdmin,
+  signInUrl,
+  verification,
+  loadError,
+  channels,
+  activeChannel,
+  onChannelSelect,
+  onLockedChannelClick,
+  shellStats,
+  filteredPlugins,
+  currentUser,
+  activeApp,
+  onAppSelect,
+  sortMode,
+  onSortModeChange,
+  query,
+  onQueryChange,
+}: ShellMainContentProps) {
+  return (
+    <main className={`${styles.panel} ${styles.content}`}>
+      {/* App-wide fundraiser banner — non-blocking, top of the content area, signed-in only.
+          The banner self-hides unless a drive is active and visible for this member. */}
+      {isAuthenticated ? <ContributionsBanner /> : null}
+      {/* Not-yet-verified members (notably the early-Commons A/B treatment bucket) get a persistent
+          prompt to submit their Quora URL right here, with a nudge to ask in the Commons if stuck. */}
+      {isAuthenticated && verification ? (
+        <UnlockVerifyBanner hasSubmission={verification.hasSubmission} reviewStatus={verification.reviewStatus} />
+      ) : null}
+      {loadError ? (
+        <section className={styles.usernameAlert} role="alert">{loadError}</section>
+      ) : null}
+      {section === 'chat' && isAuthenticated ? (
+        <ChannelSwitchRow
+          channels={channels}
+          activeChannel={activeChannel}
+          onChannelSelect={onChannelSelect}
+          onLockedChannelClick={onLockedChannelClick}
+        />
+      ) : null}
+      {section === 'chat' ? (
+        <ChatSection
+          activeChannel={activeChannel}
+          currentUser={currentUser}
+          isAdmin={isAdmin}
+          shellStats={shellStats}
+          filteredPlugins={filteredPlugins}
+          isAuthenticated={isAuthenticated}
+          signInUrl={signInUrl}
+        />
+      ) : (
+        <ShellAppsPanel
+          plugins={filteredPlugins}
+          activeApp={activeApp}
+          onAppSelect={onAppSelect}
+          sortMode={sortMode}
+          onSortModeChange={onSortModeChange}
+          query={query}
+          onQueryChange={onQueryChange}
+        />
+      )}
+    </main>
+  );
+}
+
+// Contributor-channel explainer — shown when a non-eligible member taps the locked
+// contributor chip. Same honest copy the Directory braided badge shows (proposal
+// section 3: no "verified", no "vetted"). "Anyone can earn this."
+function ContributorExplainerModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className={styles.explainerOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Weavers of the Commons"
+    >
+      <button
+        type="button"
+        aria-label="Close"
+        className={styles.explainerBackdrop}
+        onClick={onClose}
+      />
+      <div className={styles.explainerCard}>
+        <div className={styles.explainerHead}>
+          <WeaversBadge size={30} />
+          <div className={styles.explainerTitle}>Weavers of the Commons</div>
+        </div>
+        <div className={styles.explainerBody}>
+          The contributor channel is for consistent, broad contributors to the community — real
+          help, delivered over time. Anyone can earn it; when you do, the channel opens here.
+        </div>
+        <div className={styles.explainerActions}>
+          <Link href="/apps/directory/weavers-of-the-commons" className={styles.explainerLink}>
+            How it&rsquo;s earned
+          </Link>
+          <button
+            type="button"
+            className={styles.explainerClose}
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function CommunityShell(props: CommunityShellProps) {
+  const { initialPlugins, shellStats, currentUser, trust } = props;
+  const { initialSection, isAuthenticated, isAdmin, signInUrl, verification } = normalizeShellProps(props);
   const [section, setSection] = useState<ShellSection>(initialSection);
   const [query, setQuery] = useState('');
   const [plugins, setPlugins] = useState(initialPlugins);
@@ -285,84 +603,13 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
 
   return (
     <div className={`${styles.shell} ctf-self-responsive`}>
-      <header className={styles.mobileBar}>
-        {/* Brand mark on the phone bar: it is the first product identity a member sees on a phone.
-            It sits on the left; the section tabs keep their margin-left:auto so the tabs + controls
-            cluster on the right. The Skills Economy "Stack" mark matches the site title in layout.tsx. */}
-        <div className={styles.mobileBarLogo}>
-          <SeMark size={26} />
-        </div>
-        {/* Signed out, the bar carries far fewer controls (no gift reminder, help, settings or
-            avatar), so the full "SE / SKILLS ECONOMY" lockup fits beside the mark and a first-time
-            visitor sees the product name, not just a symbol. Signed in, the name is dropped again
-            so the mark, gift reminder, tabs and account controls all fit a 390px phone. */}
-        {!isAuthenticated ? (
-          <span className={styles.mobileBarWordmark} aria-hidden="true">
-            <span className={styles.mobileBarWordmarkInitials}>SE</span>
-            <span className={styles.mobileBarWordmarkName}>Skills Economy</span>
-          </span>
-        ) : null}
-        {/* Fundraiser gift reminder — sits between the brand mark and the section tabs (owner
-            placement). Renders only on phone widths while a drive is active and the full banner is
-            dismissed or snoozed; the banner itself (when open) stays in the content area below. */}
-        {isAuthenticated ? <ContributionsGiftTrigger /> : null}
-        <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === 'chat'}
-            className={section === 'chat' ? `${styles.mobileBarSectionBtn} ${styles.mobileBarSectionBtnActive}` : styles.mobileBarSectionBtn}
-            onClick={() => setSection('chat')}
-          >
-            Commons
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === 'apps'}
-            className={section === 'apps' ? `${styles.mobileBarSectionBtn} ${styles.mobileBarSectionBtnActive}` : styles.mobileBarSectionBtn}
-            onClick={() => setSection('apps')}
-          >
-            Apps
-          </button>
-        </div>
-        {/* Admins reach /admin straight from the top bar on phones — the left rail
-            (which used to carry this link) is hidden on phones, so this replaces the
-            extra tap through the drawer. Admins only; hidden for everyone else. */}
-        {isAdmin ? (
-          <Link href="/admin" className={styles.mobileBarAdminBtn} aria-label="Admin" title="Admin — manage plugins and review queues">
-            <SlidersHorizontal size={15} aria-hidden="true" />
-            {/* Label hidden at phone widths so the full bar (tabs + admin + help + settings +
-                avatar) fits without pushing the avatar off the right edge. */}
-            <span className={styles.mobileBarAdminLabel}>Admin</span>
-          </Link>
-        ) : null}
-        <div className={styles.mobileBarAuth}>
-          {/* Help control on the phone-width top bar: the desktop icon rail (which
-              hosts it) is hidden below 900px, so signed-in members reach the
-              "Report a problem" modal from here instead. */}
-          {isAuthenticated ? <HelpControl /> : null}
-          {/* Account hub link on the phone-width bar: the desktop icon rail's
-              account button (which leads to /account — identity, trust, profile,
-              data, blocked members) is hidden below 900px, so this gear restores
-              the one tap to the full account page. The avatar's own menu only
-              edits Clerk identity, so it is not a substitute for this link. */}
-          {isAuthenticated ? (
-            <Link href="/account" className={styles.iconRailBtn} aria-label="Account and settings" title="Account and settings">
-              <Settings size={18} aria-hidden="true" />
-            </Link>
-          ) : null}
-          {isAuthenticated ? (
-            // Clerk's account widget on the phone-width bar too: avatar opens
-            // Clerk's menu; "Manage account" edits name, username, and email.
-            <span className={styles.clerkAvatarSlot} title="Your account — edit name, username, and email">
-              <UserButton appearance={{ elements: { avatarBox: styles.clerkMobileAvatarBox } }} />
-            </span>
-          ) : (
-            <Link className={styles.mobileBarSignIn} href={signInUrl}>Sign in</Link>
-          )}
-        </div>
-      </header>
+      <MobileTopBar
+        section={section}
+        onSectionChange={setSection}
+        isAuthenticated={isAuthenticated}
+        isAdmin={isAdmin}
+        signInUrl={signInUrl}
+      />
       <div className={styles.frame}>
         <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} isAuthenticated={isAuthenticated} isAdmin={isAdmin} />
         {/* Channel rail — desktop only. It is hidden on phones (single "general"
@@ -375,73 +622,27 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           shellStats={shellStats}
           isAdmin={isAdmin}
         />
-        <main className={`${styles.panel} ${styles.content}`}>
-          {/* App-wide fundraiser banner — non-blocking, top of the content area, signed-in only.
-              The banner self-hides unless a drive is active and visible for this member. */}
-          {isAuthenticated ? <ContributionsBanner /> : null}
-          {/* Not-yet-verified members (notably the early-Commons A/B treatment bucket) get a persistent
-              prompt to submit their Quora URL right here, with a nudge to ask in the Commons if stuck. */}
-          {isAuthenticated && verification ? (
-            <UnlockVerifyBanner hasSubmission={verification.hasSubmission} reviewStatus={verification.reviewStatus} />
-          ) : null}
-          {loadError ? (
-            <section className={styles.usernameAlert} role="alert">{loadError}</section>
-          ) : null}
-          {/* Channel switch pills — phone widths only (the desktop channel rail is hidden there).
-              The general channel is always shown. The contributor channel is shown to everyone:
-              eligible members get it as a real, selectable chip (the server includes it in their
-              channel list); everyone else gets a locked chip that opens the same "Weavers of the
-              Commons" explainer the Directory braided badge shows — so the space is visible and
-              its bar is public, never a hidden back-room. */}
-          {section === 'chat' && isAuthenticated ? (
-            <div className={styles.channelSwitchRow} role="tablist" aria-label="Channels">
-              {channels.map((ch) => {
-                const isActive = (activeChannel ?? channels[0]?.slug) === ch.slug;
-                return (
-                  <button
-                    key={ch.slug}
-                    type="button"
-                    role="tab"
-                    aria-selected={isActive}
-                    className={isActive ? `${styles.channelSwitchBtn} ${styles.channelSwitchBtnActive}` : styles.channelSwitchBtn}
-                    onClick={() => handleChannelSelect(ch.slug)}
-                  >
-                    #{ch.slug}
-                  </button>
-                );
-              })}
-              {!channels.some((ch) => ch.slug === GATED_CHANNEL_SLUG) ? (
-                <button
-                  type="button"
-                  className={`${styles.channelSwitchBtn} ${styles.channelSwitchBtnLocked}`}
-                  onClick={() => setContributorExplainerOpen(true)}
-                  aria-haspopup="dialog"
-                  title="Weavers of the Commons"
-                >
-                  <WeaversBadge size={13} />
-                  <span>#{GATED_CHANNEL_SLUG}</span>
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-          {section === 'chat' ? (
-            activeChannel === GATED_CHANNEL_SLUG ? (
-              <GatedChatPanel currentUser={currentUser} isAdmin={isAdmin} />
-            ) : (
-              <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} isAdmin={isAdmin} signInUrl={signInUrl} />
-            )
-          ) : (
-            <ShellAppsPanel
-              plugins={filteredPlugins}
-              activeApp={activeApp}
-              onAppSelect={handleAppSelect}
-              sortMode={sortMode}
-              onSortModeChange={handleSortModeChange}
-              query={query}
-              onQueryChange={setQuery}
-            />
-          )}
-        </main>
+        <ShellMainContent
+          section={section}
+          isAuthenticated={isAuthenticated}
+          isAdmin={isAdmin}
+          signInUrl={signInUrl}
+          verification={verification}
+          loadError={loadError}
+          channels={channels}
+          activeChannel={activeChannel}
+          onChannelSelect={handleChannelSelect}
+          onLockedChannelClick={() => setContributorExplainerOpen(true)}
+          shellStats={shellStats}
+          filteredPlugins={filteredPlugins}
+          currentUser={currentUser}
+          activeApp={activeApp}
+          onAppSelect={handleAppSelect}
+          sortMode={sortMode}
+          onSortModeChange={handleSortModeChange}
+          query={query}
+          onQueryChange={setQuery}
+        />
         <ShellRightRail
           currentUser={currentUser}
           trust={trust}
@@ -449,45 +650,8 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           signInUrl={signInUrl}
         />
       </div>
-      {/* Contributor-channel explainer — shown when a non-eligible member taps the locked
-          contributor chip. Same honest copy the Directory braided badge shows (proposal
-          section 3: no "verified", no "vetted"). "Anyone can earn this." */}
       {contributorExplainerOpen ? (
-        <div
-          className={styles.explainerOverlay}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Weavers of the Commons"
-        >
-          <button
-            type="button"
-            aria-label="Close"
-            className={styles.explainerBackdrop}
-            onClick={() => setContributorExplainerOpen(false)}
-          />
-          <div className={styles.explainerCard}>
-            <div className={styles.explainerHead}>
-              <WeaversBadge size={30} />
-              <div className={styles.explainerTitle}>Weavers of the Commons</div>
-            </div>
-            <div className={styles.explainerBody}>
-              The contributor channel is for consistent, broad contributors to the community — real
-              help, delivered over time. Anyone can earn it; when you do, the channel opens here.
-            </div>
-            <div className={styles.explainerActions}>
-              <Link href="/apps/directory/weavers-of-the-commons" className={styles.explainerLink}>
-                How it&rsquo;s earned
-              </Link>
-              <button
-                type="button"
-                className={styles.explainerClose}
-                onClick={() => setContributorExplainerOpen(false)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <ContributorExplainerModal onClose={() => setContributorExplainerOpen(false)} />
       ) : null}
     </div>
   );

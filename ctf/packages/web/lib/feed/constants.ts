@@ -68,6 +68,26 @@ export function isFeedModerationReason(value: unknown): value is FeedModerationR
   return typeof value === 'string' && (FEED_MODERATION_REASONS as readonly string[]).includes(value);
 }
 
+// How often the automatic Commons guidance notice goes out, counted in community posts (owner
+// decision, 2026-07-30: every 50). Frequent enough that a newcomer meets the rule early, rare enough
+// that a regular is not lectured. A reserved actor id owns the notice so it is never attributed to a
+// member — including the owner, who should not appear to be personally telling people off every 50
+// posts.
+export const FEED_COMMONS_GUIDANCE_INTERVAL = 50;
+
+// The "how the public rooms work" notice runs on the same length of rhythm but OFFSET from the purpose
+// notice, so the two never land on the same post and a member meets one or the other roughly every 25
+// posts rather than both at once. 50 and 75 share a common multiple at 150, where they would collide;
+// that is rare enough to be two announcements in a row rather than a problem worth more machinery.
+export const FEED_COMMONS_ROOMS_INTERVAL = 75;
+
+// Signal-vs-noise is the owner's standing "every few weeks" reminder, so it is time-shaped rather than
+// volume-shaped. Tying it to post count would fire it repeatedly during a busy week and never during a
+// quiet one, which is the opposite of a periodic reminder.
+export const FEED_COMMONS_SIGNAL_INTERVAL_DAYS = 21;
+
+export const FEED_SYSTEM_ACTOR_ID = 'system:commons-guidance';
+
 export const FEED_DEFAULT_PAGE = 1;
 export const FEED_DEFAULT_PAGE_SIZE = 20;
 export const FEED_MAX_PAGE_SIZE = 100;

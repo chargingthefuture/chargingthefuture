@@ -23,6 +23,12 @@ function formatQuotedPrice(amount: number, currencyCode: string): string {
   return `${amount} ${currencyCode}`;
 }
 
+// A quote amount is valid when it is a non-empty, finite, non-negative number and a currency is set.
+// Kept out of the component body so the four checks don't count against its complexity budget.
+function isQuoteAmountValid(amount: string, parsed: number, currency: string): boolean {
+  return amount.trim().length > 0 && Number.isFinite(parsed) && parsed >= 0 && currency.trim().length > 0;
+}
+
 // Provider-only inline form to respond to a 'requested' quote with a price. Holds its own amount and
 // currency state; on submit it calls onRespond and clears the amount on success. The survivor never
 // sees this — the parent only renders it when the viewer is the quote's provider.
@@ -40,7 +46,9 @@ function QuoteRespondForm({
   const [error, setError] = useState<string | null>(null);
 
   const parsed = Number(amount);
-  const valid = amount.trim().length > 0 && Number.isFinite(parsed) && parsed >= 0 && currency.trim().length > 0;
+  const valid = isQuoteAmountValid(amount, parsed, currency);
+  // The submit button is live only when the input is valid and no send is in flight.
+  const ready = valid && !busy;
 
   const submit = async () => {
     if (!valid || busy) return;
@@ -78,8 +86,8 @@ function QuoteRespondForm({
         />
         <button
           onClick={() => void submit()}
-          disabled={!valid || busy}
-          style={{ padding: "8px 14px", borderRadius: 8, background: accent, border: "none", color: "#fff", fontSize: 12, fontWeight: 700, cursor: valid && !busy ? "pointer" : "not-allowed", opacity: valid && !busy ? 1 : 0.6, flexShrink: 0 }}
+          disabled={!ready}
+          style={{ padding: "8px 14px", borderRadius: 8, background: accent, border: "none", color: "#fff", fontSize: 12, fontWeight: 700, cursor: ready ? "pointer" : "not-allowed", opacity: ready ? 1 : 0.6, flexShrink: 0 }}
         >
           {busy ? "Sending…" : "Send quote"}
         </button>
@@ -100,6 +108,19 @@ const EMPTY_STEPS = [
 // from dominating the list on mobile.
 const SKILL_PREVIEW_CAP = 6;
 
+// Prefer the name passed from the shell (the chip the member tapped) so the banner label survives
+// even when the filter returns zero providers; fall back to whichever card still shows it. Kept out
+// of the component body so its nullish/optional chains don't count against BrowsePanel's complexity.
+function resolveBannerSkillName(
+  activeSkillName: string | null,
+  activeSkillId: string | null,
+  providers: ProviderView[],
+): string | null {
+  if (activeSkillName) return activeSkillName;
+  if (!activeSkillId) return null;
+  return providers.flatMap((p) => p.offeredSkills).find((s) => s.id === activeSkillId)?.name ?? null;
+}
+
 export function BrowsePanel({
   providers, viewerUserId = null, onSelect, activeSkillId = null, activeSkillName = null, searchActive = false, onSkillFilter,
 }: {
@@ -115,12 +136,7 @@ export function BrowsePanel({
 }) {
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
-  // Prefer the name passed from the shell (the chip the member tapped) so the banner label survives
-  // even when the filter returns zero providers; fall back to whichever card still shows it.
-  const bannerSkillName = activeSkillName
-    ?? (activeSkillId
-      ? providers.flatMap((p) => p.offeredSkills).find((s) => s.id === activeSkillId)?.name ?? null
-      : null);
+  const bannerSkillName = resolveBannerSkillName(activeSkillName, activeSkillId, providers);
 
   return (
     <ScrollArea style={{ flex: 1, minHeight: 0 }}>

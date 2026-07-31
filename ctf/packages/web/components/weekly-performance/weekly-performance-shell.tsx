@@ -35,6 +35,10 @@ function priorWeekStart(weeks: WpWeek[], selected: string | null): string | null
   return sorted[index + 1].weekStartDate;
 }
 
+function readCurrentWeekStart(currentData: CurrentWeekResponse | null): string | null {
+  return currentData?.currentWeek?.weekStartDate ?? null;
+}
+
 async function fetchShellData(): Promise<ShellData> {
   const [weeksRes, currentRes] = await Promise.all([
     fetch("/api/weekly-performance/weeks", { cache: "no-store" }),
@@ -43,7 +47,7 @@ async function fetchShellData(): Promise<ShellData> {
   if (!weeksRes.ok) throw new Error("Failed to load weeks.");
   const weeksData = (await weeksRes.json()) as WeeksResponse;
   const currentData = currentRes.ok ? ((await currentRes.json()) as CurrentWeekResponse) : null;
-  const currentWeekStart = currentData?.currentWeek?.weekStartDate ?? null;
+  const currentWeekStart = readCurrentWeekStart(currentData);
   return {
     weeks: weeksData.weeks,
     activeUsers: currentData?.activeUsersLast7Days ?? null,

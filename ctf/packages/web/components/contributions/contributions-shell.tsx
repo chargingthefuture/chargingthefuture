@@ -17,7 +17,7 @@ import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { RefreshButton } from '@/components/shared/refresh-button';
 import { goalsFromFundraiser, GoalRow } from './contributions-drive-progress';
-import { ContributionPaths, type SubmitGiftCardInput } from './contributions-paths';
+import { ContributionPaths, type PathsProps, type SubmitGiftCardInput } from './contributions-paths';
 import { ContributionsHistoryList, ContributionsEmptyHistory } from './contributions-history';
 import { ContributionsConfirmation } from './contributions-confirmation';
 
@@ -26,6 +26,23 @@ type View = 'main' | 'confirmation';
 type MobileTab = 'drive' | 'contribute' | 'history';
 
 const CSRF_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' } as const;
+
+// Fetches the drive and the member's submissions in parallel and parses both. Kept at module scope so
+// the loadData callback stays small; it throws on a failed response and the caller handles aborts.
+async function fetchContributionsData(
+  signal?: AbortSignal,
+): Promise<{ fundraiser: FundraiserResponse; submissions: ContributionSubmission[] }> {
+  const [fundraiserRes, submissionsRes] = await Promise.all([
+    fetch('/api/contributions/fundraiser', { cache: 'no-store', signal }),
+    fetch('/api/contributions/submission', { cache: 'no-store', signal }),
+  ]);
+  if (!fundraiserRes.ok || !submissionsRes.ok) {
+    throw new Error('We could not load the contribution drive. Try again in a moment.');
+  }
+  const fundraiserData = (await fundraiserRes.json()) as FundraiserResponse;
+  const submissionsData = (await submissionsRes.json()) as SubmissionsResponse;
+  return { fundraiser: fundraiserData, submissions: submissionsData.submissions ?? [] };
+}
 
 export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const { theme } = useTheme();
@@ -45,20 +62,12 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     setLoading(true);
     setError(null);
     try {
-      const [fundraiserRes, submissionsRes] = await Promise.all([
-        fetch('/api/contributions/fundraiser', { cache: 'no-store', signal }),
-        fetch('/api/contributions/submission', { cache: 'no-store', signal }),
-      ]);
-      if (!fundraiserRes.ok || !submissionsRes.ok) {
-        throw new Error('We could not load the contribution drive. Try again in a moment.');
-      }
-      const fundraiserData = (await fundraiserRes.json()) as FundraiserResponse;
-      const submissionsData = (await submissionsRes.json()) as SubmissionsResponse;
+      const data = await fetchContributionsData(signal);
       if (signal?.aborted) {
         return;
       }
-      setFundraiser(fundraiserData);
-      setSubmissions(submissionsData.submissions ?? []);
+      setFundraiser(data.fundraiser);
+      setSubmissions(data.submissions);
     } catch (e) {
       if ((e as Error).name === 'AbortError') {
         return;
@@ -165,34 +174,65 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     onSubmitGithub,
   };
 
-    return (
-      <MobileFrame t={t} tab={mobileTab} onTab={setMobileTab} onRefresh={() => loadData()} isAdmin={isAdmin}>
-        {mobileTab === 'drive' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
-            <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.7, margin: '0 0 16px' }}>
-              If everyone who&apos;s able gave a little, the platform&apos;s costs would be covered — and it stays free for everyone.
-            </p>
-            {goals.map((g) => (
-              <GoalRow key={g.key} goal={g} t={t} />
-            ))}
-          </div>
-        )}
-        {mobileTab === 'contribute' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
-            <ContributionPaths {...pathsProps} />
-          </div>
-        )}
-        {mobileTab === 'history' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
-            {submissions.length === 0 ? (
-              <ContributionsEmptyHistory t={t} onContribute={() => setMobileTab('contribute')} />
-            ) : (
-              <ContributionsHistoryList submissions={submissions} t={t} />
-            )}
-          </div>
-        )}
-      </MobileFrame>
-    );
+  return (
+    <MobileFrame t={t} tab={mobileTab} onTab={setMobileTab} onRefresh={() => loadData()} isAdmin={isAdmin}>
+      <MainTabContent
+        t={t}
+        mobileTab={mobileTab}
+        goals={goals}
+        pathsProps={pathsProps}
+        submissions={submissions}
+        onContribute={() => setMobileTab('contribute')}
+      />
+    </MobileFrame>
+  );
+}
+
+// The three main-view tabs (drive progress, the contribute paths, and the member's history). Only the
+// active tab's block renders; the others return nothing.
+function MainTabContent({
+  t,
+  mobileTab,
+  goals,
+  pathsProps,
+  submissions,
+  onContribute,
+}: {
+  t: ContributionsTokens;
+  mobileTab: MobileTab;
+  goals: ReturnType<typeof goalsFromFundraiser>;
+  pathsProps: PathsProps;
+  submissions: ContributionSubmission[];
+  onContribute: () => void;
+}) {
+  return (
+    <>
+      {mobileTab === 'drive' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
+          <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.7, margin: '0 0 16px' }}>
+            If everyone who&apos;s able gave a little, the platform&apos;s costs would be covered — and it stays free for everyone.
+          </p>
+          {goals.map((g) => (
+            <GoalRow key={g.key} goal={g} t={t} />
+          ))}
+        </div>
+      )}
+      {mobileTab === 'contribute' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
+          <ContributionPaths {...pathsProps} />
+        </div>
+      )}
+      {mobileTab === 'history' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
+          {submissions.length === 0 ? (
+            <ContributionsEmptyHistory t={t} onContribute={onContribute} />
+          ) : (
+            <ContributionsHistoryList submissions={submissions} t={t} />
+          )}
+        </div>
+      )}
+    </>
+  );
 }
 
 // --- frames + chrome ---------------------------------------------------------------------------

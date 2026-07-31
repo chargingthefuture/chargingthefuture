@@ -17,34 +17,85 @@ import { RefreshButton } from "@/components/shared/refresh-button";
 
 const CSRF_HEADERS = { "Content-Type": "application/json", "x-ctf-csrf": "1" };
 
-// Turn a failed Foundation API response into a clear member-facing message by reading the route's
-// JSON `code`, instead of always showing a generic "could not open a connection". The most common
-// case is requesting a quote from your own profile, which the server denies as a policy.
-async function foundationErrorMessage(res: Response, fallback: string): Promise<string> {
-  let code = "";
-  let message = "";
+type FoundationTokens = ReturnType<typeof getFoundationTokens>;
+
+// The thread POST returns the connection id plus the Stream credentials needed to land the member in
+// the Direct Line straight away.
+type FoundationThreadResponse = {
+  thread?: { id?: string; streamChannelId?: string };
+  streamApiKey?: string;
+  streamUserId?: string;
+  streamToken?: string;
+};
+
+// Member-facing text for each Foundation API failure `code`. The most common case is requesting a
+// quote from your own profile, which the server denies as a policy.
+const FOUNDATION_ERROR_MESSAGES: Record<string, string> = {
+  FOUNDATION_POLICY_DENIED: "You can't request a quote from your own profile.",
+  FOUNDATION_PROVIDER_NOT_FOUND: "This provider's profile could not be found.",
+  FOUNDATION_RATE_LIMIT_EXCEEDED: "You're sending requests too quickly — wait a moment and try again.",
+  FOUNDATION_STREAM_UNAVAILABLE: "Connections are temporarily unavailable. Please try again shortly.",
+  FOUNDATION_PERSISTENCE_UNAVAILABLE: "Connections are temporarily unavailable. Please try again shortly.",
+  FOUNDATION_CSRF_DENIED: "Your session needs a refresh — reload the page and try again.",
+};
+
+// Read a failed response's JSON `code`/`message`, tolerating a non-JSON body.
+async function readFoundationErrorBody(res: Response): Promise<{ code: string; message: string }> {
   try {
     const body = (await res.json()) as { code?: string; message?: string };
-    code = body.code ?? "";
-    message = body.message ?? "";
+    return { code: body.code ?? "", message: body.message ?? "" };
   } catch {
     /* non-JSON body — fall back below */
+    return { code: "", message: "" };
   }
-  switch (code) {
-    case "FOUNDATION_POLICY_DENIED":
-      return "You can't request a quote from your own profile.";
-    case "FOUNDATION_PROVIDER_NOT_FOUND":
-      return "This provider's profile could not be found.";
-    case "FOUNDATION_RATE_LIMIT_EXCEEDED":
-      return "You're sending requests too quickly — wait a moment and try again.";
-    case "FOUNDATION_STREAM_UNAVAILABLE":
-    case "FOUNDATION_PERSISTENCE_UNAVAILABLE":
-      return "Connections are temporarily unavailable. Please try again shortly.";
-    case "FOUNDATION_CSRF_DENIED":
-      return "Your session needs a refresh — reload the page and try again.";
-    default:
-      return message || fallback;
+}
+
+// Turn a failed Foundation API response into a clear member-facing message by reading the route's
+// JSON `code`, instead of always showing a generic "could not open a connection".
+async function foundationErrorMessage(res: Response, fallback: string): Promise<string> {
+  const { code, message } = await readFoundationErrorBody(res);
+  return FOUNDATION_ERROR_MESSAGES[code] || message || fallback;
+}
+
+function toErrorMessage(e: unknown, fallback: string): string {
+  return e instanceof Error ? e.message : fallback;
+}
+
+// Trade filter has no client-side field to match on; it scopes the server search query.
+function buildFoundationSearchParams(searchTerm: string, skillId: string | null): string {
+  const params = new URLSearchParams();
+  if (searchTerm) params.set("q", searchTerm);
+  if (skillId) params.set("skillId", skillId);
+  return params.toString();
+}
+
+async function fetchFoundationProviders(
+  queryString: string,
+): Promise<{ items: ProviderView[]; viewerUserId: string | null } | null> {
+  const res = await fetch(`/api/foundation/providers/search?${queryString}`);
+  if (!res.ok) return null;
+  const data = (await res.json()) as { items?: ProviderView[]; viewerUserId?: string };
+  return { items: data.items ?? [], viewerUserId: data.viewerUserId ?? null };
+}
+
+function resolveServiceType(headline: ProviderView["headline"]): string {
+  return headline?.trim() || "General trade service";
+}
+
+// Take the member straight into the Direct Line using the credentials the thread POST already
+// returned. Returns null when Stream credentials were not issued (e.g. Stream is unconfigured), so
+// the caller can fall back to the Quotes tab instead of losing the request.
+function buildDirectLineCredentials(threadData: FoundationThreadResponse): DirectLineCredentials | null {
+  const channelId = threadData.thread?.streamChannelId;
+  if (threadData.streamApiKey && threadData.streamUserId && threadData.streamToken && channelId) {
+    return {
+      streamApiKey: threadData.streamApiKey,
+      streamUserId: threadData.streamUserId,
+      streamToken: threadData.streamToken,
+      streamChannelId: channelId,
+    };
   }
+  return null;
 }
 
 function Centered({ color, children }: { color: string; children: React.ReactNode }) {
@@ -52,6 +103,89 @@ function Centered({ color, children }: { color: string; children: React.ReactNod
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0F1117", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT, color }}>
       {children}
     </div>
+  );
+}
+
+type FoundationMainScreenProps = {
+  t: FoundationTokens;
+  isAdmin?: boolean;
+  tab: FoundationTab;
+  onTabChange: (tab: FoundationTab) => void;
+  query: string;
+  onQueryChange: (query: string) => void;
+  providers: ProviderView[];
+  viewerUserId: string | null;
+  onSelectProvider: (provider: ProviderView) => void;
+  skillId: string | null;
+  skillName: string | null;
+  onSkillFilter: (skillId: string | null, skillName?: string | null) => void;
+  searchTerm: string;
+  quotes: QuoteView[];
+  onOpenDirectLine: (quote: QuoteView) => void;
+  onRespond: (quote: QuoteView, quotedAmount: number, quotedCurrency: string) => Promise<boolean>;
+  onRefresh: () => void;
+};
+
+const FOUNDATION_TABS: { key: FoundationTab; label: string }[] = [
+  { key: "browse", label: "Browse" },
+  { key: "offer", label: "Offer" },
+  { key: "quotes", label: "Quotes" },
+];
+
+// The browse/offer/quotes screen: sticky header, tab bar, search, and the active tab's panel.
+function FoundationMainScreen(props: FoundationMainScreenProps) {
+  const { t, tab } = props;
+  return (
+    <div style={{ minHeight: "100vh", background: t.BG, fontFamily: FONT, color: t.TEXT }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
+          <BackChevronButton accent={t.ACCENT} />
+          <Hammer size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
+          {/* Title shrinks and truncates so the trailing controls stay on screen */}
+          <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Foundation</span>
+          <PluginAdminButton href="/admin/foundation" isAdmin={props.isAdmin} accent={t.ACCENT} />
+          <RefreshButton onRefresh={props.onRefresh} title="Refresh" />
+          <MobileTopActions />
+        </div>
+        <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
+          {FOUNDATION_TABS.map(({ key, label }) => {
+            const isActive = tab === key;
+            return (
+              <button key={key} onClick={() => props.onTabChange(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: isActive ? `${t.ACCENT}1A` : "transparent", border: `1px solid ${isActive ? t.ACCENT + "40" : t.BORDER_STRONG}`, color: isActive ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+            );
+          })}
+        </div>
+        {tab === "browse" && (
+          <div style={{ padding: "0 12px 10px" }}>
+            <div style={{ position: "relative" }}>
+              <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: t.FAINT }} />
+              <input value={props.query} onChange={(e) => props.onQueryChange(e.target.value)} placeholder="Search trade providers…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }} />
+            </div>
+          </div>
+        )}
+      </div>
+      <FoundationTabContent {...props} />
+    </div>
+  );
+}
+
+// The active tab's panel, split out so the main screen stays under the complexity limit.
+function FoundationTabContent(props: FoundationMainScreenProps) {
+  const { tab } = props;
+  return (
+    <>
+      {tab === "browse" && <BrowsePanel providers={props.providers} viewerUserId={props.viewerUserId} onSelect={props.onSelectProvider} activeSkillId={props.skillId} activeSkillName={props.skillName} searchActive={props.searchTerm.length > 0} onSkillFilter={props.onSkillFilter} />}
+      {tab === "offer" && <OfferSkillsPanel />}
+      {tab === "quotes" && (
+        <QuotesPanel
+          quotes={props.quotes}
+          viewerUserId={props.viewerUserId}
+          onBrowse={() => props.onTabChange("browse")}
+          onOpenDirectLine={props.onOpenDirectLine}
+          onRespond={props.onRespond}
+        />
+      )}
+    </>
   );
 }
 
@@ -103,21 +237,17 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
       if (!isRefresh) setLoading(true);
       setError(null);
       try {
-        const params = new URLSearchParams();
-        if (searchTerm) params.set("q", searchTerm);
-        if (skillId) params.set("skillId", skillId);
-        const [searchRes] = await Promise.all([
-          fetch(`/api/foundation/providers/search?${params.toString()}`),
+        const [search] = await Promise.all([
+          fetchFoundationProviders(buildFoundationSearchParams(searchTerm, skillId)),
           loadQuotes(),
         ]);
         if (!active) return;
-        if (searchRes.ok) {
-          const data = (await searchRes.json()) as { items?: ProviderView[]; viewerUserId?: string };
-          setProviders(data.items ?? []);
-          setViewerUserId(data.viewerUserId ?? null);
+        if (search) {
+          setProviders(search.items);
+          setViewerUserId(search.viewerUserId);
         }
       } catch (e: unknown) {
-        if (active) setError(e instanceof Error ? e.message : "Failed to load Foundation.");
+        if (active) setError(toErrorMessage(e, "Failed to load Foundation."));
       } finally {
         if (active && !isRefresh) setLoading(false);
       }
@@ -162,16 +292,11 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
         body: JSON.stringify({ providerId: provider.profileId }),
       });
       if (!threadRes.ok) throw new Error(await foundationErrorMessage(threadRes, "Could not open a connection with this provider."));
-      const threadData = (await threadRes.json()) as {
-        thread?: { id?: string; streamChannelId?: string };
-        streamApiKey?: string;
-        streamUserId?: string;
-        streamToken?: string;
-      };
+      const threadData = (await threadRes.json()) as FoundationThreadResponse;
       const threadId = threadData.thread?.id;
       if (!threadId) throw new Error("Connection response was incomplete.");
 
-      const serviceType = provider.headline?.trim() || "General trade service";
+      const serviceType = resolveServiceType(provider.headline);
       const quoteRes = await fetch("/api/foundation/quotes", {
         method: "POST",
         headers: CSRF_HEADERS,
@@ -184,25 +309,16 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
       void loadQuotes();
       setSelected(null);
 
-      // Take the member straight into the Direct Line using the credentials the thread POST already
-      // returned. Fall back to the Quotes tab only if Stream credentials were not issued (e.g. Stream
-      // is unconfigured), so the request is never lost.
-      const channelId = threadData.thread?.streamChannelId;
-      if (threadData.streamApiKey && threadData.streamUserId && threadData.streamToken && channelId) {
-        setActiveDirectLine({
-          credentials: {
-            streamApiKey: threadData.streamApiKey,
-            streamUserId: threadData.streamUserId,
-            streamToken: threadData.streamToken,
-            streamChannelId: channelId,
-          },
-          subtitle: provider.displayName,
-        });
+      // Land in the Direct Line when Stream credentials were issued; otherwise fall back to the
+      // Quotes tab so the request is never lost.
+      const credentials = buildDirectLineCredentials(threadData);
+      if (credentials) {
+        setActiveDirectLine({ credentials, subtitle: provider.displayName });
       } else {
         setTab("quotes");
       }
     } catch (e: unknown) {
-      setQuoteError(e instanceof Error ? e.message : "Failed to request quote.");
+      setQuoteError(toErrorMessage(e, "Failed to request quote."));
     } finally {
       setSubmitting(false);
     }
@@ -281,54 +397,25 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
     );
   }
 
-  const content = (
-    <>
-      {tab === "browse" && <BrowsePanel providers={providers} viewerUserId={viewerUserId} onSelect={setSelected} activeSkillId={skillId} activeSkillName={skillName} searchActive={searchTerm.length > 0} onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }} />}
-      {tab === "offer" && <OfferSkillsPanel />}
-      {tab === "quotes" && (
-        <QuotesPanel
-          quotes={quotes}
-          viewerUserId={viewerUserId}
-          onBrowse={() => setTab("browse")}
-          onOpenDirectLine={(q) => setQuoteDirectLine({ threadId: q.threadId, subtitle: q.serviceType })}
-          onRespond={respondToQuote}
-        />
-      )}
-    </>
+  return withInstantCall(
+    <FoundationMainScreen
+      t={t}
+      isAdmin={isAdmin}
+      tab={tab}
+      onTabChange={setTab}
+      query={query}
+      onQueryChange={setQuery}
+      providers={providers}
+      viewerUserId={viewerUserId}
+      onSelectProvider={setSelected}
+      skillId={skillId}
+      skillName={skillName}
+      onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }}
+      searchTerm={searchTerm}
+      quotes={quotes}
+      onOpenDirectLine={(q) => setQuoteDirectLine({ threadId: q.threadId, subtitle: q.serviceType })}
+      onRespond={respondToQuote}
+      onRefresh={() => setRefreshKey((k) => k + 1)}
+    />,
   );
-
-    const tabs: { key: FoundationTab; label: string }[] = [
-      { key: "browse", label: "Browse" },
-      { key: "offer", label: "Offer" },
-      { key: "quotes", label: "Quotes" },
-    ];
-    return withInstantCall(
-      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: FONT, color: t.TEXT }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
-            <BackChevronButton accent={t.ACCENT} />
-            <Hammer size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
-            {/* Title shrinks and truncates so the trailing controls stay on screen */}
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Foundation</span>
-            <PluginAdminButton href="/admin/foundation" isAdmin={isAdmin} accent={t.ACCENT} />
-            <RefreshButton onRefresh={() => setRefreshKey((k) => k + 1)} title="Refresh" />
-            <MobileTopActions />
-          </div>
-          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
-            {tabs.map(({ key, label }) => (
-              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${t.ACCENT}1A` : "transparent", border: `1px solid ${tab === key ? t.ACCENT + "40" : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
-            ))}
-          </div>
-          {tab === "browse" && (
-            <div style={{ padding: "0 12px 10px" }}>
-              <div style={{ position: "relative" }}>
-                <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: t.FAINT }} />
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search trade providers…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }} />
-              </div>
-            </div>
-          )}
-        </div>
-        {content}
-      </div>,
-    );
 }

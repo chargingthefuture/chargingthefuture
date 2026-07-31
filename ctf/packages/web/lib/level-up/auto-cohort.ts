@@ -189,14 +189,9 @@ function isUniqueViolation(error: unknown): boolean {
 
 type Candidate = { jobTitleId: string; occupation: string; sector: string; skillLevel: string; gap: number };
 
-/**
- * Sector-diverse ranking (owner decision 2026-07-23): pick round-robin across sectors so the top of the
- * queue spans sectors rather than being dominated by one big-gap sector. Input `candidates` is already
- * sorted largest-gap-first, so the first time we meet a sector it is at its largest gap — Map insertion
- * order therefore orders sectors by their top gap. Each sector contributes at most `perSectorCap`; the
- * whole queue is bounded by `topN` for reviewability.
- */
-function sectorDiverseOrder(candidates: Candidate[], perSectorCap: number, topN: number): Candidate[] {
+// Group candidates by sector, preserving input order within each sector. Because `candidates` is
+// sorted largest-gap-first, Map insertion order also orders sectors by their top gap.
+function groupCandidatesBySector(candidates: Candidate[]): Map<string, Candidate[]> {
   const bySector = new Map<string, Candidate[]>();
   for (const candidate of candidates) {
     const list = bySector.get(candidate.sector);
@@ -206,6 +201,18 @@ function sectorDiverseOrder(candidates: Candidate[], perSectorCap: number, topN:
       bySector.set(candidate.sector, [candidate]);
     }
   }
+  return bySector;
+}
+
+/**
+ * Sector-diverse ranking (owner decision 2026-07-23): pick round-robin across sectors so the top of the
+ * queue spans sectors rather than being dominated by one big-gap sector. Input `candidates` is already
+ * sorted largest-gap-first, so the first time we meet a sector it is at its largest gap — Map insertion
+ * order therefore orders sectors by their top gap. Each sector contributes at most `perSectorCap`; the
+ * whole queue is bounded by `topN` for reviewability.
+ */
+function sectorDiverseOrder(candidates: Candidate[], perSectorCap: number, topN: number): Candidate[] {
+  const bySector = groupCandidatesBySector(candidates);
 
   const sectors = [...bySector.keys()];
   const takenPerSector = new Map<string, number>();
