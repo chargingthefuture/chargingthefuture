@@ -4,6 +4,26 @@ import { useState } from "react";
 import { MAX_SKILLS, type SkillsHuntRound } from "./sh-shared";
 import type { ScoutFormModel } from "./sh-scout-tab";
 
+// A nomination is ready to submit once there is an active round, a plausible full name,
+// at least one skill, and a country (the server enforces the same set).
+function isNominationReady(
+  activeRound: SkillsHuntRound | null,
+  fullName: string,
+  allSkillCount: number,
+  country: string,
+): boolean {
+  return (
+    activeRound !== null &&
+    fullName.trim().length >= 2 &&
+    allSkillCount > 0 &&
+    country.trim().length > 0
+  );
+}
+
+function nominationErrorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : "Failed to submit nomination.";
+}
+
 // Owns the nomination-form state, the submit/reset handlers, and assembly of the
 // ScoutFormModel passed to the Scout tab. Kept out of the shell to honor rule-116.
 export function useNominationForm(activeRound: SkillsHuntRound | null): {
@@ -59,11 +79,11 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
 
   async function handleSubmit() {
     // Country is required (the server enforces it too); full name and at least one skill as before.
-    if (!activeRound || fullName.trim().length < 2 || allSkillCount === 0 || country.trim().length === 0) return;
+    if (!isNominationReady(activeRound, fullName, allSkillCount, country)) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch(`/api/skills-hunt/rounds/${activeRound.id}/submissions`, {
+      const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/submissions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({
@@ -84,7 +104,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
       }
       setSubmitted(true);
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : "Failed to submit nomination.");
+      setSubmitError(nominationErrorMessage(e));
     } finally {
       setSubmitting(false);
     }
