@@ -182,6 +182,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history so the gate can diff changed files against the PR's base branch
+          # (check-modularity-governance.sh needs the merge base to find what this PR changed).
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
