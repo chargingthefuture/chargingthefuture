@@ -146,7 +146,17 @@ jobs:
         run: |
           set -euo pipefail
           # --no-wait returns immediately with the build record (id + expo.dev page).
-          eas build --platform android --profile preview --non-interactive --no-wait --json > build.json
+          # Expo enforces the free-plan cap per ACCOUNT, so the guard above can undercount and let
+          # a build through that Expo then rejects (see issue #2030). That rejection is an expected
+          # monthly condition — surface it as a skip, not a red check on the PR.
+          if ! eas build --platform android --profile preview --non-interactive --no-wait --json > build.json 2> eas-stderr.txt; then
+            cat eas-stderr.txt >&2 || true
+            if grep -qi "used its Android builds" eas-stderr.txt build.json 2>/dev/null; then
+              echo "quota_exhausted=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            exit 1
+          fi
           # Read the build page URL straight from the EAS response so we do not
           # need an EXPO_OWNER secret. Different EAS versions expose it under
           # slightly different keys, so check the known ones in order.
@@ -158,8 +168,26 @@ jobs:
           ")
           echo "build_url=${BUILD_URL}" >> "$GITHUB_OUTPUT"
 
+      - name: Quota rejected at build time — tell the pull request
+        if: ${{ steps.quota.outputs.build_allowed == 'true' && steps.build.outputs.quota_exhausted == 'true' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- expo-preview-build -->';
+            const body = `${marker}\n**Android preview build skipped — free-tier quota reached.**\n\nExpo rejected the build: the account's free-plan Android builds for this month are used up (the pre-check undercounted — Expo's cap is account-wide). Builds resume after the monthly reset.`;
+            if (!context.issue.number) { core.info(body); return; }
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.data.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
       - name: Comment install link on the pull request
-        if: ${{ steps.quota.outputs.build_allowed == 'true' }}
+        if: ${{ steps.quota.outputs.build_allowed == 'true' && steps.build.outputs.quota_exhausted != 'true' }}
         uses: actions/github-script@v7
         with:
           script: |
