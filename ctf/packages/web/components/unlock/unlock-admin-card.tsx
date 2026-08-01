@@ -80,6 +80,21 @@ function pill(bg: string, color: string, border: string) {
   return { padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: bg, color, border: `1px solid ${border}` } as const;
 }
 
+// Name first, then handle, with the Clerk id last. Reviewing a verification means deciding about a
+// person, and a raw id says nothing about who that is — an admin had to copy it out and cross-
+// reference elsewhere to find out whose account they were approving (owner report). The id is still
+// printed after the name for support and debugging, and stands alone only for a member who has
+// neither a directory profile nor a handle on file.
+function memberLabel(
+  name: string | null | undefined,
+  username: string | null | undefined,
+  userId: string,
+): string {
+  if (name) return username ? `${name} (@${username})` : name;
+  if (username) return `@${username}`;
+  return userId;
+}
+
 // Status / access-tier / reward / shared / changed pills for a submission.
 function CardBadges({ s }: { s: UnlockSubmission }) {
   return (
@@ -364,7 +379,10 @@ export function UnlockSubmissionCard(props: UnlockCardProps) {
           ) : null}
         </div>
       ) : null}
-      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 4 }}>User: {s.userId}</div>
+      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 4, overflowWrap: 'anywhere' }}>
+        Member: <strong style={{ color: t.TEXT }}>{memberLabel(s.memberName, s.memberUsername, s.userId)}</strong>
+        {s.memberName || s.memberUsername ? <span style={{ color: t.SUBTLE }}> · {s.userId}</span> : null}
+      </div>
       {history.openUser === s.userId ? <CardUrlHistory s={s} history={history} /> : null}
       <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 10 }}>
         Submitted {new Date(s.createdAt).toLocaleDateString()} · window expires {new Date(s.unlockWindowExpiresAt).toLocaleDateString()} · tier {s.accessTier}

@@ -199,6 +199,17 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-08-01: **The review queue names the member instead of printing a Clerk id (owner report).**
+  Each card showed only `User: user_38IaPPUrRq0…`, so deciding whether to approve someone meant
+  copying the id out and cross-referencing it elsewhere to find out whose account it was.
+  `listUnlockSubmissions` now joins the member's first + last name from `directory_profiles` and their
+  handle from the legacy `public.users` table, exposed as `UnlockSubmission.memberName` /
+  `.memberUsername`. The card renders `Name (@handle)` and keeps the raw id beside it for support;
+  the id stands alone only for a member with neither a profile nor a handle. The `users` join is
+  probed with `to_regclass` first (the same guard `lib/bug-reports/repository.ts` uses) so a database
+  without that legacy table still works, returning a null handle. Every column in the query is now
+  table-qualified — `directory_profiles` and `users` both have an `id`, which would otherwise make the
+  select ambiguous. Read-only display change; no route, schema, or contract change.
 - 2026-07-30: **Admin denylist panel — view and remove spam Quora URLs.** Added a "Spam Quora-URL
   denylist" panel to the Unlock admin shell (`unlock-spam-denylist-panel.tsx`, in its own component to
   keep the shell under the rule-116 size/complexity limits), fed by `listSpamQuoraUrls` from the admin
