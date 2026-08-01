@@ -913,8 +913,10 @@ function FooterNotes({ t }: { t: ComicTokens }) {
     <>
       <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, marginTop: 20 }}>
         An accepted contribution earns a ServiceCredits grant. ServiceCredits are an internal credits
-        unit inside this app — they are not money, not cash, and cannot be cashed out. It is
-        recognition for building something we all use, not a payment for your story.
+        unit inside this app — they are not money, not cash, and cannot be cashed out. They are real
+        inside the app, where members exchange credits for things they need: rides, housing stays,
+        repairs, training, and more. It is recognition for building something we all use, not a
+        payment for your story.
       </p>
       {/* Said plainly and up front, because finding out afterwards would feel like a bait. Anyone
           signed in may contribute — someone still working through Unlock may have years of writing
