@@ -27,6 +27,10 @@ export function ClickLogShell() {
   const [geoStatus, setGeoStatus] = useState<"idle" | "locating" | "error">("idle");
   const [geoError, setGeoError] = useState<string | null>(null);
   const [logged, setLogged] = useState(false);
+  // Owner-share consent. shareDefault is the member's stored global preference; formShare is the
+  // per-incident choice for the incident being logged (seeded from the default when the form opens).
+  const [shareDefault, setShareDefault] = useState(false);
+  const [formShare, setFormShare] = useState(false);
   const { theme } = useTheme();
   const t = getClickLogTokens(theme);
 
@@ -46,9 +50,62 @@ export function ClickLogShell() {
     }
   }
 
+  async function fetchSharePreference(): Promise<void> {
+    try {
+      const res = await fetch("/api/click-log/preferences");
+      if (!res.ok) return;
+      const data = (await res.json()) as { shareWithOwner?: boolean };
+      if (typeof data.shareWithOwner === "boolean") {
+        setShareDefault(data.shareWithOwner);
+        setFormShare(data.shareWithOwner);
+      }
+    } catch {
+      // Preference fetch is non-critical — leave the opt-in default (not shared).
+    }
+  }
+
   useEffect(() => {
     void fetchIncidents(true);
+    void fetchSharePreference();
   }, []);
+
+  async function handleShareDefaultChange(next: boolean): Promise<void> {
+    setShareDefault(next);
+    setFormShare(next);
+    try {
+      const res = await fetch("/api/click-log/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ shareWithOwner: next }),
+      });
+      if (!res.ok) throw new Error("Failed to save sharing preference");
+    } catch (e) {
+      setShareDefault(!next);
+      setFormShare(!next);
+      setError(e instanceof Error ? e.message : "Failed to save sharing preference");
+    }
+  }
+
+  async function handleToggleShare(id: string, next: boolean): Promise<void> {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/click-log/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ sharedWithOwner: next }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? "Failed to update sharing");
+      }
+      await fetchIncidents();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update sharing");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function flashLogged(): void {
     setLogged(true);
@@ -96,7 +153,7 @@ export function ClickLogShell() {
       const res = await fetch("/api/click-log", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ metadata }),
+        body: JSON.stringify({ metadata, sharedWithOwner: formShare }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -107,6 +164,7 @@ export function ClickLogShell() {
       setGeo({});
       setGeoStatus("idle");
       setGeoError(null);
+      setFormShare(shareDefault);
       flashLogged();
       await fetchIncidents();
     } catch (e) {
@@ -162,15 +220,33 @@ export function ClickLogShell() {
         locationAdded={typeof geo.latitude === "number"}
         geoStatus={geoStatus}
         geoError={geoError}
+        shareWithOwner={formShare}
+        onShareChange={setFormShare}
         onToggleForm={() => setShowForm((s) => !s)}
         onNoteChange={setNote}
         onAddLocation={addLocation}
         onSubmit={() => void postIncident({ ...geo, notes: note })}
-        onCancel={() => { setShowForm(false); setNote(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); }}
+        onCancel={() => { setShowForm(false); setNote(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); setFormShare(shareDefault); }}
       />
 
+      {/* Global share default. Opt-in and member-controlled; a new incident starts from this
+          setting and can be overridden per incident in the log form or the list below. */}
+      <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24, padding: "10px 14px", borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, fontSize: 12, color: t.MUTED, cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          checked={shareDefault}
+          onChange={(e) => void handleShareDefaultChange(e.target.checked)}
+          style={{ accentColor: t.ACCENT }}
+        />
+        Share new incidents with the owner by default (only coarse trend data — never your notes or exact location)
+      </label>
+
       {incidents.length > 0 && (
-        <ClickLogIncidentList incidents={incidents} onDelete={(id) => void handleDelete(id)} />
+        <ClickLogIncidentList
+          incidents={incidents}
+          onDelete={(id) => void handleDelete(id)}
+          onToggleShare={(id, next) => void handleToggleShare(id, next)}
+        />
       )}
     </>
   );

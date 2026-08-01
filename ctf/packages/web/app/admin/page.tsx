@@ -26,6 +26,7 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/comic', name: 'AI Assistant' },
   { href: '/admin/beacon', name: 'Beacon' },
   { href: '/admin/bug-reports', name: 'Bug Reports' },
+  { href: '/admin/click-log', name: 'ClickLog Trends' },
   { href: '/admin/contributions', name: 'Contributions' },
   { href: '/admin/contributor-access', name: 'Contributor Access' },
   { href: '/admin/directory', name: 'Directory' },
