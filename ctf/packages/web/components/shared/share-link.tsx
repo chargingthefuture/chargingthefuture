@@ -53,21 +53,45 @@ async function writeToClipboard(text: string): Promise<boolean> {
 }
 
 // Decide which way the popup opens from the trigger. Vertically: open below when there isn't room
-// above (~190px covers title + URL field + two rows + padding), otherwise above. Horizontally:
-// right-align when growing rightward would cross the viewport's right edge (which forces the page into
-// horizontal scroll on a phone), otherwise grow rightward from the left edge. Kept module-scope so the
-// several ?./??/?: it needs stay out of the effect's complexity count.
+// above (~190px covers title + URL field + two rows + padding), otherwise above.
+//
+// Horizontally there are three cases, and the third is the one this used to get wrong. Growing
+// rightward from the trigger's left edge is the default. When that would cross the viewport's right
+// edge it flips to grow leftward from the trigger's right edge instead — but that flip was
+// unconditional, and a trigger sitting mid-row on a phone satisfies "would overflow right" while
+// having nowhere near 280px of room to its left, so the popup shot off the LEFT edge and was clipped
+// (owner report: the share popup on a SocketRelay card opened half off-screen). When neither side
+// fits, the popup is pinned to the viewport's left margin instead, expressed as an offset from the
+// trigger because the popup is absolutely positioned inside the trigger's relative wrapper.
+//
+// Kept module-scope so the several ?./??/?: it needs stay out of the effect's complexity count.
+const POPUP_HEIGHT = 190;
+const POPUP_WIDTH = 280;
+const POPUP_MARGIN = 16;
+
+// The horizontal half, split out so each function stays inside the rule-116 complexity limit.
+function computeHorizontalAlign(
+  triggerLeft: number,
+  triggerRight: number,
+): { align: "left" | "right"; offsetPx: number } {
+  if (triggerLeft + POPUP_WIDTH <= window.innerWidth - POPUP_MARGIN) {
+    return { align: "left", offsetPx: 0 };
+  }
+  if (triggerRight - POPUP_WIDTH >= POPUP_MARGIN) {
+    return { align: "right", offsetPx: 0 };
+  }
+  return { align: "left", offsetPx: POPUP_MARGIN - triggerLeft };
+}
+
 function computePopupPosition(rect: DOMRect | undefined): {
   placement: "top" | "bottom";
   align: "left" | "right";
+  offsetPx: number;
 } {
-  const POPUP_HEIGHT = 190;
-  const POPUP_WIDTH = 280;
   const triggerTop = rect?.top ?? POPUP_HEIGHT + 1;
-  const triggerLeft = rect?.left ?? 0;
   return {
-    placement: triggerTop < POPUP_HEIGHT + 16 ? "bottom" : "top",
-    align: triggerLeft + POPUP_WIDTH > window.innerWidth - 16 ? "right" : "left",
+    placement: triggerTop < POPUP_HEIGHT + POPUP_MARGIN ? "bottom" : "top",
+    ...computeHorizontalAlign(rect?.left ?? 0, rect?.right ?? 0),
   };
 }
 
@@ -78,6 +102,7 @@ function ShareLinkPopup({
   title,
   placement,
   align,
+  offsetPx,
   absolute,
   copied,
   copyFailed,
@@ -89,6 +114,7 @@ function ShareLinkPopup({
   title: string;
   placement: "top" | "bottom";
   align: "left" | "right";
+  offsetPx: number;
   absolute: string;
   copied: boolean;
   copyFailed: boolean;
@@ -123,7 +149,7 @@ function ShareLinkPopup({
         ...(placement === "top"
           ? { bottom: "calc(100% + 8px)" }
           : { top: "calc(100% + 8px)" }),
-        ...(align === "right" ? { right: 0 } : { left: 0 }),
+        ...(align === "right" ? { right: 0 } : { left: offsetPx }),
         zIndex: 50,
         width: 280,
         maxWidth: "80vw",
@@ -193,6 +219,9 @@ export function ShareLink({
   // trigger near the right edge of the viewport (the usual header position) would push it off-screen
   // and force the whole page into horizontal scroll — so it flips to grow leftward instead.
   const [align, setAlign] = useState<"left" | "right">("left");
+  // Pixel nudge from the trigger for the case where the popup fits on neither side and has to be
+  // pinned to the viewport margin instead. Zero for the two normal alignments.
+  const [offsetPx, setOffsetPx] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const urlRef = useRef<HTMLInputElement>(null);
@@ -208,6 +237,7 @@ export function ShareLink({
     const position = computePopupPosition(rect);
     setPlacement(position.placement);
     setAlign(position.align);
+    setOffsetPx(position.offsetPx);
     // Focus the URL field so a keyboard/AT user lands on the link itself.
     urlRef.current?.focus();
     urlRef.current?.select();
@@ -280,6 +310,7 @@ export function ShareLink({
           title={title}
           placement={placement}
           align={align}
+          offsetPx={offsetPx}
           absolute={absolute}
           copied={copied}
           copyFailed={copyFailed}
