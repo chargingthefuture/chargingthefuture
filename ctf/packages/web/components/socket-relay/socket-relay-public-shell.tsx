@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { getSocketRelayTokens } from './sr-shared';
+import { SrTargetsOnlyNotice } from './sr-targets-only-notice';
 
 // Chrome palette comes from the shared theme tokens (getSocketRelayTokens); the plugin accent
 // (t.ACCENT) is the single source of truth, so the signed-out public shell matches the signed-in
@@ -27,6 +28,10 @@ function MobileSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string; 
         <span style={{ padding: '3px 12px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 11, color: COLOR, fontWeight: 600, width: 'fit-content' }}>Peer-to-peer needs board</span>
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Post what you need, offer what you have. Clothing, furniture, skills, time — the survivor community connects directly.</p>
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}</a>
+        {/* Above the join button's fold on purpose: this is the first screen an outsider following a
+            shared link or a job posting reaches, so the warning has to land before they decide to sign
+            up, not after. */}
+        <SrTargetsOnlyNotice />
       </div>
 
       {/* Blurred feed preview + lock (neutral placeholders) */}
