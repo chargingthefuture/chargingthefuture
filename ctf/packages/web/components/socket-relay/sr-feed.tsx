@@ -139,8 +139,12 @@ function RequestCard({
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <CardBadges request={r} t={t} open={open} expired={expired} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 4, lineHeight: 1.4 }}>{r.title}</div>
-          {r.details && <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6, lineHeight: 1.5 }}>{r.details}</div>}
+          {/* overflowWrap 'anywhere' on both: members paste URLs into requests, and a long URL has no
+              space to break at, so the default wrapping rule lets it run past the card's right edge and
+              get clipped (owner report — a GitHub link in a request was cut mid-address). `minWidth: 0`
+              on the flex parent above lets the column shrink; this lets the text inside it break. */}
+          <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 4, lineHeight: 1.4, overflowWrap: "anywhere" }}>{r.title}</div>
+          {r.details && <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6, lineHeight: 1.5, overflowWrap: "anywhere" }}>{r.details}</div>}
           <CardMeta request={r} t={t} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
