@@ -27,6 +27,10 @@ export type UnlockSubmission = {
   // the admin queue list. 0/1 is normal; a higher count is a signal to open the history and review —
   // never an automatic flag (Quora sometimes deletes accounts, so re-profiling is legitimate).
   quoraUrlChangeCount?: number;
+  // Who the member is, so an admin reviewing the queue is not reading a Clerk id. Only populated by
+  // the admin queue list; null when the member has no directory profile / no handle on file.
+  memberName?: string | null;
+  memberUsername?: string | null;
   createdAt: string;
   updatedAt: string;
 };
