@@ -87,7 +87,8 @@ export function ComicKnowledgePublicShell({ signInUrl }: { signInUrl: string }) 
             Joining asks for your Quora profile so it can be checked you are a real person. If you
             contribute, that check happens on the writing you send — one step instead of two. An
             accepted contribution also earns a ServiceCredits grant: an internal credits unit inside
-            this app, not money, and never cashable.
+            this app, not money, and never cashable — but real inside the app, where members exchange
+            credits for things they need: rides, housing stays, repairs, training, and more.
           </p>
         </section>
 
