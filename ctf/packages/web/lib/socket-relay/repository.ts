@@ -103,6 +103,12 @@ type FulfillmentRow = {
   close_reason: string | null;
   created_at: Date;
   updated_at: Date;
+  // Joined for the admin list only (listAdminFulfillments). Absent on every other read, which selects
+  // the bare row — hence optional rather than nullable.
+  request_title?: string | null;
+  request_status?: SocketRelayRequestStatus | null;
+  requester_name?: string | null;
+  fulfiller_name?: string | null;
 };
 
 type MessageRow = {
@@ -230,6 +236,10 @@ function mapFulfillmentRow(row: FulfillmentRow): SocketRelayFulfillment {
     closeReason: row.close_reason,
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
+    requestTitle: row.request_title ?? undefined,
+    requestStatus: row.request_status ?? undefined,
+    requesterName: row.requester_name ?? null,
+    fulfillerName: row.fulfiller_name ?? null,
   };
 }
 
@@ -982,11 +992,30 @@ export async function listAdminRequests(options?: { page?: number; pageSize?: nu
   return listRequests({ page: options?.page, pageSize: options?.pageSize });
 }
 
+// Admin fulfillment list, enriched so the screen is readable without a lookup.
+//
+// It used to select the bare row, so the admin screen could only print the request UUID and two Clerk
+// user ids. Identifying who offered to help meant copying an id, finding the request another way, and
+// cross-referencing by hand (owner report). The request title and each participant's real name are
+// joined here instead: a name that is on file is shown, and the raw id survives only as the last
+// resort when a member has neither a directory profile nor a handle.
 export async function listAdminFulfillments(): Promise<SocketRelayFulfillment[]> {
   const result = await queryDb<FulfillmentRow>(
-    `SELECT id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at
-     FROM socket_relay_fulfillments
-     ORDER BY created_at DESC`,
+    `SELECT
+       f.id, f.request_id, f.requester_user_id, f.fulfiller_user_id,
+       f.requester_username, f.fulfiller_username, f.status, f.close_reason,
+       f.created_at, f.updated_at,
+       r.title AS request_title,
+       r.status AS request_status,
+       NULLIF(TRIM(COALESCE(rp.first_name, '') || ' ' || COALESCE(rp.last_name, '')), '') AS requester_name,
+       NULLIF(TRIM(COALESCE(fp.first_name, '') || ' ' || COALESCE(fp.last_name, '')), '') AS fulfiller_name
+     FROM socket_relay_fulfillments f
+     LEFT JOIN socket_relay_requests r ON r.id = f.request_id
+     LEFT JOIN directory_profiles rp
+       ON rp.claimed_by_user_id = f.requester_user_id AND rp.deleted_at IS NULL
+     LEFT JOIN directory_profiles fp
+       ON fp.claimed_by_user_id = f.fulfiller_user_id AND fp.deleted_at IS NULL
+     ORDER BY f.created_at DESC`,
   );
 
   return result.rows.map(mapFulfillmentRow);

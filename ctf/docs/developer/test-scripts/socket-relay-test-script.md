@@ -244,7 +244,9 @@ web ☐
 **Expected:**
 - A row appears for each **active** fulfillment the member is participating in (as requester or helper).
 - A row appears for each of the member's own **open, non-expired** requests that have no active fulfillment yet — displayed as "waiting for a helper" placeholder.
-- Canceled or closed fulfillments do not appear.
+- Live conversations appear first, then your open requests waiting for a helper, then past
+  (closed or canceled) conversations. A canceled claim must still be openable from the Past
+  group — that is how you find out who offered to help before the claim was canceled.
 - Claimed requests are represented by their active fulfillment row, not an extra pending row.
 - On Android, each pending-request card shows a "No helper yet" note (not a chat), explaining the request is still open on the feed.
 - Tapping an active-fulfillment row opens the chat thread (web); on Android, each active-fulfillment card shows an "Open chat" button that opens the chat (see SR-10a).

@@ -83,6 +83,10 @@ export type SocketRelayFulfillment = {
   // can render real names instead of a raw user id. Null for legacy rows / members with no handle.
   requesterUsername: string | null;
   fulfillerUsername: string | null;
+  // Real names, joined by the admin list only, so an admin sees who the two people are without
+  // reverse-looking-up a Clerk id. Null for a member with no directory profile on file.
+  requesterName?: string | null;
+  fulfillerName?: string | null;
   status: SocketRelayFulfillmentStatus;
   closeReason: string | null;
   createdAtIso: string;
