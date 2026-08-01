@@ -351,6 +351,14 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-08-01: **Two code-review corrections (issues #2021, #2019).** (1) `GET /api/feed/items` now
+  honors the `mentions=me` input its contract (feed.timeline.fetch) has always documented: handle
+  tokens are derived server-side from the authenticated caller (never client-supplied) and passed to
+  `listFeedTimeline`; any other `mentions` value is rejected with 400. The Hub "@ Mentions" toggle was
+  never broken — it calls `/api/hub/messages`, which already implemented the filter — this closes the
+  gap on the documented items route. (2) The `feed.community.moderation.list` contract (now v1.0.1) no
+  longer claims `feed_questions`/`feed_answers` in dataAccess: the queue is Commons-only by design and
+  its query never read those tables; Q&A moderation lives in `feed.qa.moderation.flagged.list`.
 - 2026-07-31: **Admin membership-event route now writes its audit entry (code-review finding).**
   `POST /api/feed/membership/events` called `emitMembershipEvent` and returned without ever calling
   `logFeedAudit`, so this admin-only command left no audit trail even though
