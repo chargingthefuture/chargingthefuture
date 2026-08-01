@@ -279,6 +279,19 @@ function renderPluginShellC(
   return null;
 }
 
+// Knowledge redirects BEFORE the access gate, not from the shell branches. Its real page is the
+// top-level /knowledge route, which is open to any signed-in member (owner decision, 2026-07-29)
+// and carries its own signed-out landing — the page the Quora invitation links to. When this
+// redirect sat after the gate, only fully-verified members ever reached it: a signed-out visitor
+// got the generic sign-in card and a not-yet-verified member got the Unlock nudge, both wrong for
+// a page whose whole point is to be readable before joining. `redirect` throws, so returning is
+// only reached for every other plugin.
+function redirectKnowledgeBeforeGate(pluginSlug: string): void {
+  if (pluginSlug === 'knowledge') {
+    redirect('/knowledge');
+  }
+}
+
 export default async function PluginRoutePage({ params, searchParams }: PluginRoutePageProps) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
@@ -289,15 +302,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     notFound();
   }
 
-  // Knowledge redirects BEFORE the access gate, not from the shell branch below. Its real page is
-  // the top-level /knowledge route, which is open to any signed-in member (owner decision,
-  // 2026-07-29) and carries its own signed-out landing — the page the Quora invitation links to.
-  // When this redirect sat after the gate, only fully-verified members ever reached it: a
-  // signed-out visitor got the generic sign-in card and a not-yet-verified member got the Unlock
-  // nudge, both wrong for a page whose whole point is to be readable before joining.
-  if (selectedPlugin.slug === 'knowledge') {
-    redirect('/knowledge');
-  }
+  redirectKnowledgeBeforeGate(selectedPlugin.slug);
 
   // Every plugin route requires full Unlock access (the default minUnlockTier
   // 'approved_full'). A not-yet-verified member is denied with `unlock_required` and
