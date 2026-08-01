@@ -258,13 +258,6 @@ function renderPluginShellC(
     return <MoodShell />;
   }
 
-  if (selectedPlugin.slug === 'knowledge') {
-    // The real page is the top-level /knowledge route — short enough to paste into an invitation post
-    // that is read outside the app. The launcher tile lands here and is sent on, so there is one page
-    // rather than two copies to keep in step.
-    redirect('/knowledge');
-  }
-
   if (selectedPlugin.slug === 'weekly-performance') {
     // Weekly Performance has no member view — the dashboard lives on the admin page only.
     // Non-admins never reach this branch (the admin-only gate above 404s them).
@@ -294,6 +287,16 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
 
   if (!selectedPlugin || !selectedPlugin.isVisible) {
     notFound();
+  }
+
+  // Knowledge redirects BEFORE the access gate, not from the shell branch below. Its real page is
+  // the top-level /knowledge route, which is open to any signed-in member (owner decision,
+  // 2026-07-29) and carries its own signed-out landing — the page the Quora invitation links to.
+  // When this redirect sat after the gate, only fully-verified members ever reached it: a
+  // signed-out visitor got the generic sign-in card and a not-yet-verified member got the Unlock
+  // nudge, both wrong for a page whose whole point is to be readable before joining.
+  if (selectedPlugin.slug === 'knowledge') {
+    redirect('/knowledge');
   }
 
   // Every plugin route requires full Unlock access (the default minUnlockTier
