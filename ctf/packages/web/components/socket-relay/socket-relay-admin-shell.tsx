@@ -59,6 +59,15 @@ async function adminMutate(url: string, method: 'POST' | 'DELETE', body?: unknow
   }
 }
 
+// Name first, handle second, raw id last. An id is unusable on its own — identifying a helper from
+// one meant copying it out and cross-referencing elsewhere — so it is only ever the fallback for a
+// member with neither a directory profile nor a handle.
+function memberLabel(name: string | null | undefined, username: string | null, userId: string): string {
+  if (name) return username ? `${name} (@${username})` : name;
+  if (username) return `@${username}`;
+  return userId;
+}
+
 export function SocketRelayAdminShell({
   requests,
   requestsTotal,
@@ -168,10 +177,20 @@ export function SocketRelayAdminShell({
             fulfillments.map((f) => (
               <div key={f.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>Request {f.requestId}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, flex: 1, overflowWrap: 'anywhere' }}>
+                    {f.requestTitle ?? `Request ${f.requestId}`}
+                  </span>
                   <Pill label={f.status} color={FULFILLMENT_STATUS_COLOR[f.status] ?? t.MUTED} />
                 </div>
-                <div style={{ fontSize: 12, color: t.MUTED }}>Requester {f.requesterUserId} · Fulfiller {f.fulfillerUserId}</div>
+                <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, overflowWrap: 'anywhere' }}>
+                  <div>Offered to help: <strong style={{ color: t.TEXT }}>{memberLabel(f.fulfillerName, f.fulfillerUsername, f.fulfillerUserId)}</strong></div>
+                  <div>Posted by: {memberLabel(f.requesterName, f.requesterUsername, f.requesterUserId)}</div>
+                  <div>
+                    Offered {new Date(f.createdAtIso).toLocaleString()}
+                    {f.requestStatus ? ` · request is now ${f.requestStatus}` : ''}
+                    {f.closeReason ? ` · ${f.closeReason.replace(/_/g, ' ')}` : ''}
+                  </div>
+                </div>
               </div>
             ))
           )

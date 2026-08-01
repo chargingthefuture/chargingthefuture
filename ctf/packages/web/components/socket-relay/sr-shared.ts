@@ -82,21 +82,37 @@ export type SrDirectLine =
   | { kind: "fulfillment"; key: string; fulfillment: SrFulfillment }
   | { kind: "pending"; key: string; request: SrRequest };
 
-// Build the unified Direct Line list: one row per request you are currently waiting on or talking
-// through. Active fulfillments (you posted it and a helper claimed it, or you offered to help) come
-// first as live conversations; then your own still-open, non-expired requests as "waiting for a
-// helper" placeholders. Canceled/closed fulfillments and claimed/closed requests are left out — a
-// claimed request is already represented by its active fulfillment, so there is no double row.
+// Build the unified Direct Line list, newest activity first within each group:
+//   1. Active fulfillments — live conversations (you posted it and a helper claimed it, or you
+//      offered to help).
+//   2. Your own still-open, non-expired requests — "waiting for a helper" placeholders.
+//   3. Past fulfillments — ones that were closed or canceled.
+//
+// A claimed request is already represented by its active fulfillment, so it is not also listed as a
+// placeholder; that is why group 2 filters to `open`.
+//
+// Group 3 used to be dropped entirely. That erased the only record a member had of who had offered
+// to help: when a claim is canceled the request returns to `open`, the feed shows "no helper yet"
+// again, and the conversation vanished from this list — so the person who offered became
+// unreachable and effectively anonymous (owner report: two people offered help and there was no way
+// left to see who they were). Keeping past lines costs nothing to read: the chat routes gate on
+// participation, not on status, so a participant could always open these — the list simply stopped
+// pointing at them.
 export function buildDirectLines(fulfillments: SrFulfillment[], myRequests: SrRequest[]): SrDirectLine[] {
+  const byRecentUpdate = (a: SrFulfillment, b: SrFulfillment) => b.updatedAtIso.localeCompare(a.updatedAtIso);
   const active: SrDirectLine[] = fulfillments
     .filter((f) => f.status === "active")
-    .sort((a, b) => b.updatedAtIso.localeCompare(a.updatedAtIso))
+    .sort(byRecentUpdate)
     .map((f) => ({ kind: "fulfillment", key: f.id, fulfillment: f }));
   const pending: SrDirectLine[] = myRequests
     .filter((r) => r.status === "open" && !r.isExpired)
     .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
     .map((r) => ({ kind: "pending", key: `pending:${r.id}`, request: r }));
-  return [...active, ...pending];
+  const past: SrDirectLine[] = fulfillments
+    .filter((f) => f.status !== "active")
+    .sort(byRecentUpdate)
+    .map((f) => ({ kind: "fulfillment", key: f.id, fulfillment: f }));
+  return [...active, ...pending, ...past];
 }
 
 export type SrChatCredentials = {
