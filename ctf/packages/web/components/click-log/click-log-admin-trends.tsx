@@ -24,21 +24,21 @@ export function ClickLogAdminTrends() {
   const [buckets, setBuckets] = useState<SharedIncidentTrendBucket[]>([]);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     (async () => {
       try {
         const res = await fetch("/api/click-log/admin/trends");
         if (!res.ok) throw new Error("Failed to load trends");
         const data = (await res.json()) as { buckets: SharedIncidentTrendBucket[] };
-        if (!cancelled) setBuckets(data.buckets);
+        if (!canceled) setBuckets(data.buckets);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load trends");
+        if (!canceled) setError(e instanceof Error ? e.message : "Failed to load trends");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!canceled) setLoading(false);
       }
     })();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
 

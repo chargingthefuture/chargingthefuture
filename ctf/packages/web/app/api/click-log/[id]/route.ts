@@ -50,6 +50,22 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
   return NextResponse.json({ success: true });
 }
 
+// Reads and validates the PATCH body: { sharedWithOwner: boolean }. Extracted so the handler's
+// branch count stays under the rule-116 complexity limit.
+async function parseShareBody(request: NextRequest): Promise<{ error: NextResponse } | { shared: boolean }> {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return { error: NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }) };
+  }
+  const shared = (body as { sharedWithOwner?: unknown })?.sharedWithOwner;
+  if (typeof shared !== 'boolean') {
+    return { error: NextResponse.json({ error: 'Invalid sharedWithOwner' }, { status: 400 }) };
+  }
+  return { shared };
+}
+
 // Toggles whether a single incident is shared with the owner. Only the member who logged the
 // incident may change it (canToggleIncidentShare — deliberately no admin override: consent belongs
 // to the member alone). Body: { sharedWithOwner: boolean }.
@@ -66,16 +82,11 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   if (!id) {
     return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
   }
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  const parsed = await parseShareBody(request);
+  if ('error' in parsed) {
+    return parsed.error;
   }
-  const shared = (body as { sharedWithOwner?: unknown })?.sharedWithOwner;
-  if (typeof shared !== 'boolean') {
-    return NextResponse.json({ error: 'Invalid sharedWithOwner' }, { status: 400 });
-  }
+  const shared = parsed.shared;
   const incident = await getIncidentById(id);
   if (!incident) {
     return NextResponse.json({ error: 'Incident not found' }, { status: 404 });
