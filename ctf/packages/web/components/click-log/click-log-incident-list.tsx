@@ -8,9 +8,11 @@ import { formatIncidentTime, getClickLogTokens, hasLocation } from "./click-log-
 export function ClickLogIncidentList({
   incidents,
   onDelete,
+  onToggleShare,
 }: {
   incidents: ClickLogIncident[];
   onDelete: (id: string) => void;
+  onToggleShare: (id: string, shared: boolean) => void;
 }) {
   const { theme } = useTheme();
   const t = getClickLogTokens(theme);
@@ -33,6 +35,15 @@ export function ClickLogIncidentList({
                   <MapPin size={10} color={t.MUTED} /> Location recorded
                 </div>
               )}
+              {/* Owner-share state, member-toggleable per incident. Shared = only coarse trend
+                  data (day + rounded location + count) reaches the owner, never the note. */}
+              <button
+                onClick={() => onToggleShare(incident.id, !incident.shared_with_owner)}
+                aria-label={incident.shared_with_owner ? "Stop sharing this incident with the owner" : "Share this incident with the owner"}
+                style={{ marginTop: 6, padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 600, cursor: "pointer", background: incident.shared_with_owner ? `${t.ACCENT}18` : t.SURFACE, border: `1px solid ${incident.shared_with_owner ? t.ACCENT + "40" : t.BORDER_SOLID}`, color: incident.shared_with_owner ? t.ACCENT : t.MUTED }}
+              >
+                {incident.shared_with_owner ? "Shared with owner" : "Private"}
+              </button>
             </div>
             <button
               onClick={() => onDelete(incident.id)}
