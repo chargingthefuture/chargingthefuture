@@ -54,6 +54,9 @@
 **Expected:**
 - Default view shows items from multiple channel types (announcement cards, question cards, community posts) in reverse-chronological order.
 - Each filter shows only items of that type; no items from other channels appear.
+- API check (optional): `GET /api/feed/items?mentions=me` returns only items that @-mention the
+  signed-in caller (same behavior as the Hub "@ Mentions" toggle); any other `mentions` value
+  returns 400.
 - Switching back to All restores the blended view.
 - No loading spinner stays permanently; empty state message shows if a channel has no items.
 
