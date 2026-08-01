@@ -286,8 +286,13 @@ function renderPluginShellC(
 // got the generic sign-in card and a not-yet-verified member got the Unlock nudge, both wrong for
 // a page whose whole point is to be readable before joining. `redirect` throws, so returning is
 // only reached for every other plugin.
-function redirectKnowledgeBeforeGate(pluginSlug: string): void {
-  if (pluginSlug === 'knowledge') {
+//
+// Takes the whole plugin and compares `selectedPlugin.slug` rather than a bare slug string: the
+// web/android parity gate discovers which slugs have an explicit web shell by scanning this file
+// for that exact expression, so renaming the variable made knowledge disappear from the scan and
+// failed the gate.
+function redirectKnowledgeBeforeGate(selectedPlugin: SelectedPlugin): void {
+  if (selectedPlugin.slug === 'knowledge') {
     redirect('/knowledge');
   }
 }
@@ -302,7 +307,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     notFound();
   }
 
-  redirectKnowledgeBeforeGate(selectedPlugin.slug);
+  redirectKnowledgeBeforeGate(selectedPlugin);
 
   // Every plugin route requires full Unlock access (the default minUnlockTier
   // 'approved_full'). A not-yet-verified member is denied with `unlock_required` and
