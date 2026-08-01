@@ -86,6 +86,21 @@ string. Trailing whitespace on a note is trimmed before the length check.
 
 ---
 
+### CL-6 · Owner-sharing is opt-in and member-controlled
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Fresh member: open ClickLog and read the "share new incidents with the owner by default"
+   setting and the share checkbox in the log form.
+2. Log an incident without touching either — then check its row in the history list.
+3. Turn on the global default, log another incident, and check its row.
+4. On any history row, click the Shared/Private pill to flip that one incident.
+**Expected:** Both the global setting and the form checkbox start **off**; an untouched log
+produces a **Private** row. With the default on, a new incident logs as **Shared with owner**;
+the form checkbox is seeded from the default and can be overridden per incident. The per-row
+pill flips a single incident either way at any time, and each change is logged. The copy states
+that only coarse trend data is shared — never the note or exact location.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### CL-5 · Refresh the incident list
 **Role:** member · **Surfaces:** all
 **Steps:**

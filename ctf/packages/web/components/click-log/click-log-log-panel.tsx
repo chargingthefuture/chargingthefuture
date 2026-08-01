@@ -43,9 +43,11 @@ function ClickLogNoteForm({
   locationAdded,
   geoStatus,
   geoError,
+  shareWithOwner,
   tokens,
   onNoteChange,
   onAddLocation,
+  onShareChange,
   onSubmit,
   onCancel,
 }: {
@@ -54,9 +56,11 @@ function ClickLogNoteForm({
   locationAdded: boolean;
   geoStatus: GeoStatus;
   geoError: string | null;
+  shareWithOwner: boolean;
   tokens: ClickLogTokens;
   onNoteChange: (value: string) => void;
   onAddLocation: () => void;
+  onShareChange: (value: boolean) => void;
   onSubmit: () => void;
   onCancel: () => void;
 }) {
@@ -72,6 +76,17 @@ function ClickLogNoteForm({
         placeholder="Describe what happened…"
         style={{ width: "100%", padding: "10px 12px", background: t.BG, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, fontSize: 13, color: t.TITLE, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
       />
+      {/* Per-incident owner-share choice, seeded from the member's global default. Only coarse
+          trend data (day + rounded location + count) is ever shared — never notes. */}
+      <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 10, fontSize: 12, color: t.MUTED, cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          checked={shareWithOwner}
+          onChange={(e) => onShareChange(e.target.checked)}
+          style={{ accentColor: t.ACCENT }}
+        />
+        Share this incident with the owner (coarse trend data only)
+      </label>
       <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
         <ClickLogLocationButton
           locationAdded={locationAdded}
@@ -100,6 +115,8 @@ export function ClickLogLogPanel({
   locationAdded,
   geoStatus,
   geoError,
+  shareWithOwner,
+  onShareChange,
   onToggleForm,
   onNoteChange,
   onAddLocation,
@@ -113,6 +130,8 @@ export function ClickLogLogPanel({
   locationAdded: boolean;
   geoStatus: GeoStatus;
   geoError: string | null;
+  shareWithOwner: boolean;
+  onShareChange: (value: boolean) => void;
   onToggleForm: () => void;
   onNoteChange: (value: string) => void;
   onAddLocation: () => void;
@@ -142,9 +161,11 @@ export function ClickLogLogPanel({
           locationAdded={locationAdded}
           geoStatus={geoStatus}
           geoError={geoError}
+          shareWithOwner={shareWithOwner}
           tokens={t}
           onNoteChange={onNoteChange}
           onAddLocation={onAddLocation}
+          onShareChange={onShareChange}
           onSubmit={onSubmit}
           onCancel={onCancel}
         />

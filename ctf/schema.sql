@@ -19,11 +19,29 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   user_id TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
   metadata_hash TEXT GENERATED ALWAYS AS (md5(metadata::text)) STORED,
+  -- Owner-share opt-in (2026-08-01): a member may mark an incident as shared with the owner for
+  -- aggregate trend tracking. Defaults FALSE — nothing is shared unless the member opts in. A real
+  -- column (not metadata) so it is excluded from the metadata_hash dedupe and toggling share state
+  -- never collides with the UNIQUE (user_id, metadata_hash) constraint.
+  shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, metadata_hash)
 );
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_user_id ON click_log_incidents(user_id);
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_created_at ON click_log_incidents(created_at DESC);
+-- Partial index for the admin trends aggregate, which only ever reads shared rows.
+CREATE INDEX IF NOT EXISTS idx_click_log_incidents_shared ON click_log_incidents(created_at DESC) WHERE shared_with_owner;
+-- Per-member ClickLog preferences. share_with_owner is the member's global default for whether a
+-- newly logged incident is shared with the owner (per-incident override always wins). Opt-in:
+-- defaults FALSE. Mirrors the notification_preferences / user_ui_preferences upsert-on-user_id shape.
+CREATE TABLE IF NOT EXISTS click_log_preferences (
+  user_id TEXT PRIMARY KEY,
+  share_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS click_log_preferences ADD COLUMN IF NOT EXISTS share_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS click_log_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- === WHAT WORKS (survivor-verified shared tool list, organized by problem) ===

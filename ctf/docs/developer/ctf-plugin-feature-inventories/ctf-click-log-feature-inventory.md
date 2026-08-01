@@ -16,18 +16,29 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - Log incident (with optional location/notes)
 - View incident count and history
 - Delete own incidents
-- Mobile and web parity
+- Choose whether an incident is shared with the owner for trend tracking: a global "share new
+  incidents by default" setting plus a per-incident override (in the log form and on each history
+  row). Sharing is opt-in and off until the member turns it on, and can be turned off again per
+  incident at any time. Shared incidents contribute only coarse trend data (day, approximate area,
+  count) — never the note or exact location.
 
 ## 4. Admin Features
 
+- ClickLog Trends dashboard (`/admin/click-log`): aggregate counts over incidents members opted to
+  share — shared total, days with activity, per-day counts, and area-cluster count (each area is a
+  ~11 km cell). No notes, precise coordinates, incident ids, or member identity are visible.
 - View all incidents (future)
 - Delete any incident (future)
 
 ## 5. API Surface and Route Map
 
 - `GET /api/click-log` — List incidents for authenticated user. Returns `{ incidents, count }`. The user is always derived from the authenticated token (no caller-supplied `userId`); the access policy (`canViewIncidents`) is applied before the query.
-- `POST /api/click-log` — Create incident. Returns the created incident flat (a `ClickLogIncident`, not wrapped under `{ incident }`), matching the command contract's `outputSchema`.
+- `POST /api/click-log` — Create incident. Accepts optional `sharedWithOwner` boolean (falls back to the member's stored global default). Returns the created incident flat (a `ClickLogIncident`, not wrapped under `{ incident }`), matching the command contract's `outputSchema`.
 - `DELETE /api/click-log/[id]` — Delete incident by id. Returns `{ success: true }`.
+- `PATCH /api/click-log/[id]` — Toggle owner-sharing on a single incident. Body `{ sharedWithOwner }`; only the incident's owner may call it (no admin override — consent is the member's alone). Returns `{ success, sharedWithOwner }`.
+- `GET /api/click-log/preferences` — Read the member's global owner-share default (`{ shareWithOwner }`).
+- `PUT /api/click-log/preferences` — Set the member's global owner-share default. Body `{ shareWithOwner }`.
+- `GET /api/click-log/admin/trends` — Admin-only aggregate trend buckets (`{ buckets }` of day / ~11 km location cell / count) over shared incidents from the last 90 days.
 
 ## 6. Data Model and Storage Contracts
 
@@ -35,15 +46,31 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   - `id UUID PRIMARY KEY`
   - `user_id TEXT`
   - `metadata JSONB NOT NULL DEFAULT '{}'` (latitude, longitude, notes)
+  - `shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE` — member's per-incident owner-share opt-in; a real column (not metadata) so it is excluded from the `metadata_hash` dedupe
   - `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
-  - Indexes: `user_id`, `created_at DESC`
+  - Indexes: `user_id`, `created_at DESC`, partial `created_at DESC WHERE shared_with_owner` (for the trends aggregate)
+- Table: `click_log_preferences`
+  - `user_id TEXT PRIMARY KEY`
+  - `share_with_owner BOOLEAN NOT NULL DEFAULT FALSE` — global default applied to newly logged incidents when the request carries no explicit choice
+  - `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+  - Upsert-on-`user_id`; a missing row reads as the opt-in default (not shared)
 
 ## 7. Security, Privacy, and Compliance Controls
 
 - Auth required for all actions
 - Users can only view/delete their own incidents; admins can view/delete any incident
-- Web and mobile mutations send the `x-ctf-csrf: 1` header
-- Every authorized operation emits an audit event (`click-log.incident.create`/`.list`/`.delete`)
+- Owner sharing is strictly opt-in and member-controlled: both the global default and every
+  per-incident flag default to off; only the incident's owner may toggle its share state
+  (`canToggleIncidentShare` — deliberately no admin override); and the trends aggregate reads only
+  `shared_with_owner = true` rows. The privacy boundary is enforced in SQL
+  (`getSharedIncidentTrends` projects only day / 1-decimal (~11 km) location cell / count — notes,
+  precise coordinates, incident ids, and member identity never leave the query).
+- The trends endpoint and `/admin/click-log` page are admin-gated (`requireClickLogAdminAccess`,
+  `canViewSharedTrends`, server-side `isAdmin` redirect).
+- Mutating routes enforce CSRF server-side (`ensureMutationCsrf`: the `x-ctf-csrf: 1` header plus a
+  same-origin check, matching the sibling plugins); the web client sends the header on every mutation.
+- Every authorized operation emits an audit event (`click-log.incident.create`/`.list`/`.delete`,
+  `click-log.incident.share.set`, `click-log.preferences.fetch`/`.update`, `click-log.trends.fetch`)
   via `lib/click-log/audit.ts`, matching [CLICK_LOG_PLUGIN_AUDIT_CONTRACTS.yaml](../../contracts/CLICK_LOG_PLUGIN_AUDIT_CONTRACTS.yaml).
   The delete route emits a `failure`-result event when an authorized delete finds no row (rowCount 0),
   so an authorized request is audited regardless of the storage outcome.
@@ -79,6 +106,20 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-01: **Owner-share opt-in + admin trends (owner request).** ClickLog stays private by
+  default; a member can now opt in to sharing incidents with the owner for trend tracking. Added
+  `shared_with_owner` to `click_log_incidents` (real column, excluded from the `metadata_hash`
+  dedupe) and the `click_log_preferences` table (global default, upsert-on-user_id, defaults off).
+  New routes: `PATCH /api/click-log/[id]` (per-incident share toggle, owner-only — no admin
+  override), `GET/PUT /api/click-log/preferences`, and admin-only `GET /api/click-log/admin/trends`
+  whose SQL aggregate returns only coarse buckets (UTC day, location rounded to 1 decimal ≈ 11 km,
+  count) — notes, precise coordinates, incident ids, and member identity never leave the query. Web
+  shell gains the global-default checkbox, a share checkbox in the log form, and a per-row
+  Shared/Private toggle; new `/admin/click-log` trends dashboard (registered in `ADMIN_AREAS`).
+  Added `requireClickLogAdminAccess` and server-side CSRF enforcement (`ensureMutationCsrf`) on all
+  mutating ClickLog routes. Contracts updated (create command → 1.1.0 with optional
+  `sharedWithOwner`; new share.set / preferences / trends commands with access policies and audit
+  events). Android: out of scope (web-only per rule 105).
 - 2026-07-17: **History-aware back navigation (app-wide sweep).** The member shell's hand-rolled
   back chevron was replaced by the shared `BackChevronButton` — it returns to the previous in-app
   page and falls back to All Apps when there is no in-app history. UI-only; no schema, route, or

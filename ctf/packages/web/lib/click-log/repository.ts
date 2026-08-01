@@ -1,5 +1,10 @@
 import { queryDb } from 'lib/db/postgres';
-import { ClickLogIncident, CreateIncidentInput } from './types';
+import {
+  ClickLogIncident,
+  ClickLogPreferences,
+  CreateIncidentInput,
+  SharedIncidentTrendBucket,
+} from './types';
 
 export async function getIncidentById(id: string): Promise<ClickLogIncident | null> {
   const result = await queryDb<ClickLogIncident>(
@@ -10,14 +15,24 @@ export async function getIncidentById(id: string): Promise<ClickLogIncident | nu
 }
 
 export async function createIncident(input: CreateIncidentInput): Promise<ClickLogIncident> {
-  const { userId, metadata } = input;
+  const { userId, metadata, sharedWithOwner } = input;
   const result = await queryDb<ClickLogIncident>(
-    `INSERT INTO click_log_incidents (id, user_id, metadata, created_at)
-     VALUES (gen_random_uuid(), $1, $2, NOW())
+    `INSERT INTO click_log_incidents (id, user_id, metadata, shared_with_owner, created_at)
+     VALUES (gen_random_uuid(), $1, $2, $3, NOW())
      RETURNING *`,
-    [userId, metadata]
+    [userId, metadata, sharedWithOwner]
   );
   return result.rows[0];
+}
+
+// Flips the owner-share flag on a single incident. Owner-scoped only: the member who logged the
+// incident is the only one who may change whether it is shared, so there is no admin variant.
+export async function setIncidentShared(id: string, userId: string, shared: boolean): Promise<boolean> {
+  const result = await queryDb(
+    `UPDATE click_log_incidents SET shared_with_owner = $3 WHERE id = $1 AND user_id = $2`,
+    [id, userId, shared]
+  );
+  return (result.rowCount ?? 0) > 0;
 }
 
 export async function getIncidentsByUser(userId: string, limit = 50): Promise<ClickLogIncident[]> {
@@ -34,6 +49,56 @@ export async function getIncidentCount(userId: string): Promise<number> {
     [userId]
   );
   return parseInt(result.rows[0]?.count ?? '0', 10);
+}
+
+// Reads the member's global share default. A missing row means the member never touched the
+// setting, which is the opt-in default: not shared.
+export async function getPreferences(userId: string): Promise<ClickLogPreferences> {
+  const result = await queryDb<{ share_with_owner: boolean }>(
+    `SELECT share_with_owner FROM click_log_preferences WHERE user_id = $1`,
+    [userId]
+  );
+  return { shareWithOwner: result.rows[0]?.share_with_owner ?? false };
+}
+
+export async function setPreferences(userId: string, prefs: ClickLogPreferences): Promise<void> {
+  await queryDb(
+    `INSERT INTO click_log_preferences (user_id, share_with_owner, updated_at)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (user_id) DO UPDATE SET share_with_owner = EXCLUDED.share_with_owner, updated_at = NOW()`,
+    [userId, prefs.shareWithOwner]
+  );
+}
+
+// Owner trends aggregate. Reads ONLY incidents the member opted to share, and returns ONLY coarse
+// buckets: UTC day + location rounded to 1 decimal place (~11 km cell) + count. Notes, precise
+// coordinates, incident ids, and member identity never leave this query — the privacy boundary is
+// enforced here in SQL, not left to the caller.
+export async function getSharedIncidentTrends(days = 90): Promise<SharedIncidentTrendBucket[]> {
+  const result = await queryDb<{
+    day: string;
+    latitude_cell: string | null;
+    longitude_cell: string | null;
+    count: string;
+  }>(
+    `SELECT
+       to_char(date_trunc('day', created_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day,
+       round((metadata->>'latitude')::numeric, 1) AS latitude_cell,
+       round((metadata->>'longitude')::numeric, 1) AS longitude_cell,
+       COUNT(*) AS count
+     FROM click_log_incidents
+     WHERE shared_with_owner
+       AND created_at >= NOW() - make_interval(days => $1)
+     GROUP BY 1, 2, 3
+     ORDER BY 1 DESC, 4 DESC`,
+    [days]
+  );
+  return result.rows.map((row) => ({
+    day: row.day,
+    latitudeCell: row.latitude_cell === null ? null : Number(row.latitude_cell),
+    longitudeCell: row.longitude_cell === null ? null : Number(row.longitude_cell),
+    count: parseInt(row.count, 10),
+  }));
 }
 
 // Deletes an incident. Members may delete only their own (the user_id condition

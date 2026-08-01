@@ -1,17 +1,22 @@
 commands:
   - pluginId: click-log
     command: click-log.incident.create
-    version: 1.0.0
+    version: 1.1.0
     inputSchema:
       type: object
       properties:
         metadata:
           $ref: '#/definitions/IncidentMetadata'
-      # metadata is not required, matches implementation
+        sharedWithOwner:
+          type: boolean
+      # metadata is not required, matches implementation.
+      # sharedWithOwner is optional: when omitted, the member's stored global default
+      # (click_log_preferences.share_with_owner, itself defaulting to false) is applied.
     outputSchema:
       $ref: '#/definitions/ClickLogIncident'
     dataAccess:
       - click_log_incidents (insert)
+      - click_log_preferences (select)
     purpose: Log a new incident for the authenticated user
     retentionClass: user_event
   - pluginId: click-log
@@ -57,6 +62,74 @@ commands:
       - click_log_incidents (delete)
     purpose: Delete an incident by id
     retentionClass: user_event
+  - pluginId: click-log
+    command: click-log.incident.share.set
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        sharedWithOwner:
+          type: boolean
+      required: [id, sharedWithOwner]
+    outputSchema:
+      type: object
+      properties:
+        success:
+          type: boolean
+        sharedWithOwner:
+          type: boolean
+    dataAccess:
+      - click_log_incidents (update)
+    purpose: Set whether a single incident is shared with the owner for aggregate trends (owner of the incident only)
+    retentionClass: user_event
+  - pluginId: click-log
+    command: click-log.preferences.fetch
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      $ref: '#/definitions/ClickLogPreferences'
+    dataAccess:
+      - click_log_preferences (select)
+    purpose: Read the member's global owner-share default
+    retentionClass: user_event
+  - pluginId: click-log
+    command: click-log.preferences.update
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        shareWithOwner:
+          type: boolean
+      required: [shareWithOwner]
+    outputSchema:
+      $ref: '#/definitions/ClickLogPreferences'
+    dataAccess:
+      - click_log_preferences (upsert)
+    purpose: Set the member's global owner-share default for newly logged incidents
+    retentionClass: user_event
+  - pluginId: click-log
+    command: click-log.trends.fetch
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      type: object
+      properties:
+        buckets:
+          type: array
+          items:
+            $ref: '#/definitions/SharedIncidentTrendBucket'
+    dataAccess:
+      - click_log_incidents (select, aggregate only — shared_with_owner rows; the SQL projects
+        only day buckets, 1-decimal location cells, and counts, never notes, precise
+        coordinates, incident ids, or member identity)
+    purpose: Owner/admin-only aggregate trends over incidents members opted to share
+    retentionClass: user_event
 
 definitions:
   IncidentMetadata:
@@ -80,6 +153,30 @@ definitions:
           - 'null'
       metadata:
         $ref: '#/definitions/IncidentMetadata'
+      shared_with_owner:
+        type: boolean
       created_at:
         type: string
-    required: [id, user_id, metadata, created_at]
+    required: [id, user_id, metadata, shared_with_owner, created_at]
+  ClickLogPreferences:
+    type: object
+    properties:
+      shareWithOwner:
+        type: boolean
+    required: [shareWithOwner]
+  SharedIncidentTrendBucket:
+    type: object
+    properties:
+      day:
+        type: string
+      latitudeCell:
+        type:
+          - number
+          - 'null'
+      longitudeCell:
+        type:
+          - number
+          - 'null'
+      count:
+        type: integer
+    required: [day, latitudeCell, longitudeCell, count]

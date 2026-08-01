@@ -20,3 +20,31 @@ auditEvents:
     policyDecision: allow
     dataClassesAccessed: [user_event]
     targetContext: user
+  - pluginId: click-log
+    command: click-log.incident.share.set
+    commandVersion: 1.0.0
+    eventId: click-log.incident.share.set
+    policyDecision: allow
+    dataClassesAccessed: [user_event]
+    targetContext: user
+  - pluginId: click-log
+    command: click-log.preferences.fetch
+    commandVersion: 1.0.0
+    eventId: click-log.preferences.fetch
+    policyDecision: allow
+    dataClassesAccessed: [user_event]
+    targetContext: user
+  - pluginId: click-log
+    command: click-log.preferences.update
+    commandVersion: 1.0.0
+    eventId: click-log.preferences.update
+    policyDecision: allow
+    dataClassesAccessed: [user_event]
+    targetContext: user
+  - pluginId: click-log
+    command: click-log.trends.fetch
+    commandVersion: 1.0.0
+    eventId: click-log.trends.fetch
+    policyDecision: allow
+    dataClassesAccessed: [user_event]
+    targetContext: admin

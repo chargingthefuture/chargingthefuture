@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createIncident, getIncidentsByUser, getIncidentCount } from 'lib/click-log/repository';
+import { createIncident, getIncidentsByUser, getIncidentCount, getPreferences } from 'lib/click-log/repository';
 import { MAX_NOTES_LENGTH } from 'lib/click-log/constants';
 import { canViewIncidents } from 'lib/click-log/policy';
 import { logClickLogAudit } from 'lib/click-log/audit';
 import type { IncidentMetadata } from 'lib/click-log/types';
-import { requireClickLogAccess } from './_lib';
+import { ensureMutationCsrf, requireClickLogAccess } from './_lib';
 
 export async function GET() {
   const gate = await requireClickLogAccess();
@@ -91,6 +91,10 @@ function buildMetadata(
 }
 
 export async function POST(req: NextRequest) {
+  const csrfDenied = ensureMutationCsrf(req);
+  if (csrfDenied) {
+    return csrfDenied;
+  }
   const gate = await requireClickLogAccess();
   if (!gate.allowed) {
     return gate.response;
@@ -107,7 +111,15 @@ export async function POST(req: NextRequest) {
     return parsed.error;
   }
   const metadata = parsed.data;
-  const incident = await createIncident({ userId, metadata });
+  // Owner-share consent: an explicit per-incident choice in the request wins; otherwise fall back
+  // to the member's stored global default (which itself defaults to not shared).
+  const rawShared = (body as { sharedWithOwner?: unknown })?.sharedWithOwner;
+  if (rawShared !== undefined && typeof rawShared !== 'boolean') {
+    return badRequest('Invalid sharedWithOwner');
+  }
+  const sharedWithOwner =
+    rawShared !== undefined ? rawShared : (await getPreferences(userId)).shareWithOwner;
+  const incident = await createIncident({ userId, metadata, sharedWithOwner });
   logClickLogAudit({ actorId: userId, command: 'click-log.incident.create', result: 'success' });
   // Return the incident flat to match the command contract's outputSchema
   // (ClickLogIncident, not a { incident } wrapper). No current caller reads this body,

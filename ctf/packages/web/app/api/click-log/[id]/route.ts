@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteIncident, getIncidentById } from 'lib/click-log/repository';
-import { canDeleteIncident } from 'lib/click-log/policy';
+import { deleteIncident, getIncidentById, setIncidentShared } from 'lib/click-log/repository';
+import { canDeleteIncident, canToggleIncidentShare } from 'lib/click-log/policy';
 import { logClickLogAudit } from 'lib/click-log/audit';
-import { requireClickLogAccess } from '../_lib';
+import { ensureMutationCsrf, requireClickLogAccess } from '../_lib';
 
 export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const csrfDenied = ensureMutationCsrf(request);
+  if (csrfDenied) {
+    return csrfDenied;
+  }
   const gate = await requireClickLogAccess();
   if (!gate.allowed) {
     return gate.response;
@@ -44,4 +48,67 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     target: { incidentId: id },
   });
   return NextResponse.json({ success: true });
+}
+
+// Reads and validates the PATCH body: { sharedWithOwner: boolean }. Extracted so the handler's
+// branch count stays under the rule-116 complexity limit.
+async function parseShareBody(request: NextRequest): Promise<{ error: NextResponse } | { shared: boolean }> {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return { error: NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }) };
+  }
+  const shared = (body as { sharedWithOwner?: unknown })?.sharedWithOwner;
+  if (typeof shared !== 'boolean') {
+    return { error: NextResponse.json({ error: 'Invalid sharedWithOwner' }, { status: 400 }) };
+  }
+  return { shared };
+}
+
+// Toggles whether a single incident is shared with the owner. Only the member who logged the
+// incident may change it (canToggleIncidentShare — deliberately no admin override: consent belongs
+// to the member alone). Body: { sharedWithOwner: boolean }.
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const csrfDenied = ensureMutationCsrf(request);
+  if (csrfDenied) {
+    return csrfDenied;
+  }
+  const gate = await requireClickLogAccess();
+  if (!gate.allowed) {
+    return gate.response;
+  }
+  const { id } = await context.params;
+  if (!id) {
+    return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
+  }
+  const parsed = await parseShareBody(request);
+  if ('error' in parsed) {
+    return parsed.error;
+  }
+  const shared = parsed.shared;
+  const incident = await getIncidentById(id);
+  if (!incident) {
+    return NextResponse.json({ error: 'Incident not found' }, { status: 404 });
+  }
+  if (!incident.user_id || !canToggleIncidentShare(gate.auth.userId, incident.user_id)) {
+    return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  }
+  const updated = await setIncidentShared(id, gate.auth.userId, shared);
+  if (!updated) {
+    logClickLogAudit({
+      actorId: gate.auth.userId,
+      command: 'click-log.incident.share.set',
+      result: 'failure',
+      target: { incidentId: id },
+    });
+    return NextResponse.json({ error: 'Update failed' }, { status: 500 });
+  }
+  logClickLogAudit({
+    actorId: gate.auth.userId,
+    command: 'click-log.incident.share.set',
+    result: 'success',
+    target: { incidentId: id, sharedWithOwner: String(shared) },
+  });
+  return NextResponse.json({ success: true, sharedWithOwner: shared });
 }

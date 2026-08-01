@@ -12,6 +12,7 @@ import { ClickLogLoading } from "./click-log-loading";
 import { AlertTriangle } from "lucide-react";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { useOwnerShare } from "./click-log-use-owner-share";
 
 type Geo = { latitude?: number; longitude?: number };
 
@@ -45,6 +46,9 @@ export function ClickLogShell() {
       if (initial) setLoading(false);
     }
   }
+
+  // Owner-share consent (global default + per-incident choice) — see click-log-use-owner-share.
+  const share = useOwnerShare({ onError: setError, onBusy: setBusy, refresh: fetchIncidents });
 
   useEffect(() => {
     void fetchIncidents(true);
@@ -96,7 +100,7 @@ export function ClickLogShell() {
       const res = await fetch("/api/click-log", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ metadata }),
+        body: JSON.stringify({ metadata, sharedWithOwner: share.formShare }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -107,6 +111,7 @@ export function ClickLogShell() {
       setGeo({});
       setGeoStatus("idle");
       setGeoError(null);
+      share.setFormShare(share.shareDefault);
       flashLogged();
       await fetchIncidents();
     } catch (e) {
@@ -162,15 +167,33 @@ export function ClickLogShell() {
         locationAdded={typeof geo.latitude === "number"}
         geoStatus={geoStatus}
         geoError={geoError}
+        shareWithOwner={share.formShare}
+        onShareChange={share.setFormShare}
         onToggleForm={() => setShowForm((s) => !s)}
         onNoteChange={setNote}
         onAddLocation={addLocation}
         onSubmit={() => void postIncident({ ...geo, notes: note })}
-        onCancel={() => { setShowForm(false); setNote(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); }}
+        onCancel={() => { setShowForm(false); setNote(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); share.setFormShare(share.shareDefault); }}
       />
 
+      {/* Global share default. Opt-in and member-controlled; a new incident starts from this
+          setting and can be overridden per incident in the log form or the list below. */}
+      <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24, padding: "10px 14px", borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, fontSize: 12, color: t.MUTED, cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          checked={share.shareDefault}
+          onChange={(e) => void share.setDefault(e.target.checked)}
+          style={{ accentColor: t.ACCENT }}
+        />
+        Share new incidents with the owner by default (only coarse trend data — never your notes or exact location)
+      </label>
+
       {incidents.length > 0 && (
-        <ClickLogIncidentList incidents={incidents} onDelete={(id) => void handleDelete(id)} />
+        <ClickLogIncidentList
+          incidents={incidents}
+          onDelete={(id) => void handleDelete(id)}
+          onToggleShare={(id, next) => void share.toggleIncident(id, next)}
+        />
       )}
     </>
   );

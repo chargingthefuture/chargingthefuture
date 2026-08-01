@@ -23,3 +23,37 @@ policies:
       - attribute: id
         mustBeOwnedBy: authenticatedUserId
     consentRequirements: []
+  - pluginId: click-log
+    command: click-log.incident.share.set
+    version: 1.0.0
+    # Deliberately no admin override: whether an incident is shared with the owner is the
+    # member's consent decision alone, so only the incident's owner may change it.
+    requiredRoles: [user]
+    attributePolicies:
+      - attribute: id
+        mustBeOwnedBy: authenticatedUserId
+    consentRequirements: [owner_share_opt_in]
+  - pluginId: click-log
+    command: click-log.preferences.fetch
+    version: 1.0.0
+    requiredRoles: [user]
+    attributePolicies:
+      - attribute: userId
+        mustMatch: authenticatedUserId
+    consentRequirements: []
+  - pluginId: click-log
+    command: click-log.preferences.update
+    version: 1.0.0
+    requiredRoles: [user]
+    attributePolicies:
+      - attribute: userId
+        mustMatch: authenticatedUserId
+    consentRequirements: [owner_share_opt_in]
+  - pluginId: click-log
+    command: click-log.trends.fetch
+    version: 1.0.0
+    # Owner/admin-only aggregate view. Reads only member-opted-in rows, and only as coarse
+    # buckets (day + ~11 km location cell + count).
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: [owner_share_opt_in]
