@@ -16,6 +16,12 @@
 > (`ON DELETE CASCADE`). No mood data tied to the user survives. The community
 > pulse aggregate reads only `mood_value` + `submitted_at`, so it never exposed
 > per-user data in the first place.
+>
+> Defense-in-depth (2026-08-02): the registry also deletes `mood_submissions`
+> directly by `user_id`. This matches nothing today — every v3 row stores
+> `user_id` as `''` — and exists so any row that ever carries a real id (a
+> legacy import, a write path that forgets the convention) is cleared with the
+> account rather than surviving as wellbeing data with a name on it.
 
 ## 1) Plugin Metadata
 

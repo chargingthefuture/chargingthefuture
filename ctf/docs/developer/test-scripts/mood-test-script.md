@@ -145,6 +145,14 @@ anonymous aggregate. Note any drift here rather than filing separate bugs.
 
 ---
 
+### Account deletion clears mood data
+
+**Expected:** No mood row tied to the member survives account deletion.
+
+1. Submit a check-in, then delete the account (Account & Data).
+2. Confirm the member's `mood_client_identities` row is gone and no `mood_submissions` row remains
+   under their pseudonym. No surviving row may carry their real user id.
+
 ## Known gaps — do not file these as bugs
 
 Carried from the inventory's "Gaps and Known Technical Debt" section at authoring time. If you hit one

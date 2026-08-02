@@ -74,8 +74,28 @@ When user deletes Lighthouse usage only:
 - Delete immediately:
   - `lighthouse_user_extension`
   - user-scoped goals, milestones, and progress events
+  - `lighthouse_matches` where the member is the **seeker** (`seeker_user_id`) — their own stay requests
+  - `lighthouse_blocks` where the member is the **blocker** (`blocker_user_id`) — the block list they created
+  - `lighthouse_blocks` where the member is the **blocked** party (`blocked_user_id`) — see below
 - Anonymize/pseudonymize:
-  - none expected for user-owned records
+  - `lighthouse_matches.host_user_id` on matches other members sent to this member's listings — set to
+    `deleted_member` (see "Rows you appear on but do not own" below)
+
+### Rows you appear on but do not own (pseudonymized, not deleted)
+
+A match where you were the **host** belongs to the seeker: it is their record of their own housing
+search, and deleting it would destroy that record. So the row stays and your identity is overwritten
+instead — `lighthouse_matches.host_user_id` is set to the shared `deleted_member` placeholder (a
+single constant, not a per-user token, so a departed member's rows no longer link to one another).
+
+Matches where you were the **seeker** are deleted outright; you own those.
+
+Blocks pointing AT the deleted account (`lighthouse_blocks.blocked_user_id`) are **deleted, not
+pseudonymized**: the block's purpose — preventing interaction with that account — ends when the
+account does, a returning person would arrive on a new Clerk id the old row could not catch, and
+collapsing several blocked ids into the shared placeholder would violate the table's
+`UNIQUE (blocker_user_id, blocked_user_id)` the moment one blocker had blocked two departed members.
+Abuse evidence lives in `member_safety_reports`, which is retained, not here.
 - Retain for compliance/fraud/finance:
   - `lighthouse_deletion_events`
 - Never touch (must remain):

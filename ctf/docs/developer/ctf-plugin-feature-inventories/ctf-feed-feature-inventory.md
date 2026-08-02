@@ -362,6 +362,21 @@ All three feed channels (announcements, questions, community) are shipped on web
   (4) `markAnnouncementRead` now returns the stored `read_at`; `POST /api/announcements/[id]/read`
   reports that persisted timestamp instead of a route-computed one, matching `markFeedItemRead` and
   `dismissFeedItem`. The response shape (`{ ok, announcementId, readAt }`) is unchanged.
+- 2026-08-02: **Deletion burn-down batch 1: three per-user tables join the deletion registry.**
+  `feed_community_post_reactions` (the deletion contract already promised this table would clear, but
+  no registry entry existed, so the engine never executed the promise), `announcement_reactions`, and
+  `feed_hub_last_seen` (unread-badge state) are now deleted with the account. Caught by the
+  deletion-coverage gate added in #2056. Contract updated to match.
+- 2026-08-01: **Dismissing an announcement now reports the time the database actually recorded
+  (code-review issue #2016).** `dismissAnnouncement` returned the literal string `'ok'` and its
+  insert did not read `dismissed_at` back, so `POST /api/announcements/{announcementId}/dismiss`
+  filled the contract's `dismissedAt` field with a timestamp the route computed itself just before
+  the write. That value could disagree with the stored one whenever the app server and the database
+  clocks differ. The insert now ends with `RETURNING dismissed_at`, the function returns
+  `{ dismissedAtIso }`, and the route sends that value — the same shape `dismissFeedItem` and the
+  feed-item dismiss route already use. Response fields are unchanged; only the source of the
+  timestamp is.
+
 - 2026-08-01: **Two code-review corrections (issues #2021, #2019).** (1) `GET /api/feed/items` now
   honors the `mentions=me` input its contract (feed.timeline.fetch) has always documented: handle
   tokens are derived server-side from the authenticated caller (never client-supplied) and passed to
