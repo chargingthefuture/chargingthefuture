@@ -160,25 +160,6 @@
       ],
       "decision": "unreviewed"
     },
-    "level_up_disbursements": {
-      "userColumns": [
-        "recipient_user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "level_up_dispute_comments": {
-      "userColumns": [
-        "actor_user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "level_up_disputes": {
-      "userColumns": [
-        "opened_by_user_id",
-        "resolved_by_user_id"
-      ],
-      "decision": "unreviewed"
-    },
     "level_up_milestone_validations": {
       "userColumns": [
         "validated_by_user_id"
@@ -229,51 +210,6 @@
       ],
       "decision": "unreviewed"
     },
-    "service_credits_credit_limits": {
-      "userColumns": [
-        "updated_by_user_id",
-        "user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "service_credits_dispute_adjustments": {
-      "userColumns": [
-        "destination_user_id",
-        "source_user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "service_credits_disputes": {
-      "userColumns": [
-        "opened_by_user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "service_credits_escrow_holds": {
-      "userColumns": [
-        "wallet_user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "service_credits_governance_events": {
-      "userColumns": [
-        "target_user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "service_credits_treasury_config": {
-      "userColumns": [
-        "updated_by_user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "service_credits_treasury_events": {
-      "userColumns": [
-        "source_user_id",
-        "treasury_user_id"
-      ],
-      "decision": "unreviewed"
-    },
     "skills_hunt_directory_profiles": {
       "userColumns": [
         "created_by_user_id"
@@ -310,13 +246,6 @@
     "socket_relay_request_events": {
       "userColumns": [
         "actor_user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "trust_transport_disputes": {
-      "userColumns": [
-        "opened_by_user_id",
-        "resolved_by_user_id"
       ],
       "decision": "unreviewed"
     },
