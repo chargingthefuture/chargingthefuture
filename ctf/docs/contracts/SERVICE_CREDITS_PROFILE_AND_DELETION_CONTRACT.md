@@ -97,10 +97,20 @@ When user deletes ServiceCredits plugin usage only (`DELETE /api/account/service
 
 - Delete immediately:
   - `service_credits_user_extension` plugin-scoped preferences/flags not required for ledger integrity
+  - `service_credits_credit_limits` row for the member — current-state configuration, not ledger
+    history: with the wallet tombstoned there is nothing left for a limit to bound, so the row goes
+    rather than keeping a raw id alive in a settings table (the admin who set past limits remains in
+    the governance/audit records below)
 - Anonymize/pseudonymize:
   - user linkage in plugin-owned non-ledger projections where policy permits
 - Retain for compliance/fraud/finance:
   - `service_credits_wallets`, `service_credits_transfers`, and `service_credits_escrow_holds` required for ledger integrity and dispute evidence
+  - `service_credits_disputes` and `service_credits_dispute_adjustments` — the accountability record
+    of contested credit movements and how they were resolved
+  - `service_credits_governance_events` — the system-of-record for supply changes (mints, burns,
+    grants) and their targets
+  - `service_credits_treasury_events` and `service_credits_treasury_config` — treasury movements and
+    the admin audit of treasury settings
   - `service_credits_deletion_events` and reclaim records
 - Never touch (must remain):
   - canonical account identity

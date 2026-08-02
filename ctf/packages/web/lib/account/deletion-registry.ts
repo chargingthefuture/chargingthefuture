@@ -361,6 +361,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       retain('trust_transport_earnings_ledger', 'Provider earnings ledger; retained for financial integrity.'),
       retain('trust_transport_payout_requests', 'Payout requests; retained for financial integrity.'),
       retain('trust_transport_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
+      // Burn-down batch 3 (ledger/disputes): disputes over trips/settlement are the accountability
+      // record for value that moved between two members — retained like the earnings ledger above.
+      retain('trust_transport_disputes', 'Disputes over trips and settlement; retained for ledger integrity and accountability.'),
     ],
   },
   {
@@ -474,7 +477,13 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('level_up_enrollments', 'user_id', 'Your cohort enrollments.'),
       del('level_up_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
       retain('level_up_audit_events', 'Audit log; retained for compliance.'),
-      // level_up_cohorts are shared; disbursements/escrows/disputes are money records (retained).
+      // Burn-down batch 3 (ledger/disputes): credit disbursements and the disputes over them are the
+      // record of why cohort escrow balances moved — retained for ledger integrity, like the
+      // ServiceCredits ledger they feed.
+      retain('level_up_disbursements', 'Credit disbursements from cohort escrow; retained for ledger integrity.'),
+      retain('level_up_disputes', 'Disputes over cohort milestones/credits; retained for ledger integrity and accountability.'),
+      retain('level_up_dispute_comments', 'The dispute conversation record; retained with its dispute.'),
+      // level_up_cohorts are shared content.
     ],
   },
   {
@@ -566,6 +575,20 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       retain('service_credits_transfers', 'Immutable transfer record; retained for financial integrity.'),
       retain('service_credits_wallet_tombstones', 'Tombstone marking a finalized wallet.'),
       retain('service_credits_account_deletion_reclaims', 'The reclaim record produced by account deletion.'),
+      // Burn-down batch 3 (ledger/disputes): the rest of the credits ledger's supporting records.
+      // Everything that documents WHY balances moved is retained for ledger integrity — a deleted
+      // account's credits are reclaimed through the tombstone flow above, and the records proving
+      // that reclaim (and any dispute over past movements) must survive it.
+      retain('service_credits_escrow_holds', 'Escrow holds against the ledger; retained for ledger integrity.'),
+      retain('service_credits_disputes', 'Disputes over credit movements; retained for ledger integrity and accountability.'),
+      retain('service_credits_dispute_adjustments', 'Admin adjustments resolving disputes; the record of why balances changed.'),
+      retain('service_credits_governance_events', 'Governance actions (mints, burns, grants) and their targets; the system-of-record for supply changes.'),
+      retain('service_credits_treasury_events', 'Treasury movements; retained for ledger integrity.'),
+      retain('service_credits_treasury_config', 'Treasury settings and the admin audit of who changed them.'),
+      // Per-member credit-limit settings are current-state config, not ledger history: with the
+      // wallet tombstoned there is nothing left for a limit to bound, so the member's row goes
+      // rather than keeping a raw id alive in a settings table.
+      del('service_credits_credit_limits', 'user_id', 'Your credit-limit settings.'),
     ],
   },
   {
