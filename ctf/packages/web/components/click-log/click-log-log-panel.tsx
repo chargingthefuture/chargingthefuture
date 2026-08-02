@@ -2,10 +2,46 @@
 
 import { AlertTriangle, MapPin } from "lucide-react";
 import { MAX_NOTES_LENGTH } from "../../lib/click-log/constants";
+import { CLICK_LOG_PROBLEM_TAGS, CLICK_LOG_SCHEME_TAGS } from "../../lib/click-log/tags";
 import { useTheme } from "@/hooks/useTheme";
 import { getClickLogTokens, type ClickLogTokens } from "./click-log-shared";
 
 type GeoStatus = "idle" | "locating" | "error";
+
+// One optional tag dropdown (problem or scheme). Empty value means untagged. Extracted so the
+// note form's two pickers share one styled control and stay out of its complexity count.
+function ClickLogTagSelect({
+  label,
+  value,
+  options,
+  tokens,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: readonly { slug: string; label: string }[];
+  tokens: ClickLogTokens;
+  onChange: (value: string) => void;
+}) {
+  const t = tokens;
+  return (
+    <label style={{ display: "block", marginTop: 10 }}>
+      <span style={{ display: "block", fontSize: 12, color: t.MUTED, marginBottom: 4 }}>{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ width: "100%", padding: "8px 10px", background: t.BG, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, fontSize: 13, color: value ? t.TITLE : t.MUTED, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+      >
+        <option value="">None</option>
+        {options.map((option) => (
+          <option key={option.slug} value={option.slug}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 // The "Add location" button. Its background/border/color and the disabled/loading affordances all
 // depend on locationAdded and the geolocation status, so it lives here as its own component to keep
@@ -44,10 +80,14 @@ function ClickLogNoteForm({
   geoStatus,
   geoError,
   shareWithOwner,
+  problemTag,
+  schemeTag,
   tokens,
   onNoteChange,
   onAddLocation,
   onShareChange,
+  onProblemTagChange,
+  onSchemeTagChange,
   onSubmit,
   onCancel,
 }: {
@@ -57,10 +97,14 @@ function ClickLogNoteForm({
   geoStatus: GeoStatus;
   geoError: string | null;
   shareWithOwner: boolean;
+  problemTag: string;
+  schemeTag: string;
   tokens: ClickLogTokens;
   onNoteChange: (value: string) => void;
   onAddLocation: () => void;
   onShareChange: (value: boolean) => void;
+  onProblemTagChange: (value: string) => void;
+  onSchemeTagChange: (value: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
 }) {
@@ -76,8 +120,24 @@ function ClickLogNoteForm({
         placeholder="Describe what happened…"
         style={{ width: "100%", padding: "10px 12px", background: t.BG, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, fontSize: 13, color: t.TITLE, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
       />
+      {/* Optional tags: which of the 50+ known problems happened and which named scheme was
+          used. One, both, or neither may be picked; both feed trend reporting. */}
+      <ClickLogTagSelect
+        label="Which problem happened? (optional)"
+        value={problemTag}
+        options={CLICK_LOG_PROBLEM_TAGS}
+        tokens={t}
+        onChange={onProblemTagChange}
+      />
+      <ClickLogTagSelect
+        label="Which scheme was used? (optional)"
+        value={schemeTag}
+        options={CLICK_LOG_SCHEME_TAGS}
+        tokens={t}
+        onChange={onSchemeTagChange}
+      />
       {/* Per-incident owner-share choice, seeded from the member's global default. Only coarse
-          trend data (day + rounded location + count) is ever shared — never notes. */}
+          trend data (day + rounded location + tags + count) is ever shared — never notes. */}
       <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 10, fontSize: 12, color: t.MUTED, cursor: "pointer" }}>
         <input
           type="checkbox"
@@ -116,7 +176,11 @@ export function ClickLogLogPanel({
   geoStatus,
   geoError,
   shareWithOwner,
+  problemTag,
+  schemeTag,
   onShareChange,
+  onProblemTagChange,
+  onSchemeTagChange,
   onToggleForm,
   onNoteChange,
   onAddLocation,
@@ -131,7 +195,11 @@ export function ClickLogLogPanel({
   geoStatus: GeoStatus;
   geoError: string | null;
   shareWithOwner: boolean;
+  problemTag: string;
+  schemeTag: string;
   onShareChange: (value: boolean) => void;
+  onProblemTagChange: (value: string) => void;
+  onSchemeTagChange: (value: string) => void;
   onToggleForm: () => void;
   onNoteChange: (value: string) => void;
   onAddLocation: () => void;
@@ -162,10 +230,14 @@ export function ClickLogLogPanel({
           geoStatus={geoStatus}
           geoError={geoError}
           shareWithOwner={shareWithOwner}
+          problemTag={problemTag}
+          schemeTag={schemeTag}
           tokens={t}
           onNoteChange={onNoteChange}
           onAddLocation={onAddLocation}
           onShareChange={onShareChange}
+          onProblemTagChange={onProblemTagChange}
+          onSchemeTagChange={onSchemeTagChange}
           onSubmit={onSubmit}
           onCancel={onCancel}
         />

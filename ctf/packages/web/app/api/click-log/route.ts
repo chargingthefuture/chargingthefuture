@@ -4,6 +4,7 @@ import { MAX_NOTES_LENGTH } from 'lib/click-log/constants';
 import { canViewIncidents } from 'lib/click-log/policy';
 import { logClickLogAudit } from 'lib/click-log/audit';
 import type { IncidentMetadata } from 'lib/click-log/types';
+import { isValidProblemTag, isValidSchemeTag } from 'lib/click-log/tags';
 import { ensureMutationCsrf, requireClickLogAccess } from './_lib';
 
 export async function GET() {
@@ -90,6 +91,23 @@ function buildMetadata(
   };
 }
 
+// Validate an optional incident tag against its canonical slug list (lib/click-log/tags.ts).
+// Absent means untagged; an unknown slug is rejected so trend reporting only ever aggregates
+// known values. Returns a discriminated result so the caller keeps TypeScript narrowing.
+function parseTag(
+  raw: unknown,
+  isValid: (slug: string) => boolean,
+  fieldName: string,
+): { error: NextResponse } | { data: string | undefined } {
+  if (raw === undefined || raw === null) {
+    return { data: undefined };
+  }
+  if (typeof raw !== 'string' || !isValid(raw)) {
+    return { error: badRequest(`Invalid ${fieldName}`) };
+  }
+  return { data: raw };
+}
+
 export async function POST(req: NextRequest) {
   const csrfDenied = ensureMutationCsrf(req);
   if (csrfDenied) {
@@ -119,7 +137,31 @@ export async function POST(req: NextRequest) {
   }
   const sharedWithOwner =
     rawShared !== undefined ? rawShared : (await getPreferences(userId)).shareWithOwner;
-  const incident = await createIncident({ userId, metadata, sharedWithOwner });
+  // Optional tags: which known problem happened and/or which named scheme was used. One or
+  // both may be present; both are optional. Validated against the canonical slug lists.
+  const problemResult = parseTag(
+    (body as { problemTag?: unknown })?.problemTag,
+    isValidProblemTag,
+    'problemTag',
+  );
+  if ('error' in problemResult) {
+    return problemResult.error;
+  }
+  const schemeResult = parseTag(
+    (body as { schemeTag?: unknown })?.schemeTag,
+    isValidSchemeTag,
+    'schemeTag',
+  );
+  if ('error' in schemeResult) {
+    return schemeResult.error;
+  }
+  const incident = await createIncident({
+    userId,
+    metadata,
+    sharedWithOwner,
+    problemTag: problemResult.data,
+    schemeTag: schemeResult.data,
+  });
   logClickLogAudit({ actorId: userId, command: 'click-log.incident.create', result: 'success' });
   // Return the incident flat to match the command contract's outputSchema
   // (ClickLogIncident, not a { incident } wrapper). No current caller reads this body,

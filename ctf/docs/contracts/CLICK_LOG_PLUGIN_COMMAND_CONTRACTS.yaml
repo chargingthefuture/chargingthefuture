@@ -1,7 +1,7 @@
 commands:
   - pluginId: click-log
     command: click-log.incident.create
-    version: 1.1.0
+    version: 1.2.0
     inputSchema:
       type: object
       properties:
@@ -9,9 +9,17 @@ commands:
           $ref: '#/definitions/IncidentMetadata'
         sharedWithOwner:
           type: boolean
+        problemTag:
+          type: string
+        schemeTag:
+          type: string
       # metadata is not required, matches implementation.
       # sharedWithOwner is optional: when omitted, the member's stored global default
       # (click_log_preferences.share_with_owner, itself defaulting to false) is applied.
+      # problemTag / schemeTag are optional coarse tags — one, both, or neither may be sent.
+      # Each is validated against the canonical slug list in packages/web/lib/click-log/tags.ts
+      # (problems mirror the landing-page 50+ problems list; schemes come from the owner's
+      # "A post for each gang stalker game" Discourse thread); an unknown slug is a 400.
     outputSchema:
       $ref: '#/definitions/ClickLogIncident'
     dataAccess:
@@ -113,7 +121,7 @@ commands:
     retentionClass: user_event
   - pluginId: click-log
     command: click-log.trends.fetch
-    version: 1.0.0
+    version: 1.1.0
     inputSchema:
       type: object
       properties: {}
@@ -124,10 +132,15 @@ commands:
           type: array
           items:
             $ref: '#/definitions/SharedIncidentTrendBucket'
+        tagTrends:
+          type: array
+          items:
+            $ref: '#/definitions/SharedIncidentTagTrend'
     dataAccess:
       - click_log_incidents (select, aggregate only — shared_with_owner rows; the SQL projects
-        only day buckets, 1-decimal location cells, and counts, never notes, precise
-        coordinates, incident ids, or member identity)
+        only day buckets, 1-decimal location cells, counts, and per-tag counts over the
+        canonical problem/scheme tag slugs, never notes, precise coordinates, incident ids,
+        or member identity)
     purpose: Owner/admin-only aggregate trends over incidents members opted to share
     retentionClass: user_event
 
@@ -155,9 +168,18 @@ definitions:
         $ref: '#/definitions/IncidentMetadata'
       shared_with_owner:
         type: boolean
+      # Optional coarse tags; slugs from packages/web/lib/click-log/tags.ts, null when untagged.
+      problem_tag:
+        type:
+          - string
+          - 'null'
+      scheme_tag:
+        type:
+          - string
+          - 'null'
       created_at:
         type: string
-    required: [id, user_id, metadata, shared_with_owner, created_at]
+    required: [id, user_id, metadata, shared_with_owner, problem_tag, scheme_tag, created_at]
   ClickLogPreferences:
     type: object
     properties:
@@ -180,3 +202,14 @@ definitions:
       count:
         type: integer
     required: [day, latitudeCell, longitudeCell, count]
+  SharedIncidentTagTrend:
+    type: object
+    properties:
+      tagType:
+        type: string
+        enum: [problem, scheme]
+      tag:
+        type: string
+      count:
+        type: integer
+    required: [tagType, tag, count]

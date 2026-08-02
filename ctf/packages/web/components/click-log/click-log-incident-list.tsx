@@ -3,6 +3,7 @@
 import { AlertTriangle, MapPin, Trash2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import type { ClickLogIncident } from "../../lib/click-log/types";
+import { problemTagLabel, schemeTagLabel } from "../../lib/click-log/tags";
 import { formatIncidentTime, getClickLogTokens, hasLocation } from "./click-log-shared";
 
 export function ClickLogIncidentList({
@@ -30,13 +31,27 @@ export function ClickLogIncidentList({
               {incident.metadata.notes && (
                 <div style={{ fontSize: 13, color: t.TITLE, lineHeight: 1.5, marginBottom: 4 }}>{incident.metadata.notes}</div>
               )}
+              {(incident.problem_tag || incident.scheme_tag) && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 4 }}>
+                  {incident.problem_tag && (
+                    <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, background: `${t.ACCENT}12`, border: `1px solid ${t.ACCENT}25`, color: t.ACCENT }}>
+                      {problemTagLabel(incident.problem_tag)}
+                    </span>
+                  )}
+                  {incident.scheme_tag && (
+                    <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED }}>
+                      Scheme: {schemeTagLabel(incident.scheme_tag)}
+                    </span>
+                  )}
+                </div>
+              )}
               {hasLocation(incident) && (
                 <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: t.MUTED }}>
                   <MapPin size={10} color={t.MUTED} /> Location recorded
                 </div>
               )}
               {/* Owner-share state, member-toggleable per incident. Shared = only coarse trend
-                  data (day + rounded location + count) reaches the owner, never the note. */}
+                  data (day + rounded location + tags + count) reaches the owner, never the note. */}
               <button
                 onClick={() => onToggleShare(incident.id, !incident.shared_with_owner)}
                 aria-label={incident.shared_with_owner ? "Stop sharing this incident with the owner" : "Share this incident with the owner"}
