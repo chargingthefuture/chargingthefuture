@@ -96,6 +96,9 @@
 **Expected:**
 - After reload the item no longer shows as unread.
 - No error is thrown; the action is idempotent (triggering it again on the same item does not error).
+- If you inspect the network call, the read-mark response carries a `readAt` timestamp — the value the
+  database stored, not a client guess. The announcement read-mark endpoint
+  (`POST /api/announcements/:id/read`) reports its stored `readAt` the same way.
 
 **Result:** web ☐
 
