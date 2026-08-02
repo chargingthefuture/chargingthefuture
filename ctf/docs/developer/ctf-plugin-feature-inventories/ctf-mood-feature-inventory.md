@@ -116,6 +116,12 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## 9) Change Log
 
+- 2026-08-02: **Deletion burn-down batch 1: defense-in-depth entry for `mood_submissions`.** The
+  registry deleted only `mood_client_identities` (correct — v3 rows store `user_id` as `''` and
+  cascade via the pseudonym FK). It now also deletes `mood_submissions` by `user_id` directly: a
+  no-op today, present so any row that ever carries a real id — a legacy import, a future write path
+  that forgets the convention — clears with the account instead of surviving as wellbeing data with a
+  name on it. Satisfies the deletion-coverage gate added in #2056. Contract updated.
 - 2026-07-17: **History-aware back navigation (app-wide sweep).** The member shell's hand-rolled
   back chevron was replaced by the shared `BackChevronButton` — it returns to the previous in-app
   page and falls back to All Apps when there is no in-app history. UI-only; no schema, route, or

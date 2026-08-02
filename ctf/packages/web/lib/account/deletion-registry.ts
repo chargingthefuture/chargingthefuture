@@ -119,6 +119,17 @@ const retain = (table: string, note: string, reviewNote?: string): OwnedTable =>
 
 export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
+    slug: 'app-preferences',
+    name: 'App preferences',
+    dataSummary: 'Your theme and other app-wide display preferences.',
+    // Cross-cutting like notifications: not a service a member joins or leaves, so no per-service
+    // scope — it clears with the account.
+    serviceScopeSupported: false,
+    tables: [
+      del('user_ui_preferences', 'user_id', 'Your theme and display preferences.'),
+    ],
+  },
+  {
     slug: 'notifications',
     name: 'Notifications',
     dataSummary: 'Your notifications feed and your device-push preferences.',
@@ -182,6 +193,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     serviceScopeSupported: true,
     tables: [
       del('feed_answer_ratings', 'user_id', 'Your ratings on answers.'),
+      del('feed_community_post_reactions', 'user_id', 'Your reactions on community posts.'),
       del('feed_answers', 'author_user_id', 'Your answers.'),
       del('feed_questions', 'asked_by_user_id', 'Your questions.'),
       del('feed_community_replies', 'author_user_id', 'Your replies.'),
@@ -191,6 +203,8 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('feed_user_read_state', 'user_id', 'Your read state.'),
       del('feed_membership_events', 'user_id', 'Your feed membership events.'),
       del('announcement_user_state', 'user_id', 'Your announcement read/ack state.'),
+      del('announcement_reactions', 'user_id', 'Your reactions on announcements.'),
+      del('feed_hub_last_seen', 'user_id', 'When you last opened the Hub (unread-badge state).'),
       del('announcement_membership_events', 'user_id', 'Your announcement membership events.'),
       // feed_items / announcements / announcement_revisions / announcement_delivery_events are
       // admin-authored platform content (created_by_user_id), retained.
@@ -235,12 +249,16 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Your mood check-in submissions.',
     serviceScopeSupported: true,
     tables: [
-      // Mood check-ins are stored pseudonymously: mood_submissions rows carry a
-      // pseudonym, not user_id, and the only user link lives in
-      // mood_client_identities. Deleting that mapping row cascades all the user's
-      // check-ins via the mood_submissions.pseudonym FK (ON DELETE CASCADE), so
-      // this single entry removes everything for the user.
-      del('mood_client_identities', 'user_id', 'Your mood check-ins (deleting your pseudonym mapping removes every check-in stored under it).'),
+      // Check-ins are pseudonymous by design: the v3 insert stores user_id as '' on every row and
+      // the account link lives only in mood_client_identities, so deleting that mapping cascades the
+      // member's check-ins via the pseudonym FK. The direct delete below is defense-in-depth, not a
+      // correction: it matches nothing today (no row carries a real id), and exists so that any row
+      // that EVER carries one — a legacy import, a future write path that forgets the convention —
+      // is cleared with the account instead of surviving as wellbeing data with a name on it. It
+      // also makes this table's coverage visible to the deletion-coverage gate, which flags any
+      // table with a user_id column that no registry entry names.
+      del('mood_submissions', 'user_id', 'Defense-in-depth: any check-in row carrying your raw id (none are written today).'),
+      del('mood_client_identities', 'user_id', 'Your pseudonym mapping — removing it cascades every check-in stored under it.'),
     ],
   },
   {
@@ -466,6 +484,20 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Weekly performance figures are aggregate; no per-user data is stored.',
     serviceScopeSupported: false,
     tables: [],
+  },
+  {
+    slug: 'what-works',
+    name: 'WhatWorks',
+    dataSummary: 'Your endorsements of tools on the shared list.',
+    serviceScopeSupported: true,
+    tables: [
+      del('what_works_endorsements', 'user_id', 'Your endorsements.'),
+      // The list itself is community content, not personal data: problems and products are curated
+      // entries that other members rely on, and the suggested_by/reviewed_by columns on them are the
+      // admin/review audit trail — same retain reasoning as every other reviewer column.
+      retain('what_works_problems', 'Curated problem list; community content, not personal data.'),
+      retain('what_works_products', 'Curated tool list; suggested_by/reviewed_by retained as review audit.'),
+    ],
   },
   {
     slug: 'contributions',
