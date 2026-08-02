@@ -15,6 +15,7 @@ import {
 } from 'stream-chat-react';
 import 'stream-chat-react/dist/css/v2/index.css';
 import './stream-chat-panel.css';
+import { acquireStreamChatClient, releaseStreamChatClient } from '../../lib/shared/stream-chat-connection';
 
 // How far ahead the "Remind me about this" action schedules its nudge (30 minutes).
 const REMINDER_DELAY_MS = 30 * 60 * 1000;
@@ -34,44 +35,6 @@ const MESSAGE_ACTIONS_NO_EDIT: MessageActionsArray = [
   'react',
   'reply',
 ];
-
-// Shared Stream connection registry, keyed by API key. `StreamChat.getInstance(apiKey)` returns one
-// singleton client per key, so several StreamChatPanels on screen at once (e.g. a Beacon viewer plus a
-// plugin chat) share the SAME client. Previously each panel called connectUser on mount and
-// disconnectUser on unmount, so the first panel to unmount tore the connection out from under every
-// other live panel, and a quick re-mount (React StrictMode, a token refresh) could connect twice.
-// Ref-count the connection instead: connect once for the first panel, and only disconnect when the
-// LAST panel using that client unmounts. Worst case is a connection kept alive slightly too long (a
-// benign leak until page unload), never one dropped while still in use.
-const streamConnections = new Map<string, { userId: string; count: number; ready: Promise<StreamChat> }>();
-
-function acquireStreamConnection(apiKey: string, userId: string, token: string): Promise<StreamChat> {
-  const client = StreamChat.getInstance(apiKey);
-  const existing = streamConnections.get(apiKey);
-  if (existing && existing.userId === userId) {
-    existing.count += 1;
-    return existing.ready;
-  }
-  // No live connection for this key, or it is connected as a different user: (re)connect. Guard
-  // connectUser so we never call it when the client is already connected as this user.
-  const ready = Promise.resolve()
-    .then(() => (client.userID && client.userID !== userId ? client.disconnectUser() : undefined))
-    .then(() => (client.userID === userId ? undefined : client.connectUser({ id: userId }, token)))
-    .then(() => client);
-  streamConnections.set(apiKey, { userId, count: 1, ready });
-  return ready;
-}
-
-function releaseStreamConnection(apiKey: string): void {
-  const entry = streamConnections.get(apiKey);
-  if (!entry) return;
-  entry.count -= 1;
-  if (entry.count <= 0) {
-    streamConnections.delete(apiKey);
-    // Best-effort teardown once nothing is using the shared client anymore.
-    StreamChat.getInstance(apiKey).disconnectUser().catch(() => {});
-  }
-}
 
 // The logged-in author's own messages are always gray; everyone else's use the plugin accent.
 const OWN_BUBBLE_BG = 'rgba(255, 255, 255, 0.07)';
@@ -448,9 +411,10 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
 
   useEffect(() => {
     let isMounted = true;
-    // Ref-counted shared connection (see streamConnections above) — connect once across all panels on
-    // this API key, disconnect only when the last one unmounts.
-    acquireStreamConnection(streamApiKey, streamUserId, streamToken)
+    // Ref-counted connection per (apiKey, userId) identity (see lib/shared/stream-chat-connection):
+    // panels chatting as the same identity share one client; a panel can never re-authenticate or
+    // tear down another identity's connection.
+    acquireStreamChatClient(streamApiKey, streamUserId, streamToken)
       .then((chatClient) => {
         const ch = chatClient.channel(channelType, streamChannelId);
         // Watch with presence so the channel state carries its member list. The default '@' mention
@@ -470,7 +434,7 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
       });
     return () => {
       isMounted = false;
-      releaseStreamConnection(streamApiKey);
+      releaseStreamChatClient(streamApiKey, streamUserId);
     };
   }, [streamApiKey, streamToken, streamUserId, streamChannelId, channelType]);
 
