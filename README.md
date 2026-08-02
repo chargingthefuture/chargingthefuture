@@ -115,7 +115,30 @@ See `render.yaml` for service definitions and `ctf/docs/developer/` for runbooks
 
 ## Contributing
 
-Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) (if present) or open an issue to discuss changes.
+**This project does not accept outside code contributions.** Pull requests from outside the core
+team are closed unread. That is not about the quality of the offer — it is about who uses this app.
+
+The people here are survivors of organized stalking and trafficking. For them, a defect in this
+codebase is not an inconvenience: a leaked location, an exposed identity, a message reaching the
+wrong person, or an account someone else can reach is a physical-safety event. Every line that ships
+is written and reviewed by people who understand that threat model and who are accountable for it.
+Accepting code from someone outside that circle — however well-intentioned — introduces a path we
+cannot vouch for, and it is the members who would carry the consequence, not us.
+
+There is a second reason, and it is the more serious one. Targeting operations actively try to place
+people inside the communities they target. An open contribution path is a standing invitation to do
+exactly that. Refusing outside code removes that route entirely rather than relying on catching it.
+
+**Please also read this if you are thinking of helping in any other capacity.** If you are not
+targeted yourself, taking part in this project can put you in real danger: people who step in from
+the outside get noticed, are approached and asked to take part in trafficking, and those who refuse
+have been killed or have become targets themselves. Nobody here is asking you to carry that risk on
+our behalf.
+
+**The repository is public to be read, audited, and verified, not to be built on.** Reading the code,
+checking the claims made in the docs, and reporting a security problem you find are all welcome —
+see [Support](#support) for where to send a report. Members of the app report bugs in-app, which
+routes to a private triage repository.
 
 ### Code Quality
 
@@ -124,7 +147,7 @@ All commits run through:
 - **TypeScript** type checking (tsc)
 - **EOF format validation** (all files end with exactly one newline)
 - **Pre-commit hooks** (Husky) — runs tsc + linting
-- **CI workflow** (`rewrite-ci.yml`) — full test suite, schema drift checks, dependency audit
+- **CI workflow** (`.github/workflows/ci.yml`) — full test suite, schema drift checks, dependency audit
 
 To prepare a PR:
 
@@ -141,9 +164,12 @@ bash scripts/check-eof-format.sh  # EOF validation
 
 ## Support
 
-- **Issues & bugs:** GitHub Issues
-- **Discussions:** GitHub Discussions
-- **Documentation:** See `ctf/docs/developer/` and inline code comments
+- **Members:** report bugs from inside the app — reports route to a private triage repository so no
+  member's words end up on a public issue.
+- **Security problems found by reading the code:** open a GitHub issue describing the problem. Do not
+  include any member's data, and do not open a pull request with a fix — see
+  [Contributing](#contributing).
+- **Documentation:** See `ctf/docs/developer/` and inline code comments.
 
 ---
 
