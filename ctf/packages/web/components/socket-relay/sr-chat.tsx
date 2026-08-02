@@ -17,6 +17,20 @@ function fulfillmentTitle(f: SrFulfillment): string {
   return f.requestTitle && f.requestTitle.trim().length > 0 ? f.requestTitle : `Request ${f.id.slice(0, 8)}`;
 }
 
+// Why the composer is gone on a past conversation. A Direct Line closes for good at a terminal state
+// (rule 100) — there is no reopen. Without this, a member typed into the still-visible composer and
+// the send failed "Unauthorized" with no explanation (owner report). The canceled-but-open case also
+// says what TO do: a fresh offer opens a fresh Direct Line.
+function readOnlyNotice(f: SrFulfillment): string | null {
+  if (f.status === "active") return null;
+  if (f.status === "canceled") {
+    return f.requestStatus === "open"
+      ? "This conversation ended when the offer was canceled and can't be reopened. The request is open again on the feed — a new offer starts a new Direct Line."
+      : "This conversation ended when the offer was canceled and can't be reopened.";
+  }
+  return "This conversation ended when the request closed. You can still read it, but no new messages can be sent.";
+}
+
 function ResolveBar({
   selected,
   isRequester,
@@ -28,13 +42,9 @@ function ResolveBar({
   resolving: boolean;
   onResolve: (fulfillmentId: string, outcome: SrResolveOutcome) => void;
 }) {
-  if (selected.status !== "active") {
-    return (
-      <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: SUBTLE }}>
-        This request is {selected.requestStatus === "open" ? "open again" : "closed"}.
-      </div>
-    );
-  }
+  // A past conversation gets its explanation where the composer used to be (readOnlyNotice in the
+  // chat panel), so no second footer line is needed here.
+  if (selected.status !== "active") return null;
   if (!isRequester) {
     return (
       <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: SUBTLE }}>
@@ -129,6 +139,7 @@ function ChatPane({
             streamUserId={chatCredentials.streamUserId}
             streamChannelId={chatCredentials.streamChannelId}
             accentColor={t.ACCENT}
+            readOnlyNotice={readOnlyNotice(selected)}
           />
         ) : (
           <div style={{ flex: 1 }} />
