@@ -9,6 +9,66 @@ import { ClickLogTagPicker } from "./click-log-tag-picker";
 
 type GeoStatus = "idle" | "locating" | "error";
 
+// Submit gating: a tagged incident may not be submitted until a location is attached (the
+// server enforces the same rule). Module-level so the form component stays under the
+// complexity limit.
+function isSubmitDisabled(
+  submitting: boolean,
+  problemTag: string,
+  schemeTag: string,
+  locationAdded: boolean,
+): boolean {
+  return submitting || (Boolean(problemTag || schemeTag) && !locationAdded);
+}
+
+// The two optional tag pickers plus the tags-need-location hint. Extracted so the note form
+// stays under the complexity limit.
+function ClickLogTagFields({
+  problemTag,
+  schemeTag,
+  locationAdded,
+  tokens,
+  onProblemTagChange,
+  onSchemeTagChange,
+}: {
+  problemTag: string;
+  schemeTag: string;
+  locationAdded: boolean;
+  tokens: ClickLogTokens;
+  onProblemTagChange: (value: string) => void;
+  onSchemeTagChange: (value: string) => void;
+}) {
+  const t = tokens;
+  return (
+    <>
+      <ClickLogTagPicker
+        label="Which problem happened? (optional)"
+        searchPlaceholder="Search problems…"
+        value={problemTag}
+        options={CLICK_LOG_PROBLEM_TAGS}
+        tokens={t}
+        onChange={onProblemTagChange}
+      />
+      <ClickLogTagPicker
+        label="Which scheme was used? (optional)"
+        searchPlaceholder="Search schemes…"
+        value={schemeTag}
+        options={CLICK_LOG_SCHEME_TAGS}
+        tokens={t}
+        onChange={onSchemeTagChange}
+      />
+      {/* A tagged incident must carry a location — without it the trend data a tag feeds is not
+          detailed enough (owner decision, 2026-08-02). The server enforces the same rule. */}
+      {(problemTag || schemeTag) && !locationAdded && (
+        <div style={{ marginTop: 8, fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
+          Tags need a location: add your location below before submitting, so the trend data is
+          detailed enough.
+        </div>
+      )}
+    </>
+  );
+}
+
 // The "Add location" button. Its background/border/color and the disabled/loading affordances all
 // depend on locationAdded and the geolocation status, so it lives here as its own component to keep
 // those ternaries out of the panel's complexity count.
@@ -76,7 +136,7 @@ function ClickLogNoteForm({
 }) {
   const t = tokens;
   // Tagged incidents require a location (matching the server rule), so Submit waits for it.
-  const submitDisabled = submitting || (Boolean(problemTag || schemeTag) && !locationAdded);
+  const submitDisabled = isSubmitDisabled(submitting, problemTag, schemeTag, locationAdded);
   return (
     <div style={{ width: "100%", maxWidth: 480, padding: "16px", borderRadius: 14, background: t.SURFACE, border: `1px solid ${t.ACCENT}30` }}>
       <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 8 }}>Add a note (optional)</div>
@@ -91,30 +151,14 @@ function ClickLogNoteForm({
       {/* Optional tags: which of the 50+ known problems happened and which named scheme was
           used. One, both, or neither may be picked; both feed trend reporting. Type-and-search
           filtered pickers, mimicking the Directory / SkillsHunt skill pickers. */}
-      <ClickLogTagPicker
-        label="Which problem happened? (optional)"
-        searchPlaceholder="Search problems…"
-        value={problemTag}
-        options={CLICK_LOG_PROBLEM_TAGS}
+      <ClickLogTagFields
+        problemTag={problemTag}
+        schemeTag={schemeTag}
+        locationAdded={locationAdded}
         tokens={t}
-        onChange={onProblemTagChange}
+        onProblemTagChange={onProblemTagChange}
+        onSchemeTagChange={onSchemeTagChange}
       />
-      <ClickLogTagPicker
-        label="Which scheme was used? (optional)"
-        searchPlaceholder="Search schemes…"
-        value={schemeTag}
-        options={CLICK_LOG_SCHEME_TAGS}
-        tokens={t}
-        onChange={onSchemeTagChange}
-      />
-      {/* A tagged incident must carry a location — without it the trend data a tag feeds is not
-          detailed enough (owner decision, 2026-08-02). The server enforces the same rule. */}
-      {(problemTag || schemeTag) && !locationAdded && (
-        <div style={{ marginTop: 8, fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
-          Tags need a location: add your location below before submitting, so the trend data is
-          detailed enough.
-        </div>
-      )}
       {/* Per-incident owner-share choice, seeded from the member's global default. Only coarse
           trend data (day + rounded location + tags + count) is ever shared — never notes. */}
       <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 10, fontSize: 12, color: t.MUTED, cursor: "pointer" }}>
