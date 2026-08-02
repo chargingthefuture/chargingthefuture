@@ -244,6 +244,15 @@ allow or deny. A denied action (e.g. a self-block) records a `deny` entry, not o
 
 ---
 
+### Account deletion clears matches and blocks
+
+**Expected:** Deleting the account removes the member's own stay requests (matches where they were
+the seeker) and their block list, plus any blocks other members had placed on that account. Matches
+other members sent to the departed member's listings remain visible to those seekers, but the host
+now reads as a deleted member rather than showing the old account.
+
+---
+
 ## Parity check (web ↔ android)
 
 For LH-1, LH-4, and LH-A1, the android app and the mobile-responsive web layout must behave the same:

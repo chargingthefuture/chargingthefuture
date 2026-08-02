@@ -362,6 +362,15 @@ browser and is hidden on Android.
 
 ---
 
+### Account deletion clears the back-channel call log
+
+**Expected:** Deleting the account removes every back-channel call row the member appeared on —
+calls they started and calls they received. The call log is ephemeral and has no history screen, so
+there is nothing member-facing to re-check afterward; this is verified by the deletion engine's
+registry entries.
+
+---
+
 ## Admin walkthrough
 
 Chyme has no plugin-specific admin UI in this build. Room/chat/join access is gated by the shared
