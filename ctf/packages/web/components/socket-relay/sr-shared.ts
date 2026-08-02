@@ -69,6 +69,10 @@ export type SrFulfillment = {
   // Joined from the request by /api/socket-relay/my-fulfillments so the chat can show context.
   requestTitle?: string;
   requestStatus?: SrRequestStatus;
+  // Participants' real names, joined from directory_profiles by the same route. Null for a member
+  // with no profile on file; used with the usernames above to name the other person in the header.
+  requesterName?: string | null;
+  fulfillerName?: string | null;
 };
 
 export type SrListResponse = { ok: boolean; items: SrRequest[]; page: number; pageSize: number; total: number };
@@ -129,6 +133,17 @@ export const MAX_TAGS_PER_POST = 3;
 // instead of bouncing off the server as an invalid payload.
 export const MAX_TAG_LENGTH = 64;
 const MAX_FILTER_CHIPS = 10;
+
+// The other participant, as a member reads it: name first, then handle, and neither when the person
+// has no profile and no handle on file. Deliberately never falls back to the Clerk id — an id is not
+// an identity to a member, and the point of naming them is so a request owner can tell who offered.
+export function srCounterpartLabel(f: SrFulfillment, viewerIsRequester: boolean): string | null {
+  const name = viewerIsRequester ? f.fulfillerName : f.requesterName;
+  const username = viewerIsRequester ? f.fulfillerUsername : f.requesterUsername;
+  if (name) return username ? `${name} (@${username})` : name;
+  if (username) return `@${username}`;
+  return null;
+}
 
 export function requestTags(r: Pick<SrRequest, "category" | "tags">): string[] {
   if (r.tags && r.tags.length > 0) return r.tags;
