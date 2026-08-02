@@ -3,7 +3,7 @@ import { ensureUnlockMutationCsrf, requireUnlockAdminAccess, resolveUnlockReques
 import { insertUnlockAudit, reviewUnlockSubmission } from 'lib/unlock/repository';
 import { grantUnlockRewardForSubmission } from 'lib/unlock/reconcile-rewards';
 import { insertServiceCreditsAudit } from 'lib/service-credits/repository';
-import { grantUnleashFlagForUser } from 'lib/feature-flags/unleash-admin';
+import { grantUnleashFlagForUser } from 'lib/feature-flags';
 import { getAccountRestrictionStatus, restrictAccount, unrestrictAccount } from 'lib/auth/account-restrictions';
 import { UNLOCK_SPAM_RESTRICTION_REASON } from 'lib/unlock/spam-denylist';
 import { UNLOCK_FLAGS } from '@ctf/shared';

@@ -39,7 +39,13 @@ async function fetchStrategies(flagKey: string): Promise<UnleashStrategy[]> {
 	const res = await fetch(url, {
 		headers: { Authorization: token, 'Content-Type': 'application/json' },
 	});
-	if (!res.ok) return [];
+	if (!res.ok) {
+		// Surface the failure so a 403 (token lacks admin scope) or 404 (flag missing) is
+		// distinguishable from a transient network error; callers still fall back to [].
+		const body = await res.text().catch(() => '');
+		console.warn(`[unleash-admin] Failed to fetch strategies for ${flagKey}:`, res.status, body);
+		return [];
+	}
 	const data = (await res.json()) as { strategies?: UnleashStrategy[] };
 	return data.strategies ?? [];
 }
