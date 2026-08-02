@@ -351,6 +351,17 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-08-02: **Four code-review fixes (issues #2045, #2046, #2048, #2017).** (1) `evaluateFeedRateLimit`
+  no longer interpolates the table/column names it received: both are looked up from a frozen
+  allow-list map keyed by the four permitted table literals, so a widened type or a hostile cast can
+  never reach the SQL string (value literals stay parameterized). (2) The server-side Stream client in
+  `lib/feed/stream.ts` no longer calls `disconnectUser()` in a `finally` — that is the client-side
+  teardown for a connected user; a key+secret server client opens no WebSocket, and the call only risked
+  masking a real error. (3) `refreshPublishedGuidanceNotices` scopes its `feed_items` UPDATE to
+  `item_type = 'announcement'`, so a same-title, same-actor row of another type can never be overwritten.
+  (4) `markAnnouncementRead` now returns the stored `read_at`; `POST /api/announcements/[id]/read`
+  reports that persisted timestamp instead of a route-computed one, matching `markFeedItemRead` and
+  `dismissFeedItem`. The response shape (`{ ok, announcementId, readAt }`) is unchanged.
 - 2026-08-01: **Two code-review corrections (issues #2021, #2019).** (1) `GET /api/feed/items` now
   honors the `mentions=me` input its contract (feed.timeline.fetch) has always documented: handle
   tokens are derived server-side from the authenticated caller (never client-supplied) and passed to

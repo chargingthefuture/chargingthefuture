@@ -25,8 +25,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { announcementId } = await params;
 
   try {
-    const readAt = new Date().toISOString();
-    await markAnnouncementRead(gate.auth.userId, announcementId);
+    const { readAtIso: readAt } = await markAnnouncementRead(gate.auth.userId, announcementId);
     logFeedAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',

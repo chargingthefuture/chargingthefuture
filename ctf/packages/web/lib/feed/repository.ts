@@ -380,16 +380,31 @@ function passesFeedModeration(text: string, urlCap: number = FEED_MAX_COMMUNITY_
   return urlCount <= urlCap;
 }
 
+// The (table, actor-column) pairs this rate-limit query is allowed to run against. Both identifiers
+// are looked up from this frozen map — never interpolated from the caller — so even if the parameter
+// type widened or a cast slipped a hostile string past the compiler, only these fixed identifiers can
+// ever reach the SQL string. Value literals stay parameterized ($1/$2); table and column names cannot
+// be parameters in SQL, so an allow-list is the safe form.
+const FEED_RATE_LIMIT_TABLES = {
+  feed_questions: 'asked_by_user_id',
+  feed_community_posts: 'author_user_id',
+  feed_community_replies: 'author_user_id',
+  announcement_replies: 'author_user_id',
+} as const;
+
 async function evaluateFeedRateLimit(
   client: PoolClient,
   input: {
     userId: string;
-    tableName: 'feed_questions' | 'feed_community_posts' | 'feed_community_replies' | 'announcement_replies';
+    tableName: keyof typeof FEED_RATE_LIMIT_TABLES;
     limit: number;
     windowMinutes: number;
   },
 ): Promise<boolean> {
-  const actorColumn = input.tableName === 'feed_questions' ? 'asked_by_user_id' : 'author_user_id';
+  const actorColumn = FEED_RATE_LIMIT_TABLES[input.tableName];
+  if (!actorColumn) {
+    throw new Error('invalid_rate_limit_table');
+  }
   const result = await client.query<CountRow>(
     `
       SELECT COUNT(*)::text AS total
@@ -554,7 +569,7 @@ async function refreshPublishedGuidanceNotices(client: PoolClient): Promise<void
       `
         UPDATE feed_items
         SET body = $2, updated_at = NOW()
-        WHERE title = $1 AND created_by_user_id = $3 AND body <> $2
+        WHERE title = $1 AND created_by_user_id = $3 AND item_type = 'announcement' AND body <> $2
       `,
       [notice.title, notice.body, FEED_SYSTEM_ACTOR_ID],
     );
@@ -1917,16 +1932,23 @@ export async function archiveAnnouncement(actorId: string, announcementId: strin
   });
 }
 
-export async function markAnnouncementRead(userId: string, announcementId: string): Promise<void> {
-  await queryDb(
+// Returns the stored read_at so the route can report the timestamp the database actually wrote,
+// matching markFeedItemRead/dismissFeedItem, rather than a route-computed approximation.
+export async function markAnnouncementRead(
+  userId: string,
+  announcementId: string,
+): Promise<{ readAtIso: string }> {
+  const result = await queryDb<{ read_at: string }>(
     `
       INSERT INTO announcement_user_state (user_id, announcement_id, read_at, acknowledged_at, updated_at)
       VALUES ($1, $2::uuid, NOW(), NOW(), NOW())
       ON CONFLICT (user_id, announcement_id)
       DO UPDATE SET read_at = NOW(), acknowledged_at = NOW(), updated_at = NOW()
+      RETURNING read_at
     `,
     [userId, announcementId],
   );
+  return { readAtIso: new Date(result.rows[0].read_at).toISOString() };
 }
 
 export async function dismissAnnouncement(userId: string, announcementId: string): Promise<'ok'> {
