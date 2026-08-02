@@ -138,7 +138,11 @@ function FoundationMainScreen(props: FoundationMainScreenProps) {
   return (
     <div style={{ minHeight: "100vh", background: t.BG, fontFamily: FONT, color: t.TEXT }}>
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
+        {/* flexWrap: this row carries the plugin actions plus the three global ones, which
+              together overflow a 390px phone — the last control was clipped off the right
+              edge and the title collapsed to nothing. Wrapping reflows instead of cutting
+              off; on a wider viewport it still renders as one line. */}
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", rowGap: 6, gap: 8, padding: "10px 14px" }}>
           <BackChevronButton accent={t.ACCENT} />
           <Hammer size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
           {/* Title shrinks and truncates so the trailing controls stay on screen */}

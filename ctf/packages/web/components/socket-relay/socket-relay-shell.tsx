@@ -486,7 +486,13 @@ type SocketRelayHeaderProps = {
 function SocketRelayHeader({ t, openCount, isAdmin, tab, tabs, onTab, search, onSearch, categories, category, onCategory, onRefresh }: SocketRelayHeaderProps) {
   return (
     <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+      {/* flexWrap: the row carries back + share + title + open-count + Admin + refresh + the three
+          global actions, which together need ~436px and do not fit a 390px phone. Without wrapping
+          the last item (the account avatar) was clipped off the right edge and the title collapsed to
+          nothing (owner report). Wrapping moves the global actions to a second line instead of
+          cutting them off, and gives the title its width back. Nothing is removed, and on a wider
+          viewport the row still renders as one line exactly as before. */}
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", rowGap: 6, gap: 10, padding: "10px 14px" }}>
         <BackChevronButton accent={t.ACCENT} />
         <Share2 size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
         <span style={{ fontSize: 15, fontWeight: 700, color: t.TEXT, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>SocketRelay</span>

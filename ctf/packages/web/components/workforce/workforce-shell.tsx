@@ -421,7 +421,11 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     return (
       <div className="ctf-self-responsive" style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ background: t.HEADER, borderBottom: `1px solid ${t.BORDER}`, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px' }}>
+          {/* flexWrap: this row carries the plugin actions plus the three global ones, which
+              together overflow a 390px phone — the last control was clipped off the right
+              edge and the title collapsed to nothing. Wrapping reflows instead of cutting
+              off; on a wider viewport it still renders as one line. */}
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: 6, gap: 8, padding: '10px 14px' }}>
             <BackChevronButton accent={t.ACCENT} />
             <BarChart2 size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             {/* Title shrinks and truncates so the trailing controls stay on screen */}
