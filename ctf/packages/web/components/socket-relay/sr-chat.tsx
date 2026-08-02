@@ -2,7 +2,7 @@
 
 import { ChevronLeft, Clock, MessageCircle } from "lucide-react";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
-import { FAINT, SUBTLE, type SrChatCredentials, type SrDirectLine, type SrFulfillment, type SrResolveOutcome } from "./sr-shared";
+import { FAINT, SUBTLE, srCounterpartLabel, type SrChatCredentials, type SrDirectLine, type SrFulfillment, type SrResolveOutcome } from "./sr-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getSocketRelayTokens } from './sr-shared';
 
@@ -107,7 +107,12 @@ function ChatPane({
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: "#F0FDF4" }}>{fulfillmentTitle(selected)}</div>
-        <div style={{ fontSize: 12, color: SUBTLE }}>{isRequester ? "Your request — you're talking with the helper." : "You offered to help — talking with the requester."}</div>
+        {/* Names the other person. The old line said "you're talking with the helper" without ever
+            saying who the helper was, and kept saying it on a canceled conversation where nobody is
+            talking — so a request owner could open a past line and still not learn who had offered
+            (owner report). Falls back to the old wording only when the member has no name and no
+            handle on file. */}
+        <div style={{ fontSize: 12, color: SUBTLE }}>{counterpartHeadline(selected, isRequester)}</div>
       </div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         {chatLoading ? (
@@ -156,7 +161,13 @@ function DirectLineRow({
       "Your request · Waiting for a helper"
     ) : (
       <>
-        {isRequester ? "Your request" : "You're helping"} · <span style={{ textTransform: "capitalize" }}>{line.fulfillment.status}</span>
+        {/* Names the other person in the list too, so a request owner can see who offered without
+            opening each conversation one at a time. */}
+        {isRequester ? "Your request" : "You're helping"}
+        {srCounterpartLabel(line.fulfillment, isRequester)
+          ? ` · ${srCounterpartLabel(line.fulfillment, isRequester)}`
+          : ""}{" "}
+        · <span style={{ textTransform: "capitalize" }}>{line.fulfillment.status}</span>
       </>
     );
   return (
@@ -170,6 +181,21 @@ function DirectLineRow({
       <div style={{ fontSize: 11, color: SUBTLE }}>{sub}</div>
     </button>
   );
+}
+
+// The header's second line: the viewer's role, who the other person is, and — when the conversation
+// is no longer live — that it ended. Kept out of the component so its branches stay off the chat's
+// complexity budget.
+function counterpartHeadline(f: SrFulfillment, isRequester: boolean): string {
+  const role = isRequester ? "Your request" : "You offered to help";
+  const who = srCounterpartLabel(f, isRequester);
+  const other = who
+    ? `${isRequester ? "Helper" : "Requester"}: ${who}`
+    : isRequester
+      ? "with the helper"
+      : "with the requester";
+  const ended = f.status === "canceled" ? " · Canceled" : f.status === "closed" ? " · Closed" : "";
+  return `${role} · ${other}${ended}`;
 }
 
 export function SocketRelayChat({

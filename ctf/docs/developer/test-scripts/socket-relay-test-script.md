@@ -247,6 +247,10 @@ web ☐
 - Live conversations appear first, then your open requests waiting for a helper, then past
   (closed or canceled) conversations. A canceled claim must still be openable from the Past
   group — that is how you find out who offered to help before the claim was canceled.
+- Each conversation row names the other person (`Name (@handle)`, or just the handle when there is
+  no name on file). Open one: the header says your role, who the other person is, and — on a
+  past line — that it was canceled or closed. A canceled line must never read "you're talking
+  with the helper".
 - Claimed requests are represented by their active fulfillment row, not an extra pending row.
 - On Android, each pending-request card shows a "No helper yet" note (not a chat), explaining the request is still open on the feed.
 - Tapping an active-fulfillment row opens the chat thread (web); on Android, each active-fulfillment card shows an "Open chat" button that opens the chat (see SR-10a).

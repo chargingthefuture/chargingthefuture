@@ -175,6 +175,17 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+- 2026-08-01: **Direct Line now names the other person (owner report).** Past conversations became
+  visible earlier the same day, but opening one still did not say who had offered to help: the header
+  read "Your request — you're talking with the helper" with no name, and kept saying "talking with"
+  on a canceled line where nobody is talking. `listMyFulfillments` now joins both participants' first
+  + last name from `directory_profiles` alongside the usernames already captured at claim time
+  (`SrFulfillment.requesterName` / `.fulfillerName`). New shared `srCounterpartLabel()` renders
+  `Name (@handle)`, falling back to the handle alone, and to nothing when the member has neither —
+  deliberately never to the Clerk id, which is not an identity to a member. The chat header now reads
+  e.g. `Your request · Helper: Jane Doe (@jane) · Canceled`, and each row in the conversation list
+  carries the same label so an owner can see who offered without opening them one at a time.
+  Read-only display change; no route, schema, or contract change.
 - 2026-08-01: **In-app "for Targeted Individuals" notice added, then removed the same day (owner
   directive).** A notice was briefly rendered above the feed, on the post form, and on the signed-out
   public shell. The owner removed it: the board sits behind Unlock verification, so everyone reading

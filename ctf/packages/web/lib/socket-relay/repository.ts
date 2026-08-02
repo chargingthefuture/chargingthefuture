@@ -803,12 +803,21 @@ export async function getFulfillmentById(fulfillmentId: string): Promise<SocketR
 
 export async function listMyFulfillments(userId: string): Promise<SocketRelayFulfillment[]> {
   // Join the request so the chat can show what the conversation is about (title + current status)
-  // instead of a bare "Fulfillment <uuid>".
+  // instead of a bare "Fulfillment <uuid>", and both participants' real names so the header can say
+  // WHO the other person is. The usernames captured at claim time are null for anyone without a
+  // handle, which left a member with no way to tell who had offered to help — the whole point of
+  // being able to open a past conversation (owner report).
   const result = await queryDb<FulfillmentRow & { request_title: string | null; request_status: string | null }>(
     `SELECT f.id, f.request_id, f.requester_user_id, f.fulfiller_user_id, f.requester_username, f.fulfiller_username, f.status, f.close_reason, f.created_at, f.updated_at,
-            r.title AS request_title, r.status AS request_status
+            r.title AS request_title, r.status AS request_status,
+            NULLIF(TRIM(COALESCE(rp.first_name, '') || ' ' || COALESCE(rp.last_name, '')), '') AS requester_name,
+            NULLIF(TRIM(COALESCE(fp.first_name, '') || ' ' || COALESCE(fp.last_name, '')), '') AS fulfiller_name
      FROM socket_relay_fulfillments f
      LEFT JOIN socket_relay_requests r ON r.id = f.request_id
+     LEFT JOIN directory_profiles rp
+       ON rp.claimed_by_user_id = f.requester_user_id AND rp.deleted_at IS NULL
+     LEFT JOIN directory_profiles fp
+       ON fp.claimed_by_user_id = f.fulfiller_user_id AND fp.deleted_at IS NULL
      WHERE f.requester_user_id = $1 OR f.fulfiller_user_id = $1
      ORDER BY f.created_at DESC`,
     [userId],
