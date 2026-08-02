@@ -148,6 +148,14 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     serviceScopeSupported: true,
     tables: [
       del('chyme_messages', 'user_id', 'Your chat messages.'),
+      // Both sides of the ephemeral back-channel call log are deleted, not pseudonymized: a call row
+      // (invite → active → ended, with ~60s timeouts) has no history surface either party revisits,
+      // and the table's no-self CHECK (initiator <> recipient) would be violated the moment BOTH
+      // parties of one call delete their accounts and each id collapses to the shared placeholder.
+      // ended_by_user_id is always one of the two parties, so these two deletes clear every row
+      // that names the member in any column.
+      del('chyme_back_channel_calls', 'initiator_user_id', 'Back-channel calls you started.'),
+      del('chyme_back_channel_calls', 'recipient_user_id', 'Back-channel calls you received.'),
       del('chyme_room_members', 'user_id', 'Your room membership.'),
       soft('chyme_service_profiles', 'user_id', 'deleted_at', 'Your Chyme service profile.'),
       retain('chyme_deletion_events', 'Deletion accountability trail.'),
@@ -281,6 +289,24 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Your Lighthouse profile, extension record, and any property listings you created.',
     serviceScopeSupported: true,
     tables: [
+      del('lighthouse_matches', 'seeker_user_id', 'Stay requests you sent to hosts.'),
+      // The other side of the same table, mirroring SocketRelay fulfillments: a stay request sent to
+      // your listing is the seeker's record of their own housing search, so the row stays and your
+      // id is overwritten.
+      pseudo(
+        'lighthouse_matches',
+        'host_user_id',
+        [],
+        'Stay requests other members sent to your listings — the record stays with the seeker, your identity does not.',
+      ),
+      del('lighthouse_blocks', 'blocker_user_id', 'The Lighthouse blocks you created.'),
+      // Blocks pointing AT the deleted account are removed, not pseudonymized: the block's purpose
+      // (preventing interaction with that account) ends when the account does, a returning person
+      // would arrive on a new Clerk id the old row could not catch anyway, and collapsing several
+      // blocked ids to the shared placeholder would break the table's UNIQUE (blocker, blocked) the
+      // moment one blocker had blocked two departed members. Abuse EVIDENCE lives in
+      // member_safety_reports, not here.
+      del('lighthouse_blocks', 'blocked_user_id', 'Blocks other members placed on the account being deleted.'),
       soft('lighthouse_profiles', 'user_id', 'service_deleted_at', 'Your Lighthouse profile.'),
       soft('lighthouse_user_extension', 'user_id', 'service_deleted_at', 'Your Lighthouse plugin extension record.'),
       retain(
