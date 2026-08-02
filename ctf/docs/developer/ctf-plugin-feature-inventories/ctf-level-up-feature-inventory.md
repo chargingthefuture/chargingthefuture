@@ -232,6 +232,7 @@ that exist today.
 
 ## Change Log
 
+- 2026-08-02: **Deletion burn-down batch 3: disbursements and disputes classified as retained.** On account deletion, `level_up_disbursements`, `level_up_disputes`, and `level_up_dispute_comments` are retained — they are the record of why cohort escrow balances moved and how contests over them were resolved, matching the ServiceCredits ledger policy. Caught by the deletion-coverage gate added in #2056.
 - 2026-07-31: **Stored status value respelled to US English (owner-directed).** `level_up_cohorts.status` now stores `canceled`; existing rows are migrated by the idempotent US-spelling data migration block at the end of `ctf/schema.sql`. Code, contracts, and docs were renamed in the same PR.
 - 2026-07-23: **#904 delivered as an admin-approved cohort proposal queue (replaces auto-create).**
   Owner decision (small active user base): instead of the daily cron creating cohorts outright, LevelUp

@@ -541,6 +541,15 @@ Result: web ☐
 
 ---
 
+### Account deletion and the ledger
+
+**Expected:** Deleting the account reclaims and tombstones the wallet (existing flow) and removes
+the member's credit-limit settings row. Ledger history — transfers, escrow holds, disputes and
+their adjustments, governance and treasury events — is retained: past movements stay explainable
+after the account is gone.
+
+---
+
 ## Parity check (web ↔ android)
 
 These cases must produce identical outcomes on both surfaces. Run them back-to-back on the same seed state.

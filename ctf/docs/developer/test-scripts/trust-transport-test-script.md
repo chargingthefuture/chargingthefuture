@@ -526,6 +526,14 @@ Result: web ☐
 
 ---
 
+### Account deletion and dispute records
+
+**Expected:** Deleting the account removes the member's own requests, offers, and trips (with the
+provider side of a ridden trip pseudonymized — existing behavior). Disputes over trips are
+retained, matching the earnings ledger: contested value movements stay explainable.
+
+---
+
 ## Parity check (web ↔ android)
 
 These cases must produce the same observable outcome on both surfaces. Run both columns before marking either checkbox.
