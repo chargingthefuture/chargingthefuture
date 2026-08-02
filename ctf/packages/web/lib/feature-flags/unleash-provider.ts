@@ -10,6 +10,8 @@ import { type Unleash, type Context as UnleashContext, type Variant } from 'unle
 // Maps the OpenFeature evaluation context onto Unleash's native context.
 // targetingKey drives per-user targeting and sticky percentage rollout (Unleash userId).
 function toUnleashContext(context: EvaluationContext): UnleashContext {
+	// Unleash's Properties type accepts string | number; booleans are stringified so
+	// strategy constraints can still match them ("true"/"false").
 	const properties: Record<string, string | number> = {};
 	for (const [key, value] of Object.entries(context)) {
 		if (key === 'targetingKey') {
@@ -19,6 +21,10 @@ function toUnleashContext(context: EvaluationContext): UnleashContext {
 			properties[key] = value;
 		} else if (typeof value === 'boolean') {
 			properties[key] = String(value);
+		} else if (value !== undefined && value !== null) {
+			// Objects and arrays cannot be represented in Unleash context properties;
+			// warn instead of dropping them silently so a mis-shaped attribute is visible.
+			console.warn(`[feature-flags] dropping non-primitive context attribute "${key}" from Unleash context`);
 		}
 	}
 	return {
@@ -58,7 +64,14 @@ export class UnleashOpenFeatureProvider implements Provider {
 		context: EvaluationContext,
 	): Promise<ResolutionDetails<boolean>> {
 		const value = this.unleash.isEnabled(flagKey, toUnleashContext(context), defaultValue);
-		return Promise.resolve({ value, reason: StandardResolutionReasons.TARGETING_MATCH });
+		// isEnabled returns the caller-supplied default when the client has not synchronized
+		// yet or the flag is unknown; report DEFAULT then so observability metadata is honest.
+		const evaluated =
+			this.unleash.isSynchronized() && this.unleash.getFeatureToggleDefinition(flagKey) !== undefined;
+		return Promise.resolve({
+			value,
+			reason: evaluated ? StandardResolutionReasons.TARGETING_MATCH : StandardResolutionReasons.DEFAULT,
+		});
 	}
 
 	resolveStringEvaluation(
