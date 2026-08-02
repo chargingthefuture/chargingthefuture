@@ -116,6 +116,13 @@ Implemented via the generic per-plugin deletion route (Section 9) driven by the
   (see `GET /api/account/services`, which lists TrustTransport under "deletable" with the
   `dataSummary` above).
 
+### Rows you appear on but do not own (pseudonymized, not deleted)
+
+A trip you **drove or delivered** belongs to the rider who requested it, so the row stays and your
+identity is overwritten instead: `trust_transport_trips.provider_user_id` is set to `deleted_member`.
+Trips you requested are deleted outright, as before. Same rule and same reasoning as SocketRelay —
+see that plugin's contract for why a shared constant is used rather than a per-user token.
+
 ## 6) Full-Account Deletion Contract
 
 Full-account deletion runs the same table operations as Section 5 for every service in the deletion

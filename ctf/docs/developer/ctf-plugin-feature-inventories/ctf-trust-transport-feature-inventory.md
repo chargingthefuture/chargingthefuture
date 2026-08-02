@@ -292,6 +292,16 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+- 2026-08-02: **A departing member's id no longer survives on the other party's rows (owner
+  directive).** Account deletion removed `trust_transport_trips` by `requester_user_id` only, so a member who deleted their
+  account left their raw Clerk id sitting in the counterparty's view forever — the row belongs to the
+  other person, so deleting it was never the answer. New `pseudonymize` deletion action: the row
+  stays, `provider_user_id` is overwritten with the shared constant `deleted_member`. A single constant
+  rather than a per-user token, because a token would still link that person's rows to each other.
+  Deliberately not applied to abuse evidence, reviewer/admin audit columns, or
+  `member_blocks.blocked_user_id` (overwriting it could unblock someone) — each recorded in the
+  deletion contract. `check-deletion-registry.mjs` validates the new action and its cleared columns
+  against `schema.sql`; verified it fails on a bad column name. No schema change.
 - 2026-07-31: **Stored status values respelled to US English (owner-directed).** `trust_transport_requests.status`, `trust_transport_trips.status`, and `trust_transport_status_events` (the cancel event's `event_name`, now `order_canceled`, plus `from_status`/`to_status`) now store `canceled`; the trip cancel-reason column was renamed to `canceled_reason`. Existing rows are migrated by the idempotent US-spelling data migration block at the end of `ctf/schema.sql`, which re-runs on every deploy. Code, contracts, and docs were renamed in the same PR.
 - 2026-07-20: **Notifications producer.** Accepting an offer now emits a best-effort notification (`notifySafe`, `trust-transport.offer.accepted`, category `safety`) to the provider — deduped on the trip id, never to the accepting requester. Emitted from the accept-offer route. No schema/contract change.
 - 2026-07-20: **Account deletion now clears the member's Stream chat copy (privacy).** TrustTransport trip-thread chat is sent directly into Stream Chat under the Stream user `trust-transport-<userId>`, so Stream kept an independent copy that the Postgres-only account-deletion registry never removed (Stream retains messages with no expiry by default). Registered `deleteTrustTransportStreamData(userId)` (in `lib/trust-transport/stream.ts` — hard-deletes the Stream user with `mark_messages_deleted`; never throws) into the shared account-deletion external-cleanup hook (`lib/account/external-cleanup-registry.ts`), which the orchestrator runs after the DB transaction commits on every whole-account deletion path (full-account route, internal delete, Clerk webhook), best-effort (a Stream outage is logged, never blocks the deletion). No schema/route/contract change.

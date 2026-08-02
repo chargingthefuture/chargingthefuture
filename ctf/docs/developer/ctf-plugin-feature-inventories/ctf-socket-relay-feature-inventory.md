@@ -175,6 +175,16 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+- 2026-08-02: **A departing member's id no longer survives on the other party's rows (owner
+  directive).** Account deletion removed `socket_relay_fulfillments` by `requester_user_id` only, so a member who deleted their
+  account left their raw Clerk id sitting in the counterparty's view forever — the row belongs to the
+  other person, so deleting it was never the answer. New `pseudonymize` deletion action: the row
+  stays, `fulfiller_user_id` is overwritten with the shared constant `deleted_member` and the handle captured at claim time (`fulfiller_username`) is cleared. A single constant
+  rather than a per-user token, because a token would still link that person's rows to each other.
+  Deliberately not applied to abuse evidence, reviewer/admin audit columns, or
+  `member_blocks.blocked_user_id` (overwriting it could unblock someone) — each recorded in the
+  deletion contract. `check-deletion-registry.mjs` validates the new action and its cleared columns
+  against `schema.sql`; verified it fails on a bad column name. No schema change.
 - 2026-08-01: **Direct Line now names the other person (owner report).** Past conversations became
   visible earlier the same day, but opening one still did not say who had offered to help: the header
   read "Your request — you're talking with the helper" with no name, and kept saying "talking with"

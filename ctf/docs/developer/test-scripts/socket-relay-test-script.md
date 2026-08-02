@@ -499,6 +499,18 @@ is down at delete time, the deletion still succeeds and the failure is logged fo
 
 ---
 
+### Deleted counterparty is pseudonymized, not left as an id
+
+**Expected:** When the other party deletes their account, the record stays with its owner but stops
+naming them.
+
+1. As member A, post a request. As member B, claim it. Confirm the Direct Line names B.
+2. Delete member B's account (Account & Data → delete, or the admin path).
+3. As member A, open the same conversation. The row must still be there — it is A's record — and must
+   read **Deleted member**, never `user_…`.
+4. In the SocketRelay admin Fulfillments tab, the same row reads **Deleted member**, not the raw id
+   and not the literal text `deleted_member`.
+
 ## Admin walkthrough
 
 ### SR-A1 — Admin stat cards
