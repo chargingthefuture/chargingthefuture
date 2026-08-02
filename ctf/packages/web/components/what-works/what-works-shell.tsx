@@ -201,7 +201,11 @@ export function WhatWorksShell() {
     return (
       <div style={{ minHeight: '100dvh', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
         <div style={{ position: 'sticky', top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px' }}>
+          {/* flexWrap: this row carries the plugin actions plus the three global ones, which
+              together overflow a 390px phone — the last control was clipped off the right
+              edge and the title collapsed to nothing. Wrapping reflows instead of cutting
+              off; on a wider viewport it still renders as one line. */}
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: 6, gap: 8, padding: '10px 14px' }}>
             <BackChevronButton accent={t.ACCENT} />
             <ListChecks size={18} color={t.ACCENT} style={{ flexShrink: 0 }} />
             {/* Title shrinks and truncates so the trailing controls stay on screen */}

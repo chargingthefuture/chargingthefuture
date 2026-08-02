@@ -244,6 +244,17 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
 
 ## Change log
 
+- 2026-08-02: **Account deletion has never been checked for coverage; 68 tables holding a member's
+  id are unclassified.** `check-deletion-registry.mjs` only ever asked "does every table the registry
+  names exist in schema.sql?" — never the question that matters to a member: "is every table holding
+  my id accounted for when I delete my account?" Adding that second direction found 68 tables in no
+  registry entry at all, among them `lighthouse_matches`, `lighthouse_blocks`, `mood_submissions`, `service_credits_escrow_holds`. They are recorded
+  in `ctf/scripts/deletion-coverage-allowlist.json` as a burn-down list (it may only shrink; the gate
+  fails both on a new unclassified table and on a classified table left in the list — both verified).
+  Nothing is deleted differently yet: each table needs an owner decision, and they are not the same
+  kind of thing — ledger and audit rows must be retained, abuse evidence must be retained, while
+  wellbeing and match data plainly should go. This entry is the record that the gap is known and
+  measured rather than discovered later.
 - 2026-05-20: Plan created; strategic decisions locked; design submodule confirmed populated
   (17 user-facing plugins have pixel-perfect desktop + mobile + 4-state mockups).
 - 2026-05-20: Rule 127 updated — nothing is design-skippable; no admin/internal UI exemption.

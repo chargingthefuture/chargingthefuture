@@ -222,7 +222,11 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+          {/* flexWrap: this row carries the plugin actions plus the three global ones, which
+              together overflow a 390px phone — the last control was clipped off the right
+              edge and the title collapsed to nothing. Wrapping reflows instead of cutting
+              off; on a wider viewport it still renders as one line. */}
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", rowGap: 6, gap: 10, padding: "10px 14px" }}>
             <BackChevronButton accent={t.ACCENT} />
             <Car size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>TrustTransport</span>
