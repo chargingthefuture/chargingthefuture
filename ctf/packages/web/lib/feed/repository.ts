@@ -1951,7 +1951,10 @@ export async function markAnnouncementRead(
   return { readAtIso: new Date(result.rows[0].read_at).toISOString() };
 }
 
-export async function dismissAnnouncement(userId: string, announcementId: string): Promise<'ok'> {
+export async function dismissAnnouncement(
+  userId: string,
+  announcementId: string,
+): Promise<{ dismissedAtIso: string }> {
   const result = await queryDb<{ id: string }>(
     'SELECT id FROM announcements WHERE id = $1::uuid LIMIT 1',
     [announcementId],
@@ -1961,17 +1964,18 @@ export async function dismissAnnouncement(userId: string, announcementId: string
     throw new Error('announcement_not_found');
   }
 
-  await queryDb(
+  const dismissed = await queryDb<{ dismissed_at: string }>(
     `
       INSERT INTO announcement_user_state (user_id, announcement_id, dismissed_at, updated_at)
       VALUES ($1, $2::uuid, NOW(), NOW())
       ON CONFLICT (user_id, announcement_id)
       DO UPDATE SET dismissed_at = NOW(), updated_at = NOW()
+      RETURNING dismissed_at
     `,
     [userId, announcementId],
   );
 
-  return 'ok';
+  return { dismissedAtIso: new Date(dismissed.rows[0].dismissed_at).toISOString() };
 }
 
 export function validateAnnouncementTargeting(targeting: unknown): { ok: boolean; normalized: AnnouncementTargeting } {

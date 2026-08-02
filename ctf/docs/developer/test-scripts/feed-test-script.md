@@ -119,6 +119,8 @@
 - The announcement is removed from the timeline immediately.
 - After reload it remains hidden (dismissal is persisted per user).
 - Every announcement has a dismiss control — there is no mandatory/non-dismissable announcement.
+- (API-level, if inspecting the response) the `dismissedAt` value in the dismiss response is the
+  timestamp the database stored, not one the route computed — it matches the persisted row.
 
 **Result:** web ☐
 
