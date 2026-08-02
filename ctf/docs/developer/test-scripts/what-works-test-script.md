@@ -116,6 +116,11 @@ header shows a "Member view" pill opening `/apps/what-works`.
 
 ---
 
+### Account deletion clears endorsements
+
+**Expected:** Deleting the account removes the member's endorsements; tool endorsement counts drop
+accordingly. The curated problem and tool lists themselves are unchanged.
+
 ## Admin walkthrough
 
 ### WW-A1 · Review queue (approve / reject)

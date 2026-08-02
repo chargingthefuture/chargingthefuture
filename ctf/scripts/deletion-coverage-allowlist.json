@@ -32,12 +32,6 @@
       ],
       "decision": "unreviewed"
     },
-    "announcement_reactions": {
-      "userColumns": [
-        "user_id"
-      ],
-      "decision": "unreviewed"
-    },
     "announcement_replies": {
       "userColumns": [
         "author_user_id"
@@ -108,18 +102,6 @@
       "userColumns": [
         "created_by_user_id",
         "overridden_by_user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "feed_community_post_reactions": {
-      "userColumns": [
-        "user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "feed_hub_last_seen": {
-      "userColumns": [
-        "user_id"
       ],
       "decision": "unreviewed"
     },
@@ -244,12 +226,6 @@
       "decision": "unreviewed"
     },
     "login_events": {
-      "userColumns": [
-        "user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "mood_submissions": {
       "userColumns": [
         "user_id"
       ],
@@ -392,21 +368,9 @@
       ],
       "decision": "unreviewed"
     },
-    "user_ui_preferences": {
-      "userColumns": [
-        "user_id"
-      ],
-      "decision": "unreviewed"
-    },
     "weekly_performance_weeks": {
       "userColumns": [
         "selected_by_user_id"
-      ],
-      "decision": "unreviewed"
-    },
-    "what_works_endorsements": {
-      "userColumns": [
-        "user_id"
       ],
       "decision": "unreviewed"
     },

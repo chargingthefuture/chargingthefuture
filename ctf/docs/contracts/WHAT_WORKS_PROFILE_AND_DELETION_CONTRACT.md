@@ -51,6 +51,10 @@ back to the departing survivor is removed or anonymized.
 On service-scoped or full profile deletion for `user_id = X`:
 
 - `DELETE FROM what_works_endorsements WHERE user_id = X`
+  - 2026-08-02: this line was a promise without an executor — WhatWorks had no entry in the
+    account-deletion registry at all, so the deletion engine never ran it. The registry now carries a
+    `what-works` entry (endorsements deleted; the curated problem/tool lists retained as community
+    content with their review-audit columns), caught by the deletion-coverage gate.
   — removes the survivor's "this helped me" marks; each affected tool's verified count drops by one.
 - `UPDATE what_works_products SET suggested_by = NULL WHERE suggested_by = X`
   — anonymizes authorship; the suggested tool stays on the list.
