@@ -266,6 +266,14 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-08-02: **Deletion burn-down batch 2: matches and blocks join the deletion registry.** On
+  account deletion, `lighthouse_matches` rows where the member was the seeker are deleted (their own
+  stay requests) and rows where they were the host are pseudonymized (`host_user_id` →
+  `deleted_member`; the record stays with the seeker, mirroring the SocketRelay fulfillment pattern
+  from #2054). `lighthouse_blocks` rows are deleted on both sides: the member's own block list, and
+  blocks pointing at the departing account (whose purpose ends with the account; the table's UNIQUE
+  pair would also break under a shared placeholder). Caught by the deletion-coverage gate added in
+  #2056. Contract updated to match.
 - 2026-07-31: **Stored status value respelled to US English (owner-directed).** `lighthouse_matches.status` now stores `canceled`; the CHECK constraint was swapped to accept the US spelling and existing rows are migrated by the idempotent US-spelling data migration block at the end of `ctf/schema.sql`. Code, contracts, and docs were renamed in the same PR.
 - 2026-07-20: **Notifications producer.** A new match request now emits a best-effort notification (`notifySafe`, `lighthouse.match.requested`, category `safety`) to the host of the listing — deduped on the match id, never to the requester. Emitted from `POST /api/lighthouse/matches`. No schema/contract change.
 - 2026-07-20: **Account deletion now clears the member's Stream chat copy (privacy).** Lighthouse match-thread chat is sent directly into Stream Chat under the Stream user `lighthouse-<userId>`, so Stream kept an independent copy that the Postgres-only account-deletion registry never removed (Stream retains messages with no expiry by default). Registered `deleteLighthouseStreamData(userId)` (in `lib/lighthouse/stream.ts` — hard-deletes the Stream user with `mark_messages_deleted`; never throws) into the shared account-deletion external-cleanup hook (`lib/account/external-cleanup-registry.ts`), which the orchestrator runs after the DB transaction commits on every whole-account deletion path (full-account route, internal delete, Clerk webhook), best-effort (a Stream outage is logged, never blocks the deletion). No schema/route/contract change.
