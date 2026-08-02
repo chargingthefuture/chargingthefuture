@@ -27,7 +27,7 @@
 //   - Global catalog/aggregate tables (currencies, taxonomy, GDP metrics, weekly-performance
 //     aggregates) are not listed: they are not any individual user's data.
 
-export type DeletionAction = 'delete' | 'soft-delete' | 'retain';
+export type DeletionAction = 'delete' | 'soft-delete' | 'pseudonymize' | 'retain';
 
 export type OwnedTable = {
   /** Real table name as it appears in `ctf/schema.sql`. */
@@ -38,6 +38,12 @@ export type OwnedTable = {
   readonly action: DeletionAction;
   /** Required when `action` is `soft-delete`: the timestamp column to stamp. */
   readonly softDeleteColumn?: string;
+  /**
+   * Optional for `pseudonymize`: extra columns set to NULL alongside the user column — the
+   * denormalized copies of the member's identity (a handle captured at claim time, say), which would
+   * otherwise keep naming them after their id is gone.
+   */
+  readonly clearColumns?: readonly string[];
   /** Plain-language note for reviewers / audit. */
   readonly note?: string;
   /** Set when a human decision is still needed before this table's handling is final. */
@@ -67,6 +73,40 @@ const soft = (table: string, userColumn: string, softDeleteColumn: string, note?
   userColumn,
   action: 'soft-delete',
   softDeleteColumn,
+  note,
+});
+
+/**
+ * The value written over a departed member's id when a row is pseudonymized. A single constant, not a
+ * per-user token: a token would still link that person's rows to each other, which is the thing
+ * deletion is supposed to end. Two deleted helpers on one request both read as this, and that is
+ * correct — they are gone, and telling them apart is not something the surviving party needs.
+ */
+export const DELETED_MEMBER_PLACEHOLDER = 'deleted_member';
+
+/**
+ * Overwrite this member's id on a row that ANOTHER member owns.
+ *
+ * The case this exists for: a request owner keeps the record that someone offered to help — that row
+ * is theirs and deleting it would destroy their data — but the helper's raw Clerk id should not
+ * survive their account. Before this, deleting an account left that id sitting in the other party's
+ * view forever (owner report: a canceled SocketRelay claim kept naming `user_3FL6…` after the
+ * account behind it was gone).
+ *
+ * Only for genuine member-to-member counterparties. NOT for abuse evidence (a safety report's
+ * subject), and NOT for admin/reviewer columns, which are an audit trail — both are retained on
+ * purpose; see the notes at their call sites.
+ */
+const pseudo = (
+  table: string,
+  userColumn: string,
+  clearColumns: readonly string[],
+  note?: string,
+): OwnedTable => ({
+  table,
+  userColumn,
+  action: 'pseudonymize',
+  clearColumns,
   note,
 });
 
@@ -242,6 +282,15 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('socket_relay_messages', 'sender_user_id', 'Messages you sent.'),
       del('socket_relay_fulfillment_participants', 'user_id', 'Your fulfillment participation.'),
       del('socket_relay_fulfillments', 'requester_user_id', 'Fulfillments you requested.'),
+      // The other side of the same table: rows where YOU were the helper belong to the requester, so
+      // they stay — but your id and captured handle are overwritten so you are not still named in
+      // their Direct Line and admin views after you leave.
+      pseudo(
+        'socket_relay_fulfillments',
+        'fulfiller_user_id',
+        ['fulfiller_username'],
+        'Requests you offered to help on — the record stays with its owner, your identity does not.',
+      ),
       del('socket_relay_requests', 'owner_user_id', 'Your relay requests.'),
       soft('socket_relay_user_extension', 'user_id', 'service_deleted_at', 'Your SocketRelay plugin extension record.'),
       retain('socket_relay_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
@@ -254,6 +303,14 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     serviceScopeSupported: true,
     tables: [
       del('trust_transport_trips', 'requester_user_id', 'Trips you requested.'),
+      // Same shape as SocketRelay: a trip you drove belongs to the rider who requested it, so the
+      // row stays and your id is overwritten.
+      pseudo(
+        'trust_transport_trips',
+        'provider_user_id',
+        [],
+        'Trips you drove or delivered — the record stays with the rider, your identity does not.',
+      ),
       del('trust_transport_offers', 'provider_user_id', 'Offers you made.'),
       del('trust_transport_requests', 'requester_user_id', 'Your ride/package requests.'),
       soft('trust_transport_user_extension', 'user_id', 'service_deleted_at', 'Your TrustTransport plugin extension record.'),

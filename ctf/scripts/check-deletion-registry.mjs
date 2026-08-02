@@ -85,6 +85,9 @@ function parseRegistry(src) {
   const reDel = /\bdel\(\s*'([^']+)'\s*,\s*'([^']+)'/g;
   const reSoft = /\bsoft\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'/g;
   const reRetain = /\bretain\(\s*'([^']+)'/g;
+  // pseudo('table', 'user_column', ['cleared', 'columns'], 'note') — the third argument is an array,
+  // captured whole so each column inside it can be checked against schema.sql like any other.
+  const rePseudo = /\bpseudo\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*\[([^\]]*)\]/g;
 
   let m;
   while ((m = reDel.exec(src)) !== null) {
@@ -95,6 +98,10 @@ function parseRegistry(src) {
   }
   while ((m = reRetain.exec(src)) !== null) {
     refs.push({ table: m[1], action: 'retain' });
+  }
+  while ((m = rePseudo.exec(src)) !== null) {
+    const clearColumns = [...m[3].matchAll(/'([^']+)'/g)].map((c) => c[1]);
+    refs.push({ table: m[1], userColumn: m[2], clearColumns, action: 'pseudonymize' });
   }
   return refs;
 }
@@ -136,6 +143,15 @@ function main() {
         fail(`table "${ref.table}" has action "${ref.action}" but no user column.`);
       } else if (!cols.has(ref.userColumn)) {
         fail(`table "${ref.table}" does not have column "${ref.userColumn}" (declared as its user column).`);
+      }
+    }
+    if (ref.action === 'pseudonymize') {
+      // Every cleared column must exist too. A typo here would silently no-op the part that removes
+      // the denormalized handle, leaving the member named after their id was overwritten.
+      for (const column of ref.clearColumns ?? []) {
+        if (!cols.has(column)) {
+          fail(`table "${ref.table}" does not have cleared column "${column}" (declared for pseudonymize).`);
+        }
       }
     }
     if (ref.action === 'soft-delete') {

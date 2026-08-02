@@ -378,6 +378,16 @@ Stream is down at delete time, the deletion still succeeds and the failure is lo
 
 ---
 
+### Deleted driver is pseudonymized, not left as an id
+
+**Expected:** When the driver deletes their account, the rider keeps the trip record but the driver is
+no longer named by their id.
+
+1. Complete or cancel a trip so a `trust_transport_trips` row exists with a provider.
+2. Delete the provider's account.
+3. As the rider, open the trip. The record is still there and the provider reads as a deleted member,
+   never `user_…`.
+
 ## Admin walkthrough
 
 ### TT-A1 — Incident queue loads and an incident can be resolved

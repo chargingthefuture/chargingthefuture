@@ -18,14 +18,14 @@
 // foreign keys when run in order.
 
 import type { PoolClient } from 'pg';
-import type { OwnedTable, PluginDeletionEntry } from './deletion-registry';
+import { DELETED_MEMBER_PLACEHOLDER, type OwnedTable, type PluginDeletionEntry } from './deletion-registry';
 
 /** A single database operation produced from one owned table. */
 export type DeletionStatement = {
   /** Real table this operates on. */
   readonly table: string;
   /** Which registry action produced it. */
-  readonly action: 'delete' | 'soft-delete';
+  readonly action: 'delete' | 'soft-delete' | 'pseudonymize';
   /** Parameterized SQL with `$1` bound to the user id. */
   readonly sql: string;
 };
@@ -64,6 +64,25 @@ export function planTable(owned: OwnedTable): DeletionStatement | null {
           `UPDATE ${owned.table} SET ${owned.softDeleteColumn} = NOW() ` +
           `WHERE ${owned.userColumn} = $1 AND ${owned.softDeleteColumn} IS NULL`,
       };
+    case 'pseudonymize': {
+      if (!owned.userColumn) {
+        throw new Error(`Table "${owned.table}" is action "pseudonymize" but has no userColumn.`);
+      }
+      // Overwrite the id, and NULL any denormalized copies of the member's identity alongside it —
+      // clearing the id while leaving a captured handle would defeat the whole point.
+      //
+      // The WHERE still matches the REAL id, so this is naturally idempotent: a second run finds no
+      // rows, because the first already replaced them with the placeholder.
+      const sets = [
+        `${owned.userColumn} = '${DELETED_MEMBER_PLACEHOLDER}'`,
+        ...(owned.clearColumns ?? []).map((column) => `${column} = NULL`),
+      ];
+      return {
+        table: owned.table,
+        action: 'pseudonymize',
+        sql: `UPDATE ${owned.table} SET ${sets.join(', ')} WHERE ${owned.userColumn} = $1`,
+      };
+    }
     default: {
       // Exhaustiveness guard: a new action must be handled here explicitly.
       const unreachable: never = owned.action;
@@ -90,7 +109,7 @@ export function planDeletion(entry: PluginDeletionEntry): DeletionStatement[] {
 /** Per-table outcome of running a deletion, for the audit/event record. */
 export type DeletionTableResult = {
   readonly table: string;
-  readonly action: 'delete' | 'soft-delete';
+  readonly action: 'delete' | 'soft-delete' | 'pseudonymize';
   /** Rows affected (deleted or soft-deleted). */
   readonly rowCount: number;
 };

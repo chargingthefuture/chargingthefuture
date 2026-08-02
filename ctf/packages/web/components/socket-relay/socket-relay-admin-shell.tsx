@@ -7,6 +7,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import type { SocketRelayFulfillment, SocketRelayRequest } from 'lib/socket-relay/types';
+import { DELETED_MEMBER_PLACEHOLDER } from 'lib/account/deletion-registry';
 import { getSocketRelayTokens } from './sr-shared';
 
 // Admin chrome comes from the shared theme tokens (t.SURFACE / t.BORDER_SOLID are the shared
@@ -65,6 +66,10 @@ async function adminMutate(url: string, method: 'POST' | 'DELETE', body?: unknow
 function memberLabel(name: string | null | undefined, username: string | null, userId: string): string {
   if (name) return username ? `${name} (@${username})` : name;
   if (username) return `@${username}`;
+  // A row whose counterparty deleted their account carries the pseudonymize placeholder rather than a
+  // real id. Read it back as words — printing the raw sentinel would look like a bug, and the point
+  // of overwriting the id was that nobody has to decipher a token.
+  if (userId === DELETED_MEMBER_PLACEHOLDER) return 'Deleted member';
   return userId;
 }
 

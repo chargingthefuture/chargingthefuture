@@ -102,6 +102,26 @@ the dependent rows itself instead of leaving orphans:
   gone they are unreachable through the participant-gated read path.
 - Audited: the removal writes a `socket-relay.admin.request.delete` row to `socket_relay_admin_audit_trail`.
 
+### Rows you appear on but do not own (pseudonymized, not deleted)
+
+A fulfillment where you were the **helper** belongs to the member who posted the request: deleting it
+would destroy their record of what happened on their own request. So the row stays and your identity
+is overwritten instead — `socket_relay_fulfillments.fulfiller_user_id` is set to `deleted_member` and
+the handle captured at claim time (`fulfiller_username`) is set to `NULL`.
+
+Why a single shared constant and not a per-user token: a token would still link that person's rows to
+one another, which is the thing deletion is meant to end. Two departed helpers on one request both
+read as "Deleted member", and that is correct — the surviving party has no need to tell them apart.
+
+Rows where you were the **requester** are deleted outright, as before; you own those.
+
+Deliberately NOT pseudonymized, for reasons that outrank tidiness:
+- a safety report's subject (`member_safety_reports.reported_user_id`) — abuse evidence, retained;
+- reviewer/admin columns (`reviewed_by_user_id`, `updated_by_user_id`) — an audit trail of who
+  decided what, retained for compliance;
+- `member_blocks.blocked_user_id` — the column a block is enforced by; overwriting it could unblock
+  someone.
+
 ## 6) Full-Account Deletion Contract
 
 When user requests full account deletion:
