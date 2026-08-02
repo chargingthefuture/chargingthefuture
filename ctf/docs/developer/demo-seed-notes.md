@@ -166,3 +166,20 @@ The seed changes only insert into tables and columns that already exist in
 `recurring_activities`). No table, column, constraint, index, or contract is added or
 changed, so no `schema.sql` migration is required (recorded here per
 `.claude/rules/122-schema-drift-predeployment-rules.mdc`).
+
+## Tester accounts (issue #2037) — 2026-08-02
+
+The seed workflow gained two optional inputs, `demo_tester_admin_id` and
+`demo_tester_member_id`, for the hired tester's two demo accounts (one used as an
+admin, one as a plain member). For each id given, `seedDemo.mjs` inserts the same
+baseline the second owner gets: an `unlock_verification_submissions` tier row, a
+`service_credits_wallets` row, and a `directory_profiles` /
+`directory_user_extension` pair. Two things stay outside the seed because only
+Clerk and Unleash hold them: the admin role (set role=admin on the tester-admin
+account in the Clerk dashboard) and demo routing (target the `demo-mode` Unleash
+flag at both ids).
+
+All inserts target tables and columns that already exist in `ctf/schema.sql`; no
+table, column, constraint, index, or contract is added or changed, so no
+`schema.sql` migration is required (recorded here per
+`.claude/rules/122-schema-drift-predeployment-rules.mdc`).
