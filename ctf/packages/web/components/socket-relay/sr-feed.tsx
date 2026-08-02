@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Share2 } from "lucide-react";
 import { FAINT, SUBTLE, requestTags, settlementLabel, srHandle, timeAgo, type SrRequest, type SrRequestStatus } from "./sr-shared";
 import { ShareLink } from "@/components/shared/share-link";
-import { SrTargetsOnlyNotice } from "./sr-targets-only-notice";
 import { useTheme } from '@/hooks/useTheme';
 import { getSocketRelayTokens, type SocketRelayTokens } from './sr-shared';
 
@@ -238,9 +237,6 @@ export function SocketRelayFeed({
   return (
     <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "20px 24px" }}>
-        <div style={{ marginBottom: 16 }}>
-          <SrTargetsOnlyNotice />
-        </div>
         {requests.length === 0 ? (
           <FeedEmptyState filterActive={filterActive} onPost={onPost} t={t} />
         ) : (

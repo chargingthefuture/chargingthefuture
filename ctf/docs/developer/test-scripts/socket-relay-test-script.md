@@ -40,16 +40,6 @@ web ☐
 
 ---
 
-### Targeted-Individuals-only notice
-
-**Expected:** The board states who it is for before anyone can act on a post.
-
-1. Open SocketRelay signed in. A notice headed "These posts are for Targeted Individuals" sits above
-   the feed — including when the feed is empty or filtered to nothing.
-2. Open the Post form. The same notice appears above the "Good to know" footer.
-3. Sign out and open the SocketRelay public page. The notice appears under the join button, on the
-   first screen, without scrolling past the feed preview.
-
 ## Member walkthrough
 
 ### SR-1 — Browse the feed and read a request

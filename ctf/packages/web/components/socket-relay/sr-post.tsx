@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { SrTargetsOnlyNotice } from "./sr-targets-only-notice";
 import { X } from "lucide-react";
 import { MAX_TAG_LENGTH, MAX_TAGS_PER_POST, SUBTLE } from "./sr-shared";
 import { CurrencySelect } from "@/components/shared/currency-select";
@@ -210,7 +209,6 @@ export function SocketRelayPost({
             Cancel Edit
           </button>
         )}
-        <SrTargetsOnlyNotice />
         <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6 }}>Good to know: SocketRelay connects members directly, peer-to-peer. Before transacting with anyone, take the usual precautions — meet in public, and don't send money or share personal details until you're comfortable. Connections happen after someone offers to help.</div>
       </div>
     </div>
