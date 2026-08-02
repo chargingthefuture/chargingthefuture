@@ -175,17 +175,12 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
-- 2026-08-01: **"These posts are for Targeted Individuals" notice added to the board (owner
-  directive).** SocketRelay reads like an open help board, so a well-meaning stranger who reaches it
-  through a shared link or a job posting sees no reason not to answer — and someone who is not
-  targeted did. The notice states plainly that the posts are addressed to people already living under
-  organized targeting, and that an outsider who steps in gets noticed, is asked to take part in the
-  trafficking, and risks their life or their own targeting by refusing. New shared component
-  `sr-targets-only-notice.tsx`, rendered above the feed (list and empty state alike), on the post
-  form, and on the signed-out public shell above the join button — the three places someone decides to
-  take part. The same warning was added to the top of the public tester job posting (issue #2037).
-  Copy is the owner's, kept plain and unsensational on purpose. Display-only; no route, schema, or
-  contract change.
+- 2026-08-01: **In-app "for Targeted Individuals" notice added, then removed the same day (owner
+  directive).** A notice was briefly rendered above the feed, on the post form, and on the signed-out
+  public shell. The owner removed it: the board sits behind Unlock verification, so everyone reading
+  it is already a verified member and the warning had no audience there. The exposure it was written
+  for is the **public tester job posting** (issue #2037), which anyone can read without an account —
+  that is where the warning lives, and it stays there. `sr-targets-only-notice.tsx` is deleted.
 - 2026-08-01: **Past Direct Lines are visible again, and the admin fulfillment list is readable
   without a lookup (owner report).** Two faults, one story: two members offered to help on a request,
   both claims were later canceled, and the owner had no way left to see who either person was.
