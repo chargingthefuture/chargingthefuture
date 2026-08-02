@@ -1034,6 +1034,14 @@ Step 3: rejected for CSRF. Step 4: 400 — a missing `hidden` field must be an e
 
 ---
 
+### Account deletion clears replies and AI-log rows
+
+**Expected:** Deleting the account removes the member's replies to announcements and any AI-answer
+log rows carrying their id (most already cascade away with their deleted questions and answers).
+Admin-authored announcements and feed items are unaffected.
+
+---
+
 ## Parity check (web ↔ android)
 
 Android was removed 2026-07-20 (PR #1742, rule 105). All cases are web-only. No cross-surface parity checks apply.

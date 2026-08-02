@@ -292,6 +292,7 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+- 2026-08-02: **Deletion burn-down batch 4.** On account deletion, `trust_transport_status_events` and `trust_transport_proof_artifacts` rows you appear on are pseudonymized (actor/captured-by → `deleted_member`): events and proofs belong to the shared trip/request record that disputes rely on. `trust_transport_risk_signals` (abuse evidence) and `trust_transport_market_config` (admin-audited settings) are classified retained.
 - 2026-08-02: **Deletion burn-down batch 3: disputes classified as retained.** On account deletion, `trust_transport_disputes` is retained — the accountability record for value that moved between two members over a trip, matching the earnings-ledger policy already in the registry. The deletion contract already documented this; the registry entry makes the coverage gate see it. Caught by the deletion-coverage gate added in #2056.
 - 2026-08-02: **A departing member's id no longer survives on the other party's rows (owner
   directive).** Account deletion removed `trust_transport_trips` by `requester_user_id` only, so a member who deleted their

@@ -534,6 +534,14 @@ retained, matching the earnings ledger: contested value movements stay explainab
 
 ---
 
+### Account deletion pseudonymizes trip events and proofs
+
+**Expected:** After a member deletes their account, status events and pickup/delivery proofs on
+surviving trips remain (disputes rely on them), but the actor/capturer reads as a deleted member —
+no raw id survives.
+
+---
+
 ## Parity check (web ↔ android)
 
 These cases must produce the same observable outcome on both surfaces. Run both columns before marking either checkbox.

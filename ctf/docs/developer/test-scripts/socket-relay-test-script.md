@@ -605,6 +605,14 @@ web ☐
 
 ---
 
+### Account deletion pseudonymizes lifecycle events
+
+**Expected:** After a member deletes their account, request lifecycle events they appear on remain
+with the surviving request, but the actor reads as a deleted member — no raw id survives, matching
+the helper pseudonymization on fulfillments.
+
+---
+
 ## Parity check (web ↔ android)
 
 The following cases must produce the same observable result on both surfaces. Run them back-to-back on web then Android before marking either checkbox.

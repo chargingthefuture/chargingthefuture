@@ -561,6 +561,14 @@ of why cohort balances moved survives the account.
 
 ---
 
+### Account deletion clears the trainer profile and achievements
+
+**Expected:** Deleting the account removes the member's trainer profile (name, headline, bio) and
+their achievements. Cohorts, proposals, milestone validations, disbursements, and disputes remain
+(shared/admin and ledger records).
+
+---
+
 ## Parity check (web ↔ android)
 
 The following cases must produce the same data and UX outcome on both surfaces. Run them back-to-back on web and Android with the same seed account.
