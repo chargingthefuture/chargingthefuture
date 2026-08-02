@@ -31,7 +31,8 @@ const SEED_USER_IDS = [
 
 // problem_tag / scheme_tag are optional coarse tags; slugs must exist in
 // packages/web/lib/click-log/tags.ts. Coverage: tagged-with-both, problem-only,
-// scheme-only, and untagged incidents.
+// scheme-only, and untagged incidents. Every tagged incident carries a location,
+// matching the API rule that tags require latitude/longitude.
 const INCIDENTS = [
   {
     user_id: SEED_USER_IDS[0],
@@ -47,7 +48,7 @@ const INCIDENTS = [
   },
   {
     user_id: SEED_USER_IDS[2],
-    metadata: { notes: 'Incident with notes only' },
+    metadata: { latitude: 34.0522, longitude: -118.2437, notes: 'Incident with notes and location' },
     problem_tag: null,
     scheme_tag: 'mail-mirage',
   },

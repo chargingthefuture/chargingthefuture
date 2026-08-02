@@ -18,8 +18,12 @@ commands:
       # (click_log_preferences.share_with_owner, itself defaulting to false) is applied.
       # problemTag / schemeTag are optional coarse tags — one, both, or neither may be sent.
       # Each is validated against the canonical slug list in packages/web/lib/click-log/tags.ts
-      # (problems mirror the landing-page 50+ problems list; schemes come from the owner's
-      # "A post for each gang stalker game" Discourse thread); an unknown slug is a 400.
+      # (problems mirror the landing-page 50+ problems list; schemes started from the owner's
+      # "A post for each gang stalker game" Discourse thread — now deprecated, so tags.ts is
+      # the living canonical scheme list); an unknown slug is a 400.
+      # When either or both tags are present, metadata.latitude and metadata.longitude are
+      # required (owner decision, 2026-08-02: tagged trend data needs location to be detailed
+      # enough); a tagged request without a location is a 400.
     outputSchema:
       $ref: '#/definitions/ClickLogIncident'
     dataAccess:

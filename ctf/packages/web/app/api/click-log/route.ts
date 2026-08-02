@@ -155,6 +155,14 @@ export async function POST(req: NextRequest) {
   if ('error' in schemeResult) {
     return schemeResult.error;
   }
+  // A tagged incident must carry a location (owner decision, 2026-08-02): without it the
+  // trend data a tag feeds is not detailed enough. Applies when either or both tags are set.
+  if (
+    (problemResult.data !== undefined || schemeResult.data !== undefined) &&
+    (metadata.latitude === undefined || metadata.longitude === undefined)
+  ) {
+    return badRequest('Location is required when tagging an incident');
+  }
   const incident = await createIncident({
     userId,
     metadata,

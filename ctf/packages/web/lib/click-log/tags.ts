@@ -6,10 +6,11 @@
 // - Problem tags mirror the 50+ problems list published on the public landing page
 //   (`chargingthefuture/landing-page` → `src/App.tsx` `LOOK_MA_ITEMS`). Slugs are stable ids
 //   owned here; labels are short forms of the landing-page questions.
-// - Scheme tags come from the owner's Discourse thread "A post for each gang stalker game"
-//   (chargingthefuture.discourse.group /t/a-post-for-each-gang-stalker-game/30), which names
-//   schemes one post at a time, plus recurring schemes described in the owner's archived posts.
-//   The thread is still growing: add new entries here (never rename or delete a slug — logged
+// - Scheme tags started from the owner's Discourse thread "A post for each gang stalker game"
+//   (chargingthefuture.discourse.group /t/a-post-for-each-gang-stalker-game/30) plus recurring
+//   schemes described in the owner's archived posts. Discourse is deprecated (owner decision,
+//   2026-08-02): its posts stay valid but will not be updated, so THIS list is the living
+//   canonical scheme list. Add new entries here (never rename or delete a slug — logged
 //   incidents reference slugs, and trend history must stay comparable).
 
 export type ClickLogTag = {
@@ -79,11 +80,15 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   { slug: 'mail-mirage', label: 'The Mail Mirage' },
   { slug: 'conspiracy-carousel', label: 'The Conspiracy Carousel' },
   { slug: 'thats-a-nice', label: 'The "That\'s a nice ____"' },
-  // Recurring schemes described in the archived posts, not yet formally named in the thread:
+  // Recurring schemes described in the archived posts, not formally named in the thread:
   { slug: 'honey-pot', label: 'Honey Pot' },
   { slug: 'entrapment-bait', label: 'Entrapment / Bait' },
   { slug: 'staged-help', label: 'Staged "Needing Help"' },
-  // Catch-all while the thread keeps naming new schemes.
+  { slug: 'good-cop-bad-cop', label: 'Good Cop, Bad Cop' },
+  { slug: 'fake-counselor', label: 'Fake Counselor / Fake Help' },
+  { slug: 'lure-to-location', label: 'Lure to a Location' },
+  { slug: 'staged-narratives', label: 'Staged Narratives / Loud "Podcasts"' },
+  // Catch-all while new schemes get named.
   { slug: 'other-scheme', label: 'Other / not named yet' },
 ] as const;
 
