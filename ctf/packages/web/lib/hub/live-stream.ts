@@ -6,8 +6,8 @@
 // indicators. Everything here is best-effort: if Stream is not configured or any step fails, the
 // caller silently stays on polling and the chat keeps working.
 
-import { StreamChat } from 'stream-chat';
-import type { Channel } from 'stream-chat';
+import type { Channel, StreamChat } from 'stream-chat';
+import { acquireStreamChatClient, releaseStreamChatClient } from '../shared/stream-chat-connection';
 
 export type HubLiveCredentials = {
   streamApiKey: string;
@@ -64,17 +64,15 @@ export async function connectHubLive(
 ): Promise<HubLiveConnection | null> {
   let client: StreamChat | null = null;
   try {
-    client = StreamChat.getInstance(credentials.streamApiKey);
-    // getInstance returns a singleton per API key, so a prior connection (after an account switch
-    // or a reconnect) may still be authenticated as a different user. Never call connectUser on an
-    // already-connected client: reuse it when it is already this user, otherwise disconnect the
-    // stale user first — this prevents one member's real-time events from reaching another.
-    if (client.userID && client.userID !== credentials.streamUserId) {
-      await client.disconnectUser().catch(() => undefined);
-    }
-    if (!client.userID) {
-      await client.connectUser({ id: credentials.streamUserId }, credentials.streamToken);
-    }
+    // Shared per-identity connection (see lib/shared/stream-chat-connection): the Commons and the
+    // gated chat both connect as this member's feed identity and share one client, while plugin
+    // chat panels hold their own identities' clients — so opening or closing this live layer can
+    // never re-authenticate or disconnect a plugin chat, and vice versa.
+    client = await acquireStreamChatClient(
+      credentials.streamApiKey,
+      credentials.streamUserId,
+      credentials.streamToken,
+    );
 
     const channel = client.channel(credentials.streamChannelType ?? 'messaging', credentials.streamChannelId);
     await channel.watch();
@@ -120,15 +118,17 @@ export async function connectHubLive(
             await channel.stopTyping().catch(() => undefined);
           }
         } finally {
-          await client?.disconnectUser().catch(() => undefined);
+          // Release rather than disconnect: the connection is shared with any other surface chatting
+          // as this identity and is only torn down when the last holder releases.
+          releaseStreamChatClient(credentials.streamApiKey, credentials.streamUserId);
         }
       },
     };
   } catch {
-    // Any failure (connect, watch, or otherwise) leaves the caller on polling. Best-effort cleanup of
-    // a partially-opened client so we never leak a connection.
+    // Any failure (connect, watch, or otherwise) leaves the caller on polling. Release the acquired
+    // connection so we never leak a hold on it; a failed acquire holds nothing.
     if (client) {
-      await client.disconnectUser().catch(() => undefined);
+      releaseStreamChatClient(credentials.streamApiKey, credentials.streamUserId);
     }
     return null;
   }
