@@ -804,7 +804,7 @@ export function LevelUpAdminShell({
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
           <StatBlock label="Enrollments" value={String(kpis.enrollments)} />
           <StatBlock label="Completions" value={String(kpis.completions)} />
-          <StatBlock label="Avg days to first trainer payout" value={`${kpis.avgDaysToFirstTrainerPayout} days`} />
+          <StatBlock label="Avg days to first trainer credit grant" value={`${kpis.avgDaysToFirstTrainerPayout} days`} />
         </div>
 
         {/* Review queue: open disputes. Read-only list so the admin-landing dot leads somewhere that
