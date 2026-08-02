@@ -37,6 +37,7 @@ const EXEMPT_FILES = new Set([
   // package under the @img scope is named with the British spelling of "color" — and a dependency's
   // name is not ours to respell.
   'pnpm-lock.yaml',
+  'ctf/pnpm-lock.yaml',
   // Compares against status values the Expo build API returns. A third-party API's enum values are
   // facts about that API, not our prose; the script defends against both spellings on purpose.
   'ctf/scripts/check-expo-build-quota.mjs',
