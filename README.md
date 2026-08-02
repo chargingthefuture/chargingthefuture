@@ -173,4 +173,4 @@ bash scripts/check-eof-format.sh  # EOF validation
 
 ---
 
-**Last updated:** May 2026 | v3 rewrite (Render migration)
+**Last updated:** August 2026 | v3

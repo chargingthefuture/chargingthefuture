@@ -370,7 +370,12 @@ const ConversationBody: React.FC<{
   // The Stream Channel value is loosely typed throughout this panel; passed straight to the hook.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   channel: any;
-}> = ({ channel }) => {
+  // When set, the conversation is over (rule 100: transaction-scoped chats close at a terminal
+  // state). The transcript stays readable but the composer is replaced by this notice — otherwise a
+  // member types a message and watches the send fail "Unauthorized" with no explanation (owner
+  // report on a canceled Direct Line).
+  readOnlyNotice?: string | null;
+}> = ({ channel, readOnlyNotice }) => {
   const { customMessageActions, toast } = useReminderActions(channel);
   return (
     <>
@@ -398,7 +403,11 @@ const ConversationBody: React.FC<{
               message you delete it and repost, so a correction lands as a fresh message with a new
               timestamp. Delete and every other action stay. */}
           <MessageList customMessageActions={customMessageActions} messageActions={MESSAGE_ACTIONS_NO_EDIT} />
-          <MessageInput />
+          {readOnlyNotice ? (
+            <div className="ctf-chat-readonly" role="status">{readOnlyNotice}</div>
+          ) : (
+            <MessageInput />
+          )}
         </Window>
         {toast}
       </div>
@@ -415,6 +424,9 @@ export interface StreamChatPanelProps {
   channelType?: string;
   /** Plugin brand color used to tint Stream's accent (send button, links, active states). */
   accentColor?: string;
+  /** When set, the conversation is over: the transcript stays readable, the composer is replaced by
+   * this notice, and no send can fail unexplained. */
+  readOnlyNotice?: string | null;
 }
 
 export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
@@ -424,6 +436,7 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
   streamChannelId,
   channelType = 'messaging',
   accentColor,
+  readOnlyNotice,
 }) => {
   const [client, setClient] = useState<StreamChat | null>(null);
   // The Stream Channel type is generically parameterized and impractical to satisfy here; the value is
@@ -465,17 +478,22 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
   if (error) return <div style={{ padding: 16, color: '#EF4444', fontSize: 14 }}>{error}</div>;
   if (!client || !channel) return <div style={{ padding: 16, color: '#9CA3AF', fontSize: 14 }}>Chat unavailable.</div>;
 
-  // The whole app is dark, so the chat must use Stream's dark theme (it used to render the light
-  // theme, which looked like a white widget dropped into a dark plugin). The wrapper carries the
-  // theme class and, when given, tints Stream's accent CSS variables to the plugin's brand color.
+  // The whole app is dark, so the chat must use Stream's dark theme. The theme class MUST go on
+  // <Chat theme=...>: the SDK composes that prop into the class list of its own `.str-chat` root
+  // element, and Stream's stylesheet defines the light palette as element-own custom properties on
+  // `.str-chat` itself — element-own values always beat anything inherited, so a theme class (or an
+  // accent variable) placed only on this wrapper div never changes the palette. That was the bug:
+  // the wrapper carried `str-chat__theme-dark` while every panel still rendered the light theme
+  // (owner report — the Direct Line chat showed as a white widget inside the dark app). The
+  // wrapper keeps the class purely as a scope for our own rules in stream-chat-panel.css, and the
+  // `ctf-chat-accented` modifier + `--ctf-chat-accent` re-declare Stream's accent variables on the
+  // `.str-chat` element from that stylesheet (same reason: they must land element-own to win).
   const themeVars = {
     // Own messages are gray everywhere; other people's messages take the plugin accent (below).
     '--ctf-chat-own-bg': OWN_BUBBLE_BG,
     ...(accentColor
       ? {
-          '--str-chat__primary-color': accentColor,
-          '--str-chat__active-primary-color': accentColor,
-          '--str-chat__message-send-color': accentColor,
+          '--ctf-chat-accent': accentColor,
           '--ctf-chat-other-bg': accentColor,
           '--ctf-chat-other-fg': readableTextOn(accentColor),
         }
@@ -483,8 +501,11 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
   } as React.CSSProperties;
 
   return (
-    <div className="str-chat__theme-dark" style={{ height: '100%', display: 'flex', flexDirection: 'column', ...themeVars }}>
-      <Chat client={client}>
+    <div
+      className={`str-chat__theme-dark${accentColor ? ' ctf-chat-accented' : ''}`}
+      style={{ height: '100%', display: 'flex', flexDirection: 'column', ...themeVars }}
+    >
+      <Chat client={client} theme="str-chat__theme-dark">
         {/* enrichURLForPreview turns on URL enrichment in the composer: as a member types or pastes a
             link, Stream scrapes it and MessageInput shows a LinkPreviewList card before sending. The
             sent message then carries an og-scrape attachment, which the default Attachment renderer
@@ -492,7 +513,7 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
             while composing and in the conversation. The messaging channel type already permits URL
             enrichment in the dashboard, so no dashboard change is needed. */}
         <Channel channel={channel} enrichURLForPreview EmptyStateIndicator={ChatEmptyState}>
-          <ConversationBody channel={channel} />
+          <ConversationBody channel={channel} readOnlyNotice={readOnlyNotice} />
         </Channel>
       </Chat>
     </div>
