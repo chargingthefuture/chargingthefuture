@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, MapPin } from "lucide-react";
 import Link from "next/link";
 import { MobileScreenHeader } from "@/components/shared/mobile-screen-header";
-import type { SharedIncidentTrendBucket } from "../../lib/click-log/types";
+import type { SharedIncidentTagTrend, SharedIncidentTrendBucket } from "../../lib/click-log/types";
+import { problemTagLabel, schemeTagLabel } from "../../lib/click-log/tags";
 
 // Admin dark palette (rule 131) with the ClickLog accent.
 const BG = "#0F1117";
@@ -14,14 +15,43 @@ const TEXT = "#F9FAFB";
 const SUBTLE = "#6B7280";
 const ACCENT = "#EC4899";
 
+// One tag-count section of the owner trends view ("Top problems" / "Top schemes"). Tag slugs are
+// resolved to their short labels client-side from the canonical lists.
+function ClickLogTagTrendSection({
+  title,
+  rows,
+  labelFor,
+}: {
+  title: string;
+  rows: SharedIncidentTagTrend[];
+  labelFor: (slug: string) => string;
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <div style={{ marginTop: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 8 }}>{title}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {rows.map((row) => (
+          <div key={row.tag} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
+            <div style={{ fontSize: 12, color: TEXT, flex: 1 }}>{labelFor(row.tag)}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{row.count}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Owner trends over member-shared incidents. Data is coarse by construction (UTC day + ~11 km
-// location cell + count, aggregated in SQL) — this view never sees notes, precise coordinates,
-// incident ids, or member identity. No in-page title card: MobileScreenHeader names the screen
-// (rule 131), so the shell goes straight to content.
+// location cell + count buckets, plus per-tag counts over the canonical tag slugs, aggregated in
+// SQL) — this view never sees notes, precise coordinates, incident ids, or member identity. No
+// in-page title card: MobileScreenHeader names the screen (rule 131), so the shell goes straight
+// to content.
 export function ClickLogAdminTrends() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [buckets, setBuckets] = useState<SharedIncidentTrendBucket[]>([]);
+  const [tagTrends, setTagTrends] = useState<SharedIncidentTagTrend[]>([]);
 
   useEffect(() => {
     let canceled = false;
@@ -29,8 +59,12 @@ export function ClickLogAdminTrends() {
       try {
         const res = await fetch("/api/click-log/admin/trends");
         if (!res.ok) throw new Error("Failed to load trends");
-        const data = (await res.json()) as { buckets: SharedIncidentTrendBucket[] };
+        const data = (await res.json()) as {
+          buckets: SharedIncidentTrendBucket[];
+          tagTrends?: SharedIncidentTagTrend[];
+        };
         if (!canceled) setBuckets(data.buckets);
+        if (!canceled) setTagTrends(data.tagTrends ?? []);
       } catch (e) {
         if (!canceled) setError(e instanceof Error ? e.message : "Failed to load trends");
       } finally {
@@ -49,6 +83,8 @@ export function ClickLogAdminTrends() {
   }, new Map());
   const days = Array.from(dayTotals.entries());
   const withLocation = buckets.filter((b) => b.latitudeCell !== null && b.longitudeCell !== null);
+  const problemTrends = tagTrends.filter((row) => row.tagType === "problem");
+  const schemeTrends = tagTrends.filter((row) => row.tagType === "scheme");
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -68,7 +104,8 @@ export function ClickLogAdminTrends() {
           <>
             <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.5, marginBottom: 16 }}>
               Aggregate of incidents members chose to share, last 90 days. Coarse data only: day, an
-              approximate area (about 11 km), and counts — no notes, exact locations, or member identity.
+              approximate area (about 11 km), counts, and which problem/scheme tags members picked —
+              no notes, exact locations, or member identity.
             </div>
             <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
               <div style={{ flex: 1, padding: "14px 16px", borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}`, textAlign: "center" }}>
@@ -101,6 +138,8 @@ export function ClickLogAdminTrends() {
                 )}
               </div>
             )}
+            <ClickLogTagTrendSection title="Top problems" rows={problemTrends} labelFor={problemTagLabel} />
+            <ClickLogTagTrendSection title="Top schemes" rows={schemeTrends} labelFor={schemeTagLabel} />
           </>
         )}
       </div>

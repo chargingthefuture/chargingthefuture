@@ -2,10 +2,72 @@
 
 import { AlertTriangle, MapPin } from "lucide-react";
 import { MAX_NOTES_LENGTH } from "../../lib/click-log/constants";
+import { CLICK_LOG_PROBLEM_TAGS, CLICK_LOG_SCHEME_TAGS } from "../../lib/click-log/tags";
 import { useTheme } from "@/hooks/useTheme";
 import { getClickLogTokens, type ClickLogTokens } from "./click-log-shared";
+import { ClickLogTagPicker } from "./click-log-tag-picker";
 
 type GeoStatus = "idle" | "locating" | "error";
+
+// Submit gating: a tagged incident may not be submitted until a location is attached (the
+// server enforces the same rule). Module-level so the form component stays under the
+// complexity limit.
+function isSubmitDisabled(
+  submitting: boolean,
+  problemTag: string,
+  schemeTag: string,
+  locationAdded: boolean,
+): boolean {
+  return submitting || (Boolean(problemTag || schemeTag) && !locationAdded);
+}
+
+// The two optional tag pickers plus the tags-need-location hint. Extracted so the note form
+// stays under the complexity limit.
+function ClickLogTagFields({
+  problemTag,
+  schemeTag,
+  locationAdded,
+  tokens,
+  onProblemTagChange,
+  onSchemeTagChange,
+}: {
+  problemTag: string;
+  schemeTag: string;
+  locationAdded: boolean;
+  tokens: ClickLogTokens;
+  onProblemTagChange: (value: string) => void;
+  onSchemeTagChange: (value: string) => void;
+}) {
+  const t = tokens;
+  return (
+    <>
+      <ClickLogTagPicker
+        label="Which problem happened? (optional)"
+        searchPlaceholder="Search problems…"
+        value={problemTag}
+        options={CLICK_LOG_PROBLEM_TAGS}
+        tokens={t}
+        onChange={onProblemTagChange}
+      />
+      <ClickLogTagPicker
+        label="Which scheme was used? (optional)"
+        searchPlaceholder="Search schemes…"
+        value={schemeTag}
+        options={CLICK_LOG_SCHEME_TAGS}
+        tokens={t}
+        onChange={onSchemeTagChange}
+      />
+      {/* A tagged incident must carry a location — without it the trend data a tag feeds is not
+          detailed enough (owner decision, 2026-08-02). The server enforces the same rule. */}
+      {(problemTag || schemeTag) && !locationAdded && (
+        <div style={{ marginTop: 8, fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
+          Tags need a location: add your location below before submitting, so the trend data is
+          detailed enough.
+        </div>
+      )}
+    </>
+  );
+}
 
 // The "Add location" button. Its background/border/color and the disabled/loading affordances all
 // depend on locationAdded and the geolocation status, so it lives here as its own component to keep
@@ -44,10 +106,14 @@ function ClickLogNoteForm({
   geoStatus,
   geoError,
   shareWithOwner,
+  problemTag,
+  schemeTag,
   tokens,
   onNoteChange,
   onAddLocation,
   onShareChange,
+  onProblemTagChange,
+  onSchemeTagChange,
   onSubmit,
   onCancel,
 }: {
@@ -57,14 +123,20 @@ function ClickLogNoteForm({
   geoStatus: GeoStatus;
   geoError: string | null;
   shareWithOwner: boolean;
+  problemTag: string;
+  schemeTag: string;
   tokens: ClickLogTokens;
   onNoteChange: (value: string) => void;
   onAddLocation: () => void;
   onShareChange: (value: boolean) => void;
+  onProblemTagChange: (value: string) => void;
+  onSchemeTagChange: (value: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
 }) {
   const t = tokens;
+  // Tagged incidents require a location (matching the server rule), so Submit waits for it.
+  const submitDisabled = isSubmitDisabled(submitting, problemTag, schemeTag, locationAdded);
   return (
     <div style={{ width: "100%", maxWidth: 480, padding: "16px", borderRadius: 14, background: t.SURFACE, border: `1px solid ${t.ACCENT}30` }}>
       <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 8 }}>Add a note (optional)</div>
@@ -76,8 +148,19 @@ function ClickLogNoteForm({
         placeholder="Describe what happened…"
         style={{ width: "100%", padding: "10px 12px", background: t.BG, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, fontSize: 13, color: t.TITLE, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
       />
+      {/* Optional tags: which of the 50+ known problems happened and which named scheme was
+          used. One, both, or neither may be picked; both feed trend reporting. Type-and-search
+          filtered pickers, mimicking the Directory / SkillsHunt skill pickers. */}
+      <ClickLogTagFields
+        problemTag={problemTag}
+        schemeTag={schemeTag}
+        locationAdded={locationAdded}
+        tokens={t}
+        onProblemTagChange={onProblemTagChange}
+        onSchemeTagChange={onSchemeTagChange}
+      />
       {/* Per-incident owner-share choice, seeded from the member's global default. Only coarse
-          trend data (day + rounded location + count) is ever shared — never notes. */}
+          trend data (day + rounded location + tags + count) is ever shared — never notes. */}
       <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 10, fontSize: 12, color: t.MUTED, cursor: "pointer" }}>
         <input
           type="checkbox"
@@ -96,7 +179,7 @@ function ClickLogNoteForm({
         />
         <div style={{ flex: 1 }} />
         <button onClick={onCancel} style={{ padding: "7px 14px", borderRadius: 8, background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, cursor: "pointer" }}>Cancel</button>
-        <button onClick={onSubmit} disabled={submitting} style={{ padding: "7px 18px", borderRadius: 8, background: t.ACCENT, border: "none", color: "#fff", fontSize: 12, fontWeight: 700, cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1 }}>Submit</button>
+        <button onClick={onSubmit} disabled={submitDisabled} style={{ padding: "7px 18px", borderRadius: 8, background: t.ACCENT, border: "none", color: "#fff", fontSize: 12, fontWeight: 700, cursor: submitDisabled ? "not-allowed" : "pointer", opacity: submitDisabled ? 0.7 : 1 }}>Submit</button>
       </div>
       {geoStatus === "error" && (
         <div style={{ marginTop: 8, fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
@@ -116,7 +199,11 @@ export function ClickLogLogPanel({
   geoStatus,
   geoError,
   shareWithOwner,
+  problemTag,
+  schemeTag,
   onShareChange,
+  onProblemTagChange,
+  onSchemeTagChange,
   onToggleForm,
   onNoteChange,
   onAddLocation,
@@ -131,7 +218,11 @@ export function ClickLogLogPanel({
   geoStatus: GeoStatus;
   geoError: string | null;
   shareWithOwner: boolean;
+  problemTag: string;
+  schemeTag: string;
   onShareChange: (value: boolean) => void;
+  onProblemTagChange: (value: string) => void;
+  onSchemeTagChange: (value: string) => void;
   onToggleForm: () => void;
   onNoteChange: (value: string) => void;
   onAddLocation: () => void;
@@ -162,10 +253,14 @@ export function ClickLogLogPanel({
           geoStatus={geoStatus}
           geoError={geoError}
           shareWithOwner={shareWithOwner}
+          problemTag={problemTag}
+          schemeTag={schemeTag}
           tokens={t}
           onNoteChange={onNoteChange}
           onAddLocation={onAddLocation}
           onShareChange={onShareChange}
+          onProblemTagChange={onProblemTagChange}
+          onSchemeTagChange={onSchemeTagChange}
           onSubmit={onSubmit}
           onCancel={onCancel}
         />

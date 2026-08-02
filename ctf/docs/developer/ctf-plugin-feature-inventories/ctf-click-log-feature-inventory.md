@@ -14,6 +14,16 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 ## 3. User Features
 
 - Log incident (with optional location/notes)
+- Optionally tag an incident with which known problem happened ("Which problem happened?" — the
+  50+ problems list published on the public landing page) and/or which named scheme was used
+  ("Which scheme was used?" — schemes named in the owner's now-deprecated "A post for each gang
+  stalker game" Discourse thread plus schemes described in the owner's archived posts;
+  `lib/click-log/tags.ts` is the living canonical list). One, both, or neither tag may be picked.
+  Both pickers are type-and-search filtered chip pickers (mimicking the Directory / SkillsHunt
+  skill pickers). A tagged incident requires a location — the form disables Submit (with an
+  explanation) until location is added, and the server enforces the same rule — because tagged
+  trend data needs location to be detailed enough. Tags show as chips on the history rows and
+  feed trend reporting.
 - View incident count and history
 - Delete own incidents
 - Choose whether an incident is shared with the owner for trend tracking: a global "share new
@@ -25,20 +35,21 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 ## 4. Admin Features
 
 - ClickLog Trends dashboard (`/admin/click-log`): aggregate counts over incidents members opted to
-  share — shared total, days with activity, per-day counts, and area-cluster count (each area is a
-  ~11 km cell). No notes, precise coordinates, incident ids, or member identity are visible.
+  share — shared total, days with activity, per-day counts, area-cluster count (each area is a
+  ~11 km cell), and "Top problems" / "Top schemes" tag breakdowns (per-tag counts over the
+  canonical tag slugs). No notes, precise coordinates, incident ids, or member identity are visible.
 - View all incidents (future)
 - Delete any incident (future)
 
 ## 5. API Surface and Route Map
 
 - `GET /api/click-log` — List incidents for authenticated user. Returns `{ incidents, count }`. The user is always derived from the authenticated token (no caller-supplied `userId`); the access policy (`canViewIncidents`) is applied before the query.
-- `POST /api/click-log` — Create incident. Accepts optional `sharedWithOwner` boolean (falls back to the member's stored global default). Returns the created incident flat (a `ClickLogIncident`, not wrapped under `{ incident }`), matching the command contract's `outputSchema`.
+- `POST /api/click-log` — Create incident. Accepts optional `sharedWithOwner` boolean (falls back to the member's stored global default) and optional `problemTag` / `schemeTag` strings (each validated against the canonical slug lists in `lib/click-log/tags.ts`; an unknown slug is a 400). When either or both tags are present, `metadata.latitude`/`metadata.longitude` are required (400 otherwise). Returns the created incident flat (a `ClickLogIncident`, not wrapped under `{ incident }`), matching the command contract's `outputSchema`.
 - `DELETE /api/click-log/[id]` — Delete incident by id. Returns `{ success: true }`.
 - `PATCH /api/click-log/[id]` — Toggle owner-sharing on a single incident. Body `{ sharedWithOwner }`; only the incident's owner may call it (no admin override — consent is the member's alone). Returns `{ success, sharedWithOwner }`.
 - `GET /api/click-log/preferences` — Read the member's global owner-share default (`{ shareWithOwner }`).
 - `PUT /api/click-log/preferences` — Set the member's global owner-share default. Body `{ shareWithOwner }`.
-- `GET /api/click-log/admin/trends` — Admin-only aggregate trend buckets (`{ buckets }` of day / ~11 km location cell / count) over shared incidents from the last 90 days.
+- `GET /api/click-log/admin/trends` — Admin-only aggregate trends over shared incidents from the last 90 days: `{ buckets, tagTrends }` — `buckets` of day / ~11 km location cell / count, plus `tagTrends` of tag kind (`problem` | `scheme`) / tag slug / count.
 
 ## 6. Data Model and Storage Contracts
 
@@ -47,6 +58,8 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   - `user_id TEXT`
   - `metadata JSONB NOT NULL DEFAULT '{}'` (latitude, longitude, notes)
   - `shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE` — member's per-incident owner-share opt-in; a real column (not metadata) so it is excluded from the `metadata_hash` dedupe
+  - `problem_tag TEXT` (nullable) — optional coarse tag: which of the 50+ known problems happened; slug validated against `lib/click-log/tags.ts` (mirrors the landing-page problems list). Real column, excluded from the `metadata_hash` dedupe.
+  - `scheme_tag TEXT` (nullable) — optional coarse tag: which named scheme was used; slug validated against `lib/click-log/tags.ts` (schemes started from the owner's "A post for each gang stalker game" Discourse thread, now deprecated — `tags.ts` is the living canonical list and grows there; slugs are never renamed or reused so trend history stays comparable). Real column, excluded from the `metadata_hash` dedupe.
   - `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
   - Indexes: `user_id`, `created_at DESC`, partial `created_at DESC WHERE shared_with_owner` (for the trends aggregate)
 - Table: `click_log_preferences`
@@ -59,6 +72,13 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 - Auth required for all actions
 - Users can only view/delete their own incidents; admins can view/delete any incident
+- Incident tags are coarse by construction: values come only from the fixed canonical slug lists
+  in `lib/click-log/tags.ts` (the create route rejects unknown slugs), so tag data can never carry
+  free text. A tagged incident must carry a location (client and server enforced) so tagged trend
+  data is detailed enough; the location itself still only ever reaches the owner as the rounded
+  ~11 km cell, and only for incidents the member opted to share. The trends aggregate over tags
+  (`getSharedIncidentTagTrends`) reads only `shared_with_owner = true` rows and projects only tag
+  slug + count.
 - Owner sharing is strictly opt-in and member-controlled: both the global default and every
   per-incident flag default to off; only the incident's owner may toggle its share state
   (`canToggleIncidentShare` — deliberately no admin override); and the trends aggregate reads only
@@ -97,6 +117,9 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 - See [scripts/seedClickLog.mjs](../../../scripts/seedClickLog.mjs)
 - 3–5 sample incidents with varied metadata
+- Tag coverage: one incident tagged with both a problem and a scheme, one problem-only, one
+  scheme-only, and untagged incidents; every tagged seed incident carries a location, matching
+  the tags-require-location rule
 
 ## 10. Gaps and Known Technical Debt
 
@@ -106,6 +129,35 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-02: **Optional incident tags: problem + scheme (owner request).** A member can now tag a
+  logged incident with which of the 50+ known problems happened and/or which named scheme was used
+  — one, both, or neither; both optional. A tagged incident requires a location (client disables
+  Submit until location is added; the server returns 400 on a tagged request without
+  latitude/longitude) — owner decision: tagged trend data needs location to be detailed enough.
+  Canonical slug lists live in `lib/click-log/tags.ts`: problem tags mirror the 50+ problems list
+  on the public landing page (`chargingthefuture/landing-page` `LOOK_MA_ITEMS`, 51 entries);
+  scheme tags started from the owner's "A post for each gang stalker game" Discourse thread (The
+  Scapegoating by Proxy, The Mail Mirage, The Conspiracy Carousel, The "That's a nice ____") plus
+  recurring schemes described in the owner's archived posts (Honey Pot, Entrapment / Bait, Staged
+  "Needing Help", Good Cop Bad Cop, Fake Counselor / Fake Help, Lure to a Location, Staged
+  Narratives / Loud "Podcasts") and an "Other / not named yet" catch-all. Discourse is deprecated
+  (owner decision, 2026-08-02): its posts stay valid but will not gain new schemes or refined
+  definitions, so `tags.ts` is the living canonical scheme list; slugs are never renamed or
+  reused. Both tag pickers are type-and-search filtered chip pickers
+  (`click-log-tag-picker.tsx`), mimicking the Directory / SkillsHunt skill pickers (search box
+  with clear control, "✓" chips, removable selected chip) but single-select. Storage: new
+  nullable `problem_tag` / `scheme_tag` columns on
+  `click_log_incidents` (real columns, excluded from the `metadata_hash` dedupe, mirroring
+  `shared_with_owner`); `schema.demo.sql` regenerated via `generateDemoSchema.mjs` (this also
+  caught the demo file up with earlier schema.sql changes it had missed). API:
+  `POST /api/click-log` accepts optional `problemTag`/`schemeTag`, validated against the canonical
+  lists (unknown slug → 400); `GET /api/click-log/admin/trends` adds `tagTrends` (tag kind + slug
+  + count over shared rows only — the privacy boundary stays in SQL). Web shell: two optional
+  dropdowns in the log form ("Which problem happened?" / "Which scheme was used?"), tag chips on
+  history rows; admin trends dashboard adds "Top problems" / "Top schemes" sections. Contracts:
+  `click-log.incident.create` → 1.2.0, `click-log.trends.fetch` → 1.1.0, `ClickLogIncident` gains
+  `problem_tag`/`scheme_tag`, new `SharedIncidentTagTrend` definition. Seed gains tagged rows.
+  Android: out of scope (web-only per rule 105).
 - 2026-08-01: **Owner-share opt-in + admin trends (owner request).** ClickLog stays private by
   default; a member can now opt in to sharing incidents with the owner for trend tracking. Added
   `shared_with_owner` to `click_log_incidents` (real column, excluded from the `metadata_hash`

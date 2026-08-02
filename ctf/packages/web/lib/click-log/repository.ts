@@ -3,6 +3,7 @@ import {
   ClickLogIncident,
   ClickLogPreferences,
   CreateIncidentInput,
+  SharedIncidentTagTrend,
   SharedIncidentTrendBucket,
 } from './types';
 
@@ -15,12 +16,12 @@ export async function getIncidentById(id: string): Promise<ClickLogIncident | nu
 }
 
 export async function createIncident(input: CreateIncidentInput): Promise<ClickLogIncident> {
-  const { userId, metadata, sharedWithOwner } = input;
+  const { userId, metadata, sharedWithOwner, problemTag, schemeTag } = input;
   const result = await queryDb<ClickLogIncident>(
-    `INSERT INTO click_log_incidents (id, user_id, metadata, shared_with_owner, created_at)
-     VALUES (gen_random_uuid(), $1, $2, $3, NOW())
+    `INSERT INTO click_log_incidents (id, user_id, metadata, shared_with_owner, problem_tag, scheme_tag, created_at)
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())
      RETURNING *`,
-    [userId, metadata, sharedWithOwner]
+    [userId, metadata, sharedWithOwner, problemTag ?? null, schemeTag ?? null]
   );
   return result.rows[0];
 }
@@ -97,6 +98,35 @@ export async function getSharedIncidentTrends(days = 90): Promise<SharedIncident
     day: row.day,
     latitudeCell: row.latitude_cell === null ? null : Number(row.latitude_cell),
     longitudeCell: row.longitude_cell === null ? null : Number(row.longitude_cell),
+    count: parseInt(row.count, 10),
+  }));
+}
+
+// Owner tag-trend aggregate. Same privacy boundary as getSharedIncidentTrends: reads ONLY
+// incidents the member opted to share, and projects ONLY the tag slug (a coarse categorical
+// value from the canonical lists) plus a count — never notes, coordinates, incident ids, or
+// member identity. Untagged incidents are simply absent from this aggregate.
+export async function getSharedIncidentTagTrends(days = 90): Promise<SharedIncidentTagTrend[]> {
+  const result = await queryDb<{ tag_type: 'problem' | 'scheme'; tag: string; count: string }>(
+    `SELECT 'problem' AS tag_type, problem_tag AS tag, COUNT(*) AS count
+     FROM click_log_incidents
+     WHERE shared_with_owner
+       AND problem_tag IS NOT NULL
+       AND created_at >= NOW() - make_interval(days => $1)
+     GROUP BY problem_tag
+     UNION ALL
+     SELECT 'scheme' AS tag_type, scheme_tag AS tag, COUNT(*) AS count
+     FROM click_log_incidents
+     WHERE shared_with_owner
+       AND scheme_tag IS NOT NULL
+       AND created_at >= NOW() - make_interval(days => $1)
+     GROUP BY scheme_tag
+     ORDER BY count DESC, tag ASC`,
+    [days]
+  );
+  return result.rows.map((row) => ({
+    tagType: row.tag_type,
+    tag: row.tag,
     count: parseInt(row.count, 10),
   }));
 }

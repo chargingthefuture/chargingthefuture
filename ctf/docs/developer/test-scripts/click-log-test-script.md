@@ -101,6 +101,23 @@ pill flips a single incident either way at any time, and each change is logged. 
 that only coarse trend data is shared — never the note or exact location.
 **Result:** web ☐ mobile ☐ — notes:
 
+### CL-7 · Tag an incident with a problem and a scheme (location required)
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open the log form. Under "Which problem happened? (optional)", type a word (e.g. "mail") into
+   the search box and pick the matching chip. Do the same under "Which scheme was used? (optional)".
+2. Try to submit without adding a location.
+3. Add your location, then submit.
+4. Check the new row in the history list.
+**Expected:** Both pickers filter the chip list as you type (same style as the Directory and
+Skills Hunt skill pickers) and show the pick as a removable chip; tapping the active chip again
+clears it. One, both, or neither tag may be picked. With a tag picked and no location, Submit is
+disabled and the form explains that tags need a location; the server enforces the same rule (a
+tagged request without latitude/longitude is rejected). After adding the location the incident
+logs, and its history row shows the problem chip and the "Scheme:" chip. An untagged incident
+still logs fine with no location.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### CL-5 · Refresh the incident list
 **Role:** member · **Surfaces:** all
 **Steps:**
@@ -127,6 +144,17 @@ directly).
 **Expected:** The delete succeeds (admins are not limited to their own rows). The authorized request
 is logged; deleting a row that is already gone is logged as a failure result, not a server error.
 **Result:** web ☐ mobile ☐ — notes:
+
+### CL-A3 · Trends dashboard shows tag breakdowns
+**Role:** admin · **Surfaces:** web
+**Steps:**
+1. As a member, log a tagged incident with location and mark it shared with the owner (CL-7 + CL-6).
+2. As admin, open the ClickLog Trends dashboard (`/admin/click-log`).
+**Expected:** Alongside the per-day counts, "Top problems" and "Top schemes" sections list per-tag
+counts by their short labels, computed over shared incidents only. Unshared tagged incidents do not
+appear. No notes, exact locations, incident ids, or member identity anywhere on the dashboard; the
+intro copy names day, approximate area, counts, and tags as the only shared data.
+**Result:** web ☐ — notes:
 
 ### CL-A2 · Left icon-rail chrome has no dead controls
 **Role:** member · **Surfaces:** web (desktop)
