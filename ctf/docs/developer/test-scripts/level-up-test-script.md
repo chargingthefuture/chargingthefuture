@@ -553,6 +553,14 @@ Result: web ☐
 
 ---
 
+### Account deletion and cohort escrow records
+
+**Expected:** Deleting the account removes the member's enrollments (existing behavior).
+Disbursements from cohort escrow and any disputes (with their comments) are retained — the record
+of why cohort balances moved survives the account.
+
+---
+
 ## Parity check (web ↔ android)
 
 The following cases must produce the same data and UX outcome on both surfaces. Run them back-to-back on web and Android with the same seed account.

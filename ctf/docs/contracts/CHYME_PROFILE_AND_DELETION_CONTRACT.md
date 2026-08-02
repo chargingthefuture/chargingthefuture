@@ -66,6 +66,12 @@ When user deletes Chyme usage only (`DELETE /api/account/chyme-profile`):
 - Delete immediately:
   - `chyme_room_members` row for `(room_id = chyme-main-room, user_id)`
   - `chyme_messages` rows for `(room_id = chyme-main-room, user_id)`
+  - `chyme_back_channel_calls` rows where the member is the initiator OR the recipient. Both sides are
+    deleted, not pseudonymized: a back-channel call row (invite → active → ended, ~60s timeouts) has
+    no history surface either party revisits, and the table's `CHECK (initiator_user_id <>
+    recipient_user_id)` would be violated the moment both parties of one call delete their accounts
+    and each id collapsed to the shared `deleted_member` placeholder. `ended_by_user_id` is always one
+    of the two parties, so these two deletes clear every row naming the member in any column.
   - Stream copy: the member's Stream user `chyme-<user_id>` is hard-deleted with `mark_messages_deleted` (`deleteChymeStreamData`), so the chat messages fanned out to Stream are removed too. Called directly by this bespoke route; best-effort after the Postgres delete, a Stream outage is logged and never blocks the deletion.
 - Anonymize/pseudonymize:
   - none currently (hard delete for user-owned member/message rows, on Postgres and Stream)
