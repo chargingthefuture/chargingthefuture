@@ -1,0 +1,439 @@
+{
+  "_comment": "Tables that have a user-identifying column but appear in NO account-deletion registry entry, so a member deleting their account leaves those rows behind. BURN-DOWN list: it may only ever shrink. To remove an entry, classify the table in ctf/packages/web/lib/account/deletion-registry.ts (del / soft / pseudonymize / retain-with-reason) and delete it from here \u2014 the gate fails if a classified table is still listed. Never add a new table to silence the gate; classify it instead. Seeded 2026-08-02 when the schema->registry direction of the gate was first added. Every entry is UNREVIEWED and needs an owner decision: several are ledger, audit, or abuse-evidence tables where deleting would be the wrong answer, and several are plainly member data that should go.",
+  "unclassifiedTables": {
+    "account_deletion_events": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "account_restrictions": {
+      "userColumns": [
+        "restricted_by_user_id",
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "account_restrictions_audit": {
+      "userColumns": [
+        "target_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "admin_area_seen": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "announcement_delivery_events": {
+      "userColumns": [
+        "created_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "announcement_reactions": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "announcement_replies": {
+      "userColumns": [
+        "author_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "announcement_revisions": {
+      "userColumns": [
+        "created_by_user_id",
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "announcements": {
+      "userColumns": [
+        "created_by_user_id",
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "bug_reports": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "chyme_back_channel_calls": {
+      "userColumns": [
+        "ended_by_user_id",
+        "initiator_user_id",
+        "recipient_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "comic_review_queue": {
+      "userColumns": [
+        "reviewer_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "contributions_cycles": {
+      "userColumns": [
+        "created_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "contributions_runtime_config": {
+      "userColumns": [
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "directory_announcements": {
+      "userColumns": [
+        "created_by_user_id",
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "directory_quora_url_history": {
+      "userColumns": [
+        "changed_by_user_id",
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "directory_suppressed_quora_urls": {
+      "userColumns": [
+        "created_by_user_id",
+        "overridden_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "feed_community_post_reactions": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "feed_hub_last_seen": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "feed_items": {
+      "userColumns": [
+        "created_by_user_id",
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "feed_render_config": {
+      "userColumns": [
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "foundation_capacity_policies": {
+      "userColumns": [
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "foundation_capacity_policy_events": {
+      "userColumns": [
+        "changed_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "foundation_provider_accepted_currencies": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "gdp_publications": {
+      "userColumns": [
+        "created_by_user_id",
+        "host_user_id",
+        "published_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "level_up_auto_cohort_config": {
+      "userColumns": [
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "level_up_auto_cohort_term_overrides": {
+      "userColumns": [
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "level_up_cohort_proposals": {
+      "userColumns": [
+        "decided_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "level_up_cohorts": {
+      "userColumns": [
+        "created_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "level_up_disbursements": {
+      "userColumns": [
+        "recipient_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "level_up_dispute_comments": {
+      "userColumns": [
+        "actor_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "level_up_disputes": {
+      "userColumns": [
+        "opened_by_user_id",
+        "resolved_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "level_up_milestone_validations": {
+      "userColumns": [
+        "validated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "level_up_trainers": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "level_up_user_achievements": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "lighthouse_blocks": {
+      "userColumns": [
+        "blocked_user_id",
+        "blocker_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "lighthouse_matches": {
+      "userColumns": [
+        "host_user_id",
+        "seeker_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "llm_inference_log": {
+      "userColumns": [
+        "actor_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "login_events": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "mood_submissions": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "peer_programming_cohorts": {
+      "userColumns": [
+        "assigned_by_user_id",
+        "ended_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "peer_programming_settings": {
+      "userColumns": [
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "peer_programming_weekly_topics": {
+      "userColumns": [
+        "created_by_user_id",
+        "published_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "service_credits_credit_limits": {
+      "userColumns": [
+        "updated_by_user_id",
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "service_credits_dispute_adjustments": {
+      "userColumns": [
+        "destination_user_id",
+        "source_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "service_credits_disputes": {
+      "userColumns": [
+        "opened_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "service_credits_escrow_holds": {
+      "userColumns": [
+        "wallet_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "service_credits_governance_events": {
+      "userColumns": [
+        "target_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "service_credits_treasury_config": {
+      "userColumns": [
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "service_credits_treasury_events": {
+      "userColumns": [
+        "source_user_id",
+        "treasury_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "skills_hunt_directory_profiles": {
+      "userColumns": [
+        "created_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "skills_hunt_feature_reward_card": {
+      "userColumns": [
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "skills_hunt_missions": {
+      "userColumns": [
+        "created_by_user_id",
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "skills_hunt_rounds": {
+      "userColumns": [
+        "created_by_user_id",
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "skills_hunt_submission_reports": {
+      "userColumns": [
+        "reporter_user_id",
+        "resolved_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "socket_relay_request_events": {
+      "userColumns": [
+        "actor_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "trust_transport_disputes": {
+      "userColumns": [
+        "opened_by_user_id",
+        "resolved_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "trust_transport_market_config": {
+      "userColumns": [
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "trust_transport_proof_artifacts": {
+      "userColumns": [
+        "captured_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "trust_transport_risk_signals": {
+      "userColumns": [
+        "actor_user_id",
+        "resolved_by_user_id",
+        "target_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "trust_transport_status_events": {
+      "userColumns": [
+        "actor_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "user_ui_preferences": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "weekly_performance_weeks": {
+      "userColumns": [
+        "selected_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "what_works_endorsements": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "workforce_config": {
+      "userColumns": [
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "workforce_deletion_events": {
+      "userColumns": [
+        "user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "workforce_export_jobs": {
+      "userColumns": [
+        "created_by_user_id"
+      ],
+      "decision": "unreviewed"
+    },
+    "workforce_occupations": {
+      "userColumns": [
+        "created_by_user_id",
+        "updated_by_user_id"
+      ],
+      "decision": "unreviewed"
+    }
+  }
+}

@@ -106,6 +106,13 @@ function parseRegistry(src) {
   return refs;
 }
 
+function readCoverageAllowlist() {
+  const file = path.join(root, 'scripts', 'deletion-coverage-allowlist.json');
+  if (!fs.existsSync(file)) return new Set();
+  const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+  return new Set(Object.keys(parsed.unclassifiedTables ?? {}));
+}
+
 function main() {
   if (!fs.existsSync(schemaPath)) {
     fail(`schema.sql not found at ${schemaPath}`);
@@ -129,6 +136,47 @@ function main() {
   if (refs.length === 0) {
     fail('no table references parsed from the registry — parser or registry is broken.');
     return;
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Direction 2: schema -> registry. Everything above asks "does what the registry names exist?".
+  // Nothing asked the question that actually matters for a member: "is every table holding my id
+  // accounted for when I delete my account?" It was not — 64 tables with a user column appeared in
+  // no registry entry at all, including lighthouse_matches (who sought housing from whom) and
+  // mood_submissions. Those are recorded in deletion-coverage-allowlist.json as a burn-down list,
+  // and this check fails on anything new so the gap can only shrink.
+  const coverage = readCoverageAllowlist();
+  const referenced = new Set(refs.map((r) => r.table));
+  const uncovered = [];
+  for (const [table, cols] of schemaTables.entries()) {
+    const userColumns = [...cols].filter((c) => /user_id$/.test(c)).sort();
+    if (userColumns.length === 0 || referenced.has(table)) continue;
+    if (coverage.has(table)) continue;
+    uncovered.push({ table, userColumns });
+  }
+  for (const item of uncovered) {
+    fail(
+      `table "${item.table}" has user column(s) ${item.userColumns.join(', ')} but no account-deletion ` +
+        `registry entry — a member deleting their account would leave these rows behind. Classify it in ` +
+        `lib/account/deletion-registry.ts (del / soft / pseudonymize / retain).`,
+    );
+  }
+  // The allowlist may only shrink: an entry that no longer needs to be there is a finished burn-down
+  // step, and leaving it would quietly re-open the door for that table later.
+  const stillUnclassified = new Set(uncovered.map((u) => u.table));
+  for (const table of coverage) {
+    const cols = schemaTables.get(table);
+    if (!cols) {
+      fail(`allowlisted table "${table}" no longer exists in schema.sql — remove it from deletion-coverage-allowlist.json.`);
+      continue;
+    }
+    if (referenced.has(table)) {
+      fail(
+        `table "${table}" is now classified in the deletion registry but is still listed in ` +
+          `deletion-coverage-allowlist.json — remove it from the allowlist.`,
+      );
+    }
+    void stillUnclassified;
   }
 
   let checked = 0;
