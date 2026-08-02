@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
+import { reportError } from 'lib/observability/report';
 import type { HubMessagesResponse, HubMessage } from 'lib/hub/types';
 import type { FeedTimelineItem } from 'lib/feed/types';
 import {
@@ -185,7 +185,7 @@ export async function GET(request: Request) {
   } catch (error) {
     // Caught errors do not reach Sentry on their own (only unhandled ones do via
     // the Next.js onRequestError hook), so report explicitly.
-    Sentry.captureException(error, { tags: { area: 'hub', op: 'read_messages' } });
+    reportError(error, { area: 'hub', op: 'read_messages' });
     return NextResponse.json(
       {
         ok: false,
@@ -283,7 +283,7 @@ function mapHubPostError(error: unknown): NextResponse {
     );
   }
 
-  Sentry.captureException(error, { tags: { area: 'hub', op: 'send_message' } });
+  reportError(error, { area: 'hub', op: 'send_message' });
   return NextResponse.json(
     {
       ok: false,

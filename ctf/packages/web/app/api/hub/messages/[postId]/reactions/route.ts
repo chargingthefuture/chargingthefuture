@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
+import { reportError } from 'lib/observability/report';
 import { FEED_ERROR_CODE, isAllowedFeedReactionEmoji } from 'lib/feed/constants';
 import { normalizeUuid, toggleCommunityPostReaction } from 'lib/feed/repository';
 import { requireHubAccess } from '../../../_lib';
@@ -38,7 +38,7 @@ function mapHubReactionError(error: unknown): NextResponse {
 
   // Unexpected failure (e.g. a database error): caught errors do not reach Sentry on their
   // own, so report it. The client still gets a generic message.
-  Sentry.captureException(error, { tags: { area: 'hub', op: 'toggle_reaction' } });
+  reportError(error, { area: 'hub', op: 'toggle_reaction' });
   return NextResponse.json(
     { ok: false, message: 'Unable to update your reaction.' },
     { status: 503 },
