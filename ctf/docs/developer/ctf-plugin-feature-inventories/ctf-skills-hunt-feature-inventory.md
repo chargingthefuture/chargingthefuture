@@ -224,6 +224,7 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-08-02: **Deletion burn-down batch 4.** On account deletion, `skills_hunt_submission_reports` you filed are pseudonymized (`reporter_user_id` → `deleted_member`): the moderation record stays with the reported submission, your identity does not (`resolved_by_user_id` remains as admin audit). Rounds, missions, generated directory profiles, and the reward card are classified retained (shared/admin content).
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
   the previous in-app page and falls back to All Apps when there is no in-app history. The admin

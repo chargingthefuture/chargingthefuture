@@ -351,6 +351,7 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-08-02: **Deletion burn-down batch 4.** On account deletion, `announcement_replies` (your replies to announcements) and `llm_inference_log` rows carrying your id are now deleted (the log mostly FK-cascades with your questions/answers already; the direct delete closes any path the cascades miss). Admin-authored platform content (`announcements`, `announcement_revisions`, `announcement_delivery_events`, `feed_items`, `feed_render_config`) is classified retained — authorship columns are the publish audit.
 - 2026-08-02: **Four code-review fixes (issues #2045, #2046, #2048, #2017).** (1) `evaluateFeedRateLimit`
   no longer interpolates the table/column names it received: both are looked up from a frozen
   allow-list map keyed by the four permitted table literals, so a widened type or a hostile cast can
