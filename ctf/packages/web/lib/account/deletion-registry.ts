@@ -189,9 +189,12 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       soft('directory_profiles', 'claimed_by_user_id', 'deleted_at', 'The directory profile you claimed.'),
       soft('directory_user_extension', 'user_id', 'service_deleted_at', 'Your directory plugin extension record.'),
       retain('directory_deletion_events', 'Deletion accountability trail.'),
+      // Burn-down batch 4: admin content and abuse-prevention trails, retained.
+      retain('directory_announcements', 'Admin-authored directory announcements; authorship is the publish audit.'),
+      retain('directory_quora_url_history', 'Verification-URL change history; abuse-prevention evidence (detects URL reuse across accounts).'),
+      retain('directory_suppressed_quora_urls', 'Admin URL suppression list; abuse prevention and its admin audit.'),
       // directory_profile_skills, directory_profile_tags, and directory_profile_proposed_skills are
-      // keyed by profile_id (cascade with the profile, cleared in deleteOwnDirectoryProfile);
-      // directory_announcements are admin-authored.
+      // keyed by profile_id (cascade with the profile, cleared in deleteOwnDirectoryProfile).
     ],
   },
   {
@@ -214,8 +217,18 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('announcement_reactions', 'user_id', 'Your reactions on announcements.'),
       del('feed_hub_last_seen', 'user_id', 'When you last opened the Hub (unread-badge state).'),
       del('announcement_membership_events', 'user_id', 'Your announcement membership events.'),
-      // feed_items / announcements / announcement_revisions / announcement_delivery_events are
-      // admin-authored platform content (created_by_user_id), retained.
+      del('announcement_replies', 'author_user_id', 'Your replies to announcements.'),
+      // The AI-answer inference log FK-cascades with the member's questions and answers (deleted
+      // above), so this direct delete matches almost nothing — it exists so no log row carrying the
+      // member's id can survive through any path the cascades miss.
+      del('llm_inference_log', 'actor_user_id', 'AI-answer generation log rows for your questions.'),
+      // Burn-down batch 4: admin-authored platform content and its authorship audit, retained — the
+      // created_by/updated_by columns record which admin published what, not member data.
+      retain('announcements', 'Admin-authored announcements; authorship columns are the publish audit.'),
+      retain('announcement_revisions', 'Announcement edit history; admin audit.'),
+      retain('announcement_delivery_events', 'Announcement delivery/publish events; admin audit.'),
+      retain('feed_items', 'Admin-authored feed content; authorship columns are the publish audit.'),
+      retain('feed_render_config', 'Global feed settings and the admin audit of who changed them.'),
     ],
   },
   {
@@ -238,8 +251,13 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('foundation_thread_participants', 'user_id', 'Your participation in connection threads.'),
       del('foundation_connection_threads', 'created_by_user_id', 'Connection threads you started.'),
       del('foundation_provider_skills', 'user_id', 'The skills you opted in to offer.'),
+      // The FK to foundation_user_extension is ON DELETE CASCADE, but the extension row is
+      // SOFT-deleted (below), so the cascade never fires — this explicit delete is required.
+      del('foundation_provider_accepted_currencies', 'user_id', 'The currencies you accept as a provider.'),
       soft('foundation_user_extension', 'user_id', 'service_deleted_at', 'Your Foundation plugin extension record.'),
       retain('foundation_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
+      retain('foundation_capacity_policies', 'Global capacity settings and the admin audit of who changed them.'),
+      retain('foundation_capacity_policy_events', 'Capacity-policy change history; admin audit.'),
     ],
   },
   {
@@ -249,6 +267,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     serviceScopeSupported: false,
     tables: [
       // No gdp_user_extension exists in schema; all GDP tables are aggregate/admin.
+      retain('gdp_publications', 'Published GDP reports; the host/publisher columns are the publication audit.'),
     ],
   },
   {
@@ -280,7 +299,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('peer_programming_messages', 'author_user_id', 'Your room messages.'),
       del('peer_programming_cohort_members', 'user_id', 'Your cohort membership.'),
       retain('peer_programming_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
-      // peer_programming_cohorts / weekly_topics are shared/admin content.
+      retain('peer_programming_cohorts', 'Shared cohorts; assigned_by/ended_by are the admin audit.'),
+      retain('peer_programming_settings', 'Global settings and the admin audit of who changed them.'),
+      retain('peer_programming_weekly_topics', 'Admin-authored weekly topics; authorship is the publish audit.'),
     ],
   },
   {
@@ -336,6 +357,15 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
         'Requests you offered to help on — the record stays with its owner, your identity does not.',
       ),
       del('socket_relay_requests', 'owner_user_id', 'Your relay requests.'),
+      // Lifecycle events belong to the request they narrate (posted/claimed/canceled/closed), which
+      // may be another member's surviving record — so the event stays and the actor's id is
+      // overwritten, the same shape as the fulfillment pseudonymization above.
+      pseudo(
+        'socket_relay_request_events',
+        'actor_user_id',
+        [],
+        'Lifecycle events you appear on — the trail stays with the request, your identity does not.',
+      ),
       soft('socket_relay_user_extension', 'user_id', 'service_deleted_at', 'Your SocketRelay plugin extension record.'),
       retain('socket_relay_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
@@ -364,6 +394,24 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // Burn-down batch 3 (ledger/disputes): disputes over trips/settlement are the accountability
       // record for value that moved between two members — retained like the earnings ledger above.
       retain('trust_transport_disputes', 'Disputes over trips and settlement; retained for ledger integrity and accountability.'),
+      // Burn-down batch 4. Status events and proof artifacts belong to the shared trip/request
+      // record (which may be the other party's surviving data, and which proofs/disputes rely on),
+      // so like the trip's provider side they stay with the id overwritten. Risk signals are abuse
+      // evidence; market config is admin-audited settings — both retained with the id intact.
+      pseudo(
+        'trust_transport_status_events',
+        'actor_user_id',
+        [],
+        'Trip/request lifecycle events you appear on — the trail stays with the record, your identity does not.',
+      ),
+      pseudo(
+        'trust_transport_proof_artifacts',
+        'captured_by_user_id',
+        [],
+        'Pickup/delivery proofs you captured — the evidence stays with the trip, your identity does not.',
+      ),
+      retain('trust_transport_risk_signals', 'Abuse/risk evidence; retained for safety enforcement.'),
+      retain('trust_transport_market_config', 'Global market settings and the admin audit of who changed them.'),
     ],
   },
   {
@@ -425,7 +473,10 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('workforce_profiles', 'user_id', 'Your workforce profile.'),
       soft('workforce_user_extension', 'user_id', 'service_deleted_at', 'Your workforce plugin extension record.'),
       retain('workforce_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
-      // workforce_occupations / announcements / export_jobs are admin/shared.
+      retain('workforce_deletion_events', 'Deletion accountability trail.'),
+      retain('workforce_occupations', 'Shared occupation catalog; authorship columns are the admin audit.'),
+      retain('workforce_export_jobs', 'Admin report-export jobs; the admin audit of who exported what.'),
+      retain('workforce_config', 'Global settings and the admin audit of who changed them.'),
     ],
   },
   {
@@ -440,7 +491,19 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('skills_hunt_leaderboard', 'user_id', 'Your leaderboard entries.'),
       soft('skills_hunt_submissions', 'submitter_user_id', 'deleted_at', 'Your submissions (soft-deleted; audit log retained).'),
       retain('skills_hunt_audit_log', 'Compliance audit log; retained.'),
-      // skills_hunt_rounds / missions are global; skills_hunt_directory_profiles are unclaimed projections.
+      // A report you filed about someone's submission is moderation evidence tied to that
+      // submission, not your record — it stays with your id overwritten (resolved_by is the admin
+      // audit and is untouched).
+      pseudo(
+        'skills_hunt_submission_reports',
+        'reporter_user_id',
+        [],
+        'Reports you filed about submissions — the moderation record stays, your identity does not.',
+      ),
+      retain('skills_hunt_rounds', 'Shared rounds; authorship columns are the admin audit.'),
+      retain('skills_hunt_missions', 'Shared missions; authorship columns are the admin audit.'),
+      retain('skills_hunt_directory_profiles', 'Admin-generated unclaimed directory projections; created_by is the admin audit.'),
+      retain('skills_hunt_feature_reward_card', 'Global reward-card setting and the admin audit of who changed it.'),
     ],
   },
   {
@@ -483,7 +546,14 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       retain('level_up_disbursements', 'Credit disbursements from cohort escrow; retained for ledger integrity.'),
       retain('level_up_disputes', 'Disputes over cohort milestones/credits; retained for ledger integrity and accountability.'),
       retain('level_up_dispute_comments', 'The dispute conversation record; retained with its dispute.'),
-      // level_up_cohorts are shared content.
+      // Burn-down batch 4: the member-owned leftovers and the shared/admin remainder.
+      del('level_up_trainers', 'user_id', 'Your trainer profile (name, headline, bio, tracks).'),
+      del('level_up_user_achievements', 'user_id', 'Your achievements.'),
+      retain('level_up_cohorts', 'Shared cohorts; created_by is the admin audit.'),
+      retain('level_up_cohort_proposals', 'Auto-cohort proposals; decided_by is the admin decision audit.'),
+      retain('level_up_milestone_validations', 'Milestone validations — part of why cohort credits were released; ledger-adjacent audit.'),
+      retain('level_up_auto_cohort_config', 'Global auto-cohort settings and the admin audit of who changed them.'),
+      retain('level_up_auto_cohort_term_overrides', 'Per-term overrides and the admin audit of who set them.'),
     ],
   },
   {
@@ -510,7 +580,8 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // than the Withdraw button — and Withdraw only deactivates, so this one actually removes the
       // words. The cascade is a foreign key rather than a step here so it cannot be forgotten.
       del('comic_contributions', 'user_id', 'Writing you contributed to the assistant.'),
-      // comic_turns / review_queue / training_examples are shared/admin/model data.
+      retain('comic_review_queue', 'Answer review queue; reviewer_user_id is the admin review audit.'),
+      // comic_turns / training_examples are shared/model data.
     ],
   },
   {
@@ -518,7 +589,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     name: 'Weekly Performance',
     dataSummary: 'Weekly performance figures are aggregate; no per-user data is stored.',
     serviceScopeSupported: false,
-    tables: [],
+    tables: [
+      retain('weekly_performance_weeks', 'Aggregate week records; selected_by is the admin audit of week selection.'),
+    ],
   },
   {
     slug: 'what-works',
@@ -543,7 +616,8 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('contributions_submissions', 'user_id', 'Your contribution claims, including the Signal contact you provided.'),
       del('contributions_banner_state', 'user_id', 'Your fundraiser banner snooze state.'),
       retain('contributions_audit_log', 'Audit log; retained for compliance. Contains no Signal contact values.'),
-      // contributions_cycles and contributions_runtime_config are global (owner-managed).
+      retain('contributions_cycles', 'Global funding cycles; created_by is the admin audit.'),
+      retain('contributions_runtime_config', 'Global settings and the admin audit of who changed them.'),
       // Granted credits live in the ServiceCredits ledger and follow that plugin's policy below.
     ],
   },
@@ -616,6 +690,42 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('contributor_access_channel_posts', 'author_user_id', 'Your messages in the contributor channel.'),
       del('contributor_access_eligibility', 'user_id', 'Your earned-eligibility record.'),
       retain('contributor_access_audit_trail', 'Admin-action accountability trail.'),
+    ],
+  },
+  {
+    slug: 'bug-reports',
+    name: 'Bug Reports',
+    dataSummary: 'Bug reports you filed (kept for triage with your identity removed).',
+    // Cross-cutting: reports reference any plugin, so there is no per-service scope.
+    serviceScopeSupported: false,
+    tables: [
+      // A report is operational triage input the owner still needs after the reporter leaves (it may
+      // already be mirrored into a GitHub issue), so the row stays and the reporter's id is
+      // overwritten instead of the report being destroyed.
+      pseudo(
+        'bug_reports',
+        'user_id',
+        [],
+        'Bug reports you filed — the report stays for triage, your identity does not.',
+      ),
+    ],
+  },
+  {
+    slug: 'platform-account',
+    name: 'Account & Moderation',
+    dataSummary: 'Cross-cutting account records: sign-in telemetry, deletion accountability, and moderation state.',
+    // Platform-level rows, not a service a member joins — they are handled only with the account.
+    serviceScopeSupported: false,
+    tables: [
+      del('login_events', 'user_id', 'Your sign-in timestamps (telemetry, not an enforcement record).'),
+      del('admin_area_seen', 'user_id', 'Which admin areas you opened (per-admin new-item badge state).'),
+      retain('account_deletion_events', 'The accountability record of the deletion itself.'),
+      // Restriction state and its audit are moderation/abuse enforcement: a restricted account's
+      // record must survive the account so a delete-and-return does not launder the history. The
+      // user_id here is the enforcement key (and the table's primary key), so it is kept intact —
+      // the same reasoning as member_blocks.blocked_user_id and the safety-report subject.
+      retain('account_restrictions', 'Moderation/restriction state; abuse enforcement record.'),
+      retain('account_restrictions_audit', 'The audit trail of restriction decisions; retained for compliance.'),
     ],
   },
 ];

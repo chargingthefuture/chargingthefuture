@@ -714,6 +714,13 @@ Result: web ☐
 
 ---
 
+### Account deletion pseudonymizes filed reports
+
+**Expected:** After a member deletes their account, reports they filed about submissions remain as
+moderation records, but the reporter reads as a deleted member; the resolving admin stays recorded.
+
+---
+
 ## Parity check (web ↔ android)
 
 The following cases must produce identical behavior on both surfaces. Rerun them back-to-back on web and Android and confirm they match.

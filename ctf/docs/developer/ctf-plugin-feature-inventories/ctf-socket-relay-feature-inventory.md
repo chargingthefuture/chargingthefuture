@@ -175,6 +175,7 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+- 2026-08-02: **Deletion burn-down batch 4.** On account deletion, `socket_relay_request_events` rows you appear on are pseudonymized (`actor_user_id` → `deleted_member`): the lifecycle trail belongs to the request it narrates, which may be another member's surviving record — same shape as the fulfillment pseudonymization from #2054.
 - 2026-08-02: **A departing member's id no longer survives on the other party's rows (owner
   directive).** Account deletion removed `socket_relay_fulfillments` by `requester_user_id` only, so a member who deleted their
   account left their raw Clerk id sitting in the counterparty's view forever — the row belongs to the
