@@ -19,7 +19,7 @@ import { getLevelUpTokens, type WalletView } from "./lu-shared";
 const KIND_LABELS: Record<string, string> = {
   milestone_release: "Milestone released",
   completion_bonus: "Completion bonus",
-  trainer_payout: "Trainer payout",
+  trainer_payout: "Trainer credit grant",
   stipend: "Stipend",
   microgrant: "Microgrant",
   achievement: "Achievement badge",
