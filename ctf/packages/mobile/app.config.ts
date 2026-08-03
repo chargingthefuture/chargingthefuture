@@ -105,6 +105,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       'expo-notifications',
+      // Wires the Sentry native SDK into the EAS Android build so crashes in the keep-list app are
+      // reported again (the JS init lives in src/observability/sentry.ts and no-ops without a DSN).
+      '@sentry/react-native/expo',
     ],
     updates: {
       ...(updatesUrl ? { url: updatesUrl } : {}),

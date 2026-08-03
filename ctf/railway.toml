@@ -1,6 +1,0 @@
-[build]
-# Single deploy entry point for Railway service rooted at ctf/packages/web.
-buildCommand = "corepack enable && corepack prepare pnpm@9.12.0 --activate && NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=8192 corepack pnpm build"
-
-[deploy]
-startCommand = "corepack enable && corepack prepare pnpm@9.12.0 --activate && NEXT_TELEMETRY_DISABLED=1 corepack pnpm --filter @ctf/web run check:formance-env && corepack pnpm --filter @ctf/web run start"
