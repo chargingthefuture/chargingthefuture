@@ -80,7 +80,40 @@ export async function ensureSocketRelayFulfillmentChannel(input: {
   }
 
   await channel.addMembers([requesterStreamUserId, fulfillerStreamUserId]);
+  await verifyFulfillmentChannelMembers(channel, streamChannelId, [requesterStreamUserId, fulfillerStreamUserId]);
   return streamChannelId;
+}
+
+// Confirm Stream really holds both participants as members of the conversation, and record it when it
+// does not.
+//
+// Membership is what grants the right to post: Stream refuses a send from a non-member with a 403,
+// which the browser shows as a bare "Message Failed · Unauthorized" with no reason attached (owner
+// reports). `addMembers` above is expected to make that true, so this check should always pass — which
+// is exactly why it is worth running: if it ever fails, that silent mismatch is the cause of the
+// refused send, and this is the only place it can be seen. A frozen channel refuses sends the same way
+// and is recorded here too. Never throws: a conversation must still open even if this read fails.
+async function verifyFulfillmentChannelMembers(
+  channel: ReturnType<StreamChat['channel']>,
+  streamChannelId: string,
+  expectedMemberIds: string[],
+): Promise<void> {
+  try {
+    const response = await channel.queryMembers({});
+    const presentIds = new Set(response.members.map((member) => member.user_id ?? member.user?.id));
+    const missing = expectedMemberIds.filter((id) => !presentIds.has(id));
+    const frozen = channel.data?.frozen === true;
+    if (missing.length === 0 && !frozen) {
+      return;
+    }
+    reportError(new Error('SocketRelay Direct Line cannot accept messages'), {
+      area: 'socket-relay',
+      op: 'verify_channel_members',
+      extra: { streamChannelId, missingMemberIds: missing, frozen, memberCount: presentIds.size },
+    });
+  } catch (error: unknown) {
+    reportError(error, { area: 'socket-relay', op: 'verify_channel_members', extra: { streamChannelId } });
+  }
 }
 
 export async function createSocketRelayParticipantToken(userId: string, displayName: string): Promise<SocketRelayStreamParticipantCredentials | null> {

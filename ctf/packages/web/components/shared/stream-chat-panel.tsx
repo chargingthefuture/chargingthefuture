@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { StreamChat } from 'stream-chat';
+import type { Channel as StreamChannel, Message, SendMessageOptions } from 'stream-chat';
 import {
   Chat,
   Channel,
@@ -16,6 +17,8 @@ import {
 import 'stream-chat-react/dist/css/v2/index.css';
 import './stream-chat-panel.css';
 import { acquireStreamChatClient, releaseStreamChatClient } from '../../lib/shared/stream-chat-connection';
+import { describeSendBlock, describeStreamSendFailure, streamChatDebugContext } from '../../lib/shared/stream-chat-send-state';
+import { reportError } from '../../lib/observability/report';
 
 // How far ahead the "Remind me about this" action schedules its nudge (30 minutes).
 const REMINDER_DELAY_MS = 30 * 60 * 1000;
@@ -338,7 +341,15 @@ const ConversationBody: React.FC<{
   // member types a message and watches the send fail "Unauthorized" with no explanation (owner
   // report on a canceled Direct Line).
   readOnlyNotice?: string | null;
-}> = ({ channel, readOnlyNotice }) => {
+  // Set when Stream says this member is not allowed to post here (not a member of the conversation,
+  // banned, or the conversation is frozen). The composer is replaced by this explanation, because a
+  // composer that is guaranteed to fail is worse than none: the chat library renders it regardless of
+  // permission and then reports every refusal as the same bare "Unauthorized".
+  sendBlockedNotice?: string | null;
+  // The reason the last send was refused, in plain words. Shown above the composer so the member sees
+  // what happened instead of only the failed bubble.
+  sendFailureNotice?: string | null;
+}> = ({ channel, readOnlyNotice, sendBlockedNotice, sendFailureNotice }) => {
   const { customMessageActions, toast } = useReminderActions(channel);
   return (
     <>
@@ -373,8 +384,15 @@ const ConversationBody: React.FC<{
           <MessageList customMessageActions={customMessageActions} messageActions={MESSAGE_ACTIONS_NO_EDIT} />
           {readOnlyNotice ? (
             <div className="ctf-chat-readonly" role="status">{readOnlyNotice}</div>
+          ) : sendBlockedNotice ? (
+            <div className="ctf-chat-readonly" role="status">{sendBlockedNotice}</div>
           ) : (
-            <MessageInput />
+            <>
+              {sendFailureNotice ? (
+                <div className="ctf-chat-send-error" role="alert">{sendFailureNotice}</div>
+              ) : null}
+              <MessageInput />
+            </>
           )}
         </Window>
         {toast}
@@ -413,6 +431,10 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
   const [channel, setChannel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Set when Stream says this member may read but not post here; replaces the composer.
+  const [sendBlockedNotice, setSendBlockedNotice] = useState<string | null>(null);
+  // Set when a send is actually refused; shown above the composer and cleared by the next success.
+  const [sendFailureNotice, setSendFailureNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -427,6 +449,19 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
         // loaded for autocomplete to offer anyone; watch() populates channel.state.members.
         return ch.watch({ presence: true }).then(() => {
           if (!isMounted) return;
+          // Stream returns the member's capabilities with the channel. When posting is not among them,
+          // every send is going to be refused, so say why here instead of letting the member type into
+          // a composer that answers with a bare "Unauthorized" — and record the capability list, the
+          // frozen flag, and which Stream app answered, which is what pins down the cause.
+          const blocked = describeSendBlock(ch);
+          setSendBlockedNotice(blocked);
+          if (blocked) {
+            reportError(new Error('Stream chat: member cannot post in this channel'), {
+              area: 'chat',
+              op: 'send_capability_missing',
+              extra: streamChatDebugContext({ streamApiKey, streamUserId, streamChannelId, channel: ch }),
+            });
+          }
           setChannel(ch);
           setClient(chatClient);
           setLoading(false);
@@ -442,6 +477,33 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
       releaseStreamChatClient(streamApiKey, streamUserId);
     };
   }, [streamApiKey, streamToken, streamUserId, streamChannelId, channelType]);
+
+  // Send the message ourselves instead of letting the library do it silently, so a refusal keeps its
+  // reason. Stream's error carries the actual cause; the library throws it away and labels every
+  // refusal "Unauthorized" on the failed bubble. The error is rethrown afterwards so the failed-message
+  // UI (and its retry) behaves exactly as before — this only adds the explanation and the log.
+  const doSendMessageRequest = useCallback(
+    async (ch: StreamChannel, message: Message, options?: SendMessageOptions) => {
+      try {
+        const response = await ch.sendMessage(message, options);
+        setSendFailureNotice(null);
+        return response;
+      } catch (sendError: unknown) {
+        const failure = describeStreamSendFailure(sendError);
+        setSendFailureNotice(failure.memberText);
+        reportError(sendError, {
+          area: 'chat',
+          op: 'send_message',
+          extra: {
+            ...streamChatDebugContext({ streamApiKey, streamUserId, streamChannelId, channel: ch }),
+            ...failure.detail,
+          },
+        });
+        throw sendError;
+      }
+    },
+    [streamApiKey, streamUserId, streamChannelId],
+  );
 
   if (loading) return <div style={{ padding: 16, color: '#9CA3AF', fontSize: 14 }}>Loading chat…</div>;
   if (error) return <div style={{ padding: 16, color: '#EF4444', fontSize: 14 }}>{error}</div>;
@@ -481,8 +543,18 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
             (Card) draws as a preview card in the MessageList — so pasted links get preview cards both
             while composing and in the conversation. The messaging channel type already permits URL
             enrichment in the dashboard, so no dashboard change is needed. */}
-        <Channel channel={channel} enrichURLForPreview EmptyStateIndicator={ChatEmptyState}>
-          <ConversationBody channel={channel} readOnlyNotice={readOnlyNotice} />
+        <Channel
+          channel={channel}
+          enrichURLForPreview
+          EmptyStateIndicator={ChatEmptyState}
+          doSendMessageRequest={doSendMessageRequest}
+        >
+          <ConversationBody
+            channel={channel}
+            readOnlyNotice={readOnlyNotice}
+            sendBlockedNotice={sendBlockedNotice}
+            sendFailureNotice={sendFailureNotice}
+          />
         </Channel>
       </Chat>
     </div>
