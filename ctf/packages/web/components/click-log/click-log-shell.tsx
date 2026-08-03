@@ -24,6 +24,9 @@ export function ClickLogShell() {
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [note, setNote] = useState("");
+  // Optional tags for the incident being logged ("" = untagged). Slugs from lib/click-log/tags.
+  const [problemTag, setProblemTag] = useState("");
+  const [schemeTag, setSchemeTag] = useState("");
   const [geo, setGeo] = useState<Geo>({});
   const [geoStatus, setGeoStatus] = useState<"idle" | "locating" | "error">("idle");
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -100,7 +103,13 @@ export function ClickLogShell() {
       const res = await fetch("/api/click-log", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ metadata, sharedWithOwner: share.formShare }),
+        body: JSON.stringify({
+          metadata,
+          sharedWithOwner: share.formShare,
+          // Omit an unpicked tag entirely — the API treats absent as untagged.
+          ...(problemTag ? { problemTag } : {}),
+          ...(schemeTag ? { schemeTag } : {}),
+        }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -108,6 +117,8 @@ export function ClickLogShell() {
       }
       setShowForm(false);
       setNote("");
+      setProblemTag("");
+      setSchemeTag("");
       setGeo({});
       setGeoStatus("idle");
       setGeoError(null);
@@ -168,12 +179,16 @@ export function ClickLogShell() {
         geoStatus={geoStatus}
         geoError={geoError}
         shareWithOwner={share.formShare}
+        problemTag={problemTag}
+        schemeTag={schemeTag}
         onShareChange={share.setFormShare}
+        onProblemTagChange={setProblemTag}
+        onSchemeTagChange={setSchemeTag}
         onToggleForm={() => setShowForm((s) => !s)}
         onNoteChange={setNote}
         onAddLocation={addLocation}
         onSubmit={() => void postIncident({ ...geo, notes: note })}
-        onCancel={() => { setShowForm(false); setNote(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); share.setFormShare(share.shareDefault); }}
+        onCancel={() => { setShowForm(false); setNote(""); setProblemTag(""); setSchemeTag(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); share.setFormShare(share.shareDefault); }}
       />
 
       {/* Global share default. Opt-in and member-controlled; a new incident starts from this

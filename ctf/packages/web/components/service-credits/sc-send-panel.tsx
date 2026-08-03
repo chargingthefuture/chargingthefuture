@@ -23,12 +23,12 @@ function RailSelector({ rail, onChange }: { rail: Rail; onChange: (next: Rail) =
   ];
   return (
     <div style={{ marginBottom: 12 }}>
-      <label htmlFor="sc-rail" style={inputLabel}>Pay with</label>
+      <label htmlFor="sc-rail" style={inputLabel}>Send with</label>
       <select
         id="sc-rail"
         value={rail}
         onChange={(e) => onChange(e.target.value as Rail)}
-        aria-label="Payment method"
+        aria-label="Send method"
         style={{ ...inputField, marginBottom: 0, appearance: "auto" }}
       >
         {options.map((o) => (
@@ -37,7 +37,7 @@ function RailSelector({ rail, onChange }: { rail: Rail; onChange: (next: Rail) =
       </select>
       {rail === "mutual_credit" && (
         <div style={{ fontSize: 11, color: t.MUTED, marginTop: 6, lineHeight: 1.5 }}>
-          Pay now on community credit, repay as you earn.
+          Send now on community credit, repay as you earn.
         </div>
       )}
     </div>

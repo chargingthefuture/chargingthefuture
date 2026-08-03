@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, CheckCircle, Coins, DollarSign, Target, Trophy, TrendingUp, Users } from "lucide-react";
+import { BookOpen, CheckCircle, Coins, Target, Trophy, TrendingUp, Users } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getLevelUpTokens, type NavKey } from "./lu-shared";
 
@@ -14,7 +14,7 @@ const NAV_ITEMS: { icon: React.ElementType; label: string; key: NavKey }[] = [
 
 const TRAINER_TOOLS = [
   { icon: CheckCircle, label: "Validate Milestones" },
-  { icon: DollarSign, label: "Payout History" },
+  { icon: Coins, label: "Grant History" },
 ];
 
 export function LevelUpSidebar({

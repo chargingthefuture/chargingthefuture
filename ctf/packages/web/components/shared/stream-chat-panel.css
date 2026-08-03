@@ -263,6 +263,19 @@
   line-height: 1.5;
 }
 
+/* Why the last message did not send, shown directly above the composer. Sits in the same place as the
+ * read-only notice but reads as a fault (red tint), because it reports something that went wrong
+ * rather than a conversation that is simply over. */
+.ctf-chat-send-error {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(239, 68, 68, 0.28);
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #FCA5A5;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* Polls (default stream-chat-react 12.16 Poll components, created from the composer's attachment menu
  * and rendered in the MessageList). The defaults already inherit Stream's dark theme; these rules
  * only tint the create-poll affordance and the poll card's primary accents to the plugin color so a

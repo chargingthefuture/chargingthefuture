@@ -34,11 +34,40 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   user_id TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
   metadata_hash TEXT GENERATED ALWAYS AS (md5(metadata::text)) STORED,
+  -- Owner-share opt-in (2026-08-01): a member may mark an incident as shared with the owner for
+  -- aggregate trend tracking. Defaults FALSE — nothing is shared unless the member opts in. A real
+  -- column (not metadata) so it is excluded from the metadata_hash dedupe and toggling share state
+  -- never collides with the UNIQUE (user_id, metadata_hash) constraint.
+  shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Optional incident tags (2026-08-02): a member may say which of the 50+ known problems
+  -- happened (problem_tag — slugs mirror the landing-page problems list) and/or which named
+  -- scheme was used (scheme_tag — slugs from the owner's "A post for each gang stalker game"
+  -- Discourse thread). Canonical slug lists live in packages/web/lib/click-log/tags.ts; the API
+  -- validates against them. Real columns (not metadata) so they are excluded from the
+  -- metadata_hash dedupe — mirroring shared_with_owner — and so the shared-trends aggregate can
+  -- project them as coarse categorical values without touching the metadata JSON.
+  problem_tag TEXT,
+  scheme_tag TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, metadata_hash)
 );
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tag TEXT;
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tag TEXT;
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_user_id ON click_log_incidents(user_id);
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_created_at ON click_log_incidents(created_at DESC);
+-- Partial index for the admin trends aggregate, which only ever reads shared rows.
+CREATE INDEX IF NOT EXISTS idx_click_log_incidents_shared ON click_log_incidents(created_at DESC) WHERE shared_with_owner;
+-- Per-member ClickLog preferences. share_with_owner is the member's global default for whether a
+-- newly logged incident is shared with the owner (per-incident override always wins). Opt-in:
+-- defaults FALSE. Mirrors the notification_preferences / user_ui_preferences upsert-on-user_id shape.
+CREATE TABLE IF NOT EXISTS click_log_preferences (
+  user_id TEXT PRIMARY KEY,
+  share_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS click_log_preferences ADD COLUMN IF NOT EXISTS share_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS click_log_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- === WHAT WORKS (survivor-verified shared tool list, organized by problem) ===
@@ -1308,6 +1337,29 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_unlock_verification_submissions_user_id
 -- URL (and which one currently holds the reward) without scanning the table.
 CREATE INDEX IF NOT EXISTS idx_unlock_verification_submissions_url_normalized
   ON unlock_verification_submissions (quora_profile_url_normalized);
+
+-- Persistent spam denylist of normalized Quora profile URLs. When an admin marks a submission spam,
+-- its normalized URL is recorded here. This serves two purposes: (1) a member's per-member submission
+-- row is hard-deleted when they delete their account/data, but this denylist is deliberately keyed on
+-- the URL (never on a member id) and retained for abuse prevention, so the spam URL survives that
+-- deletion; (2) a fresh submission of a denylisted URL (even from a new account) is auto-marked spam at
+-- submission time and never re-enters the review queue. A later approve/reject of the same URL removes
+-- it here, so a mistaken spam mark is fully reversible.
+CREATE TABLE IF NOT EXISTS unlock_spam_quora_urls (
+  quora_profile_url_normalized TEXT PRIMARY KEY,
+  quora_profile_url TEXT NOT NULL,
+  flagged_by_user_id TEXT,
+  flag_count INTEGER NOT NULL DEFAULT 1,
+  first_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS quora_profile_url TEXT;
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS flagged_by_user_id TEXT;
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS flag_count INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS first_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS last_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- Add prod unlock audit/config tables if missing.
 -- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the
@@ -6182,6 +6234,52 @@ ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS discreet
 ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 COMMIT;
 
+
+-- spelling:disable — this migration must name the old British value to rewrite it; every
+-- occurrence below is the value being migrated away from, not new usage.
+-- === US-SPELLING DATA MIGRATION: cancelled -> canceled (owner-directed, 2026-07-31) ===
+-- "cancelled" was a stored status value in several tables. The owner directed the repo-wide switch
+-- to US spelling to include stored values, so this block renames every persisted occurrence. It is
+-- idempotent and stays in the schema permanently: each deploy re-runs it, so any straggler row
+-- written by not-yet-redeployed code is corrected on the next apply. The code, contracts, and docs
+-- were renamed in the same PR, so reader and writer agree from the same deploy onward.
+BEGIN;
+
+-- Column rename: trust_transport_trips.cancelled_reason -> canceled_reason. Guarded so it runs
+-- once on a legacy database and never on a fresh one (where CREATE TABLE already used the new name).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'trust_transport_trips' AND column_name = 'cancelled_reason'
+  ) THEN
+    ALTER TABLE trust_transport_trips RENAME COLUMN cancelled_reason TO canceled_reason;
+  END IF;
+END $$;
+
+-- Status values. WHERE makes each UPDATE a no-op after the first run.
+UPDATE trust_transport_requests SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE trust_transport_trips SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE trust_transport_status_events SET event_name = 'order_canceled' WHERE event_name = 'order_cancelled';
+UPDATE trust_transport_status_events SET from_status = 'canceled' WHERE from_status = 'cancelled';
+UPDATE trust_transport_status_events SET to_status = 'canceled' WHERE to_status = 'cancelled';
+UPDATE lighthouse_matches SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE socket_relay_requests SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE socket_relay_fulfillments SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE level_up_cohorts SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE service_credits_transfers SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE foundation_call_sessions SET status = 'canceled' WHERE status = 'cancelled';
+
+-- lighthouse_matches carries the only CHECK constraint naming the old value. On a legacy database
+-- the inline constraint still allows 'cancelled' and not 'canceled', so swap it: drop whichever
+-- form exists, then re-add with the US value. Runs after the UPDATE above so validation passes.
+ALTER TABLE IF EXISTS lighthouse_matches DROP CONSTRAINT IF EXISTS lighthouse_matches_status_check;
+ALTER TABLE IF EXISTS lighthouse_matches
+  ADD CONSTRAINT lighthouse_matches_status_check
+  CHECK (status IN ('pending', 'accepted', 'rejected', 'canceled', 'completed'));
+-- spelling:enable
+COMMIT;
+
 -- ── post migration: 0001_directory_display_name_to_first_last.sql ──
 -- Directory: move the single v2 `display_name` field to honest v3
 -- `first_name` + `last_name` columns, then drop `display_name`.
@@ -6497,47 +6595,3 @@ END $$;
 -- (re-running changes nothing once the table is gone).
 DROP TABLE IF EXISTS workforce_announcements;
 
--- spelling:disable — this migration must name the old British value to rewrite it; every
--- occurrence below is the value being migrated away from, not new usage.
--- === US-SPELLING DATA MIGRATION: cancelled -> canceled (owner-directed, 2026-07-31) ===
--- "cancelled" was a stored status value in several tables. The owner directed the repo-wide switch
--- to US spelling to include stored values, so this block renames every persisted occurrence. It is
--- idempotent and stays in the schema permanently: each deploy re-runs it, so any straggler row
--- written by not-yet-redeployed code is corrected on the next apply. The code, contracts, and docs
--- were renamed in the same PR, so reader and writer agree from the same deploy onward.
-BEGIN;
-
--- Column rename: trust_transport_trips.cancelled_reason -> canceled_reason. Guarded so it runs
--- once on a legacy database and never on a fresh one (where CREATE TABLE already used the new name).
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'trust_transport_trips' AND column_name = 'cancelled_reason'
-  ) THEN
-    ALTER TABLE trust_transport_trips RENAME COLUMN cancelled_reason TO canceled_reason;
-  END IF;
-END $$;
-
--- Status values. WHERE makes each UPDATE a no-op after the first run.
-UPDATE trust_transport_requests SET status = 'canceled' WHERE status = 'cancelled';
-UPDATE trust_transport_trips SET status = 'canceled' WHERE status = 'cancelled';
-UPDATE trust_transport_status_events SET event_name = 'order_canceled' WHERE event_name = 'order_cancelled';
-UPDATE trust_transport_status_events SET from_status = 'canceled' WHERE from_status = 'cancelled';
-UPDATE trust_transport_status_events SET to_status = 'canceled' WHERE to_status = 'cancelled';
-UPDATE lighthouse_matches SET status = 'canceled' WHERE status = 'cancelled';
-UPDATE socket_relay_requests SET status = 'canceled' WHERE status = 'cancelled';
-UPDATE socket_relay_fulfillments SET status = 'canceled' WHERE status = 'cancelled';
-UPDATE level_up_cohorts SET status = 'canceled' WHERE status = 'cancelled';
-UPDATE service_credits_transfers SET status = 'canceled' WHERE status = 'cancelled';
-UPDATE foundation_call_sessions SET status = 'canceled' WHERE status = 'cancelled';
-
--- lighthouse_matches carries the only CHECK constraint naming the old value. On a legacy database
--- the inline constraint still allows 'cancelled' and not 'canceled', so swap it: drop whichever
--- form exists, then re-add with the US value. Runs after the UPDATE above so validation passes.
-ALTER TABLE IF EXISTS lighthouse_matches DROP CONSTRAINT IF EXISTS lighthouse_matches_status_check;
-ALTER TABLE IF EXISTS lighthouse_matches
-  ADD CONSTRAINT lighthouse_matches_status_check
-  CHECK (status IN ('pending', 'accepted', 'rejected', 'canceled', 'completed'));
--- spelling:enable
-COMMIT;

@@ -24,10 +24,21 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   -- column (not metadata) so it is excluded from the metadata_hash dedupe and toggling share state
   -- never collides with the UNIQUE (user_id, metadata_hash) constraint.
   shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Optional incident tags (2026-08-02): a member may say which of the 50+ known problems
+  -- happened (problem_tag — slugs mirror the landing-page problems list) and/or which named
+  -- scheme was used (scheme_tag — slugs from the owner's "A post for each gang stalker game"
+  -- Discourse thread). Canonical slug lists live in packages/web/lib/click-log/tags.ts; the API
+  -- validates against them. Real columns (not metadata) so they are excluded from the
+  -- metadata_hash dedupe — mirroring shared_with_owner — and so the shared-trends aggregate can
+  -- project them as coarse categorical values without touching the metadata JSON.
+  problem_tag TEXT,
+  scheme_tag TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, metadata_hash)
 );
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tag TEXT;
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tag TEXT;
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_user_id ON click_log_incidents(user_id);
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_created_at ON click_log_incidents(created_at DESC);
 -- Partial index for the admin trends aggregate, which only ever reads shared rows.

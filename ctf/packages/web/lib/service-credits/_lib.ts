@@ -72,7 +72,7 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
 const SERVICE_CREDITS_ERROR_RESPONSES: Record<string, { code: string; message: string; status: number }> = {
   insufficient_balance: { code: 'service_credits_insufficient_balance', message: 'Insufficient balance.', status: 409 },
   invalid_payload: { code: 'service_credits_invalid_payload', message: 'Invalid request payload.', status: 400 },
-  credit_limit_exceeded: { code: 'service_credits_credit_limit_exceeded', message: 'This payment would exceed your mutual-credit limit.', status: 409 },
+  credit_limit_exceeded: { code: 'service_credits_credit_limit_exceeded', message: 'This send would exceed your mutual-credit limit.', status: 409 },
   mutual_credit_disabled: { code: 'service_credits_mutual_credit_disabled', message: 'Mutual credit is not enabled.', status: 409 },
   mint_budget_exceeded: { code: 'service_credits_mint_budget_exceeded', message: 'This mint would exceed the issuance budget for the current period.', status: 409 },
   credit_limit_above_max: { code: 'service_credits_credit_limit_above_max', message: 'That credit limit is above the maximum allowed by policy.', status: 409 },

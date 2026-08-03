@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
+import { reportError } from 'lib/observability/report';
 import type { PublicCommunityPost } from 'lib/feed/types';
 import { listPublicCommunityPosts } from 'lib/feed/repository';
 import { enforcePublicReadRateLimit } from 'lib/security/rate-limit';
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     // A read failure must not break the public home; degrade to the sign-in prompt (isPublic:false).
-    Sentry.captureException(error, { tags: { area: 'feed', op: 'public_community' } });
+    reportError(error, { area: 'feed', op: 'public_community' });
     return NextResponse.json({ isPublic: false, posts: [] }, { status: 200 });
   }
 }
