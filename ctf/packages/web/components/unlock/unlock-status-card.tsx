@@ -48,7 +48,7 @@ export function UnlockStatusCard({
         {status === "approved" && (
           <div style={{ padding: "14px", borderRadius: 12, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20`, textAlign: "center" }}>
             <div style={{ fontSize: 28 }}>🎉</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: t.ACCENT, marginTop: 6 }}>Welcome to the Commons!</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: t.ACCENT, marginTop: 6 }}>Welcome to Skills Economy (SE)</div>
             <div style={{ fontSize: 13, color: t.MUTED, marginTop: 4 }}>Your profile has been verified. All features are now unlocked.</div>
             <div style={{ fontSize: 12, color: t.MUTED, marginTop: 10, lineHeight: 1.5 }}>
               Your ServiceCredits reward is issued automatically and arrives within {UNLOCK_REWARD_SLA_HOURS} hours, if not sooner.
