@@ -15,7 +15,8 @@
     "check:auth-env": "node ./scripts/check-auth-env.mjs",
     "check:clerk-env": "node ./scripts/check-auth-env.mjs",
     "check:formance-env": "node ./scripts/check-formance-env.mjs",
-    "check:stream-env": "node ./scripts/check-stream-env.mjs"
+    "check:stream-env": "node ./scripts/check-stream-env.mjs",
+    "check:stream-channel-config": "node ./scripts/check-stream-channel-config.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^3.15.0",
