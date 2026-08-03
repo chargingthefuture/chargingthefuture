@@ -40,10 +40,14 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
       (async () => {
         try {
           await c.leave();
-        } catch {}
+        } catch {
+          /* no-trace: the call was already left */
+        }
         try {
           await videoClient.disconnectUser();
-        } catch {}
+        } catch {
+          /* no-trace: the client is already disconnected */
+        }
       })();
     };
   }, [streamApiKey, streamToken, streamUserId, streamChannelId]);

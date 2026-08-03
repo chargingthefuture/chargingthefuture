@@ -45,7 +45,7 @@ export async function resolveUsernames(userIds: string[]): Promise<Map<string, s
         result.set(user.id, displayName(user));
       }
     } catch {
-      // best-effort: leave this chunk's ids unresolved (null)
+      // no-trace: best-effort, so this chunk's ids stay unresolved (null)
     }
   }
 

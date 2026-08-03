@@ -693,3 +693,24 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
     the parse reason and reports nothing).
   - Next (follow-up 2 of 2): the same standard outside route handlers — `lib/**`, `ctf/scripts/**`, and
     the mobile app.
+- 2026-08-03: **Closed the last surface for verbose error handling** (rule 137, follow-up 2 of 2): the
+  code that is neither a route handler nor a screen — the web server libraries, the operational scripts,
+  the shared packages, and the native app's own modules. Cross-cutting, no schema/contract/route change.
+  - Rule 137 gained points 13–15: a catch that does work records the reason (`reportError` in
+    `web/lib/**` and the native app, `console.error` in a script — a script that fails silently and exits
+    0 is the worst case for anyone debugging it); a catch whose whole body is one `return` or one
+    assignment is fine as it is, because producing the alternative value is its job and the caller sees
+    it; and an empty catch must state why in the code as `no-trace: <reason>`, so a deliberate silence is
+    visible and greppable instead of invisible. A bare `// ignore` no longer passes.
+  - **The native app had no error reporting at all** for caught failures. Added
+    `ctf/packages/mobile/src/observability/report.ts` (`reportError` + `reasonText`) alongside the
+    existing Sentry init: a console line always, Sentry when a DSN is configured. Nine silent failures now
+    report, including a failed token refresh that signed the member out with no trace, a bug report whose
+    submission failed silently, and the Chyme back-channel join.
+  - The gate covers all three surfaces and found **82 sites**; all are resolved — the ones that were
+    hiding a real failure now report it, and the deliberate ones (releasing a client that is already
+    gone, a share sheet the member dismissed, a temporary file already deleted, the Stream
+    create-or-watch idiom) carry a stated `no-trace:` reason. The burn-down list stays empty.
+  - Two gate refinements while measuring: a catch whose body is a single return/assignment is exempt
+    (that is the fallback being the answer, not a hidden failure), and the statement split ignores
+    semicolons inside strings.

@@ -63,6 +63,24 @@ fallback sentence. That is where the reason used to disappear a second time.
     validation of the person's own input (a JSON textarea that does not parse) are not failures to
     explain with vendor text: report the first, show the parse reason for the second with `reasonText`.
 
+## Mandatory — everything else that catches (libraries, scripts, the native app)
+
+Not every catch answers a request or draws a screen. A server library, an operational script, or a
+native-app module still has to leave a trace when it swallows a failure.
+
+13. **A catch that does work must record the reason.** If the body retries, cleans up, writes a
+    different value, or shows something, the caught value goes to `reportError` (web `lib/**`, the
+    native app) or `console.error` (a script — an operational script that fails silently and exits 0 is
+    the worst case for anyone debugging it).
+14. **A catch whose whole body is one `return` or one assignment is fine as it is.** Producing the
+    alternative value is its job and the caller can see that value: `return null`,
+    `return { ok: false, reason: 'not_a_zip' }`, `reporter = createNoopReporter()`. Carry a short
+    comment saying why the failure is expected.
+15. **An empty catch must say why, in the code, as `no-trace: <reason>`.** Releasing a client that is
+    already gone, a share sheet the member dismissed, a temporary file already deleted — these are
+    real, and the marker makes the decision visible and greppable instead of invisible. A bare
+    `// ignore` is not enough: name the reason.
+
 ## How
 
 `ctf/packages/web/lib/errors/failure.ts` (server) and `ctf/packages/web/lib/errors/client-failure.ts`
@@ -127,11 +145,13 @@ message: withReason('Could not open the broadcast call', error);
 ## CI gate
 
 `pnpm --dir ctf run check:error-verbosity` (job **Error Verbosity Gate** in `.github/workflows/ci.yml`)
-fails on five things. On routes (`ctf/packages/web/app/api/**/route.ts`): an answering `catch` with no
+fails on seven things. On routes (`ctf/packages/web/app/api/**/route.ts`): an answering `catch` with no
 binding, a 5xx answer that does not report the error, and an operator-route error message with no
-reason. On screens and hooks (`components/**`, `hooks/**`, `app/**` outside `api`): a `!res.ok` branch
-that shows a fixed string instead of the route's message, and a `catch` that shows a fixed string and
-never uses the caught value.
+reason. On screens and hooks (`components/**`, `hooks/**`, `app/**` outside `api`, and the native app's
+`src/**`): a `!res.ok` branch that shows a fixed string instead of the route's message, and a `catch`
+that shows a fixed string and never uses the caught value. On everything else that catches
+(`web/lib/**`, `ctf/scripts/**`, `mobile/src/**`, `shared/src/**`): an empty catch with no
+`no-trace: <reason>` marker, and a catch that does work while neither using nor recording the value.
 
 `ctf/config/error-verbosity-allowlist.json` holds a per-file budget for the failures that existed when
 the gate landed. It is a burn-down list: a budget may shrink, never grow, and a file not listed must be
@@ -141,6 +161,7 @@ clean. Do not add an entry to silence the gate — fix the route.
 
 - `.claude/rules/113-platform-coding-rules.mdc` — structured error responses, no silent catch.
 - `.claude/rules/108-observability-provider-abstraction-rules.mdc` — all error capture goes through
-  `reportError`.
+  `reportError`. The native app has its own, at
+  `ctf/packages/mobile/src/observability/report.ts` (console line plus Sentry, a no-op without a DSN).
 - `.claude/rules/124-brand-voice-and-language-rules.mdc` — plain words in the summary half of the
   message; the reason half is the machine's own text and is quoted as-is.

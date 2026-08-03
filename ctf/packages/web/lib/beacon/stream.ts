@@ -167,7 +167,7 @@ export async function createBeaconHostCredentials(input: {
     // too: releasing a server-side client must never be what stops a broadcast from starting.
     try {
       await chatClient.disconnectUser();
-    } catch { /* nothing to release */ }
+    } catch { /* no-trace: the client is already released */ }
   }
 }
 

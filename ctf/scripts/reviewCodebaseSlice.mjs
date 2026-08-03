@@ -536,7 +536,7 @@ function salvageFindings(text) {
         try {
           objects.push(JSON.parse(text.slice(objStart, i + 1)));
         } catch {
-          // An individually malformed object is skipped, not fatal.
+          // no-trace: an individually malformed object is skipped rather than fatal.
         }
         objStart = -1;
       }
@@ -553,7 +553,7 @@ function ensureLabel(name, color, description) {
   try {
     gh(['label', 'create', name, '--repo', REPO, '--color', color, '--description', description, '--force']);
   } catch {
-    // Best-effort; applying the label at create time is what matters.
+    // no-trace: best-effort, since applying the label at create time is what matters.
   }
 }
 
