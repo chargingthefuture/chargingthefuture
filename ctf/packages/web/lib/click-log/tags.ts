@@ -88,6 +88,12 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   { slug: 'fake-counselor', label: 'Fake Counselor / Fake Help' },
   { slug: 'lure-to-location', label: 'Lure to a Location' },
   { slug: 'staged-narratives', label: 'Staged Narratives / Loud "Podcasts"' },
+  // Named by the owner (2026-08-03), the first scheme added through the ClickLog-era flow:
+  // staged criticism of an invented flaw, timed to be absurd (e.g. "you stink" after hours in
+  // 100-degree heat on the way to a shower). Dual purpose: sensitize the member into being
+  // overly self-critical, and capture audio of the remark so operatives who know nothing
+  // believe the "problem" is real and recurring.
+  { slug: 'fabricated-flaw', label: 'The Fabricated Flaw' },
   // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
   // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
   // description of the scheme (see click-log.incident.create) — that is the intake that names
