@@ -275,6 +275,7 @@ web ☐
 **Expected:**
 - Both participants can send and receive messages.
 - No send fails with **"Message Failed · Unauthorized"** on an active Direct Line — including right after arriving from the Commons or a deep link (step 4). That failure meant the chat connection had been silently switched to another surface's Stream user; each chat identity now keeps its own connection.
+- If a send *is* refused anyway, the conversation must say why: a plain-language line appears above the composer naming the reason the chat service gave (for example that the conversation is paused), never only the words "Message Failed · Unauthorized". If the member is not allowed to post at all, the composer is replaced by that explanation instead of accepting text that cannot be sent. Report any occurrence — the reason is also recorded in the runtime logs (`op: send_capability_missing`, `op: send_message`, `op: verify_channel_members`).
 - The chat panel shows the request title and each participant's role ("Your request" / "You're helping").
 - Each participant sees the **other** person by their real `@username` (or a readable name) — **not** a raw `user-xxxxxxxx` id. This holds both right after the claim and when re-opening the chat later (opening the chat must not degrade the counterparty's name).
 - When the message list is empty a branded empty state appears ("No messages yet" or similar) — not Stream's default "No chats here yet…".
