@@ -38,8 +38,9 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   incidents by default" setting plus a per-incident override (in the log form and on each history
   row). Sharing is opt-in and off until the member turns it on, and can be turned off again per
   incident at any time. Shared incidents contribute only grouped trend data (day, approximate area,
-  count) — never the note or exact location. The member-facing copy says exactly that in plain
-  words ("only the date, rough area, and tags"), with no "coarse" wording.
+  count) — never the note or exact location. The member-facing copy says so in plain words: the
+  global default reads "only trend data — never your notes" and the per-incident checkbox reads
+  "only the date, rough area, and tags". Neither uses the word "coarse".
 
 ## 4. Admin Features
 
@@ -172,7 +173,7 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
   know that, and the word can be read as "rude". The two member-facing sharing controls now name
   what is actually sent: the per-incident checkbox reads "Share this incident with the owner (only
   the date, rough area, and tags)" and the global default reads "Share new incidents with the owner
-  by default (only the date, rough area, and tags — never your notes or exact location)". The owner
+  by default (only trend data — never your notes)" (owner-set wording). The owner
   trends dashboard blurb says "Grouped data only" instead of "Coarse data only". Copy only — no
   change to what is shared, to any route, schema, or contract.
 - 2026-08-03: **"Not listed" scheme-suggestion intake + naming pipeline (owner request).** The
