@@ -168,6 +168,23 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-04: **Four more scheme tags: The Poisoned Well and the luck-pendulum family (owner-named).**
+  `poisoned-well` — an easy-to-recruit newcomer is steered into the member's orbit, gossip about
+  that newcomer is staged within their earshot so it reads as coming from the member, and a second
+  operative then baits the member into saying something about them; the newcomer dislikes the
+  member before any real relationship exists. The owner's good-luck / bad-luck pendulum split into
+  two tags because the mechanism, tell, and outcome differ: `windfall` (sudden fortune lands on
+  someone near the member — scholarship, job, whirlwind marriage or baby — elevating them so they
+  read the member as incompetent, handing them fake friends and an ego boost, and seeding
+  insecurity in the member; a flattered person converts easily; distinct from `honey-pot`, where
+  the romance targets the member directly) and `jinx` (someone near the member is hit with a
+  ticket, crash, theft, or repair bill and is then told the member's presence caused it — cause the
+  problem, sell the story, break the tie, isolate the member). `fake-job` — a job offer good enough
+  to leave the current one for, then a firing shortly after, leaving the target without the old job
+  and further from a better one; aimed at the member directly or at someone near them. List-data
+  only: no schema, route, contract, or UI change. The landing `/schemes` page gains matching
+  entries in a companion PR.
+
 - 2026-08-04: **Four new scheme tags: The Pot and Kettle plus three vehicle schemes (owner-named).**
   `pot-and-kettle` — the insult is delivered by someone who visibly embodies it (a fat person
   calling the member fat, a disabled person mocking a disability), made obnoxiously inappropriate

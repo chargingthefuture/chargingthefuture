@@ -212,3 +212,5 @@ of these, it is already tracked, not a new bug:
 > _Scheme list update (2026-08-03): added "The Fabricated Flaw" to the canonical scheme tags. List-data only — no test steps changed; CL-7/CL-8 cover tagging and suggestions generically._
 
 > _Scheme list update (2026-08-04): added "The Pot and Kettle", "Staged Road Rage", "The Insurance Bleed", and "Road Sensitization". List-data only — no test steps changed._
+
+> _Scheme list update (2026-08-04): added "The Poisoned Well", "The Windfall", "The Jinx", and "The Fake Job". List-data only — no test steps changed._
