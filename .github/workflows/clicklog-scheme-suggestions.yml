@@ -1,0 +1,55 @@
+name: ClickLog — Scheme Suggestion Issues
+
+# Drains "Not listed" scheme suggestions from the app database into the PRIVATE triage repo
+# (member-written text may carry personal detail; issues never carry member identity), and files
+# a threshold alert when shared "Not listed" incidents are trending. The pipeline ONLY files
+# issues — naming a scheme stays a deliberate PR that edits the canonical list in
+# packages/web/lib/click-log/tags.ts. See ctf/scripts/proposeSchemeSuggestions.mjs.
+#
+# Prerequisites (same as bug reports):
+#   1. The private triage repo exists (chargingthefuture/bug-reports).
+#   2. GH_PAT repo secret has issues:write there.
+#   3. Labels `scheme-suggestion` and `needs-triage` exist there (the script retries without
+#      labels if they are missing, so a missing label never loses an issue).
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "41 */12 * * *"   # twice a day, at :41 to avoid a top-of-hour stampede
+
+permissions:
+  contents: read
+
+jobs:
+  file-scheme-suggestion-issues:
+    name: File scheme-suggestion and threshold issues
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # DATABASE_URL is a runtime secret; Infisical is the single source of truth.
+      # GH_PAT is a GitHub-native secret and is read straight from repo secrets below.
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      # The script needs only the Postgres client. Install it standalone so we do not
+      # pay for a full monorepo install on every run.
+      - name: Install Postgres client
+        run: npm install --no-save pg@8
+
+      - name: File issues
+        env:
+          # DATABASE_URL is injected by the Infisical step above.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: node ctf/scripts/proposeSchemeSuggestions.mjs

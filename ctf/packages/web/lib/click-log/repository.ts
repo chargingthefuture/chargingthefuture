@@ -3,6 +3,7 @@ import {
   ClickLogIncident,
   ClickLogPreferences,
   CreateIncidentInput,
+  CreateSchemeSuggestionInput,
   SharedIncidentTagTrend,
   SharedIncidentTrendBucket,
 } from './types';
@@ -100,6 +101,18 @@ export async function getSharedIncidentTrends(days = 90): Promise<SharedIncident
     longitudeCell: row.longitude_cell === null ? null : Number(row.longitude_cell),
     count: parseInt(row.count, 10),
   }));
+}
+
+// Stores a member's "Not listed" scheme suggestion. The text is member-authored and explicitly
+// shared with the owner; the scheduled proposeSchemeSuggestions script drains status='new' rows
+// into private triage issues (never exposing user_id or incident_id in the issue).
+export async function createSchemeSuggestion(input: CreateSchemeSuggestionInput): Promise<void> {
+  const { incidentId, userId, suggestion, quoraUrl } = input;
+  await queryDb(
+    `INSERT INTO click_log_scheme_suggestions (id, incident_id, user_id, suggestion, quora_url, status, created_at, updated_at)
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, 'new', NOW(), NOW())`,
+    [incidentId, userId, suggestion, quoraUrl ?? null]
+  );
 }
 
 // Owner tag-trend aggregate. Same privacy boundary as getSharedIncidentTrends: reads ONLY

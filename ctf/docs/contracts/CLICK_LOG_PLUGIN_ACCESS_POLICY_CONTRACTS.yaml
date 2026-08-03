@@ -1,12 +1,20 @@
 policies:
   - pluginId: click-log
     command: click-log.incident.create
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles: [user]
     attributePolicies:
       - attribute: userId
         mustMatch: authenticatedUserId
-    consentRequirements: []
+      # The "Not listed" scheme flow (schemeTag = 'other-scheme') additionally requires the
+      # Weavers of the Commons badge (contributor_access_eligibility: eligible and not revoked)
+      # — spam control on the scheme-suggestion intake. Enforced in the create route; members
+      # without the badge get a 403 and the client hides the option.
+      - attribute: schemeTag
+        conditionalRequirement: weavers_badge_when_other_scheme
+    # The schemeSuggestion text is member content explicitly shared with the owner; the field
+    # states this in the form, so submission is the consent act.
+    consentRequirements: [scheme_suggestion_shared_with_owner]
   - pluginId: click-log
     command: click-log.incident.list
     version: 1.0.0

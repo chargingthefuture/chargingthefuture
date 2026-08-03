@@ -68,6 +68,51 @@ CREATE TABLE IF NOT EXISTS click_log_preferences (
 );
 ALTER TABLE IF EXISTS click_log_preferences ADD COLUMN IF NOT EXISTS share_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS click_log_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- "Not listed" scheme suggestions (2026-08-02): when a member picks the catch-all scheme tag they
+-- must describe the scheme, and that text is EXPLICITLY shared with the owner (the form says so —
+-- unlike incident notes, which are never shared). Weavers of the Commons badge holders only (spam
+-- control, enforced in the create route). quora_url is an optional self-provided link to the
+-- member's own Quora post about a similar incident (a spam signal for the owner). The scheduled
+-- proposeSchemeSuggestions script drains status='new' rows into PRIVATE triage-repo issues (the
+-- text may carry personal detail; the public repo never sees it, and issues never carry user_id or
+-- incident_id), then stamps status='issue_created' plus the issue reference — mirroring bug_reports.
+CREATE TABLE IF NOT EXISTS click_log_scheme_suggestions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  incident_id UUID,
+  user_id TEXT NOT NULL,
+  suggestion TEXT NOT NULL,
+  quora_url TEXT,
+  status TEXT NOT NULL DEFAULT 'new',
+  triage_repo TEXT,
+  issue_number INTEGER,
+  issue_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS incident_id UUID;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS suggestion TEXT;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS quora_url TEXT;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'new';
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS triage_repo TEXT;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS issue_number INTEGER;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS issue_url TEXT;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_click_log_scheme_suggestions_status ON click_log_scheme_suggestions(status, created_at);
+-- Dedupe marker for the unnamed-scheme threshold alert: one row per filed alert issue, so the
+-- scheduled script files at most one alert per cooldown window. Holds counts only — no member data.
+CREATE TABLE IF NOT EXISTS click_log_unnamed_scheme_alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  window_days INTEGER NOT NULL,
+  shared_count INTEGER NOT NULL,
+  issue_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS click_log_unnamed_scheme_alerts ADD COLUMN IF NOT EXISTS window_days INTEGER;
+ALTER TABLE IF EXISTS click_log_unnamed_scheme_alerts ADD COLUMN IF NOT EXISTS shared_count INTEGER;
+ALTER TABLE IF EXISTS click_log_unnamed_scheme_alerts ADD COLUMN IF NOT EXISTS issue_url TEXT;
+ALTER TABLE IF EXISTS click_log_unnamed_scheme_alerts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- === WHAT WORKS (survivor-verified shared tool list, organized by problem) ===

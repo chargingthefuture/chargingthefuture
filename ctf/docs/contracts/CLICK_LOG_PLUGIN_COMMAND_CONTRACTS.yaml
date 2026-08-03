@@ -1,7 +1,7 @@
 commands:
   - pluginId: click-log
     command: click-log.incident.create
-    version: 1.2.0
+    version: 1.3.0
     inputSchema:
       type: object
       properties:
@@ -12,6 +12,10 @@ commands:
         problemTag:
           type: string
         schemeTag:
+          type: string
+        schemeSuggestion:
+          type: string
+        schemeQuoraUrl:
           type: string
       # metadata is not required, matches implementation.
       # sharedWithOwner is optional: when omitted, the member's stored global default
@@ -24,16 +28,26 @@ commands:
       # When either or both tags are present, metadata.latitude and metadata.longitude are
       # required (owner decision, 2026-08-02: tagged trend data needs location to be detailed
       # enough); a tagged request without a location is a 400.
+      # schemeSuggestion is REQUIRED (1–200 chars after trim) when schemeTag is the catch-all
+      # 'other-scheme' ("Not listed") and rejected with any other schemeTag. It is member text
+      # EXPLICITLY shared with the owner (the form says so; metadata.notes stays never-shared)
+      # and is stored in click_log_scheme_suggestions for the scheme-naming pipeline.
+      # schemeQuoraUrl is optional with 'other-scheme' only: an https quora.com link to the
+      # member's own post about a similar incident (a spam signal for the owner).
+      # The 'other-scheme' flow is limited to Weavers of the Commons badge holders
+      # (contributor_access_eligibility: eligible and not revoked); others receive a 403.
     outputSchema:
       $ref: '#/definitions/ClickLogIncident'
     dataAccess:
       - click_log_incidents (insert)
       - click_log_preferences (select)
+      - click_log_scheme_suggestions (insert — only when schemeTag is 'other-scheme')
+      - contributor_access_eligibility (select — Weavers badge check, only when schemeTag is 'other-scheme')
     purpose: Log a new incident for the authenticated user
     retentionClass: user_event
   - pluginId: click-log
     command: click-log.incident.list
-    version: 1.0.0
+    version: 1.1.0
     inputSchema:
       type: object
       properties:
@@ -52,8 +66,14 @@ commands:
             $ref: '#/definitions/ClickLogIncident'
         count:
           type: integer
+        canSuggestScheme:
+          type: boolean
+      # canSuggestScheme: whether this member may pick the "Not listed" scheme tag (Weavers of
+      # the Commons badge holders only). The client hides the option when false; the create
+      # route enforces the same rule independently.
     dataAccess:
       - click_log_incidents (select)
+      - contributor_access_eligibility (select — Weavers badge check for canSuggestScheme)
     purpose: List incidents for a user
     retentionClass: user_event
   - pluginId: click-log

@@ -24,6 +24,14 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   explanation) until location is added, and the server enforces the same rule — because tagged
   trend data needs location to be detailed enough. Tags show as chips on the history rows and
   feed trend reporting.
+- Suggest a new scheme via the "Not listed" scheme tag (Weavers of the Commons badge holders
+  only — members without the badge do not see the option). Picking it requires a written
+  description of the scheme (up to 200 characters) that is explicitly shared with the owner —
+  the field says so; incident notes stay never-shared — plus an optional link to the member's
+  own Quora post about a similar incident (an https quora.com link, also shared; it helps the
+  owner tell real reports from spam). This intake is how new schemes earn a name: suggestions
+  flow to the owner's private triage queue, and a real one becomes a pull request adding the
+  scheme to the canonical list.
 - View incident count and history
 - Delete own incidents
 - Choose whether an incident is shared with the owner for trend tracking: a global "share new
@@ -38,13 +46,22 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   share — shared total, days with activity, per-day counts, area-cluster count (each area is a
   ~11 km cell), and "Top problems" / "Top schemes" tag breakdowns (per-tag counts over the
   canonical tag slugs). No notes, precise coordinates, incident ids, or member identity are visible.
+- Scheme-naming pipeline (scheduled, outside the app): `.github/workflows/clicklog-scheme-suggestions.yml`
+  runs `ctf/scripts/proposeSchemeSuggestions.mjs` twice a day. It (a) drains new "Not listed"
+  suggestions into one issue per distinct text in the private triage repo
+  (`chargingthefuture/bug-reports`) — carrying the suggestion text, the optional Quora self-link,
+  a same-text count, and dates, never member identity or incident ids — and (b) files a single
+  threshold alert (counts only) when shared "Not listed" incidents reach 5 in 90 days, at most one
+  alert per 30 days (`click_log_unnamed_scheme_alerts` is the dedupe marker). The pipeline never
+  edits the canonical scheme list; naming a scheme stays a PR to `lib/click-log/tags.ts` plus the
+  landing-page `/schemes` mirror.
 - View all incidents (future)
 - Delete any incident (future)
 
 ## 5. API Surface and Route Map
 
-- `GET /api/click-log` — List incidents for authenticated user. Returns `{ incidents, count }`. The user is always derived from the authenticated token (no caller-supplied `userId`); the access policy (`canViewIncidents`) is applied before the query.
-- `POST /api/click-log` — Create incident. Accepts optional `sharedWithOwner` boolean (falls back to the member's stored global default) and optional `problemTag` / `schemeTag` strings (each validated against the canonical slug lists in `lib/click-log/tags.ts`; an unknown slug is a 400). When either or both tags are present, `metadata.latitude`/`metadata.longitude` are required (400 otherwise). Returns the created incident flat (a `ClickLogIncident`, not wrapped under `{ incident }`), matching the command contract's `outputSchema`.
+- `GET /api/click-log` — List incidents for authenticated user. Returns `{ incidents, count, canSuggestScheme }` (`canSuggestScheme` = whether this member holds the Weavers of the Commons badge and so may pick "Not listed"). The user is always derived from the authenticated token (no caller-supplied `userId`); the access policy (`canViewIncidents`) is applied before the query.
+- `POST /api/click-log` — Create incident. Accepts optional `sharedWithOwner` boolean (falls back to the member's stored global default) and optional `problemTag` / `schemeTag` strings (each validated against the canonical slug lists in `lib/click-log/tags.ts`; an unknown slug is a 400). When either or both tags are present, `metadata.latitude`/`metadata.longitude` are required (400 otherwise). When `schemeTag` is `other-scheme` ("Not listed"): `schemeSuggestion` is required (1–200 chars after trim), `schemeQuoraUrl` is optional (must be an https quora.com link), the caller must hold the Weavers badge (403 otherwise), and the suggestion is stored in `click_log_scheme_suggestions`; suggestion fields with any other `schemeTag` are a 400. Returns the created incident flat (a `ClickLogIncident`, not wrapped under `{ incident }`), matching the command contract's `outputSchema`.
 - `DELETE /api/click-log/[id]` — Delete incident by id. Returns `{ success: true }`.
 - `PATCH /api/click-log/[id]` — Toggle owner-sharing on a single incident. Body `{ sharedWithOwner }`; only the incident's owner may call it (no admin override — consent is the member's alone). Returns `{ success, sharedWithOwner }`.
 - `GET /api/click-log/preferences` — Read the member's global owner-share default (`{ shareWithOwner }`).
@@ -67,11 +84,29 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   - `share_with_owner BOOLEAN NOT NULL DEFAULT FALSE` — global default applied to newly logged incidents when the request carries no explicit choice
   - `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
   - Upsert-on-`user_id`; a missing row reads as the opt-in default (not shared)
+- Table: `click_log_scheme_suggestions` — "Not listed" scheme descriptions, explicitly shared with the owner
+  - `id UUID PRIMARY KEY`
+  - `incident_id UUID` (nullable; the incident it was written with — no FK, matching the incidents table's conventions)
+  - `user_id TEXT NOT NULL` (for moderation and account deletion only; never surfaced in issues)
+  - `suggestion TEXT NOT NULL` (1–200 chars, validated in the create route)
+  - `quora_url TEXT` (nullable; validated https quora.com self-link)
+  - `status TEXT NOT NULL DEFAULT 'new'` (`new` → `issue_created`), `triage_repo TEXT`, `issue_number INTEGER`, `issue_url TEXT` — pipeline tracking, mirroring `bug_reports`
+  - `created_at` / `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+  - Index: `(status, created_at)` for the pipeline drain
+  - Deletion registry: `delete` on account deletion (an already-filed triage issue persists, like a bug report; the database row and member link are removed)
+- Table: `click_log_unnamed_scheme_alerts` — dedupe marker for the threshold alert; counts only, no member data
+  - `id UUID PRIMARY KEY`, `window_days INTEGER NOT NULL`, `shared_count INTEGER NOT NULL`, `issue_url TEXT`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
 
 ## 7. Security, Privacy, and Compliance Controls
 
 - Auth required for all actions
 - Users can only view/delete their own incidents; admins can view/delete any incident
+- The "Not listed" scheme-suggestion text is the one deliberate exception to "tags carry no free
+  text": it is a separate field explicitly labeled as shared with the owner (submission is the
+  consent act), stored apart from `metadata.notes` (which keeps its absolute never-shared
+  guarantee), capped at 200 chars, Weavers-of-the-Commons-gated (client hides the option;
+  server returns 403), and drained only into the PRIVATE triage repo — issues never carry
+  member identity or incident ids. Suggestion fields sent with any other scheme tag are rejected.
 - Incident tags are coarse by construction: values come only from the fixed canonical slug lists
   in `lib/click-log/tags.ts` (the create route rejects unknown slugs), so tag data can never carry
   free text. A tagged incident must carry a location (client and server enforced) so tagged trend
@@ -120,6 +155,8 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 - Tag coverage: one incident tagged with both a problem and a scheme, one problem-only, one
   scheme-only, and untagged incidents; every tagged seed incident carries a location, matching
   the tags-require-location rule
+- One "Not listed" incident plus a matching `click_log_scheme_suggestions` row (status `new`,
+  with a Quora self-link) so a demo run of the suggestion pipeline has something to drain
 
 ## 10. Gaps and Known Technical Debt
 
@@ -129,6 +166,27 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-03: **"Not listed" scheme-suggestion intake + naming pipeline (owner request).** The
+  catch-all scheme tag's label changed "Other / not named yet" → "Not listed" (slug `other-scheme`
+  frozen; the landing `/schemes` mirror is renamed in a companion landing-page PR). Picking it now
+  REQUIRES a description of the scheme (1–200 chars) that is explicitly shared with the owner —
+  the field says so, and it is stored in the new `click_log_scheme_suggestions` table, never in
+  `metadata.notes` (which stays never-shared) — plus an optional https quora.com self-link (spam
+  signal). The option is limited to Weavers of the Commons badge holders (owner decision, spam
+  control): `GET /api/click-log` now returns `canSuggestScheme` (badge check via
+  `contributor_access_eligibility`), the client hides the option for non-holders, and the create
+  route independently returns 403. New scheduled pipeline
+  (`.github/workflows/clicklog-scheme-suggestions.yml` → `ctf/scripts/proposeSchemeSuggestions.mjs`,
+  twice daily, mirroring the skills-promotion and bug-report pipelines): drains `status='new'`
+  suggestions into one PRIVATE triage-repo issue per distinct text (suggestion + Quora link +
+  same-text count + dates; never member identity or incident ids), and files a threshold alert
+  (counts only) when shared "Not listed" incidents reach 5 in 90 days, at most one alert per 30
+  days (`click_log_unnamed_scheme_alerts`). The pipeline never edits the canonical list — naming a
+  scheme stays a PR to `tags.ts` + the landing mirror. Deletion registry: suggestions are deleted
+  with the account (filed issues persist, like bug reports). Contracts: `incident.create` → 1.3.0,
+  `incident.list` → 1.1.0, access policy create → 1.1.0 with the Weavers conditional and the
+  shared-suggestion consent note. Seed gains a "Not listed" incident + suggestion row. Android:
+  out of scope (web-only per rule 105).
 - 2026-08-02: **Optional incident tags: problem + scheme (owner request).** A member can now tag a
   logged incident with which of the 50+ known problems happened and/or which named scheme was used
   — one, both, or neither; both optional. A tagged incident requires a location (client disables
