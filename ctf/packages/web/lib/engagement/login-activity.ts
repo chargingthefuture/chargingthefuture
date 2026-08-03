@@ -52,7 +52,7 @@ export async function getActiveUserIdsLastDays(days: number): Promise<string[]> 
   const result = await queryDb<{ user_id: string }>(
     `SELECT DISTINCT user_id
      FROM login_events
-     WHERE created_at >= NOW() - ($1::text || ' days')::interval
+     WHERE created_at >= NOW() - make_interval(days => $1::int)
      ORDER BY user_id ASC`,
     [safeDays],
   );
@@ -65,7 +65,7 @@ export async function countActiveUsersLastDays(days: number): Promise<number> {
   const result = await queryDb<{ total: string }>(
     `SELECT COUNT(DISTINCT user_id)::text AS total
      FROM login_events
-     WHERE created_at >= NOW() - ($1::text || ' days')::interval`,
+     WHERE created_at >= NOW() - make_interval(days => $1::int)`,
     [safeDays],
   );
 
