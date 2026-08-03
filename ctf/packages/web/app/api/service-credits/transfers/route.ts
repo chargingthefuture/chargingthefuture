@@ -4,6 +4,7 @@ import { ensureMutationCsrf, requireServiceCreditsReadAccess, serviceCreditsErro
 import { isRegisteredPluginSlug } from 'lib/plugins/repository';
 import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // A transfer with no originPlugin is a direct member-to-member send from the ServiceCredits app
 // itself, so it defaults to this plugin's own path.
@@ -103,8 +104,8 @@ export async function POST(request: Request) {
   let body: TransferBody;
   try {
     body = (await request.json()) as TransferBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 });
   }
 
   const parsed = parseTransferBody(body);

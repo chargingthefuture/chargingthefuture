@@ -4,6 +4,7 @@ import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { takedownAdminProfile } from 'lib/directory/repository';
 import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason, withReason } from 'lib/errors/failure';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -17,10 +18,10 @@ async function parseTakedownReason(request: Request): Promise<{ error: NextRespo
   try {
     const body = (await request.json()) as { reason?: unknown };
     reason = typeof body.reason === 'string' ? body.reason : '';
-  } catch {
+  } catch (caught) {
     return {
       error: NextResponse.json(
-        { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+        { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: withReason('Invalid JSON body', caught) },
         { status: 400 },
       ),
     };
@@ -142,7 +143,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       errorCategory: 'persistence_error',
     });
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to take down profile.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: `Unable to take down profile: ${failureReason(error)}` },
       { status: 503 },
     );
   }

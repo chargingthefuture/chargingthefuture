@@ -13,6 +13,7 @@ import {
 } from 'lib/contributor-access/gated-channel';
 import { CONTRIBUTOR_VALUE_EVENT_KEYS } from 'lib/contributor-access/weights';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Admin read/update of the single owner-tunable config row (weights, threshold, gate minimums,
 // channel_open). Admin-only; every allow/deny audits. The channel_open launch gate is enforced
@@ -43,7 +44,7 @@ export async function GET() {
   } catch (error) {
     reportError(error, { area: 'contributor-access', op: 'admin_config_get' });
     return NextResponse.json(
-      { ok: false, code: 'contributor_access_unavailable', message: 'Config unavailable.' },
+      { ok: false, code: 'contributor_access_unavailable', message: `Config unavailable: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -217,9 +218,9 @@ export async function PUT(request: Request) {
   let body: ConfigBody;
   try {
     body = (await request.json()) as ConfigBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: 'contributor_access_invalid_json', message: 'Invalid JSON body.' },
+      { ok: false, code: 'contributor_access_invalid_json', message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -260,7 +261,7 @@ export async function PUT(request: Request) {
   } catch (error) {
     reportError(error, { area: 'contributor-access', op: 'admin_config_update' });
     return NextResponse.json(
-      { ok: false, code: 'contributor_access_unavailable', message: 'Config update unavailable.' },
+      { ok: false, code: 'contributor_access_unavailable', message: `Config update unavailable: ${failureReason(error)}` },
       { status: 503 },
     );
   }

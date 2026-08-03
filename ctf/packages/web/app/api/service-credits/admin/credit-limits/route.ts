@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { setCreditLimit, getCreditLimitInfo, insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type CreditLimitBody = {
   targetUserId?: string;
@@ -46,8 +47,8 @@ export async function POST(request: Request) {
   let body: CreditLimitBody;
   try {
     body = (await request.json()) as CreditLimitBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: `Invalid JSON body: ${failureReason(error)}` }, { status: 400 });
   }
 
   if (!body.targetUserId || typeof body.creditLimit !== 'number' || !Number.isFinite(body.creditLimit) || body.creditLimit < 0) {

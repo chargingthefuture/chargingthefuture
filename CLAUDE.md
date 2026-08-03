@@ -165,6 +165,7 @@ needed to authenticate `infisical run`.
 | Auth (Clerk) | `.claude/rules/107-integration-stack-rules.mdc` |
 | File size limits | `.claude/rules/116-file-size-and-modularity-rules.mdc` |
 | Agent cost/readability | `.claude/rules/117-agent-readability-and-cost-rules.mdc` |
+| Error handling (say what failed and why) | `.claude/rules/137-verbose-error-handling-rules.mdc` |
 
 # Codespaces Environment Notice
 
@@ -287,6 +288,7 @@ and hides meaning.
 - [134-navigation-and-back-control-rules.mdc](.claude/rules/134-navigation-and-back-control-rules.mdc)
 - [135-ai-behavior-change-log-and-user-preferences.mdc](.claude/rules/135-ai-behavior-change-log-and-user-preferences.mdc)
 - [136-backup-and-restore-testing-rules.mdc](.claude/rules/136-backup-and-restore-testing-rules.mdc)
+- [137-verbose-error-handling-rules.mdc](.claude/rules/137-verbose-error-handling-rules.mdc)
 - [200-plugin-command-contract-templates.mdc](.claude/rules/200-plugin-command-contract-templates.mdc)
 - [201-plugin-command-schema-template.mdc](.claude/rules/201-plugin-command-schema-template.mdc)
 - [202-plugin-access-policy-schema-template.mdc](.claude/rules/202-plugin-access-policy-schema-template.mdc)

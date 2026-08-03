@@ -4,6 +4,7 @@ import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { insertLighthouseAudit, updateMatch, validateMatchUpdateInput } from 'lib/lighthouse/repository';
 import type { LighthouseMatchUpdateInput } from 'lib/lighthouse/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteParams = {
   params: Promise<{ matchId: string }>;
@@ -63,9 +64,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
   let body: MatchBody;
   try {
     body = (await request.json()) as MatchBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

@@ -5,6 +5,7 @@ import { logFeedAudit } from 'lib/feed/audit';
 import { createFeedQuestion, validateFeedQuestionInput } from 'lib/feed/repository';
 import type { FeedQuestionInput } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type QuestionBody = Partial<FeedQuestionInput>;
 
@@ -31,9 +32,9 @@ export async function POST(request: Request) {
   let body: QuestionBody;
   try {
     body = (await request.json()) as QuestionBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

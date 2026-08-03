@@ -4,6 +4,7 @@ import { FEED_ERROR_CODE, FEED_DEFAULT_PAGE, FEED_DEFAULT_PAGE_SIZE, FEED_MAX_PA
 import { listAdminQuestions, isValidFeedQuestionCategory } from 'lib/feed/repository';
 import type { FeedQuestionCategory } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Resolve page and page size from the query string, applying the same defaults and the maximum cap
 // as before.
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
   } catch (error) {
     reportError(error, { area: 'feed', op: 'admin_questions' });
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to list questions.' },
+      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: `Unable to list questions: ${failureReason(error)}` },
       { status: 503 },
     );
   }

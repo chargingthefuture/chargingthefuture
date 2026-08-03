@@ -5,6 +5,7 @@ import { getFeedConfig, updateFeedConfig, validateFeedConfigInput } from 'lib/fe
 import { logFeedAudit } from 'lib/feed/audit';
 import type { FeedConfigInput } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type ConfigBody = Partial<FeedConfigInput>;
 
@@ -32,7 +33,7 @@ export async function GET() {
   } catch (error) {
     reportError(error, { area: 'feed', op: 'admin_config' });
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch feed config.' },
+      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: `Unable to fetch feed config: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -52,9 +53,9 @@ export async function PUT(request: Request) {
   let body: ConfigBody;
   try {
     body = (await request.json()) as ConfigBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -88,7 +89,7 @@ export async function PUT(request: Request) {
   } catch (error) {
     reportError(error, { area: 'feed', op: 'admin_config' });
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to update feed config.' },
+      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: `Unable to update feed config: ${failureReason(error)}` },
       { status: 503 },
     );
   }

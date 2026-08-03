@@ -407,6 +407,21 @@ jobs:
       - name: Fail on API routes that nothing calls
         run: node ctf/scripts/check-orphan-routes.mjs
 
+  error-verbosity-gate:
+    name: Error Verbosity Gate
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Rule 137: when a route fails, its answer must say what failed and why. Fails the build on an
+      # answering catch with no binding, a 5xx that never reports the error, and an operator-surface
+      # message with no reason. A fixed sentence with no reason costs a round of guessing every time it
+      # reaches someone, which is why this is a gate and not a review note.
+      - name: Fail on opaque error paths
+        run: node ctf/scripts/check-error-verbosity.mjs
+
   taxonomy-change-gate:
     name: Taxonomy Change Gate
     runs-on: ubuntu-latest
@@ -477,6 +492,7 @@ jobs:
       - stream-quota-policy
       - stream-quota-impact-note
       - schema-drift-gate
+      - error-verbosity-gate
       - pr-parity-status
     # Run the expensive build/lint/typecheck gate only when app/build code changed.
     # For config/docs-only PRs this job is skipped (which counts as a pass downstream),
@@ -492,6 +508,7 @@ jobs:
       needs.stream-quota-policy.result == 'success' &&
       (needs.stream-quota-impact-note.result == 'success' || needs.stream-quota-impact-note.result == 'skipped') &&
       needs.schema-drift-gate.result == 'success' &&
+      needs.error-verbosity-gate.result == 'success' &&
       (needs.pr-parity-status.result == 'success' || needs.pr-parity-status.result == 'skipped')
     steps:
       - name: Checkout

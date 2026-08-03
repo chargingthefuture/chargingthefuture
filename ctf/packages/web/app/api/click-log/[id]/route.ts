@@ -3,6 +3,7 @@ import { deleteIncident, getIncidentById, setIncidentShared } from 'lib/click-lo
 import { canDeleteIncident, canToggleIncidentShare } from 'lib/click-log/policy';
 import { logClickLogAudit } from 'lib/click-log/audit';
 import { ensureMutationCsrf, requireClickLogAccess } from '../_lib';
+import { failureReason } from 'lib/errors/failure';
 
 export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const csrfDenied = ensureMutationCsrf(request);
@@ -56,8 +57,8 @@ async function parseShareBody(request: NextRequest): Promise<{ error: NextRespon
   let body;
   try {
     body = await request.json();
-  } catch {
-    return { error: NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }) };
+  } catch (caught) {
+    return { error: NextResponse.json({ error: 'Invalid JSON body', reason: failureReason(caught) }, { status: 400 }) };
   }
   const shared = (body as { sharedWithOwner?: unknown })?.sharedWithOwner;
   if (typeof shared !== 'boolean') {

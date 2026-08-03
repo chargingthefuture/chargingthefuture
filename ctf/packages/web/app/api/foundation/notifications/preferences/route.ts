@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { insertFoundationAudit, upsertNotificationPreferences } from 'lib/foundation/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export async function PUT(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -18,9 +19,9 @@ export async function PUT(request: Request) {
   let payload: { inAppEnabled?: boolean; pushEnabled?: boolean; emailEnabled?: boolean; quietHours?: unknown } = {};
   try {
     payload = await request.json();
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.', reason: failureReason(error) },
       { status: 400 },
     );
   }

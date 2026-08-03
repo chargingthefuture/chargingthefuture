@@ -4,6 +4,7 @@ import { TRUST_TRANSPORT_DEFAULT_PAGE, TRUST_TRANSPORT_DEFAULT_PAGE_SIZE, TRUST_
 import { createRequest, insertTrustTransportAudit, isValidRequestPrice, listRequests, validateRequestInput } from 'lib/trust-transport/repository';
 import type { TrustTransportMode, TrustTransportRequestInput } from 'lib/trust-transport/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Only a real number or a non-empty numeric string becomes an amount; booleans, arrays, objects, and
 // `null`/`undefined` never coerce to a price (so e.g. `true` is not read as 1).
@@ -85,9 +86,9 @@ export async function POST(request: Request) {
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

@@ -3,6 +3,7 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { checkMutationOrigin } from 'lib/auth/csrf';
 import { markAdminAreaSeen } from 'lib/admin/area-attention';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type AreaSeenBody = { areaSlug?: string };
 
@@ -33,8 +34,8 @@ export async function POST(request: Request) {
   let body: AreaSeenBody;
   try {
     body = (await request.json()) as AreaSeenBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'invalid_json', message: `Invalid JSON body: ${failureReason(error)}` }, { status: 400 });
   }
 
   const areaSlug = typeof body.areaSlug === 'string' ? body.areaSlug.trim() : '';
@@ -47,6 +48,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'admin-attention', op: 'mark_seen' });
-    return NextResponse.json({ ok: false, code: 'admin_area_seen_error', message: 'Could not update the marker.' }, { status: 500 });
+    return NextResponse.json({ ok: false, code: 'admin_area_seen_error', message: `Could not update the marker: ${failureReason(error)}` }, { status: 500 });
   }
 }

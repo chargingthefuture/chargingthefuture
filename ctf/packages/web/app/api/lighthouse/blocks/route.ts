@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireLighthouseReadAccess } from 'lib/lighthouse/
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { createBlock, insertLighthouseAudit, listBlocks } from 'lib/lighthouse/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type CreateBlockBody = {
   blockedUserId?: string;
@@ -82,9 +83,9 @@ export async function POST(request: Request) {
   let body: CreateBlockBody;
   try {
     body = (await request.json()) as CreateBlockBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

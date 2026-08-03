@@ -5,6 +5,7 @@ import { listReports } from 'lib/skills-hunt/moderation';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import type { SkillsHuntSubmissionReportStatus } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 function parseStatus(value: string | null): SkillsHuntSubmissionReportStatus | null {
   if (value === 'open' || value === 'dismissed' || value === 'archived' || value === 'removed') return value;
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_reports' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load reports.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to load reports: ${failureReason(error)}` },
       { status: 503 },
     );
   }

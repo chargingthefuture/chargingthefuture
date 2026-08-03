@@ -3,6 +3,7 @@ import { requireSkillsHuntModeratorAccess } from '../../../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { getRound, getRoundRewardSummary, listSubmissions, parsePaginationParams } from 'lib/skills-hunt/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export async function GET(request: Request, { params }: { params: Promise<{ roundId: string }> }) {
   // Moderator (not admin) gate is deliberate: this is the moderation queue, matching the
@@ -34,7 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ roun
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_submissions' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to list submissions.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to list submissions: ${failureReason(error)}` },
       { status: 503 },
     );
   }

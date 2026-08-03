@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { insertFoundationAudit, sendMessageToThread } from 'lib/foundation/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type SendMessageInput =
   | { ok: true; messageText: string; clientMessageId: string; attachments: unknown }
@@ -14,11 +15,11 @@ async function readSendMessageInput(request: Request, threadId: string): Promise
   let payload: { messageText?: string; attachments?: unknown; clientMessageId?: string } = {};
   try {
     payload = await request.json();
-  } catch {
+  } catch (error) {
     return {
       ok: false,
       response: NextResponse.json(
-        { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.' },
+        { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.', reason: failureReason(error) },
         { status: 400 },
       ),
     };

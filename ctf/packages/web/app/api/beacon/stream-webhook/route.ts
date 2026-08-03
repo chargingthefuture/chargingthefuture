@@ -7,6 +7,7 @@ import {
 } from 'lib/beacon/repository';
 import { verifyBeaconWebhookSignature } from 'lib/beacon/stream';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,8 +77,8 @@ export async function POST(request: Request) {
   let payload: Record<string, unknown>;
   try {
     payload = rawBody.length > 0 ? (JSON.parse(rawBody) as Record<string, unknown>) : {};
-  } catch {
-    return NextResponse.json({ ok: false, code: BEACON_ERROR_CODE.invalidJson, message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: BEACON_ERROR_CODE.invalidJson, message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 });
   }
 
   try {

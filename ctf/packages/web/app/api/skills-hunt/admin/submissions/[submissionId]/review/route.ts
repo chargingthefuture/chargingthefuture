@@ -14,6 +14,7 @@ import {
 import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/repository';
 import type { SkillsHuntSubmission, SkillsHuntSubmissionReviewInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason, withReason } from 'lib/errors/failure';
 
 // System actor recorded on the ServiceCredits mint for an accepted nomination —
 // mirrors Unlock's 'unlock-incentive-system'. The human reviewer is captured
@@ -123,9 +124,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
   let body: ReviewBody;
   try {
     body = (await request.json()) as ReviewBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -194,7 +195,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
 
     const failure = isNotFound
       ? { code: SKILLS_HUNT_ERROR_CODE.submissionNotFound, message: 'Submission not found.', status: 404 }
-      : { code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to review submission.', status: 503 };
+      : { code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: withReason('Unable to review submission', error), status: 503 };
     return NextResponse.json({ ok: false, code: failure.code, message: failure.message }, { status: failure.status });
   }
 }

@@ -4,6 +4,7 @@ import { createTransfer } from 'lib/service-credits/repository';
 import { insertTrustTransportAudit } from 'lib/trust-transport/repository';
 import { TRUST_TRANSPORT_ERROR_CODE } from 'lib/trust-transport/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type TrustTransportServiceCreditsSendInput = {
   toUserId: string;
@@ -38,8 +39,8 @@ export async function POST(request: Request) {
   let input: TrustTransportServiceCreditsSendInput;
   try {
     input = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON.', reason: failureReason(error) }, { status: 400 });
   }
 
   if (!input.toUserId || !isValidTransferAmount(input.amount)) {

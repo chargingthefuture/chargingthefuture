@@ -6,6 +6,7 @@ import { deleteAllAccountData } from 'lib/account/deletion-orchestrator';
 import { runWithForcedPool } from 'lib/db/postgres';
 import { getClerkSecretKey } from 'lib/auth/clerk-env';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Operator-only: delete ANY user's account by id, for clearing duplicate accounts the owner finds.
 // This is the admin counterpart to the self-service `DELETE /api/account/full-account` route: it runs
@@ -176,7 +177,7 @@ export async function POST(request: Request) {
     // (no secrets), not a stack trace.
     const detail = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { ok: false, code: 'account_delete_failed', step, message: 'Unable to complete operator account deletion.', detail },
+      { ok: false, code: 'account_delete_failed', step, message: `Unable to complete operator account deletion: ${failureReason(error)}`, detail },
       { status: 503 },
     );
   }

@@ -4,6 +4,7 @@ import { BUG_REPORT_ERROR_CODE } from 'lib/bug-reports/constants';
 import { listReportsForAdmin } from 'lib/bug-reports/repository';
 import { feedAuthorHandle } from 'lib/feed/author-handle';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Admin list of bug reports for the /admin/bug-reports review page. Held reports first.
 // Redacted text only — the raw user text never leaves the database (rule 129). Reporter
@@ -44,7 +45,7 @@ export async function GET() {
       {
         ok: false,
         code: BUG_REPORT_ERROR_CODE.persistenceUnavailable,
-        message: 'Unable to load bug reports.',
+        message: `Unable to load bug reports: ${failureReason(error)}`,
       },
       { status: 503 },
     );

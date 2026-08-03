@@ -3,6 +3,7 @@ import { requireFoundationReadAccess, ensureMutationCsrf } from '../_lib';
 import { createTransfer } from 'lib/service-credits/repository';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type FoundationServiceCreditsSendInput = {
   toUserId: string;
@@ -25,8 +26,8 @@ export async function POST(request: Request) {
   let input: FoundationServiceCreditsSendInput;
   try {
     input = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON.', reason: failureReason(error) }, { status: 400 });
   }
 
   if (!input.toUserId || typeof input.amount !== 'number' || input.amount <= 0) {
