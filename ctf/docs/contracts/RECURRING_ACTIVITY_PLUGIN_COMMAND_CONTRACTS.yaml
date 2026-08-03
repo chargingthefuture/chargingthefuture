@@ -18,7 +18,9 @@ contracts:
     command: recurring-activity.create
     version: 1.0.0
     description: >-
-      Declare a new PENDING recurring activity with another member. The caller is the owner. A fiat
+      Declare a new PENDING recurring activity with another member. The caller is the owner. A
+      counterparty that nothing on the platform knows about is rejected (permissive check: a claimed
+      directory profile, a recorded sign-in, or the accounts table where it exists). A fiat
       (non-ServiceCredits) line MUST NOT carry an amount — the value firewall is enforced server-side,
       not just in the UI — so the platform never holds a summable recurring-fiat-payment total. Only
       ServiceCredits (an internal utility token) may carry a declared value, and even that is a declared
@@ -75,6 +77,7 @@ contracts:
           - foundation
           - socket-relay
           - trust-transport
+          - service-credits
     outputSchema:
       activity:
         type: object
@@ -82,6 +85,9 @@ contracts:
       - recurring_activities
       - recurring_activity_audit_trail
       - currencies
+      # Read-only, for the counterparty-exists check:
+      - directory_profiles
+      - login_events
     purpose: recurring_activity_declaration
     retentionClass: member_scoped
     idempotency: false

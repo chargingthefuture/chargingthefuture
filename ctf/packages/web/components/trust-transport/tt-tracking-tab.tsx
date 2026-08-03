@@ -304,12 +304,12 @@ function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionCo
       <TrackingStatusMessage awaitingDriver={model.awaitingDriver} />
       {model.awaitingDriver && <RequestOffers requestId={request.id} onAccepted={onAccepted} />}
       {model.awaitingCompletionConfirmation && <TrackingCompletion request={request} onCompletionConfirmed={onCompletionConfirmed} />}
-      {/* A ride that both sides confirmed is often not a one-off — the same school run every week,
-          the same weekly shop. Offered on the finished ride so nobody has to go to another app to
-          record it. TrustTransport settles each trip on its own, so a declared ServiceCredits value
-          here is recognized as a relationship rather than counted twice — see
-          PER_OCCURRENCE_ORIGIN_PLUGINS. */}
-      {model.status.toLowerCase() === "completed" && request.tripProviderUserId ? (
+      {/* A ride is often not a one-off — the same school run every week, the same weekly shop. The
+          prompt appears as soon as a driver has accepted (a trip exists, so there is someone to name),
+          not only once the ride is finished, because that is when the rider knows it is standing.
+          TrustTransport settles each trip on its own, so a declared ServiceCredits value here is
+          recognized as a relationship rather than counted twice — see PER_OCCURRENCE_ORIGIN_PLUGINS. */}
+      {request.tripProviderUserId ? (
         <MarkRecurringControl
           counterpartyUserId={request.tripProviderUserId}
           originPlugin="trust-transport"

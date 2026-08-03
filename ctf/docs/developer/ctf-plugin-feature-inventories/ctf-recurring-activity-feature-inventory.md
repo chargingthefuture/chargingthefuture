@@ -47,12 +47,18 @@ signal in Trust. It is emphatically NOT a ledger, NOT a bill, and carries NO fia
 4. Control the visibility (private default / restricted / public) of an activity you recorded.
 5. See your ongoing activities and pending confirmations in the hub, and via a light card in the account
    hub next to Trust.
-6. Record an arrangement as ongoing **without leaving the app you are in**. A "This happens regularly"
-   control sits beside the finished arrangement itself: an accepted LightHouse match, a closed Foundation
-   quote, a SocketRelay favor that got done, a completed TrustTransport ride. The other member is already
-   known, so all you choose is how often and how it is settled. It creates exactly the same pending row
-   this plugin's own form does, the other member confirms it here, and the row says which app it came
-   from.
+6. Record an arrangement as ongoing **without coming to this app at all** — the owner's intended primary
+   entry point. An "Is this ongoing?" prompt sits inside each app where the relationship already exists:
+   a LightHouse match the host accepted, a Foundation Direct Line thread with a provider, a SocketRelay
+   favor (live or closed successfully), a TrustTransport ride once a driver has accepted, and right after
+   a ServiceCredits send. The other member is already known, so all you choose is how often and how it is
+   settled. It creates exactly the same pending row this plugin's own form does, the other member confirms
+   it here, and the row says which app it came from.
+7. The prompt disappears once an arrangement with that member is already recorded (pending or ongoing),
+   so the same pair is never recorded twice from two different apps. A declined or ended one does not
+   block recording a new one.
+8. After recording, the prompt links to this hub — the one place an arrangement is edited, confirmed, or
+   ended — so a member finds it without having to know the app exists beforehand.
 
 ## Admin Features
 
@@ -161,23 +167,48 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
 
 ## Gaps and Known Technical Debt
 
-1. **Contextual "Is this ongoing?" prompts** inside the sibling plugins where a relationship already
-   exists (LightHouse match, Foundation thread, SocketRelay favor, a ServiceCredits send) are the owner's
-   intended primary entry point. They must be added surgically/additively to already-shipped screens and
-   are a fast follow-up; v1 ships the standalone hub + account-hub card and the full backend.
+1. ~~**Contextual "Is this ongoing?" prompts** inside the sibling plugins…~~ **Closed 2026-08-03.** All
+   four named entry points ship, plus TrustTransport: LightHouse match (accepted), Foundation thread
+   (Direct Line, survivor side), SocketRelay favor (live or closed successfully), ServiceCredits send
+   (right after a completed send), TrustTransport ride (once a driver has accepted). Each was added
+   additively to the already-shipped screen; none replaced existing copy or layout. The standalone hub
+   remains for confirming, editing, and ending.
 2. **Cadence is not normalized** for the ServiceCredits value contribution — the declared `sc_value` is
    summed as-is regardless of cadence (a `weekly` 50 SC and a `monthly` 50 SC both contribute 50). A
    monthly normalization is a documented follow-up; the figure is a labeled estimate, so this is an
    approximation, not a correctness bug.
-3. **Counterparty existence is not verified** against a canonical member table at create time (the schema
-   guards only against a self-counterparty). The UI supplies a real user id from a picker; a server-side
-   membership check is a follow-up.
+3. ~~**Counterparty existence is not verified**…~~ **Closed 2026-08-03.** `createRecurringActivity` now
+   rejects a counterparty nothing on the platform knows about. The check is deliberately permissive
+   because `users` does not exist in every environment (it is not in `schema.sql` — see
+   `countTotalMembers`): it accepts a match from any of a claimed `directory_profiles` row, a recorded
+   `login_events` sign-in, or the `users` table where present, and an unreadable check is treated as
+   "known" so a lookup failure can never block a real member. It refuses an invented id, which is what
+   the gap was about.
 4. **No admin collusion-review surface yet** — the bilateral graph is captured (owner/counterparty edges
    + cadence + audit trail) so the "same small group confirming each other to inflate trust" pattern is
    detectable, but the admin view/metric that surfaces it is not built.
 
 ## Change Log
 
+- 2026-08-03 (second pass): **Completed the locked accessibility decision, which the first pass
+  implemented too narrowly.** The spec (Gaps #1) names the in-app prompts as the owner's intended
+  *primary* entry point, at every place a relationship already exists — LightHouse match, Foundation
+  **thread**, SocketRelay favor, **a ServiceCredits send**. The first pass instead put the control only on
+  *terminal* states and skipped ServiceCredits entirely (wrongly recorded as a deliberate exclusion).
+  Corrected: (a) **ServiceCredits** now prompts right after a completed send, reading the resolved
+  recipient id back from the transfer response rather than what was typed; `service-credits` joins the
+  origin allowlist and, because every completed send is already recognized from the transfers table, also
+  `PER_OCCURRENCE_ORIGIN_PLUGINS`. (b) **Foundation** now prompts on the **Direct Line thread** — the
+  relationship itself — for the survivor side, in any lifecycle state, in addition to the closed-quote
+  row. (c) **SocketRelay** prompts on a live fulfillment as well as one closed successfully; a member
+  usually knows a favor is standing while it is happening. (d) **TrustTransport** prompts as soon as a
+  driver has accepted, not only once the ride is finished. (e) The control is labeled **"Is this
+  ongoing?"**, the spec's own wording. (f) The prompt hides itself when an arrangement with that member is
+  already pending or ongoing, so the same pair cannot be recorded twice from two different apps — the
+  caller's own list is read once per page load and shared by every prompt on it, and dropped after a
+  successful record. (g) After recording, the prompt links to this hub so a member discovers where an
+  arrangement is confirmed, edited, or ended. Also closes Gaps #3 (counterparty existence is now checked
+  server-side, permissively). No schema change beyond the first pass's `origin_plugin`.
 - 2026-08-03: **Recurring activity can now be recorded from inside the app you are already in (owner
   directive).** Until now the only way to record one was to come to this plugin and search for the other
   member by hand — the wrong moment and the wrong place, since you know an arrangement is ongoing while

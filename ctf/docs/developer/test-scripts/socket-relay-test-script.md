@@ -519,16 +519,17 @@ naming them.
 
 **Role:** member
 **Surfaces:** web (desktop), web (mobile-responsive)
-**Precondition:** Signed in as either party on a fulfillment closed as successful. Also have one active fulfillment and, if possible, one closed as unsuccessful.
+**Precondition:** Signed in as either party on a fulfillment closed as successful, with no recurring arrangement recorded with that member. Also have one ACTIVE fulfillment and, if possible, one closed as unsuccessful.
 
 **Steps:**
-1. Open the Direct Line and select the successful, closed conversation.
-2. Look for "This happens regularly" above the resolve bar.
-3. Select the active conversation, and the unsuccessful one, and look again.
-4. On the successful one, pick a cadence and record it.
+1. Open the Direct Line and select the active conversation.
+2. Look for "Is this ongoing?" above the resolve bar.
+3. Select the conversation closed as successful, then the unsuccessful or canceled one, and look again.
+4. On one of them, pick a cadence and record it.
 
 **Expected:**
-- The control appears only on the conversation closed as successful — not on an active one, and not on one closed unsuccessfully or canceled.
+- The prompt appears on the ACTIVE conversation as well as on one closed successfully — a member usually knows a favor is standing while it is still happening.
+- It does NOT appear on a conversation closed unsuccessfully or canceled.
 - The other participant is already filled in and named — no member search.
 - After recording, the row appears in the Recurring Activity app marked "Recorded from SocketRelay", awaiting the other member.
 

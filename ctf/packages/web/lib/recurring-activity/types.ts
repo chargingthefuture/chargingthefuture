@@ -80,6 +80,7 @@ export const RECURRING_ACTIVITY_ORIGIN_PLUGINS: readonly string[] = [
   'foundation',
   'socket-relay',
   'trust-transport',
+  'service-credits',
 ];
 
 // Apps that already record EVERY exchange as it happens: a Foundation call is metered per minute-block,
@@ -93,4 +94,7 @@ export const PER_OCCURRENCE_ORIGIN_PLUGINS: readonly string[] = [
   'foundation',
   'socket-relay',
   'trust-transport',
+  // Every completed send is already recognized from the transfers table, so a standing arrangement
+  // declared beside one counts as a relationship, never again as value.
+  'service-credits',
 ];

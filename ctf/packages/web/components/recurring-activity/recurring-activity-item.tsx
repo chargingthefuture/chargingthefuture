@@ -25,6 +25,7 @@ const ORIGIN_LABEL: Record<string, string> = {
   foundation: 'Foundation',
   'socket-relay': 'SocketRelay',
   'trust-transport': 'TrustTransport',
+  'service-credits': 'ServiceCredits',
 };
 
 export function RecurringActivityItem({

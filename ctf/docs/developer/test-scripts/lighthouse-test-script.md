@@ -213,13 +213,13 @@ is down at delete time, the deletion still succeeds and the failure is logged fo
 **Steps:**
 1. Open the Matches tab.
 2. Look at the accepted match card, then at the pending one.
-3. On the accepted card, click "This happens regularly", pick a cadence, and record it.
+3. On the accepted card, click "Is this ongoing?", pick a cadence, and record it.
 
 **Expected:**
-- The control appears on the accepted match and NOT on the pending one.
+- The prompt appears on the accepted match and NOT on the pending one, and is absent altogether if an arrangement with that member is already recorded.
 - The other side of the match is already filled in — no member search.
 - With a money currency chosen there is no amount field; the panel says only that this happens and how often.
-- After recording, the card shows "Recorded — waiting for … to confirm it.", and the row appears in the Recurring Activity app marked "Recorded from LightHouse", awaiting the other member.
+- After recording, the card shows "Recorded — waiting for … to confirm it." with a link to the Recurring Activity hub, and the row appears there marked "Recorded from LightHouse", awaiting the other member.
 
 Result: web ☐
 

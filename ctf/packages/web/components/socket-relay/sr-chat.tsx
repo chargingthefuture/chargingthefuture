@@ -146,11 +146,12 @@ function ChatPane({
           <div style={{ flex: 1 }} />
         )}
       </div>
-      {/* A favor that got done is often not a one-off — the same neighbor collects the same
-          prescription every month. Offered right where the favor was closed, so nobody has to go to
-          another app to record it. Only on a successful close: an unsuccessful or canceled favor is
-          not an arrangement. */}
-      {selected.status === "closed" && selected.closeReason === "successful" ? (
+      {/* A favor is often not a one-off — the same neighbor collects the same prescription every
+          month. The prompt sits on the live conversation as well as on a favor already closed
+          successfully, because that is where the relationship is and the member usually knows it is
+          standing while it is happening. Not on a canceled or unsuccessful close — that is not an
+          arrangement. */}
+      {selected.status === "active" || (selected.status === "closed" && selected.closeReason === "successful") ? (
         <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           <MarkRecurringControl
             counterpartyUserId={isRequester ? selected.fulfillerUserId : selected.requesterUserId}

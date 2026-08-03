@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CheckCircle, Shield } from "lucide-react";
 import { ACCEPTED_APPS, type WalletData, idempotencyKey } from "./sc-shared";
+import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
 import { useTheme } from '@/hooks/useTheme';
 import { getServiceCreditsTokens } from './sc-shared';
 
@@ -53,6 +54,10 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // Who the completed send went to, kept after the form clears so the "Is this ongoing?" prompt can
+  // name them. A standing arrangement settled in credits is exactly the case the Recurring Activity
+  // plugin exists for, and the moment right after a send is when the member knows it.
+  const [sentToUserId, setSentToUserId] = useState<string | null>(null);
 
   const numeric = Number(amount);
   const canSend = !submitting && recipient.trim().length > 0 && amount.length > 0 && !Number.isNaN(numeric) && numeric > 0;
@@ -75,12 +80,18 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
           ...(rail === "mutual_credit" ? { rail } : {}),
         }),
       });
+      const payload = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        transfer?: { recipientUserId?: string };
+      };
       if (!res.ok) {
-        const d = (await res.json()) as { message?: string };
-        throw new Error(d.message ?? "Failed to create transfer.");
+        throw new Error(payload.message ?? "Failed to create transfer.");
       }
       await onSent();
       setSuccess(true);
+      // The server resolves a username to a real member id, so read it back rather than reusing what
+      // was typed in the box.
+      setSentToUserId(payload.transfer?.recipientUserId ?? null);
       setRecipient("");
       setAmount("");
       setRail("balance");
@@ -100,6 +111,17 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
       <input id="sc-amount" value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" aria-label="Amount in credits" placeholder="Amount (e.g. 50)" style={inputField} />
       {error && <div style={{ fontSize: 12, color: "#EF4444", marginBottom: 8 }}>{error}</div>}
       {success && <div style={{ fontSize: 12, color: "#22C55E", marginBottom: 8 }}>Credits sent successfully!</div>}
+      {success && sentToUserId ? (
+        <div style={{ marginBottom: 10 }}>
+          <MarkRecurringControl
+            counterpartyUserId={sentToUserId}
+            originPlugin="service-credits"
+            sector="general"
+            sectorLabel="something you settle in credits"
+            accent={t.ACCENT}
+          />
+        </div>
+      ) : null}
       <button type="button" disabled={!canSend} onClick={send}
         style={{ width: "100%", padding: "10px", borderRadius: 10, background: canSend ? t.ACCENT : "rgba(245,158,11,0.4)", border: "none", color: t.BG, fontSize: 14, fontWeight: 800, cursor: canSend ? "pointer" : "not-allowed" }}>
         {submitting ? "Sending…" : "Send Credits"}

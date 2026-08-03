@@ -212,9 +212,9 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
   const [quoteSuccess, setQuoteSuccess] = useState(false);
   // The Direct Line opened straight after Request Quote, holding the Stream credentials the thread
   // POST returned, plus the provider name to show in the heading.
-  const [activeDirectLine, setActiveDirectLine] = useState<{ credentials: DirectLineCredentials; subtitle: string | null } | null>(null);
+  const [activeDirectLine, setActiveDirectLine] = useState<{ credentials: DirectLineCredentials; subtitle: string | null; providerUserId?: string | null } | null>(null);
   // The Direct Line re-opened from a Quotes row — only the thread id; credentials are fetched fresh.
-  const [quoteDirectLine, setQuoteDirectLine] = useState<{ threadId: string; subtitle: string | null } | null>(null);
+  const [quoteDirectLine, setQuoteDirectLine] = useState<{ threadId: string; subtitle: string | null; providerUserId?: string | null } | null>(null);
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
   // Bumped by the header refresh button; the load effect re-runs without the full-screen loading
@@ -317,7 +317,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
       // Quotes tab so the request is never lost.
       const credentials = buildDirectLineCredentials(threadData);
       if (credentials) {
-        setActiveDirectLine({ credentials, subtitle: provider.displayName });
+        setActiveDirectLine({ credentials, subtitle: provider.displayName, providerUserId: provider.providerUserId });
       } else {
         setTab("quotes");
       }
@@ -371,6 +371,11 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
       <DirectLineFromQuote
         credentials={activeDirectLine.credentials}
         subtitle={activeDirectLine.subtitle}
+        counterpartyUserId={
+          activeDirectLine.providerUserId && activeDirectLine.providerUserId !== viewerUserId
+            ? activeDirectLine.providerUserId
+            : null
+        }
         onBack={() => { setActiveDirectLine(null); setTab("quotes"); }}
       />,
     );
@@ -383,6 +388,11 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
         threadId={quoteDirectLine.threadId}
         subtitle={quoteDirectLine.subtitle}
         onBack={() => setQuoteDirectLine(null)}
+        counterpartyUserId={
+          quoteDirectLine.providerUserId && quoteDirectLine.providerUserId !== viewerUserId
+            ? quoteDirectLine.providerUserId
+            : null
+        }
       />,
     );
   }
@@ -417,7 +427,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
       onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }}
       searchTerm={searchTerm}
       quotes={quotes}
-      onOpenDirectLine={(q) => setQuoteDirectLine({ threadId: q.threadId, subtitle: q.serviceType })}
+      onOpenDirectLine={(q) => setQuoteDirectLine({ threadId: q.threadId, subtitle: q.serviceType, providerUserId: q.providerUserId })}
       onRespond={respondToQuote}
       onRefresh={() => setRefreshKey((k) => k + 1)}
     />,

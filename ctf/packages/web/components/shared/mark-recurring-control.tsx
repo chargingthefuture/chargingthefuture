@@ -1,17 +1,18 @@
 'use client';
 
 import { Repeat } from 'lucide-react';
-import { useCallback, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 
 /**
- * "This happens regularly" — the inline way to record an ongoing arrangement with the member you are
- * already dealing with, without leaving the app you are in.
+ * "Is this ongoing?" — the inline way to record an ongoing arrangement with the member you are already
+ * dealing with, without leaving the app you are in.
  *
- * A recurring arrangement used to be recordable in exactly one place: the Recurring Activity plugin,
- * where you had to search for the other member by hand. That is the wrong moment and the wrong place —
- * you know an arrangement is ongoing when you are standing in the middle of it, in LightHouse or
- * Foundation or SocketRelay. Any plugin can drop this control next to an accepted match, a connection,
- * or a completed favor: the other member is already known, so all that is left to choose is how often.
+ * This is the owner's intended PRIMARY entry point for recurring activity (Recurring Activity inventory,
+ * Gaps #1): the plugin must be reachable from inside the apps where the relationship already exists, so
+ * it is not another app to remember. The standalone hub still exists for editing and confirming, but a
+ * member should never have to go there to record something — they are prompted where the relationship
+ * is: a LightHouse match, a Foundation thread, a SocketRelay favor, a ServiceCredits send. The other
+ * member is already known, so all that is left to choose is how often.
  *
  * What it records is the same row the Recurring Activity plugin creates, so it shows up there, the other
  * member confirms or declines it there, and only a confirmed one counts for anything. The app it was
@@ -55,6 +56,36 @@ async function loadCurrencies(): Promise<Currency[]> {
   }
 }
 
+// The same pair can be reachable from more than one place — a Foundation quote row and the thread it
+// belongs to, a LightHouse match and its chat — so the prompt must know when an arrangement with this
+// member already exists, or a member would record duplicates without meaning to. The caller's own list
+// answers that, and it is fetched ONCE per page load and shared by every control on the page (a matches
+// list can render many), then dropped after a successful record so the next read is accurate.
+let existingCounterpartiesPromise: Promise<Set<string>> | null = null;
+
+function loadExistingCounterparties(): Promise<Set<string>> {
+  if (!existingCounterpartiesPromise) {
+    existingCounterpartiesPromise = fetch('/api/recurring-activity', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) return new Set<string>();
+        const data = (await res.json()) as {
+          activities?: Array<{ ownerUserId: string; counterpartyUserId: string; status: string }>;
+        };
+        const live = new Set<string>();
+        for (const a of data.activities ?? []) {
+          // A declined or ended arrangement should not block recording a new one — only a live one does.
+          if (a.status === 'pending' || a.status === 'active') {
+            live.add(a.ownerUserId);
+            live.add(a.counterpartyUserId);
+          }
+        }
+        return live;
+      })
+      .catch(() => new Set<string>());
+  }
+  return existingCounterpartiesPromise;
+}
+
 export function MarkRecurringControl({
   counterpartyUserId,
   counterpartyName,
@@ -68,7 +99,7 @@ export function MarkRecurringControl({
   /** Shown to the member so they can see who the arrangement is with. Falls back to "this member". */
   counterpartyName?: string | null;
   /** The app this declaration is made from. Must be one of RECURRING_ACTIVITY_ORIGIN_PLUGINS. */
-  originPlugin: 'lighthouse' | 'foundation' | 'socket-relay' | 'trust-transport';
+  originPlugin: 'lighthouse' | 'foundation' | 'socket-relay' | 'trust-transport' | 'service-credits';
   sector: 'housing' | 'service' | 'favor' | 'general';
   /** Plain wording for what is being recorded, e.g. "a place to stay". */
   sectorLabel: string;
@@ -84,6 +115,18 @@ export function MarkRecurringControl({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recorded, setRecorded] = useState(false);
+  // null while the check is in flight, so the prompt does not flash on screen and then vanish.
+  const [alreadyRecorded, setAlreadyRecorded] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void loadExistingCounterparties().then((live) => {
+      if (active) setAlreadyRecorded(live.has(counterpartyUserId));
+    });
+    return () => {
+      active = false;
+    };
+  }, [counterpartyUserId]);
 
   const withWhom = counterpartyName ? counterpartyName : 'this member';
   const showsScValue = isServiceCredits(currencies, currencyCode);
@@ -121,6 +164,9 @@ export function MarkRecurringControl({
         setError(data.message ?? 'That could not be recorded. Try again.');
         return;
       }
+      // Drop the shared cache so any other prompt for this member on the page stops offering to record
+      // the same arrangement again.
+      existingCounterpartiesPromise = null;
       setRecorded(true);
       setOpen(false);
     } catch {
@@ -132,12 +178,21 @@ export function MarkRecurringControl({
 
   if (recorded) {
     return (
-      <div style={{ fontSize: 12, color: accent, display: 'flex', alignItems: 'center', gap: 6, ...style }}>
+      <div style={{ fontSize: 12, color: accent, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', ...style }}>
         <Repeat size={13} />
         <span>Recorded — waiting for {withWhom} to confirm it.</span>
+        {/* The hub is where it can be edited or ended later, so name it once here rather than expecting
+            the member to know the app exists. */}
+        <a href="/apps/recurring-activity" style={{ color: accent, textDecoration: 'underline' }}>
+          See your ongoing arrangements
+        </a>
       </div>
     );
   }
+
+  // Nothing to offer while the check is running, and nothing to offer once an arrangement with this
+  // member is already on the books — the hub is where an existing one is edited or ended.
+  if (alreadyRecorded === null || alreadyRecorded) return null;
 
   if (!open) {
     return (
@@ -151,7 +206,7 @@ export function MarkRecurringControl({
         }}
       >
         <Repeat size={13} />
-        This happens regularly
+        Is this ongoing?
       </button>
     );
   }

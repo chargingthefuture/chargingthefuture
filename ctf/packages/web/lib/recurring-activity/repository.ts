@@ -143,6 +143,32 @@ function resolveOriginPlugin(originPlugin: string | null | undefined): string | 
   return originPlugin;
 }
 
+/**
+ * Is this counterparty a real member? Inventory gap #3: the schema only guarded against naming
+ * yourself, so a client could name any string and it would be stored. Now that the prompt appears in
+ * five apps rather than one picker, the id arrives from more places and is worth checking.
+ *
+ * Deliberately permissive — it rejects only an id that NOTHING on the platform knows about. `users`
+ * does not exist in every environment (it is not in schema.sql; see countTotalMembers), so the check
+ * asks three sources and accepts a match from any: a claimed directory profile, a recorded sign-in, or
+ * the accounts table where it exists. A member who has signed in even once is known, so this cannot
+ * reject a legitimate arrangement while still refusing an invented id.
+ */
+async function counterpartyIsAMember(userId: string): Promise<boolean> {
+  const result = await queryDb<{ known: boolean }>(
+    `SELECT (
+       EXISTS (SELECT 1 FROM directory_profiles WHERE claimed_by_user_id = $1)
+       OR EXISTS (SELECT 1 FROM login_events WHERE user_id = $1)
+       OR (
+         to_regclass('public.users') IS NOT NULL
+         AND EXISTS (SELECT 1 FROM users WHERE id = $1)
+       )
+     ) AS known`,
+    [userId],
+  );
+  return result.rows[0]?.known === true;
+}
+
 // Create a pending recurring activity declared by the owner. Validates: no self-activity, a real
 // active currency, and that a ServiceCredits value (if any) is present only for SC lines. Fiat lines
 // never carry an amount — the value firewall is enforced here, not just in the UI.
@@ -152,6 +178,14 @@ export async function createRecurringActivity(input: CreateRecurringActivityInpu
   const currency = await getCurrency(input.currencyCode);
   if (!currency || !currency.isActive) {
     throw new RecurringActivityValidationError('Unknown or inactive currency.');
+  }
+
+  // A failed lookup must not block a real member from recording an arrangement, so an unreadable
+  // check is treated as "known" — the guard exists to refuse an invented id, not to add a new way for
+  // the feature to break.
+  const counterpartyKnown = await counterpartyIsAMember(counterpartyUserId).catch(() => true);
+  if (!counterpartyKnown) {
+    throw new RecurringActivityValidationError('That member could not be found.');
   }
 
   const scValue = resolveScValue(currency, input.scValue);

@@ -23,8 +23,8 @@ Foundation provides trauma-informed survivors with deterministic access to vette
 5. Connection and quote history lists scoped by actor ownership.
 6. In-app notifications for messages, quote state changes, and missed calls.
 7. Notification preferences and quiet-hour controls.
-8. **Record a closed quote as ongoing work, without leaving Foundation (2026-08-03).** A closed quote
-   carries a "This happens regularly" control on the survivor's side: pick how often and how it is
+8. **Record ongoing work with a provider, without leaving Foundation (2026-08-03).** The Direct Line
+   thread carries an "Is this ongoing?" prompt on the survivor's side: pick how often and how it is
    settled, and it records an ongoing service arrangement with that provider. The provider confirms it
    in the Recurring Activity app. A money arrangement records no amount — only that it happens and how
    often.
@@ -178,11 +178,13 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 ## Change Log
 
 
-- 2026-08-03: **A closed quote can be recorded as ongoing without leaving Foundation.** A one-off
+- 2026-08-03: **Ongoing work with a provider can be recorded without leaving Foundation.** A one-off
   engagement is often the start of a standing arrangement — the same electrician every quarter. The
-  quotes panel now shows the shared "This happens regularly" control
-  (`components/shared/mark-recurring-control.tsx`) on a closed quote, offered to the survivor side (the
-  side that would keep calling the same provider), pre-set to the service sector and to that provider. It
+  shared "Is this ongoing?" prompt (`components/shared/mark-recurring-control.tsx`) now sits on the
+  **Direct Line thread** — the relationship itself, in any lifecycle state — and on the closed-quote row,
+  both offered to the survivor side (the side that would keep calling the same provider) and pre-set to
+  the service sector and that provider. The provider never sees it on their own side, and it hides itself
+  once an arrangement with that member exists, so the thread and the quote row cannot produce two rows. It
   creates the usual pending Recurring Activity row with `origin_plugin = 'foundation'`. Because Foundation
   already settles every metered call on its own, a declared ServiceCredits value on one of these lines is
   recognized by GDP as a relationship rather than counted a second time (see the Recurring Activity

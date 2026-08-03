@@ -114,9 +114,11 @@ longer a precondition for browsing, hosting, or matching.
    - `pending`, `accepted`, `rejected`, `canceled`, `completed`.
 7. Duplicate active/pending request constraints remain required.
 8. **Record an accepted match as ongoing, without leaving LightHouse (2026-08-03).** An accepted match
-   carries a "This happens regularly" control: pick how often and how it is settled, and it records an
-   ongoing housing arrangement with the other side of that match. They confirm it in the Recurring
-   Activity app. A money arrangement records no amount — only that it happens and how often.
+   carries an "Is this ongoing?" prompt: pick how often and how it is settled, and it records an ongoing
+   housing arrangement with the other side of that match. They confirm it in the Recurring Activity app.
+   A money arrangement records no amount — only that it happens and how often. The prompt hides itself
+   when an arrangement with that member is already recorded, so the pair is never recorded twice from
+   two apps.
 
 ### 1.6 Blocks (User Safety)
 
@@ -273,7 +275,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 - 2026-08-03: **An accepted match can be recorded as ongoing without leaving LightHouse.** Housing is the
   clearest case of something that carries on month after month, and LightHouse only ever sees the moment
-  the host says yes. The matches tab now shows the shared "This happens regularly" control
+  the host says yes. The matches tab now shows the shared "Is this ongoing?" prompt
   (`components/shared/mark-recurring-control.tsx`) on an accepted/completed match, pre-set to the housing
   sector and to the other side of that match, so the member records the ongoing arrangement right there
   instead of being sent to the Recurring Activity plugin to search for the same person by hand. It

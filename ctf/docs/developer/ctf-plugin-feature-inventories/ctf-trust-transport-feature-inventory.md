@@ -83,8 +83,8 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 1. Canonical lifecycle states by mode (ride/package/food) with shared status vocabulary.
 2. In-context communication channel scoped to each order/trip between exactly the two parties (rider and driver). The chat opens with the trip and closes when the trip reaches a terminal state (completed, canceled, disputed): no new messages may be sent, both parties keep read-only access for a limited window, and messages are retained server-side for moderation/abuse evidence per the deletion contract. No 1:1 messaging exists outside an active trip (platform rule 100, "Messaging Scope and Lifecycle").
 3. Clear non-technical status and failure messaging.
-4. **Record a completed ride as a regular one, without leaving TrustTransport (2026-08-03).** A completed
-   ride carries a "This happens regularly" control: pick how often and how it is settled, and it records
+4. **Record a ride as a regular one, without leaving TrustTransport (2026-08-03).** Once a driver has
+   accepted, the ride carries an "Is this ongoing?" prompt: pick how often and how it is settled, and it records
    an ongoing arrangement with the member who drove, who confirms it in the Recurring Activity app. A
    money arrangement records no amount — only that it happens and how often.
 
@@ -299,8 +299,10 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 - 2026-08-03: **A completed ride can be recorded as ongoing without leaving TrustTransport.** The same
   school run every week is one arrangement, not a stack of unrelated trips. The Tracking card now shows
-  the shared "This happens regularly" control (`components/shared/mark-recurring-control.tsx`) on a
-  completed ride, pre-set to the service sector and to the member who drove. To name them, the requester's
+  the shared "Is this ongoing?" prompt (`components/shared/mark-recurring-control.tsx`) as soon as a
+  driver has accepted (a trip exists, so there is someone to name) and onward through completion,
+  pre-set to the service sector and to the member who drove. It hides itself once an arrangement with
+  that member exists. To name them, the requester's
   request payload gained `tripProviderUserId`, selected from the existing LATERAL trip join and present
   only once a trip exists — by which point the two are already paired and talking on the Direct Line, so
   it reveals nothing they cannot already see. It creates the usual pending Recurring Activity row with
