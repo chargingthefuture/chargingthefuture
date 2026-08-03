@@ -4,6 +4,7 @@ import { FEED_ERROR_CODE, isAllowedFeedReactionEmoji } from 'lib/feed/constants'
 import { normalizeUuid, toggleCommunityPostReaction } from 'lib/feed/repository';
 import { requireHubAccess } from '../../../_lib';
 import { ensureMutationCsrf } from '../../../../feed/_lib';
+import { failureReason } from 'lib/errors/failure';
 
 // Toggle the signed-in member's emoji reaction on a Hub community (peer) post. Reactions live
 // in our own database (feed_community_post_reactions), not in Stream. A second tap of the same
@@ -72,9 +73,9 @@ export async function POST(
   let body: ReactionRequestBody;
   try {
     body = (await request.json()) as ReactionRequestBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, message: 'Invalid JSON payload.' },
+      { ok: false, message: 'Invalid JSON payload.', reason: failureReason(error) },
       { status: 400 },
     );
   }

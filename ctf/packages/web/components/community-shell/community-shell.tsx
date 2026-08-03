@@ -306,21 +306,19 @@ type ChatSectionProps = {
   shellStats: ShellStats;
   filteredPlugins: PluginRegistryItem[];
   isAuthenticated: boolean;
-  signInUrl: string;
 };
 
-function ChatSection({ activeChannel, currentUser, isAdmin, shellStats, filteredPlugins, isAuthenticated, signInUrl }: ChatSectionProps) {
+function ChatSection({ activeChannel, currentUser, isAdmin, shellStats, filteredPlugins, isAuthenticated }: ChatSectionProps) {
   if (activeChannel === GATED_CHANNEL_SLUG) {
     return <GatedChatPanel currentUser={currentUser} isAdmin={isAdmin} />;
   }
-  return <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} isAdmin={isAdmin} signInUrl={signInUrl} />;
+  return <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} isAdmin={isAdmin} />;
 }
 
 type ShellMainContentProps = {
   section: ShellSection;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  signInUrl: string;
   verification: ShellVerification | null;
   loadError: string | null;
   channels: HubChannelInfo[];
@@ -342,7 +340,6 @@ function ShellMainContent({
   section,
   isAuthenticated,
   isAdmin,
-  signInUrl,
   verification,
   loadError,
   channels,
@@ -388,7 +385,6 @@ function ShellMainContent({
           shellStats={shellStats}
           filteredPlugins={filteredPlugins}
           isAuthenticated={isAuthenticated}
-          signInUrl={signInUrl}
         />
       ) : (
         <ShellAppsPanel
@@ -626,7 +622,6 @@ export function CommunityShell(props: CommunityShellProps) {
           section={section}
           isAuthenticated={isAuthenticated}
           isAdmin={isAdmin}
-          signInUrl={signInUrl}
           verification={verification}
           loadError={loadError}
           channels={channels}

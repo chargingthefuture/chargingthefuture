@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/
 import { FOUNDATION_CALL_MODALITIES, FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { createCallSession, insertFoundationAudit } from 'lib/foundation/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type CreateCallInput =
   | { ok: true; modality: 'voice' | 'video'; requestedDurationMinutes?: number; idempotencyKey: string }
@@ -14,11 +15,11 @@ async function readCreateCallInput(request: Request, threadId: string): Promise<
   let payload: { modality?: string; requestedDurationMinutes?: number; idempotencyKey?: string } = {};
   try {
     payload = await request.json();
-  } catch {
+  } catch (error) {
     return {
       ok: false,
       response: NextResponse.json(
-        { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.' },
+        { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.', reason: failureReason(error) },
         { status: 400 },
       ),
     };

@@ -4,6 +4,7 @@ import { withDbTransaction } from 'lib/db/postgres';
 import { resolveReport, type ResolveReportInput } from 'lib/skills-hunt/moderation';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type ResolveReportBodyResult =
   | { ok: true; status: ResolveReportInput['status']; resolutionNotes: string | null }
@@ -44,9 +45,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ re
   let body: Partial<ResolveReportInput>;
   try {
     body = (await request.json()) as Partial<ResolveReportInput>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -76,7 +77,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ re
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_reports_reportid' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to resolve report.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to resolve report: ${failureReason(error)}` },
       { status: 503 },
     );
   }

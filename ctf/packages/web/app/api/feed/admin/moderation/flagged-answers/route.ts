@@ -3,6 +3,7 @@ import { requireFeedAdminAccess } from '../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { countPendingFlaggedAnswers, listFlaggedAnswers } from 'lib/feed/moderation';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
       {
         ok: false,
         code: FEED_ERROR_CODE.persistenceUnavailable,
-        message: 'Could not load flagged answers.',
+        message: `Could not load flagged answers: ${failureReason(error)}`,
       },
       { status: 503 },
     );

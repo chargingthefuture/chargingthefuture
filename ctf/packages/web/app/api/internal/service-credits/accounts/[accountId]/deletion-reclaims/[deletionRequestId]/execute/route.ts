@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { executeDeletionReclaim, insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type ReclaimBody = {
   treasuryUserId?: string;
@@ -60,8 +61,8 @@ async function parseReclaimBody(request: Request): Promise<{ error: NextResponse
   let body: ReclaimBody;
   try {
     body = (await request.json()) as ReclaimBody;
-  } catch {
-    return { error: NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.' }, { status: 400 }) };
+  } catch (caught) {
+    return { error: NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.', reason: failureReason(caught) }, { status: 400 }) };
   }
 
   if (!body.treasuryUserId || !body.requestedAt || !body.idempotencyKey || !body.requestId || !body.traceId) {

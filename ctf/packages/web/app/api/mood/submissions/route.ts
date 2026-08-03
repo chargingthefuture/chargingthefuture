@@ -3,6 +3,7 @@ import { createMoodSubmission, getOrCreateMoodPseudonym } from 'lib/mood/reposit
 import { ensureMutationCsrf, moodErrorResponse, requireMoodAccess } from 'lib/mood/_lib';
 import { logMoodAudit } from 'lib/mood/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type SubmissionBody = {
   clientId?: string;
@@ -81,8 +82,8 @@ export async function POST(request: Request) {
   let body: SubmissionBody;
   try {
     body = (await request.json()) as SubmissionBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'mood_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'mood_invalid_json', message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 });
   }
 
   const validated = validateSubmissionBody(body);

@@ -10,6 +10,7 @@ import {
 import type { LighthouseMatchCreateInput } from 'lib/lighthouse/types';
 import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type MatchBody = Partial<LighthouseMatchCreateInput> & { idempotencyKey?: string };
 
@@ -125,9 +126,9 @@ export async function POST(request: Request) {
   let body: MatchBody;
   try {
     body = (await request.json()) as MatchBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

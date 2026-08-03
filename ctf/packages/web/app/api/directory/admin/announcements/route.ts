@@ -5,6 +5,7 @@ import { createAnnouncement, listDirectoryAnnouncements, validateAnnouncementInp
 import type { DirectoryAnnouncementInput } from 'lib/directory/types';
 import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type AnnouncementBody = Partial<DirectoryAnnouncementInput>;
 
@@ -30,7 +31,7 @@ export async function GET() {
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_announcements' });
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to list announcements.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: `Unable to list announcements: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -50,9 +51,9 @@ export async function POST(request: Request) {
   let body: AnnouncementBody;
   try {
     body = (await request.json()) as AnnouncementBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to create announcement.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: `Unable to create announcement: ${failureReason(error)}` },
       { status: 503 },
     );
   }

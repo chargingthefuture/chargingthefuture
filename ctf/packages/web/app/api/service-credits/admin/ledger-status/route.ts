@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireServiceCreditsAdminAccess } from 'lib/service-credits/_lib';
 import { getFormanceConfigStatus } from 'lib/service-credits/formance-ledger';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,7 @@ export async function GET() {
   } catch (error) {
     reportError(error, { area: 'service-credits', op: 'ledger_status' });
     return NextResponse.json(
-      { ok: false, message: 'Unable to read ledger status.' },
+      { ok: false, message: `Unable to read ledger status: ${failureReason(error)}` },
       { status: 503 },
     );
   }

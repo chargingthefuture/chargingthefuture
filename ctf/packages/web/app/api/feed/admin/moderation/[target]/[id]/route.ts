@@ -11,6 +11,7 @@ import {
 import { isFeedModerationTarget, setCommunityModerationStatus } from 'lib/feed/moderation';
 import { logFeedAudit } from 'lib/feed/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason, withReason } from 'lib/errors/failure';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,10 +26,10 @@ async function parseModerationBody(
   let body: { hidden?: unknown; reason?: unknown };
   try {
     body = (await request.json()) as { hidden?: unknown; reason?: unknown };
-  } catch {
+  } catch (caught) {
     return {
       error: NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: withReason('Invalid JSON body', caught) },
         { status: 400 },
       ),
     };
@@ -143,7 +144,7 @@ export async function POST(
       {
         ok: false,
         code: FEED_ERROR_CODE.persistenceUnavailable,
-        message: 'Could not change that. Nothing was altered — try again.',
+        message: `Could not change that. Nothing was altered — try again: ${failureReason(error)}`,
       },
       { status: 503 },
     );

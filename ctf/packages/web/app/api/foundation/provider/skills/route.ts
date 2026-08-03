@@ -3,6 +3,7 @@ import { requireFoundationReadAccess, ensureMutationCsrf } from 'lib/foundation/
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { listOwnOfferableSkills, setOwnOfferedSkills } from 'lib/foundation/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // The skills the member could offer through Foundation (their own Directory skills), each flagged
 // with whether they have currently opted in to be contacted about it.
@@ -42,9 +43,9 @@ export async function PUT(request: Request) {
   let body: { skillIds?: unknown };
   try {
     body = (await request.json()) as { skillIds?: unknown };
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

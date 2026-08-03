@@ -4,6 +4,7 @@ import { insertLevelUpAudit, isTrainerForCohort, releaseMilestoneCredits } from 
 import { ensureMutationCsrf, levelUpErrorResponse, requireLevelUpReadAccess } from 'lib/level-up/_lib';
 import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteProps = {
   params: Promise<{ milestoneId: string }>;
@@ -31,8 +32,8 @@ export async function POST(request: Request, { params }: RouteProps) {
   let body: unknown;
   try {
     body = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, code: 'level_up_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'level_up_invalid_json', message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 });
   }
 
   const parsed = releaseSchema.safeParse(body);

@@ -646,3 +646,27 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   `member.safety-report.create` / `admin.safety-report.list` / `admin.safety-report.review` command
   and access-policy contracts and updated the profile/deletion contract. Android parity deferred
   (Parity Ticket #809). Owner-review lane.
+- 2026-08-03: **Verbose error handling is now a written rule with a CI gate, and every API route in the
+  app was brought up to it** (owner directive after an opaque "Broadcast input unavailable." blocked a
+  go-live with nothing to act on; the owner's point was that this had been asked for since the start of
+  v3 and kept slipping). Cross-cutting, all plugins, no schema/contract/route change.
+  - New rule `.claude/rules/137-verbose-error-handling-rules.mdc`: never discard the caught value; every
+    5xx reports the error; operator surfaces (admin / internal / cron) carry the underlying reason in the
+    message a person reads; member-facing surfaces keep plain copy plus a `code` and a short `reference`;
+    each step of a multi-step handler names itself; bookkeeping (audit rows, notices) never fails the
+    action; upstream text is passed through truncated and never secret.
+  - New shared helper `ctf/packages/web/lib/errors/failure.ts` — `failureResponse` (reports and answers
+    in one call, with a `reference` in both), `failureReason`, `withReason`.
+  - New gate `ctf/scripts/check-error-verbosity.mjs` (`pnpm --dir ctf run check:error-verbosity`, job
+    **Error Verbosity Gate** in `ci.yml`, required by Quality Gates). It fails on an answering `catch`
+    with no binding, a 5xx that never reports, and an operator message with no reason.
+  - Burn-down: the gate found **235 opaque error paths across 179 route files**. All 235 are fixed in
+    this change, so `ctf/config/error-verbosity-allowlist.json` ships **empty** — the list exists only so
+    a future exception is recorded rather than hidden, and it may only shrink.
+  - Shape of the fix: an operator message now reads `Could not update the marker: <reason>`; a
+    member-facing caller-input failure (a malformed request body) keeps its copy and gains a
+    machine-readable `reason` field; a member-facing 5xx reports the error instead of dropping it. No
+    member-facing copy was rewritten.
+  - Not covered yet (follow-up): client shells that replace a route's `message` with their own fallback
+    string, and the same standard for non-route server code (`lib/**`, scripts, the mobile app). The gate
+    scans `ctf/packages/web/app/api/**/route.ts` only.

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
 import { getTreasuryConfig, insertServiceCreditsAudit, updateTreasuryConfig } from 'lib/service-credits/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type TreasuryBody = {
   policy?: Record<string, unknown>;
@@ -36,8 +37,8 @@ export async function PUT(request: Request) {
   let body: TreasuryBody;
   try {
     body = (await request.json()) as TreasuryBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: `Invalid JSON body: ${failureReason(error)}` }, { status: 400 });
   }
 
   if (!body.policy || typeof body.policy !== 'object') {

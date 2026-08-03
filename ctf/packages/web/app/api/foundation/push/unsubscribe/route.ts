@@ -4,6 +4,7 @@ import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { insertFoundationAudit } from 'lib/foundation/repository';
 import { deletePushSubscriptionByEndpoint } from 'lib/notifications/push';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Remove the signed-in member's push subscription for one device (issue #808 task 5): they turned call
 // alerts off on that device, or the browser/app revoked the subscription. The member acts only on their own
@@ -24,9 +25,9 @@ export async function POST(request: Request) {
   let payload: { endpoint?: unknown };
   try {
     payload = await request.json();
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'An endpoint is required.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'An endpoint is required.', reason: failureReason(error) },
       { status: 400 },
     );
   }

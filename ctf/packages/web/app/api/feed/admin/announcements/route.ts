@@ -5,6 +5,7 @@ import { createAnnouncementDraft, listAnnouncements, validateAnnouncementDraftIn
 import { logFeedAudit } from 'lib/feed/audit';
 import type { AnnouncementDraftInput } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type AnnouncementBody = Partial<AnnouncementDraftInput>;
 
@@ -33,7 +34,7 @@ export async function GET() {
   } catch (error) {
     reportError(error, { area: 'feed', op: 'admin_announcements' });
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to list announcements.' },
+      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: `Unable to list announcements: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -53,9 +54,9 @@ export async function POST(request: Request) {
   let body: AnnouncementBody;
   try {
     body = (await request.json()) as AnnouncementBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
   } catch (error) {
     reportError(error, { area: 'feed', op: 'admin_announcements' });
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to create announcement draft.' },
+      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: `Unable to create announcement draft: ${failureReason(error)}` },
       { status: 503 },
     );
   }

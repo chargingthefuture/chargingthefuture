@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFoundationAdminAccess } from 'lib/foundation
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { evaluateRateLimitCommand, insertFoundationAudit } from 'lib/foundation/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type EvaluatePayload = { userId?: string; commandName?: string; limit?: number; windowSeconds?: number };
 
@@ -33,9 +34,9 @@ export async function POST(request: Request) {
   let payload: EvaluatePayload = {};
   try {
     payload = await request.json();
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: `Invalid JSON payload: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
     reportError(error, { area: 'foundation', op: 'admin_rate_limits_evaluate' });
     console.error('[Foundation] Rate-limit evaluation failed:', error);
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Rate-limit evaluation unavailable.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: `Rate-limit evaluation unavailable: ${failureReason(error)}` },
       { status: 503 },
     );
   }

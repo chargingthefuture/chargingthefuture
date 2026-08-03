@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../../feed/_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { validateAnnouncementTargeting } from 'lib/feed/repository';
+import { failureReason } from 'lib/errors/failure';
 
 type TargetingBody = {
   targeting?: unknown;
@@ -21,9 +22,9 @@ export async function POST(request: Request) {
   let body: TargetingBody;
   try {
     body = (await request.json()) as TargetingBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { enrollInCohort, insertLevelUpAudit } from 'lib/level-up/repository';
 import { ensureMutationCsrf, levelUpErrorResponse, requireLevelUpReadAccess } from 'lib/level-up/_lib';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 const enrollSchema = z.object({
   cohortId: z.string().uuid(),
@@ -32,8 +33,8 @@ export async function POST(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, code: 'level_up_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'level_up_invalid_json', message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 });
   }
 
   const parsed = enrollSchema.safeParse(body);

@@ -9,6 +9,7 @@ import {
   BUG_REPORT_RATE_LIMIT_COUNT,
 } from 'lib/bug-reports/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type BugReportSubmitInput = {
   message?: unknown;
@@ -43,9 +44,9 @@ export async function POST(request: Request) {
   let input: BugReportSubmitInput;
   try {
     input = await request.json();
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: BUG_REPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON.' },
+      { ok: false, code: BUG_REPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON.', reason: failureReason(error) },
       { status: 400 },
     );
   }

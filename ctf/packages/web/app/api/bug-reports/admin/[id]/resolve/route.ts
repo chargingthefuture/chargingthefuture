@@ -3,6 +3,7 @@ import { requireBugReportAdminAccess, ensureMutationCsrf } from '../../../_lib';
 import { BUG_REPORT_ERROR_CODE } from 'lib/bug-reports/constants';
 import { releaseHeldReport, rejectReport } from 'lib/bug-reports/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type ResolveBody = { action?: unknown };
 
@@ -79,7 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       {
         ok: false,
         code: BUG_REPORT_ERROR_CODE.persistenceUnavailable,
-        message: 'Unable to resolve this report.',
+        message: `Unable to resolve this report: ${failureReason(error)}`,
       },
       { status: 503 },
     );

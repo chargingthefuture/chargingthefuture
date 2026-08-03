@@ -3,6 +3,7 @@ import { requireGatedChannelAccess } from '../../../_lib';
 import { ensureMutationCsrf } from '../../../../admin/_lib';
 import { toggleGatedChannelReaction } from 'lib/contributor-access/channel-repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Toggle the member's emoji reaction on a gated-channel post. The emoji must belong to the fixed
 // gated reaction set (richer than the Commons set, validated server-side).
@@ -25,8 +26,8 @@ export async function POST(request: Request, context: { params: Promise<{ postId
   let body: ReactionBody;
   try {
     body = (await request.json()) as ReactionBody;
-  } catch {
-    return NextResponse.json({ ok: false, message: 'Invalid JSON payload.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, message: 'Invalid JSON payload.', reason: failureReason(error) }, { status: 400 });
   }
 
   const emoji = typeof body.emoji === 'string' ? body.emoji : '';

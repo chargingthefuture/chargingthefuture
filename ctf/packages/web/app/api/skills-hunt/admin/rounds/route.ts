@@ -4,6 +4,7 @@ import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { createRound, insertSkillsHuntAudit, listRounds, validateRoundInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntRoundInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RoundBody = Partial<SkillsHuntRoundInput>;
 
@@ -36,7 +37,7 @@ export async function GET() {
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to list rounds.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to list rounds: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -56,9 +57,9 @@ export async function POST(request: Request) {
   let body: RoundBody;
   try {
     body = (await request.json()) as RoundBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to create round.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to create round: ${failureReason(error)}` },
       { status: 503 },
     );
   }

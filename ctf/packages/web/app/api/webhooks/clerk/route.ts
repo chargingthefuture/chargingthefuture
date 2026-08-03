@@ -5,6 +5,7 @@ import { logChymeAudit } from 'lib/chyme/audit';
 import { deleteAllAccountData } from 'lib/account/deletion-orchestrator';
 import { runWithForcedPool, queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Clerk webhook receiver. Clerk deliveries are signed with svix; we verify the signature ourselves
 // (this Clerk version ships no verify helper and svix is not a dependency) using the endpoint's
@@ -110,8 +111,8 @@ export async function POST(request: Request) {
   let event: ClerkWebhookEvent;
   try {
     event = JSON.parse(rawBody) as ClerkWebhookEvent;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'invalid_json' }, { status: 400 });
+  } catch (caught) {
+    return NextResponse.json({ ok: false, code: 'invalid_json', reason: failureReason(caught) }, { status: 400 });
   }
 
   // Acknowledge every other event type so Clerk does not retry deliveries we intentionally ignore.
