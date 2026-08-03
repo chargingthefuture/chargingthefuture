@@ -94,6 +94,31 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // overly self-critical, and capture audio of the remark so operatives who know nothing
   // believe the "problem" is real and recurring.
   { slug: 'fabricated-flaw', label: 'The Fabricated Flaw' },
+  // Named by the owner (2026-08-04). Sibling of The Fabricated Flaw, but the mechanism is
+  // projection rather than invention: the insult is delivered by someone who visibly embodies
+  // it (a fat person calling the member fat, a disabled person mocking a disability), and the
+  // mismatch is made obnoxiously inappropriate on purpose. Double effect — it forces the
+  // operative to live a lie, which demoralizes and binds them, while still aiming at the
+  // member's self-esteem. Telling the two apart when logging: was the insult absurdly false
+  // (Fabricated Flaw), or was the insulter a walking contradiction of it (Pot and Kettle)?
+  { slug: 'pot-and-kettle', label: 'The Pot and Kettle' },
+  // Named by the owner (2026-08-04) — three distinct car plays, split so trend data can tell
+  // them apart. Context recorded here and deliberately NOT offered as a tag: the owner reports
+  // that killing a Target in a motor-vehicle "accident" is the most common plausible-deniability
+  // murder, which is why the vehicle schemes below matter beyond their immediate cost.
+  //
+  // A cyclist or pedestrian cuts in front of the member's car at the last moment — usually a
+  // pump fake, sometimes a real strike (the owner was hit as a pedestrian) — to provoke a
+  // reaction that gets filmed. The footage of a Target "raging" is the recruiting material that
+  // convinces onlookers to join in.
+  { slug: 'staged-road-rage', label: 'Staged Road Rage' },
+  // Repeatedly striking the member's parked or moving car so claims and premiums climb, until
+  // the member is bleeding money or cannot stay insured at all. Financial attrition, not theater.
+  { slug: 'insurance-bleed', label: 'The Insurance Bleed' },
+  // Recurring vehicle theater aimed at making the member hyper-aware behind the wheel: high
+  // beams flashed, brake checks, cars pacing or boxing them in. The point is sensitization —
+  // every drive becomes something to read and second-guess.
+  { slug: 'road-sensitization', label: 'Road Sensitization' },
   // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
   // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
   // description of the scheme (see click-log.incident.create) — that is the intake that names
