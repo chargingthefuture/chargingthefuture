@@ -364,3 +364,28 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   `event.start-broadcast` command, access-policy, and audit contract entries. Note: HLS/recording are
   started once when a publisher is present (replacing the call that always failed), so net Stream usage
   is unchanged-to-positive with no new recurring calls.
+- 2026-08-03: Made a failed "Go live" say why, and stopped two non-video steps from blocking a broadcast
+  (branch `fix/beacon-go-live-failure-detail`; owner report from a phone: the banner read only
+  "Broadcast input unavailable." with no way to tell what was wrong). Three changes, no route, schema,
+  or contract change:
+  1. `GET /api/beacon/[id]/ingest` no longer wraps every step in one catch that returns a single fixed
+     sentence. Each step is attempted separately and names itself in the message the admin sees:
+     loading the event ("Could not load the event: …", `beacon_persistence_unavailable`), preparing the
+     host ("Broadcast input unavailable — preparing the host failed: …"), and opening the broadcast call
+     ("Broadcast input unavailable — opening the broadcast call failed: …"). Stream-not-configured still
+     answers "Live video is not configured." The echoed reason is capped at 300 characters. Each step
+     also reports separately (`ingest_load_event`, `ingest_host_credentials`, `ingest_open_call`,
+     `ingest_audit`), so error reporting shows which one failed.
+  2. The ingest audit row is now written best-effort. It is bookkeeping; a failed audit write used to
+     surface as a broadcast failure even though the RTMP details and host token were ready.
+  3. Registering the host on Stream Chat (`upsertUser`) inside `createBeaconHostCredentials` is now
+     best-effort, and releasing the Stream client is guarded. The host token is signed locally from the
+     app secret and publishing video does not need the chat user to exist, so a Chat-side failure (quota,
+     a chat-disabled app, a transient error) no longer stops a broadcast — it is reported
+     (`host_chat_upsert`) and only the host's chat display name and moderator role are missed.
+  Also, a failed Stream Video REST call now carries its HTTP status and endpoint alongside Stream's own
+  message (`Stream Video POST /api/v2/video/call/… failed (403): …`) — the status is what distinguishes
+  a misconfigured app from an unauthorized one from an over-quota one — and a non-JSON error body no
+  longer replaces the status with a JSON parse error. The API key is never included (the path is logged
+  without its query string). Quota-impact note:
+  `ctf/docs/quota-impact/2026-08-03-beacon-go-live-failure-detail.md`.
