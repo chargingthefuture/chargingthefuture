@@ -704,7 +704,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
     visible and greppable instead of invisible. A bare `// ignore` no longer passes.
   - **The native app had no error reporting at all** for caught failures. Added
     `ctf/packages/mobile/src/observability/report.ts` (`reportError` + `reasonText`) alongside the
-    existing Sentry init: a console line always, Sentry when a DSN is configured. Nine silent failures now
+    existing Sentry init: a log line always, Sentry when a DSN is configured. Nine silent failures now
     report, including a failed token refresh that signed the member out with no trace, a bug report whose
     submission failed silently, and the Chyme back-channel join.
   - The gate covers all three surfaces and found **82 sites**; all are resolved — the ones that were

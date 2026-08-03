@@ -13,9 +13,9 @@ type ReportContext = {
 //
 // A caught error does not reach Sentry on its own — only an unhandled crash does. Every screen that
 // catches its own failure to show a friendly message was therefore hiding the cause, and on a phone
-// there is no console to check afterwards. This is the one place the reason gets recorded.
+// there is nowhere to read the logs afterwards. This is the one place the reason gets recorded.
 //
-// Always logs to the device console as well, so a failure is visible in a dev build and in `adb logcat`
+// Always writes a device log line as well, so a failure is visible in a dev build and in `adb logcat`
 // even when Sentry is not configured (no DSN, or the provider flag is not 'sentry' — see
 // `initMobileSentry`). ReportContext forbids secrets, so logging the tags is safe.
 export function reportError(error: unknown, context: ReportContext): void {
@@ -31,7 +31,7 @@ export function reportError(error: unknown, context: ReportContext): void {
       extra: context.extra,
     });
   } catch {
-    // no-trace: Sentry is not initialised in this build, and the console line above is the record.
+    // no-trace: Sentry is not initialized in this build, and the log line above is the record.
   }
 }
 

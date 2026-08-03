@@ -162,6 +162,6 @@ clean. Do not add an entry to silence the gate — fix the route.
 - `.claude/rules/113-platform-coding-rules.mdc` — structured error responses, no silent catch.
 - `.claude/rules/108-observability-provider-abstraction-rules.mdc` — all error capture goes through
   `reportError`. The native app has its own, at
-  `ctf/packages/mobile/src/observability/report.ts` (console line plus Sentry, a no-op without a DSN).
+  `ctf/packages/mobile/src/observability/report.ts` (a device log line plus Sentry, a no-op without a DSN).
 - `.claude/rules/124-brand-voice-and-language-rules.mdc` — plain words in the summary half of the
   message; the reason half is the machine's own text and is quoted as-is.

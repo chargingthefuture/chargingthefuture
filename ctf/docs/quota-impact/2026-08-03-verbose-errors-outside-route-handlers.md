@@ -49,7 +49,7 @@
 
 - Metrics and alerts added/updated: no new metrics, but a real gain in coverage. The native app had **no
   error reporting for caught failures at all**; `ctf/packages/mobile/src/observability/report.ts` adds it
-  (console line always, Sentry when a DSN is configured), and the Chyme back-channel join failure and the
+  (a log line always, Sentry when a DSN is configured), and the Chyme back-channel join failure and the
   Stream chat search failure now report instead of vanishing. On the web, a failed Stream Chat connect in
   `lib/hub/live-stream.ts` now reports rather than silently falling back to polling.
 
