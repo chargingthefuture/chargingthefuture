@@ -168,6 +168,14 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-03: **New scheme tag: The Fabricated Flaw (owner-named).** Added slug `fabricated-flaw`
+  to `CLICK_LOG_SCHEME_TAGS` — staged criticism of an invented flaw, timed to be absurd, meant to
+  sensitize the member into self-criticism and to capture audio of the remark so uninvolved
+  operatives believe the "problem" is real and recurring. First scheme named through the
+  ClickLog-era flow (Discourse stays deprecated). List-data only: no schema, route, contract, or
+  UI change — the pickers, validation, and trends pick the new slug up from the canonical list.
+  The landing `/schemes` page gains the matching entry in a companion landing-page PR.
+
 - 2026-08-03: **Dropped the word "coarse" from the sharing copy.** "Coarse" is a technical term for
   data that has been rounded off and grouped; a member reading the sharing checkbox has no way to
   know that, and the word can be read as "rude". The two member-facing sharing controls now name
