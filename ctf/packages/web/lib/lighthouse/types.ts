@@ -63,14 +63,6 @@ export type LighthouseMatch = {
   streamChannelId: string;
 };
 
-export type LighthouseBlock = {
-  id: string;
-  blockerUserId: string;
-  blockedUserId: string;
-  reason: string | null;
-  createdAtIso: string;
-};
-
 export type LighthouseProfileInput = {
   profileType: LighthouseProfileType;
   bio?: string | null;

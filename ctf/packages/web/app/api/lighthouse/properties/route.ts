@@ -77,11 +77,9 @@ const LIGHTHOUSE_ERROR_RESPONSES: Record<string, { code: string; message: string
   profile_not_found: { code: LIGHTHOUSE_ERROR_CODE.profileNotFound, message: 'Lighthouse profile not found.', status: 404 },
   property_not_found: { code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: 'Lighthouse property not found.', status: 404 },
   match_not_found: { code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: 'Lighthouse match not found.', status: 404 },
-  block_not_found: { code: LIGHTHOUSE_ERROR_CODE.blockNotFound, message: 'Lighthouse block not found.', status: 404 },
   not_owner: { code: LIGHTHOUSE_ERROR_CODE.notOwner, message: 'Operation requires ownership.', status: 403 },
   policy_denied: { code: LIGHTHOUSE_ERROR_CODE.policyDenied, message: 'Operation denied by policy.', status: 403 },
-  blocked_pair: { code: LIGHTHOUSE_ERROR_CODE.blockedPair, message: 'Match blocked by pair policy.', status: 403 },
-  self_block: { code: LIGHTHOUSE_ERROR_CODE.selfBlock, message: 'Cannot block your own user account.', status: 403 },
+  blocked_pair: { code: LIGHTHOUSE_ERROR_CODE.blockedPair, message: 'This listing is not available to you.', status: 403 },
   duplicate_match: { code: LIGHTHOUSE_ERROR_CODE.duplicateMatch, message: 'Active match request already exists.', status: 409 },
   'invalid payload': { code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid payload.', status: 400 },
 };
@@ -112,7 +110,9 @@ export async function GET(request: NextRequest) {
   const onlyActive = parseOnlyActive(request.nextUrl.searchParams.get('onlyActive'));
 
   try {
-    const result = await listProperties({ page, pageSize, country, city, onlyActive });
+    // Pass the browsing member so listings from anyone they have blocked (or who blocked them) are
+    // left out — a block hides the person as well as stopping contact.
+    const result = await listProperties({ page, pageSize, country, city, onlyActive, viewerUserId: gate.auth.userId });
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'lighthouse', op: 'properties' });

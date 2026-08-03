@@ -210,6 +210,11 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
           setSelectedProperty(null);
           setTab("profile");
         }}
+        // Blocking the host hides their listings, so go back to browse and re-read the list.
+        onBlocked={() => {
+          setSelectedProperty(null);
+          void fetchAll();
+        }}
       />
     );
   }

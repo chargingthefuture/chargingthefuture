@@ -50,28 +50,6 @@ contracts:
     idempotency: true
 
   - pluginId: lighthouse
-    command: lighthouse.block.create
-    version: 1.0.0
-    description: Create a user safety block relation used by matching workflows.
-    inputSchema:
-      blockedUserId:
-        type: string
-        required: true
-      reason:
-        type: string
-        required: false
-    outputSchema:
-      blockId:
-        type: string
-      createdAt:
-        type: string
-    dataAccess:
-      - lighthouse_blocks
-    purpose: user_safety_controls
-    retentionClass: audit_long_lived
-    idempotency: true
-
-  - pluginId: lighthouse
     command: lighthouse.property.create
     version: 1.0.0
     description: >-
