@@ -1,6 +1,7 @@
 import { createHmac } from 'crypto';
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
+import { reportError } from 'lib/observability/report';
 import { BEACON_CHAT_CHANNEL_TYPE, BEACON_STREAM_CALL_TYPE } from './constants';
 
 // Beacon's Stream Video integration. Beacon is a one-way `livestream`: only the admin host
@@ -98,10 +99,24 @@ async function streamVideoFetch(
     cache: 'no-store',
   });
   const text = await response.text();
-  const parsed = text.length > 0 ? (JSON.parse(text) as Record<string, unknown>) : {};
+  // A failing request does not always answer with JSON (a proxy or gateway can return HTML), and a
+  // JSON.parse throw there would replace the real status with "Unexpected token <". Parse defensively
+  // so the status below is always the thing the caller sees.
+  let parsed: Record<string, unknown> = {};
+  if (text.length > 0) {
+    try {
+      parsed = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      parsed = {};
+    }
+  }
   if (!response.ok) {
-    const message = typeof parsed.message === 'string' ? parsed.message : `Stream Video request failed (${response.status}).`;
-    throw new Error(message);
+    // Keep the HTTP status and the endpoint alongside Stream's own message. Stream's message alone
+    // ("call type does not exist", "not allowed") does not say whether the app is misconfigured,
+    // unauthorized, or over quota; the status does, and the admin surfaces show this text. The path
+    // is included but never the query string — that carries the API key.
+    const detail = typeof parsed.message === 'string' && parsed.message.length > 0 ? `: ${parsed.message}` : '.';
+    throw new Error(`Stream Video ${init.method} ${path} failed (${response.status})${detail}`);
   }
   return parsed;
 }
@@ -129,7 +144,17 @@ export async function createBeaconHostCredentials(input: {
   const chatClient = new StreamChat(credentials.apiKey, credentials.apiSecret);
   try {
     const streamUserId = beaconStreamUserId(input.userId);
-    await chatClient.upsertUser({ id: streamUserId, name: input.name, role: 'admin' });
+    // Registering the host on Stream Chat is best-effort on purpose. The host token below is signed
+    // locally from the app secret and needs no network call, and publishing video does not depend on
+    // the chat user existing (the video client sends the user object when it connects). So a Chat-side
+    // failure — quota, a chat-disabled app, a transient error — must not be the reason a broadcast
+    // cannot start. It is reported and the broadcast proceeds; only the host's chat display name and
+    // moderator role are missed.
+    try {
+      await chatClient.upsertUser({ id: streamUserId, name: input.name, role: 'admin' });
+    } catch (error) {
+      reportError(error, { area: 'beacon', op: 'host_chat_upsert', extra: { eventId: input.eventId } });
+    }
     return {
       streamApiKey: credentials.apiKey,
       streamCallType: BEACON_STREAM_CALL_TYPE,
@@ -138,7 +163,11 @@ export async function createBeaconHostCredentials(input: {
       hostToken: chatClient.createToken(streamUserId),
     };
   } finally {
-    await chatClient.disconnectUser();
+    // A throw in a finally block replaces the value being returned, so closing the client is guarded
+    // too: releasing a server-side client must never be what stops a broadcast from starting.
+    try {
+      await chatClient.disconnectUser();
+    } catch { /* nothing to release */ }
   }
 }
 
