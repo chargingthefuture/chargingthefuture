@@ -17,6 +17,7 @@ import { LighthouseLoadingSkeleton } from "./lighthouse-loading-skeleton";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { failureText } from 'lib/errors/client-failure';
 
 /** GET a list endpoint and return its `items`; [] when the request fails or has no items. */
 async function fetchItems<T>(url: string): Promise<T[]> {
@@ -140,8 +141,8 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
         const data = await currencyRes.json() as { currencies?: Currency[] };
         setCurrencies(Array.isArray(data.currencies) ? data.currencies : []);
       }
-    } catch {
-      setError("Failed to load LightHouse data.");
+    } catch (caught) {
+      setError(failureText(caught, { area: 'lighthouse', op: 'fetch_all', fallback: "Failed to load LightHouse data.", audience: 'member' }));
     } finally {
       if (initial) setLoading(false);
     }

@@ -11,6 +11,7 @@ import { Field, ConfirmAction, Feedback } from './sca-fields';
 import { scAdminMutate, type CreditLimitResponse, type CreditLimitLookup, type CreditLimitLookupResponse } from './sca-shared';
 import { useTheme } from '@/hooks/useTheme';
 import { getServiceCreditsTokens, type ServiceCreditsTokens } from './sc-shared';
+import { failureText } from 'lib/errors/client-failure';
 
 // The set-limit action is ready once a member ID and a finite, non-negative limit are supplied.
 function isCreditLimitReady(targetUserId: string, creditLimit: string, limit: number): boolean {
@@ -119,8 +120,8 @@ export function ServiceCreditsCreditLimitsPanel() {
         return;
       }
       setLookup(data.creditLimit);
-    } catch {
-      setError('Network error. Try again.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'service-credits', op: 'look_up', fallback: 'Network error. Try again.' }));
     } finally {
       setLookingUp(false);
     }

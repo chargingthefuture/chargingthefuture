@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Bath, Bed, Calendar, CheckCircle2, Home, MapPin, Pencil, UserRoundPlus } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { acceptedCurrencyLabels, formatRentParts, getLighthouseTokens, listingAcceptsCredits, type CurrencyMap, type LighthouseTokens, type Property } from "./shared";
+import { failureText } from 'lib/errors/client-failure';
 
 // The chips row under the title: property type, location, and a credits flag when accepted.
 function ListingBadges({ l, t }: { l: Property; t: LighthouseTokens }) {
@@ -267,8 +268,8 @@ function RequestToStay({
         return;
       }
       setError(data.message ?? "Could not send your request. Please try again.");
-    } catch {
-      setError("Could not send your request. Please try again.");
+    } catch (caught) {
+      setError(failureText(caught, { area: 'lighthouse', op: 'submit', fallback: "Could not send your request. Please try again.", audience: 'member' }));
     } finally {
       setSubmitting(false);
     }

@@ -9,6 +9,7 @@ import { getChymeTokens, type CurrentUser, requestJson } from './chyme-shared';
 import { ChymeHeader } from './chyme-header';
 import { ChymeSidebar } from './chyme-sidebar';
 import { ChymeRoomView } from './chyme-room-view';
+import { responseFailureText } from 'lib/errors/client-failure';
 import type {
   ChymeJoinResponse,
   ChymeMessage,
@@ -67,7 +68,7 @@ function useChymeShellState(roomScope: ChymeRoomScope) {
           return;
         }
         if (!roomRes.ok) {
-          throw new Error('Unable to load Chyme.');
+          throw new Error(await responseFailureText(roomRes, 'Unable to load Chyme.', 'member'));
         }
         const roomPayload = (await roomRes.json()) as ChymeRoomResponse;
         const messagePayload = await requestJson<{ roomKey: string; messages: ChymeMessage[] }>(
