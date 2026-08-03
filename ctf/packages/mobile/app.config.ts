@@ -107,7 +107,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-notifications',
       // Wires the Sentry native SDK into the EAS Android build so crashes in the keep-list app are
       // reported again (the JS init lives in src/observability/sentry.ts and no-ops without a DSN).
-      '@sentry/react-native/expo',
+      //
+      // `disableAutoUpload: true` turns off the Gradle step that uploads JavaScript source maps to
+      // Sentry at the end of the release bundle. That step shells out to sentry-cli, which needs a
+      // Sentry organization, project, and auth token. Only the DSN is configured (EXPO_SENTRY_DSN),
+      // so the upload had nothing to authenticate with and failed the whole Android build:
+      // "error: An organization ID or slug is required". Crash reporting itself does not depend on
+      // the upload — it only makes stack traces in Sentry point at original source lines instead of
+      // the bundled output. To turn the upload back on later, add SENTRY_ORG, SENTRY_PROJECT, and
+      // SENTRY_AUTH_TOKEN to the build environment first, then drop this option.
+      ['@sentry/react-native/expo', { disableAutoUpload: true }],
     ],
     updates: {
       ...(updatesUrl ? { url: updatesUrl } : {}),
