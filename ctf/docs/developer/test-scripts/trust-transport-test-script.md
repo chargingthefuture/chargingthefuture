@@ -18,6 +18,7 @@
 ---
 
 > Status spelling: since 2026-07-31 every stored status reads `canceled` (US spelling); if a step shows the British form anywhere, that is a bug.
+> 2026-08-03: the spelling migration's rename guard in `ctf/schema.sql` was scoped to the public schema (issue #2030 — the unscoped check matched the demo schema's copy and broke the Neon apply). Database-side fix only; no member-facing behavior changed, so every step below tests exactly as written.
 
 ## How to run this
 

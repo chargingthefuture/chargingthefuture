@@ -6249,11 +6249,16 @@ BEGIN;
 
 -- Column rename: trust_transport_trips.cancelled_reason -> canceled_reason. Guarded so it runs
 -- once on a legacy database and never on a fresh one (where CREATE TABLE already used the new name).
+-- The guard must name the schema: the database also holds the demo schema, and an unfiltered
+-- information_schema lookup matched the demo copy of the column after the public one was already
+-- renamed, sending the ALTER at a column that no longer exists (issue #2030). The demo-schema
+-- generator retargets the table_schema value, so the demo apply guards its own copy the same way.
 DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'trust_transport_trips' AND column_name = 'cancelled_reason'
+    WHERE table_schema = 'public'
+      AND table_name = 'trust_transport_trips' AND column_name = 'cancelled_reason'
   ) THEN
     ALTER TABLE trust_transport_trips RENAME COLUMN cancelled_reason TO canceled_reason;
   END IF;
