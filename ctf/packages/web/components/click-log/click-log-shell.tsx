@@ -252,7 +252,7 @@ export function ClickLogShell() {
           onChange={(e) => void share.setDefault(e.target.checked)}
           style={{ accentColor: t.ACCENT }}
         />
-        Share new incidents with the owner by default (only coarse trend data — never your notes or exact location)
+        Share new incidents with the owner by default (only the date, rough area, and tags — never your notes or exact location)
       </label>
 
       {incidents.length > 0 && (

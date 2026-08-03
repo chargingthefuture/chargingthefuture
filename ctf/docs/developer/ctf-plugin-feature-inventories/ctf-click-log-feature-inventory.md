@@ -37,8 +37,9 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - Choose whether an incident is shared with the owner for trend tracking: a global "share new
   incidents by default" setting plus a per-incident override (in the log form and on each history
   row). Sharing is opt-in and off until the member turns it on, and can be turned off again per
-  incident at any time. Shared incidents contribute only coarse trend data (day, approximate area,
-  count) — never the note or exact location.
+  incident at any time. Shared incidents contribute only grouped trend data (day, approximate area,
+  count) — never the note or exact location. The member-facing copy says exactly that in plain
+  words ("only the date, rough area, and tags"), with no "coarse" wording.
 
 ## 4. Admin Features
 
@@ -166,6 +167,14 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-03: **Dropped the word "coarse" from the sharing copy.** "Coarse" is a technical term for
+  data that has been rounded off and grouped; a member reading the sharing checkbox has no way to
+  know that, and the word can be read as "rude". The two member-facing sharing controls now name
+  what is actually sent: the per-incident checkbox reads "Share this incident with the owner (only
+  the date, rough area, and tags)" and the global default reads "Share new incidents with the owner
+  by default (only the date, rough area, and tags — never your notes or exact location)". The owner
+  trends dashboard blurb says "Grouped data only" instead of "Coarse data only". Copy only — no
+  change to what is shared, to any route, schema, or contract.
 - 2026-08-03: **"Not listed" scheme-suggestion intake + naming pipeline (owner request).** The
   catch-all scheme tag's label changed "Other / not named yet" → "Not listed" (slug `other-scheme`
   frozen; the landing `/schemes` mirror is renamed in a companion landing-page PR). Picking it now
