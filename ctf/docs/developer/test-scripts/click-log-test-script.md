@@ -97,8 +97,10 @@ string. Trailing whitespace on a note is trimmed before the length check.
 **Expected:** Both the global setting and the form checkbox start **off**; an untouched log
 produces a **Private** row. With the default on, a new incident logs as **Shared with owner**;
 the form checkbox is seeded from the default and can be overridden per incident. The per-row
-pill flips a single incident either way at any time, and each change is logged. The copy states
-that only coarse trend data is shared — never the note or exact location.
+pill flips a single incident either way at any time, and each change is logged. The copy names
+what is shared in plain words — the global default says "only trend data — never your notes" and
+the per-incident checkbox says "only the date, rough area, and tags"; the word "coarse" appears
+nowhere on screen.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CL-7 · Tag an incident with a problem and a scheme (location required)
