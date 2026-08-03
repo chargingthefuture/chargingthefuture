@@ -101,6 +101,16 @@ export const COMMUNITY_VALUE_INDEX_LABEL = "Community Value Index";
 export const COMMUNITY_VALUE_INDEX_DISCLAIMER =
   "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through a fixed set of weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
 
+// The projected figure: what the posts already on the board would add IF every one of them closed
+// successfully. It is a separate number from the Community Value Index and is never added to it — the
+// index counts only exchanges that actually completed. Kept here as its own metric key/label/disclaimer
+// so the wording cannot drift between surfaces, and so no surface can show the projected figure without
+// the sentence that says what it is.
+export const PROJECTED_VALUE_METRIC_KEY = "gdp_projected_value_index";
+export const PROJECTED_VALUE_LABEL = "Value waiting to happen";
+export const PROJECTED_VALUE_DISCLAIMER =
+  "This is what the posts already on the board would add if every one of them closed successfully — rides and deliveries still open, quotes waiting on an answer, favors nobody has done yet, recurring activities waiting to be confirmed. Most posts never close, so treat it as interest, not achievement. It is not part of the Community Value Index, and like the index it isn't money, a price, or a redemption value.";
+
 // Format a USD aggregate into the compact $B/$M/$K form the design uses. Returns a
 // dash when the figure is absent so the map never invents a number.
 export function formatGdpUsd(value: number | null | undefined): string {
@@ -154,12 +164,31 @@ export interface GdpLiveSource {
   valueIndex: number;
 }
 
+// One projection source's contribution — open posts that have not closed yet, per plugin. Carried in
+// its own payload field, never mixed into `metrics` or `sources`, so the projected figure can never be
+// read as recognized value.
+export interface GdpProjectedSource {
+  pluginSlug: string;
+  label: string;
+  valueIndex: number;
+  openCount: number;
+}
+
+// The projected block from GET /api/gdp/report/current. Absent/null when the projection read failed, in
+// which case the panel is simply not rendered.
+export interface GdpProjection {
+  projectedValueIndex: number;
+  openPostCount: number;
+  perSource: GdpProjectedSource[];
+}
+
 // The live report payload from GET /api/gdp/report/current: live metric rows plus the per-source
 // breakdown and an optional narrative. Computed on each request — there is no published-snapshot read.
 export interface GdpReportPayload {
   publication?: { id: string; weekStartDate: string; title: string; summary: string; status: string } | null;
   metrics: GdpMetricRow[];
   sources?: GdpLiveSource[];
+  projection?: GdpProjection | null;
 }
 
 // Shape the live metric rows into the GdpMetrics the hero/sidebar render. The headline is the Community
@@ -176,6 +205,16 @@ export function shapeLiveGdpMetrics(rows: GdpMetricRow[], isEstimate: boolean): 
     memberStats,
     isEstimate,
   };
+}
+
+// Shape the projected per-source rows for the panel: drop sources with nothing open (so the panel never
+// shows an empty bar), largest first, with the bar scaled to the biggest contributor. Returns an empty
+// list when nothing is open anywhere, which hides the panel entirely.
+export function shapeProjectedSources(sources: GdpProjectedSource[] | undefined): GdpProjectedSource[] {
+  if (!Array.isArray(sources)) return [];
+  return sources
+    .filter((s) => Number.isFinite(s.valueIndex) && s.valueIndex > 0)
+    .sort((a, b) => b.valueIndex - a.valueIndex);
 }
 
 // Shape the per-source breakdown into sector rows (largest first). Bars are scaled to the biggest

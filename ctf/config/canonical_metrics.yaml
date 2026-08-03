@@ -153,6 +153,44 @@ canonical_metrics:
     allowed_thresholds:
       min: 0
 
+  - id: gdp_projected_value_index
+    name: Projected Community Value
+    description: What the posts already on the board would add to the Community Value Index IF every one of them closed successfully — open TrustTransport requests, Foundation quotes awaiting a decision, SocketRelay favors nobody has done yet, and recurring activities awaiting confirmation. A separate, marketing-facing figure computed by ctf/packages/web/lib/gdp/projection.ts and carried in its own field of the live report; it is NEVER added to gdp_value_index, never written to gdp_metric_snapshots, and never read by the weekly recognition job. Every source reads rows the recognition sources deliberately skip (open instead of settled), so a post can never be counted in both figures. Uses the same fixed contribution weights so the two numbers share a scale. Like the index it is NOT money, NOT a price, and NOT an exchange or redemption value; shown with no currency symbol, always beside the sentence that says most posts never close.
+    owner: economics-team@chargingthefuture.org
+    data_type: integer
+    unit: index
+    calculation: |
+      -- Aggregated server-side by ctf/packages/web/lib/gdp/projection.ts on each dashboard request:
+      -- for each registered projection source, SUM(open posted value) grouped by value type, multiplied
+      -- by the same DEFAULT_CONTRIBUTION_WEIGHTS the real index uses, summed across all sources. Free,
+      -- barter, and fiat recurring lines are counted by NUMBER of open posts, never by an amount. A type
+      -- with no active weight is surfaced and excluded. The result is a relative index, never money.
+      SELECT COALESCE(SUM(amount * weight), 0) AS gdp_projected_value_index
+      FROM open_posted_value
+      JOIN contribution_weights USING (currency_code);
+    inputs:
+      - name: trust_transport_requests.price_amount
+        type: currency
+      - name: trust_transport_requests.status
+        type: string
+      - name: foundation_quote_requests.quoted_amount
+        type: currency
+      - name: foundation_quote_requests.lifecycle_state
+        type: string
+      - name: socket_relay_requests.status
+        type: string
+      - name: recurring_activities.sc_value
+        type: number
+      - name: recurring_activities.status
+        type: string
+    example_values:
+      - 387
+    last_updated: "2026-08-03T00:00:00Z"
+    update_cadence: live
+    retention: not stored
+    allowed_thresholds:
+      min: 0
+
   - id: gdp_service_revenue_target
     name: GDP Service Revenue Target
     description: Annual service-sector GDP target value.

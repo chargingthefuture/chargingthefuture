@@ -36,6 +36,8 @@
 
 5. **No currency symbol on the Community Value Index.** The hero figure on the dashboard has no `$`, `€`, or other currency prefix. web ☐
 
+6. **Projected figure stays out of the index.** In the `GET /api/gdp/report/current` body, any projected value appears only inside the `projection` object; the `metrics` array contains no projected row. If the community has open posts, a "Value waiting to happen" panel renders below the hero, visually apart from it. web ☐
+
 ---
 
 ## Member walkthrough
@@ -249,6 +251,49 @@ Result: web ☐
 **Expected:**
 - No `$`, `€`, `£`, or other currency prefix or suffix on the index figure.
 - The label or footnote makes clear this is a relative index — not a ledger amount, price, or redemption value for any token or currency.
+
+Result: web ☐
+
+---
+
+### GDP-12 — "Value waiting to happen" is separate from the Community Value Index
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Seed run. Signed in. At least one open post exists that carries a value — an open TrustTransport request with a price type chosen, a Foundation quote a provider has answered but nobody has closed, an unexpired SocketRelay favor, or a recurring activity awaiting confirmation. Note the hero index figure before you start.
+
+**Steps:**
+1. On `/apps/gdp`, look below the hero for the "Value waiting to happen" panel.
+2. Read its figure, its open-post count, and the italic sentence under them.
+3. Compare the panel's figure with the hero's Community Value Index figure.
+4. Complete or close one of the open posts (for example, close a SocketRelay favor successfully), then refresh `/apps/gdp`.
+5. In DevTools, look at the `GET /api/gdp/report/current` response body.
+
+**Expected:**
+- The panel is visually apart from the hero (dashed border, muted surface) and never sits inside it.
+- The panel figure carries no `$`, `€`, or other currency symbol.
+- The sentence says the number is what open posts would add if they all closed, that most posts never close, and that it is not part of the Community Value Index and is not money.
+- The hero index figure does **not** include the projected number — the two figures move independently.
+- After a post closes, the projected figure goes down and the hero index goes up. The post is never counted in both at once.
+- In the response body, the projected number appears only under `projection`; the `metrics` array contains no `gdp_projected_value_index` row and no projected value.
+- Each per-app row shows a count of posts still open, and rows with nothing open are not listed.
+
+Result: web ☐
+
+---
+
+### GDP-13 — The projected panel disappears when nothing is open
+
+**Role:** member
+**Surfaces:** web (desktop)
+**Precondition:** A database (or fixture) where every TrustTransport request is completed/canceled, every Foundation quote is closed, every SocketRelay favor is closed or expired, and no recurring activity is pending.
+
+**Steps:**
+1. Load `/apps/gdp` and scan the area under the hero.
+
+**Expected:**
+- No "Value waiting to happen" panel appears at all — not an empty panel, not a zero, not a dash.
+- The rest of the dashboard renders normally.
 
 Result: web ☐
 

@@ -64,7 +64,10 @@ contracts:
       Get the aggregate GDP dashboard for the authenticated survivor-facing view. Computed LIVE on each
       request (no weekly publish/snapshot step): the Community Value Index is recognized from every
       registered non-incentive settled-value source right now, alongside live member counts. Reads only
-      community-wide aggregates — never per-user figures.
+      community-wide aggregates — never per-user figures. Also returns a SEPARATE `projection` block —
+      what the posts still open would add if every one closed successfully — computed by
+      lib/gdp/projection.ts and carried in its own field so it is never summed into the index, never
+      written to a snapshot, and never read by the weekly recognition job.
     inputSchema:
       year:
         type: integer
@@ -87,6 +90,11 @@ contracts:
         type: array
       rolloutProgress:
         type: object
+      # Open, not-yet-closed posts, kept apart from every recognized figure above:
+      # { projectedValueIndex, openPostCount, perSource: [{ pluginSlug, label, valueIndex, openCount }] }.
+      # Null when the projection read fails, in which case the panel is simply not rendered.
+      projection:
+        type: object
     dataAccess:
       # Live recognition sources (non-incentive settled value) + activity counts read on each request:
       - foundation_call_sessions
@@ -97,6 +105,11 @@ contracts:
       - recurring_activities
       - login_events
       - users
+      # Projection sources — OPEN posts only, read for the separate projected figure. Each reads rows the
+      # recognition sources deliberately skip, so nothing is counted in both figures:
+      - trust_transport_requests
+      - foundation_quote_requests
+      - socket_relay_requests
       # Published-snapshot history (retained, not what the live dashboard shows):
       - gdp_metric_snapshots
       - gdp_category_breakdowns
