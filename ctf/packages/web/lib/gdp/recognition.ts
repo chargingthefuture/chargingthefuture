@@ -53,6 +53,12 @@ export const DEFAULT_CONTRIBUTION_WEIGHTS: Map<string, number> = new Map([
   // Non-money exchanges: one completed act of value counts as one point each.
   [FREE_CODE, 1],
   [BARTER_CODE, 1],
+  // Recurring activity, by count: one point per confirmed fiat recurring line (see
+  // RECURRING_ACTIVITY_COUNT_UNIT below — a hidden unit, never a fiat amount). This mirrors the weekly
+  // job's weight map in scripts/recognizeGdp.mjs, which has always carried it; the live map was missed
+  // when the weights moved out of the database and into code, so every confirmed fiat recurring line
+  // was being surfaced as unweighted and excluded from the live index instead of counting one point.
+  ['RACT', 1],
   // Foreign-currency settled value, normalized to a USD reference (USD = 1). Notional index inputs only,
   // never a price or redemption rate — present so a foreign-priced completed task is counted, not dropped.
   ['USD', 1],

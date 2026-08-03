@@ -348,6 +348,18 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-08-03: **Fixed the live index dropping every confirmed fiat recurring activity.** The two weight
+  maps are documented as mirrors of each other, but `DEFAULT_CONTRIBUTION_WEIGHTS` in
+  `lib/gdp/recognition.ts` had no `RACT` entry while `WEIGHTS` in `scripts/recognizeGdp.mjs` has carried
+  `['RACT', 1]` since the Recurring Activity work landed. `RACT` is the hidden by-count unit every
+  confirmed fiat recurring line contributes, so on the live dashboard — the surface members actually
+  read — those lines were being surfaced as an unweighted type and excluded from the index entirely,
+  contributing zero, while the weekly job counted them one point each. Three places already documented
+  the intended weight of 1 (both code comments and §4.4 below); the live map was simply missed when the
+  weights moved out of the database and into code. Added `['RACT', 1]` so the live index matches the
+  weekly job and the documentation. Effect: the Community Value Index rises by one point per confirmed
+  fiat recurring activity, and `unweightedCurrencies` no longer reports `RACT`. Weight-map entry only —
+  no schema, route, or contract change.
 - 2026-08-03: **Registered LightHouse as a recognition source, and its available homes as a projected
   one (owner correction).** LightHouse had been left out of both figures on the reasoning that a listed
   rent is recurring money the product refuses to total. That reasoning was wrong: no plugin holds

@@ -13,7 +13,8 @@ vi.mock('lib/db/postgres', () => ({
       return { rows: [{ currency_code: 'SC', total: '100' }, { currency_code: 'FREE', total: '3' }] };
     }
     if (sql.includes('foundation_quote_requests')) {
-      return { rows: [{ currency_code: 'USD', total: '250' }] };
+      // The second row is a value type with no contribution weight, to prove it is surfaced not zeroed.
+      return { rows: [{ currency_code: 'USD', total: '250' }, { currency_code: 'XTS', total: '99' }] };
     }
     if (sql.includes('lighthouse_properties')) {
       // One priced home at 1200 USD/month plus two listings with no priced rent.
@@ -55,22 +56,31 @@ describe('projectOpenValueIndex', () => {
   it('folds every open source with the same weights the real index uses', async () => {
     const result = await projectOpenValueIndex();
     // 100 SC (weight 1) + 3 free requests + 250 USD (weight 1) + one month of a 1200 USD listing +
-    // 2 no-rent listings + 4 open favors + 2 pending fiat recurring lines (RACT has no weight, so it is
-    // surfaced not counted) + 30 declared SC.
-    expect(result.projectedValueIndex).toBe(100 + 3 + 250 + 1200 + 2 + 4 + 30);
+    // 2 no-rent listings + 4 open favors + 2 pending fiat recurring lines (one RACT point each) +
+    // 30 declared SC. The 99 in an unweighted type is excluded, not counted.
+    expect(result.projectedValueIndex).toBe(100 + 3 + 250 + 1200 + 2 + 4 + 2 + 30);
     expect(result.perSource.map((s) => s.pluginSlug)).toEqual(PROJECTION_SOURCES.map((s) => s.pluginSlug));
   });
 
   it('reports the number of open posts behind the figure', async () => {
     const result = await projectOpenValueIndex();
-    // 1 priced TrustTransport group + 3 free + 1 priced quote group + 1 priced listing group +
-    // 2 no-rent listings + 4 favors + 2 pending fiat + 1 SC group.
-    expect(result.openPostCount).toBe(1 + 3 + 1 + 1 + 2 + 4 + 2 + 1);
+    // 1 priced TrustTransport group + 3 free + 2 quote groups (one priced, one in an unweighted type —
+    // still a real open post) + 1 priced listing group + 2 no-rent listings + 4 favors + 2 pending fiat
+    // + 1 SC group.
+    expect(result.openPostCount).toBe(1 + 3 + 2 + 1 + 2 + 4 + 2 + 1);
   });
 
   it('surfaces a value type with no contribution weight instead of zeroing it', async () => {
     const result = await projectOpenValueIndex();
-    expect(result.unweightedCurrencies).toContain(RECURRING_ACTIVITY_COUNT_UNIT);
+    expect(result.unweightedCurrencies).toContain('XTS');
+  });
+
+  it('counts a pending fiat recurring line as one point, matching the weekly job', async () => {
+    const result = await projectOpenValueIndex();
+    const recurring = result.perSource.find((s) => s.pluginSlug === 'recurring-activity');
+    // 2 pending fiat lines (one RACT point each) + 30 declared ServiceCredits.
+    expect(recurring?.valueIndex).toBe(32);
+    expect(result.unweightedCurrencies).not.toContain(RECURRING_ACTIVITY_COUNT_UNIT);
   });
 
   it('only ever reads open rows — never a settled one the real index already counts', async () => {
