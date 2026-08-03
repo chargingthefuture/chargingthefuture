@@ -56,15 +56,14 @@ type ShellChatPanelProps = {
   currentUser: ShellCurrentUser;
   isAuthenticated?: boolean;
   isAdmin?: boolean;
-  signInUrl?: string;
 };
 
-export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = false, isAdmin = false, signInUrl = '/sign-in' }: ShellChatPanelProps) {
+export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = false, isAdmin = false }: ShellChatPanelProps) {
   if (isAuthenticated) {
     return <AuthenticatedChatPanel stats={stats} plugins={plugins} currentUser={currentUser} isAdmin={isAdmin} />;
   }
 
-  return <PublicCommunityPanel stats={stats} plugins={plugins} signInUrl={signInUrl} />;
+  return <PublicCommunityPanel stats={stats} plugins={plugins} />;
 }
 
 function formatPostTime(iso: string): string {
@@ -111,8 +110,10 @@ function publicRowBackground(authorUsername: string | null): string {
 // visitor reads them here — read-only and nothing else (no AI assistant, no concierge chips, no
 // composer). Posts come from the public, unauthenticated endpoint, which itself only returns posts
 // when an admin has turned public viewing on. When public viewing is off (or the read fails), we fall
-// back to the plain sign-in prompt. A single sign-in call-to-action lets a visitor join to take part.
-function PublicCommunityPanel({ plugins, signInUrl }: { stats: ShellStats; plugins: PluginRegistryItem[]; signInUrl: string }) {
+// back to the plain sign-in prompt. Signing in is offered by the "Sign in" button in the top bar (and
+// the right rail on wide screens) — this panel carries no second sign-in button of its own, so the
+// hero, the posts, and the closing line fit on one screen without scrolling past a full-width CTA.
+function PublicCommunityPanel({ plugins }: { stats: ShellStats; plugins: PluginRegistryItem[] }) {
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
 
   const [posts, setPosts] = useState<PublicCommunityPost[]>([]);
@@ -174,9 +175,6 @@ function PublicCommunityPanel({ plugins, signInUrl }: { stats: ShellStats; plugi
       </div>
 
       <div className={styles.chatSuggestions}>
-        <Link href={signInUrl} className={styles.chatSignInLink}>
-          Sign In to Get Started
-        </Link>
         <p className={styles.chatSuggestionsInfo}>
           {hasPosts
             ? 'You are reading the Commons. Sign in — free — to post, reply, and access housing, work, and safety resources.'
