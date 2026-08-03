@@ -276,7 +276,7 @@ function StatusView({
         {display === 'approved' && (
           <View style={s.approvedBox}>
             <Text style={{ fontSize: 26, textAlign: 'center' }}>🎉</Text>
-            <Text style={[s.approvedTitle, { color: accent }]}>Welcome to the Survivor Hub!</Text>
+            <Text style={[s.approvedTitle, { color: accent }]}>Welcome to the Commons!</Text>
             <Text style={[s.bodyText, { textAlign: 'center' }]}>All features are now unlocked.</Text>
             <Text style={[s.bodyText, { textAlign: 'center', marginTop: 8 }]}>
               {status.incentiveGrantedAt
