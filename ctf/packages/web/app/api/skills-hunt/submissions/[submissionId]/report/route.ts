@@ -5,6 +5,7 @@ import { createReport, validateCreateReportInput, type CreateReportInput } from 
 import { insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export async function POST(request: Request, { params }: { params: Promise<{ submissionId: string }> }) {
   // Filing a report is an authenticated-member write, not a plain read — use the submit gate,
@@ -25,9 +26,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
   let body: Partial<CreateReportInput>;
   try {
     body = (await request.json()) as Partial<CreateReportInput>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

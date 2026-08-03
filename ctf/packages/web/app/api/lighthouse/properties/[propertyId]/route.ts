@@ -10,6 +10,7 @@ import {
 } from 'lib/lighthouse/repository';
 import type { LighthousePropertyInput } from 'lib/lighthouse/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteParams = {
   params: Promise<{ propertyId: string }>;
@@ -128,9 +129,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
   let body: PropertyBody;
   try {
     body = (await request.json()) as PropertyBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

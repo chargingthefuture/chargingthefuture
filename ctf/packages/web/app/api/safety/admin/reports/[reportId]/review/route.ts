@@ -3,6 +3,7 @@ import { requireSafetyAdminAccess, ensureMutationCsrf } from '../../../_lib';
 import { SAFETY_ERROR_CODE } from 'lib/safety/constants';
 import { insertSafetyAdminAudit, setSafetyReportStatus } from 'lib/safety/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type ReviewBody = { action?: unknown };
 
@@ -35,9 +36,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ rep
   let body: ReviewBody;
   try {
     body = (await request.json()) as ReviewBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SAFETY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SAFETY_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -78,7 +79,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ rep
   } catch (error) {
     reportError(error, { area: 'safety', op: 'admin_report_review' });
     return NextResponse.json(
-      { ok: false, code: SAFETY_ERROR_CODE.persistenceUnavailable, message: 'Unable to update this report.' },
+      { ok: false, code: SAFETY_ERROR_CODE.persistenceUnavailable, message: `Unable to update this report: ${failureReason(error)}` },
       { status: 503 },
     );
   }

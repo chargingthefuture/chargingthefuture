@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireSkillsHuntModeratorAccess } from '../../../.
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { generateDirectoryProfileFromAcceptedSubmission, insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason, withReason } from 'lib/errors/failure';
 
 type GenerateBody = {
   invitedByUsername?: string;
@@ -48,9 +49,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
   let body: GenerateBody;
   try {
     body = (await request.json()) as GenerateBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -85,6 +86,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     const message = error instanceof Error ? error.message : 'unknown';
     const { status, code, responseMessage } = mapGenerateProfileError(message);
 
-    return NextResponse.json({ ok: false, code, message: responseMessage }, { status });
+    return NextResponse.json({ ok: false, code, message: withReason(responseMessage, error) }, { status });
   }
 }

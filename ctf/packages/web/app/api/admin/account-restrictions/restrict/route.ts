@@ -3,6 +3,7 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { checkMutationOrigin } from 'lib/auth/csrf';
 import { restrictAccount, RESTRICTION_SCOPES, type RestrictionScope } from 'lib/auth/account-restrictions';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RestrictBody = { targetUserId?: string; reason?: string; scope?: string };
 
@@ -32,8 +33,8 @@ export async function POST(request: Request) {
   let body: RestrictBody;
   try {
     body = (await request.json()) as RestrictBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'invalid_json', message: `Invalid JSON body: ${failureReason(error)}` }, { status: 400 });
   }
 
   const scope = body.scope;
@@ -51,6 +52,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, restriction }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'account-restrictions', op: 'restrict' });
-    return NextResponse.json({ ok: false, code: 'account_restrictions_error', message: 'Could not restrict the account.' }, { status: 500 });
+    return NextResponse.json({ ok: false, code: 'account_restrictions_error', message: `Could not restrict the account: ${failureReason(error)}` }, { status: 500 });
   }
 }

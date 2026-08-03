@@ -3,6 +3,7 @@ import { requireChymeAccess, ensureMutationCsrf } from '../_lib';
 import { sendServiceCredits } from 'lib/chyme/repository';
 import { CHYME_MAX_TIP_AMOUNT } from 'lib/chyme/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type TipBody = { toUserId: string; amount: number; message?: string; idempotencyKey?: unknown };
 
@@ -58,8 +59,8 @@ export async function POST(request: Request) {
   let body: TipBody;
   try {
     body = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 });
   }
 
   const validated = validateTipRequest(body, gate.identity.userId);

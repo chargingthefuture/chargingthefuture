@@ -3,6 +3,7 @@ import { requireSafetyAdminAccess } from '../_lib';
 import { SAFETY_ERROR_CODE } from 'lib/safety/constants';
 import { listSafetyReportsForAdmin } from 'lib/safety/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Admin list of member safety reports for the /admin/safety review queue (issue #809, task 3).
 // Open reports first, then newest first. Each row carries the resolved reporter and reported display
@@ -20,7 +21,7 @@ export async function GET() {
   } catch (error) {
     reportError(error, { area: 'safety', op: 'admin_reports_list' });
     return NextResponse.json(
-      { ok: false, code: SAFETY_ERROR_CODE.persistenceUnavailable, message: 'Unable to load safety reports.' },
+      { ok: false, code: SAFETY_ERROR_CODE.persistenceUnavailable, message: `Unable to load safety reports: ${failureReason(error)}` },
       { status: 503 },
     );
   }

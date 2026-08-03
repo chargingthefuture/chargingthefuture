@@ -19,6 +19,7 @@ import {
 import { feedPostLength as normalizedPostLength } from 'lib/feed/normalize';
 import { requireHubAccess } from '../_lib';
 import { ensureMutationCsrf } from '../../feed/_lib';
+import { failureReason } from 'lib/errors/failure';
 
 // Survivor Hub consolidation: the Hub home channel is backed by the Feed model
 // (feed_items) as the single source of truth. The channel is one blended stream
@@ -307,11 +308,11 @@ export async function POST(request: Request) {
   let body: MessageRequestBody;
   try {
     body = (await request.json()) as MessageRequestBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
       {
         ok: false,
-        message: 'Invalid JSON payload.',
+        message: 'Invalid JSON payload.', reason: failureReason(error),
       },
       { status: 400 },
     );

@@ -3,6 +3,7 @@ import { ensureNotificationsCsrf, requireNotificationsAccess } from '../../_lib'
 import { deletePushSubscriptionByEndpoint } from 'lib/notifications/push';
 import { NOTIFICATION_ERROR_CODE } from 'lib/notifications/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Remove one device's push subscription (the member turned device alerts off, or the browser revoked
 // it). Scoped to the caller so a member can only delete their own subscription.
@@ -20,9 +21,9 @@ export async function POST(request: Request) {
   let payload: { endpoint?: unknown };
   try {
     payload = await request.json();
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: NOTIFICATION_ERROR_CODE.invalidPayload, message: 'An endpoint is required.' },
+      { ok: false, code: NOTIFICATION_ERROR_CODE.invalidPayload, message: 'An endpoint is required.', reason: failureReason(error) },
       { status: 400 },
     );
   }

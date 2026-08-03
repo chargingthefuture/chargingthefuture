@@ -4,6 +4,7 @@ import { toggleAnnouncementReaction } from 'lib/feed/repository';
 import { logFeedAudit } from 'lib/feed/audit';
 import { reportError } from 'lib/observability/report';
 import { ensureMutationCsrf, requireFeedReadAccess } from '../../../feed/_lib';
+import { failureReason } from 'lib/errors/failure';
 
 // Toggle the signed-in member's emoji reaction on an official announcement. Reactions live in our
 // own database (announcement_reactions), keyed on the announcement. A second tap of the same emoji
@@ -63,8 +64,8 @@ export async function POST(request: Request, { params }: RouteParams) {
   let body: ReactionRequestBody;
   try {
     body = (await request.json()) as ReactionRequestBody;
-  } catch {
-    return NextResponse.json({ ok: false, message: 'Invalid JSON payload.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, message: 'Invalid JSON payload.', reason: failureReason(error) }, { status: 400 });
   }
 
   const emoji = typeof body.emoji === 'string' ? body.emoji : '';

@@ -10,6 +10,7 @@ import {
 } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type SectorUpdateBody = {
   name?: unknown;
@@ -125,7 +126,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   } catch (error) {
     reportError(error, { area: 'skills-taxonomy', op: 'admin_sectors_id' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to read sector.' },
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: `Unable to read sector: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -147,9 +148,9 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   let body: SectorUpdateBody;
   try {
     body = (await request.json()) as SectorUpdateBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -198,7 +199,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     });
 
     return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to update sector.' },
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: `Unable to update sector: ${failureReason(error)}` },
       { status: 503 },
     );
   }

@@ -5,6 +5,7 @@ import { createAnnouncementDraft, validateAnnouncementDraftInput } from 'lib/fee
 import { logFeedAudit } from 'lib/feed/audit';
 import type { AnnouncementDraftInput } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type DraftBody = Partial<AnnouncementDraftInput>;
 
@@ -32,9 +33,9 @@ export async function POST(request: Request) {
   let body: DraftBody;
   try {
     body = (await request.json()) as DraftBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
       errorCategory: error instanceof Error ? error.message : 'unknown_error',
     });
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to create draft.' },
+      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: `Unable to create draft: ${failureReason(error)}` },
       { status: 503 },
     );
   }

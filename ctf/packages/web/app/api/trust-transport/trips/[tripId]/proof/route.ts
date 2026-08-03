@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireTrustTransportReadAccess, trustTransportErro
 import { TRUST_TRANSPORT_ERROR_CODE } from 'lib/trust-transport/constants';
 import { captureTripProof } from 'lib/trust-transport/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteProps = {
   params: Promise<{ tripId: string }>;
@@ -22,9 +23,9 @@ export async function POST(request: Request, { params }: RouteProps) {
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

@@ -5,6 +5,7 @@ import { deleteOwnDirectoryProfile, getOwnProfile, upsertOwnProfile, validatePro
 import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 import type { DirectoryProfileInput } from 'lib/directory/types';
+import { failureReason } from 'lib/errors/failure';
 
 type ProfileBody = Partial<DirectoryProfileInput>;
 
@@ -129,9 +130,9 @@ async function handleUpsert(request: Request) {
   let body: ProfileBody;
   try {
     body = (await request.json()) as ProfileBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

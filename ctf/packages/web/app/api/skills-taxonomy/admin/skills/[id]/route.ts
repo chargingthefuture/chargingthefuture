@@ -10,6 +10,7 @@ import {
 } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type SkillUpdateBody = {
   jobTitleId?: unknown;
@@ -158,7 +159,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   } catch (error) {
     reportError(error, { area: 'skills-taxonomy', op: 'admin_skills_id' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to read skill.' },
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: `Unable to read skill: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -180,9 +181,9 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   let body: SkillUpdateBody;
   try {
     body = (await request.json()) as SkillUpdateBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }

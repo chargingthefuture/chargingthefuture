@@ -5,6 +5,7 @@ import { insertWorkforceAdminAudit, getWorkforceConfig, updateWorkforceConfig, v
 import { logWorkforceAudit, WORKFORCE_AUDIT_WORKSPACE } from 'lib/workforce/audit';
 import type { WorkforceConfigInput } from 'lib/workforce/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type ConfigBody = Partial<WorkforceConfigInput>;
 
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
   } catch (error) {
     reportError(error, { area: 'workforce', op: 'admin_config' });
     return NextResponse.json(
-      { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch workforce config.' },
+      { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: `Unable to fetch workforce config: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -69,9 +70,9 @@ export async function PUT(request: Request) {
   let body: ConfigBody;
   try {
     body = (await request.json()) as ConfigBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: WORKFORCE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: WORKFORCE_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -132,7 +133,7 @@ export async function PUT(request: Request) {
   } catch (error) {
     reportError(error, { area: 'workforce', op: 'admin_config' });
     return NextResponse.json(
-      { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to update config.' },
+      { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: `Unable to update config: ${failureReason(error)}` },
       { status: 503 },
     );
   }

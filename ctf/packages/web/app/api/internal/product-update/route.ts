@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAnnouncementDraft, publishAnnouncement } from 'lib/feed/repository';
 import { logFeedAudit } from 'lib/feed/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 const CI_ACTOR_ID = 'ci-product-update';
 
@@ -23,8 +24,8 @@ export async function POST(request: NextRequest) {
     const data = (await request.json()) as { title?: unknown; body?: unknown };
     title = typeof data.title === 'string' ? data.title.trim() : '';
     body = typeof data.body === 'string' ? data.body.trim() : '';
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  } catch (caught) {
+    return NextResponse.json({ error: 'Invalid JSON', reason: failureReason(caught) }, { status: 400 });
   }
 
   if (!title || !body) {
@@ -50,7 +51,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ id: announcement.id, status: 'published' }, { status: 201 });
   } catch (err) {
     reportError(err, { area: 'internal', op: 'product_update' });
-    const message = err instanceof Error ? err.message : 'unknown';
-    return NextResponse.json({ error: 'Failed to publish', detail: message }, { status: 503 });
+    return NextResponse.json({ error: 'Failed to publish', detail: failureReason(err) }, { status: 503 });
   }
 }

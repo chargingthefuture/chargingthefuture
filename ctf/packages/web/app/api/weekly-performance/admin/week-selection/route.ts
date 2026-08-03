@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireWeeklyPerformanceAdminAccess } from 'lib/weekly-performance/_lib';
 import { insertWeeklyPerformanceAudit, selectWeek } from 'lib/weekly-performance/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type SelectionBody = {
   weekStartDate?: string;
@@ -21,8 +22,8 @@ export async function PUT(request: Request) {
   let body: SelectionBody;
   try {
     body = (await request.json()) as SelectionBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'weekly_performance_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'weekly_performance_invalid_json', message: `Invalid JSON body: ${failureReason(error)}` }, { status: 400 });
   }
 
   if (!body.weekStartDate) {
@@ -45,7 +46,7 @@ export async function PUT(request: Request) {
   } catch (error) {
     reportError(error, { area: 'weekly-performance', op: 'admin_week_selection' });
     if (error instanceof Error && error.message === 'not_found') {
-      return NextResponse.json({ ok: false, code: 'weekly_performance_week_not_found', message: 'Week not found.' }, { status: 404 });
+      return NextResponse.json({ ok: false, code: 'weekly_performance_week_not_found', message: `Week not found: ${failureReason(error)}` }, { status: 404 });
     }
 
     return NextResponse.json({ ok: false, code: 'weekly_performance_unavailable', message: 'Week selection unavailable.' }, { status: 503 });

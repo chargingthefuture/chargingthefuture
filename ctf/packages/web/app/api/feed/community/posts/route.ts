@@ -5,6 +5,7 @@ import { logFeedAudit } from 'lib/feed/audit';
 import { createFeedCommunityPost, validateFeedCommunityPostInput } from 'lib/feed/repository';
 import type { FeedCommunityPostInput } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type CommunityBody = Partial<FeedCommunityPostInput>;
 
@@ -24,10 +25,10 @@ async function parsePostBody(
   let body: CommunityBody;
   try {
     body = (await request.json()) as CommunityBody;
-  } catch {
+  } catch (caught) {
     return {
       error: NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(caught) },
         { status: 400 },
       ),
     };

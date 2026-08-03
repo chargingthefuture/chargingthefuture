@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { createQuoteRequest, insertFoundationAudit } from 'lib/foundation/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type CreateQuotePayload = { threadId?: string; serviceType?: string; requestDetails?: unknown; idempotencyKey?: string };
 
@@ -59,9 +60,9 @@ export async function POST(request: Request) {
   let payload: CreateQuotePayload = {};
   try {
     payload = await request.json();
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.', reason: failureReason(error) },
       { status: 400 },
     );
   }

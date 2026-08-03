@@ -3,6 +3,7 @@ import { requireComicAdminAccess } from '../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { pingOllama } from 'lib/chatbot/ollama';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export async function GET() {
   } catch (error) {
     reportError(error, { area: 'comic', op: 'ai_status' });
     return NextResponse.json(
-      { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Unable to read AI service status.' },
+      { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: `Unable to read AI service status: ${failureReason(error)}` },
       { status: 503 },
     );
   }

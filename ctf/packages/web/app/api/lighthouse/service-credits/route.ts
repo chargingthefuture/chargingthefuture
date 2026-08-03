@@ -3,6 +3,7 @@ import { requireLighthouseReadAccess, ensureMutationCsrf } from 'lib/lighthouse/
 import { createTransfer } from 'lib/service-credits/repository';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type LighthouseServiceCreditsSendInput = {
   toUserId: string;
@@ -27,8 +28,8 @@ export async function POST(request: Request) {
   let input: LighthouseServiceCreditsSendInput;
   try {
     input = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON.', reason: failureReason(error) }, { status: 400 });
   }
 
   if (!input.toUserId || typeof input.amount !== 'number' || input.amount <= 0) {

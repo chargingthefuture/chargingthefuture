@@ -10,6 +10,7 @@ import {
 } from 'lib/lighthouse/repository';
 import type { LighthouseProfileInput } from 'lib/lighthouse/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type ProfileBody = Partial<LighthouseProfileInput>;
 
@@ -83,9 +84,9 @@ async function upsertProfileHandler(request: Request) {
   let body: ProfileBody;
   try {
     body = (await request.json()) as ProfileBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

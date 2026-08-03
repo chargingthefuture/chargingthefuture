@@ -4,6 +4,7 @@ import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { insertLighthouseAudit, updateMatch, validateMatchUpdateInput } from 'lib/lighthouse/repository';
 import type { LighthouseMatchUpdateInput } from 'lib/lighthouse/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteParams = {
   params: Promise<{ matchId: string }>;
@@ -25,9 +26,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
   let body: MatchBody;
   try {
     body = (await request.json()) as MatchBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -81,7 +82,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     if (code === 'match_not_found') {
       return NextResponse.json(
-        { ok: false, code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: 'Lighthouse match not found.' },
+        { ok: false, code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: `Lighthouse match not found: ${failureReason(error)}` },
         { status: 404 },
       );
     }

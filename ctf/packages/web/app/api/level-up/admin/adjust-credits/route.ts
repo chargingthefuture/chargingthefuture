@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { adminAdjustCredits, insertLevelUpAudit } from 'lib/level-up/repository';
 import { ensureMutationCsrf, levelUpErrorResponse, requireLevelUpAdminAccess } from 'lib/level-up/_lib';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 const adjustSchema = z.object({
   targetUserId: z.string().min(1),
@@ -29,8 +30,8 @@ export async function POST(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, code: 'level_up_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'level_up_invalid_json', message: `Invalid JSON body: ${failureReason(error)}` }, { status: 400 });
   }
 
   const parsed = adjustSchema.safeParse(body);

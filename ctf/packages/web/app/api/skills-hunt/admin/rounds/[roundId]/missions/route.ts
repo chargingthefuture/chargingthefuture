@@ -9,6 +9,7 @@ import {
 } from 'lib/skills-hunt/missions';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 const VALID_GOAL_TYPES = ['count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_distinct_sectors'] as const;
 const VALID_MISSION_STATUSES = ['draft', 'active', 'locked', 'archived'] as const;
@@ -90,7 +91,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_missions' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load missions.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to load missions: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -115,9 +116,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
     if (body === null || typeof body !== 'object' || Array.isArray(body)) {
       throw new Error('not an object');
     }
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -145,7 +146,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_missions' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to create mission.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to create mission: ${failureReason(error)}` },
       { status: 503 },
     );
   }

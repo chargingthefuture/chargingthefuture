@@ -4,6 +4,7 @@ import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { archiveAnnouncement } from 'lib/feed/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteParams = {
   params: Promise<{ announcementId: string }>;
@@ -43,7 +44,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const code = message === 'announcement_not_found' ? FEED_ERROR_CODE.notFound : FEED_ERROR_CODE.persistenceUnavailable;
 
     return NextResponse.json(
-      { ok: false, code, message: 'Unable to archive announcement.' },
+      { ok: false, code, message: `Unable to archive announcement: ${failureReason(error)}` },
       { status },
     );
   }

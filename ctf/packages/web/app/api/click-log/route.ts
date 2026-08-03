@@ -13,6 +13,7 @@ import type { IncidentMetadata } from 'lib/click-log/types';
 import { isValidProblemTag, isValidSchemeTag, NOT_LISTED_SCHEME_SLUG } from 'lib/click-log/tags';
 import { getWeaversBadgeHolders } from 'lib/contributor-access/badge';
 import { ensureMutationCsrf, requireClickLogAccess } from './_lib';
+import { failureReason } from 'lib/errors/failure';
 
 export async function GET() {
   const gate = await requireClickLogAccess();
@@ -254,8 +255,8 @@ export async function POST(req: NextRequest) {
   let body;
   try {
     body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  } catch (caught) {
+    return NextResponse.json({ error: 'Invalid JSON body', reason: failureReason(caught) }, { status: 400 });
   }
   const parsed = parseIncidentMetadata(body);
   if ('error' in parsed) {

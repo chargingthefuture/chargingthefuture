@@ -5,6 +5,7 @@ import { createAdminProfile, listAdminProfiles, parsePaginationParams, validateP
 import { logDirectoryAudit } from 'lib/directory/audit';
 import type { DirectoryProfileInput } from 'lib/directory/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type AdminProfileBody = Partial<DirectoryProfileInput>;
 
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_profiles' });
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to list admin profiles.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: `Unable to list admin profiles: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -88,9 +89,9 @@ export async function POST(request: Request) {
   let body: AdminProfileBody;
   try {
     body = (await request.json()) as AdminProfileBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }

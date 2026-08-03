@@ -4,6 +4,7 @@ import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { relabelQuestionCategory, isValidFeedQuestionCategory } from 'lib/feed/repository';
 import { logFeedAudit } from 'lib/feed/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ questionId: string }> }) {
   const gate = await requireFeedAdminAccess();
@@ -19,9 +20,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ qu
   let body: { category?: unknown };
   try {
     body = (await request.json()) as { category?: unknown };
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -61,7 +62,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ qu
     reportError(error, { area: 'feed', op: 'admin_questions_questionid' });
     if (error instanceof Error && error.message === 'question_not_found') {
       return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.notFound, message: 'Question not found.' },
+        { ok: false, code: FEED_ERROR_CODE.notFound, message: `Question not found: ${failureReason(error)}` },
         { status: 404 },
       );
     }

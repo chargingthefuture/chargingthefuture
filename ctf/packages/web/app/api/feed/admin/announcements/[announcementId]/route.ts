@@ -5,6 +5,7 @@ import { logFeedAudit } from 'lib/feed/audit';
 import { updateAnnouncementDraft, validateAnnouncementDraftInput } from 'lib/feed/repository';
 import type { AnnouncementDraftInput } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteParams = {
   params: Promise<{ announcementId: string }>;
@@ -39,9 +40,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
   let body: AnnouncementBody;
   try {
     body = (await request.json()) as AnnouncementBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -77,7 +78,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const code = message === 'announcement_not_found' ? FEED_ERROR_CODE.notFound : FEED_ERROR_CODE.persistenceUnavailable;
 
     return NextResponse.json(
-      { ok: false, code, message: 'Unable to update announcement draft.' },
+      { ok: false, code, message: `Unable to update announcement draft: ${failureReason(error)}` },
       { status },
     );
   }

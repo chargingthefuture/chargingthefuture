@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPreferences, setPreferences } from 'lib/click-log/repository';
 import { logClickLogAudit } from 'lib/click-log/audit';
 import { ensureMutationCsrf, requireClickLogAccess } from '../_lib';
+import { failureReason } from 'lib/errors/failure';
 
 // Member ClickLog preferences. shareWithOwner is the member's global default for whether a newly
 // logged incident is shared with the owner for aggregate trends. Opt-in: a member who has never
@@ -29,8 +30,8 @@ export async function PUT(req: NextRequest) {
   let body;
   try {
     body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  } catch (caught) {
+    return NextResponse.json({ error: 'Invalid JSON body', reason: failureReason(caught) }, { status: 400 });
   }
   const shareWithOwner = (body as { shareWithOwner?: unknown })?.shareWithOwner;
   if (typeof shareWithOwner !== 'boolean') {

@@ -4,6 +4,7 @@ import { TRUST_TRANSPORT_ERROR_CODE } from 'lib/trust-transport/constants';
 import { getMarketConfig, insertTrustTransportAudit, updateMarketConfig } from 'lib/trust-transport/repository';
 import type { TrustTransportMarketConfig } from 'lib/trust-transport/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 function parseMarketConfig(body: Record<string, unknown>): TrustTransportMarketConfig {
   return {
@@ -42,9 +43,9 @@ export async function PUT(request: Request) {
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }

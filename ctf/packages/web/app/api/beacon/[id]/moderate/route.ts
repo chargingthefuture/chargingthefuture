@@ -4,6 +4,7 @@ import { BEACON_ERROR_CODE, BEACON_DEFAULT_SLOW_MODE_SECONDS } from 'lib/beacon/
 import { getBeaconEvent, insertBeaconAudit } from 'lib/beacon/repository';
 import { moderateBeaconChat, type BeaconModerationAction } from 'lib/beacon/stream';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,8 +26,8 @@ async function parseModerateBody(
   let body: ModerateBody;
   try {
     body = (await request.json()) as ModerateBody;
-  } catch {
-    return { error: NextResponse.json({ ok: false, code: BEACON_ERROR_CODE.invalidJson, message: 'Invalid JSON body.' }, { status: 400 }) };
+  } catch (caught) {
+    return { error: NextResponse.json({ ok: false, code: BEACON_ERROR_CODE.invalidJson, message: 'Invalid JSON body.', reason: failureReason(caught) }, { status: 400 }) };
   }
 
   const action = body.action as BeaconModerationAction | undefined;
