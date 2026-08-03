@@ -1,0 +1,350 @@
+{
+  "_comment": "BURN-DOWN list for check-dependency-audit.mjs: the advisories open in the locked production tree on 2026-08-03, when the gate was added. Every entry is a transitive package pinned by a parent, waiting on an upstream release — none is a package this repo chose directly at a vulnerable version. The list may only ever shrink: the gate fails on a new advisory not listed here AND on a listed advisory that no longer applies. Never add an entry to silence the gate; update the dependency instead.",
+  "advisories": {
+    "1115805": {
+      "module": "lodash-es",
+      "severity": "high",
+      "title": "lodash vulnerable to Code Injection via `_.template` imports key names"
+    },
+    "1115809": {
+      "module": "lodash-es",
+      "severity": "moderate",
+      "title": "lodash vulnerable to Prototype Pollution via array path bypass in `_.unset` and `_.omit`"
+    },
+    "1116560": {
+      "module": "follow-redirects",
+      "severity": "moderate",
+      "title": "follow-redirects leaks Custom Authentication Headers to Cross-Domain Redirect Targets"
+    },
+    "1117015": {
+      "module": "postcss",
+      "severity": "moderate",
+      "title": "PostCSS has XSS via Unescaped </style> in its CSS Stringify Output"
+    },
+    "1117061": {
+      "module": "fastify",
+      "severity": "high",
+      "title": "Fastify has a Body Schema Validation Bypass via Leading Space in Content-Type Header"
+    },
+    "1117574": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: Authentication Bypass via Prototype Pollution Gadget in `validateStatus` Merge Strategy"
+    },
+    "1117576": {
+      "module": "axios",
+      "severity": "high",
+      "title": "Axios: Incomplete Fix for CVE-2025-62718 — NO_PROXY Protection Bypassed via RFC 1122 Loopback Subnet (127.0.0.0/8) in Axios 1.15.0"
+    },
+    "1117577": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: Invisible JSON Response Tampering via Prototype Pollution Gadget in `parseReviver`"
+    },
+    "1117580": {
+      "module": "axios",
+      "severity": "low",
+      "title": "Axios: Null Byte Injection via Reverse-Encoding in AxiosURLSearchParams"
+    },
+    "1117581": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: CRLF Injection in multipart/form-data body via unsanitized blob.type in formDataToStream"
+    },
+    "1117583": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: no_proxy bypass via IP alias allows SSRF"
+    },
+    "1117587": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios' HTTP adapter-streamed uploads bypass maxBodyLength when maxRedirects: 0"
+    },
+    "1117589": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: HTTP adapter streamed responses bypass maxContentLength"
+    },
+    "1117591": {
+      "module": "axios",
+      "severity": "high",
+      "title": "Axios: Prototype Pollution Gadgets - Response Tampering, Data Exfiltration, and Request Hijacking"
+    },
+    "1117593": {
+      "module": "axios",
+      "severity": "high",
+      "title": "Axios: Header Injection via Prototype Pollution"
+    },
+    "1117595": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: XSRF Token Cross-Origin Leakage via Prototype Pollution Gadget in `withXSRFToken` Boolean Coercion"
+    },
+    "1117870": {
+      "module": "fast-uri",
+      "severity": "high",
+      "title": "fast-uri vulnerable to path traversal via percent-encoded dot segments"
+    },
+    "1117884": {
+      "module": "fast-uri",
+      "severity": "high",
+      "title": "fast-uri vulnerable to host confusion via percent-encoded authority delimiters"
+    },
+    "1117894": {
+      "module": "@xmldom/xmldom",
+      "severity": "high",
+      "title": "xmldom: Uncontrolled recursion in XML serialization leads to DoS"
+    },
+    "1117897": {
+      "module": "@xmldom/xmldom",
+      "severity": "high",
+      "title": "xmldom has XML injection through unvalidated DocumentType serialization"
+    },
+    "1117900": {
+      "module": "@xmldom/xmldom",
+      "severity": "high",
+      "title": "xmldom has XML node injection through unvalidated processing instruction serialization"
+    },
+    "1117903": {
+      "module": "@xmldom/xmldom",
+      "severity": "high",
+      "title": "xmldom has XML node injection through unvalidated comment serialization"
+    },
+    "1118607": {
+      "module": "axios",
+      "severity": "high",
+      "title": "Axios has prototype pollution read-side gadgets in HTTP adapter that allow credential injection and request hijacking"
+    },
+    "1119108": {
+      "module": "ws",
+      "severity": "moderate",
+      "title": "ws: Uninitialized memory disclosure"
+    },
+    "1119441": {
+      "module": "uuid",
+      "severity": "moderate",
+      "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided"
+    },
+    "1119502": {
+      "module": "qs",
+      "severity": "moderate",
+      "title": "qs has a remotely triggerable DoS: qs.stringify crashes with TypeError on null/undefined entries in comma-format arrays when encodeValuesOnly is set"
+    },
+    "1120125": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: unbounded recursion in toFormData causes DoS via deeply nested request data"
+    },
+    "1120311": {
+      "module": "brace-expansion",
+      "severity": "moderate",
+      "title": "brace-expansion: Large numeric range defeats documented `max` DoS protection"
+    },
+    "1120422": {
+      "module": "shell-quote",
+      "severity": "critical",
+      "title": "shell-quote quote() does not escape newlines in object .op values"
+    },
+    "1120547": {
+      "module": "axios",
+      "severity": "high",
+      "title": "Axios: Regular Expression Denial of Service (ReDoS) via Cookie Name Injection"
+    },
+    "1120643": {
+      "module": "axios",
+      "severity": "high",
+      "title": "Allocation of Resources Without Limits or Throttling in Axios"
+    },
+    "1120645": {
+      "module": "axios",
+      "severity": "high",
+      "title": "Axios: Proxy-Authorization Credential Leak to Origin Server Across HTTP-to-HTTPS Redirect in Axios Node.js HTTP Adapter"
+    },
+    "1120647": {
+      "module": "axios",
+      "severity": "high",
+      "title": "Axios: Proxy-Authorization header leaks to redirect target when proxy is re-evaluated to direct connection"
+    },
+    "1120649": {
+      "module": "axios",
+      "severity": "high",
+      "title": "axios Vulnerable to Credential Theft and Response Hijacking via Prototype Pollution Gadget in Config Merge"
+    },
+    "1120650": {
+      "module": "axios",
+      "severity": "high",
+      "title": "axios Vulnerable to Full Man-in-the-Middle via Prototype Pollution Gadget in `config.proxy`"
+    },
+    "1120652": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "axios has DoS & Header Injection via Prototype Pollution Read-Side Gadgets in axios merge functions"
+    },
+    "1120743": {
+      "module": "form-data",
+      "severity": "high",
+      "title": "form-data: CRLF injection in form-data via unescaped multipart field names and filenames"
+    },
+    "1120821": {
+      "module": "@opentelemetry/core",
+      "severity": "moderate",
+      "title": "OpenTelemetry Core: Unbounded memory allocation in W3C Baggage propagation"
+    },
+    "1121859": {
+      "module": "js-yaml",
+      "severity": "moderate",
+      "title": "JS-YAML: Quadratic-complexity DoS in merge key handling via repeated aliases"
+    },
+    "1121860": {
+      "module": "js-yaml",
+      "severity": "moderate",
+      "title": "JS-YAML: Quadratic-complexity DoS in merge key handling via repeated aliases"
+    },
+    "1123259": {
+      "module": "ws",
+      "severity": "high",
+      "title": "ws: Memory exhaustion DoS from tiny fragments and data chunks"
+    },
+    "1123260": {
+      "module": "ws",
+      "severity": "high",
+      "title": "ws: Memory exhaustion DoS from tiny fragments and data chunks"
+    },
+    "1123482": {
+      "module": "websocket-driver",
+      "severity": "moderate",
+      "title": "websocket-driver: Resource limit bypass via message compression"
+    },
+    "1123483": {
+      "module": "websocket-driver",
+      "severity": "critical",
+      "title": "websocket-driver: Message corruption via abuse of protocol length headers"
+    },
+    "1123528": {
+      "module": "@babel/core",
+      "severity": "low",
+      "title": "@babel/core: Arbitrary File Read via sourceMappingURL Comment"
+    },
+    "1123824": {
+      "module": "axios",
+      "severity": "high",
+      "title": "axios's shouldBypassProxy does not recognize IPv4-mapped IPv6 addresses, allowing NO_PROXY bypass (incomplete fix for CVE-2025-62718)"
+    },
+    "1123882": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: Excessive recursion in formDataToJSON can cause denial of service"
+    },
+    "1123884": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: Prototype pollution auth subfields can inject Basic auth"
+    },
+    "1123885": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: Deep formToJSON Key Recursion Can Cause Denial of Service"
+    },
+    "1123897": {
+      "module": "brace-expansion",
+      "severity": "high",
+      "title": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups"
+    },
+    "1123898": {
+      "module": "brace-expansion",
+      "severity": "high",
+      "title": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups"
+    },
+    "1123911": {
+      "module": "js-yaml",
+      "severity": "high",
+      "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption"
+    },
+    "1123912": {
+      "module": "js-yaml",
+      "severity": "high",
+      "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption"
+    },
+    "1123944": {
+      "module": "shell-quote",
+      "severity": "high",
+      "title": "shell-quote: Quadratic-complexity Denial of Service in `parse()` (CWE-407)"
+    },
+    "1123957": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: Fetch adapter `ReadableStream` uploads bypass `maxBodyLength`"
+    },
+    "1123959": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: Prototype pollution gadgets can alter axios request construction"
+    },
+    "1123961": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: NO_PROXY bypass for 0.0.0.0 local addresses in axios"
+    },
+    "1123967": {
+      "module": "axios",
+      "severity": "high",
+      "title": "Axios Node HTTP adapter can use an inherited proxy after interceptor config cloning"
+    },
+    "1123969": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios form serializer maxDepth bypass via {} metatoken"
+    },
+    "1123971": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: Nested axios option objects can consume polluted prototype values"
+    },
+    "1123973": {
+      "module": "axios",
+      "severity": "moderate",
+      "title": "Axios: HTTP/2 streamed uploads bypass `maxBodyLength`"
+    },
+    "1124064": {
+      "module": "fast-uri",
+      "severity": "high",
+      "title": "fast-uri vulnerable to host confusion via literal backslash authority delimiter"
+    },
+    "1124066": {
+      "module": "sharp",
+      "severity": "high",
+      "title": "sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591"
+    },
+    "1124252": {
+      "module": "postcss",
+      "severity": "high",
+      "title": "PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments"
+    },
+    "1124273": {
+      "module": "find-my-way",
+      "severity": "high",
+      "title": "find-my-way: DDoS with HTTP2"
+    },
+    "1124288": {
+      "module": "postcss",
+      "severity": "high",
+      "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure"
+    },
+    "1130178": {
+      "module": "fast-uri",
+      "severity": "high",
+      "title": "fast-uri vulnerable to host confusion via failed IDN canonicalization"
+    },
+    "1130588": {
+      "module": "brace-expansion",
+      "severity": "high",
+      "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash"
+    },
+    "1130591": {
+      "module": "brace-expansion",
+      "severity": "high",
+      "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash"
+    }
+  }
+}
