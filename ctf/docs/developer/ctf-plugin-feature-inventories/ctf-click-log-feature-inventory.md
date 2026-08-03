@@ -168,6 +168,22 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-04: **Four new scheme tags: The Pot and Kettle plus three vehicle schemes (owner-named).**
+  `pot-and-kettle` — the insult is delivered by someone who visibly embodies it (a fat person
+  calling the member fat, a disabled person mocking a disability), made obnoxiously inappropriate
+  on purpose; it forces the operative to live a lie while still aiming at the member's self-esteem.
+  Sibling of `fabricated-flaw` but distinct: fabricated = the flaw is invented, projected = the
+  insulter contradicts their own insult. The owner's car material split into three tags so trend
+  data can tell the plays apart: `staged-road-rage` (a cyclist or pedestrian cuts in front at the
+  last moment — usually a pump fake, sometimes a real strike — to provoke a filmed reaction used
+  as recruiting material), `insurance-bleed` (repeated strikes on the member's car so premiums
+  climb until they bleed money or cannot stay insured), and `road-sensitization` (high beams,
+  brake checks, cars pacing or boxing them in, so every drive becomes something to second-guess).
+  Recorded in `tags.ts` as context but deliberately not a tag: the owner reports that killing a
+  Target in a motor-vehicle "accident" is the most common plausible-deniability murder. List-data
+  only: no schema, route, contract, or UI change — pickers, validation, and trends read the
+  canonical list. The landing `/schemes` page gains matching entries in a companion PR.
+
 - 2026-08-03: **New scheme tag: The Fabricated Flaw (owner-named).** Added slug `fabricated-flaw`
   to `CLICK_LOG_SCHEME_TAGS` — staged criticism of an invented flaw, timed to be absurd, meant to
   sensitize the member into self-criticism and to capture audio of the remark so uninvolved
