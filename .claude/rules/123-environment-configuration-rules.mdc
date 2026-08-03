@@ -2,14 +2,16 @@
 
 ## Scope
 - Applies to all code under `ctf/`
-- Governs environment setup, deployment topology, and Clerk authentication across three distinct deployment environments
+- Governs environment setup, deployment topology, and Clerk authentication for the single production environment
 - Environment variables are a critical contract and cannot be renamed without explicit user consent
 
 ## Single Production Environment (Render)
 
 No local dev. The v3 app runs as a **single production environment on Render**:
-the `ctf-web` service plus supporting services (`ctf-formance-ledger`,
-`ctf-ollama`). There is no separate staging *deployment* —
+the `ctf-web` service plus `ctf-route-weather` (see `render.yaml`). The Formance
+ledger, Infisical, and Unleash deliberately stay on Railway (cost decision
+recorded in `render.yaml`); the Ollama Render service was removed 2026-06-14
+(moved to a RunPod endpoint). There is no separate staging *deployment* —
 splitting was constrained by Clerk's domain binding (one Clerk instance per
 domain), and v3 ships to the single production domain.
 
@@ -244,15 +246,18 @@ no admin setting and no env override, behavior is unchanged: ON.
 
 ### When Modifying Environment Variables
 - Notify the user immediately
-- Update `.env.local.example` in the same commit
-- Do not commit new variable keys without updating the example file
-- Document the purpose of new variables in this rule or a related configuration document
+- Add the new key in Infisical with owner approval (there is no `.env.local.example` file —
+  Infisical is the single source of truth)
+- Document the purpose of new variables in this rule or a related configuration document in the
+  same commit
 
 ### When Troubleshooting Auth Issues
 1. Verify the Clerk instance matches the deployment domain
-2. Check that `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is the correct one for the domain
+2. Check that `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY` is the correct one for the domain
 3. Confirm redirect URIs in Clerk dashboard match the deployment domain (exact match)
-4. For Vercel deployments, verify CORS is configured on Railway backend
+4. Confirm the Render service environment synced from Infisical, and remember `NEXT_PUBLIC_*`
+   values are baked into the image at build time (`build-images.yml`) — changing them needs a
+   rebuild, not just a redeploy
 5. Check browser console for Clerk-specific error messages
 
 ## Reserved Username Prefixes (Skills Hunt + Directory co-change)

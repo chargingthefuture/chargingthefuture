@@ -1,3 +1,10 @@
+> **SUPERSEDED — kept as history. Do not follow.** This is a 2026-03 dispatch-planning document
+> from before the Render migration and the no-phases planning rule. Its infrastructure order
+> (Railway/Vercel baselines), phase buckets, and rule-file references (e.g.
+> `111-deployment-topology-rules.mdc`, `index.mdc`) are out of date or point at files that no
+> longer exist. Current planning guidance lives in `CLAUDE.md`; current infrastructure is Render
+> (`render.yaml`) with secrets in Infisical.
+
 # CTF Plugin Background-Agent Assignment Matrix
 
 Date: 2026-03-01

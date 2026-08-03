@@ -1,84 +1,56 @@
-# Railway MCP Debugging Rules
+# Railway Debugging Rules (Railway-resident services only)
 
 ## Scope
-Applies to all debugging, log inspection, and runtime troubleshooting of Railway deployments.
 
-## Critical: No Railway CLI — Use MCP Server Only
+Applies to debugging, log inspection, and runtime troubleshooting of the services that actually
+run on Railway. **The web app does not run on Railway.** `ctf-web` (and `ctf-route-weather`) run
+on **Render** — see `render.yaml` and rule 123. The services deliberately kept on Railway (cost
+decision recorded in `render.yaml`) are:
 
-The Railway CLI (`railway`) is NOT installed in the Codespaces environment.
+- **Infisical** — self-hosted secrets manager (single source of truth for secrets)
+- **Unleash** — self-hosted feature-flag server
+- **Formance ledger** — the ledger service and its Postgres
+
+## Web app ("app not loading") goes to Render, not Railway
+
+When the user says "app not loading", "build error", or similar about the product itself, debug
+**Render**, not Railway:
+
+1. Use the Render MCP server, which is what the committed `.mcp.json` configures
+   (`"render": { "url": "https://mcp.render.com/mcp" }`, authorized by `RENDER_API_KEY`).
+2. Fetch the `ctf-web` service's deploy and runtime logs; check deploy status.
+3. `render-debug-agent.yml` (manual dispatch) can also pull Render logs and open a fix PR.
+4. Remember the deploy path: `build-images.yml` builds and pushes the GHCR image and triggers the
+   Render deploy; `render-deploy.yml` re-pulls the existing image (e.g. to pick up new env vars).
+
+Debug Railway only when the failing piece is Infisical, Unleash, or the Formance ledger (for
+example: secrets stopped syncing to Render, flags not resolving, ledger API unreachable at
+`FORMANCE_API_URL`).
+
+## Critical: No Railway CLI
+
+The Railway CLI (`railway`) is NOT installed in the Codespaces environment and is not installed by
+`.devcontainer/setup.sh`.
 **Never attempt `railway logs`, `railway run`, `railway up`, or any `railway` CLI command.**
 
-### How to Access Railway
-
-Railway is accessible via the Railway MCP server (`@railway/mcp-server`), which is a **local stdio process** (not an HTTP endpoint). It is configured in `.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "railway-mcp-server": {
-      "command": "npx",
-      "args": ["-y", "@railway/mcp-server"],
-      "env": {
-        "RAILWAY_TOKEN": "${RAILWAY_API_TOKEN}"
-      }
-    }
-  }
-}
-```
-
-Prerequisites:
-- `RAILWAY_API_TOKEN` must be set as a Codespaces secret (it is forwarded to the MCP server as `RAILWAY_TOKEN`)
-- Railway CLI (`@railway/cli`) must be installed — it is installed via `setup.sh`
-
-If MCP tools are not available (ToolSearch returns no Railway tools), the session started before the MCP server connected. **Do not tell the user the token is missing** — first verify with `echo $RAILWAY_API_TOKEN`. If the token is set, ask the user to restart the Claude Code session so the MCP server can reconnect.
-
-## Agent Workflow for Railway Build/Runtime Issues
-
-When the user says "debug Railway", "app not loading", "Railway build error", or similar:
-
-1. **Check if Railway MCP tools are available** via ToolSearch.
-2. **If available**: Use Railway MCP tools to:
-   - List projects and services
-   - Fetch the latest deployment logs for the failing service
-   - Check service status (crashed, restarting, healthy)
-3. **Diagnose from logs**: Look for startup errors, missing env vars, crashes.
-4. **Fix code or config** without user input — see common causes below.
-5. **Commit and push** with a clear message: what was wrong, what was fixed.
-6. **Tell the user succinctly** what was wrong and what was changed.
-
-## Staging Environment
-
-- **Domain**: `the-comic.com` (staging)
-- **Railway environment**: `rewrite-railway-staging`
-- **App URL env var**: `RAILWAY_NEXT_PUBLIC_APP_URL`
-
-## Common Railway Runtime Failures
-
-### 1. Startup Crash from Env Validation
-Scripts in `ctf/packages/web/scripts/` run at startup and can `process.exit(1)` if required
-environment variables are missing. The container crashes before serving any traffic —
-Railway returns `{"status":"error","code":404,"message":"Application not found"}`.
-
-**Check**: `ctf/railway.toml` `startCommand` for pre-start scripts.
-**Fix**: Make checks env-aware (require in production only, not staging) or set missing Railway vars.
-
-### 2. Domain Not Mapped
-Railway returns `Application not found` if the custom domain is not wired to a service in Railway.
-This requires Railway dashboard access or MCP to reconfigure the domain → service mapping.
-
-### 3. TLS Certificate Error
-`ERR_TLS_CERT_ALTNAME_INVALID` on a custom domain means Railway has not yet provisioned the cert,
-or the domain was added but the Railway service it points to is not running.
-
-### 4. Build Succeeds, Runtime Fails
-The Railway build step (`next build`) does NOT run startup validation scripts.
-Failures in `startCommand` only appear in deployment runtime logs, not build logs.
-Always check runtime logs separately from build logs.
-
-## What to NOT Do
-
-- Do not use `railway` CLI commands — they will fail.
 - Do not try to install the Railway CLI.
 - Do not use `npx @railway/cli` or `npm exec @railway/cli`.
-- Do not use `infisical run --` unless explicitly configured and tokens are available.
 - Do not spin in loops checking whether the Railway CLI exists.
+
+## Railway access (when a Railway-resident service is the problem)
+
+The committed `.mcp.json` configures only the Render MCP server — there is no Railway MCP server
+entry today. If Railway-side debugging is needed:
+
+- Check with ToolSearch whether any Railway MCP tools are available in the session; if not, the
+  Railway dashboard (owner access) is the path — report what needs checking rather than guessing.
+- A Railway MCP server (`@railway/mcp-server`, authenticated by a `RAILWAY_API_TOKEN` Codespaces
+  secret) can be added to `.mcp.json` if the owner wants agent-side Railway access; do not add it
+  without asking.
+
+## Historical note
+
+Earlier versions of this rule described the pre-Render world (web app on Railway,
+`ctf/railway.toml` as the deploy entry point, a `the-comic.com` staging environment). All v3 app
+services migrated to Render (May 2026); there is no staging deployment (rule 123). Do not use
+`ctf/railway.toml` to debug or deploy the web app.
