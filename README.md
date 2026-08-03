@@ -65,9 +65,11 @@ ctf/
    Create a `.env.local` file in `ctf/packages/web/` with required secrets:
    ```bash
    DATABASE_URL=postgresql://user:pass@localhost/ctf
-   CLERK_SECRET_KEY=your_clerk_key
-   STREAM_CHAT_API_KEY=your_stream_key
-   # See ctf/docs/developer/README.md for full list
+   NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY=your_clerk_publishable_key
+   AUTH_SECRET_KEY=your_clerk_secret_key
+   STREAM_API_KEY=your_stream_key
+   # Auth keys are provider-neutral names (read by ctf/packages/web/lib/auth/provider-env.ts).
+   # Production secrets live in Infisical — see .claude/rules/123-environment-configuration-rules.mdc
    ```
 
 3. **Apply schema and run dev server:**
