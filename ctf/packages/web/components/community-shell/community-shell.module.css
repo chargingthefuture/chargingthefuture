@@ -1285,25 +1285,11 @@
   color: var(--ctf-text-shell);
 }
 
-.chatSignInLink {
-  display: inline-block;
-  padding: 12px 24px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #7C3AED 0%, #0EA5E9 100%);
-  color: #fff;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 600;
-  transition: opacity 0.2s ease;
-  text-align: center;
-}
-
-.chatSignInLink:hover {
-  opacity: 0.9;
-}
-
+/* The signed-out closing line. It is the only child of .chatSuggestions now that the panel's own
+   sign-in button is gone (signing in is offered by the top bar and the right rail), so it takes the
+   full row width and needs no top margin — that margin only existed to separate it from the button. */
 .chatSuggestionsInfo {
-  margin-top: 12px;
+  flex: 1 1 100%;
   text-align: center;
   font-size: 13px;
   color: var(--ctf-text-secondary);
@@ -1675,10 +1661,9 @@
   font-size: 10px;
 }
 
-/* Secondary (outline) sign-in on the right rail. The primary gradient CTA is the larger
-   "Sign In to Get Started" in the chat panel; above 1280px both are visible at once, so the rail
-   one is demoted to an outline to remove the competing-primaries read. (Comic theme overrides this
-   to its own flat-ink CTA treatment below, unchanged.) */
+/* Secondary (outline) sign-in on the right rail. It stays an outline button rather than a second
+   gradient CTA, so the gradient "Sign in" in the top bar reads as the single primary action.
+   (Comic theme overrides this to its own flat-ink CTA treatment below, unchanged.) */
 .profileLoginBtn {
   display: inline-block;
   padding: 8px 16px;
@@ -2887,7 +2872,6 @@
   color: var(--ctf-cta-text);
 }
 
-:global([data-theme='comic']) .chatSignInLink,
 :global([data-theme='comic']) .profileLoginBtn,
 :global([data-theme='comic']) .mobileBarSignIn,
 :global([data-theme='comic']) .chatSendBtnActive,
