@@ -24,6 +24,7 @@ import { HelpControl } from '../bug-reports/help-control';
 import { SeMark } from '../shared/se-mark';
 import type { UnlockReviewStatus } from '../../lib/unlock/types';
 import styles from './community-shell.module.css';
+import { failureText } from 'lib/errors/client-failure';
 
 // Verification state for a signed-in member who has not yet completed Quora verification but reaches
 // the Commons (notably the early-Commons A/B treatment bucket). Null/undefined when the member is
@@ -500,9 +501,9 @@ export function CommunityShell(props: CommunityShellProps) {
           setPlugins(payload.plugins);
           setLoadError(null);
         }
-      } catch {
+      } catch (caught) {
         if (!canceled) {
-          setLoadError('Live plugin data is temporarily unavailable. Showing last known registry snapshot.');
+          setLoadError(failureText(caught, { area: 'community-shell', op: 'load_plugins', fallback: 'Live plugin data is temporarily unavailable. Showing last known registry snapshot.', audience: 'member' }));
         }
       }
     }

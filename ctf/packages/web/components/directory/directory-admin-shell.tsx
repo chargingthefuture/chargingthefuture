@@ -42,6 +42,7 @@ import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { getDirectoryTokens } from "./shared";
 import { DirectorySkillsPicker } from "./directory-skills-picker";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 const COLOR = "#93C5FD";
 const COMMUNITY = "#A855F7";
@@ -264,13 +265,13 @@ function useDirectoryProfiles() {
     try {
       const res = await fetch("/api/directory/admin/profiles?pageSize=100&includeInactive=true");
       if (!res.ok) {
-        setError("Could not load profiles.");
+        setError(await responseFailureText(res, "Could not load profiles."));
         return;
       }
       const data = (await res.json()) as { items?: AdminDirectoryProfile[] };
       setProfiles(data.items ?? []);
-    } catch {
-      setError("Could not load profiles.");
+    } catch (caught) {
+      setError(failureText(caught, { area: 'directory', op: 'load', fallback: "Could not load profiles." }));
     } finally {
       setLoading(false);
     }
@@ -358,8 +359,8 @@ function useProfileEditor(
         return;
       }
       setDrawerError(body.message ?? "Could not save this profile.");
-    } catch {
-      setDrawerError("Could not save this profile.");
+    } catch (caught) {
+      setDrawerError(failureText(caught, { area: 'directory', op: 'save', fallback: "Could not save this profile." }));
     } finally {
       setSaving(false);
     }
@@ -387,8 +388,8 @@ function useProfileEditor(
         return;
       }
       setDrawerError(body.message ?? "Could not attach this profile.");
-    } catch {
-      setDrawerError("Could not attach this profile.");
+    } catch (caught) {
+      setDrawerError(failureText(caught, { area: 'directory', op: 'assign', fallback: "Could not attach this profile." }));
     } finally {
       setSaving(false);
     }
@@ -413,8 +414,8 @@ function useProfileEditor(
       }
       const body = (await res.json().catch(() => ({}))) as { message?: string };
       if (editId === p.id) setDrawerError(body.message ?? "Could not delete this profile.");
-    } catch {
-      if (editId === p.id) setDrawerError("Could not delete this profile.");
+    } catch (caught) {
+      if (editId === p.id) setDrawerError(failureText(caught, { area: 'directory', op: 'delete', fallback: "Could not delete this profile." }));
     } finally {
       setSaving(false);
     }
@@ -448,8 +449,8 @@ function useProfileEditor(
       }
       const body = (await res.json().catch(() => ({}))) as { message?: string };
       window.alert(body.message ?? "Could not take down this profile.");
-    } catch {
-      window.alert("Could not take down this profile.");
+    } catch (caught) {
+      window.alert(failureText(caught, { area: 'directory', op: 'takedown', fallback: "Could not take down this profile." }));
     } finally {
       setSaving(false);
     }
@@ -1014,8 +1015,8 @@ function SuppressionPanel() {
       }
       const body = (await res.json().catch(() => ({}))) as { message?: string };
       window.alert(body.message ?? "Could not lift the suppression.");
-    } catch {
-      window.alert("Could not lift the suppression.");
+    } catch (caught) {
+      window.alert(failureText(caught, { area: 'directory', op: 'override', fallback: "Could not lift the suppression." }));
     } finally {
       setBusyId(null);
     }

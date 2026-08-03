@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { BellRing } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getFoundationTokens, type FoundationTokens } from "./foundation-ui";
+import { responseFailureText } from 'lib/errors/client-failure';
+import { reportError } from 'lib/observability/report';
 
 // "Enable call alerts on this device" (issue #808 task 5). A provider who allows instant 1:1 calls can
 // turn on Web Push so their device wakes when a member rings them, even with the app closed. The in-app
@@ -198,7 +200,10 @@ export function CallAlerts() {
         setStatus("unavailable");
         return;
       }
-    } catch {
+    } catch (caught) {
+      // `status` drives the panel's state machine, so it stays a fixed value — the reason goes to the
+      // error report instead of into the state.
+      reportError(caught, { area: 'foundation', op: 'push_key_check' });
       setStatus("unavailable");
       return;
     }
@@ -212,7 +217,8 @@ export function CallAlerts() {
       const registration = await navigator.serviceWorker.getRegistration();
       const existing = registration ? await registration.pushManager.getSubscription() : null;
       setStatus(existing ? "enabled" : "disabled");
-    } catch {
+    } catch (caught) {
+      reportError(caught, { area: 'foundation', op: 'push_subscription_check' });
       setStatus("disabled");
     }
   }, []);
@@ -257,7 +263,7 @@ export function CallAlerts() {
         }),
       });
       if (!saveRes.ok) {
-        throw new Error("Could not turn on call alerts. Please try again.");
+        throw new Error(await responseFailureText(saveRes, "Could not turn on call alerts. Please try again.", 'member'));
       }
       setStatus("enabled");
     } catch (caught) {

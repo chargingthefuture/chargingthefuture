@@ -13,6 +13,7 @@ import { adminMutate, type AdminProblem, type AdminProduct } from './ww-admin-sh
 import { getWhatWorksTokens } from './ww-shared';
 import { WhatWorksAdminProducts } from './ww-admin-products';
 import { WhatWorksAdminProblems } from './ww-admin-problems';
+import { responseFailureText } from 'lib/errors/client-failure';
 
 function StatBlock({ label, value, accent }: { label: string; value: number; accent?: string }) {
   const { theme } = useTheme();
@@ -40,7 +41,7 @@ export function WhatWorksAdminShell() {
     const query = status === 'all' ? '' : `?status=${status}`;
     const res = await fetch(`/api/what-works/admin/products${query}`);
     if (!res.ok) {
-      throw new Error('Could not load suggestions.');
+      throw new Error(await responseFailureText(res, 'Could not load suggestions.'));
     }
     const data = (await res.json()) as { products: AdminProduct[] };
     setProducts(data.products ?? []);
@@ -49,7 +50,7 @@ export function WhatWorksAdminShell() {
   const loadProblems = useCallback(async () => {
     const res = await fetch('/api/what-works/admin/problems');
     if (!res.ok) {
-      throw new Error('Could not load problems.');
+      throw new Error(await responseFailureText(res, 'Could not load problems.'));
     }
     const data = (await res.json()) as { problems: AdminProblem[] };
     setProblems(data.problems ?? []);

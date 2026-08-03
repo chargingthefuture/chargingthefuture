@@ -11,6 +11,7 @@ import {
   CONTRIBUTION_CONSENT_VERSION,
 } from '../../lib/comic/contribution-consent';
 import { MAX_LINKED_POSTS } from '../../lib/comic/contribution-links';
+import { failureText } from 'lib/errors/client-failure';
 
 // The knowledge page (`/knowledge`): where a member lends their own public Quora writing to the
 // assistant's reference library, and where the consent that permits it is given.
@@ -215,8 +216,8 @@ function useKnowledgeContribution(askForQuoraUrl: boolean) {
       });
       const data = (await res.json().catch(() => null)) as ContributionResponse | null;
       handleSubmitResponse(res.ok, data);
-    } catch {
-      setError('Could not reach the server. Nothing was sent.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'comic', op: 'submit', fallback: 'Could not reach the server. Nothing was sent.', audience: 'member' }));
     } finally {
       setSubmitting(false);
     }
@@ -234,8 +235,8 @@ function useKnowledgeContribution(askForQuoraUrl: boolean) {
         return;
       }
       void loadHistory();
-    } catch {
-      setError('Could not reach the server.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'comic', op: 'withdraw', fallback: 'Could not reach the server.', audience: 'member' }));
     }
   }
 

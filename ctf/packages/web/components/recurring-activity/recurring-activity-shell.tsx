@@ -20,6 +20,7 @@ import {
 } from './recurring-activity-shared';
 import { RecurringActivityList } from './recurring-activity-list';
 import { RecurringActivityCreateForm, type CreateActivityInput } from './recurring-activity-create-form';
+import { responseFailureText } from 'lib/errors/client-failure';
 
 type ActionKind = 'confirm' | 'decline' | 'end' | 'visibility';
 
@@ -33,7 +34,7 @@ async function fetchRecurringActivityData(
     fetch('/api/currencies', { cache: 'no-store', signal }),
   ]);
   if (!activitiesRes.ok) {
-    throw new Error('We could not load your ongoing activities. Try again in a moment.');
+    throw new Error(await responseFailureText(activitiesRes, 'We could not load your ongoing activities. Try again in a moment.', 'member'));
   }
   const activitiesData = (await activitiesRes.json()) as ActivitiesResponse;
   const currenciesData = currenciesRes.ok
@@ -137,7 +138,7 @@ export function RecurringActivityShell() {
           body: JSON.stringify(body ?? {}),
         });
         if (!res.ok) {
-          throw new Error('That action did not go through. Try again in a moment.');
+          throw new Error(await responseFailureText(res, 'That action did not go through. Try again in a moment.', 'member'));
         }
         await loadData();
       } catch (e) {

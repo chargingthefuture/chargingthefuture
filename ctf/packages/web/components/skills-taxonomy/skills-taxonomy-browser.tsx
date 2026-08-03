@@ -18,6 +18,7 @@ import { SkillsTaxonomyTitlesColumn } from "./st-titles-column";
 import { SkillsTaxonomySkillsDetail } from "./st-skills-detail";
 import { SkillsTaxonomyEmptyState } from "./st-empty-state";
 import { SkillsTaxonomyLoading } from "./st-loading";
+import { failureText } from 'lib/errors/client-failure';
 
 type StMobileView = "sectors" | "titles" | "skills";
 
@@ -129,8 +130,8 @@ export function SkillsTaxonomyBrowser() {
       const data = (await res.json()) as { items: StSector[] };
       setSectors(data.items ?? []);
       setSelectedSectorId((prev) => prev ?? (data.items?.[0]?.id ?? null));
-    } catch {
-      setError("Failed to load taxonomy.");
+    } catch (caught) {
+      setError(failureText(caught, { area: 'skills-taxonomy', op: 'load', fallback: "Failed to load taxonomy.", audience: 'member' }));
     } finally {
       if (initial) setLoading(false);
     }

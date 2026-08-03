@@ -8,6 +8,7 @@ import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import type { FoundationCapacityPolicy } from 'lib/foundation/types';
 import { getFoundationTokens, type FoundationTokens } from './foundation-ui';
+import { failureText } from 'lib/errors/client-failure';
 
 type FoundationAdminDashboard = {
   providersTotal: number;
@@ -110,8 +111,8 @@ export function FoundationAdminShell({
       }
       setMessage('Capacity policy saved.');
       router.refresh();
-    } catch {
-      setError('Network error. Try again.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'foundation', op: 'save', fallback: 'Network error. Try again.' }));
     } finally {
       setSaving(false);
     }

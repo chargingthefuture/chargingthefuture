@@ -118,6 +118,92 @@ function findings(file, source) {
   return out;
 }
 
+// ---------------------------------------------------------------------------------------------------
+// Client surfaces. A route that explains itself is worth nothing if the screen replaces the
+// explanation with its own fallback sentence, which is where the reason used to disappear a second
+// time. Two failures, both in the screens and hooks that call our own routes:
+//
+//   discards-response  a `!res.ok` branch that shows a fixed string and never reads the body's
+//                      message/reason — the explanation was fetched and thrown away.
+//   discards-throw     a `catch` that shows a fixed string and never uses the caught value. The plain
+//                      sentence is fine when the request never answered, but the caught value has to
+//                      reach reportError so it is not lost.
+// ---------------------------------------------------------------------------------------------------
+
+const clientRoots = [
+  'ctf/packages/web/components',
+  'ctf/packages/web/hooks',
+  'ctf/packages/web/app',
+];
+
+function clientFiles(dir) {
+  const found = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) {
+      // `api` is the server half, checked above; node_modules is not ours.
+      if (entry !== 'api' && entry !== 'node_modules') found.push(...clientFiles(full));
+    } else if (/\.(ts|tsx)$/.test(entry) && entry !== 'route.ts') {
+      found.push(full);
+    }
+  }
+  return found.sort();
+}
+
+// Showing the person a failure: a state setter, a toast, an alert, or a thrown Error whose text is a
+// bare string literal.
+const SHOWS_LITERAL = /(set[A-Za-z]*(Error|Message|Notice|Status|Failure)\s*\(\s*['"]|toast\.error\s*\(\s*['"]|alert\s*\(\s*['"]|throw new Error\s*\(\s*['"])/;
+const READS_SERVER_TEXT = /\bmessage\b|\breason\b|\bdetail\b/;
+
+// A block that starts at `re` and runs to its matching brace.
+function guardedBlocks(source, pattern) {
+  const found = [];
+  const re = new RegExp(pattern, 'g');
+  let m;
+  while ((m = re.exec(source)) !== null) {
+    const open = source.indexOf('{', m.index);
+    if (open < 0 || open > m.index + m[0].length + 2) continue;
+    let depth = 1;
+    let i = open + 1;
+    while (i < source.length && depth > 0) {
+      if (source[i] === '{') depth += 1;
+      else if (source[i] === '}') depth -= 1;
+      i += 1;
+    }
+    found.push({
+      binding: (m[1] ?? '').replace(/[()]/g, '').trim().split(':')[0].trim(),
+      body: source.slice(open + 1, i - 1),
+      line: source.slice(0, m.index).split('\n').length,
+    });
+  }
+  return found;
+}
+
+function clientFindings(file, source) {
+  const rel = relative(repoRoot, file).split('\\').join('/');
+  const out = [];
+  if (!/fetch\s*\(/.test(source)) {
+    return out;
+  }
+
+  for (const block of guardedBlocks(source, 'if\\s*\\(\\s*!\\s*[\\w.]+\\.ok\\s*\\)\\s*')) {
+    if (SHOWS_LITERAL.test(block.body) && !READS_SERVER_TEXT.test(block.body)) {
+      out.push({ rel, line: block.line, kind: 'discards-response', detail: "shows a fixed string instead of the route's message" });
+    }
+  }
+
+  for (const block of guardedBlocks(source, 'catch\\s*(\\([^)]*\\))?\\s*')) {
+    if (!SHOWS_LITERAL.test(block.body)) continue;
+    const binding = block.binding;
+    const uses = binding.length > 0 && new RegExp(`\\b${binding}\\b`).test(block.body);
+    if (!uses) {
+      out.push({ rel, line: block.line, kind: 'discards-throw', detail: 'shows a fixed string and never uses the caught value' });
+    }
+  }
+
+  return out;
+}
+
 function main() {
   const allowlist = JSON.parse(readFileSync(allowlistPath, 'utf8'));
   const budgets = allowlist.files ?? {};
@@ -129,6 +215,14 @@ function main() {
     if (results.length === 0) continue;
     counts.set(results[0].rel, results.length);
     all.push(...results);
+  }
+  for (const root of clientRoots) {
+    for (const file of clientFiles(join(repoRoot, root))) {
+      const results = clientFindings(file, readFileSync(file, 'utf8'));
+      if (results.length === 0) continue;
+      counts.set(results[0].rel, (counts.get(results[0].rel) ?? 0) + results.length);
+      all.push(...results);
+    }
   }
 
   if (WRITE) {
@@ -153,7 +247,7 @@ function main() {
 
   const listed = Object.keys(budgets).length;
   const budgeted = Object.values(budgets).reduce((sum, n) => sum + n, 0);
-  console.log(`check-error-verbosity: ${all.length} finding(s) across ${counts.size} route file(s).`);
+  console.log(`check-error-verbosity: ${all.length} finding(s) across ${counts.size} file(s) (routes + client surfaces).`);
   console.log(`  burn-down list: ${listed} file(s), ${budgeted} allowed. Rule: .claude/rules/137-verbose-error-handling-rules.mdc`);
 
   if (over.length === 0) {
@@ -168,9 +262,11 @@ function main() {
       console.error(`      line ${finding.line}: ${finding.kind} — ${finding.detail}`);
     }
   }
-  console.error('\nFix: answer with failureResponse({ summary, error, code, area, op }) from');
-  console.error("lib/errors/failure.ts, or include withReason('…', error) in the message. Do not add an");
-  console.error('allowlist entry — the burn-down list only shrinks.');
+  console.error('\nFix, on a route: answer with failureResponse({ summary, error, code, area, op }) from');
+  console.error("lib/errors/failure.ts, or include withReason('…', error) in the message.");
+  console.error("Fix, on a screen: show the route's message (data?.message ?? your fallback), and pass a");
+  console.error('caught value to reportError so it is not lost. Do not add an allowlist entry — the');
+  console.error('burn-down list only shrinks.');
   process.exit(1);
 }
 

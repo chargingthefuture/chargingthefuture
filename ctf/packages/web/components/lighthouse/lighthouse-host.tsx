@@ -11,6 +11,7 @@ import type { Currency } from "@/lib/currency/types";
 import { SERVICE_CREDITS_LABEL } from "@/lib/currency/types";
 import { sortPreferred } from "@/lib/currency/format";
 import { formatRent, getLighthouseTokens, LIGHTHOUSE_PROPERTY_TYPES, type CurrencyMap, type LighthouseTokens, type Property } from "./shared";
+import { failureText } from 'lib/errors/client-failure';
 
 // Member self-service hosting. A member lists their own place here; there is NO separate "host
 // profile" form — the host identity shown on a listing is composed from data we already have
@@ -505,8 +506,8 @@ export function LighthouseHost({
       setEditingId(id);
       setShowForm(true);
       requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
-    } catch {
-      setError("Could not load the listing to edit. Please try again.");
+    } catch (caught) {
+      setError(failureText(caught, { area: 'lighthouse', op: 'begin_edit', fallback: "Could not load the listing to edit. Please try again.", audience: 'member' }));
     }
   }
 

@@ -6,6 +6,7 @@ import type { WorkforceBucketDetail, WorkforceGroupedReportItem } from '../../li
 import { WorkforceMemberList } from './workforce-member-list';
 import { useTheme } from '@/hooks/useTheme';
 import { getWorkforceTokens } from './workforce-shared';
+import { failureText } from 'lib/errors/client-failure';
 
 type DrilldownKind = 'sector' | 'skill-level';
 
@@ -32,8 +33,8 @@ function BucketRow({ kind, item }: { kind: DrilldownKind; item: WorkforceGrouped
         }
         const json = (await res.json()) as { detail?: WorkforceBucketDetail | null };
         setDetail(json.detail ?? { ...item, matchedMembers: [] });
-      } catch {
-        setError('Could not load members for this bucket.');
+      } catch (caught) {
+        setError(failureText(caught, { area: 'workforce', op: 'toggle', fallback: 'Could not load members for this bucket.', audience: 'member' }));
       } finally {
         setLoading(false);
       }

@@ -670,3 +670,26 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   - Not covered yet (follow-up): client shells that replace a route's `message` with their own fallback
     string, and the same standard for non-route server code (`lib/**`, scripts, the mobile app). The gate
     scans `ctf/packages/web/app/api/**/route.ts` only.
+- 2026-08-03: **Closed the client-side half of verbose error handling** (rule 137, follow-up 1 of 2 from
+  the entry above; owner asked for the screens first). A route that explains itself is worth nothing if
+  the screen replaces the explanation with its own fallback sentence — which is where the reason was
+  disappearing a second time. Cross-cutting, 25 screens/panels/hooks, no schema/contract/route change.
+  - Rule 137 gained points 8–12 for client surfaces: show what the route said; a caught value on a screen
+    is still reported; operator screens name the reason and member screens do not; show a `reference`
+    when the response carries one; and not every string literal is a message (a state machine and a
+    local validation of the person's own input are handled differently).
+  - New helper `ctf/packages/web/lib/errors/client-failure.ts` — `responseFailureText` (what the route
+    said, falling back to the screen's sentence, with the `reference` appended), `failureText` (report
+    the caught value and return the text to show), `reasonText` (the reason with nothing reported, for a
+    local parse of the person's own input). Import-safe from a component; the server helper imports
+    `next/server` and must not be used from one.
+  - The gate now scans screens and hooks too and fails on: a `!res.ok` branch that shows a fixed string
+    instead of the route's message, and a `catch` that shows a fixed string and never uses the caught
+    value. It found **49 sites across 25 files** — all fixed here, so the burn-down list stays empty.
+  - Audience split, so no member-facing copy changed: 13 member screens keep their exact sentence and
+    send the reason to the error report; admin panels append the reason. Two sites were hand-corrected
+    rather than swept — `foundation-call-alerts` (its `setStatus` drives a state machine, so it reports
+    and keeps the fixed status) and `sca-treasury-panel` (a JSON textarea the admin typed, so it shows
+    the parse reason and reports nothing).
+  - Next (follow-up 2 of 2): the same standard outside route handlers — `lib/**`, `ctf/scripts/**`, and
+    the mobile app.
