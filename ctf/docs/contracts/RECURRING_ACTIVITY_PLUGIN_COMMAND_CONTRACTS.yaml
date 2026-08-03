@@ -22,8 +22,10 @@ contracts:
       (non-ServiceCredits) line MUST NOT carry an amount — the value firewall is enforced server-side,
       not just in the UI — so the platform never holds a summable recurring-fiat-payment total. Only
       ServiceCredits (an internal utility token) may carry a declared value, and even that is a declared
-      figure, never an executed transfer. No free-text is accepted; sector is a fixed enum. Implemented
-      by POST /api/recurring-activity.
+      figure, never an executed transfer. No free-text is accepted; sector is a fixed enum. Callable
+      both from this plugin's own form and from the inline "this happens regularly" control other apps
+      render beside a finished arrangement, which passes originPlugin. Implemented by
+      POST /api/recurring-activity.
     inputSchema:
       counterpartyUserId:
         type: string
@@ -58,6 +60,21 @@ contracts:
           - private
           - restricted
           - public
+      originPlugin:
+        type: string
+        required: false
+        description: >-
+          The app the member declared this from, when they used that app's inline control instead of
+          this plugin's own form. Absent for a line created in the plugin. Rejected if not one of the
+          values below, because the value decides how GDP recognizes the line: a declaration made in an
+          app that already settles every exchange on-platform is recognized as a relationship (one
+          point) rather than by its declared ServiceCredits value, so the same credits are never counted
+          twice.
+        enum:
+          - lighthouse
+          - foundation
+          - socket-relay
+          - trust-transport
     outputSchema:
       activity:
         type: object

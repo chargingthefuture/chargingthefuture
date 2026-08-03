@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Car, Navigation, MessageCircle, Check, X, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
 import { useTheme } from "@/hooks/useTheme";
 import { getTrustTransportTokens, ttSettlementLabel, type TripRequest, type TtOffer } from "./tt-shared";
 
@@ -303,6 +304,21 @@ function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionCo
       <TrackingStatusMessage awaitingDriver={model.awaitingDriver} />
       {model.awaitingDriver && <RequestOffers requestId={request.id} onAccepted={onAccepted} />}
       {model.awaitingCompletionConfirmation && <TrackingCompletion request={request} onCompletionConfirmed={onCompletionConfirmed} />}
+      {/* A ride that both sides confirmed is often not a one-off — the same school run every week,
+          the same weekly shop. Offered on the finished ride so nobody has to go to another app to
+          record it. TrustTransport settles each trip on its own, so a declared ServiceCredits value
+          here is recognized as a relationship rather than counted twice — see
+          PER_OCCURRENCE_ORIGIN_PLUGINS. */}
+      {model.status.toLowerCase() === "completed" && request.tripProviderUserId ? (
+        <MarkRecurringControl
+          counterpartyUserId={request.tripProviderUserId}
+          originPlugin="trust-transport"
+          sector="service"
+          sectorLabel="a regular ride like this one"
+          accent={t.ACCENT}
+          style={{ marginBottom: 12 }}
+        />
+      ) : null}
       <DirectLineButton awaitingDriver={model.awaitingDriver} hasMarginBottom={model.cancellable} onClick={() => onChat(request)} />
       {model.cancellable && <CancelRequestButton requestId={request.id} onCancelled={onCancelled} />}
     </div>

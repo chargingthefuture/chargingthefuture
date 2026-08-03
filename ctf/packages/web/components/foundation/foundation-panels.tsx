@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
 import { Badge } from "@/components/ui/badge";
 import { Hammer, FileText, Wrench, MessageSquare, CheckCircle2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
@@ -339,6 +340,24 @@ export function QuotesPanel({
                           <CheckCircle2 size={14} /> Settled
                         </span>
                       ) : null}
+                    </div>
+                  ) : null}
+
+                  {/* A closed engagement is often the start of a standing arrangement — the same
+                      electrician every quarter. Offered to the survivor side (the side that would keep
+                      calling the same provider) right on the quote, so nobody has to go to another app
+                      to record it. Foundation settles each metered call on its own, so a declared
+                      ServiceCredits value here is recognized as a relationship rather than counted a
+                      second time — see PER_OCCURRENCE_ORIGIN_PLUGINS. */}
+                  {!isProvider && q.lifecycleState === "closed" ? (
+                    <div style={{ paddingLeft: 54 }}>
+                      <MarkRecurringControl
+                        counterpartyUserId={q.providerUserId}
+                        originPlugin="foundation"
+                        sector="service"
+                        sectorLabel={`ongoing ${q.serviceType} work`}
+                        accent={t.ACCENT}
+                      />
                     </div>
                   ) : null}
 

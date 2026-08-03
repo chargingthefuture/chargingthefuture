@@ -204,6 +204,27 @@ is down at delete time, the deletion still succeeds and the failure is logged fo
 
 ---
 
+### LH-R1 — Record an accepted match as ongoing housing
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in as either side of a LightHouse match the host has accepted. Also have one match still pending.
+
+**Steps:**
+1. Open the Matches tab.
+2. Look at the accepted match card, then at the pending one.
+3. On the accepted card, click "This happens regularly", pick a cadence, and record it.
+
+**Expected:**
+- The control appears on the accepted match and NOT on the pending one.
+- The other side of the match is already filled in — no member search.
+- With a money currency chosen there is no amount field; the panel says only that this happens and how often.
+- After recording, the card shows "Recorded — waiting for … to confirm it.", and the row appears in the Recurring Activity app marked "Recorded from LightHouse", awaiting the other member.
+
+Result: web ☐
+
+---
+
 ## Admin walkthrough
 
 ### LH-A1 · Admin stats and tables

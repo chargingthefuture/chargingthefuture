@@ -113,6 +113,10 @@ longer a precondition for browsing, hosting, or matching.
 6. Status lifecycle parity target:
    - `pending`, `accepted`, `rejected`, `canceled`, `completed`.
 7. Duplicate active/pending request constraints remain required.
+8. **Record an accepted match as ongoing, without leaving LightHouse (2026-08-03).** An accepted match
+   carries a "This happens regularly" control: pick how often and how it is settled, and it records an
+   ongoing housing arrangement with the other side of that match. They confirm it in the Recurring
+   Activity app. A money arrangement records no amount — only that it happens and how often.
 
 ### 1.6 Blocks (User Safety)
 
@@ -266,6 +270,16 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+
+- 2026-08-03: **An accepted match can be recorded as ongoing without leaving LightHouse.** Housing is the
+  clearest case of something that carries on month after month, and LightHouse only ever sees the moment
+  the host says yes. The matches tab now shows the shared "This happens regularly" control
+  (`components/shared/mark-recurring-control.tsx`) on an accepted/completed match, pre-set to the housing
+  sector and to the other side of that match, so the member records the ongoing arrangement right there
+  instead of being sent to the Recurring Activity plugin to search for the same person by hand. It
+  creates the usual pending row, which the other member confirms in that plugin; the row records
+  `origin_plugin = 'lighthouse'`. `LighthouseMatches` gained an optional `viewerUserId` prop (to name the
+  other side); no LightHouse schema, route, or contract change.
 - 2026-08-03: **LightHouse is now a GDP recognition source, and its available homes feed the projected
   figure (owner decision).** The 2026-07-04 entry below moved *recurring* rent to the Recurring Activity
   plugin; that stands, and it is precisely why LightHouse can now be recognized without holding a

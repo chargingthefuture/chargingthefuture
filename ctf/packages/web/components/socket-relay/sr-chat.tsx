@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, Clock, MessageCircle } from "lucide-react";
+import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
 import { FAINT, SUBTLE, srCounterpartLabel, type SrChatCredentials, type SrDirectLine, type SrFulfillment, type SrResolveOutcome } from "./sr-shared";
 import { useTheme } from '@/hooks/useTheme';
@@ -145,6 +146,22 @@ function ChatPane({
           <div style={{ flex: 1 }} />
         )}
       </div>
+      {/* A favor that got done is often not a one-off — the same neighbor collects the same
+          prescription every month. Offered right where the favor was closed, so nobody has to go to
+          another app to record it. Only on a successful close: an unsuccessful or canceled favor is
+          not an arrangement. */}
+      {selected.status === "closed" && selected.closeReason === "successful" ? (
+        <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <MarkRecurringControl
+            counterpartyUserId={isRequester ? selected.fulfillerUserId : selected.requesterUserId}
+            counterpartyName={isRequester ? selected.fulfillerUsername : selected.requesterUsername}
+            originPlugin="socket-relay"
+            sector="favor"
+            sectorLabel="a favor like this one"
+            accent={t.ACCENT}
+          />
+        </div>
+      ) : null}
       <ResolveBar selected={selected} isRequester={isRequester} resolving={resolving} onResolve={onResolve} />
     </div>
   );

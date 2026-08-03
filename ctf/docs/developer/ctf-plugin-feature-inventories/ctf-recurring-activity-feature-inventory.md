@@ -47,6 +47,12 @@ signal in Trust. It is emphatically NOT a ledger, NOT a bill, and carries NO fia
 4. Control the visibility (private default / restricted / public) of an activity you recorded.
 5. See your ongoing activities and pending confirmations in the hub, and via a light card in the account
    hub next to Trust.
+6. Record an arrangement as ongoing **without leaving the app you are in**. A "This happens regularly"
+   control sits beside the finished arrangement itself: an accepted LightHouse match, a closed Foundation
+   quote, a SocketRelay favor that got done, a completed TrustTransport ride. The other member is already
+   known, so all you choose is how often and how it is settled. It creates exactly the same pending row
+   this plugin's own form does, the other member confirms it here, and the row says which app it came
+   from.
 
 ## Admin Features
 
@@ -82,7 +88,11 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
   NUMERIC(14,2) nullable — set ONLY for ServiceCredits lines, always NULL for fiat; `status` TEXT CHECK
   (`pending`|`active`|`ended`|`declined`, default `pending`); `visibility` TEXT CHECK
   (`private`|`restricted`|`public`, default `private`); `confirmed_at`, `ended_at`, `ended_by_user_id`,
-  `created_at`, `updated_at`. Constraint `recurring_activities_no_self` (`owner_user_id <>
+  `created_at`, `updated_at`; `origin_plugin` TEXT nullable — which app the member declared this from
+  when they used that app's inline control (`lighthouse`|`foundation`|`socket-relay`|`trust-transport`),
+  NULL for a line created in this plugin's own form. Validated at write time against
+  `RECURRING_ACTIVITY_ORIGIN_PLUGINS`, not by a database CHECK, because the plugin list changes; an
+  unknown value is rejected rather than stored. Constraint `recurring_activities_no_self` (`owner_user_id <>
   counterparty_user_id`). Indexes on `(owner_user_id, status)`, `(counterparty_user_id, status)`,
   `(status, currency_code)`. There is deliberately NO free-text column.
 - `recurring_activity_audit_trail` — append-only audit of every mutation (create/confirm/decline/end/
@@ -105,6 +115,15 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
 - GDP (see the GDP inventory §4.4): fiat lines → one `RACT` each (a count); ServiceCredits lines → their
   declared `sc_value` (value). Its own de-duped recognition bucket, so it never double-counts the direct
   ServiceCredits transfer source (a different table).
+- One exception, added when inline declaration shipped: some apps already record EVERY exchange as it
+  happens — a Foundation call is metered per minute-block, a TrustTransport trip settles per trip, a
+  SocketRelay favor closes one at a time — and GDP already recognizes each of those occurrences.
+  Counting a declared ServiceCredits value from one of those apps would count the same credits a second
+  time, so a confirmed ServiceCredits line whose `origin_plugin` is in `PER_OCCURRENCE_ORIGIN_PLUGINS`
+  (`foundation`, `socket-relay`, `trust-transport`) is counted as a RELATIONSHIP — one `RACT`, the way a
+  fiat line is counted — and never again as value. LightHouse is deliberately not in that set: it
+  records the arrangement once and never sees the months that follow, so the declared value there is the
+  only record of them. A line with no origin (declared in this plugin) is counted by value as before.
 - Trust (see the Trust inventory): the count of DISTINCT other members with an `active` activity (either
   side) — distinct counterparties so a repeated partner or a collusion ring cannot inflate the signal.
 
@@ -159,6 +178,23 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
 
 ## Change Log
 
+- 2026-08-03: **Recurring activity can now be recorded from inside the app you are already in (owner
+  directive).** Until now the only way to record one was to come to this plugin and search for the other
+  member by hand — the wrong moment and the wrong place, since you know an arrangement is ongoing while
+  you are standing in the middle of it. A shared control
+  (`ctf/packages/web/components/shared/mark-recurring-control.tsx`) can be dropped beside any finished
+  arrangement; it knows the other member already, asks only how often and how it is settled, and posts
+  the same pending row this plugin's form creates. Wired into four surfaces: an accepted LightHouse match
+  (sector `housing`), a closed Foundation quote, survivor side (`service`), a SocketRelay favor closed
+  successfully (`favor`), and a completed TrustTransport ride (`service`). The money firewall is
+  unchanged — a fiat line still carries no amount, and the control says so where the amount field would
+  be. New nullable `origin_plugin` column records which app it came from; the hub shows it as "Recorded
+  from LightHouse" so a member recognizes the row here. TrustTransport's request payload gained
+  `tripProviderUserId` (present only once a trip exists, by which point the two are already paired and
+  talking) so the completed ride knows who to name. `recurring-activity.create` gained the optional
+  `originPlugin` input, validated against a fixed list. See also the counting exception recorded under
+  Lifecycle and counting semantics: `origin_plugin` is what lets GDP avoid counting the same
+  ServiceCredits twice.
 - 2026-07-20: **Notifications producer.** Best-effort notifications (`notifySafe`) now fire from the
   routes: creating an activity notifies the counterparty to confirm/decline
   (`recurring-activity.invited`); confirming/declining notifies the owner

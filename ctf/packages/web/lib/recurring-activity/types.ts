@@ -52,6 +52,10 @@ export interface RecurringActivity {
   endedByUserId: string | null;
   createdAt: string;
   updatedAt: string;
+  // Which app the member declared this from, when they used that app's inline "mark as recurring"
+  // control. NULL when they used the Recurring Activity plugin's own form. See
+  // RECURRING_ACTIVITY_ORIGIN_PLUGINS below.
+  originPlugin: string | null;
   // The party the reading member is NOT — filled in per-reader by the API so the client can show
   // "with <the other member>" without the reader having to work out which side they are on.
   role?: 'owner' | 'counterparty';
@@ -65,4 +69,28 @@ export interface CreateRecurringActivityInput {
   cadence: RecurringActivityCadence;
   scValue?: number | null;
   visibility?: RecurringActivityVisibility;
+  originPlugin?: string | null;
 }
+
+// The apps that may declare a recurring activity inline, so a member never has to leave what they are
+// doing to record one. Anything else is rejected at write time, which keeps `origin_plugin` a small
+// known set rather than free text a client could put anything in.
+export const RECURRING_ACTIVITY_ORIGIN_PLUGINS: readonly string[] = [
+  'lighthouse',
+  'foundation',
+  'socket-relay',
+  'trust-transport',
+];
+
+// Apps that already record EVERY exchange as it happens: a Foundation call is metered per minute-block,
+// a TrustTransport trip is settled per trip, a SocketRelay favor is closed one at a time. GDP already
+// recognizes each of those occurrences, so a declared ServiceCredits value from one of these would count
+// the same value a second time. A declaration from one of these apps is therefore recognized as a
+// RELATIONSHIP (one point, the way a fiat line is counted) and never again as value. LightHouse is not
+// on this list: it records the arrangement once and never sees the months that follow, so its declared
+// value is the only record there is.
+export const PER_OCCURRENCE_ORIGIN_PLUGINS: readonly string[] = [
+  'foundation',
+  'socket-relay',
+  'trust-transport',
+];

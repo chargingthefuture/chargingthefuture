@@ -515,6 +515,27 @@ naming them.
 4. In the SocketRelay admin Fulfillments tab, the same row reads **Deleted member**, not the raw id
    and not the literal text `deleted_member`.
 
+### SR-R1 — Record a completed favor as a regular one
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in as either party on a fulfillment closed as successful. Also have one active fulfillment and, if possible, one closed as unsuccessful.
+
+**Steps:**
+1. Open the Direct Line and select the successful, closed conversation.
+2. Look for "This happens regularly" above the resolve bar.
+3. Select the active conversation, and the unsuccessful one, and look again.
+4. On the successful one, pick a cadence and record it.
+
+**Expected:**
+- The control appears only on the conversation closed as successful — not on an active one, and not on one closed unsuccessfully or canceled.
+- The other participant is already filled in and named — no member search.
+- After recording, the row appears in the Recurring Activity app marked "Recorded from SocketRelay", awaiting the other member.
+
+Result: web ☐
+
+---
+
 ## Admin walkthrough
 
 ### SR-A1 — Admin stat cards

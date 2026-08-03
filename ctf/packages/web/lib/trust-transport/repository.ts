@@ -103,6 +103,7 @@ type RequestRow = {
   // Present only when the row is selected with a join to trust_transport_trips (e.g. listRequests).
   trip_id?: string | null;
   trip_status?: TrustTransportTripStatus | null;
+  trip_provider_user_id?: string | null;
   requester_completion_confirmed_at?: Date | null;
   provider_completion_confirmed_at?: Date | null;
 };
@@ -221,6 +222,10 @@ function mapRequestRow(row: RequestRow): TrustTransportRequest {
     updatedAtIso: toIso(row.updated_at),
     tripId: row.trip_id ?? null,
     tripStatus: row.trip_status ?? null,
+    // Who accepted the request. Present only once a trip exists — i.e. once the requester and this
+    // provider are already paired and talking on the Direct Line — so it reveals nothing the requester
+    // cannot already see. Carried so a finished trip can offer to record the ride as a regular one.
+    tripProviderUserId: row.trip_provider_user_id ?? null,
     requesterCompletionConfirmedAtIso: row.requester_completion_confirmed_at ? toIso(row.requester_completion_confirmed_at) : null,
     providerCompletionConfirmedAtIso: row.provider_completion_confirmed_at ? toIso(row.provider_completion_confirmed_at) : null,
   };
@@ -424,10 +429,10 @@ export async function listRequests(options?: { page?: number; pageSize?: number;
     // LATERAL with LIMIT 1 so a request with more than one trip row (data anomaly) cannot duplicate the
     // request in the page and diverge from the COUNT above — at most one trip id per request.
     `SELECT r.id, r.requester_user_id, r.mode, r.title, r.details, r.pickup_city, r.dropoff_city, r.pickup_geo_redacted, r.dropoff_geo_redacted, r.status, r.price_amount, r.price_currency, r.created_at, r.updated_at,
-            t.id AS trip_id, t.status AS trip_status, t.requester_completion_confirmed_at, t.provider_completion_confirmed_at
+            t.id AS trip_id, t.status AS trip_status, t.provider_user_id AS trip_provider_user_id, t.requester_completion_confirmed_at, t.provider_completion_confirmed_at
      FROM trust_transport_requests r
      LEFT JOIN LATERAL (
-       SELECT id, status, requester_completion_confirmed_at, provider_completion_confirmed_at FROM trust_transport_trips
+       SELECT id, status, provider_user_id, requester_completion_confirmed_at, provider_completion_confirmed_at FROM trust_transport_trips
        WHERE request_id = r.id
        ORDER BY created_at
        LIMIT 1

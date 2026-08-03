@@ -350,12 +350,42 @@ These cases must produce identical behavior on both surfaces. Run them on web an
 
 ## Known gaps — do not file these as bugs
 
-1. **Contextual "Is this ongoing?" prompts** inside sibling plugins (LightHouse, Foundation, SocketRelay, ServiceCredits) are not yet built. The standalone hub is the only creation entry point in v1.
+1. ~~**Contextual "Is this ongoing?" prompts** inside sibling plugins are not yet built.~~ **Built
+   2026-08-03.** A "This happens regularly" control now sits beside the finished arrangement in
+   LightHouse (accepted match), Foundation (closed quote, survivor side), SocketRelay (favor closed
+   successfully), and TrustTransport (completed ride). The standalone hub is no longer the only place to
+   record one. ServiceCredits has no such control: a credits send is a single completed transfer with no
+   arrangement attached to it. See RA-16 below.
 2. **Cadence is not normalized** for the SC value contribution — a weekly 50 SC and a monthly 50 SC both contribute 50 to the GDP index. This is a documented approximation, not a correctness bug.
 3. **Counterparty existence is not verified server-side** against a canonical member table at create time. The UI picker supplies a real user ID; a server-side membership guard is a planned follow-up.
 4. **No admin collusion-review surface** — the bilateral graph is captured in the audit trail but no admin UI to surface collusion patterns is built yet.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+
+---
+
+### RA-16 — Record an ongoing arrangement from inside another app
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Two member accounts, A and B. A finished arrangement between them in any of: LightHouse (a match B accepted), Foundation (a closed quote where A is the survivor and B the provider), SocketRelay (a favor closed as successful), TrustTransport (a completed ride).
+
+**Steps:**
+1. As A, open that app and find the finished arrangement.
+2. Click "This happens regularly".
+3. Pick a cadence, leave the currency on a money currency, and record it.
+4. Repeat with the currency set to ServiceCredits and a value entered.
+5. Open `/apps/recurring-activity` as A, then as B.
+
+**Expected:**
+- The control appears only on a finished arrangement — not on a pending LightHouse match, an open Foundation quote, an unsuccessful or canceled SocketRelay favor, or a ride still in progress.
+- The other member is already filled in; there is no member search to do.
+- With a money currency selected, there is NO amount field — the line says only that this happens and how often. With ServiceCredits selected, an optional value field appears.
+- After recording, the control is replaced by "Recorded — waiting for … to confirm it."
+- In the Recurring Activity hub, A sees the new row as pending, carrying a "Recorded from …" line naming the app it came from.
+- B sees it as awaiting their confirmation and gets the usual notification. Nothing counts toward Trust or GDP until B confirms.
+
+Result: web ☐
 
 ---
 

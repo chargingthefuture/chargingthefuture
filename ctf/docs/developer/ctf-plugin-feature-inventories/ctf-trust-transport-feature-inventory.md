@@ -83,6 +83,10 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 1. Canonical lifecycle states by mode (ride/package/food) with shared status vocabulary.
 2. In-context communication channel scoped to each order/trip between exactly the two parties (rider and driver). The chat opens with the trip and closes when the trip reaches a terminal state (completed, canceled, disputed): no new messages may be sent, both parties keep read-only access for a limited window, and messages are retained server-side for moderation/abuse evidence per the deletion contract. No 1:1 messaging exists outside an active trip (platform rule 100, "Messaging Scope and Lifecycle").
 3. Clear non-technical status and failure messaging.
+4. **Record a completed ride as a regular one, without leaving TrustTransport (2026-08-03).** A completed
+   ride carries a "This happens regularly" control: pick how often and how it is settled, and it records
+   an ongoing arrangement with the member who drove, who confirms it in the Recurring Activity app. A
+   money arrangement records no amount — only that it happens and how often.
 
 ### 1.6 Earnings and Completion History
 
@@ -292,6 +296,17 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+
+- 2026-08-03: **A completed ride can be recorded as ongoing without leaving TrustTransport.** The same
+  school run every week is one arrangement, not a stack of unrelated trips. The Tracking card now shows
+  the shared "This happens regularly" control (`components/shared/mark-recurring-control.tsx`) on a
+  completed ride, pre-set to the service sector and to the member who drove. To name them, the requester's
+  request payload gained `tripProviderUserId`, selected from the existing LATERAL trip join and present
+  only once a trip exists — by which point the two are already paired and talking on the Direct Line, so
+  it reveals nothing they cannot already see. It creates the usual pending Recurring Activity row with
+  `origin_plugin = 'trust-transport'`; because TrustTransport already recognizes each completed trip, a
+  declared ServiceCredits value on one of these lines is recognized as a relationship rather than counted
+  twice. No schema or route-signature change.
 - 2026-08-02: **Deletion burn-down batch 4.** On account deletion, `trust_transport_status_events` and `trust_transport_proof_artifacts` rows you appear on are pseudonymized (actor/captured-by → `deleted_member`): events and proofs belong to the shared trip/request record that disputes rely on. `trust_transport_risk_signals` (abuse evidence) and `trust_transport_market_config` (admin-audited settings) are classified retained.
 - 2026-08-02: **Deletion burn-down batch 3: disputes classified as retained.** On account deletion, `trust_transport_disputes` is retained — the accountability record for value that moved between two members over a trip, matching the earnings-ledger policy already in the registry. The deletion contract already documented this; the registry entry makes the coverage gate see it. Caught by the deletion-coverage gate added in #2056.
 - 2026-08-02: **A departing member's id no longer survives on the other party's rows (owner

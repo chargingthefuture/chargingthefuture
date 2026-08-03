@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // and by two figures (the real index for an accepted match, the projection for a listing nobody has
 // taken). The SQL is what keeps those apart, so the SQL is what is asserted.
 const executed: string[] = [];
+const recurringSql: string[] = [];
 
 vi.mock('lib/db/postgres', () => ({
   queryDb: vi.fn(async (sql: string) => {
@@ -12,15 +13,30 @@ vi.mock('lib/db/postgres', () => ({
     if (sql.includes('lighthouse_matches')) {
       return { rows: [{ currency_code: 'USD', total: '1200' }, { currency_code: 'FREE', total: '2' }] };
     }
+    if (sql.includes('recurring_activities')) {
+      recurringSql.push(sql);
+      // 3 confirmed fiat lines; 500 declared credits on lines whose value is the only record;
+      // 2 credits lines declared from an app that already settles every exchange itself.
+      if (sql.includes("currency_code <> 'SC'")) return { rows: [{ total: '3' }] };
+      if (sql.includes('SUM(sc_value)')) return { rows: [{ total: '500' }] };
+      return { rows: [{ total: '2' }] };
+    }
     return { rows: [] };
   }),
 }));
 
-const { lighthouseHousingSource, foldVolumesIntoIndex, DEFAULT_CONTRIBUTION_WEIGHTS, RECOGNITION_SOURCES } =
-  await import('./recognition');
+const {
+  lighthouseHousingSource,
+  recurringActivitySource,
+  foldVolumesIntoIndex,
+  DEFAULT_CONTRIBUTION_WEIGHTS,
+  RECOGNITION_SOURCES,
+} = await import('./recognition');
+const { PER_OCCURRENCE_ORIGIN_PLUGINS } = await import('lib/recurring-activity/types');
 
 beforeEach(() => {
   executed.length = 0;
+  recurringSql.length = 0;
 });
 
 describe('lighthouseHousingSource', () => {
@@ -51,5 +67,34 @@ describe('lighthouseHousingSource', () => {
   it('is registered as a recognition source exactly once', () => {
     const registered = RECOGNITION_SOURCES.filter((s) => s.pluginSlug === 'lighthouse');
     expect(registered).toHaveLength(1);
+  });
+});
+
+describe('recurringActivitySource', () => {
+  it('counts a declared value only where that value is the only record of the exchange', async () => {
+    const volumes = await recurringActivitySource.loadVolumes();
+    const credits = volumes.find((v) => v.currencyCode === 'SC');
+    // The 500 declared credits count; the 2 lines declared inside an app that settles every exchange
+    // itself do NOT add their declared value, or the same credits would be counted twice.
+    expect(credits?.amount).toBe(500);
+  });
+
+  it('still counts those relationships — one point each, like a money line', async () => {
+    const volumes = await recurringActivitySource.loadVolumes();
+    const byCount = volumes.find((v) => v.currencyCode === 'RACT');
+    // 3 confirmed money lines + 2 credits lines counted as relationships instead of value.
+    expect(byCount?.amount).toBe(5);
+    const folded = foldVolumesIntoIndex(volumes, DEFAULT_CONTRIBUTION_WEIGHTS);
+    expect(folded.valueIndex).toBe(505);
+    expect(folded.unweightedCurrencies).toEqual([]);
+  });
+
+  it('reads only confirmed lines, and splits them by the app they were declared from', async () => {
+    await recurringActivitySource.loadVolumes();
+    const sql = recurringSql.join('\n');
+    expect(sql).toContain("status = 'active'");
+    expect(sql).not.toContain("status = 'pending'");
+    expect(sql).toContain('origin_plugin');
+    expect(PER_OCCURRENCE_ORIGIN_PLUGINS).not.toContain('lighthouse');
   });
 });

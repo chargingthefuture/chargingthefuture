@@ -44,6 +44,11 @@ SocketRelay is a request-and-fulfillment plugin with profile management, request
 1. Fulfillment claim flow for eligible requests.
 2. Fulfillment detail and “my fulfillments” views.
 3. Closure outcomes with canonical status taxonomy.
+4. **Record a favor as a regular one, without leaving SocketRelay (2026-08-03).** Once a favor is closed
+   as successful, the Direct Line carries a "This happens regularly" control: pick how often and how it
+   is settled, and it records an ongoing favor arrangement with the other member, who confirms it in the
+   Recurring Activity app. Only on a successful close — an unsuccessful or canceled favor is not an
+   arrangement.
 
 ### 1.4 Fulfillment Chat
 
@@ -175,6 +180,16 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+
+- 2026-08-03: **A favor that got done can be recorded as ongoing without leaving SocketRelay.** The same
+  neighbor collecting the same prescription every month is a standing arrangement, not a string of
+  one-offs. The Direct Line now shows the shared "This happens regularly" control
+  (`components/shared/mark-recurring-control.tsx`) once a fulfillment is closed as successful, pre-set to
+  the favor sector and to the other participant. Only on a successful close — an unsuccessful or canceled
+  favor is not an arrangement. It creates the usual pending Recurring Activity row with
+  `origin_plugin = 'socket-relay'`; because SocketRelay already recognizes each completed favor on its
+  own, a declared ServiceCredits value on one of these lines is recognized as a relationship rather than
+  counted twice. UI only — no SocketRelay schema, route, or contract change.
 - 2026-08-02: **Deletion burn-down batch 4.** On account deletion, `socket_relay_request_events` rows you appear on are pseudonymized (`actor_user_id` → `deleted_member`): the lifecycle trail belongs to the request it narrates, which may be another member's surviving record — same shape as the fulfillment pseudonymization from #2054.
 - 2026-08-02: **A departing member's id no longer survives on the other party's rows (owner
   directive).** Account deletion removed `socket_relay_fulfillments` by `requester_user_id` only, so a member who deleted their

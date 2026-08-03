@@ -772,3 +772,24 @@ Result: web ☐
 skills and threads (existing behavior) — no currency preference survives the account.
 
 Result: web ☐
+
+
+### FN-R1 — Record a closed quote as ongoing work
+
+**Role:** member (survivor side)
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in as the survivor on a quote that has been closed. Also have one quote still open.
+
+**Steps:**
+1. Open the Quotes panel.
+2. Look at the closed quote, then at the open one.
+3. On the closed quote, click "This happens regularly", pick a cadence, and record it.
+4. Sign in as the provider on that same quote and look at the card.
+
+**Expected:**
+- The control appears on the closed quote and NOT on the open one.
+- The provider does not see the control on their own side — it is offered to the survivor, the side that would keep calling the same provider.
+- The provider is already filled in — no member search.
+- After recording, the row appears in the Recurring Activity app marked "Recorded from Foundation", awaiting the provider's confirmation.
+
+Result: web ☐

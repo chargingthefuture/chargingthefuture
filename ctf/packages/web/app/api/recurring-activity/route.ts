@@ -15,6 +15,7 @@ import {
 import { logRecurringActivityAuditEvent } from 'lib/recurring-activity/audit';
 import {
   RECURRING_ACTIVITY_CADENCES,
+  RECURRING_ACTIVITY_ORIGIN_PLUGINS,
   RECURRING_ACTIVITY_SECTORS,
   RECURRING_ACTIVITY_VISIBILITY_VALUES,
   type RecurringActivity,
@@ -56,6 +57,10 @@ type ValidatedCreateBody = {
   cadence: RecurringActivityCadence;
   visibility: RecurringActivityVisibility | undefined;
   scValue: number | null | undefined;
+  // Set when the member declared this from inside another app's inline control rather than from the
+  // Recurring Activity plugin's own form. Validated against the known list so a client cannot store an
+  // arbitrary origin — the value decides how GDP recognizes the line.
+  originPlugin: string | undefined;
 };
 
 // scValue is optional; an empty string / null / undefined means "not provided". A present value must
@@ -104,6 +109,16 @@ function validateCreateBody(body: Record<string, unknown>): { error: CreateDeny 
     return scValueResult;
   }
 
+  const rawOrigin = typeof body.originPlugin === 'string' ? body.originPlugin.trim() : '';
+  if (rawOrigin && !RECURRING_ACTIVITY_ORIGIN_PLUGINS.includes(rawOrigin)) {
+    return {
+      error: {
+        reason: 'invalid_origin_plugin',
+        message: `originPlugin must be one of: ${RECURRING_ACTIVITY_ORIGIN_PLUGINS.join(', ')}.`,
+      },
+    };
+  }
+
   return {
     data: {
       counterpartyUserId,
@@ -112,6 +127,7 @@ function validateCreateBody(body: Record<string, unknown>): { error: CreateDeny 
       cadence: cadence as RecurringActivityCadence,
       visibility: visibility as RecurringActivityVisibility | undefined,
       scValue: scValueResult.data,
+      originPlugin: rawOrigin || undefined,
     },
   };
 }
@@ -173,7 +189,7 @@ export async function POST(request: Request) {
   if ('error' in validated) {
     return denyBadRequest(validated.error.reason, validated.error.message);
   }
-  const { counterpartyUserId, sector, currencyCode, cadence, visibility, scValue } = validated.data;
+  const { counterpartyUserId, sector, currencyCode, cadence, visibility, scValue, originPlugin } = validated.data;
 
   try {
     const activity = await createRecurringActivity({
@@ -184,6 +200,7 @@ export async function POST(request: Request) {
       cadence,
       scValue,
       visibility,
+      originPlugin,
     });
     await logRecurringActivityAuditEvent({
       actorUserId: userId,
@@ -198,6 +215,7 @@ export async function POST(request: Request) {
         currencyCode: activity.currencyCode,
         cadence: activity.cadence,
         hasScValue: activity.scValue !== null,
+        originPlugin: activity.originPlugin,
       },
     });
     // Notify the counterparty they were named in a recurring activity to confirm or decline —
