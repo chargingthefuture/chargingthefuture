@@ -88,9 +88,16 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   { slug: 'fake-counselor', label: 'Fake Counselor / Fake Help' },
   { slug: 'lure-to-location', label: 'Lure to a Location' },
   { slug: 'staged-narratives', label: 'Staged Narratives / Loud "Podcasts"' },
-  // Catch-all while new schemes get named.
-  { slug: 'other-scheme', label: 'Other / not named yet' },
+  // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
+  // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
+  // description of the scheme (see click-log.incident.create) — that is the intake that names
+  // new schemes — and is limited to Weavers of the Commons badge holders to keep spam out.
+  { slug: 'other-scheme', label: 'Not listed' },
 ] as const;
+
+// The catch-all scheme slug. Picking it switches the log form and the create API into the
+// scheme-suggestion flow (required description, optional Quora link, Weavers-only).
+export const NOT_LISTED_SCHEME_SLUG = 'other-scheme';
 
 const PROBLEM_SLUGS = new Set(CLICK_LOG_PROBLEM_TAGS.map((t) => t.slug));
 const SCHEME_SLUGS = new Set(CLICK_LOG_SCHEME_TAGS.map((t) => t.slug));

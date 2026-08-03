@@ -118,6 +118,22 @@ logs, and its history row shows the problem chip and the "Scheme:" chip. An unta
 still logs fine with no location.
 **Result:** web ☐ mobile ☐ — notes:
 
+### CL-8 · Suggest a new scheme via "Not listed" (Weavers only, description required)
+**Role:** member (one with the Weavers of the Commons badge, one without) · **Surfaces:** all
+**Steps:**
+1. As a member without the Weavers badge, open the scheme picker and search for "Not listed".
+2. As a Weavers badge holder, pick "Not listed". Read the fields that appear.
+3. Try to submit with location added but the description empty.
+4. Write a short description, optionally add an https quora.com link to your own post, submit.
+**Expected:** Without the badge the "Not listed" option does not appear at all (named schemes
+remain pickable). With the badge, picking it reveals a required "Describe the scheme" field and
+an optional Quora self-link field, both explicitly labeled as shared with the owner, plus a note
+that the incident note above stays private. Submit stays disabled until the description has text
+(and location is added, per CL-7); the server enforces the same rules, including rejecting a
+non-quora.com link. After submitting, the incident logs with the "Not listed" scheme chip; the
+description is stored for the owner's scheme-naming queue, not shown in the trends dashboard.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### CL-5 · Refresh the incident list
 **Role:** member · **Surfaces:** all
 **Steps:**

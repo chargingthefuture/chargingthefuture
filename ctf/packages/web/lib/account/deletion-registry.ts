@@ -562,6 +562,10 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Your logged incidents.',
     serviceScopeSupported: true,
     tables: [
+      // Child of click_log_incidents by incident_id (no FK), so it deletes first. A suggestion
+      // already copied into a private triage issue persists there, like a bug report; the
+      // database row and the member link are removed here.
+      del('click_log_scheme_suggestions', 'user_id', 'Scheme descriptions you chose to share with the owner.'),
       del('click_log_incidents', 'user_id', 'Your logged incidents.'),
       del('click_log_preferences', 'user_id', 'Your owner-sharing preference.'),
     ],

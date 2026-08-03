@@ -41,6 +41,18 @@ export type SharedIncidentTrendBucket = {
   count: number;
 };
 
+// A member's "Not listed" scheme suggestion, written when logging an incident with the
+// catch-all scheme tag. Explicitly shared with the owner (the form says so); a scheduled
+// pipeline turns new suggestions into private triage issues so the owner can name new schemes.
+export type CreateSchemeSuggestionInput = {
+  incidentId: string;
+  userId: string;
+  suggestion: string;
+  // Optional link to the member's own Quora post about a similar incident (spam signal for
+  // the owner). Validated to be a quora.com link before storage.
+  quoraUrl?: string;
+};
+
 // One row of the owner tag-trend aggregate over shared incidents: a tag kind + slug + count.
 // Tags are coarse categorical values from the canonical lists in lib/click-log/tags.ts, so this
 // carries no free text, location, incident ids, or member identity.

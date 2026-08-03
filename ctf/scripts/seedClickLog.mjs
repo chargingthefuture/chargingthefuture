@@ -64,6 +64,25 @@ const INCIDENTS = [
     problem_tag: null,
     scheme_tag: null,
   },
+  // "Not listed" scheme with a suggestion (see SUGGESTIONS below): the suggestion row is what
+  // the proposeSchemeSuggestions pipeline drains into a private triage issue.
+  {
+    user_id: SEED_USER_IDS[2],
+    metadata: { latitude: 41.8781, longitude: -87.6298 },
+    problem_tag: null,
+    scheme_tag: 'other-scheme',
+  },
+];
+
+// One seeded "Not listed" suggestion, keyed to the other-scheme incident above. status stays
+// 'new' so a demo run of the pipeline has something to drain.
+const SUGGESTIONS = [
+  {
+    user_id: SEED_USER_IDS[2],
+    incident_index: 5,
+    suggestion: 'They keep sending fake utility workers to the door in pairs',
+    quora_url: 'https://www.quora.com/profile/example-demo-post',
+  },
 ];
 
 
@@ -81,6 +100,18 @@ async function seed() {
          VALUES ($1, $2, $3, $4, $5, NOW())
          ON CONFLICT (id) DO NOTHING`,
         [id, incident.user_id, JSON.stringify(incident.metadata), incident.problem_tag, incident.scheme_tag]
+      );
+    }
+    for (const s of SUGGESTIONS) {
+      const incident = INCIDENTS[s.incident_index];
+      const incidentId = deterministicId(incident.user_id, incident.metadata);
+      // Deterministic suggestion id: derived from user + text so reruns stay idempotent.
+      const suggestionId = deterministicId(s.user_id, { suggestion: s.suggestion });
+      await queryDb(
+        `INSERT INTO click_log_scheme_suggestions (id, incident_id, user_id, suggestion, quora_url, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, 'new', NOW(), NOW())
+         ON CONFLICT (id) DO NOTHING`,
+        [suggestionId, incidentId, s.user_id, s.suggestion, s.quora_url]
       );
     }
     await queryDb('COMMIT');
