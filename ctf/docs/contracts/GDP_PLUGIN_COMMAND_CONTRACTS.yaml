@@ -103,10 +103,15 @@ contracts:
       - service_credits_transfers
       - socket_relay_fulfillments
       - recurring_activities
+      # LightHouse: an accepted match contributes one month of the listed rent (later months belong to
+      # the recurring_activities source above, so no month is counted twice):
+      - lighthouse_matches
+      - lighthouse_properties
       - login_events
       - users
       # Projection sources — OPEN posts only, read for the separate projected figure. Each reads rows the
-      # recognition sources deliberately skip, so nothing is counted in both figures:
+      # recognition sources deliberately skip, so nothing is counted in both figures. LightHouse is the
+      # one shared table: the projection reads only listings with NO accepted/completed match:
       - trust_transport_requests
       - foundation_quote_requests
       - socket_relay_requests

@@ -282,7 +282,28 @@ Result: web ☐
 
 ---
 
-### GDP-13 — The projected panel disappears when nothing is open
+### GDP-13 — A LightHouse home moves from projected to recognized when a host accepts
+
+**Role:** member
+**Surfaces:** web (desktop)
+**Precondition:** Seed run. An active LightHouse listing with a monthly rent set (say 1,200 USD) and no accepted match. A seeker account able to request a stay, and the host account able to accept. Note the hero index figure and the projected figure before you start.
+
+**Steps:**
+1. On `/apps/gdp`, note the "LightHouse homes still available" row in the projected panel and the hero index figure.
+2. As the seeker, request a stay at that listing. Refresh `/apps/gdp`.
+3. As the host, accept the request. Refresh `/apps/gdp` again.
+
+**Expected:**
+- Before the request: the listing contributes one month of its rent (1,200 for a 1,200/month home) to the projected figure — not several months, and not the yearly total.
+- After the request but before acceptance: the projected figure is unchanged. A pending request does not add anything; the home was already counted once.
+- After the host accepts: the listing leaves the projected figure and the hero Community Value Index rises by the same one month. The home is counted in exactly one figure at each point, never both.
+- The hero index does not keep rising on later refreshes — one month is recognized per arrangement, not one per visit or per month elapsed.
+
+Result: web ☐
+
+---
+
+### GDP-14 — The projected panel disappears when nothing is open
 
 **Role:** member
 **Surfaces:** web (desktop)

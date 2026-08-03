@@ -87,6 +87,40 @@ export const foundationOpenQuoteSource: ProjectionSource = {
 };
 
 /**
+ * LightHouse homes still available: an active listing that nobody has been accepted into yet. The
+ * listing IS the post here — a home offered, waiting for a seeker — so it is projected the same way an
+ * open ride or an unclaimed favor is, at ONE month of the listed rent (the same unit the recognition
+ * source uses when a match is accepted, so the number simply moves from this figure into the real index
+ * when a host says yes).
+ *
+ * A listing with an accepted or completed match is excluded: that home is recognized for real and must
+ * not also sit here. Pending requests against a listing are deliberately NOT counted separately either —
+ * a home with three people asking is still one home, and counting the asks would inflate the figure.
+ * A listing with no priced rent counts as one FREE exchange, matching the recognition treatment.
+ */
+export const lighthouseOpenListingSource: ProjectionSource = {
+  pluginSlug: 'lighthouse',
+  label: 'LightHouse homes still available',
+  async loadVolumes() {
+    const result = await queryDb<{ currency_code: string; total: string }>(
+      `SELECT CASE WHEN p.monthly_rent > 0 AND p.rent_currency IS NOT NULL THEN p.rent_currency ELSE $1 END AS currency_code,
+              SUM(CASE WHEN p.monthly_rent > 0 AND p.rent_currency IS NOT NULL THEN p.monthly_rent ELSE 1 END)::text AS total
+         FROM lighthouse_properties p
+         WHERE p.is_active = true
+           AND NOT EXISTS (
+             SELECT 1 FROM lighthouse_matches m
+              WHERE m.property_id = p.id AND m.status IN ('accepted', 'completed')
+           )
+         GROUP BY 1`,
+      [FREE_CODE],
+    );
+    return result.rows
+      .filter((row) => Number(row.total) > 0)
+      .map((row) => ({ amount: Number(row.total), currencyCode: row.currency_code }));
+  },
+};
+
+/**
  * SocketRelay favors waiting to be done: a favor posted (`open`) or picked up but not yet closed
  * (`claimed`), and not past its 28-day expiry. A favor carries no price, so each one counts as a single
  * FREE exchange — the same unit the index uses for a favor that closed successfully. Expired, closed,
@@ -152,19 +186,16 @@ export const recurringActivityPendingSource: ProjectionSource = {
  * incentive (reward, bonus, stipend, thank-you mint) and never a reallocation.
  *
  * Deliberately NOT projected:
- *   - LightHouse listings. A listing's rent is real money on a monthly cadence, and the platform
- *     deliberately does not hold a recurring-rent total; ongoing housing arrangements are captured by
- *     the Recurring Activity plugin instead, by count. Turning a listed monthly rent into a lump
- *     projected figure would invent a number the product refuses to hold.
  *   - Skills Hunt, Unlock, and Contributions posts. Their value moves are incentive mints, which are
  *     excluded from the real index and must stay excluded here.
  *   - Feed posts, directory profiles, announcements. Not exchanges; they carry no value to project.
- *   - TrustTransport pending offers. An offer sits against a request that this list already counts;
- *     counting both would count one job twice.
+ *   - TrustTransport pending offers and LightHouse pending match requests. Each sits against a post
+ *     this list already counts, so counting them would count one job, or one home, twice.
  */
 export const PROJECTION_SOURCES: ProjectionSource[] = [
   trustTransportOpenRequestSource,
   foundationOpenQuoteSource,
+  lighthouseOpenListingSource,
   socketRelayOpenFavorSource,
   recurringActivityPendingSource,
 ];

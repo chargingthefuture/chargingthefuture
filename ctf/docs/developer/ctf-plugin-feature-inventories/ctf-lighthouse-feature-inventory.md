@@ -266,6 +266,24 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-08-03: **LightHouse is now a GDP recognition source, and its available homes feed the projected
+  figure (owner decision).** The 2026-07-04 entry below moved *recurring* rent to the Recurring Activity
+  plugin; that stands, and it is precisely why LightHouse can now be recognized without holding a
+  running rent total. An accepted housing arrangement is a real settled exchange, so
+  `lighthouse_matches` in `accepted` or `completed`, joined to its listing, contributes **one month** of
+  `monthly_rent` in `rent_currency` to the Community Value Index (`lighthouse-housing` source in
+  `ctf/packages/web/lib/gdp/recognition.ts` and the mirrored query in `ctf/scripts/recognizeGdp.mjs`).
+  Every month after the first belongs to Recurring Activity, where the pair declares the ongoing
+  relationship, so the two sources cover different periods of the same tenancy and no month is counted
+  twice. A match counts once whether it sits in `accepted` or `completed` — one arrangement, one row. A
+  listing with no priced rent (`monthly_rent` 0/NULL — the host form's "0 for ServiceCredits / free")
+  records no amount anywhere, so an accepted match on one counts as a single FREE exchange rather than
+  an invented amount. Separately, active listings with no accepted match feed the GDP dashboard's
+  projected "Value waiting to happen" figure at the same one-month unit, so a home moves out of the
+  projected number and into the real index the moment a host accepts; pending match requests are not
+  counted on their own (a home with three people asking is still one home). No LightHouse schema,
+  route, or contract change — `monthly_rent`/`rent_currency` remain listing fields and LightHouse still
+  has no settlement table. Recorded in the GDP inventory and in `dashboard.snapshot.get` `dataAccess`.
 - 2026-08-02: **Deletion burn-down batch 2: matches and blocks join the deletion registry.** On
   account deletion, `lighthouse_matches` rows where the member was the seeker are deleted (their own
   stay requests) and rows where they were the host are pseudonymized (`host_user_id` →

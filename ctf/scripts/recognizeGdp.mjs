@@ -73,6 +73,22 @@ const SOURCES = [
             WHERE status = 'completed' AND origin_plugin = 'chyme'`,
   },
   {
+    // LightHouse housing arrangements: a seeker asked to stay at a listed home and the host accepted.
+    // Counted once per match in 'accepted' or 'completed' (one arrangement, two lifecycle states), worth
+    // ONE month of the listed rent — the arrangement made here. Later months belong to Recurring
+    // Activity, where the pair declares the ongoing relationship, so no month is counted twice and no
+    // plugin holds a running rent total. A listing with no priced rent (0/NULL — the host form's "0 for
+    // ServiceCredits / free") records no amount anywhere, so it counts as one FREE exchange rather than
+    // an invented figure.
+    pluginSlug: 'lighthouse',
+    sql: `SELECT CASE WHEN p.monthly_rent > 0 AND p.rent_currency IS NOT NULL THEN p.rent_currency ELSE 'FREE' END AS currency_code,
+                 SUM(CASE WHEN p.monthly_rent > 0 AND p.rent_currency IS NOT NULL THEN p.monthly_rent ELSE 1 END)::numeric AS total
+            FROM lighthouse_matches m
+            JOIN lighthouse_properties p ON p.id = m.property_id
+            WHERE m.status IN ('accepted', 'completed')
+            GROUP BY 1`,
+  },
+  {
     // SocketRelay favors: mutual aid with no per-favor price, so each successfully-completed favor counts
     // as one FREE exchange (by count). The standalone SocketRelay SC transfer route is intentionally not
     // also counted here to avoid double-counting a single favor.

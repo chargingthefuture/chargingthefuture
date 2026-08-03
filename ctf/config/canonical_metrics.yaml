@@ -123,7 +123,7 @@ canonical_metrics:
 
   - id: gdp_value_index
     name: Community Value Index
-    description: One composite measure of all recognized economic activity in the community, folding every value type (fiat, crypto, ServiceCredits, barter) into a single relative figure via owner-set, non-binding contribution weights (USD is only the reference base = 1). A community-built transparency measure in the spirit of GDP — NOT money, NOT a price, and NOT an exchange or redemption value for any currency or token; displayed with no currency symbol. Augments, does not replace, the projection target (issue #121). Only eligible settled value is recognized; transfers and deletion/reclaim reallocations are excluded.
+    description: One composite measure of all recognized economic activity in the community, folding every value type (fiat, crypto, ServiceCredits, barter) into a single relative figure via owner-set, non-binding contribution weights (USD is only the reference base = 1). A community-built transparency measure in the spirit of GDP — NOT money, NOT a price, and NOT an exchange or redemption value for any currency or token; displayed with no currency symbol. Augments, does not replace, the projection target (issue #121). Only eligible settled value is recognized; transfers and deletion/reclaim reallocations are excluded. Recognized sources include LightHouse housing arrangements at ONE month of the listed rent per accepted match; the months after the first are counted by the Recurring Activity source instead, so no month is counted twice and no plugin holds a running rent total.
     owner: economics-team@chargingthefuture.org
     data_type: integer
     unit: index
@@ -141,6 +141,10 @@ canonical_metrics:
         type: currency
       - name: service_credits_governance_events.amount
         type: integer
+      - name: lighthouse_properties.monthly_rent
+        type: currency
+      - name: lighthouse_matches.status
+        type: string
       - name: currency_usd_rates.usd_rate
         type: number
       - name: currency_usd_rates.as_of
@@ -155,7 +159,7 @@ canonical_metrics:
 
   - id: gdp_projected_value_index
     name: Projected Community Value
-    description: What the posts already on the board would add to the Community Value Index IF every one of them closed successfully — open TrustTransport requests, Foundation quotes awaiting a decision, SocketRelay favors nobody has done yet, and recurring activities awaiting confirmation. A separate, marketing-facing figure computed by ctf/packages/web/lib/gdp/projection.ts and carried in its own field of the live report; it is NEVER added to gdp_value_index, never written to gdp_metric_snapshots, and never read by the weekly recognition job. Every source reads rows the recognition sources deliberately skip (open instead of settled), so a post can never be counted in both figures. Uses the same fixed contribution weights so the two numbers share a scale. Like the index it is NOT money, NOT a price, and NOT an exchange or redemption value; shown with no currency symbol, always beside the sentence that says most posts never close.
+    description: What the posts already on the board would add to the Community Value Index IF every one of them closed successfully — open TrustTransport requests, Foundation quotes awaiting a decision, LightHouse homes still available (at one month of the listed rent, and only where no match has been accepted), SocketRelay favors nobody has done yet, and recurring activities awaiting confirmation. A separate, marketing-facing figure computed by ctf/packages/web/lib/gdp/projection.ts and carried in its own field of the live report; it is NEVER added to gdp_value_index, never written to gdp_metric_snapshots, and never read by the weekly recognition job. Every source reads rows the recognition sources deliberately skip (open instead of settled), so a post can never be counted in both figures. Uses the same fixed contribution weights so the two numbers share a scale. Like the index it is NOT money, NOT a price, and NOT an exchange or redemption value; shown with no currency symbol, always beside the sentence that says most posts never close.
     owner: economics-team@chargingthefuture.org
     data_type: integer
     unit: index
@@ -177,6 +181,10 @@ canonical_metrics:
         type: currency
       - name: foundation_quote_requests.lifecycle_state
         type: string
+      - name: lighthouse_properties.monthly_rent
+        type: currency
+      - name: lighthouse_properties.is_active
+        type: boolean
       - name: socket_relay_requests.status
         type: string
       - name: recurring_activities.sc_value

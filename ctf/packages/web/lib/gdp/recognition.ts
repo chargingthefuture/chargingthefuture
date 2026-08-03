@@ -260,6 +260,41 @@ export const chymeTipSource: RecognitionSource = {
 };
 
 /**
+ * LightHouse housing arrangements: a seeker asked to stay at a listed home and the host accepted, so a
+ * real housing arrangement was made. Read from `lighthouse_matches` joined to the listing, counting a
+ * match once in `accepted` or `completed` (the same arrangement in two lifecycle states — never twice).
+ *
+ * ONE month of the listed rent is recognized per arrangement: the arrangement that was actually made
+ * here. Every month after that is not LightHouse's to count — the pair declares the ongoing
+ * relationship in Recurring Activity, which recognizes it by count for fiat, so the two sources cover
+ * different periods of the same tenancy and never overlap. This is why LightHouse can be recognized
+ * without the platform ever holding a running rent total.
+ *
+ * A listing with no priced rent (`monthly_rent` of zero or NULL — the host form's "0 for
+ * ServiceCredits / free") records no amount anywhere, so an accepted match on one counts as a single
+ * FREE exchange, exactly like a completed SocketRelay favor. Housing given at no charge is real value;
+ * an amount that was never recorded is never invented.
+ */
+export const lighthouseHousingSource: RecognitionSource = {
+  pluginSlug: 'lighthouse',
+  label: 'LightHouse housing arrangements',
+  async loadVolumes() {
+    const result = await queryDb<{ currency_code: string; total: string }>(
+      `SELECT CASE WHEN p.monthly_rent > 0 AND p.rent_currency IS NOT NULL THEN p.rent_currency ELSE $1 END AS currency_code,
+              SUM(CASE WHEN p.monthly_rent > 0 AND p.rent_currency IS NOT NULL THEN p.monthly_rent ELSE 1 END)::text AS total
+         FROM lighthouse_matches m
+         JOIN lighthouse_properties p ON p.id = m.property_id
+         WHERE m.status IN ('accepted', 'completed')
+         GROUP BY 1`,
+      [FREE_CODE],
+    );
+    return result.rows
+      .filter((row) => Number(row.total) > 0)
+      .map((row) => ({ amount: Number(row.total), currencyCode: row.currency_code }));
+  },
+};
+
+/**
  * SocketRelay favors: SocketRelay is mutual aid — most favors are given free, and a fulfillment carries
  * no price/currency, so there is no money amount to sum. We recognize each successfully-completed favor
  * as one `FREE` exchange (counted by completed-exchange count, the way the index treats BARTER/FREE),
@@ -343,12 +378,15 @@ export const recurringActivitySource: RecognitionSource = {
  * (the direct ServiceCredits source); plugin-mediated transfers are attributed to each plugin by
  * `origin_plugin`, so nothing is double-counted and the ledger is never blindly summed. Concretely
  * excluded today: Skills Hunt accept rewards, Unlock verification incentives, and Contributions
- * thank-you grants (all incentive mints). Recurring off-platform relationships (LightHouse rent,
- * ongoing Foundation services, standing SocketRelay favors) are captured instead by the Recurring
- * Activity source above (issue #885): a self-declared, counterparty-confirmed activity, counted by
- * number for fiat and by declared value for ServiceCredits — never a settled fiat amount, so the
- * platform stays a peer-to-peer marketplace and never holds a recurring-fiat-payment record. Append a
- * source here (and document it in the GDP inventory) when a plugin starts recording settled value.
+ * thank-you grants (all incentive mints).
+ *
+ * How an ongoing arrangement is split between two sources: the plugin where the arrangement was made
+ * recognizes the value of making it — a LightHouse match recognizes one month of the listed rent — and
+ * every period after that belongs to the Recurring Activity source above (issue #885), where the pair
+ * declares the ongoing relationship themselves and it is counted by number for fiat and by declared
+ * value for ServiceCredits. No plugin holds a running rent or subscription total, and no month is
+ * counted twice. Append a source here (and document it in the GDP inventory) when a plugin starts
+ * recording settled value.
  */
 export const RECOGNITION_SOURCES: RecognitionSource[] = [
   trustTransportSource,
@@ -359,6 +397,7 @@ export const RECOGNITION_SOURCES: RecognitionSource[] = [
   foundationQuoteSource,
   serviceCreditsDirectTransferSource,
   chymeTipSource,
+  lighthouseHousingSource,
   socketRelayFavorSource,
   recurringActivitySource,
 ];

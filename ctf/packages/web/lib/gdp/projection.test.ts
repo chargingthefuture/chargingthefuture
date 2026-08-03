@@ -15,6 +15,10 @@ vi.mock('lib/db/postgres', () => ({
     if (sql.includes('foundation_quote_requests')) {
       return { rows: [{ currency_code: 'USD', total: '250' }] };
     }
+    if (sql.includes('lighthouse_properties')) {
+      // One priced home at 1200 USD/month plus two listings with no priced rent.
+      return { rows: [{ currency_code: 'USD', total: '1200' }, { currency_code: 'FREE', total: '2' }] };
+    }
     if (sql.includes('socket_relay_requests')) {
       return { rows: [{ total: '4' }] };
     }
@@ -50,16 +54,18 @@ describe('countOpenPosts', () => {
 describe('projectOpenValueIndex', () => {
   it('folds every open source with the same weights the real index uses', async () => {
     const result = await projectOpenValueIndex();
-    // 100 SC (weight 1) + 3 free requests + 250 USD (weight 1) + 4 open favors + 2 pending fiat
-    // recurring lines (RACT has no weight, so it is surfaced not counted) + 30 declared SC.
-    expect(result.projectedValueIndex).toBe(100 + 3 + 250 + 4 + 30);
+    // 100 SC (weight 1) + 3 free requests + 250 USD (weight 1) + one month of a 1200 USD listing +
+    // 2 no-rent listings + 4 open favors + 2 pending fiat recurring lines (RACT has no weight, so it is
+    // surfaced not counted) + 30 declared SC.
+    expect(result.projectedValueIndex).toBe(100 + 3 + 250 + 1200 + 2 + 4 + 30);
     expect(result.perSource.map((s) => s.pluginSlug)).toEqual(PROJECTION_SOURCES.map((s) => s.pluginSlug));
   });
 
   it('reports the number of open posts behind the figure', async () => {
     const result = await projectOpenValueIndex();
-    // 1 priced TrustTransport group + 3 free + 1 priced quote group + 4 favors + 2 pending fiat + 1 SC group.
-    expect(result.openPostCount).toBe(1 + 3 + 1 + 4 + 2 + 1);
+    // 1 priced TrustTransport group + 3 free + 1 priced quote group + 1 priced listing group +
+    // 2 no-rent listings + 4 favors + 2 pending fiat + 1 SC group.
+    expect(result.openPostCount).toBe(1 + 3 + 1 + 1 + 2 + 4 + 2 + 1);
   });
 
   it('surfaces a value type with no contribution weight instead of zeroing it', async () => {
@@ -80,5 +86,17 @@ describe('projectOpenValueIndex', () => {
     expect(sql).not.toContain('foundation_call_sessions');
     expect(sql).not.toContain('settled_at');
     expect(sql).not.toContain("'active'");
+    // LightHouse is the one place both figures read the same table, so the projection must exclude a
+    // home that already has an accepted or completed match — that home belongs to the real index.
+    expect(sql).toContain('NOT EXISTS');
+  });
+
+  it('projects a LightHouse listing at one month, leaving later months to Recurring Activity', async () => {
+    const result = await projectOpenValueIndex();
+    const lighthouse = result.perSource.find((s) => s.pluginSlug === 'lighthouse');
+    // One month of the 1200 USD listing plus one point per no-rent listing — never a multiple of the
+    // rent, because the months after the first are declared in Recurring Activity, not counted here.
+    expect(lighthouse?.valueIndex).toBe(1202);
+    expect(lighthouse?.openCount).toBe(3);
   });
 });
