@@ -8,7 +8,7 @@ Enforce a unified, trauma-informed brand language.
 - For any wording conflict, this module defers to the lexicon.
 
 ## Required Read Order For Copy Work
-- Read `index.mdc`.
+- Read `CLAUDE.md` (the agent home and rules index).
 - Read this file.
 - Read `ctf/docs/BRAND_VOICE_LEXICON.md` before editing user-facing copy.
 

@@ -1,3 +1,8 @@
+> **DEPRECATED (owner decision, 2026-06-17) — kept as history.** Production is the single source
+> of truth for design; the `design/` submodule and the Replit design agent are reference/inspiration
+> only, not authoritative and not synced. Do not route work through this agent or the Replit flow.
+> See CLAUDE.md "Design Pass Gating" and `.claude/rules/127-design-pass-gating-rules.mdc`.
+
 ## Design & Mockups Agent
 
 ### Purpose

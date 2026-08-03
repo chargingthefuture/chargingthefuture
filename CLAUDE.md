@@ -125,11 +125,24 @@ Formance — additionally keep `*_STAGING` values in that same environment; demo
 runtime so recording sessions never touch the production Stream quota or the real ledger. Do not
 rename, remove, or restructure secret keys without explicit user approval.
 
-Only a small set of bootstrap secrets live outside Infisical:
+GitHub Actions secrets hold the Infisical bootstrap set plus an operational set the workflows
+read directly (verified against `secrets.*` references in `.github/workflows/`):
 
 | Where | Secrets |
 |---|---|
-| GitHub Actions secrets | `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`, `INFISICAL_PROJECT_SLUG`, `INFISICAL_URL` |
+| GitHub Actions — Infisical bootstrap | `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`, `INFISICAL_PROJECT_SLUG`, `INFISICAL_URL` |
+| GitHub Actions — repo/agent access | `GH_PAT`, `GH_ACTIONS_BILLING_TOKEN` |
+| GitHub Actions — deploy (Render/GHCR) | `RENDER_API_KEY`, `RENDER_SERVICE_ID_CTF_WEB`, `RENDER_SERVICE_ID_CTF_WORKER`, `RENDER_SERVICE_ID_CTF_ROUTE_WEATHER` |
+| GitHub Actions — image build args (client-inlined) | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY`, `NEXT_PUBLIC_AUTH_SIGN_IN_URL`, `NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL`, `NEXT_PUBLIC_AUTH_PROVIDER` |
+| GitHub Actions — database (Neon) | `DATABASE_URL`, `DATABASE_URL_DIRECT`, `NEON_API_KEY`, `NEON_PROJECT_ID` |
+| GitHub Actions — backups (Formance) | `BACKUP_REPO`, `FORMANCE_DATABASE_URL`, `FORMANCE_RESTORE_TARGET_DATABASE_URL` |
+| GitHub Actions — app/cron calls | `CRON_SECRET`, `SERVICE_CREDITS_INTERNAL_TOKEN`, `ACCOUNT_DELETE_SECRET` |
+| GitHub Actions — other services | `EXPO_TOKEN`, `GITLEAKS_LICENSE`, `NTFY_TOPIC` |
+
+Some of these (e.g. `NEXT_PUBLIC_APP_URL`, `CRON_SECRET`, the database URLs) are deliberate
+cross-store duplicates of Infisical values — GitHub Actions is a genuinely separate store, which
+rule 123 allows. Do not conclude from this table that a workflow secret is misplaced or safe to
+remove; the workflows under `.github/workflows/` are the authoritative usage list.
 
 **To use secrets in a task or script:**
 ```bash
@@ -322,7 +335,11 @@ Example: `feat: add Ollama chatbot integration to feed question answers`
 
 ### PR Description — Parity Status (`pr-parity-status` in `ci.yml`)
 
-Every PR description must include one of:
+The `pr-parity-status` job is **informational-only**: it always passes (the check name is kept so
+branch protection stays satisfied) and at most emits a notice when the description has no parity
+line. Chyme parity is enforced directly by `check-web-android-parity.mjs` in the Quality Gates
+job. Still include one of the lines below in every PR description — it records the delivery scope
+for reviewers:
 
 ```
 Parity Status: web + mobile-responsive + android complete
@@ -356,26 +373,24 @@ Use when Android parity is deferred; link to the tracking issue.
 
 All `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with exactly one newline and no trailing blank lines. Validated by `ctf/scripts/check-eof-format.sh` on every PR.
 
-### Known: a freshly-opened PR fails "Semantic PR Title" and "PR Parity Status" — just fix it, don't re-diagnose
+### Known: a freshly-opened PR fails "Semantic PR Title" — just fix it, don't re-diagnose
 
 PRs in this repo are usually opened from the Claude Code web UI, which auto-generates the title and
-description. That generated text does **not** follow the two conventions above, so the **Semantic PR
-Title** (`pr-title-semantic.yml`) and **PR Parity Status** (`pr-parity-status` in `ci.yml`) checks go
-red within seconds of the PR opening. **This is expected and well understood — do not spend tokens
-investigating why these two checks fail on a brand-new PR.** Fix the metadata directly:
+description. That generated title does **not** follow the convention above, so the **Semantic PR
+Title** check (`pr-title-semantic.yml`) goes red within seconds of the PR opening. **This is
+expected and well understood — do not spend tokens investigating why it fails on a brand-new PR.**
+(The `pr-parity-status` check no longer fails on a missing parity line — it always passes and only
+emits a notice, so no empty-commit re-trigger is needed for it.) Fix the metadata directly:
 
 1. **Title** — edit it to a Conventional Commit (`feat:` / `fix:` / `chore:` / `refactor:` / `docs:` /
    `ci:` / `perf:` / `test:` / `build:` / `style:` / `revert:`). Editing the title re-runs the
    Semantic PR Title check automatically.
 2. **Description** — add a line that is *exactly* `Parity Status: web + mobile-responsive + android complete`
    (backend/infra, or all three shipped in this PR) **or** `Parity Ticket: #<issue>` (Android deferred).
-3. **Re-trigger parity** — the PR Parity Status check does **not** re-run on a description edit. Push
-   one empty commit to the PR branch to re-evaluate it:
-   `git commit --allow-empty -m "chore: re-trigger CI" && git push`.
+   This is for the human reader; no check fails without it.
 
-After that both go green. The whole fix costs about one title edit, one description edit, and one
-empty commit. If you can set the PR body at creation time, put the Conventional-Commit title and the
-`Parity Status:` line in up front so both pass on the first run and no empty commit is needed.
+If you can set the PR body at creation time, put the Conventional-Commit title and the
+`Parity Status:` line in up front so everything passes on the first run.
 
 ### Code Review (CodeRabbit removed — replaced by the in-repo code-review pipeline)
 

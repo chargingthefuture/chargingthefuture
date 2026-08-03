@@ -4,10 +4,14 @@
 Enable provider-neutral error monitoring so Sentry can be used now and Signoz can be adopted later with minimal refactoring.
 
 ## Mandatory
-- All error capture must flow through a shared provider-agnostic interface.
-- Feature modules must never call vendor SDKs directly.
+- All error capture must flow through the shared helper `reportError` in
+  `ctf/packages/web/lib/observability/report.ts`. Today that helper is Sentry-specific behind the
+  shared entry point: it calls `@sentry/nextjs` directly and falls back to stdout logging when
+  Sentry is off. Only cron check-ins go through the provider-agnostic `ObservabilityReporter`
+  interface (`lib/observability/types.ts`) with provider routing (sentry / noop).
+- Feature modules must never call vendor SDKs directly — call `reportError` (errors) or the
+  reporter interface (cron check-ins).
 - Use normalized event shape (`message`, `level`, `tags`, `context`, `fingerprint`, `timestamp`).
-- Support provider routing by configuration (Sentry, Signoz, no-op).
 
 ## Migration Safety Rules
 - Keep adapter contracts stable even if provider changes.
@@ -18,10 +22,15 @@ Enable provider-neutral error monitoring so Sentry can be used now and Signoz ca
 - Initialize provider once per runtime boundary.
 - Fail open to no-op reporting if provider config is missing, while preserving local logging.
 - Track provider health and dropped-event metrics.
-- Use rewrite-specific DSNs/config and keep them isolated from legacy project telemetry.
-- Configure provider by environment variables:
-	- Web: `NEXT_PUBLIC_OBSERVABILITY_PROVIDER`, `NEXT_PUBLIC_SENTRY_DSN`
-	- Mobile: `EXPO_PUBLIC_OBSERVABILITY_PROVIDER`, `EXPO_PUBLIC_SENTRY_DSN`
+- Use v3-specific DSNs/config and keep them isolated from legacy project telemetry.
+- Configure by the environment variables the code actually reads:
+	- Web: `OBSERVABILITY_PROVIDER` (`lib/observability/provider.ts`), `SENTRY_DSN` (server/edge),
+	  `NEXT_PUBLIC_SENTRY_DSN` (browser bundle — introduced in PR #2074 because Next.js only inlines
+	  `NEXT_PUBLIC_*` variables into the client), and `CTF_SKIP_SENTRY_NEXTJS` (set to `1` to skip
+	  Sentry entirely, e.g. in CI builds).
+	- Mobile: `MOBILE_OBSERVABILITY_PROVIDER` and `EXPO_SENTRY_DSN` are passed through by
+	  `app.config.ts` but nothing consumes them yet — the mobile app has no observability
+	  integration today.
 
 ## Prohibited
 - Embedding provider-specific APIs into domain/business logic.
