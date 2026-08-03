@@ -45,6 +45,7 @@
     "lint:a11y": "eslint --no-config-lookup --config ./a11y-audit.config.mjs --max-warnings=0 \"packages/web/app/**/*.tsx\" \"packages/web/components/**/*.tsx\"",
     "check:taxonomy-changes": "node ./scripts/check-taxonomy-change.mjs",
     "check:test-script-drift": "node ./scripts/check-test-script-drift.mjs",
+    "check:error-verbosity": "node ./scripts/check-error-verbosity.mjs",
     "formance:fetch:standalone": "node ./scripts/fetchFormanceStandalone.mjs",
     "formance:up:standalone": "pnpm run formance:fetch:standalone && docker compose -f ./ops/formance/upstream-standalone/docker-compose.yml up -d",
     "formance:down:standalone": "bash ./scripts/formanceStandaloneDown.sh",

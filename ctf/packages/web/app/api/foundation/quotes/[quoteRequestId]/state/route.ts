@@ -4,6 +4,7 @@ import { FOUNDATION_ERROR_CODE, FOUNDATION_QUOTE_STATES } from 'lib/foundation/c
 import { insertFoundationAudit, updateQuoteRequestState } from 'lib/foundation/repository';
 import type { FoundationQuoteState } from 'lib/foundation/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type StatePayload = {
   transitionTo?: string;
@@ -107,9 +108,9 @@ export async function POST(request: Request, context: { params: Promise<{ quoteR
   let payload: StatePayload = {};
   try {
     payload = await request.json();
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.', reason: failureReason(error) },
       { status: 400 },
     );
   }

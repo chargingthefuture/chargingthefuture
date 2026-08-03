@@ -7,6 +7,7 @@ import {
 import { endCohort, insertPeerProgrammingAudit } from 'lib/peer-programming/repository';
 import { PEER_PROGRAMMING_ERROR_CODE } from 'lib/peer-programming/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type EndCohortBody = {
   cohortId?: string;
@@ -29,9 +30,9 @@ export async function POST(request: Request) {
   let body: EndCohortBody;
   try {
     body = (await request.json()) as EndCohortBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }

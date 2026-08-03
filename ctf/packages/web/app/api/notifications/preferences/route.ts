@@ -3,6 +3,7 @@ import { ensureNotificationsCsrf, requireNotificationsAccess } from '../_lib';
 import { getNotificationPreferences, updateNotificationPreferences } from 'lib/notifications/repository';
 import { NOTIFICATION_ERROR_CODE, type NotificationPreferencesResponse } from 'lib/notifications/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 function readBool(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
@@ -43,9 +44,9 @@ export async function PUT(request: Request) {
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: NOTIFICATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: NOTIFICATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

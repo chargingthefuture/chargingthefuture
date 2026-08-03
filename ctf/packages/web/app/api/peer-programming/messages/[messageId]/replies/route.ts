@@ -3,6 +3,7 @@ import { createMessage, getMessageById, insertPeerProgrammingAudit, isCohortEnde
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
 import { PEER_PROGRAMMING_ERROR_CODE, PEER_PROGRAMMING_MAX_MESSAGE_LENGTH } from 'lib/peer-programming/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type ReplyBody = {
   cohortId?: string;
@@ -19,8 +20,8 @@ async function parseReplyBody(request: Request): Promise<ParsedReplyBody> {
   let body: ReplyBody;
   try {
     body = (await request.json()) as ReplyBody;
-  } catch {
-    return { ok: false, response: NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: 'Invalid JSON body.' }, { status: 400 }) };
+  } catch (error) {
+    return { ok: false, response: NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 }) };
   }
 
   if (!body.cohortId || !body.body) {

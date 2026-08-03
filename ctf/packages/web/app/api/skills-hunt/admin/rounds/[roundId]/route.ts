@@ -4,6 +4,7 @@ import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { getRound, insertSkillsHuntAudit, updateRound, validateRoundInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntRound, SkillsHuntRoundInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RoundBody = Partial<SkillsHuntRoundInput>;
 
@@ -67,9 +68,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
   let body: RoundBody;
   try {
     body = (await request.json()) as RoundBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -112,7 +113,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to update round.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to update round: ${failureReason(error)}` },
       { status: 503 },
     );
   }

@@ -3,6 +3,7 @@ import { requireDirectoryAdminAccess } from '../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { listSuppressedQuoraUrls } from 'lib/directory/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Admin read of the Quora-URL suppression list (takedowns), for the admin suppression screen.
 export async function GET() {
@@ -17,7 +18,7 @@ export async function GET() {
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_suppressed_urls_list' });
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to load the suppression list.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: `Unable to load the suppression list: ${failureReason(error)}` },
       { status: 503 },
     );
   }

@@ -4,6 +4,7 @@ import { SKILLS_TAXONOMY_ERROR_CODE } from 'lib/skills-taxonomy/constants';
 import { getHierarchy } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Admin reads deliberately use an opt-OUT model: inactive (soft-deleted/disabled)
 // records are included by default so admins see the full taxonomy, and a caller
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to load admin hierarchy.' },
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: `Unable to load admin hierarchy: ${failureReason(error)}` },
       { status: 503 },
     );
   }

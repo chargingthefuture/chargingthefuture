@@ -4,6 +4,7 @@ import { getHubLastSeen, updateHubLastSeen } from 'lib/feed/repository';
 import { reportError } from 'lib/observability/report';
 import { requireHubAccess } from '../_lib';
 import { ensureMutationCsrf } from '../../feed/_lib';
+import { failureReason } from 'lib/errors/failure';
 
 // Per-member "last seen" marker for the Hub home channel. The chat reads it on entry to
 // place a single "New messages" divider, and writes it after the member has viewed the chat.
@@ -53,9 +54,9 @@ export async function POST(request: Request) {
     if (raw.trim().length > 0) {
       body = JSON.parse(raw) as LastSeenRequestBody;
     }
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, message: 'Invalid JSON payload.' },
+      { ok: false, message: 'Invalid JSON payload.', reason: failureReason(error) },
       { status: 400 },
     );
   }

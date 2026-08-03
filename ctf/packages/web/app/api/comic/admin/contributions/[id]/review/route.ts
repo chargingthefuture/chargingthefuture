@@ -6,6 +6,7 @@ import { logComicAudit } from 'lib/comic/audit';
 import { acceptContribution, declineContribution } from 'lib/comic/contribution-repository';
 import { grantContributionRecognition } from 'lib/comic/contribution-grant';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export const dynamic = 'force-dynamic';
 
@@ -142,9 +143,9 @@ export async function POST(request: Request, context: RouteContext) {
   let body: { action?: string; excludedEntryIds?: unknown; reason?: string };
   try {
     body = (await request.json()) as typeof body;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Could not read the request.' },
+      { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: `Could not read the request: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -165,7 +166,7 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     reportError(error, { area: 'comic', op: 'contribution_review', extra: { contributionId: id } });
     return NextResponse.json(
-      { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Could not record that review.' },
+      { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: `Could not record that review: ${failureReason(error)}` },
       { status: 503 },
     );
   }

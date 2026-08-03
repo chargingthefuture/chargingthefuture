@@ -4,6 +4,7 @@ import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { insertSkillsHuntAudit, updateFeatureRewardCard, validateFeatureRewardCardInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntFeatureRewardCardInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type FeatureRewardCardBody = Partial<SkillsHuntFeatureRewardCardInput>;
 
@@ -31,9 +32,9 @@ export async function PUT(request: Request) {
   let body: FeatureRewardCardBody;
   try {
     body = (await request.json()) as FeatureRewardCardBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -62,7 +63,7 @@ export async function PUT(request: Request) {
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_feature_reward_card' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to update feature reward card.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to update feature reward card: ${failureReason(error)}` },
       { status: 503 },
     );
   }

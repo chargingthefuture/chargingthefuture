@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireContributorAccessAdmin } from '../_lib';
 import { insertContributorAccessAudit, reinstateEligibility } from 'lib/contributor-access/repository';
 import { syncGatedChannelMembershipIfOpen } from 'lib/contributor-access/gated-channel';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Clears a for-cause revocation. Eligibility returns because it was previously earned
 // (first_earned_at is permanent) — this is not a fresh grant.
@@ -25,9 +26,9 @@ export async function POST(request: Request) {
   let body: ReinstateBody;
   try {
     body = (await request.json()) as ReinstateBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: 'contributor_access_invalid_json', message: 'Invalid JSON body.' },
+      { ok: false, code: 'contributor_access_invalid_json', message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
   } catch (error) {
     reportError(error, { area: 'contributor-access', op: 'admin_member_reinstate' });
     return NextResponse.json(
-      { ok: false, code: 'contributor_access_unavailable', message: 'Reinstate unavailable.' },
+      { ok: false, code: 'contributor_access_unavailable', message: `Reinstate unavailable: ${failureReason(error)}` },
       { status: 503 },
     );
   }

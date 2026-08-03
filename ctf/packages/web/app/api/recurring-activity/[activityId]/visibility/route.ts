@@ -15,6 +15,7 @@ import {
   type RecurringActivityVisibility,
 } from 'lib/recurring-activity/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // POST /api/recurring-activity/[activityId]/visibility — the owner sets the activity's visibility.
 export async function POST(request: Request, context: unknown) {
@@ -32,9 +33,9 @@ export async function POST(request: Request, context: unknown) {
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: RECURRING_ACTIVITY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: RECURRING_ACTIVITY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

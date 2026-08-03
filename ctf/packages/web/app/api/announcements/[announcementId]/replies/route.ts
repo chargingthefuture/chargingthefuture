@@ -6,6 +6,7 @@ import { feedAuthorHandle } from 'lib/feed/author-handle';
 import { logFeedAudit } from 'lib/feed/audit';
 import { reportError } from 'lib/observability/report';
 import { ensureMutationCsrf, requireFeedReadAccess } from '../../../feed/_lib';
+import { failureReason } from 'lib/errors/failure';
 
 // Replies on an official announcement. GET returns the thread (oldest-first) with each author
 // resolved to a display handle; POST adds the signed-in member's reply. Replies live in our own
@@ -96,8 +97,8 @@ export async function POST(request: Request, { params }: RouteParams) {
   let body: ReplyRequestBody;
   try {
     body = (await request.json()) as ReplyRequestBody;
-  } catch {
-    return NextResponse.json({ ok: false, message: 'Invalid JSON payload.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, message: 'Invalid JSON payload.', reason: failureReason(error) }, { status: 400 });
   }
 
   const text = typeof body.body === 'string' ? body.body : '';

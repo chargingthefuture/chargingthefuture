@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { reconcileUnlockRewards } from 'lib/unlock/reconcile-rewards';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type ReconcileBody = { limit?: number };
 
@@ -35,6 +36,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'unlock', op: 'internal_reconcile_rewards' });
-    return NextResponse.json({ ok: false, code: 'unlock_reconcile_unavailable', message: 'Unable to reconcile unlock rewards.' }, { status: 503 });
+    return NextResponse.json({ ok: false, code: 'unlock_reconcile_unavailable', message: `Unable to reconcile unlock rewards: ${failureReason(error)}` }, { status: 503 });
   }
 }

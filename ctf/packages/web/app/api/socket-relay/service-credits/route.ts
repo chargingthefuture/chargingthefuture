@@ -4,6 +4,7 @@ import { createTransfer } from 'lib/service-credits/repository';
 import { insertSocketRelayAudit } from 'lib/socket-relay/repository';
 import { SOCKET_RELAY_ERROR_CODE } from 'lib/socket-relay/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type SocketRelayServiceCreditsSendInput = {
   toUserId: string;
@@ -26,8 +27,8 @@ export async function POST(request: Request) {
   let input: SocketRelayServiceCreditsSendInput;
   try {
     input = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid JSON.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid JSON.', reason: failureReason(error) }, { status: 400 });
   }
 
   if (!input.toUserId || typeof input.amount !== 'number' || input.amount <= 0) {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { insertServiceCreditsAudit, releaseEscrow } from 'lib/service-credits/repository';
 import { ensureMutationCsrf, requireServiceCreditsServiceAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type EscrowParams = {
   params: Promise<{ escrowId: string }>;
@@ -30,8 +31,8 @@ export async function POST(request: Request, context: EscrowParams) {
   let body: ReleaseBody;
   try {
     body = (await request.json()) as ReleaseBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 });
   }
 
   if (!body.destinationUserId || !body.releaseReason || !body.originPlugin || !body.idempotencyKey) {

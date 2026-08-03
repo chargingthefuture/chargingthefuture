@@ -9,6 +9,7 @@ import {
 } from 'lib/contributor-access/channel-repository';
 import { feedAuthorHandle } from 'lib/feed/author-handle';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Gated channel message history (GET) and posting (POST). Same architecture as the Commons: the
 // database is the message source of truth; Stream is only the live layer (see ../join). Threads
@@ -104,8 +105,8 @@ export async function POST(request: Request) {
   let body: MessageRequestBody;
   try {
     body = (await request.json()) as MessageRequestBody;
-  } catch {
-    return NextResponse.json({ ok: false, message: 'Invalid JSON payload.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, message: 'Invalid JSON payload.', reason: failureReason(error) }, { status: 400 });
   }
 
   const parsed = parseChannelMessageInput(body);

@@ -4,6 +4,7 @@ import { SKILLS_TAXONOMY_ERROR_CODE } from 'lib/skills-taxonomy/constants';
 import { getFlattened } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 function parseBooleanParam(url: string, name: string): boolean {
   return new URL(url).searchParams.get(name) === 'true';
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
       {
         ok: false,
         code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable,
-        message: 'Unable to load admin flattened taxonomy.',
+        message: `Unable to load admin flattened taxonomy: ${failureReason(error)}`,
       },
       { status: 503 },
     );

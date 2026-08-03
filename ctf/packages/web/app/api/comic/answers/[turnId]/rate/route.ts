@@ -4,6 +4,7 @@ import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { logComicAudit } from 'lib/comic/audit';
 import { isValidComicAnswerRating, rateComicAnswer } from 'lib/comic/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RateBody = {
   rating?: string;
@@ -32,9 +33,9 @@ export async function POST(request: Request, { params }: RouteParams) {
   let body: RateBody;
   try {
     body = (await request.json()) as RateBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }
