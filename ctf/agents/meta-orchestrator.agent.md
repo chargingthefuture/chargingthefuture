@@ -18,5 +18,5 @@ Coordinates and escalates between all other agents. Ensures that all agent check
 - Escalate blockers to operator
 
 ## Supabase Skill Integration
-- On any Supabase/Postgres/SQL/database-related change, invoke the supabase-postgres-best-practices skill from ctf/.agents/skills/supabase-postgres-best-practices.
+- On any Supabase/Postgres/SQL/database-related change, invoke the supabase-postgres-best-practices skill from ctf/agents/skills/supabase-postgres-best-practices.
 - Aggregate results from this skill with other agent checks before approval.

@@ -1,7 +1,7 @@
 # Sentry Implementation Rules
 
 ## Intent
-Apply Sentry correctly for the rewrite while keeping provider abstraction intact.
+Apply Sentry correctly for the v3 app while keeping provider abstraction intact.
 
 ## Scope
 - Applies when `OBSERVABILITY_PROVIDER` resolves to `sentry`.
@@ -11,11 +11,15 @@ Apply Sentry correctly for the rewrite while keeping provider abstraction intact
 
 ## Initialization Rules
 - Initialize Sentry once per runtime boundary.
-- Web initialization files are:
-  - `packages/web/sentry.client.config.ts`
-  - `packages/web/sentry.server.config.ts`
-  - `packages/web/sentry.edge.config.ts`
-- Web instrumentation registration must be handled via `packages/web/instrumentation.ts`.
+- Web initialization files (as of PR #2074) are:
+  - `packages/web/instrumentation.ts` — `register()` performs the nodejs and edge `Sentry.init`
+    inline via dynamic import (the `@sentry/nextjs` v10 convention).
+  - `packages/web/instrumentation-client.ts` — browser init (migrated from the old
+    `sentry.client.config.ts`, which no longer exists).
+  - `packages/web/app/global-error.tsx` — root render-error boundary that reports crashes.
+- Note: `packages/web/sentry.server.config.ts` and `sentry.edge.config.ts` still exist but are
+  imported by nothing — they are duplicate, un-executed init definitions (cleanup pending). Do not
+  treat them as the init layout and do not add a third init path.
 - Do not duplicate `Sentry.init(...)` calls across feature modules.
 
 ## Exception Capture Rules

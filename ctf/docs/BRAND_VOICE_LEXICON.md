@@ -111,20 +111,41 @@ This document is the canonical source of truth for brand language across:
 
 ## Canonical Capability Names (Public Surfaces)
 
-- LightHouse
-- TrustTransport
-- Workforce Recruiter
-- SupportMatch
-- Directory
-- SocketRelay
-- CompareNotes
+This list matches the shipped plugin registry
+(`ctf/packages/web/lib/plugins/repository.ts`) — the registry's `name` field is the
+member-facing name.
+
+- Beacon
+- Bug Reporting
 - Chyme
-- LostMail
+- ClickLog
+- Contributions
+- Directory
+- Foundation
+- GDP
+- Knowledge Library
+- LevelUp
+- LightHouse
+- Mood
 - PeerProgramming
+- Recurring Activity
 - ServiceCredits
 - SkillsHunt
+- Skills Taxonomy
+- SocketRelay
+- Trust
+- TrustTransport
+- Unlock
+- WhatWorks
+- Workforce
 
-When these names are updated, change this lexicon first, then update all copy surfaces.
+Admin-only (not member-visible, kept here for internal copy): Weekly Performance, Mutual Time.
+
+Retired names — do not use in new copy: SupportMatch, CompareNotes, LostMail (never shipped in
+v3), "Workforce Recruiter" (the shipped name is Workforce).
+
+When these names are updated, change this lexicon and the registry together, then update all copy
+surfaces.
 
 ## Plugin Name Joining Convention
 
