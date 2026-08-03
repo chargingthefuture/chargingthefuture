@@ -352,10 +352,15 @@ const ConversationBody: React.FC<{
           the panel), and link preview cards render in the MessageList via the default Attachment Card.
           Polls (create + vote) are entirely default in stream-chat-react 12.16: the composer's
           AttachmentSelector shows a "Create poll" entry whenever the channel config allows polls and
-          the member holds the send-poll capability (uploads are off, so it is the only entry there),
-          and MessageList renders the default Poll card with live voting for any message that carries a
-          poll. The owner enabled polls on the messaging channel type, so no extra wiring is needed; the
-          affordance is simply absent on channels that do not permit polls. The reminder action is the
+          the member holds the send-poll capability, and MessageList renders the default Poll card with
+          live voting for any message that carries a poll. The owner enabled polls on the messaging
+          channel type, so no extra wiring is needed; the affordance is simply absent on channels that
+          do not permit polls. Uploads are ON for the messaging channel type (a Stream dashboard
+          setting, not code), so the AttachmentSelector also shows a "File" entry. There is no custom
+          upload handler anywhere in the app: a picked file goes from the member's browser straight to
+          Stream's own file storage/CDN via the SDK default — our servers never receive the bytes.
+          (The gated contributor channel is different: its custom 'ctf-gated' channel type has uploads
+          OFF — see lib/contributor-access/gated-channel.ts.) The reminder action is the
           only message action passed in — it is empty (no extra action) when the channel does not permit
           reminders. */}
       <div className="ctf-chat-conversation">
