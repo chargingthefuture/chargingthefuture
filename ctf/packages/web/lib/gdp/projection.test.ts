@@ -21,7 +21,15 @@ vi.mock('lib/db/postgres', () => ({
       return { rows: [{ currency_code: 'USD', total: '1200' }, { currency_code: 'FREE', total: '2' }] };
     }
     if (sql.includes('socket_relay_requests')) {
-      return { rows: [{ total: '4' }] };
+      // One favor offering 15 ServiceCredits, one offering 30 USD, and two with no named value — a
+      // priced post projects at its posted amount, an unpriced one at one point (issue #120 columns).
+      return {
+        rows: [
+          { currency_code: 'SC', total: '15' },
+          { currency_code: 'USD', total: '30' },
+          { currency_code: 'FREE', total: '2' },
+        ],
+      };
     }
     if (sql.includes('recurring_activities') && sql.includes('COUNT(*)')) {
       return { rows: [{ total: '2' }] };
@@ -56,18 +64,19 @@ describe('projectOpenValueIndex', () => {
   it('folds every open source with the same weights the real index uses', async () => {
     const result = await projectOpenValueIndex();
     // 100 SC (weight 1) + 3 free requests + 250 USD (weight 1) + one month of a 1200 USD listing +
-    // 2 no-rent listings + 4 open favors + 2 pending fiat recurring lines (one RACT point each) +
-    // 30 declared SC. The 99 in an unweighted type is excluded, not counted.
-    expect(result.projectedValueIndex).toBe(100 + 3 + 250 + 1200 + 2 + 4 + 2 + 30);
+    // 2 no-rent listings + favors at their posted value (15 SC + 30 USD + 2 unpriced) + 2 pending fiat
+    // recurring lines (one RACT point each) + 30 declared SC. The 99 in an unweighted type is excluded,
+    // not counted.
+    expect(result.projectedValueIndex).toBe(100 + 3 + 250 + 1200 + 2 + 15 + 30 + 2 + 2 + 30);
     expect(result.perSource.map((s) => s.pluginSlug)).toEqual(PROJECTION_SOURCES.map((s) => s.pluginSlug));
   });
 
   it('reports the number of open posts behind the figure', async () => {
     const result = await projectOpenValueIndex();
     // 1 priced TrustTransport group + 3 free + 2 quote groups (one priced, one in an unweighted type —
-    // still a real open post) + 1 priced listing group + 2 no-rent listings + 4 favors + 2 pending fiat
-    // + 1 SC group.
-    expect(result.openPostCount).toBe(1 + 3 + 2 + 1 + 2 + 4 + 2 + 1);
+    // still a real open post) + 1 priced listing group + 2 no-rent listings + 2 priced favor groups +
+    // 2 unpriced favors + 2 pending fiat + 1 SC group.
+    expect(result.openPostCount).toBe(1 + 3 + 2 + 1 + 2 + 2 + 2 + 2 + 1);
   });
 
   it('surfaces a value type with no contribution weight instead of zeroing it', async () => {
@@ -108,5 +117,15 @@ describe('projectOpenValueIndex', () => {
     // rent, because the months after the first are declared in Recurring Activity, not counted here.
     expect(lighthouse?.valueIndex).toBe(1202);
     expect(lighthouse?.openCount).toBe(3);
+  });
+
+  it('projects a priced favor at its posted value, and an unpriced one at one point', async () => {
+    const result = await projectOpenValueIndex();
+    const socketRelay = result.perSource.find((s) => s.pluginSlug === 'socket-relay');
+    // 15 offered ServiceCredits + 30 offered USD + 2 favors with no named value. Before issue #120's
+    // optional price columns were folded in, every favor counted one point regardless of its posted
+    // value, which under-read the board.
+    expect(socketRelay?.valueIndex).toBe(15 + 30 + 2);
+    expect(socketRelay?.openCount).toBe(4);
   });
 });

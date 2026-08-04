@@ -275,6 +275,7 @@ Result: web ☐
 - The sentence says the number is what open posts would add if they all closed, that most posts never close, and that it is not part of the Community Value Index and is not money.
 - The hero index figure does **not** include the projected number — the two figures move independently.
 - After a post closes, the projected figure goes down and the hero index goes up. The post is never counted in both at once.
+- A post that names an offered value moves both figures by that value, not by 1 — a SocketRelay favor offering 15 ServiceCredits adds 15 to "Value waiting to happen" while open and 15 to the hero index when it closes successfully. A post with no named value (or Free/Barter) moves each figure by one point.
 - In the response body, the projected number appears only under `projection`; the `metrics` array contains no `gdp_projected_value_index` row and no projected value.
 - Each per-app row shows a count of posts still open, and rows with nothing open are not listed.
 

@@ -89,13 +89,19 @@ const SOURCES = [
             GROUP BY 1`,
   },
   {
-    // SocketRelay favors: mutual aid with no per-favor price, so each successfully-completed favor counts
-    // as one FREE exchange (by count). The standalone SocketRelay SC transfer route is intentionally not
-    // also counted here to avoid double-counting a single favor.
+    // SocketRelay favors: mutual aid, but a post may name an offered value (issue #120). Each
+    // successfully-completed favor is recognized at its request's posted value — a priced post at
+    // price_amount in price_currency, a post with no named value (or an amount-less type: Free, Barter)
+    // as one FREE exchange by count. The standalone SocketRelay SC transfer route is intentionally not
+    // also counted here to avoid double-counting a single favor. Mirrors socketRelayFavorSource in
+    // packages/web/lib/gdp/recognition.ts.
     pluginSlug: 'socket-relay',
-    sql: `SELECT 'FREE' AS currency_code, COUNT(*)::numeric AS total
-            FROM socket_relay_fulfillments
-            WHERE close_reason = 'successful'`,
+    sql: `SELECT COALESCE(r.price_currency, 'FREE') AS currency_code,
+                 SUM(CASE WHEN r.price_amount IS NULL THEN 1 ELSE r.price_amount END)::numeric AS total
+            FROM socket_relay_fulfillments f
+            JOIN socket_relay_requests r ON r.id = f.request_id
+            WHERE f.close_reason = 'successful'
+            GROUP BY 1`,
   },
   {
     // Recurring Activity — fiat lines (issue #885): self-declared, counterparty-CONFIRMED ongoing peer
