@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Repeat, Users, Zap } from 'lucide-react';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { RefreshButton } from '@/components/shared/refresh-button';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 // Admin dark palette (rule 131) with the Recurring Activity accent.
 const BG = '#0F1117';
@@ -82,20 +83,27 @@ export function RecurringActivityAdminShell() {
     setError(null);
     try {
       const res = await fetch('/api/recurring-activity/admin/review', { cache: 'no-store' });
+      if (!res.ok) {
+        // Operator surface: show what the route said, with its status, rather than a fixed sentence.
+        setError(await responseFailureText(res, 'Could not load the review.'));
+        return;
+      }
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         message?: string;
         review?: Review;
         names?: Record<string, string | null>;
       };
-      if (!res.ok || !data.ok || !data.review) {
-        setError(data.message ?? 'Could not load the review.');
+      if (!data.ok || !data.review) {
+        setError(data.message ?? 'Could not load the review: the response carried no review.');
         return;
       }
       setReview(data.review);
       setNames(data.names ?? {});
-    } catch {
-      setError('Could not load the review.');
+    } catch (caught) {
+      // The request never answered, so there is no server text — name the reason here and send the
+      // caught value to the error report rather than dropping it.
+      setError(failureText(caught, { area: 'recurring-activity', op: 'admin_review_load', fallback: 'Could not load the review.' }));
     } finally {
       if (initial) setLoading(false);
     }

@@ -94,6 +94,39 @@ function PendingPane({ title }: { title: string }) {
   );
 }
 
+/**
+ * "Is this ongoing?" under a favor conversation. A favor is often not a one-off — the same neighbor
+ * collects the same prescription every month. Shown on the live conversation as well as on one closed
+ * successfully, because that is where the relationship is and the member usually knows it is standing
+ * while it is happening. Not on a canceled or unsuccessful close: that is not an arrangement. Its own
+ * component so ChatPane stays a layout, not a decision tree (rule 116).
+ */
+function FavorRecurringPrompt({
+  selected,
+  isRequester,
+  accent,
+}: {
+  selected: SrFulfillment;
+  isRequester: boolean;
+  accent: string;
+}) {
+  const isStandingCandidate =
+    selected.status === "active" || (selected.status === "closed" && selected.closeReason === "successful");
+  if (!isStandingCandidate) return null;
+  return (
+    <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+      <MarkRecurringControl
+        counterpartyUserId={isRequester ? selected.fulfillerUserId : selected.requesterUserId}
+        counterpartyName={isRequester ? selected.fulfillerUsername : selected.requesterUsername}
+        originPlugin="socket-relay"
+        sector="favor"
+        sectorLabel="a favor like this one"
+        accent={accent}
+      />
+    </div>
+  );
+}
+
 function ChatPane({
   selected,
   isRequester,
@@ -146,23 +179,7 @@ function ChatPane({
           <div style={{ flex: 1 }} />
         )}
       </div>
-      {/* A favor is often not a one-off — the same neighbor collects the same prescription every
-          month. The prompt sits on the live conversation as well as on a favor already closed
-          successfully, because that is where the relationship is and the member usually knows it is
-          standing while it is happening. Not on a canceled or unsuccessful close — that is not an
-          arrangement. */}
-      {selected.status === "active" || (selected.status === "closed" && selected.closeReason === "successful") ? (
-        <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          <MarkRecurringControl
-            counterpartyUserId={isRequester ? selected.fulfillerUserId : selected.requesterUserId}
-            counterpartyName={isRequester ? selected.fulfillerUsername : selected.requesterUsername}
-            originPlugin="socket-relay"
-            sector="favor"
-            sectorLabel="a favor like this one"
-            accent={t.ACCENT}
-          />
-        </div>
-      ) : null}
+      <FavorRecurringPrompt selected={selected} isRequester={isRequester} accent={t.ACCENT} />
       <ResolveBar selected={selected} isRequester={isRequester} resolving={resolving} onResolve={onResolve} />
     </div>
   );

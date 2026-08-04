@@ -193,6 +193,16 @@ function FoundationTabContent(props: FoundationMainScreenProps) {
   );
 }
 
+// The other party on a Direct Line, for the "Is this ongoing?" prompt — the provider, and only when
+// the viewer is not that provider (a provider is not offered a standing arrangement with themselves).
+// Null hides the prompt.
+function directLineCounterparty(providerUserId: string | null | undefined, viewerUserId: string | null): string | null {
+  if (!providerUserId || providerUserId === viewerUserId) {
+    return null;
+  }
+  return providerUserId;
+}
+
 export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: boolean; initialProviderId?: string } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -371,11 +381,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
       <DirectLineFromQuote
         credentials={activeDirectLine.credentials}
         subtitle={activeDirectLine.subtitle}
-        counterpartyUserId={
-          activeDirectLine.providerUserId && activeDirectLine.providerUserId !== viewerUserId
-            ? activeDirectLine.providerUserId
-            : null
-        }
+        counterpartyUserId={directLineCounterparty(activeDirectLine.providerUserId, viewerUserId)}
         onBack={() => { setActiveDirectLine(null); setTab("quotes"); }}
       />,
     );
@@ -388,11 +394,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
         threadId={quoteDirectLine.threadId}
         subtitle={quoteDirectLine.subtitle}
         onBack={() => setQuoteDirectLine(null)}
-        counterpartyUserId={
-          quoteDirectLine.providerUserId && quoteDirectLine.providerUserId !== viewerUserId
-            ? quoteDirectLine.providerUserId
-            : null
-        }
+        counterpartyUserId={directLineCounterparty(quoteDirectLine.providerUserId, viewerUserId)}
       />,
     );
   }

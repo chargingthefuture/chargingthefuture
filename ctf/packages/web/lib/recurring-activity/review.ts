@@ -137,14 +137,8 @@ export function findFastConfirmations(edges: ActiveEdge[]): FastConfirmation[] {
   return fast.sort((a, b) => a.secondsToConfirm - b.secondsToConfirm);
 }
 
-/**
- * Small groups whose confirmed arrangements point at each other. Built by walking the graph into
- * connected groups, then keeping the ones that are both SMALL (at most MAX_CLUSTER_SIZE members) and
- * LOOPED (at least as many arrangements as members, which a simple chain can never have). That
- * combination is the "same handful of people confirming each other" shape; a big community and a
- * simple chain of introductions both fall out.
- */
-export function findTightClusters(edges: ActiveEdge[]): TightCluster[] {
+/** Every member as a key, mapped to everyone they hold a confirmed arrangement with. */
+function buildNeighborMap(edges: ActiveEdge[]): Map<string, Set<string>> {
   const neighbors = new Map<string, Set<string>>();
   const addNeighbor = (from: string, to: string) => {
     const set = neighbors.get(from) ?? new Set<string>();
@@ -155,29 +149,48 @@ export function findTightClusters(edges: ActiveEdge[]): TightCluster[] {
     addNeighbor(edge.ownerUserId, edge.counterpartyUserId);
     addNeighbor(edge.counterpartyUserId, edge.ownerUserId);
   }
+  return neighbors;
+}
 
+/** Everyone reachable from `start` by any chain of arrangements — one connected group. */
+function collectGroup(start: string, neighbors: Map<string, Set<string>>, seen: Set<string>): string[] {
+  const group: string[] = [];
+  const queue = [start];
+  seen.add(start);
+  while (queue.length > 0) {
+    const current = queue.shift() as string;
+    group.push(current);
+    for (const next of neighbors.get(current) ?? []) {
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push(next);
+    }
+  }
+  return group;
+}
+
+/** Count each arrangement inside a group once, not once per endpoint. */
+function countArrangementsWithin(group: string[], edges: ActiveEdge[]): number {
+  const members = new Set(group);
+  return edges.filter((e) => members.has(e.ownerUserId) && members.has(e.counterpartyUserId)).length;
+}
+
+/**
+ * Small groups whose confirmed arrangements point at each other. Built by walking the graph into
+ * connected groups, then keeping the ones that are both SMALL (at most MAX_CLUSTER_SIZE members) and
+ * LOOPED (at least as many arrangements as members, which a simple chain can never have). That
+ * combination is the "same handful of people confirming each other" shape; a big community and a
+ * simple chain of introductions both fall out.
+ */
+export function findTightClusters(edges: ActiveEdge[]): TightCluster[] {
+  const neighbors = buildNeighborMap(edges);
   const seen = new Set<string>();
   const clusters: TightCluster[] = [];
   for (const start of neighbors.keys()) {
     if (seen.has(start)) continue;
-    const group: string[] = [];
-    const queue = [start];
-    seen.add(start);
-    while (queue.length > 0) {
-      const current = queue.shift() as string;
-      group.push(current);
-      for (const next of neighbors.get(current) ?? []) {
-        if (seen.has(next)) continue;
-        seen.add(next);
-        queue.push(next);
-      }
-    }
+    const group = collectGroup(start, neighbors, seen);
     if (group.length < 3 || group.length > MAX_CLUSTER_SIZE) continue;
-    const members = new Set(group);
-    // Count each arrangement once, not once per endpoint.
-    const arrangementCount = edges.filter(
-      (e) => members.has(e.ownerUserId) && members.has(e.counterpartyUserId),
-    ).length;
+    const arrangementCount = countArrangementsWithin(group, edges);
     const density = arrangementCount / group.length;
     if (density < 1) continue;
     clusters.push({ memberUserIds: [...group].sort(), arrangementCount, density });

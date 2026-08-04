@@ -76,6 +76,46 @@ function parseScValue(raw: unknown): { error: CreateDeny } | { data: number | nu
   return { data: parsed };
 }
 
+// The app a declaration was made from, when the member used that app's inline prompt instead of the
+// plugin's own form. Absent is fine; an unrecognized value is not, because the value decides how GDP
+// recognizes the line. Its own parser so the body validator stays one decision per field.
+function parseOriginPlugin(raw: unknown): { error: CreateDeny } | { data: string | undefined } {
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  if (!value) {
+    return { data: undefined };
+  }
+  if (!RECURRING_ACTIVITY_ORIGIN_PLUGINS.includes(value)) {
+    return {
+      error: {
+        reason: 'invalid_origin_plugin',
+        message: `originPlugin must be one of: ${RECURRING_ACTIVITY_ORIGIN_PLUGINS.join(', ')}.`,
+      },
+    };
+  }
+  return { data: value };
+}
+
+// The three fixed-vocabulary fields, checked in one place. Each is a plain list membership test, so
+// keeping them together leaves the validator reading as a sequence of steps rather than a wall of ifs.
+function checkEnumFields(body: Record<string, unknown>): CreateDeny | null {
+  if (!RECURRING_ACTIVITY_SECTORS.includes(body.sector as RecurringActivitySector)) {
+    return { reason: 'invalid_sector', message: `sector must be one of: ${RECURRING_ACTIVITY_SECTORS.join(', ')}.` };
+  }
+  if (!RECURRING_ACTIVITY_CADENCES.includes(body.cadence as RecurringActivityCadence)) {
+    return { reason: 'invalid_cadence', message: `cadence must be one of: ${RECURRING_ACTIVITY_CADENCES.join(', ')}.` };
+  }
+  if (
+    body.visibility !== undefined &&
+    !RECURRING_ACTIVITY_VISIBILITY_VALUES.includes(body.visibility as RecurringActivityVisibility)
+  ) {
+    return {
+      reason: 'invalid_visibility',
+      message: `visibility must be one of: ${RECURRING_ACTIVITY_VISIBILITY_VALUES.join(', ')}.`,
+    };
+  }
+  return null;
+}
+
 // Validate the create-activity body. Returns a discriminated result so the caller keeps TypeScript
 // narrowing on the validated fields and records the deny audit row itself on failure.
 function validateCreateBody(body: Record<string, unknown>): { error: CreateDeny } | { data: ValidatedCreateBody } {
@@ -88,20 +128,12 @@ function validateCreateBody(body: Record<string, unknown>): { error: CreateDeny 
   if (!counterpartyUserId) {
     return { error: { reason: 'missing_counterparty', message: 'counterpartyUserId is required.' } };
   }
-  if (!RECURRING_ACTIVITY_SECTORS.includes(sector as RecurringActivitySector)) {
-    return { error: { reason: 'invalid_sector', message: `sector must be one of: ${RECURRING_ACTIVITY_SECTORS.join(', ')}.` } };
-  }
   if (!currencyCode) {
     return { error: { reason: 'missing_currency', message: 'currencyCode is required.' } };
   }
-  if (!RECURRING_ACTIVITY_CADENCES.includes(cadence as RecurringActivityCadence)) {
-    return { error: { reason: 'invalid_cadence', message: `cadence must be one of: ${RECURRING_ACTIVITY_CADENCES.join(', ')}.` } };
-  }
-  if (
-    visibility !== undefined &&
-    !RECURRING_ACTIVITY_VISIBILITY_VALUES.includes(visibility as RecurringActivityVisibility)
-  ) {
-    return { error: { reason: 'invalid_visibility', message: `visibility must be one of: ${RECURRING_ACTIVITY_VISIBILITY_VALUES.join(', ')}.` } };
+  const enumDeny = checkEnumFields(body);
+  if (enumDeny) {
+    return { error: enumDeny };
   }
 
   const scValueResult = parseScValue(body.scValue);
@@ -109,14 +141,9 @@ function validateCreateBody(body: Record<string, unknown>): { error: CreateDeny 
     return scValueResult;
   }
 
-  const rawOrigin = typeof body.originPlugin === 'string' ? body.originPlugin.trim() : '';
-  if (rawOrigin && !RECURRING_ACTIVITY_ORIGIN_PLUGINS.includes(rawOrigin)) {
-    return {
-      error: {
-        reason: 'invalid_origin_plugin',
-        message: `originPlugin must be one of: ${RECURRING_ACTIVITY_ORIGIN_PLUGINS.join(', ')}.`,
-      },
-    };
+  const originResult = parseOriginPlugin(body.originPlugin);
+  if ('error' in originResult) {
+    return originResult;
   }
 
   return {
@@ -127,7 +154,7 @@ function validateCreateBody(body: Record<string, unknown>): { error: CreateDeny 
       cadence: cadence as RecurringActivityCadence,
       visibility: visibility as RecurringActivityVisibility | undefined,
       scValue: scValueResult.data,
-      originPlugin: rawOrigin || undefined,
+      originPlugin: originResult.data,
     },
   };
 }

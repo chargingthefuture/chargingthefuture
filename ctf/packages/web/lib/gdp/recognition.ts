@@ -362,6 +362,12 @@ export const RECURRING_ACTIVITY_COUNT_UNIT = 'RACT';
  * the months that follow, so the declared value there is the only record of them. A line declared in the
  * Recurring Activity plugin itself has no origin and is counted by value as before.
  */
+/** A SUM/COUNT read back as a number, with a non-finite or missing result treated as zero. */
+function positiveTotal(row: { total: string | null } | undefined): number {
+  const value = Number(row?.total ?? 0);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
 export const recurringActivitySource: RecognitionSource = {
   pluginSlug: 'recurring-activity',
   label: 'Recurring peer activities (confirmed)',
@@ -394,15 +400,12 @@ export const recurringActivitySource: RecognitionSource = {
       ),
     ]);
     const volumes: CurrencyVolume[] = [];
-    const fiat = Number(fiatCount.rows[0]?.total ?? 0);
-    const relationshipsOnly = Number(perOccurrenceScCount.rows[0]?.total ?? 0);
-    const countedByRelationship =
-      (Number.isFinite(fiat) ? fiat : 0) + (Number.isFinite(relationshipsOnly) ? relationshipsOnly : 0);
+    const countedByRelationship = positiveTotal(fiatCount.rows[0]) + positiveTotal(perOccurrenceScCount.rows[0]);
     if (countedByRelationship > 0) {
       volumes.push({ amount: countedByRelationship, currencyCode: RECURRING_ACTIVITY_COUNT_UNIT });
     }
-    const sc = Number(scValue.rows[0]?.total ?? 0);
-    if (Number.isFinite(sc) && sc > 0) {
+    const sc = positiveTotal(scValue.rows[0]);
+    if (sc > 0) {
       volumes.push({ amount: sc, currencyCode: 'SC' });
     }
     return volumes;

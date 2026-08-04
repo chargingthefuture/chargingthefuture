@@ -2,6 +2,7 @@
 
 import { Repeat } from 'lucide-react';
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 /**
  * "Is this ongoing?" — the inline way to record an ongoing arrangement with the member you are already
@@ -159,8 +160,14 @@ export function MarkRecurringControl({
         headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
         body: JSON.stringify(body),
       });
+      if (!res.ok) {
+        // Member surface: show what the route said (it explains itself — an unknown member, a fiat
+        // line carrying an amount), and keep the plain sentence only when the body carried nothing.
+        setError(await responseFailureText(res, 'That could not be recorded. Try again.', 'member'));
+        return;
+      }
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };
-      if (!res.ok || !data.ok) {
+      if (!data.ok) {
         setError(data.message ?? 'That could not be recorded. Try again.');
         return;
       }
@@ -169,8 +176,16 @@ export function MarkRecurringControl({
       existingCounterpartiesPromise = null;
       setRecorded(true);
       setOpen(false);
-    } catch {
-      setError('That could not be recorded. Try again.');
+    } catch (caught) {
+      // The request never answered. A member keeps the plain sentence — no stack, no vendor text —
+      // while the caught value goes to the error report so the reason is not lost.
+      setError(failureText(caught, {
+        area: 'recurring-activity',
+        op: 'inline_declare',
+        fallback: 'That could not be recorded. Try again.',
+        audience: 'member',
+        extra: { originPlugin },
+      }));
     } finally {
       setSubmitting(false);
     }
@@ -211,13 +226,75 @@ export function MarkRecurringControl({
     );
   }
 
+  return (
+    <RecurringDetailsForm
+      accent={accent}
+      withWhom={withWhom}
+      sectorLabel={sectorLabel}
+      cadence={cadence}
+      onCadence={setCadence}
+      currencies={currencies}
+      currencyCode={currencyCode}
+      onCurrencyCode={setCurrencyCode}
+      showsScValue={showsScValue}
+      scValue={scValue}
+      onScValue={setScValue}
+      submitting={submitting}
+      error={error}
+      onSubmit={() => { void submit(); }}
+      onCancel={() => { setOpen(false); setError(null); }}
+    />
+  );
+}
+
+/**
+ * The expanded form: how often, how it is settled, and an optional declared value for a ServiceCredits
+ * line. Its own component so the control above stays a small state machine — collapsed, expanded,
+ * recorded — rather than a component that also renders a form (rule 116).
+ *
+ * A money arrangement has no amount field at all, and says so: the platform holds no recurring money
+ * figures, and the absence has to be visible rather than implied.
+ */
+function RecurringDetailsForm({
+  accent,
+  withWhom,
+  sectorLabel,
+  cadence,
+  onCadence,
+  currencies,
+  currencyCode,
+  onCurrencyCode,
+  showsScValue,
+  scValue,
+  onScValue,
+  submitting,
+  error,
+  onSubmit,
+  onCancel,
+}: {
+  accent: string;
+  withWhom: string;
+  sectorLabel: string;
+  cadence: Cadence;
+  onCadence: (cadence: Cadence) => void;
+  currencies: Currency[];
+  currencyCode: string;
+  onCurrencyCode: (code: string) => void;
+  showsScValue: boolean;
+  scValue: string;
+  onScValue: (value: string) => void;
+  submitting: boolean;
+  error: string | null;
+  onSubmit: () => void;
+  onCancel: () => void;
+}) {
   const fieldStyle: CSSProperties = {
     width: '100%', padding: '9px 10px', borderRadius: 8, fontSize: 13,
     background: 'rgba(255,255,255,0.04)', border: `1px solid ${accent}30`, color: 'inherit',
   };
 
   return (
-    <div style={{ padding: 14, borderRadius: 12, border: `1px solid ${accent}30`, background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: 10, ...style }}>
+    <div style={{ padding: 14, borderRadius: 12, border: `1px solid ${accent}30`, background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: 10,  }}>
       <div style={{ fontSize: 13, fontWeight: 700 }}>Record this as ongoing</div>
       <div style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.5 }}>
         An ongoing arrangement with {withWhom} for {sectorLabel}. {withWhom} has to confirm it before it
@@ -226,7 +303,7 @@ export function MarkRecurringControl({
 
       <label style={{ fontSize: 12, opacity: 0.75 }}>
         How often
-        <select value={cadence} onChange={(e) => setCadence(e.target.value as Cadence)} style={{ ...fieldStyle, marginTop: 5 }}>
+        <select value={cadence} onChange={(e) => onCadence(e.target.value as Cadence)} style={{ ...fieldStyle, marginTop: 5 }}>
           {CADENCES.map((c) => (
             <option key={c} value={c}>{CADENCE_LABEL[c]}</option>
           ))}
@@ -235,7 +312,7 @@ export function MarkRecurringControl({
 
       <label style={{ fontSize: 12, opacity: 0.75 }}>
         Settled in
-        <select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)} style={{ ...fieldStyle, marginTop: 5 }}>
+        <select value={currencyCode} onChange={(e) => onCurrencyCode(e.target.value)} style={{ ...fieldStyle, marginTop: 5 }}>
           {currencies.map((c) => (
             <option key={c.code} value={c.code}>{c.name ? `${c.name} (${c.code})` : c.code}</option>
           ))}
@@ -249,7 +326,7 @@ export function MarkRecurringControl({
             type="number"
             min="0"
             value={scValue}
-            onChange={(e) => setScValue(e.target.value)}
+            onChange={(e) => onScValue(e.target.value)}
             placeholder="e.g. 50"
             style={{ ...fieldStyle, marginTop: 5 }}
           />
@@ -265,7 +342,7 @@ export function MarkRecurringControl({
       <div style={{ display: 'flex', gap: 8 }}>
         <button
           type="button"
-          onClick={() => { void submit(); }}
+          onClick={onSubmit}
           disabled={submitting || currencyCode === ''}
           style={{
             flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', background: accent, color: '#000',
@@ -276,7 +353,7 @@ export function MarkRecurringControl({
         </button>
         <button
           type="button"
-          onClick={() => { setOpen(false); setError(null); }}
+          onClick={onCancel}
           style={{
             padding: '9px 14px', borderRadius: 8, background: 'transparent', border: `1px solid ${accent}30`,
             color: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer',

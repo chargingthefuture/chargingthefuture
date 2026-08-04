@@ -45,6 +45,56 @@ function RailSelector({ rail, onChange }: { rail: Rail; onChange: (next: Rail) =
   );
 }
 
+// Whether the Send button is live: not already in flight, a recipient typed, and an amount that reads
+// as a positive number. Named so the component body states the rule once instead of carrying it inline.
+function isSendable({
+  submitting,
+  recipient,
+  amount,
+  numeric,
+}: {
+  submitting: boolean;
+  recipient: string;
+  amount: string;
+  numeric: number;
+}): boolean {
+  if (submitting) return false;
+  if (recipient.trim().length === 0 || amount.length === 0) return false;
+  return !Number.isNaN(numeric) && numeric > 0;
+}
+
+// Send the transfer and hand back the recipient id the SERVER resolved — the box takes a username, and
+// the "Is this ongoing?" prompt needs a real member id to name. Throws with the route's own message so
+// the caller shows what actually failed rather than a fixed sentence.
+async function postTransfer({
+  recipient,
+  amount,
+  rail,
+}: {
+  recipient: string;
+  amount: number;
+  rail: Rail;
+}): Promise<string | null> {
+  const res = await fetch("/api/service-credits/transfers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+    body: JSON.stringify({
+      recipientUserId: recipient,
+      amount,
+      idempotencyKey: idempotencyKey(),
+      ...(rail === "mutual_credit" ? { rail } : {}),
+    }),
+  });
+  const payload = (await res.json().catch(() => ({}))) as {
+    message?: string;
+    transfer?: { recipientUserId?: string };
+  };
+  if (!res.ok) {
+    throw new Error(payload.message ?? "Failed to create transfer.");
+  }
+  return payload.transfer?.recipientUserId ?? null;
+}
+
 function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () => Promise<void> }) {
   const { theme } = useTheme();
   const t = getServiceCreditsTokens(theme);
@@ -60,7 +110,7 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
   const [sentToUserId, setSentToUserId] = useState<string | null>(null);
 
   const numeric = Number(amount);
-  const canSend = !submitting && recipient.trim().length > 0 && amount.length > 0 && !Number.isNaN(numeric) && numeric > 0;
+  const canSend = isSendable({ submitting, recipient, amount, numeric });
 
   async function send() {
     setSubmitting(true);
@@ -70,28 +120,12 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
       // The balance rail keeps the client-side guard. The mutual-credit rail is allowed to go
       // negative up to the member's limit, so we do not block here — the server decides.
       if (rail === "balance" && numeric > (wallet?.availableBalance ?? 0)) throw new Error("Insufficient balance");
-      const res = await fetch("/api/service-credits/transfers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({
-          recipientUserId: recipient.trim(),
-          amount: numeric,
-          idempotencyKey: idempotencyKey(),
-          ...(rail === "mutual_credit" ? { rail } : {}),
-        }),
-      });
-      const payload = (await res.json().catch(() => ({}))) as {
-        message?: string;
-        transfer?: { recipientUserId?: string };
-      };
-      if (!res.ok) {
-        throw new Error(payload.message ?? "Failed to create transfer.");
-      }
+      const recipientUserId = await postTransfer({ recipient: recipient.trim(), amount: numeric, rail });
       await onSent();
       setSuccess(true);
       // The server resolves a username to a real member id, so read it back rather than reusing what
       // was typed in the box.
-      setSentToUserId(payload.transfer?.recipientUserId ?? null);
+      setSentToUserId(recipientUserId);
       setRecipient("");
       setAmount("");
       setRail("balance");
