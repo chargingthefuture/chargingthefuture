@@ -51,30 +51,3 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: lighthouse
-    command: lighthouse.block.create
-    commandVersion: 1.0.0
-    purpose: user_safety_controls
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-      evidence:
-        roleCheck: pass_or_fail
-        selfBlockCheck: pass_or_fail
-        safetyPolicyCheck: pass_or_fail
-    dataClassesAccessed:
-      - block_relation_metadata
-      - safety_case_metadata
-    targetContext:
-      workspaceId: workspace_identifier
-      blockId: block_identifier
-      blockedUserId: principal_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class

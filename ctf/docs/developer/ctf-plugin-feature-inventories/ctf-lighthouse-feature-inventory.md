@@ -114,11 +114,32 @@ longer a precondition for browsing, hosting, or matching.
    - `pending`, `accepted`, `rejected`, `canceled`, `completed`.
 7. Duplicate active/pending request constraints remain required.
 
-### 1.6 Blocks (User Safety)
+### 1.6 Blocks (User Safety) — served by the product-wide member block
 
-1. `lighthouse_blocks` is in required v1 parity scope.
-2. User-level block create/check/list/delete behaviors must be implemented through policy-controlled plugin contracts.
-3. Block behavior must be reflected in match and related interaction surfaces where applicable.
+LightHouse does not have its own blocking feature. Blocking is one product-wide thing a member does
+once, from anywhere, and it holds everywhere — see §1.6 of `ctf-non-plugin-feature-inventory.md` for
+the model, the routes, and the manage-list. LightHouse's job is to honor it:
+
+1. **Block a host from the listing.** The listing detail carries the shared "Block member" action
+   (`components/blocks/block-member-button.tsx`, `POST /api/account/blocks`), shown on any listing
+   that is not the member's own. It is where a seeker actually meets a host, so it is where blocking
+   belongs. The dialog carries the same optional safety escalation as everywhere else.
+2. **A blocked host's listings are hidden.** `GET /api/lighthouse/properties` passes the browsing
+   member to `listProperties`, which leaves out any listing whose host is blocked in either
+   direction. Blocking from the listing detail sends the member back to browse and re-reads the list,
+   so the blocked host's places disappear straight away.
+3. **A blocked pair cannot request a stay.** Creating a match request checks `member_blocks` in both
+   directions inside the same transaction and fails with `blocked_pair` (403). The check also still
+   reads the plugin's older `lighthouse_blocks` table so pre-existing rows keep working. The refusal
+   message is deliberately neutral — "This listing is not available to you." — because a block is
+   never disclosed to the person who was blocked; it replaced the unreachable-until-now internal
+   wording "Match blocked by pair policy."
+4. **`lighthouse_blocks` is read-only history.** The plugin's own block routes
+   (`GET`/`POST /api/lighthouse/blocks`, `DELETE …/blocks/[blockedUserId]`, `GET …/blocks/check`)
+   were removed on 2026-08-03: nothing ever called them, so no member could create a LightHouse
+   block, while the product-wide block they *were* using went unenforced here. The table is kept and
+   still read by the match-request check (and still cleared on account deletion), but nothing writes
+   it any more.
 
 ## 2) Admin Features
 
@@ -182,14 +203,12 @@ longer a precondition for browsing, hosting, or matching.
 - `PUT /api/lighthouse/admin/matches/:id`
 - `GET /api/lighthouse/admin/audit-events` — admin-gated (`requireLighthouseAdminAccess`) list of audit-trail rows (`listLighthouseAuditEvents`, `?limit=` default 100), reading `lighthouse_admin_audit_trail`.
 
-### 3.5 Blocks APIs (implemented)
+### 3.5 Blocks APIs — none; LightHouse has no block routes of its own
 
-Implemented and verified against the route handlers (resolves the earlier "contract to be finalized" note):
-
-- `GET /api/lighthouse/blocks` — list the caller's blocks (`listBlocks`). Read-gated.
-- `POST /api/lighthouse/blocks` — create a block (`createBlock`; body `{ blockedUserId, reason? }`; CSRF-guarded; a self-block returns 403; the action is recorded in `lighthouse_admin_audit_trail` via `insertLighthouseAudit`). Returns 201.
-- `DELETE /api/lighthouse/blocks/[blockedUserId]` — remove a block (`removeBlock`; 404 when not found; CSRF-guarded; audited).
-- `GET /api/lighthouse/blocks/check?blockedUserId=` — return `{ blocked }` for whether the pair is blocked in either direction (`isBlockedPair`). Read-gated.
+Blocking runs entirely through the account-level routes (`GET`/`POST /api/account/blocks`,
+`DELETE /api/account/blocks/[blockedUserId]`), documented in §1.6 of
+`ctf-non-plugin-feature-inventory.md`. The four LightHouse-specific block routes that used to be
+listed here were removed on 2026-08-03 — see §1.6 above.
 
 ### 3.6 ServiceCredits
 
@@ -204,7 +223,9 @@ Required entities for parity scope:
    (FK → `currencies(code)`; the currency the rent is listed in). Backfilled to `USD` for existing
    non-null rents; Canadian listings with no cost yet keep NULL.
 3. `lighthouse_matches`
-4. `lighthouse_blocks`
+4. `lighthouse_blocks` — read-only history since 2026-08-03. Nothing writes it any more (the plugin's
+   own block routes were removed); the match-request check still reads it alongside `member_blocks`
+   so rows written before then keep taking effect, and account deletion still clears it.
 5. `lighthouse_property_accepted_currencies` — join (`property_id`, `currency_code` FK →
    `currencies`) listing every currency a property accepts. "Accepts ServiceCredits" is true iff a
    row with `currency_code='SC'` exists here — it is never derived from `rent_currency`.
@@ -261,11 +282,36 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 ## 8) Gaps and Known Technical Debt
 
 1. Host-profile deletion semantics for linked properties/matches follow a defensive cascade; FK-safe contract semantics are documented in code but have not been promoted to an explicit deletion contract.
-2. Blocks route policy-error taxonomy is implemented inline; a shared error-code contract for block flows has not been published.
+2. ~~Blocks route policy-error taxonomy is implemented inline; a shared error-code contract for block flows has not been published.~~ **Closed (2026-08-03):** LightHouse no longer has block routes of its own, so there is no plugin-specific block error taxonomy left to publish. Blocking runs on the account-level routes; the only block-related code left here is the read check on a match request, which returns the existing `blocked_pair` (403).
 3. LightHouse-specific rate-limit and anti-scraping thresholds use shared platform defaults; a plugin-specific hardening contract is a known follow-up.
+4. **Chat threads on an existing match are not re-checked against a later block.** A block stops a
+   *new* stay request and hides the host's listings, but a match that was already accepted keeps its
+   Stream chat channel. Cutting an existing thread when one side blocks the other needs a decision on
+   what happens to the match itself (canceled? left in place, muted?), so it is recorded here rather
+   than guessed at.
 
 ## 9) Change Log
 
+- 2026-08-03: **Blocking a member now actually works in LightHouse; the plugin's own block routes are
+  gone.** LightHouse had a full block backend of its own — create, list, delete, pair-check, audited
+  and CSRF-guarded — that no screen had ever called, so no member could create a LightHouse block and
+  the `lighthouse_blocks` check on a stay request could never fire. Meanwhile the product-wide member
+  block that members *do* use (`member_blocks`, `/api/account/blocks`, shipped on web and Android) was
+  not read here at all: blocking someone left them free to ask to stay at your place, and left their
+  listings sitting in your browse list. Changed: (a) the match-request transaction now checks
+  `member_blocks` in both directions, `UNION ALL` with the legacy `lighthouse_blocks` rows, still
+  throwing `blocked_pair` → 403; (b) `listProperties` takes the browsing member and leaves out
+  listings whose host is blocked either way, wired from `GET /api/lighthouse/properties`; (c) the
+  listing detail carries the shared `BlockMemberButton` (the reusable control that until now was
+  exported but attached to no member surface), and blocking sends the member back to a re-read browse
+  list; (d) removed the four unused routes (`GET`/`POST /api/lighthouse/blocks`,
+  `DELETE …/blocks/[blockedUserId]`, `GET …/blocks/check`), the repository functions behind them
+  (`createBlock`, `listBlocks`, `removeBlock`, `isBlockedPair`, `mapBlock`, `LighthouseBlockRow`), the
+  `LighthouseBlock` type, and the now-unreachable `blockNotFound` / `selfBlock` error codes and their
+  entries in the five route error tables; (e) dropped the `lighthouse.block.create` command from the
+  command, access-policy, and audit contracts; (f) took the four routes off
+  `ctf/scripts/orphan-route-allowlist.json`. `lighthouse_blocks` is kept as read-only history — no
+  schema change, and account deletion still clears it.
 - 2026-08-02: **Deletion burn-down batch 2: matches and blocks join the deletion registry.** On
   account deletion, `lighthouse_matches` rows where the member was the seeker are deleted (their own
   stay requests) and rows where they were the host are pseudonymized (`host_user_id` →
@@ -379,10 +425,11 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
   - Acceptance criteria:
     - FK-safe behavior for linked properties/matches is approved.
     - User-facing outcomes and audit expectations are documented.
-- [ ] Lock blocks policy contract for v1.
-  - Acceptance criteria:
-    - Block lifecycle operations (create/check/list/delete) are approved.
-    - Match/interactions behavior under block state is explicitly documented.
+- [x] Lock blocks policy contract for v1. **Done 2026-08-03 — the answer is that LightHouse has no
+      block contract of its own.** Create/list/delete belong to the product-wide member block
+      (§1.6 of `ctf-non-plugin-feature-inventory.md`); what LightHouse owns is honoring it, written
+      out in §1.6 above: listings hidden from a blocked host, and `blocked_pair` (403) on a stay
+      request between a blocked pair.
 - [ ] Lock web+android parity obligations for critical LightHouse flows.
   - Acceptance criteria:
     - Critical user/admin/safety flows are served on web (desktop + mobile-responsive); the native Android surface was removed 2026-07-20 (rule 105, PR #1742), so this feature is now web-only.
@@ -412,10 +459,10 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 - [ ] Enforce admin-role plus CSRF controls on admin writes.
   - Acceptance criteria:
     - Admin property/match/announcement mutations reject missing or invalid CSRF tokens.
-- [ ] Implement blocks policy enforcement.
-  - Acceptance criteria:
-    - Block relationships are respected in affected interaction paths.
-    - Policy-deny behavior is deterministic and documented.
+- [x] Implement blocks policy enforcement. **Done 2026-08-03.** The match-request transaction reads
+      `member_blocks` in both directions (plus the legacy `lighthouse_blocks` rows) and throws
+      `blocked_pair` → 403; browse leaves out listings from a blocked host. Deterministic: both are
+      plain SQL checks on the read/write path, not a client-side filter.
 
 ### �� Web Delivery
 
@@ -434,9 +481,9 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 - [ ] Implement admin surface parity.
   - Acceptance criteria:
     - Admin stats, profile views, moderation updates, and announcement management are complete.
-- [ ] Implement blocks UX parity.
-  - Acceptance criteria:
-    - User block create/check/list/delete interactions are accessible and policy-aligned.
+- [x] Implement blocks UX parity. **Done 2026-08-03.** The listing detail carries the shared "Block
+      member" action; the list of who you have blocked, and unblocking, live in one place for the
+      whole product at `/account/blocks` rather than being rebuilt per plugin.
 
 ### �� Android Delivery Parity
 
@@ -446,9 +493,10 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 - [ ] Implement Android parity for required admin flows.
   - Acceptance criteria:
     - In-scope admin moderation outcomes are equivalent to web policy outcomes.
-- [ ] Implement Android parity for blocks behavior.
-  - Acceptance criteria:
-    - Blocks lifecycle and enforcement behavior mirror shared contract outcomes.
+- [x] Implement Android parity for blocks behavior. **Not applicable since 2026-07-20.** LightHouse
+      has no native Android surface (rule 105, PR #1742), so there is nothing to mirror. Android does
+      ship the product-wide block (`packages/mobile/src/features/blocks/`), which is the same block
+      this plugin enforces.
 
 ### �� Security, Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED — see Rule 118.]
 

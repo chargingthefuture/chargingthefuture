@@ -214,11 +214,6 @@
       "reason": "Called by the host platform uptime check, not by app code."
     },
     {
-      "route": "/api/hub/bots",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
-    },
-    {
       "route": "/api/level-up/cohorts/[cohortId]/claim-trainer",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
@@ -280,21 +275,6 @@
     },
     {
       "route": "/api/lighthouse/admin/stats",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
-    },
-    {
-      "route": "/api/lighthouse/blocks/[blockedUserId]",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
-    },
-    {
-      "route": "/api/lighthouse/blocks/check",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
-    },
-    {
-      "route": "/api/lighthouse/blocks",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
     },
