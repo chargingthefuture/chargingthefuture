@@ -139,6 +139,7 @@ web ☐
 **Expected:**
 - The created request card shows a settlement badge that names ServiceCredits (e.g. "SC" or "ServiceCredits") — never a fiat equivalent.
 - "Accepts ServiceCredits" is true only because the `socket_relay_request_accepted_currencies` record was written; this is not derived from `price_currency` alone.
+- On `/apps/gdp`, the "Value waiting to happen" panel's SocketRelay row grows by the posted amount (e.g. +15 for a 15-ServiceCredits post), not by 1; a post with no named value (or Free/Barter) adds one point. When a favor later closes successfully, the same amount leaves the panel and enters the Community Value Index (see GDP-12 in the GDP test script).
 
 web ☐
 

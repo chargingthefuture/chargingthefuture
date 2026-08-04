@@ -180,6 +180,16 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+- 2026-08-04: **Favors now count toward the Community Value Index at the value their post names.** A
+  post can name an offered value since issue #120 (`price_amount`/`price_currency`), but the GDP
+  value layer still counted every SocketRelay favor as one `FREE` point — both the projected
+  open-board figure (open/claimed, unexpired posts) and the real index (favors closed
+  `successful`) — so a post offering 15 ServiceCredits or 30 USD read as 1. Both GDP sources
+  (`ctf/packages/web/lib/gdp/projection.ts`, `ctf/packages/web/lib/gdp/recognition.ts`, mirrored in
+  `ctf/scripts/recognizeGdp.mjs`) now count a priced post at its posted amount in its posted value
+  type and an unpriced or amount-less post (Free, Barter) at one point. Change lives entirely in the
+  GDP plugin's read layer — no SocketRelay schema, route, or contract change; details in the GDP
+  inventory change log.
 
 - 2026-08-03: **A favor that got done can be recorded as ongoing without leaving SocketRelay.** The same
   neighbor collecting the same prescription every month is a standing arrangement, not a string of
