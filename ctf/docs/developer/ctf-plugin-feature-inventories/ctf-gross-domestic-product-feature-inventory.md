@@ -348,6 +348,17 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-08-04: **Both Community Value Index figures now appear in the weekly community-stats draft, via a
+  shared script module.** The weekly community-stats draft generator
+  (`ctf/scripts/generate-community-stats.mjs`, run by `.github/workflows/generate-community-stats.yml`)
+  gained a GDP stat provider reporting the real Community Value Index and the projected "value waiting
+  to happen" figure alongside the SocketRelay/Directory/ServiceCredits aggregates, with not-money
+  wording carried into the fact labels and the drafting prompt. To avoid a third hand-copied set of
+  queries, the recognition source SQL and contribution weights moved out of `scripts/recognizeGdp.mjs`
+  into a shared module `ctf/scripts/lib/gdpValueIndex.mjs` (which also carries a script-side mirror of
+  the projection sources in `packages/web/lib/gdp/projection.ts`); `recognizeGdp.mjs` now imports from
+  it with identical queries, weights, and snapshot-write behavior. Operational scripts only — no app
+  code, schema, route, or contract change; the app-side value layer is untouched.
 - 2026-08-04: **SocketRelay favors now count at the value their post names, in both figures.** A
   SocketRelay post can name an offered value (issue #120: optional `price_amount`/`price_currency`
   on `socket_relay_requests`), but both figures still counted every favor as one `FREE` point — the
