@@ -9,7 +9,6 @@ import {
   LIGHTHOUSE_PROFILE_TYPES,
 } from './constants';
 import type {
-  LighthouseBlock,
   LighthouseMatch,
   LighthouseMatchCreateInput,
   LighthouseMatchUpdateInput,
@@ -83,14 +82,6 @@ type LighthouseMatchRow = {
   created_at: Date | string;
   updated_at: Date | string;
   stream_channel_id: string;
-};
-
-type LighthouseBlockRow = {
-  id: string;
-  blocker_user_id: string;
-  blocked_user_id: string;
-  reason: string | null;
-  created_at: Date | string;
 };
 
 function toIso(value: Date | string): string {
@@ -323,16 +314,6 @@ function mapMatch(row: LighthouseMatchRow): LighthouseMatch {
   };
 }
 
-function mapBlock(row: LighthouseBlockRow): LighthouseBlock {
-  return {
-    id: row.id,
-    blockerUserId: row.blocker_user_id,
-    blockedUserId: row.blocked_user_id,
-    reason: row.reason,
-    createdAtIso: toIso(row.created_at),
-  };
-}
-
 // A budget value is valid when it is absent (null) or a finite, non-negative number.
 function isNonNegativeFiniteOrNull(value: number | null): boolean {
   return value === null || (Number.isFinite(value) && value >= 0);
@@ -505,17 +486,40 @@ export async function deleteProfile(userId: string): Promise<void> {
   });
 }
 
+// Leaves out a listing whose host is blocked in either direction from the viewer. A block hides the
+// person as well as stopping contact (the product-wide model in lib/blocks/repository.ts), so a
+// browse list must not show a blocked person's place. The `IS NULL` arm makes it a no-op when no
+// viewer is passed, so the same SQL still serves a viewer-less read unchanged. `viewer` is the
+// placeholder holding the viewer id — the count and page queries number their arguments differently,
+// so each passes its own.
+function hideBlockedHostsSql(viewer: string): string {
+  return `
+          AND (
+            ${viewer}::text IS NULL
+            OR NOT EXISTS (
+              SELECT 1
+              FROM member_blocks
+              WHERE (blocker_user_id = ${viewer} AND blocked_user_id = lighthouse_properties.host_user_id)
+                 OR (blocker_user_id = lighthouse_properties.host_user_id AND blocked_user_id = ${viewer})
+            )
+          )`;
+}
+
 export async function listProperties(input: {
   page?: number;
   pageSize?: number;
   country?: string;
   city?: string;
   onlyActive?: boolean;
+  // Who is browsing. When set, listings from members they have blocked (or who blocked them) are
+  // left out. Optional so a caller with no signed-in viewer keeps the previous behavior.
+  viewerUserId?: string | null;
 }): Promise<{ items: LighthouseProperty[]; total: number; pagination: { page: number; pageSize: number } }> {
   const paging = normalizePage(input.page, input.pageSize);
   const country = normalizeNullableText(input.country);
   const city = normalizeNullableText(input.city);
   const onlyActive = input.onlyActive !== false;
+  const viewerUserId = normalizeNullableText(input.viewerUserId);
 
   const [countResult, rows] = await Promise.all([
     queryDb<CountRow>(
@@ -525,8 +529,9 @@ export async function listProperties(input: {
         WHERE ($1::boolean = FALSE OR is_active = TRUE)
           AND ($2::text IS NULL OR country = $2)
           AND ($3::text IS NULL OR city = $3)
+          ${hideBlockedHostsSql('$4')}
       `,
-      [onlyActive, country, city],
+      [onlyActive, country, city, viewerUserId],
     ),
     queryDb<LighthousePropertyRow>(
       `
@@ -556,10 +561,11 @@ export async function listProperties(input: {
         WHERE ($1::boolean = FALSE OR is_active = TRUE)
           AND ($2::text IS NULL OR country = $2)
           AND ($3::text IS NULL OR city = $3)
+          ${hideBlockedHostsSql('$6')}
         ORDER BY updated_at DESC
         OFFSET $4 LIMIT $5
       `,
-      [onlyActive, country, city, paging.offset, paging.pageSize],
+      [onlyActive, country, city, paging.offset, paging.pageSize, viewerUserId],
     ),
   ]);
 
@@ -930,21 +936,6 @@ export async function deleteProperty(actorUserId: string, propertyId: string, is
   return result.deleted;
 }
 
-export async function isBlockedPair(userA: string, userB: string): Promise<boolean> {
-  const result = await queryDb<{ found: number }>(
-    `
-      SELECT 1 AS found
-      FROM lighthouse_blocks
-      WHERE (blocker_user_id = $1 AND blocked_user_id = $2)
-         OR (blocker_user_id = $2 AND blocked_user_id = $1)
-      LIMIT 1
-    `,
-    [userA, userB],
-  );
-
-  return result.rows.length > 0;
-}
-
 // Flatten a participant-token result into the three Stream fields returned to the caller, defaulting
 // each to null when no token was issued.
 function buildStreamTokenFields(
@@ -1010,8 +1001,21 @@ export async function createMatchRequest(input: {
       throw new Error('policy_denied');
     }
 
+    // Two block sources, both symmetric — a block in either direction stops the request:
+    //   member_blocks     — the product-wide member block anyone can create from a member surface
+    //                       (lib/blocks/repository.ts). This is the live one. Until this arm was
+    //                       added, blocking someone did not stop them asking to stay at your place.
+    //   lighthouse_blocks — this plugin's older, separate block table. It is read-only now: the
+    //                       routes that wrote it were removed once the product-wide block shipped,
+    //                       so this arm only honors rows written before that (and seed fixtures).
+    // One round trip inside the same transaction as the rest of the create.
     const blocked = await client.query(
       `
+        SELECT 1 AS found
+        FROM member_blocks
+        WHERE (blocker_user_id = $1 AND blocked_user_id = $2)
+           OR (blocker_user_id = $2 AND blocked_user_id = $1)
+        UNION ALL
         SELECT 1 AS found
         FROM lighthouse_blocks
         WHERE (blocker_user_id = $1 AND blocked_user_id = $2)
@@ -1201,52 +1205,6 @@ export async function updateMatch(input: {
 
     return mapMatch(updated.rows[0]);
   });
-}
-
-export async function createBlock(actorUserId: string, blockedUserId: string, reason?: string): Promise<LighthouseBlock> {
-  if (actorUserId === blockedUserId) {
-    throw new Error('self_block');
-  }
-
-  const result = await queryDb<LighthouseBlockRow>(
-    `
-      INSERT INTO lighthouse_blocks (blocker_user_id, blocked_user_id, reason)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (blocker_user_id, blocked_user_id)
-      DO UPDATE SET reason = EXCLUDED.reason
-      RETURNING id, blocker_user_id, blocked_user_id, reason, created_at
-    `,
-    [actorUserId, blockedUserId, normalizeNullableText(reason)],
-  );
-
-  return mapBlock(result.rows[0]);
-}
-
-export async function listBlocks(actorUserId: string): Promise<LighthouseBlock[]> {
-  const result = await queryDb<LighthouseBlockRow>(
-    `
-      SELECT id, blocker_user_id, blocked_user_id, reason, created_at
-      FROM lighthouse_blocks
-      WHERE blocker_user_id = $1
-      ORDER BY created_at DESC
-    `,
-    [actorUserId],
-  );
-
-  return result.rows.map(mapBlock);
-}
-
-export async function removeBlock(actorUserId: string, blockedUserId: string): Promise<boolean> {
-  const result = await queryDb(
-    `
-      DELETE FROM lighthouse_blocks
-      WHERE blocker_user_id = $1
-        AND blocked_user_id = $2
-    `,
-    [actorUserId, blockedUserId],
-  );
-
-  return (result.rowCount ?? 0) > 0;
 }
 
 export async function getLighthouseAdminStats(): Promise<{
