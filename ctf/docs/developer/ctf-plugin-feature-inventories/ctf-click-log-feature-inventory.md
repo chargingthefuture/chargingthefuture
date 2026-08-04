@@ -168,6 +168,23 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-04: **Recorded a known taxonomy gap in the scheme tag list (documentation only).** The
+  owner observed that Color Sensitization is an individual tactic rather than a scheme, and the
+  observation holds list-wide: the entries are not all the same kind of thing. Some are operations
+  with an arc (setup, mechanism, intended end state — `poisoned-well`, `fake-job`, `jinx`,
+  `windfall`, `conspiracy-carousel`, `honey-pot`, `lure-to-location`, `staged-road-rage`,
+  `fabricated-flaw`, `scapegoating-by-proxy`). Some are ambient tactics with no arc, a standing
+  condition nobody is working to conclude (`color-sensitization`, `road-sensitization`,
+  `thats-a-nice`, `staged-narratives`). One is a shape over time rather than an act
+  (`performed-kindness`). This matters beyond naming because ambient tactics are near-continuous
+  and operations are episodic, so ranking tags by raw count places a daily-logged condition above a
+  quarterly operation — true and misleading at once. Deliberately not fixed: nothing consumes tag
+  type today and no logged data exists to distort, so a `kind` field now would be guessing at a
+  shape before seeing one. The trigger to add it is the first tag ranking on real data that
+  misleads; at that point add the field rather than reordering or renaming, since slugs are frozen.
+  Comment recorded above `CLICK_LOG_SCHEME_TAGS` in `lib/click-log/tags.ts`. No code behavior,
+  schema, route, contract, or public-list change.
+
 - 2026-08-04: **New scheme tag: Color Sensitization, plus a correction to The Warm Spell
   (owner-named).** `color-sensitization` — the people around a member all start wearing the same
   color, and it changes on a schedule; the cover story is a fashion trend. The owner reports this
