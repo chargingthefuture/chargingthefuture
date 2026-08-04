@@ -168,6 +168,25 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-04: **New scheme tag: Color Sensitization, plus a correction to The Warm Spell
+  (owner-named).** `color-sensitization` — the people around a member all start wearing the same
+  color, and it changes on a schedule; the cover story is a fashion trend. The owner reports this
+  runs simultaneously across targets who have no connection to each other, which no individual can
+  observe and which only appears in aggregate. That makes it the strongest candidate for showing
+  that cross-member trend reporting finds what one member cannot: several members in different
+  cities logging this tag in the same week is not what a real fashion trend produces. Distinct from
+  `thats-a-nice`, where strangers comment on what the member owns; here the display is on them.
+  The Warm Spell comment was also corrected: the warm phase is the setup for a positive-surface
+  scheme rather than a pause between attacks, so the dangerous moment is the middle of a warm
+  stretch and not its end. Recorded explicitly as the owner's observation of their own case and not
+  as a rule — the owner notes each target gets a variation, that whether the sequencing holds
+  generally is unclear, and that what they see driving the repetition is cost efficiency (reusing
+  plays is cheaper than bespoke operations per target) and plausible deniability. Related structural
+  note from the owner, recorded here rather than as a tag: which group puts a person on the list
+  differs between targets, but the other groups join in regardless, which is consistent with a
+  distributed network rather than one directing body. List-data only: no schema, route, contract, or
+  UI change. Landing `/schemes` mirror in a companion PR.
+
 - 2026-08-04: **New scheme tag: The Warm Spell (owner-named).** `performed-kindness` — weeks or
   months of performed friendliness, then overt harassment resumes. The only scheme in the list
   defined by its shape over time rather than by a single act, and separate from `good-cop-bad-cop`
