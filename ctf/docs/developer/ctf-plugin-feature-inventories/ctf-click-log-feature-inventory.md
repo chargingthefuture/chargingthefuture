@@ -168,6 +168,18 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-04: **New scheme tag: The Warm Spell (owner-named).** `performed-kindness` — weeks or
+  months of performed friendliness, then overt harassment resumes. The only scheme in the list
+  defined by its shape over time rather than by a single act, and separate from `good-cop-bad-cop`
+  on that basis: that one is two people working the same moment, this one is the whole environment
+  alternating and can be the same people doing both. Purpose per the owner: lower the member's
+  guard so new information can be collected, and keep them swinging between relief and dread.
+  Recorded alongside it: alternation is more destabilizing than constant hostility because constant
+  hostility becomes background a person adapts to, and the kind stretches damage the member's
+  ability to report the pattern at all, since bystanders get the line "they were nice to you last
+  month". List-data only: no schema, route, contract, or UI change. Landing `/schemes` mirror in a
+  companion PR.
+
 - 2026-08-04: **Four more scheme tags: The Poisoned Well and the luck-pendulum family (owner-named).**
   `poisoned-well` — an easy-to-recruit newcomer is steered into the member's orbit, gossip about
   that newcomer is staged within their earshot so it reads as coming from the member, and a second

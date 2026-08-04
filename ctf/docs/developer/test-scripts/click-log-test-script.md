@@ -214,3 +214,5 @@ of these, it is already tracked, not a new bug:
 > _Scheme list update (2026-08-04): added "The Pot and Kettle", "Staged Road Rage", "The Insurance Bleed", and "Road Sensitization". List-data only — no test steps changed._
 
 > _Scheme list update (2026-08-04): added "The Poisoned Well", "The Windfall", "The Jinx", and "The Fake Job". List-data only — no test steps changed._
+
+> _Scheme list update (2026-08-04): added "The Warm Spell". List-data only — no test steps changed._

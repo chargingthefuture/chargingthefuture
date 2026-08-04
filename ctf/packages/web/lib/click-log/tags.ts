@@ -145,6 +145,24 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // reach, and the target is worse off than before the move. Can be aimed at the member directly
   // or at someone near them as the bad-luck swing above.
   { slug: 'fake-job', label: 'The Fake Job' },
+  // Named by the owner (2026-08-04). Weeks or months of performed friendliness, then overt
+  // harassment resumes — violence, name-calling, the rest. The only scheme in this list defined by
+  // its shape over time rather than by a single act, which is why it is separate from
+  // `good-cop-bad-cop`: that one is two people working the same moment, this one is the whole
+  // environment alternating, and it can be the same people doing both.
+  //
+  // Owner's read of the purpose, both supported: lower the member's guard so new information can
+  // be collected, and keep them swinging between relief and dread. Two further effects worth
+  // recording. Alternation is more destabilizing than constant hostility, because constant
+  // hostility becomes background a person adapts to and alternation prevents adaptation — this is
+  // intermittent reinforcement, the same mechanism that makes gambling persistent. And the kind
+  // stretches damage the member's ability to report it: they give the member reason to doubt
+  // themselves and give bystanders the line "they were nice to you last month". A member who stays
+  // guarded through the warm phase reads as unreasonable to everyone watching.
+  //
+  // The warm phase is also when `honey-pot` and `poisoned-well` run most easily, since both need
+  // the member receptive to someone new.
+  { slug: 'performed-kindness', label: 'The Warm Spell' },
   // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
   // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
   // description of the scheme (see click-log.incident.create) — that is the intake that names
