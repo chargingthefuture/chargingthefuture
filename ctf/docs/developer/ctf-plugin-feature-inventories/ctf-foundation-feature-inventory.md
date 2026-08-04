@@ -23,6 +23,11 @@ Foundation provides trauma-informed survivors with deterministic access to vette
 5. Connection and quote history lists scoped by actor ownership.
 6. In-app notifications for messages, quote state changes, and missed calls.
 7. Notification preferences and quiet-hour controls.
+8. **Record ongoing work with a provider, without leaving Foundation (2026-08-03).** The Direct Line
+   thread carries an "Is this ongoing?" prompt on the survivor's side: pick how often and how it is
+   settled, and it records an ongoing service arrangement with that provider. The provider confirms it
+   in the Recurring Activity app. A money arrangement records no amount — only that it happens and how
+   often.
 
 ## Admin Features
 
@@ -172,6 +177,19 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 
 ## Change Log
 
+
+- 2026-08-03: **Ongoing work with a provider can be recorded without leaving Foundation.** A one-off
+  engagement is often the start of a standing arrangement — the same electrician every quarter. The
+  shared "Is this ongoing?" prompt (`components/shared/mark-recurring-control.tsx`) now sits on the
+  **Direct Line thread** — the relationship itself, in any lifecycle state — and on the closed-quote row,
+  both offered to the survivor side (the side that would keep calling the same provider) and pre-set to
+  the service sector and that provider. The provider never sees it on their own side, and it hides itself
+  once an arrangement with that member exists, so the thread and the quote row cannot produce two rows. It
+  creates the usual pending Recurring Activity row with `origin_plugin = 'foundation'`. Because Foundation
+  already settles every metered call on its own, a declared ServiceCredits value on one of these lines is
+  recognized by GDP as a relationship rather than counted a second time (see the Recurring Activity
+  inventory, Lifecycle and counting semantics). UI only — no Foundation schema, route, or contract
+  change.
 - 2026-08-02: **Deletion burn-down batch 4.** On account deletion, `foundation_provider_accepted_currencies` is now deleted explicitly — its FK cascade points at `foundation_user_extension`, which is soft-deleted, so the cascade never fired. Capacity policies and their change events are classified retained (admin audit).
 - 2026-07-31: **Stored status value respelled to US English (owner-directed).** `foundation_call_sessions.status` now stores `canceled`; existing rows are migrated by the idempotent US-spelling data migration block at the end of `ctf/schema.sql`. Code, contracts, and docs were renamed in the same PR.
 - 2026-07-29: **Capacity-policy changes are now versioned and audited (issue #1960).** The admin capacity-policy update (`PUT /api/foundation/admin/capacity-policy` → `updateCapacityPolicy`, `lib/foundation/repository.ts`) wrote only the singleton `foundation_capacity_policies` row and audited a bare snapshot — it never produced the `policyVersion`/`activatedAt` its command contract declares, and the `foundation_capacity_policy_events` table the contract's `dataAccess` and the `capacity_policy_event_log` audit reference did not exist. Added that append-only table (`schema.sql` + regenerated `schema.demo.sql`; `id`, monotonic `policy_version`, a snapshot of the five limits + `quota_state`, `changed_by_user_id`, `activated_at`) and made `updateCapacityPolicy` run in a transaction that upserts the policy AND inserts one event (`policy_version = MAX+1`), returning `policyVersion`/`activatedAtIso`. Because the route already spreads the returned policy into both the audit metadata and the response, the audit row and the API response now carry the version + activation time with no route change. `getCapacityPolicy` reports the current version by reading the latest event; `FoundationCapacityPolicy` gained `policyVersion` / `activatedAtIso` (null on a policy never updated). The events table is an admin audit log and is retained (not deleted on account deletion), matching `foundation_admin_audit_trail`. No command/audit contract change was needed — the contracts already declared these. **Parity:** web admin surface (backend/schema).

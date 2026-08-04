@@ -113,6 +113,12 @@ longer a precondition for browsing, hosting, or matching.
 6. Status lifecycle parity target:
    - `pending`, `accepted`, `rejected`, `canceled`, `completed`.
 7. Duplicate active/pending request constraints remain required.
+8. **Record an accepted match as ongoing, without leaving LightHouse (2026-08-03).** An accepted match
+   carries an "Is this ongoing?" prompt: pick how often and how it is settled, and it records an ongoing
+   housing arrangement with the other side of that match. They confirm it in the Recurring Activity app.
+   A money arrangement records no amount — only that it happens and how often. The prompt hides itself
+   when an arrangement with that member is already recorded, so the pair is never recorded twice from
+   two apps.
 
 ### 1.6 Blocks (User Safety) — served by the product-wide member block
 
@@ -292,6 +298,33 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-08-03: **An accepted match can be recorded as ongoing without leaving LightHouse.** Housing is the
+  clearest case of something that carries on month after month, and LightHouse only ever sees the moment
+  the host says yes. The matches tab now shows the shared "Is this ongoing?" prompt
+  (`components/shared/mark-recurring-control.tsx`) on an accepted/completed match, pre-set to the housing
+  sector and to the other side of that match, so the member records the ongoing arrangement right there
+  instead of being sent to the Recurring Activity plugin to search for the same person by hand. It
+  creates the usual pending row, which the other member confirms in that plugin; the row records
+  `origin_plugin = 'lighthouse'`. `LighthouseMatches` gained an optional `viewerUserId` prop (to name the
+  other side); no LightHouse schema, route, or contract change.
+- 2026-08-03: **LightHouse is now a GDP recognition source, and its available homes feed the projected
+  figure (owner decision).** The 2026-07-04 entry below moved *recurring* rent to the Recurring Activity
+  plugin; that stands, and it is precisely why LightHouse can now be recognized without holding a
+  running rent total. An accepted housing arrangement is a real settled exchange, so
+  `lighthouse_matches` in `accepted` or `completed`, joined to its listing, contributes **one month** of
+  `monthly_rent` in `rent_currency` to the Community Value Index (`lighthouse-housing` source in
+  `ctf/packages/web/lib/gdp/recognition.ts` and the mirrored query in `ctf/scripts/recognizeGdp.mjs`).
+  Every month after the first belongs to Recurring Activity, where the pair declares the ongoing
+  relationship, so the two sources cover different periods of the same tenancy and no month is counted
+  twice. A match counts once whether it sits in `accepted` or `completed` — one arrangement, one row. A
+  listing with no priced rent (`monthly_rent` 0/NULL — the host form's "0 for ServiceCredits / free")
+  records no amount anywhere, so an accepted match on one counts as a single FREE exchange rather than
+  an invented amount. Separately, active listings with no accepted match feed the GDP dashboard's
+  projected "Value waiting to happen" figure at the same one-month unit, so a home moves out of the
+  projected number and into the real index the moment a host accepts; pending match requests are not
+  counted on their own (a home with three people asking is still one home). No LightHouse schema,
+  route, or contract change — `monthly_rent`/`rent_currency` remain listing fields and LightHouse still
+  has no settlement table. Recorded in the GDP inventory and in `dashboard.snapshot.get` `dataAccess`.
 - 2026-08-03: **Blocking a member now actually works in LightHouse; the plugin's own block routes are
   gone.** LightHouse had a full block backend of its own — create, list, delete, pair-check, audited
   and CSRF-guarded — that no screen had ever called, so no member could create a LightHouse block and
@@ -311,8 +344,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
   entries in the five route error tables; (e) dropped the `lighthouse.block.create` command from the
   command, access-policy, and audit contracts; (f) took the four routes off
   `ctf/scripts/orphan-route-allowlist.json`. `lighthouse_blocks` is kept as read-only history — no
-  schema change, and account deletion still clears it.
-- 2026-08-02: **Deletion burn-down batch 2: matches and blocks join the deletion registry.** On
+  schema change, and account deletion still clears it.- 2026-08-02: **Deletion burn-down batch 2: matches and blocks join the deletion registry.** On
   account deletion, `lighthouse_matches` rows where the member was the seeker are deleted (their own
   stay requests) and rows where they were the host are pseudonymized (`host_user_id` →
   `deleted_member`; the record stays with the seeker, mirroring the SocketRelay fulfillment pattern

@@ -293,6 +293,30 @@ Result: web ☐
 
 ---
 
+### SC-R1 — Record a send as an ongoing arrangement
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in with enough credits to send, and a recipient you have no recurring arrangement with.
+
+**Steps:**
+1. Open the Send panel, enter the recipient's username, an amount, and send.
+2. After "Credits sent successfully!" appears, look just below it.
+3. Click "Is this ongoing?", pick a cadence, leave the currency on ServiceCredits, enter a value, and record it.
+4. Send again to the same member and look below the success line.
+5. Open `/apps/recurring-activity` as the sender, then as the recipient.
+
+**Expected:**
+- The prompt appears only after a successful send — not before sending, and not after a failed one.
+- It names the member the server resolved, even though the box was filled in with a username and has since cleared.
+- After recording, it is replaced by "Recorded — waiting for … to confirm it." with a link to the Recurring Activity hub.
+- On the second send the prompt does not appear at all — an arrangement with that member is already on the books.
+- The sender sees a pending row marked "Recorded from ServiceCredits"; the recipient sees it awaiting confirmation. The transfer itself is unchanged — the balance moved exactly as before, and nothing about recording an arrangement touches it.
+
+Result: web ☐
+
+---
+
 ## Admin walkthrough
 
 ### SC-A1 — Treasury policy view and edit

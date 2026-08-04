@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { PER_OCCURRENCE_ORIGIN_PLUGINS, cadenceMonthlyFactorSql } from 'lib/recurring-activity/types';
 
 // Community Value Index recognition (issue #121). This module is the GDP plugin's "value layer": it
 // rolls all recognized economic activity across applicable plugins into ONE composite figure — the
@@ -53,6 +54,12 @@ export const DEFAULT_CONTRIBUTION_WEIGHTS: Map<string, number> = new Map([
   // Non-money exchanges: one completed act of value counts as one point each.
   [FREE_CODE, 1],
   [BARTER_CODE, 1],
+  // Recurring activity, by count: one point per confirmed fiat recurring line (see
+  // RECURRING_ACTIVITY_COUNT_UNIT below — a hidden unit, never a fiat amount). This mirrors the weekly
+  // job's weight map in scripts/recognizeGdp.mjs, which has always carried it; the live map was missed
+  // when the weights moved out of the database and into code, so every confirmed fiat recurring line
+  // was being surfaced as unweighted and excluded from the live index instead of counting one point.
+  ['RACT', 1],
   // Foreign-currency settled value, normalized to a USD reference (USD = 1). Notional index inputs only,
   // never a price or redemption rate — present so a foreign-priced completed task is counted, not dropped.
   ['USD', 1],
@@ -260,6 +267,41 @@ export const chymeTipSource: RecognitionSource = {
 };
 
 /**
+ * LightHouse housing arrangements: a seeker asked to stay at a listed home and the host accepted, so a
+ * real housing arrangement was made. Read from `lighthouse_matches` joined to the listing, counting a
+ * match once in `accepted` or `completed` (the same arrangement in two lifecycle states — never twice).
+ *
+ * ONE month of the listed rent is recognized per arrangement: the arrangement that was actually made
+ * here. Every month after that is not LightHouse's to count — the pair declares the ongoing
+ * relationship in Recurring Activity, which recognizes it by count for fiat, so the two sources cover
+ * different periods of the same tenancy and never overlap. This is why LightHouse can be recognized
+ * without the platform ever holding a running rent total.
+ *
+ * A listing with no priced rent (`monthly_rent` of zero or NULL — the host form's "0 for
+ * ServiceCredits / free") records no amount anywhere, so an accepted match on one counts as a single
+ * FREE exchange, exactly like a completed SocketRelay favor. Housing given at no charge is real value;
+ * an amount that was never recorded is never invented.
+ */
+export const lighthouseHousingSource: RecognitionSource = {
+  pluginSlug: 'lighthouse',
+  label: 'LightHouse housing arrangements',
+  async loadVolumes() {
+    const result = await queryDb<{ currency_code: string; total: string }>(
+      `SELECT CASE WHEN p.monthly_rent > 0 AND p.rent_currency IS NOT NULL THEN p.rent_currency ELSE $1 END AS currency_code,
+              SUM(CASE WHEN p.monthly_rent > 0 AND p.rent_currency IS NOT NULL THEN p.monthly_rent ELSE 1 END)::text AS total
+         FROM lighthouse_matches m
+         JOIN lighthouse_properties p ON p.id = m.property_id
+         WHERE m.status IN ('accepted', 'completed')
+         GROUP BY 1`,
+      [FREE_CODE],
+    );
+    return result.rows
+      .filter((row) => Number(row.total) > 0)
+      .map((row) => ({ amount: Number(row.total), currencyCode: row.currency_code }));
+  },
+};
+
+/**
  * SocketRelay favors: SocketRelay is mutual aid — most favors are given free, and a fulfillment carries
  * no price/currency, so there is no money amount to sum. We recognize each successfully-completed favor
  * as one `FREE` exchange (counted by completed-exchange count, the way the index treats BARTER/FREE),
@@ -301,34 +343,69 @@ export const RECURRING_ACTIVITY_COUNT_UNIT = 'RACT';
  *   - Fiat lines (currency_code <> 'SC'): counted by NUMBER of activities, one RACT each. A fiat line
  *     carries NO amount (the schema never stores one), so the platform never holds a summable
  *     recurring-fiat-payment total — the whole point of the plugin.
- *   - ServiceCredits lines (currency_code = 'SC'): counted by their declared `sc_value`. ServiceCredits
- *     is an internal utility token with no third-party reporting duty. This is a DECLARED figure, never
- *     an executed transfer, so it never touches real balances and never double-counts the direct
- *     ServiceCredits transfer source (which reads `service_credits_transfers`, a different table).
+ *   - ServiceCredits lines (currency_code = 'SC'): counted by their declared `sc_value`, scaled to a
+ *     MONTHLY figure by the line's cadence (`CADENCE_MONTHLY_FACTOR`) so a weekly arrangement and a
+ *     monthly one moving the same credits over a year count the same. Before that scaling, a weekly 50
+ *     and a monthly 50 both contributed 50, which read a weekly arrangement as a twelfth of what it is.
+ *     ServiceCredits is an internal utility token with no third-party reporting duty. This is a DECLARED
+ *     figure, never an executed transfer, so it never touches real balances and never double-counts the
+ *     direct ServiceCredits transfer source (which reads `service_credits_transfers`, a different
+ *     table). Fiat lines are unaffected: they are counted by NUMBER of relationships, not by period.
+ *
+ * One exception keeps a declared value from counting twice. Members can now mark an activity as
+ * recurring from inside the app they are already in, and that app is recorded on the row as
+ * `origin_plugin`. Some of those apps settle EVERY exchange on-platform and are already recognized per
+ * occurrence — a Foundation call per minute-block, a TrustTransport trip per trip, a SocketRelay favor
+ * per favor. Counting a declared ServiceCredits value from one of those would count the same credits a
+ * second time, so those lines are recognized as a RELATIONSHIP (one point, like a fiat line) rather than
+ * as value. LightHouse is deliberately not in that set: it records the arrangement once and never sees
+ * the months that follow, so the declared value there is the only record of them. A line declared in the
+ * Recurring Activity plugin itself has no origin and is counted by value as before.
  */
+/** A SUM/COUNT read back as a number, with a non-finite or missing result treated as zero. */
+function positiveTotal(row: { total: string | null } | undefined): number {
+  const value = Number(row?.total ?? 0);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
 export const recurringActivitySource: RecognitionSource = {
   pluginSlug: 'recurring-activity',
   label: 'Recurring peer activities (confirmed)',
   async loadVolumes() {
-    const [fiatCount, scValue] = await Promise.all([
+    const [fiatCount, scValue, perOccurrenceScCount] = await Promise.all([
       queryDb<{ total: string | null }>(
         `SELECT COUNT(*)::text AS total
            FROM recurring_activities
           WHERE status = 'active' AND currency_code <> 'SC'`,
       ),
+      // ServiceCredits lines counted by DECLARED value — but only where that declared value is the
+      // only record of the exchange. A line declared inside an app that already settles every single
+      // exchange on-platform is excluded here and counted as a relationship below instead, so the same
+      // credits are never counted twice (see PER_OCCURRENCE_ORIGIN_PLUGINS).
       queryDb<{ total: string | null }>(
-        `SELECT SUM(sc_value)::text AS total
+        `SELECT SUM(sc_value * (${cadenceMonthlyFactorSql()}))::text AS total
            FROM recurring_activities
-          WHERE status = 'active' AND currency_code = 'SC' AND sc_value IS NOT NULL`,
+          WHERE status = 'active' AND currency_code = 'SC' AND sc_value IS NOT NULL
+            AND (origin_plugin IS NULL OR origin_plugin <> ALL($1::text[]))`,
+        [PER_OCCURRENCE_ORIGIN_PLUGINS],
+      ),
+      // The ones just excluded: still real ongoing relationships, so each counts one point, exactly the
+      // way a fiat line does. Recognized as a relationship, never a second time as value.
+      queryDb<{ total: string | null }>(
+        `SELECT COUNT(*)::text AS total
+           FROM recurring_activities
+          WHERE status = 'active' AND currency_code = 'SC'
+            AND origin_plugin = ANY($1::text[])`,
+        [PER_OCCURRENCE_ORIGIN_PLUGINS],
       ),
     ]);
     const volumes: CurrencyVolume[] = [];
-    const fiat = Number(fiatCount.rows[0]?.total ?? 0);
-    if (Number.isFinite(fiat) && fiat > 0) {
-      volumes.push({ amount: fiat, currencyCode: RECURRING_ACTIVITY_COUNT_UNIT });
+    const countedByRelationship = positiveTotal(fiatCount.rows[0]) + positiveTotal(perOccurrenceScCount.rows[0]);
+    if (countedByRelationship > 0) {
+      volumes.push({ amount: countedByRelationship, currencyCode: RECURRING_ACTIVITY_COUNT_UNIT });
     }
-    const sc = Number(scValue.rows[0]?.total ?? 0);
-    if (Number.isFinite(sc) && sc > 0) {
+    const sc = positiveTotal(scValue.rows[0]);
+    if (sc > 0) {
       volumes.push({ amount: sc, currencyCode: 'SC' });
     }
     return volumes;
@@ -343,12 +420,15 @@ export const recurringActivitySource: RecognitionSource = {
  * (the direct ServiceCredits source); plugin-mediated transfers are attributed to each plugin by
  * `origin_plugin`, so nothing is double-counted and the ledger is never blindly summed. Concretely
  * excluded today: Skills Hunt accept rewards, Unlock verification incentives, and Contributions
- * thank-you grants (all incentive mints). Recurring off-platform relationships (LightHouse rent,
- * ongoing Foundation services, standing SocketRelay favors) are captured instead by the Recurring
- * Activity source above (issue #885): a self-declared, counterparty-confirmed activity, counted by
- * number for fiat and by declared value for ServiceCredits — never a settled fiat amount, so the
- * platform stays a peer-to-peer marketplace and never holds a recurring-fiat-payment record. Append a
- * source here (and document it in the GDP inventory) when a plugin starts recording settled value.
+ * thank-you grants (all incentive mints).
+ *
+ * How an ongoing arrangement is split between two sources: the plugin where the arrangement was made
+ * recognizes the value of making it — a LightHouse match recognizes one month of the listed rent — and
+ * every period after that belongs to the Recurring Activity source above (issue #885), where the pair
+ * declares the ongoing relationship themselves and it is counted by number for fiat and by declared
+ * value for ServiceCredits. No plugin holds a running rent or subscription total, and no month is
+ * counted twice. Append a source here (and document it in the GDP inventory) when a plugin starts
+ * recording settled value.
  */
 export const RECOGNITION_SOURCES: RecognitionSource[] = [
   trustTransportSource,
@@ -359,6 +439,7 @@ export const RECOGNITION_SOURCES: RecognitionSource[] = [
   foundationQuoteSource,
   serviceCreditsDirectTransferSource,
   chymeTipSource,
+  lighthouseHousingSource,
   socketRelayFavorSource,
   recurringActivitySource,
 ];

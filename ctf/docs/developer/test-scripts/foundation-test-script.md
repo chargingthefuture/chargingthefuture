@@ -772,3 +772,24 @@ Result: web ☐
 skills and threads (existing behavior) — no currency preference survives the account.
 
 Result: web ☐
+
+
+### FN-R1 — Record a closed quote as ongoing work
+
+**Role:** member (survivor side)
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in as the survivor on a quote with an open Direct Line thread, and no recurring arrangement recorded with that provider yet.
+
+**Steps:**
+1. Open the Quotes panel and open the Direct Line for that quote.
+2. Look at the bottom of the thread for the "Is this ongoing?" prompt.
+3. Click it, pick a cadence, and record it.
+4. Sign in as the provider, open the same thread, and look for the prompt.
+
+**Expected:**
+- The prompt sits on the thread itself — the relationship — not only on a closed quote, and appears whatever lifecycle state the quote is in.
+- The provider does NOT see it on their own side; it is offered to the survivor, the side that would keep calling the same provider.
+- The provider is already filled in — no member search.
+- After recording, the row appears in the Recurring Activity app marked "Recorded from Foundation", awaiting the provider's confirmation, and the prompt is gone from both the thread and the quote row.
+
+Result: web ☐

@@ -47,13 +47,45 @@ signal in Trust. It is emphatically NOT a ledger, NOT a bill, and carries NO fia
 4. Control the visibility (private default / restricted / public) of an activity you recorded.
 5. See your ongoing activities and pending confirmations in the hub, and via a light card in the account
    hub next to Trust.
+6. Record an arrangement as ongoing **without coming to this app at all** — the owner's intended primary
+   entry point. An "Is this ongoing?" prompt sits inside each app where the relationship already exists:
+   a LightHouse match the host accepted, a Foundation Direct Line thread with a provider, a SocketRelay
+   favor (live or closed successfully), a TrustTransport ride once a driver has accepted, and right after
+   a ServiceCredits send. The other member is already known, so all you choose is how often and how it is
+   settled. It creates exactly the same pending row this plugin's own form does, the other member confirms
+   it here, and the row says which app it came from.
+7. The prompt disappears once an arrangement with that member is already recorded (pending or ongoing),
+   so the same pair is never recorded twice from two different apps. A declined or ended one does not
+   block recording a new one.
+8. After recording, the prompt links to this hub — the one place an arrangement is edited, confirmed, or
+   ended — so a member finds it without having to know the app exists beforehand.
 
 ## Admin Features
 
-None in v1. There is no admin mutation surface. The append-only `recurring_activity_audit_trail`
-supports later admin review of the bilateral confirmation graph for collusion patterns (a ring that only
-ever confirms the same small set of members), which is one of the fraud signals this plugin is designed
-to make detectable — but no admin UI ships yet (see Gaps).
+There is still **no admin mutation surface** — an admin cannot create, confirm, decline, end, or edit
+anyone's arrangement. One read-only review surface ships (2026-08-03):
+
+1. **Collusion review** at `/admin/recurring-activity`, reading
+   `GET /api/recurring-activity/admin/review`. A recurring activity counts only once the counterparty
+   confirms it, which stops one member inflating their own standing but not a small group confirming
+   each other's. The review surfaces the three shapes that pattern makes:
+   - **Each declared one with the other** — two members who each recorded an arrangement naming the
+     other. One arrangement between two people is ordinary; a matched pair, one in each direction, is
+     what a trade of confirmations looks like.
+   - **Confirmed within a minute** — confirmed within 60 seconds of being declared, fast enough that
+     nobody plausibly read it. Two people sitting together can legitimately be that quick, so it earns
+     a second look and never a conclusion.
+   - **Small groups pointing at each other** — a connected group of three to eight members with at
+     least as many confirmed arrangements as members, which means the group contains a loop rather
+     than a chain of introductions. Groups larger than eight are excluded on purpose: that is a
+     community, not a ring.
+2. The surface changes nothing, scores nobody, and feeds no member-facing figure. Flags are questions
+   for a person to read, not findings. Member ids on flagged rows only are resolved to display names so
+   the reviewer can see who is involved; the surface never lists the roster.
+3. It reads a bounded slice (the 5,000 most recent confirmed arrangements) and says plainly when that
+   cap was hit, rather than showing a partial picture as if it were the whole one.
+4. Every read — allow or deny — writes an audit row (`recurring-activity.admin.review.read`), because
+   looking at who is connected to whom is itself a use of admin power.
 
 ## API Surface and Route Map
 
@@ -72,6 +104,10 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
   `recurring-activity.end`.
 - `POST /api/recurring-activity/[activityId]/visibility` — owner sets visibility. Command:
   `recurring-activity.visibility.update`.
+- `GET /api/recurring-activity/admin/review` — **admin only**, read-only collusion review over
+  confirmed arrangements (see Admin Features). Returns `{ review, names }`; writes an audit row on both
+  the allow and the deny path. Command: `recurring-activity.admin.review.read`. Rendered by
+  `/admin/recurring-activity`.
 
 ## Data Model and Storage Contracts
 
@@ -82,7 +118,11 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
   NUMERIC(14,2) nullable — set ONLY for ServiceCredits lines, always NULL for fiat; `status` TEXT CHECK
   (`pending`|`active`|`ended`|`declined`, default `pending`); `visibility` TEXT CHECK
   (`private`|`restricted`|`public`, default `private`); `confirmed_at`, `ended_at`, `ended_by_user_id`,
-  `created_at`, `updated_at`. Constraint `recurring_activities_no_self` (`owner_user_id <>
+  `created_at`, `updated_at`; `origin_plugin` TEXT nullable — which app the member declared this from
+  when they used that app's inline control (`lighthouse`|`foundation`|`socket-relay`|`trust-transport`),
+  NULL for a line created in this plugin's own form. Validated at write time against
+  `RECURRING_ACTIVITY_ORIGIN_PLUGINS`, not by a database CHECK, because the plugin list changes; an
+  unknown value is rejected rather than stored. Constraint `recurring_activities_no_self` (`owner_user_id <>
   counterparty_user_id`). Indexes on `(owner_user_id, status)`, `(counterparty_user_id, status)`,
   `(status, currency_code)`. There is deliberately NO free-text column.
 - `recurring_activity_audit_trail` — append-only audit of every mutation (create/confirm/decline/end/
@@ -103,8 +143,21 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
 - Only `active` (counterparty-confirmed) rows feed Trust or GDP. `pending`, `declined`, and `ended` rows
   feed nothing.
 - GDP (see the GDP inventory §4.4): fiat lines → one `RACT` each (a count); ServiceCredits lines → their
-  declared `sc_value` (value). Its own de-duped recognition bucket, so it never double-counts the direct
-  ServiceCredits transfer source (a different table).
+  declared `sc_value` **scaled to a monthly figure by the line's cadence** (`CADENCE_MONTHLY_FACTOR`:
+  weekly 52/12, biweekly 26/12, monthly 1, quarterly 1/3), so two arrangements moving the same credits
+  over a year count the same. An unknown cadence falls back to a factor of 1 rather than dropping the
+  row. Fiat lines are unaffected — they are counted by number of relationships, not by period. Its own
+  de-duped recognition bucket, so it never double-counts the direct ServiceCredits transfer source (a
+  different table).
+- One exception, added when inline declaration shipped: some apps already record EVERY exchange as it
+  happens — a Foundation call is metered per minute-block, a TrustTransport trip settles per trip, a
+  SocketRelay favor closes one at a time — and GDP already recognizes each of those occurrences.
+  Counting a declared ServiceCredits value from one of those apps would count the same credits a second
+  time, so a confirmed ServiceCredits line whose `origin_plugin` is in `PER_OCCURRENCE_ORIGIN_PLUGINS`
+  (`foundation`, `socket-relay`, `trust-transport`) is counted as a RELATIONSHIP — one `RACT`, the way a
+  fiat line is counted — and never again as value. LightHouse is deliberately not in that set: it
+  records the arrangement once and never sees the months that follow, so the declared value there is the
+  only record of them. A line with no origin (declared in this plugin) is counted by value as before.
 - Trust (see the Trust inventory): the count of DISTINCT other members with an `active` activity (either
   side) — distinct counterparties so a repeated partner or a collusion ring cannot inflate the signal.
 
@@ -142,23 +195,87 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
 
 ## Gaps and Known Technical Debt
 
-1. **Contextual "Is this ongoing?" prompts** inside the sibling plugins where a relationship already
-   exists (LightHouse match, Foundation thread, SocketRelay favor, a ServiceCredits send) are the owner's
-   intended primary entry point. They must be added surgically/additively to already-shipped screens and
-   are a fast follow-up; v1 ships the standalone hub + account-hub card and the full backend.
-2. **Cadence is not normalized** for the ServiceCredits value contribution — the declared `sc_value` is
-   summed as-is regardless of cadence (a `weekly` 50 SC and a `monthly` 50 SC both contribute 50). A
-   monthly normalization is a documented follow-up; the figure is a labeled estimate, so this is an
-   approximation, not a correctness bug.
-3. **Counterparty existence is not verified** against a canonical member table at create time (the schema
-   guards only against a self-counterparty). The UI supplies a real user id from a picker; a server-side
-   membership check is a follow-up.
-4. **No admin collusion-review surface yet** — the bilateral graph is captured (owner/counterparty edges
-   + cadence + audit trail) so the "same small group confirming each other to inflate trust" pattern is
-   detectable, but the admin view/metric that surfaces it is not built.
+1. ~~**Contextual "Is this ongoing?" prompts** inside the sibling plugins…~~ **Closed 2026-08-03.** All
+   four named entry points ship, plus TrustTransport: LightHouse match (accepted), Foundation thread
+   (Direct Line, survivor side), SocketRelay favor (live or closed successfully), ServiceCredits send
+   (right after a completed send), TrustTransport ride (once a driver has accepted). Each was added
+   additively to the already-shipped screen; none replaced existing copy or layout. The standalone hub
+   remains for confirming, editing, and ending.
+2. ~~**Cadence is not normalized** for the ServiceCredits value contribution…~~ **Closed 2026-08-03.**
+   The declared value is now scaled to a monthly figure by the line's cadence before it is counted, in
+   the live recognition source, the projected figure, and the weekly job. A weekly 50 credits now
+   contributes 52/12 × 50 a month instead of the same 50 a monthly line contributes. Factors live in
+   one place (`CADENCE_MONTHLY_FACTOR`) and the SQL is generated from them so the two cannot drift.
+3. ~~**Counterparty existence is not verified**…~~ **Closed 2026-08-03.** `createRecurringActivity` now
+   rejects a counterparty nothing on the platform knows about. The check is deliberately permissive
+   because `users` does not exist in every environment (it is not in `schema.sql` — see
+   `countTotalMembers`): it accepts a match from any of a claimed `directory_profiles` row, a recorded
+   `login_events` sign-in, or the `users` table where present, and an unreadable check is treated as
+   "known" so a lookup failure can never block a real member. It refuses an invented id, which is what
+   the gap was about.
+4. ~~**No admin collusion-review surface yet**…~~ **Closed 2026-08-03.** `/admin/recurring-activity`
+   ships as a read-only review of reciprocal pairs, one-minute confirmations, and small looped groups
+   (see Admin Features). Remaining by design, not as debt: the review flags patterns and takes no
+   action — there is deliberately no admin power to void, edit, or annotate a member's arrangement, so
+   acting on a flag means talking to the members involved.
 
 ## Change Log
 
+- 2026-08-03 (third pass): **Closed the last two inventory gaps.** (1) **Cadence normalization**
+  (Gaps #2): a declared ServiceCredits value is now scaled to a monthly figure by the line's cadence
+  before it is counted — weekly 52/12, biweekly 26/12, monthly 1, quarterly 1/3 — in the live
+  recognition source, in the projected figure, and in the weekly `recognizeGdp.mjs` job. Previously a
+  weekly 50 and a monthly 50 both contributed 50, reading a weekly arrangement as a twelfth of what it
+  is. The factors live once in `CADENCE_MONTHLY_FACTOR` and the SQL CASE is generated from them
+  (`cadenceMonthlyFactorSql`), so the map and the query cannot disagree; the weekly job mirrors the same
+  numbers with a comment tying them together. An unknown cadence counts once a month rather than
+  dropping the row. Effect: the Community Value Index rises for weekly and biweekly ServiceCredits
+  arrangements and falls for quarterly ones. Fiat lines are untouched — they are counted by number of
+  relationships, not by period. (2) **Collusion review** (Gaps #4): a read-only admin surface at
+  `/admin/recurring-activity` backed by `GET /api/recurring-activity/admin/review` and
+  `lib/recurring-activity/review.ts`, surfacing reciprocal pairs, confirmations inside a minute, and
+  connected groups of three to eight members carrying at least as many arrangements as members (a loop,
+  not a chain). Bounded to the 5,000 most recent confirmed arrangements and says so when the cap is hit.
+  No mutation power of any kind, no member-facing effect, no score; every read writes an audit row.
+  Added to the admin landing directory, with new command, access-policy, and audit contract entries.
+  Graph logic and the normalization factors are covered by `lib/recurring-activity/review.test.ts`. No
+  schema change.
+- 2026-08-03 (second pass): **Completed the locked accessibility decision, which the first pass
+  implemented too narrowly.** The spec (Gaps #1) names the in-app prompts as the owner's intended
+  *primary* entry point, at every place a relationship already exists — LightHouse match, Foundation
+  **thread**, SocketRelay favor, **a ServiceCredits send**. The first pass instead put the control only on
+  *terminal* states and skipped ServiceCredits entirely (wrongly recorded as a deliberate exclusion).
+  Corrected: (a) **ServiceCredits** now prompts right after a completed send, reading the resolved
+  recipient id back from the transfer response rather than what was typed; `service-credits` joins the
+  origin allowlist and, because every completed send is already recognized from the transfers table, also
+  `PER_OCCURRENCE_ORIGIN_PLUGINS`. (b) **Foundation** now prompts on the **Direct Line thread** — the
+  relationship itself — for the survivor side, in any lifecycle state, in addition to the closed-quote
+  row. (c) **SocketRelay** prompts on a live fulfillment as well as one closed successfully; a member
+  usually knows a favor is standing while it is happening. (d) **TrustTransport** prompts as soon as a
+  driver has accepted, not only once the ride is finished. (e) The control is labeled **"Is this
+  ongoing?"**, the spec's own wording. (f) The prompt hides itself when an arrangement with that member is
+  already pending or ongoing, so the same pair cannot be recorded twice from two different apps — the
+  caller's own list is read once per page load and shared by every prompt on it, and dropped after a
+  successful record. (g) After recording, the prompt links to this hub so a member discovers where an
+  arrangement is confirmed, edited, or ended. Also closes Gaps #3 (counterparty existence is now checked
+  server-side, permissively). No schema change beyond the first pass's `origin_plugin`.
+- 2026-08-03: **Recurring activity can now be recorded from inside the app you are already in (owner
+  directive).** Until now the only way to record one was to come to this plugin and search for the other
+  member by hand — the wrong moment and the wrong place, since you know an arrangement is ongoing while
+  you are standing in the middle of it. A shared control
+  (`ctf/packages/web/components/shared/mark-recurring-control.tsx`) can be dropped beside any finished
+  arrangement; it knows the other member already, asks only how often and how it is settled, and posts
+  the same pending row this plugin's form creates. Wired into four surfaces: an accepted LightHouse match
+  (sector `housing`), a closed Foundation quote, survivor side (`service`), a SocketRelay favor closed
+  successfully (`favor`), and a completed TrustTransport ride (`service`). The money firewall is
+  unchanged — a fiat line still carries no amount, and the control says so where the amount field would
+  be. New nullable `origin_plugin` column records which app it came from; the hub shows it as "Recorded
+  from LightHouse" so a member recognizes the row here. TrustTransport's request payload gained
+  `tripProviderUserId` (present only once a trip exists, by which point the two are already paired and
+  talking) so the completed ride knows who to name. `recurring-activity.create` gained the optional
+  `originPlugin` input, validated against a fixed list. See also the counting exception recorded under
+  Lifecycle and counting semantics: `origin_plugin` is what lets GDP avoid counting the same
+  ServiceCredits twice.
 - 2026-07-20: **Notifications producer.** Best-effort notifications (`notifySafe`) now fire from the
   routes: creating an activity notifies the counterparty to confirm/decline
   (`recurring-activity.invited`); confirming/declining notifies the owner

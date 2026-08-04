@@ -40,6 +40,7 @@ function LighthouseTabContent({
   chatError,
   chatCredentials,
   username,
+  viewerUserId,
   editPropertyId,
   onToggleSave,
   onSelectProperty,
@@ -58,6 +59,9 @@ function LighthouseTabContent({
   chatError: string | null;
   chatCredentials: ChatCredentials | null;
   username: string | null;
+  // Passed to the matches tab so an accepted match can offer to record the arrangement as ongoing,
+  // naming the other side of the match.
+  viewerUserId: string;
   editPropertyId: string | null;
   onToggleSave: (id: string) => void;
   onSelectProperty: (property: Property) => void;
@@ -78,7 +82,7 @@ function LighthouseTabContent({
         />
       )}
       {tab === "matches" && (
-        <LighthouseMatches matches={matches} properties={properties} onSelectProperty={onSelectProperty} />
+        <LighthouseMatches matches={matches} properties={properties} onSelectProperty={onSelectProperty} viewerUserId={viewerUserId} />
       )}
       {tab === "chat" && (
         <LighthouseChat
@@ -245,6 +249,7 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       chatError={chatError}
       chatCredentials={chatCredentials}
       username={username}
+      viewerUserId={userId}
       editPropertyId={editPropertyId}
       onToggleSave={toggleSave}
       onSelectProperty={setSelectedProperty}
