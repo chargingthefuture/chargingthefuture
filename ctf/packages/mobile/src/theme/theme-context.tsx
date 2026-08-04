@@ -56,7 +56,7 @@ async function writeStoredTheme(theme: ThemeName): Promise<void> {
   try {
     await SecureStore.setItemAsync(THEME_STORAGE_KEY, theme);
   } catch {
-    // Storage unavailable — the in-memory choice still applies this session.
+    // no-trace: storage is unavailable, and the in-memory choice still applies this session.
   }
 }
 
@@ -109,7 +109,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           applyTheme(serverTheme, false);
         }
       } catch {
-        // Offline or not signed in — keep the local choice.
+        // no-trace: offline or not signed in, so the local choice stands.
       }
     })();
 

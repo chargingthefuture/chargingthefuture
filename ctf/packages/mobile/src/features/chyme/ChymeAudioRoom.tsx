@@ -123,12 +123,12 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
         try {
           await activeCall.camera.disable();
         } catch {
-          /* no camera to disable */
+          /* no-trace: there is no camera to disable on this device */
         }
         try {
           await activeCall.microphone.disable();
         } catch {
-          /* already muted */
+          /* no-trace: the microphone is already muted */
         }
         await activeCall.join({ create: true });
         if (canceled) return;
@@ -150,12 +150,12 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
         try {
           await activeCall.leave();
         } catch {
-          /* already left */
+          /* no-trace: the call was already left */
         }
         try {
           await videoClient.disconnectUser();
         } catch {
-          /* ignore */
+          /* no-trace: the client is already disconnected */
         }
       })();
     };

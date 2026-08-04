@@ -451,7 +451,7 @@ async function main() {
               [rollbackRowId],
             );
           } catch {
-            // Best-effort cleanup; if it fails the row simply stays and is skipped later.
+            // no-trace: best-effort cleanup, and if it fails the row simply stays and is skipped later.
           }
         }
       }

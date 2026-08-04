@@ -64,7 +64,7 @@ async function readError(res: Response, fallback: string): Promise<string> {
       return body.message;
     }
   } catch {
-    // keep the fallback message
+    // no-trace: an unreadable body just means the fallback message is used
   }
   return fallback;
 }

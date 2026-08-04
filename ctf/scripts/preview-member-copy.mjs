@@ -25,7 +25,7 @@ async function loadChromium() {
     try {
       return (await import(specifier)).chromium;
     } catch {
-      // try the next candidate
+      // no-trace: this specifier is not installed, so try the next candidate
     }
   }
   console.error(
@@ -54,7 +54,7 @@ function extractCopy() {
       // eslint-disable-next-line no-new-func
       out[name] = new Function('para', `return (${expr});`)(para);
     } catch {
-      // A constant that does not evaluate standalone is not copy we can preview; skip it rather than fail.
+      // no-trace: a constant that does not evaluate standalone is not previewable copy, so it is skipped.
     }
   }
   return out;

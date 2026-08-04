@@ -313,7 +313,7 @@ function stamp() {
   try {
     sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' }).trim();
   } catch {
-    /* not a git checkout — leave unknown */
+    /* no-trace: not a git checkout, so the sha stays 'unknown' */
   }
   const date = new Date().toISOString().slice(0, 10);
   return `${date} (commit ${sha})`;

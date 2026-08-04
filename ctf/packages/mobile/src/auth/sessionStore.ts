@@ -42,7 +42,7 @@ export async function saveStoredSession(session: StoredSession): Promise<void> {
   try {
     await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(session));
   } catch {
-    // ignore: a failed write only means the user re-authenticates next launch
+    // no-trace: a failed write only means the member signs in again next launch
   }
 }
 
@@ -50,6 +50,6 @@ export async function clearStoredSession(): Promise<void> {
   try {
     await SecureStore.deleteItemAsync(SESSION_KEY);
   } catch {
-    // ignore
+    // no-trace: clearing a session that is already gone is the same outcome
   }
 }

@@ -105,7 +105,7 @@ export function UnlockVerifyBanner() {
     try {
       setStatus(await fetchUnlockStatus());
     } catch {
-      // Best-effort: a status failure just leaves the banner hidden. The server gates still enforce.
+      // no-trace: a status failure just leaves the banner hidden, and the server gates still enforce.
     }
   }, []);
 

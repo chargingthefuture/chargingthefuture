@@ -17,7 +17,9 @@ export function getStreamVideoClient(apiKey: string, token: string, userId: stri
     if (streamVideoClient) {
       try {
         streamVideoClient.disconnectUser?.();
-      } catch {}
+      } catch {
+        /* no-trace: the client is already disconnected */
+      }
       streamVideoClient = null;
     }
     streamVideoClient = new StreamVideoClient({

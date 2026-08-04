@@ -20,6 +20,7 @@ import {
 import { useTheme, getAppAccent, type ThemeTokens } from "../../theme";
 import { UNLOCK_REWARD_SLA_HOURS } from "./constants";
 import { usePluginAuth } from "./usePluginAuth";
+import { reportError, reasonText } from '../../observability/report';
 import {
   fetchExperimentSplit,
   fetchSubmissions,
@@ -335,8 +336,9 @@ export const AdminUnlock = () => {
         await reviewSubmission(submissionId, reviewStatus);
         setNotice(reviewStatus === "approved" ? "Submission approved." : "Submission rejected.");
         await load();
-      } catch {
-        setError("Could not review the submission. Try again.");
+      } catch (caught) {
+        reportError(caught, { area: 'unlock', op: 'admin_review_submission' });
+        setError(`Could not review the submission: ${reasonText(caught)}`);
       } finally {
         setActing(null);
       }
@@ -359,8 +361,9 @@ export const AdminUnlock = () => {
           heldNote,
       );
       await load();
-    } catch {
-      setError("Could not retry pending rewards. Try again.");
+    } catch (caught) {
+      reportError(caught, { area: 'unlock', op: 'admin_retry_rewards' });
+      setError(`Could not retry pending rewards: ${reasonText(caught)}`);
     } finally {
       setReconciling(false);
     }

@@ -31,6 +31,7 @@ import { Trash2, Lock, CheckCircle, X, AlertTriangle } from "lucide-react-native
 import { useTheme, type ThemeTokens } from "../../theme";
 import { interFamily } from "../../components/ui";
 import { getApiBaseUrl } from "../../auth/authedFetch";
+import { reportError } from '../../observability/report';
 import {
   fetchAccountServices,
   deleteServiceData,
@@ -57,7 +58,8 @@ async function openTerms(): Promise<void> {
   const url = termsUrl();
   try {
     await Linking.openURL(url);
-  } catch {
+  } catch (caught) {
+    reportError(caught, { area: 'account', op: 'open_terms', extra: { url } });
     Alert.alert("Unable to open", "We could not open the Terms and Privacy Policy page.");
   }
 }
@@ -77,7 +79,8 @@ async function openAccessibility(): Promise<void> {
   const url = accessibilityUrl();
   try {
     await Linking.openURL(url);
-  } catch {
+  } catch (caught) {
+    reportError(caught, { area: 'account', op: 'open_accessibility', extra: { url } });
     Alert.alert("Unable to open", "We could not open the Accessibility page.");
   }
 }

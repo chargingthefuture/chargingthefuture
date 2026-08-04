@@ -45,7 +45,7 @@ function ensureLabel(name, color, description) {
   try {
     gh(['label', 'create', name, '--repo', TRIAGE_REPO, '--color', color, '--description', description, '--force']);
   } catch {
-    // Label tooling is best-effort; applying the label below is what matters.
+    // no-trace: label tooling is best-effort, since applying the label below is what matters.
   }
 }
 

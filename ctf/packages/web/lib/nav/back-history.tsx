@@ -50,7 +50,7 @@ function writeStack(stack: string[]): void {
   try {
     window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stack.slice(-MAX_STACK)));
   } catch {
-    // Storage full or unavailable — back simply falls back to one-level-up.
+    // no-trace: storage is full or unavailable, so back falls back to one level up.
   }
 }
 

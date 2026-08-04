@@ -228,6 +228,6 @@ export async function insertContributorAccessAudit(input: {
       ],
     );
   } catch {
-    // Swallowed on purpose: see comment above.
+    // no-trace: swallowed on purpose, for the reason given above.
   }
 }

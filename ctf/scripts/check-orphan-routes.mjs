@@ -112,7 +112,7 @@ let allowlist = { routes: [] };
 try {
   allowlist = JSON.parse(readFileSync(ALLOWLIST_PATH, 'utf8'));
 } catch {
-  // A missing allowlist is treated as empty rather than fatal, so the gate still runs.
+  // no-trace: a missing allowlist is treated as empty rather than fatal, so the gate still runs.
 }
 const allowed = new Map((allowlist.routes ?? []).map((entry) => [entry.route, entry.reason]));
 
