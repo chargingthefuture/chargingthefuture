@@ -8,13 +8,15 @@
 //   Transactions / Active Plugins) have no backing — the signal-snapshot route
 //   is a stub and no snapshot table exists — so we render the real
 //   `trustEvidence` list instead of fabricating bucket values.
-// - There is no "request verification" endpoint (verification is admin-only),
-//   and the visibility-update route is a stub, so we render the truthful admin
-//   note and a static visibility row rather than non-functional controls.
+// - There is no "request verification" endpoint (verification is admin-only).
+// - The visibility row is a live control only on self surfaces (`editable`),
+//   because POST /api/trust/visibility is self-scope only; when the card shows
+//   another member's trust the row stays read-only.
 import React from "react";
 import { ShieldCheck, Eye, CheckCircle2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import type { TrustUserExtension, TrustEvidenceItem } from "../../lib/trust/types";
+import type { TrustUserExtension, TrustEvidenceItem, TrustVisibility } from "../../lib/trust/types";
+import { TRUST_VISIBILITY_VALUES } from "../../lib/trust/types";
 import { getTrustTokens } from "./trust-shared";
 
 // Accent-with-alpha card tints and the 5% hairline have no exact shell-token equivalent
@@ -58,18 +60,66 @@ function WidgetHeader() {
   );
 }
 
-function VisibilityRow({ visibility, bordered }: { visibility: string; bordered: boolean }) {
+function VisibilityRow({ visibility, bordered, editable }: { visibility: string; bordered: boolean; editable?: boolean }) {
   const { theme } = useTheme();
   const t = getTrustTokens(theme);
+  const [current, setCurrent] = React.useState(visibility);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  async function updateVisibility(next: TrustVisibility) {
+    const previous = current;
+    setCurrent(next);
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/trust/visibility", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ trustVisibility: next }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { message?: string } | null;
+        setCurrent(previous);
+        setError(body?.message ?? `Could not save the visibility setting (status ${res.status}).`);
+      }
+    } catch (err) {
+      setCurrent(previous);
+      setError(`Could not reach the server to save the visibility setting: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: bordered ? "9px 0 0" : 0, marginTop: bordered ? 0 : 4, borderTop: bordered ? `1px solid ${HAIRLINE}` : "none" }}>
-      <Eye size={11} style={{ color: t.FAINT }} />
-      <span style={{ fontSize: 11, color: t.FAINT }}>Visible to: {titleCase(visibility)}</span>
+    <div style={{ padding: bordered ? "9px 0 0" : 0, marginTop: bordered ? 0 : 4, borderTop: bordered ? `1px solid ${HAIRLINE}` : "none" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <Eye size={11} style={{ color: t.FAINT }} />
+        {editable ? (
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: t.FAINT }}>
+            Visible to:
+            <select
+              value={current}
+              disabled={saving}
+              onChange={(e) => void updateVisibility(e.target.value as TrustVisibility)}
+              aria-label="Trust visibility"
+              style={{ fontSize: 11, color: t.FAINT, background: "transparent", border: `1px solid ${HAIRLINE}`, borderRadius: 6, padding: "1px 4px" }}
+            >
+              {TRUST_VISIBILITY_VALUES.map((value) => (
+                <option key={value} value={value}>{titleCase(value)}</option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <span style={{ fontSize: 11, color: t.FAINT }}>Visible to: {titleCase(current)}</span>
+        )}
+      </div>
+      {error && <div style={{ fontSize: 10, color: "#F87171", marginTop: 4, lineHeight: 1.4 }}>{error}</div>}
     </div>
   );
 }
 
-function EmptyBody({ visibility }: { visibility: string }) {
+function EmptyBody({ visibility, editable }: { visibility: string; editable?: boolean }) {
   const { theme } = useTheme();
   const t = getTrustTokens(theme);
   return (
@@ -93,7 +143,7 @@ function EmptyBody({ visibility }: { visibility: string }) {
         ))}
       </div>
 
-      <VisibilityRow visibility={visibility} bordered />
+      <VisibilityRow visibility={visibility} bordered editable={editable} />
     </div>
   );
 }
@@ -117,7 +167,7 @@ function EvidenceItem({ item }: { item: TrustEvidenceItem }) {
   );
 }
 
-function EvidenceBody({ evidence, visibility }: { evidence: TrustEvidenceItem[]; visibility: string }) {
+function EvidenceBody({ evidence, visibility, editable }: { evidence: TrustEvidenceItem[]; visibility: string; editable?: boolean }) {
   return (
     <div style={{ padding: "4px 14px 14px", borderTop: `1px solid ${HAIRLINE}` }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "12px 0 10px" }}>
@@ -126,7 +176,7 @@ function EvidenceBody({ evidence, visibility }: { evidence: TrustEvidenceItem[];
         ))}
       </div>
       <div style={{ paddingTop: 7, borderTop: `1px solid ${HAIRLINE}` }}>
-        <VisibilityRow visibility={visibility} bordered={false} />
+        <VisibilityRow visibility={visibility} bordered={false} editable={editable} />
       </div>
     </div>
   );
@@ -134,16 +184,19 @@ function EvidenceBody({ evidence, visibility }: { evidence: TrustEvidenceItem[];
 
 export interface TrustWidgetCardProps {
   trust: TrustUserExtension;
+  // True only when the card renders the signed-in member's own trust — the
+  // visibility route is self-scope, so other-member cards stay read-only.
+  editable?: boolean;
 }
 
-export const TrustWidgetCard: React.FC<TrustWidgetCardProps> = ({ trust }) => {
+export const TrustWidgetCard: React.FC<TrustWidgetCardProps> = ({ trust, editable }) => {
   const hasEvidence = trust.trustEvidence.length > 0;
   return (
     <div style={{ borderRadius: 12, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif" }}>
       <WidgetHeader />
       {hasEvidence
-        ? <EvidenceBody evidence={trust.trustEvidence} visibility={trust.trustVisibility} />
-        : <EmptyBody visibility={trust.trustVisibility} />}
+        ? <EvidenceBody evidence={trust.trustEvidence} visibility={trust.trustVisibility} editable={editable} />
+        : <EmptyBody visibility={trust.trustVisibility} editable={editable} />}
     </div>
   );
 };

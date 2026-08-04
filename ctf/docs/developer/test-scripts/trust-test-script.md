@@ -12,7 +12,7 @@
 | **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md` |
-| **Generated** | 2026-07-14 (hand-updated: demo trust evidence shape fix — human summaries, no raw type slug, no "Invalid Date") |
+| **Generated** | 2026-08-04 (hand-updated: live visibility selector on self widgets — TR-A5b; admin verification page `/admin/trust` — TR-A9b) |
 
 ---
 
@@ -153,6 +153,27 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 ---
 
+### TR-A5b — Visibility selector in the widget (self surfaces only)
+
+**Role:** Admin acting as any authenticated user  
+**Surfaces:** Web (desktop + mobile-responsive)  
+**Precondition:** Admin signed in.
+
+**Steps:**
+1. Open the account hub (or the community shell right rail) and find the Trust widget's "Visible to:" row.
+2. Change the dropdown to `Private`, then reload the page.
+3. Open another member's Directory profile and find their Trust widget (member with `public` visibility).
+4. Reset your own visibility to `Public`.
+
+**Expected:**
+- On your own widget the row is a live dropdown (Public / Private / Restricted). Changing it POSTs `/api/trust/visibility`; after reload the chosen value is still selected.
+- On failure (e.g. network cut), the dropdown reverts to the previous value and a short plain-language error appears under the row.
+- On **another member's** widget the row is plain text ("Visible to: …"), never a dropdown — the route is self-scope only.
+
+**Result:** web ☐
+
+---
+
 ### TR-A6 — Visibility update: invalid value rejected
 
 **Role:** Admin (or any authenticated user)  
@@ -226,6 +247,27 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 **Expected:**
 - No evidence item mentions Mood, GentlePulse, ClickLog, Unlock, Foundation seeker activity, member blocks, or safety reports.
 - No numeric trust score appears anywhere.
+
+**Result:** web ☐
+
+---
+
+### TR-A9b — Admin verification page (`/admin/trust`)
+
+**Role:** Admin  
+**Surfaces:** Web (desktop + mobile-responsive)  
+**Precondition:** Seed complete. Member B exists. Admin signed in.
+
+**Steps:**
+1. Open `/admin` and confirm a **Trust** card is listed; click it (lands on `/admin/trust`).
+2. In the "Verification review" form, enter Member B's user id, pick `verified`, add a note, and save.
+3. Save again with an empty target user id.
+4. As a non-admin member, open `/admin/trust` directly.
+
+**Expected:**
+- Step 2: a status line confirms the save ("… is now verified") and Member B's trust panel gains the admin evidence item.
+- Step 3: an inline plain-language error asks for the target user id; nothing is sent.
+- Step 4: the non-admin is redirected away — the page never renders for them.
 
 **Result:** web ☐
 
