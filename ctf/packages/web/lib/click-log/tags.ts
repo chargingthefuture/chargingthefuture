@@ -160,9 +160,35 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // themselves and give bystanders the line "they were nice to you last month". A member who stays
   // guarded through the warm phase reads as unreasonable to everyone watching.
   //
-  // The warm phase is also when `honey-pot` and `poisoned-well` run most easily, since both need
-  // the member receptive to someone new.
+  // Owner's later refinement (2026-08-04): the warm phase is not a pause between attacks, it is
+  // the setup. A positive-surface scheme launches during or right at the end of it — `honey-pot`
+  // is the common one, but it can be any of the schemes whose presentation is friendly
+  // (`windfall`, `fake-counselor`, `fake-job`, the friendly half of `good-cop-bad-cop`,
+  // `thats-a-nice`, `lure-to-location` when it arrives as an invitation). Those are the plays that
+  // need a lowered guard to work at all; the hostile ones land regardless. The tell that follows:
+  // the dangerous moment is the middle of a warm stretch, not its end.
+  //
+  // Recorded as the owner's observation of their own case, NOT as an established rule. The owner
+  // notes each target gets a variation, and that whether the sequencing holds generally is
+  // unclear. Their read of what drives the repetition is laziness or cost efficiency — running
+  // bespoke operations per target is expensive, reusing plays is cheap — and plausible
+  // deniability. Do not state the sequence as a law anywhere member-facing.
   { slug: 'performed-kindness', label: 'The Warm Spell' },
+  // Named by the owner (2026-08-04). The people around a member all start wearing the same color,
+  // and the color changes on a schedule. The cover story is that it is a fashion trend.
+  //
+  // What separates this from every other scheme in the list: the owner reports it runs
+  // SIMULTANEOUSLY across targets who have no connection to each other, or at minimum across any
+  // targets who are in contact. An individual cannot see that; it only appears in aggregate. This
+  // makes it the single best candidate for demonstrating that cross-member trend reporting finds
+  // things no one member can — several members in different cities logging this tag in the same
+  // week is a pattern a coincidence does not produce, and a real fashion trend does not respect
+  // target boundaries. It is also why the owner reads the "trend" cover as evidence of central
+  // coordination rather than against it.
+  //
+  // Distinct from `thats-a-nice`, which is strangers commenting on what the member owns or wears.
+  // Here the display is on them, and the member is meant to notice.
+  { slug: 'color-sensitization', label: 'Color Sensitization' },
   // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
   // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
   // description of the scheme (see click-log.incident.create) — that is the intake that names
