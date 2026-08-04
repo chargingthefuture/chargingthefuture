@@ -69,6 +69,10 @@ export type TrustTransportRequest = {
   // and settlement have actually happened. The UI uses this to know whether a completion confirmation is
   // still pending.
   tripStatus?: TrustTransportTripStatus | null;
+  // The member who accepted the request, present only once a trip exists. By then the two are already
+  // paired and talking on the Direct Line, so this reveals nothing new; it is carried so a finished ride
+  // can offer to record the arrangement as a regular one.
+  tripProviderUserId?: string | null;
   requesterCompletionConfirmedAtIso?: string | null;
   providerCompletionConfirmedAtIso?: string | null;
 };

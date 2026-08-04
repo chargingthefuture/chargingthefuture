@@ -42,6 +42,9 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/foundation', name: 'Foundation' },
   { href: '/admin/level-up', name: 'LevelUp' },
   { href: '/admin/lighthouse', name: 'LightHouse' },
+  // Read-only review of who confirms whose recurring arrangements — the two-sided confirmation rule
+  // stops one member inflating their own standing, not a small group confirming each other's.
+  { href: '/admin/recurring-activity', name: 'Recurring Activity Review' },
   // Mutual Time has no /admin/* route — its admin dashboard (create/manage polls) lives at
   // /apps/mutual-time (MutualTimeAdmin renders there for admins), so this row points there.
   { href: '/apps/mutual-time', name: 'Mutual Time' },

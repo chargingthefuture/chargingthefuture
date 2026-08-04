@@ -60,6 +60,8 @@ export interface TripRequest {
   // The underlying trip's own status. Needed because `status` above already reads "completed" once the
   // trip reaches "delivered" — before mutual completion confirmation (and settlement) actually happens.
   tripStatus?: string | null;
+  // The member who drove/delivered, once a trip exists. Used to offer recording a regular ride.
+  tripProviderUserId?: string | null;
   requesterCompletionConfirmedAtIso?: string | null;
   providerCompletionConfirmedAtIso?: string | null;
 }

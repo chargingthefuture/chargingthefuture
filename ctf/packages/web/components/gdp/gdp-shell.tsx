@@ -51,7 +51,9 @@ function GdpContent({
     return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontSize: 14, padding: 24 }}>{error}</div>;
   }
   if (!report) return <EmptyReport t={t} />;
-  return <GdpDashboard sectors={sectors} countries={countries} metrics={metrics} />;
+  // The projected block rides in its own payload field, so it is read straight off the report and never
+  // derived from the metric rows that make up the Community Value Index.
+  return <GdpDashboard sectors={sectors} countries={countries} metrics={metrics} projection={report.projection} />;
 }
 
 // Read the live headline figure (the Community Value Index) off the report payload and report whether it

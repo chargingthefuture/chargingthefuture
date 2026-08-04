@@ -389,6 +389,28 @@ no longer named by their id.
 3. As the rider, open the trip. The record is still there and the provider reads as a deleted member,
    never `user_…`.
 
+### TT-R1 — Record a completed ride as a regular one
+
+**Role:** member (requester side)
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in as the requester on a ride a driver has accepted, with no recurring arrangement recorded with that driver. Also have one ride nobody has accepted yet.
+
+**Steps:**
+1. Open the Tracking tab.
+2. Look at the accepted/in-progress ride card, then at the one with no driver.
+3. On the accepted ride, click "Is this ongoing?", pick a cadence, and record it.
+
+**Expected:**
+- The prompt appears as soon as a driver has accepted — a rider knows a school run is weekly before the first one finishes — and stays available on a completed ride.
+- It does NOT appear on a ride nobody has accepted: there is no other member yet to name.
+- The member who drove is already filled in — no member search.
+- With a money currency chosen there is no amount field.
+- After recording, the row appears in the Recurring Activity app marked "Recorded from TrustTransport", awaiting the driver's confirmation.
+
+Result: web ☐
+
+---
+
 ## Admin walkthrough
 
 ### TT-A1 — Incident queue loads and an incident can be resolved

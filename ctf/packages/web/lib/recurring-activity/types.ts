@@ -22,6 +22,37 @@ export const RECURRING_ACTIVITY_CADENCES: readonly RecurringActivityCadence[] = 
   'quarterly',
 ];
 
+/**
+ * How many times a cadence happens in one month — the factor that puts every declared ServiceCredits
+ * value on the same footing before it is counted (inventory Gaps #2).
+ *
+ * Without this, a weekly 50 credits and a monthly 50 credits both contributed 50 to the Community Value
+ * Index, so a weekly arrangement was counted as though it happened a twelfth as often as it does. Each
+ * declared value is now read as "per occurrence" and scaled to a MONTHLY figure, so two arrangements
+ * that move the same credits over a year contribute the same amount.
+ *
+ * Weekly is 52 weeks over 12 months, biweekly 26 over 12, quarterly one third of a month. These are
+ * counting factors for a relative index, never a payment schedule and never money.
+ */
+export const CADENCE_MONTHLY_FACTOR: Record<RecurringActivityCadence, number> = {
+  weekly: 52 / 12,
+  biweekly: 26 / 12,
+  monthly: 1,
+  quarterly: 1 / 3,
+};
+
+/**
+ * The same factors as a SQL CASE expression, built from the map above so the two can never disagree.
+ * `column` is the cadence column to switch on. An unknown cadence falls back to 1 (counted once a
+ * month) rather than dropping the row — a value that exists should never silently vanish.
+ */
+export function cadenceMonthlyFactorSql(column = 'cadence'): string {
+  const branches = RECURRING_ACTIVITY_CADENCES.map(
+    (cadence) => `WHEN '${cadence}' THEN ${CADENCE_MONTHLY_FACTOR[cadence].toFixed(6)}`,
+  ).join(' ');
+  return `CASE ${column} ${branches} ELSE 1 END`;
+}
+
 // pending → counterparty has not yet confirmed (counts toward nothing).
 // active  → confirmed by the counterparty (the only state that feeds Trust or GDP).
 // ended   → either party ended it (no longer ongoing).
@@ -52,6 +83,10 @@ export interface RecurringActivity {
   endedByUserId: string | null;
   createdAt: string;
   updatedAt: string;
+  // Which app the member declared this from, when they used that app's inline "mark as recurring"
+  // control. NULL when they used the Recurring Activity plugin's own form. See
+  // RECURRING_ACTIVITY_ORIGIN_PLUGINS below.
+  originPlugin: string | null;
   // The party the reading member is NOT — filled in per-reader by the API so the client can show
   // "with <the other member>" without the reader having to work out which side they are on.
   role?: 'owner' | 'counterparty';
@@ -65,4 +100,32 @@ export interface CreateRecurringActivityInput {
   cadence: RecurringActivityCadence;
   scValue?: number | null;
   visibility?: RecurringActivityVisibility;
+  originPlugin?: string | null;
 }
+
+// The apps that may declare a recurring activity inline, so a member never has to leave what they are
+// doing to record one. Anything else is rejected at write time, which keeps `origin_plugin` a small
+// known set rather than free text a client could put anything in.
+export const RECURRING_ACTIVITY_ORIGIN_PLUGINS: readonly string[] = [
+  'lighthouse',
+  'foundation',
+  'socket-relay',
+  'trust-transport',
+  'service-credits',
+];
+
+// Apps that already record EVERY exchange as it happens: a Foundation call is metered per minute-block,
+// a TrustTransport trip is settled per trip, a SocketRelay favor is closed one at a time. GDP already
+// recognizes each of those occurrences, so a declared ServiceCredits value from one of these would count
+// the same value a second time. A declaration from one of these apps is therefore recognized as a
+// RELATIONSHIP (one point, the way a fiat line is counted) and never again as value. LightHouse is not
+// on this list: it records the arrangement once and never sees the months that follow, so its declared
+// value is the only record there is.
+export const PER_OCCURRENCE_ORIGIN_PLUGINS: readonly string[] = [
+  'foundation',
+  'socket-relay',
+  'trust-transport',
+  // Every completed send is already recognized from the transfers table, so a standing arrangement
+  // declared beside one counts as a relationship, never again as value.
+  'service-credits',
+];
