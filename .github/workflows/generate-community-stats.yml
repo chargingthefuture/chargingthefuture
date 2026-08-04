@@ -2,9 +2,11 @@ name: Generate — Community Stats Draft
 
 # Weekly sibling of generate-product-update.yml. Instead of turning commits into
 # a product update, this turns privacy-safe, whole-community activity totals
-# (open SocketRelay posts, Directory profiles and skills) into a short Quora
-# draft, filed as a GitHub issue for the owner to review and post. No individual
-# person, post, or profile is ever read — only aggregate counts.
+# (open SocketRelay posts, Directory profiles and skills, ServiceCredits
+# aggregates, and the two Community Value Index figures — real and projected)
+# into a short Quora draft, filed as a GitHub issue for the owner to review and
+# post. No individual person, post, or profile is ever read — only aggregate
+# counts, and the index figures are index numbers, never money.
 
 on:
   schedule:
