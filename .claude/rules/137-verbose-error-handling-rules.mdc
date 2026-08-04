@@ -42,9 +42,69 @@ reason, plus a stable code. Three facts, one line.
    and HTTP status; cap the echoed reason (the shared helper caps at 300 characters); never include an
    API key, token, stream key, or connection string, and log a URL path without its query string.
 
+## Mandatory — client surfaces (screens, panels, hooks)
+
+A route that explains itself is worth nothing if the screen replaces the explanation with its own
+fallback sentence. That is where the reason used to disappear a second time.
+
+8. **Show what the route said.** When a response carries `message` (or `reason` / `detail`), that text
+   goes on screen. A screen's own sentence is the fallback for when the body carries nothing — never a
+   replacement for what the route sent.
+9. **A caught value on a screen is still reported.** When the request never answered (network down, a
+   parse throw) there is no server text, so the screen keeps its plain sentence — but the caught value
+   goes to `reportError`. A `catch` that shows a fixed string and drops the value is the client version
+   of a silent catch.
+10. **Operator screens name the reason; member screens do not.** An admin panel appends the reason to
+    its sentence. A member screen keeps its plain copy and sends the reason to the error report, so
+    member-facing wording never turns into vendor or stack text.
+11. **A quotable reference beats a technical message.** When the response carries a `reference`, show
+    it — that is what makes a screenshot or a bug report traceable to the log line.
+12. **Not every literal is a message.** A state machine (`setStatus('unavailable')`) and a local
+    validation of the person's own input (a JSON textarea that does not parse) are not failures to
+    explain with vendor text: report the first, show the parse reason for the second with `reasonText`.
+
+## Mandatory — everything else that catches (libraries, scripts, the native app)
+
+Not every catch answers a request or draws a screen. A server library, an operational script, or a
+native-app module still has to leave a trace when it swallows a failure.
+
+13. **A catch that does work must record the reason.** If the body retries, cleans up, writes a
+    different value, or shows something, the caught value goes to `reportError` (web `lib/**`, the
+    native app) or `console.error` (a script — an operational script that fails silently and exits 0 is
+    the worst case for anyone debugging it).
+14. **A catch whose whole body is one `return` or one assignment is fine as it is.** Producing the
+    alternative value is its job and the caller can see that value: `return null`,
+    `return { ok: false, reason: 'not_a_zip' }`, `reporter = createNoopReporter()`. Carry a short
+    comment saying why the failure is expected.
+15. **An empty catch must say why, in the code, as `no-trace: <reason>`.** Releasing a client that is
+    already gone, a share sheet the member dismissed, a temporary file already deleted — these are
+    real, and the marker makes the decision visible and greppable instead of invisible. A bare
+    `// ignore` is not enough: name the reason.
+
 ## How
 
-`ctf/packages/web/lib/errors/failure.ts`:
+`ctf/packages/web/lib/errors/failure.ts` (server) and `ctf/packages/web/lib/errors/client-failure.ts`
+(screens — import-safe from a component; the server module pulls in `next/server` and must not be used
+from one):
+
+```ts
+import { failureText, responseFailureText, reasonText } from 'lib/errors/client-failure';
+
+// The request answered with an error — show what the route said.
+if (!res.ok) {
+  setError(await responseFailureText(res, 'Could not load profiles.'));           // operator
+  setError(await responseFailureText(res, 'Could not load your list.', 'member')); // member
+  return;
+}
+
+// The request never answered — keep the sentence, report the value.
+} catch (caught) {
+  setError(failureText(caught, { area: 'directory', op: 'load', fallback: 'Could not load profiles.' }));
+  setError(failureText(caught, { area: 'lighthouse', op: 'submit', fallback: 'Could not send that.', audience: 'member' }));
+}
+```
+
+Server side:
 
 ```ts
 import { failureResponse, failureReason, withReason } from 'lib/errors/failure';
@@ -78,15 +138,20 @@ message: withReason('Could not open the broadcast call', error);
 - One `catch` covering several steps that answers with one message for all of them.
 - `catch {}` / a bound error that is never used, on any answering path.
 - Swallowing a failure and answering `ok: true`.
-- Replacing a specific upstream message with a generic one (including in a client shell: when a route
-  supplies a `message`, show it — a client-side fallback string is for when the request never answered).
+- Replacing a specific upstream message with a generic one. In a screen this is the common case: when a
+  route supplies a `message`, show it — a fallback string is for when the request never answered.
 - Putting a secret, token, key, or connection string in a message or an error report.
 
 ## CI gate
 
 `pnpm --dir ctf run check:error-verbosity` (job **Error Verbosity Gate** in `.github/workflows/ci.yml`)
-scans `ctf/packages/web/app/api/**/route.ts` and fails on: an answering `catch` with no binding, a 5xx
-answer that does not report the error, and an operator-route error message with no reason.
+fails on seven things. On routes (`ctf/packages/web/app/api/**/route.ts`): an answering `catch` with no
+binding, a 5xx answer that does not report the error, and an operator-route error message with no
+reason. On screens and hooks (`components/**`, `hooks/**`, `app/**` outside `api`, and the native app's
+`src/**`): a `!res.ok` branch that shows a fixed string instead of the route's message, and a `catch`
+that shows a fixed string and never uses the caught value. On everything else that catches
+(`web/lib/**`, `ctf/scripts/**`, `mobile/src/**`, `shared/src/**`): an empty catch with no
+`no-trace: <reason>` marker, and a catch that does work while neither using nor recording the value.
 
 `ctf/config/error-verbosity-allowlist.json` holds a per-file budget for the failures that existed when
 the gate landed. It is a burn-down list: a budget may shrink, never grow, and a file not listed must be
@@ -96,6 +161,7 @@ clean. Do not add an entry to silence the gate — fix the route.
 
 - `.claude/rules/113-platform-coding-rules.mdc` — structured error responses, no silent catch.
 - `.claude/rules/108-observability-provider-abstraction-rules.mdc` — all error capture goes through
-  `reportError`.
+  `reportError`. The native app has its own, at
+  `ctf/packages/mobile/src/observability/report.ts` (a device log line plus Sentry, a no-op without a DSN).
 - `.claude/rules/124-brand-voice-and-language-rules.mdc` — plain words in the summary half of the
   message; the reason half is the machine's own text and is quoted as-is.

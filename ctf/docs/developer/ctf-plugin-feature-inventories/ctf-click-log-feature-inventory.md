@@ -168,6 +168,47 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-04: **Four more scheme tags: The Poisoned Well and the luck-pendulum family (owner-named).**
+  `poisoned-well` — an easy-to-recruit newcomer is steered into the member's orbit, gossip about
+  that newcomer is staged within their earshot so it reads as coming from the member, and a second
+  operative then baits the member into saying something about them; the newcomer dislikes the
+  member before any real relationship exists. The owner's good-luck / bad-luck pendulum split into
+  two tags because the mechanism, tell, and outcome differ: `windfall` (sudden fortune lands on
+  someone near the member — scholarship, job, whirlwind marriage or baby — elevating them so they
+  read the member as incompetent, handing them fake friends and an ego boost, and seeding
+  insecurity in the member; a flattered person converts easily; distinct from `honey-pot`, where
+  the romance targets the member directly) and `jinx` (someone near the member is hit with a
+  ticket, crash, theft, or repair bill and is then told the member's presence caused it — cause the
+  problem, sell the story, break the tie, isolate the member). `fake-job` — a job offer good enough
+  to leave the current one for, then a firing shortly after, leaving the target without the old job
+  and further from a better one; aimed at the member directly or at someone near them. List-data
+  only: no schema, route, contract, or UI change. The landing `/schemes` page gains matching
+  entries in a companion PR.
+
+- 2026-08-04: **Four new scheme tags: The Pot and Kettle plus three vehicle schemes (owner-named).**
+  `pot-and-kettle` — the insult is delivered by someone who visibly embodies it (a fat person
+  calling the member fat, a disabled person mocking a disability), made obnoxiously inappropriate
+  on purpose; it forces the operative to live a lie while still aiming at the member's self-esteem.
+  Sibling of `fabricated-flaw` but distinct: fabricated = the flaw is invented, projected = the
+  insulter contradicts their own insult. The owner's car material split into three tags so trend
+  data can tell the plays apart: `staged-road-rage` (a cyclist or pedestrian cuts in front at the
+  last moment — usually a pump fake, sometimes a real strike — to provoke a filmed reaction used
+  as recruiting material), `insurance-bleed` (repeated strikes on the member's car so premiums
+  climb until they bleed money or cannot stay insured), and `road-sensitization` (high beams,
+  brake checks, cars pacing or boxing them in, so every drive becomes something to second-guess).
+  Recorded in `tags.ts` as context but deliberately not a tag: the owner reports that killing a
+  Target in a motor-vehicle "accident" is the most common plausible-deniability murder. List-data
+  only: no schema, route, contract, or UI change — pickers, validation, and trends read the
+  canonical list. The landing `/schemes` page gains matching entries in a companion PR.
+
+- 2026-08-03: **New scheme tag: The Fabricated Flaw (owner-named).** Added slug `fabricated-flaw`
+  to `CLICK_LOG_SCHEME_TAGS` — staged criticism of an invented flaw, timed to be absurd, meant to
+  sensitize the member into self-criticism and to capture audio of the remark so uninvolved
+  operatives believe the "problem" is real and recurring. First scheme named through the
+  ClickLog-era flow (Discourse stays deprecated). List-data only: no schema, route, contract, or
+  UI change — the pickers, validation, and trends pick the new slug up from the canonical list.
+  The landing `/schemes` page gains the matching entry in a companion landing-page PR.
+
 - 2026-08-03: **Dropped the word "coarse" from the sharing copy.** "Coarse" is a technical term for
   data that has been rounded off and grouped; a member reading the sharing checkbox has no way to
   know that, and the word can be read as "rude". The two member-facing sharing controls now name

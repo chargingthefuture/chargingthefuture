@@ -62,7 +62,7 @@ export function useChymeBackChannel(enabled: boolean): MobileBackChannelControll
     try {
       setState(await getBackChannelState());
     } catch {
-      /* best-effort poll; next tick retries */
+      /* no-trace: best-effort poll, the next tick retries */
     }
   }, []);
 

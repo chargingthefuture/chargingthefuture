@@ -17,6 +17,7 @@ import {
   type FeedModerationReason,
 } from 'lib/feed/constants';
 import { getFeedAnnouncementsTokens, type FeedAnnouncementsTokens } from './feed-announcements-shared';
+import { failureText } from 'lib/errors/client-failure';
 
 // Commons moderation — the admin surface for taking a member's post or reply down, and putting it
 // back. Until this existed there was no moderation surface at all: the only way to remove something
@@ -474,8 +475,8 @@ export function CommonsModerationAdminShell({
       } else {
         setError(data?.message ?? 'Could not load the moderation queue.');
       }
-    } catch {
-      setError('Could not load the moderation queue.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'feed-announcements', op: 'reload', fallback: 'Could not load the moderation queue.' }));
     }
   }, [applyQueueData]);
 
@@ -492,8 +493,8 @@ export function CommonsModerationAdminShell({
       } else {
         setError(data?.message ?? 'Could not load flagged answers.');
       }
-    } catch {
-      setError('Could not load flagged answers.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'feed-announcements', op: 'reload_flagged', fallback: 'Could not load flagged answers.' }));
     }
   }, []);
 
@@ -520,8 +521,8 @@ export function CommonsModerationAdminShell({
       }
       setNotice(moderationNotice(result.changed, nextHidden, 'Answer hidden. The question stays up.', 'Answer is visible again.'));
       await reloadFlagged();
-    } catch {
-      setError('Could not change that answer.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'feed-announcements', op: 'set_answer_hidden', fallback: 'Could not change that answer.' }));
     } finally {
       setBusyId(null);
     }
@@ -555,8 +556,8 @@ export function CommonsModerationAdminShell({
         'Back in the Commons.',
       ));
       await reload(tab === 'hidden', focusAuthor?.authorUserId ?? null);
-    } catch {
-      setError('Could not change that post.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'feed-announcements', op: 'set_hidden_state', fallback: 'Could not change that post.' }));
     } finally {
       setBusyId(null);
     }

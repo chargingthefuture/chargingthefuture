@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { UnlockSubmission } from 'lib/unlock/types';
+import { failureText } from 'lib/errors/client-failure';
 
 // Data + behavior helpers for the Unlock admin shell, kept out of the shell component so each handler is
 // a small module-level function (the shell component itself stays under the rule-116 size/complexity
@@ -96,8 +97,8 @@ export async function retryRewards(ctx: UnlockAdminActionCtx): Promise<void> {
     if (summary.notice) ctx.setNotice(summary.notice);
     // Refresh so the snapshot counts and reward pills reflect the freshly granted rewards.
     ctx.router.refresh();
-  } catch {
-    ctx.setError('Network error. Try again.');
+  } catch (caught) {
+    ctx.setError(failureText(caught, { area: 'unlock', op: 'retry_rewards', fallback: 'Network error. Try again.' }));
   } finally {
     ctx.setReconciling(false);
   }
@@ -125,8 +126,8 @@ export async function reviewSubmission(ctx: UnlockAdminActionCtx, id: number, re
       ctx.setNotice('Approved, but the reward is held: this Quora profile is already on another account. Decide which account keeps it — Grant reward here, or Revoke it from the other.');
     }
     ctx.router.refresh();
-  } catch {
-    ctx.setError('Network error. Try again.');
+  } catch (caught) {
+    ctx.setError(failureText(caught, { area: 'unlock', op: 'review_submission', fallback: 'Network error. Try again.' }));
   } finally {
     ctx.setBusyId(null);
   }
@@ -153,8 +154,8 @@ export async function grantReward(ctx: UnlockAdminActionCtx, id: number): Promis
     }
     ctx.setNotice('Reward granted to this account.');
     ctx.router.refresh();
-  } catch {
-    ctx.setError('Network error. Try again.');
+  } catch (caught) {
+    ctx.setError(failureText(caught, { area: 'unlock', op: 'grant_reward', fallback: 'Network error. Try again.' }));
   } finally {
     ctx.setBusyId(null);
   }
@@ -188,8 +189,8 @@ export async function revokeReward(ctx: UnlockAdminActionCtx, id: number): Promi
     );
     ctx.setConfirmRevokeId(null);
     ctx.router.refresh();
-  } catch {
-    ctx.setError('Network error. Try again.');
+  } catch (caught) {
+    ctx.setError(failureText(caught, { area: 'unlock', op: 'revoke_reward', fallback: 'Network error. Try again.' }));
   } finally {
     ctx.setBusyId(null);
   }
@@ -215,8 +216,8 @@ export async function saveUrl(ctx: UnlockAdminActionCtx, id: number, editUrl: st
     ctx.setSubmissions((prev) => prev.map((s) => (s.id === id ? saved : s)));
     ctx.closeEditor();
     ctx.router.refresh();
-  } catch {
-    ctx.setEditError('Network error. Try again.');
+  } catch (caught) {
+    ctx.setEditError(failureText(caught, { area: 'unlock', op: 'save_url', fallback: 'Network error. Try again.' }));
   } finally {
     ctx.setSavingUrl(false);
   }
@@ -247,8 +248,8 @@ export async function toggleHistory(
     } else {
       ctx.setError(data?.message ?? 'Could not load Quora URL history.');
     }
-  } catch {
-    ctx.setError('Could not load Quora URL history.');
+  } catch (caught) {
+    ctx.setError(failureText(caught, { area: 'unlock', op: 'toggle_history', fallback: 'Could not load Quora URL history.' }));
   } finally {
     ctx.setHistoryLoadingUser(null);
   }

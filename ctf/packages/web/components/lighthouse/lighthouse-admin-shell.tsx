@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { getLighthouseTokens, type LighthouseTokens } from './shared';
+import { failureText } from 'lib/errors/client-failure';
 
 // Admin design tokens (shared admin look) come from the theme-aware LightHouse tokens: accent
 // (blue), page background, panel/header, admin card surface, and the solid admin border. The
@@ -121,8 +122,8 @@ export function LighthouseAdminShell({
       }
       setMessage(p.isActive ? 'Listing hidden.' : 'Listing restored.');
       router.refresh();
-    } catch {
-      setError('Network error. Try again.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'lighthouse', op: 'toggle_property_active', fallback: 'Network error. Try again.' }));
     } finally {
       setBusyId(null);
     }
@@ -146,8 +147,8 @@ export function LighthouseAdminShell({
       }
       setMessage('Match canceled.');
       router.refresh();
-    } catch {
-      setError('Network error. Try again.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'lighthouse', op: 'cancel_match', fallback: 'Network error. Try again.' }));
     } finally {
       setBusyId(null);
     }

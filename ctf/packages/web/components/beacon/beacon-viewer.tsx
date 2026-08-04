@@ -13,6 +13,7 @@ import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { useTheme } from '@/hooks/useTheme';
 import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
 import { BEACON_COLOR } from 'lib/beacon/constants';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 type BeaconEventLike = {
   id: string;
@@ -250,7 +251,7 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
         headers: { 'x-ctf-csrf': '1' },
       });
       if (!res.ok) {
-        setChatError('Live chat is unavailable right now.');
+        setChatError(await responseFailureText(res, 'Live chat is unavailable right now.', 'member'));
         return;
       }
       const data = (await res.json()) as { ok: boolean } & ChatCredentials;
@@ -261,8 +262,8 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
         streamUserId: data.streamUserId,
         streamToken: data.streamToken,
       });
-    } catch {
-      setChatError('Live chat is unavailable right now.');
+    } catch (caught) {
+      setChatError(failureText(caught, { area: 'beacon', op: 'join_chat', fallback: 'Live chat is unavailable right now.', audience: 'member' }));
     }
   }, [liveEvent]);
 

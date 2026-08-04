@@ -667,7 +667,7 @@ export async function enrollInCohort(input: EnrollInCohortInput) {
           idempotencyKey: `${input.idempotencyKey}:rollback:${escrowId}`,
         });
       } catch {
-        // Best-effort rollback for already-held escrows.
+        // no-trace: best-effort rollback for escrows that are already held.
       }
     }
 

@@ -8,6 +8,7 @@
 
 import type { Channel, StreamChat } from 'stream-chat';
 import { acquireStreamChatClient, releaseStreamChatClient } from '../shared/stream-chat-connection';
+import { reportError } from 'lib/observability/report';
 
 export type HubLiveCredentials = {
   streamApiKey: string;
@@ -124,7 +125,10 @@ export async function connectHubLive(
         }
       },
     };
-  } catch {
+  } catch (caught) {
+    // Live chat silently falling back to polling looked like a slow feed for weeks, so the reason is
+    // recorded even though the fallback is harmless.
+    reportError(caught, { area: 'hub', op: 'live_stream_connect' });
     // Any failure (connect, watch, or otherwise) leaves the caller on polling. Release the acquired
     // connection so we never leak a hold on it; a failed acquire holds nothing.
     if (client) {

@@ -124,7 +124,7 @@ async function postTransactionToFormance(input: {
   try {
     payload = (await response.json()) as FormanceTransactionResponse;
   } catch {
-    // Non-JSON or empty body: keep the empty default payload; the post already succeeded.
+    // no-trace: a non-JSON or empty body keeps the default payload, and the post already succeeded.
   }
 
   return {

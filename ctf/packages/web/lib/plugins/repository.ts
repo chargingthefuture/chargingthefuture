@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { reportError } from 'lib/observability/report';
 
 export type PluginAvailabilityState = 'implemented_shell' | 'planned' | 'alpha' | 'beta';
 
@@ -343,7 +344,10 @@ export async function listPluginRegistry(options?: { includeHidden?: boolean }):
       : fallbackPluginRegistry.filter((item) => item.isVisible);
 
     return sortPluginsByName(items);
-  } catch {
+  } catch (caught) {
+    // The registry read failing means every member sees the built-in list instead of the database's —
+    // a silent config drift, so it is reported.
+    reportError(caught, { area: 'plugins', op: 'list_registry' });
     const items = includeHidden
       ? fallbackPluginRegistry
       : fallbackPluginRegistry.filter((item) => item.isVisible);

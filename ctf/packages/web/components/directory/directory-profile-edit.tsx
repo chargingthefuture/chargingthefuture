@@ -8,6 +8,7 @@ import { DirectorySkillsPicker } from "./directory-skills-picker";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { useTheme } from "@/hooks/useTheme";
 import { DIRECTORY_MAX_PROPOSED_SKILL_LENGTH, DIRECTORY_MAX_PROPOSED_SKILLS } from "@/lib/directory/constants";
+import { failureText } from 'lib/errors/client-failure';
 
 // The full editable shape of a directory profile. GET /api/directory/profile returns the
 // caller's own profile with the taxonomy IDs (sectorId, jobTitleId, skills[].id) needed to
@@ -657,8 +658,8 @@ export function DirectoryProfileEdit({
         return;
       }
       setSaveError(body.message ?? "Could not save your profile. Please try again.");
-    } catch {
-      setSaveError("Could not save your profile. Please try again.");
+    } catch (caught) {
+      setSaveError(failureText(caught, { area: 'directory', op: 'save', fallback: "Could not save your profile. Please try again.", audience: 'member' }));
     } finally {
       setSaving(false);
     }

@@ -12,6 +12,7 @@ import { DirectoryBrowse } from "./directory-browse";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { failureText } from 'lib/errors/client-failure';
 
 const DEFAULT_REWARD_CARD: SkillsHuntRewardCard = {
   title: "Help grow the Directory",
@@ -204,8 +205,8 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
           const data = await res.json() as { items?: Sector[] };
           setSectors(data.items ?? []);
         }
-      } catch {
-        setMetaError("Failed to load directory.");
+      } catch (caught) {
+        setMetaError(failureText(caught, { area: 'directory', op: 'fetch_meta', fallback: "Failed to load directory.", audience: 'member' }));
       } finally {
         setLoadingMeta(false);
       }

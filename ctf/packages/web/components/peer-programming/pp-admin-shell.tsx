@@ -20,6 +20,7 @@ import { ppAdminMutate } from './pp-admin-shared';
 import { getPeerProgrammingTokens, type PeerProgrammingTokens } from './pp-shared';
 import { PeerProgrammingAdminTopicForm } from './pp-admin-topic-form';
 import { PeerProgrammingAdminAssignments } from './pp-admin-assignments';
+import { responseFailureText } from 'lib/errors/client-failure';
 
 // Admin design tokens (shared admin look from the design system) come from the theme-aware
 // PeerProgramming tokens: accent (mint), page background, panel/header, admin card surface, and
@@ -132,7 +133,7 @@ function usePeerProgrammingAdmin(): AdminData {
   const loadTopic = useCallback(async () => {
     const res = await fetch('/api/peer-programming/admin/topics');
     if (!res.ok) {
-      throw new Error('Could not load the weekly topic.');
+      throw new Error(await responseFailureText(res, 'Could not load the weekly topic.'));
     }
     const data = (await res.json()) as { ok: boolean; topic: PeerProgrammingTopic | null };
     setTopic(data.topic ?? null);
@@ -141,7 +142,7 @@ function usePeerProgrammingAdmin(): AdminData {
   const loadCohorts = useCallback(async () => {
     const res = await fetch('/api/peer-programming/admin/cohorts');
     if (!res.ok) {
-      throw new Error('Could not load the active cohorts.');
+      throw new Error(await responseFailureText(res, 'Could not load the active cohorts.'));
     }
     const data = (await res.json()) as { ok: boolean; cohorts: AdminCohort[] };
     setCohorts(data.cohorts ?? []);
@@ -150,7 +151,7 @@ function usePeerProgrammingAdmin(): AdminData {
   const loadMode = useCallback(async () => {
     const res = await fetch('/api/peer-programming/admin/single-open-cohort');
     if (!res.ok) {
-      throw new Error('Could not load the single-open-cohort setting.');
+      throw new Error(await responseFailureText(res, 'Could not load the single-open-cohort setting.'));
     }
     const data = (await res.json()) as { ok: boolean; mode: SingleOpenCohortMode };
     setMode(data.mode ?? null);
