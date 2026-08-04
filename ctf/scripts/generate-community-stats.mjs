@@ -42,8 +42,9 @@ requireEnv('ANTHROPIC_API_KEY');
 // The number of documented skills a functioning economy needs — the point at which the community can
 // meet its own needs. Any economy can be any size; covering all 650 skills is what makes it
 // self-sufficient. We size a full 650 at about $300 billion in community value (the same $300B goal
-// the GDP plugin tracks; an estimate, never money or price). The Directory shows how many skills are
-// documented so far, so the draft can report that count against this 650 baseline as a percentage.
+// the GDP plugin tracks; an estimate, never money or price). Progress toward it is counted as the
+// number of different skills at least one member has actually listed in the Directory — NOT the size
+// of the skills catalog, which already holds all 650 options and would always read 100%.
 const FULL_ECONOMY_SKILL_BASELINE = 650;
 
 const pool = new Pool({
@@ -93,11 +94,15 @@ const STAT_PROVIDERS = [
         `SELECT COUNT(*)::int AS n FROM directory_profiles
          WHERE is_active = TRUE AND deleted_at IS NULL`,
       );
+      // Skills at least one active member has listed. Joined to the taxonomy and filtered to
+      // is_active so this counts the same population as the catalog total below — otherwise a skill
+      // retired from the taxonomy could push the listed count above the catalog it is measured against.
       const distinctSkills = await client.query(
         `SELECT COUNT(DISTINCT dps.skill_id)::int AS n
          FROM directory_profile_skills dps
          JOIN directory_profiles p ON dps.profile_id::text = p.id::text
-         WHERE p.is_active = TRUE AND p.deleted_at IS NULL`,
+         JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
+         WHERE p.is_active = TRUE AND p.deleted_at IS NULL AND s.is_active = TRUE`,
       );
       const totalSkills = await client.query(
         `SELECT COUNT(*)::int AS n FROM skills_taxonomy_skills WHERE is_active = TRUE`,
@@ -112,17 +117,22 @@ const STAT_PROVIDERS = [
          ORDER BY n DESC, s.name ASC
          LIMIT 5`,
       );
-      // How many skills are documented so far, measured against the 650 a full Skills Economy
-      // needs. The percentage is whole-number and can read small early on — that is fine to show
-      // plainly.
-      const documentedNow = totalSkills.rows[0].n;
-      const pctOfBaseline = Math.round((documentedNow / FULL_ECONOMY_SKILL_BASELINE) * 100);
+      // How many skills members have actually listed so far, measured against the 650 a full Skills
+      // Economy needs. This is the distinct-listed count, not the catalog size: the catalog already
+      // offers all 650, so using it here would report 100% coverage on a Directory where only a
+      // fraction of the skills has anyone behind it. The percentage is whole-number and can read
+      // small early on — that is fine to show plainly.
+      const documentedNow = distinctSkills.rows[0].n;
+      const pctOfBaseline = Math.min(
+        100,
+        Math.round((documentedNow / FULL_ECONOMY_SKILL_BASELINE) * 100),
+      );
       const facts = [
         { label: 'people listed in the Directory', value: profiles.rows[0].n },
-        { label: 'different skills people have listed', value: distinctSkills.rows[0].n },
+        { label: 'different skills people have listed', value: documentedNow },
         { label: 'skills available to pick from in total', value: totalSkills.rows[0].n },
         {
-          label: 'documented skills toward a functioning economy',
+          label: 'skills with at least one person behind them, toward a functioning economy',
           value: `${documentedNow} of ${FULL_ECONOMY_SKILL_BASELINE} (${pctOfBaseline}%) — all ${FULL_ECONOMY_SKILL_BASELINE} would be about $300 billion in community value`,
         },
       ];
@@ -253,7 +263,7 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
     messages: [
       {
         role: 'user',
-        content: `This week's whole-community totals:\n\n${statsForPrompt}\n\nWrite a community snapshot. Return ONLY a JSON object with these exact keys:\n- title: A short, plain in-list title (max 80 chars), e.g. "Community activity — ${today}".\n- quoraDraft: A 2-4 short-paragraph Quora post, written like a personal note. Lead with the SocketRelay open posts and the Directory numbers, since those show need most clearly. Work in the skills-documented-so-far line — how many of the 650 skills a functioning economy needs are documented now, and the percentage — since it shows how the economy is filling in; use only the exact numbers given for it. When you first name each app, paste its exact direct link (given above as "direct link: ...") right after the name in parentheses, so a reader can tap straight through to it. Remember an open-post count is a count of posts, not people. Plain words, ~6th-grade reading level. Make it concrete: a number, what it means, and one simple thing a reader can do (join, list a skill, answer an open post). One sentence on where the project lives, giving the GitHub URL exactly as ${repoUrl}. Do not invent numbers or links, do not sell importance, no rhetorical questions.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
+        content: `This week's whole-community totals:\n\n${statsForPrompt}\n\nWrite a community snapshot. Return ONLY a JSON object with these exact keys:\n- title: A short, plain in-list title (max 80 chars), e.g. "Community activity — ${today}".\n- quoraDraft: A 2-4 short-paragraph Quora post, written like a personal note. Lead with the SocketRelay open posts and the Directory numbers, since those show need most clearly. Work in the skills-coverage line — how many of the 650 skills a functioning economy needs have at least one person behind them now, and the percentage — since it shows how the economy is filling in; use only the exact numbers given for it, and never treat the separate "skills available to pick from in total" number as coverage (that one is the size of the pick-list, not how many skills someone has listed). When you first name each app, paste its exact direct link (given above as "direct link: ...") right after the name in parentheses, so a reader can tap straight through to it. Remember an open-post count is a count of posts, not people. Plain words, ~6th-grade reading level. Make it concrete: a number, what it means, and one simple thing a reader can do (join, list a skill, answer an open post). One sentence on where the project lives, giving the GitHub URL exactly as ${repoUrl}. Do not invent numbers or links, do not sell importance, no rhetorical questions.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
       },
     ],
   }),
