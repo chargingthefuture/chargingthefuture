@@ -74,6 +74,28 @@ export const CLICK_LOG_PROBLEM_TAGS: readonly ClickLogTag[] = [
   { slug: 'banking-blocked', label: 'Bank / finance accounts falsely blocked' },
 ] as const;
 
+// Known taxonomy gap, recorded 2026-08-04 (owner raised it about `color-sensitization`, and it
+// turns out to be list-wide). The entries below are not all the same kind of thing:
+//
+//   - Operations with an arc — a setup, a mechanism, an intended end state. `poisoned-well` steers
+//     someone in, stages the gossip, baits the member, and ends with that person turned.
+//     `fake-job` hires and fires. `jinx`, `windfall`, `conspiracy-carousel`, `honey-pot`,
+//     `lure-to-location`, `staged-road-rage`, `fabricated-flaw`, `scapegoating-by-proxy` are the
+//     same shape.
+//   - Ambient tactics with no arc — a standing condition the member is meant to keep noticing, with
+//     nobody working toward a conclusion: `color-sensitization`, `road-sensitization`,
+//     `thats-a-nice`, `staged-narratives`.
+//   - A shape over time rather than an act at all: `performed-kindness`.
+//
+// Why this is not just naming. Ambient tactics are near-continuous and operations are episodic, so
+// a raw count column ranks a tag logged most days far above one logged quarterly. That is
+// technically true and actively misleading, because it compares a persistent condition against
+// discrete operations.
+//
+// Deliberately NOT fixed yet: nothing consumes tag type today and no logged data exists to be
+// distorted, so adding a `kind` field now would be guessing at a shape before seeing one. The
+// trigger to add it is the first time a tag ranking on real data misleads the reader. When that
+// happens, add the field rather than reordering or renaming — the slugs are frozen.
 export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // Named in the Discourse thread (one post per scheme):
   { slug: 'scapegoating-by-proxy', label: 'The Scapegoating by Proxy' },

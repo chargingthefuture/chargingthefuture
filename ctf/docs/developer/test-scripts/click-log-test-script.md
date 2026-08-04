@@ -218,3 +218,5 @@ of these, it is already tracked, not a new bug:
 > _Scheme list update (2026-08-04): added "The Warm Spell". List-data only — no test steps changed._
 
 > _Scheme list update (2026-08-04): added "Color Sensitization". List-data only — no test steps changed._
+
+> _Documentation note (2026-08-04): recorded a known taxonomy gap in the scheme tag list — it mixes operations with an arc, ambient tactics without one, and one entry that is a shape over time. Comment only; no tag added, removed, or renamed, and no test steps changed._
