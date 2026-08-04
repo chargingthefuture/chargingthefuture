@@ -62,10 +62,30 @@ signal in Trust. It is emphatically NOT a ledger, NOT a bill, and carries NO fia
 
 ## Admin Features
 
-None in v1. There is no admin mutation surface. The append-only `recurring_activity_audit_trail`
-supports later admin review of the bilateral confirmation graph for collusion patterns (a ring that only
-ever confirms the same small set of members), which is one of the fraud signals this plugin is designed
-to make detectable — but no admin UI ships yet (see Gaps).
+There is still **no admin mutation surface** — an admin cannot create, confirm, decline, end, or edit
+anyone's arrangement. One read-only review surface ships (2026-08-03):
+
+1. **Collusion review** at `/admin/recurring-activity`, reading
+   `GET /api/recurring-activity/admin/review`. A recurring activity counts only once the counterparty
+   confirms it, which stops one member inflating their own standing but not a small group confirming
+   each other's. The review surfaces the three shapes that pattern makes:
+   - **Each declared one with the other** — two members who each recorded an arrangement naming the
+     other. One arrangement between two people is ordinary; a matched pair, one in each direction, is
+     what a trade of confirmations looks like.
+   - **Confirmed within a minute** — confirmed within 60 seconds of being declared, fast enough that
+     nobody plausibly read it. Two people sitting together can legitimately be that quick, so it earns
+     a second look and never a conclusion.
+   - **Small groups pointing at each other** — a connected group of three to eight members with at
+     least as many confirmed arrangements as members, which means the group contains a loop rather
+     than a chain of introductions. Groups larger than eight are excluded on purpose: that is a
+     community, not a ring.
+2. The surface changes nothing, scores nobody, and feeds no member-facing figure. Flags are questions
+   for a person to read, not findings. Member ids on flagged rows only are resolved to display names so
+   the reviewer can see who is involved; the surface never lists the roster.
+3. It reads a bounded slice (the 5,000 most recent confirmed arrangements) and says plainly when that
+   cap was hit, rather than showing a partial picture as if it were the whole one.
+4. Every read — allow or deny — writes an audit row (`recurring-activity.admin.review.read`), because
+   looking at who is connected to whom is itself a use of admin power.
 
 ## API Surface and Route Map
 
@@ -84,6 +104,10 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
   `recurring-activity.end`.
 - `POST /api/recurring-activity/[activityId]/visibility` — owner sets visibility. Command:
   `recurring-activity.visibility.update`.
+- `GET /api/recurring-activity/admin/review` — **admin only**, read-only collusion review over
+  confirmed arrangements (see Admin Features). Returns `{ review, names }`; writes an audit row on both
+  the allow and the deny path. Command: `recurring-activity.admin.review.read`. Rendered by
+  `/admin/recurring-activity`.
 
 ## Data Model and Storage Contracts
 
@@ -119,8 +143,12 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
 - Only `active` (counterparty-confirmed) rows feed Trust or GDP. `pending`, `declined`, and `ended` rows
   feed nothing.
 - GDP (see the GDP inventory §4.4): fiat lines → one `RACT` each (a count); ServiceCredits lines → their
-  declared `sc_value` (value). Its own de-duped recognition bucket, so it never double-counts the direct
-  ServiceCredits transfer source (a different table).
+  declared `sc_value` **scaled to a monthly figure by the line's cadence** (`CADENCE_MONTHLY_FACTOR`:
+  weekly 52/12, biweekly 26/12, monthly 1, quarterly 1/3), so two arrangements moving the same credits
+  over a year count the same. An unknown cadence falls back to a factor of 1 rather than dropping the
+  row. Fiat lines are unaffected — they are counted by number of relationships, not by period. Its own
+  de-duped recognition bucket, so it never double-counts the direct ServiceCredits transfer source (a
+  different table).
 - One exception, added when inline declaration shipped: some apps already record EVERY exchange as it
   happens — a Foundation call is metered per minute-block, a TrustTransport trip settles per trip, a
   SocketRelay favor closes one at a time — and GDP already recognizes each of those occurrences.
@@ -173,10 +201,11 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
    (right after a completed send), TrustTransport ride (once a driver has accepted). Each was added
    additively to the already-shipped screen; none replaced existing copy or layout. The standalone hub
    remains for confirming, editing, and ending.
-2. **Cadence is not normalized** for the ServiceCredits value contribution — the declared `sc_value` is
-   summed as-is regardless of cadence (a `weekly` 50 SC and a `monthly` 50 SC both contribute 50). A
-   monthly normalization is a documented follow-up; the figure is a labeled estimate, so this is an
-   approximation, not a correctness bug.
+2. ~~**Cadence is not normalized** for the ServiceCredits value contribution…~~ **Closed 2026-08-03.**
+   The declared value is now scaled to a monthly figure by the line's cadence before it is counted, in
+   the live recognition source, the projected figure, and the weekly job. A weekly 50 credits now
+   contributes 52/12 × 50 a month instead of the same 50 a monthly line contributes. Factors live in
+   one place (`CADENCE_MONTHLY_FACTOR`) and the SQL is generated from them so the two cannot drift.
 3. ~~**Counterparty existence is not verified**…~~ **Closed 2026-08-03.** `createRecurringActivity` now
    rejects a counterparty nothing on the platform knows about. The check is deliberately permissive
    because `users` does not exist in every environment (it is not in `schema.sql` — see
@@ -184,12 +213,33 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
    `login_events` sign-in, or the `users` table where present, and an unreadable check is treated as
    "known" so a lookup failure can never block a real member. It refuses an invented id, which is what
    the gap was about.
-4. **No admin collusion-review surface yet** — the bilateral graph is captured (owner/counterparty edges
-   + cadence + audit trail) so the "same small group confirming each other to inflate trust" pattern is
-   detectable, but the admin view/metric that surfaces it is not built.
+4. ~~**No admin collusion-review surface yet**…~~ **Closed 2026-08-03.** `/admin/recurring-activity`
+   ships as a read-only review of reciprocal pairs, one-minute confirmations, and small looped groups
+   (see Admin Features). Remaining by design, not as debt: the review flags patterns and takes no
+   action — there is deliberately no admin power to void, edit, or annotate a member's arrangement, so
+   acting on a flag means talking to the members involved.
 
 ## Change Log
 
+- 2026-08-03 (third pass): **Closed the last two inventory gaps.** (1) **Cadence normalization**
+  (Gaps #2): a declared ServiceCredits value is now scaled to a monthly figure by the line's cadence
+  before it is counted — weekly 52/12, biweekly 26/12, monthly 1, quarterly 1/3 — in the live
+  recognition source, in the projected figure, and in the weekly `recognizeGdp.mjs` job. Previously a
+  weekly 50 and a monthly 50 both contributed 50, reading a weekly arrangement as a twelfth of what it
+  is. The factors live once in `CADENCE_MONTHLY_FACTOR` and the SQL CASE is generated from them
+  (`cadenceMonthlyFactorSql`), so the map and the query cannot disagree; the weekly job mirrors the same
+  numbers with a comment tying them together. An unknown cadence counts once a month rather than
+  dropping the row. Effect: the Community Value Index rises for weekly and biweekly ServiceCredits
+  arrangements and falls for quarterly ones. Fiat lines are untouched — they are counted by number of
+  relationships, not by period. (2) **Collusion review** (Gaps #4): a read-only admin surface at
+  `/admin/recurring-activity` backed by `GET /api/recurring-activity/admin/review` and
+  `lib/recurring-activity/review.ts`, surfacing reciprocal pairs, confirmations inside a minute, and
+  connected groups of three to eight members carrying at least as many arrangements as members (a loop,
+  not a chain). Bounded to the 5,000 most recent confirmed arrangements and says so when the cap is hit.
+  No mutation power of any kind, no member-facing effect, no score; every read writes an audit row.
+  Added to the admin landing directory, with new command, access-policy, and audit contract entries.
+  Graph logic and the normalization factors are covered by `lib/recurring-activity/review.test.ts`. No
+  schema change.
 - 2026-08-03 (second pass): **Completed the locked accessibility decision, which the first pass
   implemented too narrowly.** The spec (Gaps #1) names the in-app prompts as the owner's intended
   *primary* entry point, at every place a relationship already exists — LightHouse match, Foundation

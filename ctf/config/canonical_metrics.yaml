@@ -123,7 +123,7 @@ canonical_metrics:
 
   - id: gdp_value_index
     name: Community Value Index
-    description: One composite measure of all recognized economic activity in the community, folding every value type (fiat, crypto, ServiceCredits, barter) into a single relative figure via owner-set, non-binding contribution weights (USD is only the reference base = 1). A community-built transparency measure in the spirit of GDP — NOT money, NOT a price, and NOT an exchange or redemption value for any currency or token; displayed with no currency symbol. Augments, does not replace, the projection target (issue #121). Only eligible settled value is recognized; transfers and deletion/reclaim reallocations are excluded. Recognized sources include LightHouse housing arrangements at ONE month of the listed rent per accepted match; the months after the first are counted by the Recurring Activity source instead, so no month is counted twice and no plugin holds a running rent total.
+    description: One composite measure of all recognized economic activity in the community, folding every value type (fiat, crypto, ServiceCredits, barter) into a single relative figure via owner-set, non-binding contribution weights (USD is only the reference base = 1). A community-built transparency measure in the spirit of GDP — NOT money, NOT a price, and NOT an exchange or redemption value for any currency or token; displayed with no currency symbol. Augments, does not replace, the projection target (issue #121). Only eligible settled value is recognized; transfers and deletion/reclaim reallocations are excluded. Recognized sources include LightHouse housing arrangements at ONE month of the listed rent per accepted match; the months after the first are counted by the Recurring Activity source instead, so no month is counted twice and no plugin holds a running rent total. Declared recurring ServiceCredits values are scaled to a monthly figure by the arrangement's cadence (weekly 52/12, biweekly 26/12, monthly 1, quarterly 1/3) so two arrangements moving the same credits over a year contribute equally; recurring fiat lines are counted by number of relationships and carry no amount at all.
     owner: economics-team@chargingthefuture.org
     data_type: integer
     unit: index
@@ -144,6 +144,10 @@ canonical_metrics:
       - name: lighthouse_properties.monthly_rent
         type: currency
       - name: lighthouse_matches.status
+        type: string
+      - name: recurring_activities.sc_value
+        type: number
+      - name: recurring_activities.cadence
         type: string
       - name: currency_usd_rates.usd_rate
         type: number
@@ -189,6 +193,8 @@ canonical_metrics:
         type: string
       - name: recurring_activities.sc_value
         type: number
+      - name: recurring_activities.cadence
+        type: string
       - name: recurring_activities.status
         type: string
     example_values:

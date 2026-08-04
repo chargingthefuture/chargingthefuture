@@ -1,5 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
-import { PER_OCCURRENCE_ORIGIN_PLUGINS } from 'lib/recurring-activity/types';
+import { PER_OCCURRENCE_ORIGIN_PLUGINS, cadenceMonthlyFactorSql } from 'lib/recurring-activity/types';
 
 // Community Value Index recognition (issue #121). This module is the GDP plugin's "value layer": it
 // rolls all recognized economic activity across applicable plugins into ONE composite figure — the
@@ -343,10 +343,14 @@ export const RECURRING_ACTIVITY_COUNT_UNIT = 'RACT';
  *   - Fiat lines (currency_code <> 'SC'): counted by NUMBER of activities, one RACT each. A fiat line
  *     carries NO amount (the schema never stores one), so the platform never holds a summable
  *     recurring-fiat-payment total — the whole point of the plugin.
- *   - ServiceCredits lines (currency_code = 'SC'): counted by their declared `sc_value`. ServiceCredits
- *     is an internal utility token with no third-party reporting duty. This is a DECLARED figure, never
- *     an executed transfer, so it never touches real balances and never double-counts the direct
- *     ServiceCredits transfer source (which reads `service_credits_transfers`, a different table).
+ *   - ServiceCredits lines (currency_code = 'SC'): counted by their declared `sc_value`, scaled to a
+ *     MONTHLY figure by the line's cadence (`CADENCE_MONTHLY_FACTOR`) so a weekly arrangement and a
+ *     monthly one moving the same credits over a year count the same. Before that scaling, a weekly 50
+ *     and a monthly 50 both contributed 50, which read a weekly arrangement as a twelfth of what it is.
+ *     ServiceCredits is an internal utility token with no third-party reporting duty. This is a DECLARED
+ *     figure, never an executed transfer, so it never touches real balances and never double-counts the
+ *     direct ServiceCredits transfer source (which reads `service_credits_transfers`, a different
+ *     table). Fiat lines are unaffected: they are counted by NUMBER of relationships, not by period.
  *
  * One exception keeps a declared value from counting twice. Members can now mark an activity as
  * recurring from inside the app they are already in, and that app is recorded on the row as
@@ -373,7 +377,7 @@ export const recurringActivitySource: RecognitionSource = {
       // exchange on-platform is excluded here and counted as a relationship below instead, so the same
       // credits are never counted twice (see PER_OCCURRENCE_ORIGIN_PLUGINS).
       queryDb<{ total: string | null }>(
-        `SELECT SUM(sc_value)::text AS total
+        `SELECT SUM(sc_value * (${cadenceMonthlyFactorSql()}))::text AS total
            FROM recurring_activities
           WHERE status = 'active' AND currency_code = 'SC' AND sc_value IS NOT NULL
             AND (origin_plugin IS NULL OR origin_plugin <> ALL($1::text[]))`,

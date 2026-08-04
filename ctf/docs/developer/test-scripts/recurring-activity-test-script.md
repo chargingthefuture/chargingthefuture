@@ -410,6 +410,75 @@ Result: web ☐
 
 ---
 
+### RA-18 — A weekly arrangement counts more than a monthly one
+
+**Role:** member (plus a look at the GDP dashboard)
+**Surfaces:** web (desktop)
+**Precondition:** Two confirmed ServiceCredits arrangements with the same declared value — say 50 credits — one with cadence "Every week" and one with cadence "Every month". Note the Community Value Index on `/apps/gdp` before you start.
+
+**Steps:**
+1. Record and confirm the monthly one. Reload `/apps/gdp` and note how much the index moved.
+2. Record and confirm the weekly one. Reload `/apps/gdp` and note how much it moved this time.
+
+**Expected:**
+- The monthly arrangement adds about 50 to the index.
+- The weekly one adds about 217 — 52 weeks over 12 months, times 50 — not another 50. Two arrangements moving the same credits over a year now count the same.
+- A quarterly 50 adds about 17, not 50.
+- A confirmed FIAT recurring arrangement still adds exactly one point regardless of cadence, and still shows no amount anywhere.
+
+Result: web ☐
+
+---
+
+## Admin walkthrough
+
+There is still no admin power to create, confirm, decline, end, or edit anyone's arrangement. One read-only review surface ships.
+
+### RA-A1 — Collusion review is admin-only and read-only
+
+**Role:** admin, then a non-admin member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in as an admin. Seed or create: two members who each declared an arrangement naming the other (both confirmed); one arrangement confirmed within seconds of being declared; three members whose confirmed arrangements form a loop (A–B, B–C, C–A).
+
+**Steps:**
+1. Open `/admin` and find "Recurring Activity Review" in the directory. Open it.
+2. Read the three sections.
+3. Click the refresh control.
+4. Sign in as a non-admin member and navigate directly to `/admin/recurring-activity`, then call `GET /api/recurring-activity/admin/review` directly.
+
+**Expected:**
+- The reciprocal pair appears under "Each declared one with the other", the quick one under "Confirmed within a minute" with the seconds shown, and the three-member loop under "Small groups pointing at each other".
+- A section with nothing in it reads "Nothing to look at here" rather than showing an empty list.
+- Members are named where a name is available, and shown as a shortened id where it is not — never blank.
+- There is no button anywhere to void, edit, end, or annotate anyone's arrangement. The page only reads.
+- The refresh control re-pulls the data without a full page reload.
+- The non-admin is redirected away from the page, and the API call returns 403.
+- A chain of introductions (A–B, B–C with no link back) does NOT appear as a group, and neither does a group larger than eight.
+
+Result: web ☐
+
+---
+
+### RA-A2 — Every review read is audited
+
+**Role:** admin
+**Surfaces:** web (desktop)
+**Precondition:** Database access to `recurring_activity_audit_trail`.
+
+**Steps:**
+1. Open `/admin/recurring-activity` as an admin.
+2. Have a non-admin member attempt the same page or API call.
+3. Query the audit trail for `command = 'recurring-activity.admin.review.read'`.
+
+**Expected:**
+- The admin's read wrote a row with `policy_status = 'allow'` carrying only counts in its metadata — how many arrangements were reviewed and how many of each pattern were flagged.
+- The non-admin attempt wrote a row with `policy_status = 'deny'` and reason `not_admin`.
+- Neither row contains a member's declared value, sector, or any free text.
+
+Result: web ☐
+
+---
+
 ## Notifications
 
 **1.** As member A, record a new recurring activity with member B. Sign in as member B, open the 🔔 notifications tab in the Commons, and confirm a "Someone recorded a recurring activity with you — confirm or decline it." item appears (unread).

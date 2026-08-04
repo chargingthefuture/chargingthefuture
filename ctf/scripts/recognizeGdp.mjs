@@ -109,12 +109,21 @@ const SOURCES = [
             WHERE status = 'active' AND currency_code <> 'SC'`,
   },
   {
-    // Recurring Activity — ServiceCredits lines (issue #885): counted by their DECLARED sc_value.
-    // ServiceCredits is an internal utility token with no third-party reporting duty. This is a declared
-    // figure, never an executed transfer, so it never touches balances and never double-counts the
-    // direct ServiceCredits transfer source (a different table). Only active (confirmed) rows count.
+    // Recurring Activity — ServiceCredits lines (issue #885): counted by their DECLARED sc_value,
+    // scaled to a MONTHLY figure by the line's cadence so a weekly arrangement and a monthly one moving
+    // the same credits over a year count the same (mirrors CADENCE_MONTHLY_FACTOR in
+    // packages/web/lib/recurring-activity/types.ts — keep the two in step). ServiceCredits is an
+    // internal utility token with no third-party reporting duty. This is a declared figure, never an
+    // executed transfer, so it never touches balances and never double-counts the direct ServiceCredits
+    // transfer source (a different table). Only active (confirmed) rows count.
     pluginSlug: 'recurring-activity',
-    sql: `SELECT 'SC' AS currency_code, SUM(sc_value)::numeric AS total
+    sql: `SELECT 'SC' AS currency_code,
+                 SUM(sc_value * (CASE cadence
+                                   WHEN 'weekly' THEN 4.333333
+                                   WHEN 'biweekly' THEN 2.166667
+                                   WHEN 'monthly' THEN 1.000000
+                                   WHEN 'quarterly' THEN 0.333333
+                                   ELSE 1 END))::numeric AS total
             FROM recurring_activities
             WHERE status = 'active' AND currency_code = 'SC' AND sc_value IS NOT NULL`,
   },

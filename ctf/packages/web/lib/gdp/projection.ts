@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { cadenceMonthlyFactorSql } from 'lib/recurring-activity/types';
 import {
   DEFAULT_CONTRIBUTION_WEIGHTS,
   FREE_CODE,
@@ -148,8 +149,9 @@ export const socketRelayOpenFavorSource: ProjectionSource = {
  * Recurring activities awaiting confirmation: one member has declared an ongoing activity with another
  * and the other has not confirmed it yet (`status = 'pending'`). Counted with the same firewall the
  * confirmed source uses — fiat lines by NUMBER (one hidden RACT unit each, because a fiat line stores no
- * amount by design), ServiceCredits lines by their declared `sc_value`. Confirmed (`active`) rows are
- * counted for real by the recognition source, so the two never overlap.
+ * amount by design), ServiceCredits lines by their declared `sc_value`, scaled to a monthly figure by
+ * cadence exactly as the confirmed source scales it. Confirmed (`active`) rows are counted for real by
+ * the recognition source, so the two never overlap.
  */
 export const recurringActivityPendingSource: ProjectionSource = {
   pluginSlug: 'recurring-activity',
@@ -162,7 +164,9 @@ export const recurringActivityPendingSource: ProjectionSource = {
           WHERE status = 'pending' AND currency_code <> 'SC'`,
       ),
       queryDb<{ total: string | null }>(
-        `SELECT SUM(sc_value)::text AS total
+        // Scaled to a monthly figure by cadence, the same way the confirmed source counts it, so a line
+        // contributes the same before and after it is confirmed.
+        `SELECT SUM(sc_value * (${cadenceMonthlyFactorSql()}))::text AS total
            FROM recurring_activities
           WHERE status = 'pending' AND currency_code = 'SC' AND sc_value IS NOT NULL`,
       ),

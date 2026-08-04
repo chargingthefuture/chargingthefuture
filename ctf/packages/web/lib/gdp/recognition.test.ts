@@ -18,7 +18,9 @@ vi.mock('lib/db/postgres', () => ({
       // 3 confirmed fiat lines; 500 declared credits on lines whose value is the only record;
       // 2 credits lines declared from an app that already settles every exchange itself.
       if (sql.includes("currency_code <> 'SC'")) return { rows: [{ total: '3' }] };
-      if (sql.includes('SUM(sc_value)')) return { rows: [{ total: '500' }] };
+      // The declared value is scaled to a monthly figure by cadence in SQL, so match the prefix
+      // rather than the exact call — the database does that arithmetic, not this mock.
+      if (sql.includes('SUM(sc_value')) return { rows: [{ total: '500' }] };
       return { rows: [{ total: '2' }] };
     }
     return { rows: [] };
