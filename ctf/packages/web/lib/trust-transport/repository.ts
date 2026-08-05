@@ -58,6 +58,36 @@ function isTrustTransportRequestActive(status: string | null | undefined): boole
   return !TRUST_TRANSPORT_TERMINAL_STATUSES.has((status ?? '').toLowerCase());
 }
 
+// Offer presence mirrors the request hook: same slug/deep link, but the ref is the offer row and the
+// label is the driver-side one the derive path already emits (lib/presence/derive.ts). Best-effort —
+// the presence helpers swallow and report their own failures.
+const TRUST_TRANSPORT_OFFER_REF_TYPE = 'offer';
+const TRUST_TRANSPORT_OFFER_LABEL = 'Offering rides';
+
+async function syncTrustTransportOfferPresence(
+  providerUserId: string,
+  offerId: string,
+  status: string | null | undefined,
+): Promise<void> {
+  if (isTrustTransportRequestActive(status)) {
+    await recordMemberPresence({
+      userId: providerUserId,
+      pluginSlug: TRUST_TRANSPORT_PRESENCE_SLUG,
+      refType: TRUST_TRANSPORT_OFFER_REF_TYPE,
+      refId: offerId,
+      label: TRUST_TRANSPORT_OFFER_LABEL,
+      deepLink: TRUST_TRANSPORT_PRESENCE_DEEP_LINK,
+    });
+  } else {
+    await clearMemberPresence({
+      userId: providerUserId,
+      pluginSlug: TRUST_TRANSPORT_PRESENCE_SLUG,
+      refType: TRUST_TRANSPORT_OFFER_REF_TYPE,
+      refId: offerId,
+    });
+  }
+}
+
 // Keep the requester's TrustTransport presence in step with a request's current status. Best-effort:
 // swallows its own failure and never breaks the caller's request operation.
 async function syncTrustTransportRequestPresence(
@@ -576,7 +606,7 @@ export async function createOffer(
 
   const note = normalizeNullableText(input.note);
 
-  return withDbTransaction(async (client) => {
+  const offer = await withDbTransaction(async (client) => {
     const existing = await client.query<OfferRow>(
       `SELECT id, request_id, provider_user_id, note, proposed_amount, status, created_at, updated_at
        FROM trust_transport_offers
@@ -607,6 +637,12 @@ export async function createOffer(
 
     return mapOfferRow(created.rows[0]);
   });
+
+  // Best-effort presence write after the offer is durably committed: an open offer makes the driver
+  // active in TrustTransport ("Offering rides"). Never breaks offer creation.
+  await syncTrustTransportOfferPresence(offer.providerUserId, offer.id, offer.status);
+
+  return offer;
 }
 
 export async function acceptOffer(requestId: string, offerId: string, actorUserId: string, idempotencyKey: string): Promise<{ trip: TrustTransportTrip; request: TrustTransportRequest }> {
@@ -668,11 +704,12 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
       };
     }
 
-    await client.query(
+    const offerStatusResult = await client.query<{ id: string; provider_user_id: string; status: string }>(
       `UPDATE trust_transport_offers
        SET status = CASE WHEN id = $1::uuid THEN 'accepted' ELSE 'rejected' END,
            updated_at = NOW()
-       WHERE request_id = $2::uuid`,
+       WHERE request_id = $2::uuid
+       RETURNING id, provider_user_id, status`,
       [offerId, requestId],
     );
 
@@ -700,8 +737,16 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
     return {
       trip: mapTripRow(tripResult.rows[0]),
       request: mapRequestRow(requestResult.rows[0]),
+      offerStatuses: offerStatusResult.rows,
     };
   });
+
+  // Best-effort presence sync after the commit: rejected drivers stop "Offering rides"; the accepted
+  // offer stays active while the trip runs. Never breaks the acceptance. (Empty on the idempotent
+  // replay path, which changes no offer rows.)
+  for (const row of created.offerStatuses ?? []) {
+    await syncTrustTransportOfferPresence(row.provider_user_id, row.id, row.status);
+  }
 
   const streamChannelId = await ensureTrustTransportTripChannel({
     tripId: created.trip.id,
