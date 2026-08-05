@@ -47,6 +47,7 @@ contracts:
       - directory_provider_profiles_read_model
       - directory_service_regions_read_model
       - foundation_user_extension
+      - member_blocks
     purpose: survivor_provider_matching
     retentionClass: derived_short_lived
     idempotency: true
@@ -98,6 +99,7 @@ contracts:
       - foundation_thread_participants
       - stream_chat_channel_metadata
       - directory_provider_profiles_read_model
+      - member_blocks
     purpose: secure_initial_connection
     retentionClass: communication_medium_lived
     idempotency: true
@@ -225,6 +227,7 @@ contracts:
       - foundation_rate_limit_counters
       - foundation_user_extension
       - service_credits_wallets
+      - member_blocks
     purpose: survivor_provider_communication
     retentionClass: communication_short_lived
     idempotency: false

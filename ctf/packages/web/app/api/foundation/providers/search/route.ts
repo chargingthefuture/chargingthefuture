@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
       ? skillIdRaw
       : null;
 
-    const providers = await searchProviders({ query, skillId, page, pageSize });
+    // viewerUserId hides providers in a blocked pair with the browsing member (issue #809 task 4).
+    const providers = await searchProviders({ query, skillId, page, pageSize, viewerUserId: gate.auth.userId });
 
     await insertFoundationAudit({
       actorId: gate.auth.userId,

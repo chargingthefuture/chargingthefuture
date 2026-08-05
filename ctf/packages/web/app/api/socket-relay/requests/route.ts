@@ -47,7 +47,9 @@ export async function GET(request: Request) {
     // Optional ?status=open (comma-separated) scopes the feed to claimable posts so resolved/claimed
     // ones don't crowd out open requests on a page. Absent/unknown values leave the full-status list.
     const statuses = parseStatusFilter(url.searchParams.get('status'));
-    const response = await listRequests({ page, pageSize, statuses });
+    // viewerUserId hides posts from a blocked pair (either direction) for the browsing member
+    // (issue #809 task 4). Owner-scoped and admin lists do not pass a viewer and stay complete.
+    const response = await listRequests({ page, pageSize, statuses, viewerUserId: gate.auth.userId });
     return NextResponse.json({ ok: true, ...response }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'socket-relay', op: 'requests' });

@@ -1,3 +1,4 @@
+import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
 import {
@@ -23,6 +24,7 @@ import type {
 import { ensureSocketRelayFulfillmentChannel } from './stream';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
+import { isBlockedBetweenTx } from 'lib/blocks/repository';
 import { reportError } from 'lib/observability/report';
 
 // Cross-plugin presence: a SocketRelay help post (the Commons request a member created) marks its
@@ -478,28 +480,51 @@ export async function createRequest(actorUserId: string, actorUsername: string |
   return request;
 }
 
-export async function listRequests(options?: {
+type ListRequestsOptions = {
   page?: number;
   pageSize?: number;
   ownerUserId?: string;
   statuses?: SocketRelayRequestStatus[];
-}): Promise<{ items: SocketRelayRequest[]; page: number; pageSize: number; total: number }> {
+  // When set, requests whose owner is blocked (either direction) relative to this viewer are hidden
+  // (issue #809 task 4). Pass the signed-in member for the browse feed; leave unset for admin lists
+  // and owner-scoped lists, which must stay complete.
+  viewerUserId?: string;
+};
+
+function normalizeListRequestsOptions(options?: ListRequestsOptions) {
   const page = normalizePage(options?.page);
   const pageSize = normalizePageSize(options?.pageSize);
-  const offset = (page - 1) * pageSize;
+  return {
+    page,
+    pageSize,
+    offset: (page - 1) * pageSize,
+    ownerUserId: normalizeNullableText(options?.ownerUserId ?? null),
+    // Optional status scoping. The member feed asks for open (claimable) requests only, so resolved
+    // and claimed posts do not crowd out open ones on a page. Null means every status — the owner
+    // "Mine" / Direct Line lists and the admin list all keep their full-status view.
+    statuses: options?.statuses && options.statuses.length > 0 ? options.statuses : null,
+    viewerUserId: normalizeNullableText(options?.viewerUserId ?? null),
+  };
+}
 
-  const ownerUserId = normalizeNullableText(options?.ownerUserId ?? null);
-  // Optional status scoping. The member feed asks for open (claimable) requests only, so resolved and
-  // claimed posts do not crowd out open ones on a page. Null means every status — the owner "Mine" /
-  // Direct Line lists and the admin list all keep their full-status view.
-  const statuses = options?.statuses && options.statuses.length > 0 ? options.statuses : null;
+export async function listRequests(options?: ListRequestsOptions): Promise<{ items: SocketRelayRequest[]; page: number; pageSize: number; total: number }> {
+  const { page, pageSize, offset, ownerUserId, statuses, viewerUserId } = normalizeListRequestsOptions(options);
+
+  // Mirrors the LightHouse browse filter: a `IS NULL` arm keeps this a no-op when no viewer is passed.
+  const hideBlockedOwnersSql = `
+       AND ($3::text IS NULL OR NOT EXISTS (
+         SELECT 1
+         FROM member_blocks
+         WHERE (blocker_user_id = $3 AND blocked_user_id = socket_relay_requests.owner_user_id)
+            OR (blocker_user_id = socket_relay_requests.owner_user_id AND blocked_user_id = $3)
+       ))`;
 
   const count = await queryDb<CountRow>(
     `SELECT COUNT(*)::text AS total
      FROM socket_relay_requests
      WHERE ($1::text IS NULL OR owner_user_id = $1)
-       AND ($2::text[] IS NULL OR status = ANY($2))`,
-    [ownerUserId, statuses],
+       AND ($2::text[] IS NULL OR status = ANY($2))${hideBlockedOwnersSql}`,
+    [ownerUserId, statuses, viewerUserId],
   );
 
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
@@ -508,10 +533,10 @@ export async function listRequests(options?: {
     `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, state, country, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at
      FROM socket_relay_requests
      WHERE ($1::text IS NULL OR owner_user_id = $1)
-       AND ($2::text[] IS NULL OR status = ANY($2))
+       AND ($2::text[] IS NULL OR status = ANY($2))${hideBlockedOwnersSql}
      ORDER BY created_at DESC
-     OFFSET $3 LIMIT $4`,
-    [ownerUserId, statuses, offset, pageSize],
+     OFFSET $4 LIMIT $5`,
+    [ownerUserId, statuses, viewerUserId, offset, pageSize],
   );
 
   return {
@@ -671,6 +696,29 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
   return request;
 }
 
+// Idempotency arm of claimRequest: a network retry after the first claim already committed finds the
+// request 'claimed'. If it was claimed by THIS actor, return the existing active fulfillment instead
+// of erroring — the command contract marks claim idempotent, so a retry of a claim that actually
+// succeeded reads as success, not `request_not_claimable`. Another member's claim returns null.
+async function findExistingActiveClaim(
+  client: PoolClient,
+  requestRow: RequestRow,
+  actorUserId: string,
+): Promise<SocketRelayFulfillment | null> {
+  if (requestRow.status !== 'claimed') {
+    return null;
+  }
+  const existing = await client.query<FulfillmentRow>(
+    `SELECT id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at
+     FROM socket_relay_fulfillments
+     WHERE request_id = $1::uuid AND fulfiller_user_id = $2 AND status = 'active'
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [requestRow.id, actorUserId],
+  );
+  return (existing.rowCount ?? 0) > 0 ? mapFulfillmentRow(existing.rows[0]) : null;
+}
+
 export async function claimRequest(requestId: string, actorUserId: string, actorUsername: string | null = null): Promise<{ request: SocketRelayRequest; fulfillment: SocketRelayFulfillment }> {
   const created = await withDbTransaction(async (client) => {
     const requestResult = await client.query<RequestRow>(
@@ -692,27 +740,17 @@ export async function claimRequest(requestId: string, actorUserId: string, actor
       throw new Error('actor_is_owner');
     }
 
+    // Block check (issue #809 task 4): a blocked pair must not be joined into a Direct Line. Checked
+    // before the idempotency branch so a blocked retry cannot resurrect an old claim either. The
+    // route maps blocked_pair to neutral copy so the block never reveals itself.
+    if (await isBlockedBetweenTx(client, actorUserId, requestRow.owner_user_id)) {
+      throw new Error('blocked_pair');
+    }
+
     if (requestRow.status !== 'open') {
-      // Idempotency: a network retry after the first claim already committed will find the request
-      // 'claimed'. If it was claimed by THIS actor, return the existing active fulfillment instead of
-      // erroring — the command contract marks claim idempotent, so a retry of a claim that actually
-      // succeeded should read as success, not `request_not_claimable`. Another member's claim still
-      // errors.
-      if (requestRow.status === 'claimed') {
-        const existing = await client.query<FulfillmentRow>(
-          `SELECT id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at
-           FROM socket_relay_fulfillments
-           WHERE request_id = $1::uuid AND fulfiller_user_id = $2 AND status = 'active'
-           ORDER BY created_at DESC
-           LIMIT 1`,
-          [requestId, actorUserId],
-        );
-        if ((existing.rowCount ?? 0) > 0) {
-          return {
-            request: mapRequestRow(requestRow),
-            fulfillment: mapFulfillmentRow(existing.rows[0]),
-          };
-        }
+      const existing = await findExistingActiveClaim(client, requestRow, actorUserId);
+      if (existing) {
+        return { request: mapRequestRow(requestRow), fulfillment: existing };
       }
       throw new Error('request_not_claimable');
     }
