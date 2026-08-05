@@ -864,7 +864,6 @@ export async function getOwnProfile(userId: string): Promise<WorkforceProfile | 
     occupationId: row.job_title_id,
     occupationName: row.job_title_name,
     skillLevel: deriveWorkforceSkillLevel(row.job_title_name),
-    region: null,
     recruitedState: true,
     recruitedResolvedAtIso: null,
     availabilityPreferences: normalizeJsonObject(extension?.availability_preferences),

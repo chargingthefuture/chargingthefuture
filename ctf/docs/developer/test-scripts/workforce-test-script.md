@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual update: WF-A2 now tests the shipped Audit trail panel |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) |
 
 ## How to run this
 
@@ -117,10 +117,11 @@ reason (job title, skill, or sector). Recruited in a bucket can exceed the physi
 **Role:** member · **Surfaces:** all
 **Precondition:** the member has a claimed Directory profile.
 **Steps:**
-1. Open the Workforce profile view; read occupation, skill level, recruited state. (No region row
-   renders — the profile API's `region` field is always empty; see the tracked gaps below.)
-2. Find the only member write — the service-scoped delete — and read its notice (do not complete a
-   destructive delete in a shared seed DB unless it is your own throwaway account).
+1. Open the Workforce profile view; read occupation, skill level, recruited state. (There is no
+   region row — the always-null `region` field was dropped 2026-08-04.)
+2. Open `/account/data` and find the per-service "Delete your Workforce data?" control — this is the
+   member-facing service-scoped delete (do not complete a destructive delete in a shared seed DB
+   unless it is your own throwaway account).
 **Expected:** The profile is derived live from the member's own claimed Directory profile and is
 display-only (no editor). The delete is a service-scoped soft delete (it clears the Workforce
 preferences and marks the service deleted), requires sign-in/ownership, and does not delete the
@@ -256,11 +257,12 @@ of these, it is already tracked, not a new bug:
   `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor`) are unused
   dead weight in the schema, kept only because the SkillsHunt rare-skill snapshot and the demo seed
   still reference `workforce_occupations`.
-- The member-facing control for the service-scoped delete (WF-7 step 2) is not built yet — the
-  endpoint exists per the deletion contract, but no screen offers the confirmation; verify the
-  read-only profile and skip the delete until the control ships.
-- The profile API's `region` field is always empty (no upstream source); both profile surfaces hide
-  the row when it is absent, so seeing no region is correct, not a bug.
+- The member-facing service-scoped delete lives on the Account & Data screen (`/account/data`), not
+  inside the Workforce shell — that is by design, not a missing control (reclassified 2026-08-04).
+  The in-plugin `DELETE /api/workforce/profile` route stays because the deletion contract §9
+  mandates it.
+- The profile has no `region` field (dropped 2026-08-04 — it was always null with no upstream
+  source). Seeing no region row anywhere is correct.
 - (2026-07-03 sweep) The unused summary report endpoint, an in-process sync cron that failed on
   every run, two never-shown mobile screens, and a button with no action were removed; no test case
   covered them, so no case changes — recorded here so the script and inventory move together.
