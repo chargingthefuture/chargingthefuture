@@ -10,6 +10,7 @@
 // them yet — see the inventory's Gaps section). The cohort list is read-only
 // here; cohort creation already lives in the trainer/admin plugin shell.
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { TrendingUp } from 'lucide-react';
 import {
   idempotencyKey,
@@ -24,6 +25,7 @@ import {
   type ProposalTermMonths,
 } from './lu-admin-shared';
 import { getLevelUpTokens, type LevelUpTokens } from './lu-shared';
+import { ClaimTrainerControl, DisputeResolveControl, ValidationActions } from './lu-review-actions';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
@@ -71,7 +73,7 @@ function formatQueueTime(iso: string): string {
 const alertBoxStyle: React.CSSProperties = { marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 };
 const noticeBoxStyle: React.CSSProperties = { marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13 };
 
-function DisputesSection({ openDisputes, t }: { openDisputes: AdminDispute[]; t: LevelUpTokens }) {
+function DisputesSection({ openDisputes, t, onChanged }: { openDisputes: AdminDispute[]; t: LevelUpTokens; onChanged: () => void }) {
   return (
     <div style={{ marginBottom: 24 }}>
       <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>
@@ -92,6 +94,7 @@ function DisputesSection({ openDisputes, t }: { openDisputes: AdminDispute[]; t:
             <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6 }}>
               Opened by {dispute.openedByName ?? `member ${dispute.openedByUserId.slice(0, 6)}`}
             </div>
+            <DisputeResolveControl dispute={dispute} t={t} onDone={onChanged} />
           </div>
         ))
       )}
@@ -99,7 +102,7 @@ function DisputesSection({ openDisputes, t }: { openDisputes: AdminDispute[]; t:
   );
 }
 
-function ValidationsSection({ pendingValidations, t }: { pendingValidations: AdminValidation[]; t: LevelUpTokens }) {
+function ValidationsSection({ pendingValidations, t, onChanged }: { pendingValidations: AdminValidation[]; t: LevelUpTokens; onChanged: () => void }) {
   return (
     <div style={{ marginBottom: 24 }}>
       <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>
@@ -120,6 +123,7 @@ function ValidationsSection({ pendingValidations, t }: { pendingValidations: Adm
               <p style={{ fontSize: 13, color: '#D1D5DB', margin: '6px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{validation.validationNote}</p>
             ) : null}
             <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6 }}>Enrollment {validation.enrollmentId.slice(0, 8)}</div>
+            <ValidationActions validation={validation} t={t} onDone={onChanged} />
           </div>
         ))
       )}
@@ -263,7 +267,7 @@ function ProposalsSection({
   );
 }
 
-function CohortsSection({ cohorts, cohortsError, t }: { cohorts: AdminCohort[] | null; cohortsError: string | null; t: LevelUpTokens }) {
+function CohortsSection({ cohorts, cohortsError, t, onClaimed }: { cohorts: AdminCohort[] | null; cohortsError: string | null; t: LevelUpTokens; onClaimed: () => void }) {
   return (
     <div style={{ marginBottom: 24 }}>
       <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>Cohorts</h2>
@@ -287,6 +291,7 @@ function CohortsSection({ cohorts, cohortsError, t }: { cohorts: AdminCohort[] |
                   needs trainer
                 </span>
               ) : null}
+              {cohort.needsTrainer ? <ClaimTrainerControl cohortId={cohort.id} t={t} onDone={onClaimed} /> : null}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 24px', fontSize: 12, color: t.MUTED }}>
               <span>Seats: {cohort.seatsAvailable} of {cohort.seats} open</span>
@@ -705,6 +710,7 @@ function useLevelUpAdminController(pendingProposals: AdminProposal[]) {
   return {
     cohorts,
     cohortsError,
+    loadCohorts,
     proposals,
     proposalTerms,
     setProposalTerms,
@@ -750,9 +756,11 @@ export function LevelUpAdminShell({
 }) {
   const { theme } = useTheme();
   const t = getLevelUpTokens(theme);
+  const router = useRouter();
   const {
     cohorts,
     cohortsError,
+    loadCohorts,
     proposals,
     proposalTerms,
     setProposalTerms,
@@ -807,12 +815,13 @@ export function LevelUpAdminShell({
           <StatBlock label="Avg days to first trainer credit grant" value={`${kpis.avgDaysToFirstTrainerPayout} days`} />
         </div>
 
-        {/* Review queue: open disputes. Read-only list so the admin-landing dot leads somewhere that
-            shows what is new; resolving a dispute stays in the existing dispute flow. */}
-        <DisputesSection openDisputes={openDisputes} t={t} />
+        {/* Review queue: open disputes — with the resolve action inline (2026-08-05; before that the
+            list was read-only and resolving required a direct API call). The lists are server props,
+            so a completed action re-pulls them via router.refresh(). */}
+        <DisputesSection openDisputes={openDisputes} t={t} onChanged={() => router.refresh()} />
 
-        {/* Review queue: pending milestone validations. */}
-        <ValidationsSection pendingValidations={pendingValidations} t={t} />
+        {/* Review queue: pending milestone validations — with validate/release actions inline. */}
+        <ValidationsSection pendingValidations={pendingValidations} t={t} onChanged={() => router.refresh()} />
 
         {/* Cohort proposals from Workforce gaps (issue #904) */}
         <ProposalsSection
@@ -832,7 +841,7 @@ export function LevelUpAdminShell({
         />
 
         {/* Cohorts */}
-        <CohortsSection cohorts={cohorts} cohortsError={cohortsError} t={t} />
+        <CohortsSection cohorts={cohorts} cohortsError={cohortsError} t={t} onClaimed={() => void loadCohorts()} />
 
         {/* ServiceCredits grant (grant-only — never removes credits) */}
         <GrantForm
