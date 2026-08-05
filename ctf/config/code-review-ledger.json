@@ -142,34 +142,48 @@
     {
       "name": "contributor-access",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-08-05T14:30:46.085Z",
+      "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/contributor-access",
+        "ctf/packages/web/components/contributor-access",
+        "ctf/packages/web/lib/contributor-access"
+      ]
     },
     {
       "name": "currencies",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-08-05T09:14:09.920Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/currencies"
+      ]
     },
     {
       "name": "currency",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-08-04T23:38:50.123Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/currency"
+      ]
     },
     {
       "name": "db",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-08-04T23:12:28.808Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/db"
+      ]
     },
     {
       "name": "directory",
@@ -188,34 +202,58 @@
     {
       "name": "engagement",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-08-03T10:10:15.973Z",
+      "lastRunIssues": 3,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/engagement"
+      ]
+    },
+    {
+      "name": "errors",
+      "type": "module",
+      "lastReviewedAt": "2026-08-04T09:16:34.636Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/errors"
+      ]
     },
     {
       "name": "feature-flags",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-08-02T08:41:34.630Z",
+      "lastRunIssues": 5,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/feature-flags"
+      ]
     },
     {
       "name": "feed",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-08-01T08:38:06.926Z",
+      "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/feed",
+        "ctf/packages/web/lib/feed"
+      ]
     },
     {
       "name": "feed-announcements",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-07-30T09:08:07.260Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/components/feed-announcements"
+      ]
     },
     {
       "name": "foundation",
