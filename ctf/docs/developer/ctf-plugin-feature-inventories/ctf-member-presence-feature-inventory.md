@@ -8,17 +8,14 @@ beside it. This is not a standalone plugin with its own routes-and-admin surface
 (`member_plugin_presence`) plus one read API and a Directory profile surface. The index is owned and
 written by the source plugins (for this first cut, by a one-time backfill); Directory only reads it.
 
-Live per-plugin write hooks now keep the index current in real time for LightHouse property listings,
-TrustTransport ride requests, Foundation provider offerings, and SocketRelay posts: the source plugin
-writes presence as the listing is created, updated, closed, or removed, so the index no longer waits on
-the periodic backfill for those sources. The one source still on the backfill only is the TrustTransport
-ride offer (the driver offer), because it has no create or remove path in the web app — see the
-deferred follow-up below.
+Live per-plugin write hooks now keep the index current in real time for every source — LightHouse
+property listings, TrustTransport ride requests and driver offers, Foundation provider offerings, and
+SocketRelay posts: the source plugin writes presence as the listing is created, updated, closed, or
+removed, so the index no longer waits on a backfill for any source.
 
-Out of scope for this first cut, recorded as deferred follow-ups in the Build Checklist below:
-the TrustTransport ride-offer write hook (no web create/remove path exists yet), and presence/trust
-badges on other interaction surfaces (Commons post author, LightHouse host, TrustTransport driver,
-Foundation provider).
+Out of scope for this first cut, recorded as a deferred follow-up in the Build Checklist below:
+presence/trust badges on other interaction surfaces (Commons post author, LightHouse host,
+TrustTransport driver, Foundation provider).
 
 ## Intent and Outcome
 
@@ -31,8 +28,8 @@ the existing trust card rendered next to it so trust reads as peer social proof 
 
 - Presence uses a shared index that each plugin writes to — not direct per-plugin queries from
   Directory. The index was first populated by a one-time backfill from existing listings; live
-  per-plugin write hooks now keep it current as listings are created, closed, and removed (for all
-  sources except the TrustTransport ride offer, which has no web create/remove path yet).
+  per-plugin write hooks now keep it current as listings are created, closed, and removed (all
+  sources, including the TrustTransport ride offer as of 2026-08-04).
 - Nothing is public in this app, so any listing a member has counts as presence. There is no
   public/private gate on a presence entry.
 - Presence and the trust panel apply only to claimed profiles (a profile whose
@@ -58,6 +55,9 @@ the existing trust card rendered next to it so trust reads as peer social proof 
   - TrustTransport requests: `createRequest` records presence; `updateTripStatus` and `cancelOrder`
     clear it when the request reaches a terminal status (and re-record otherwise). Keyed on
     `requester_user_id`. The accepted/assigned states still count as active, matching the backfill.
+  - TrustTransport driver offers: `createOffer` records presence for the offering driver
+    (ref type `offer`, label "Offering rides"); `acceptOffer` clears it for the drivers whose offers
+    were rejected and keeps the accepted driver active. Keyed on `provider_user_id`.
   - Foundation: `setOwnOfferedSkills` records one presence row per currently offered skill and clears
     any skill dropped from the set. Keyed on `user_id`, ref id = skill id.
   - SocketRelay: `createRequest` and `repostRequest` record presence (status open); `claimRequest`,
@@ -187,12 +187,12 @@ it current, so presence coverage follows the real data of the source plugins.
 
 ## Gaps and Known Technical Debt
 
-- Presence for LightHouse, TrustTransport requests, Foundation, and SocketRelay is now written live as
-  listings change, so it no longer waits on the backfill. The TrustTransport ride offer (driver offer)
-  is the one source still backfill-only: there is no web create or remove path for an offer (offers
-  appear only via seed scripts in the current code), so there is nothing to hook. If an offer
-  create/remove path is added later, wire `recordMemberPresence` / `clearMemberPresence` on
-  `provider_user_id` with the same `offer` ref type and "Offering rides" label the backfill uses.
+- Presence for every source — LightHouse, TrustTransport requests **and driver offers**, Foundation,
+  and SocketRelay — is now written live as listings change. The driver-offer hook landed 2026-08-04:
+  the earlier note here ("there is no web create or remove path for an offer") had gone out of date —
+  the help tab's offer form (`tt-help-tab.tsx`) POSTs `/api/trust-transport/requests/:id/offers` —
+  so `createOffer` now records presence on `provider_user_id` (ref type `offer`, label
+  "Offering rides") and `acceptOffer` clears it for the drivers whose offers were rejected.
 - Presence writes are best-effort and not part of the listing's database transaction: a presence write
   that fails after the listing commits is logged and dropped, leaving the index momentarily out of date
   until the next write. This is intentional — the listing operation must never fail because of a
@@ -223,12 +223,12 @@ it current, so presence coverage follows the real data of the source plugins.
    current without waiting on the periodic backfill. Done for LightHouse property listings,
    TrustTransport ride requests, Foundation provider offerings, and SocketRelay posts.
 
-Deferred follow-ups (not yet done):
+8. TrustTransport ride-offer write hook. Done (2026-08-04): `createOffer` records presence for the
+   offering driver after the offer commits, and `acceptOffer` clears presence for the drivers whose
+   offers were rejected (the accepted driver stays active). Same `offer` ref type and
+   "Offering rides" label as the derive path.
 
-8. TrustTransport ride-offer write hook: the driver offer is the one presence source with no live hook,
-   because the web app has no create or remove path for an offer (offers exist only via seed scripts).
-   The one-time backfill seeded any existing offers; new offers will not be indexed until such a path is
-   added, at which point wire the same record/clear hooks on `provider_user_id`.
+Deferred follow-ups (not yet done):
 9. Presence/trust badges on other interaction surfaces: the Commons (SocketRelay) post author, the
    LightHouse host, the TrustTransport driver, and the Foundation provider — so presence and trust are
    visible where members actually meet, not only on the Directory profile.
@@ -274,3 +274,10 @@ Deferred follow-ups (not yet done):
   or dropped. In `GET /api/presence/user/[userId]`, the route context is now typed the repo-standard
   way (`{ params: Promise<{ userId: string }> }`, awaited) instead of a double cast, and a
   missing/empty `userId` returns 400. No schema, contract, or surface change.
+- 2026-08-04: TrustTransport driver-offer live hook (closes deferred item 8). The earlier reason for
+  deferral — "the web app has no create or remove path for an offer" — was no longer true: the help
+  tab's offer form POSTs `/api/trust-transport/requests/:id/offers`. `createOffer` in
+  `lib/trust-transport/repository.ts` now records the driver's presence (ref type `offer`, label
+  "Offering rides") after the offer commits, and `acceptOffer` clears presence for the drivers whose
+  offers were rejected while keeping the accepted driver active. Best-effort like every other hook;
+  `refreshOwnPresence` remains the self-healing fallback. No schema, route, or contract change.

@@ -302,29 +302,33 @@ export const lighthouseHousingSource: RecognitionSource = {
 };
 
 /**
- * SocketRelay favors: SocketRelay is mutual aid — most favors are given free, and a fulfillment carries
- * no price/currency, so there is no money amount to sum. We recognize each successfully-completed favor
- * as one `FREE` exchange (counted by completed-exchange count, the way the index treats BARTER/FREE),
- * read from `socket_relay_fulfillments` where `close_reason = 'successful'`. Unsuccessful, reopened, or
- * canceled favors do not count. We deliberately do NOT also count SocketRelay's standalone
- * ServiceCredits transfer route here: it is rare, unlinked to a fulfillment, and counting both could
- * double-count one favor; the completed-favor count is the mutual-aid value SocketRelay actually
- * settles. If `FREE` has no active contribution weight it is surfaced and excluded, never zeroed.
+ * SocketRelay favors: SocketRelay is mutual aid — most favors are given free, but a post may name an
+ * offered value (issue #120: optional `price_amount`/`price_currency` on the request). Each
+ * successfully-completed favor (`socket_relay_fulfillments.close_reason = 'successful'`, joined to its
+ * request) is recognized at the value the post carried: a priced post at its `price_amount` in
+ * `price_currency`, and a post with no named value (NULL) or an amount-less type (Free, Barter) as one
+ * exchange by count, the way the index treats BARTER/FREE. Unsuccessful, reopened, or canceled favors do
+ * not count. We deliberately do NOT also count SocketRelay's standalone ServiceCredits transfer route
+ * here: it is rare, unlinked to a fulfillment, and counting both could double-count one favor; the
+ * request's posted value is the mutual-aid value SocketRelay actually settles. A value type with no
+ * active contribution weight is surfaced and excluded, never zeroed.
  */
 export const socketRelayFavorSource: RecognitionSource = {
   pluginSlug: 'socket-relay',
   label: 'SocketRelay completed favors',
   async loadVolumes() {
-    const result = await queryDb<{ total: string | null }>(
-      `SELECT COUNT(*)::text AS total
-         FROM socket_relay_fulfillments
-         WHERE close_reason = 'successful'`,
+    const result = await queryDb<{ currency_code: string; total: string }>(
+      `SELECT COALESCE(r.price_currency, $1) AS currency_code,
+              SUM(CASE WHEN r.price_amount IS NULL THEN 1 ELSE r.price_amount END)::text AS total
+         FROM socket_relay_fulfillments f
+         JOIN socket_relay_requests r ON r.id = f.request_id
+         WHERE f.close_reason = 'successful'
+         GROUP BY 1`,
+      [FREE_CODE],
     );
-    const total = Number(result.rows[0]?.total ?? 0);
-    if (!Number.isFinite(total) || total <= 0) {
-      return [];
-    }
-    return [{ amount: total, currencyCode: FREE_CODE }];
+    return result.rows
+      .filter((row) => Number(row.total) > 0)
+      .map((row) => ({ amount: Number(row.total), currencyCode: row.currency_code }));
   },
 };
 
