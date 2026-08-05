@@ -297,6 +297,12 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 ## Change Log
 
 
+- 2026-08-04: **Driver offers now write Member Presence live.** `createOffer` records a presence row
+  for the offering driver (ref type `offer`, label "Offering rides") after the offer commits, and
+  `acceptOffer` clears presence for the drivers whose offers were rejected while the accepted driver
+  stays active. Closes the last backfill-only source in the Member Presence inventory. Best-effort —
+  a presence failure is reported and never breaks the offer or the acceptance. No schema, route, or
+  contract change.
 - 2026-08-03: **A completed ride can be recorded as ongoing without leaving TrustTransport.** The same
   school run every week is one arrangement, not a stack of unrelated trips. The Tracking card now shows
   the shared "Is this ongoing?" prompt (`components/shared/mark-recurring-control.tsx`) as soon as a

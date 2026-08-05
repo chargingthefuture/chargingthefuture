@@ -405,8 +405,8 @@ function PresenceRow({ tokens: t, entry }: { tokens: DirectoryTokens; entry: Pre
 }
 
 // The trust card (or a calm restricted note) that sits beneath the presence list.
-function TrustPanel({ tokens: t, trustState }: { tokens: DirectoryTokens; trustState: TrustState }) {
-  if (trustState.kind === "ready") return <TrustWidgetCard trust={trustState.trust} />;
+function TrustPanel({ tokens: t, trustState, isOwnProfile }: { tokens: DirectoryTokens; trustState: TrustState; isOwnProfile: boolean }) {
+  if (trustState.kind === "ready") return <TrustWidgetCard trust={trustState.trust} editable={isOwnProfile} />;
   if (trustState.kind === "restricted") {
     return (
       <div style={{ padding: "14px 16px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}` }}>
@@ -427,11 +427,13 @@ function AlsoActiveInSection({
   claimedUserId,
   presence,
   trustState,
+  isOwnProfile,
 }: {
   tokens: DirectoryTokens;
   claimedUserId: string | null;
   presence: PresenceEntry[];
   trustState: TrustState;
+  isOwnProfile: boolean;
 }) {
   if (!claimedUserId) return null;
   const hasPresence = presence.length > 0;
@@ -453,7 +455,7 @@ function AlsoActiveInSection({
         </div>
       )}
 
-      <TrustPanel tokens={t} trustState={trustState} />
+      <TrustPanel tokens={t} trustState={trustState} isOwnProfile={isOwnProfile} />
     </section>
   );
 }
@@ -643,7 +645,7 @@ export function DirectoryProfileDetail({
           <BlockSection claimedUserId={claimedUserId} isOwnProfile={isOwnProfile} name={p.name} />
 
           {/* Also active in + Trust */}
-          <AlsoActiveInSection tokens={t} claimedUserId={claimedUserId} presence={presence} trustState={trustState} />
+          <AlsoActiveInSection tokens={t} claimedUserId={claimedUserId} presence={presence} trustState={trustState} isOwnProfile={isOwnProfile} />
 
           <AttachToAccountPanel
             tokens={t}

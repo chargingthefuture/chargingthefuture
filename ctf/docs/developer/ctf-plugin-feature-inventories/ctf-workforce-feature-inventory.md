@@ -61,7 +61,7 @@ Workforce is a **read-only live tracker** of how the skills/talent of a populati
 ### 2.1 Workforce Admin Operations
 
 1. Admin route for the workforce config (the population model) plus the read-only dashboard snapshot.
-2. Admin audit-trail read endpoint (`GET /api/workforce/admin/audit-events`) — implemented and admin-gated, but no admin screen calls it yet (Gaps item 5).
+2. Admin audit-trail viewer: the admin screen's "Audit trail" panel loads `GET /api/workforce/admin/audit-events` on demand and pages through events newest-first (command, allow/deny, reason, target, actor, timestamp).
 3. No occupation/announcement/export/sync/recompute admin surface — those were removed in the read-only model.
 
 ### 2.2 Workforce Configuration Governance
@@ -194,7 +194,7 @@ Note: there is no snapshot table — the dashboard, sector/skill/occupation brea
 2. Per-occupation demand is split evenly across a sector's job titles (no per-occupation weight exists in Skills Taxonomy). If finer weighting is wanted, it would need a new upstream signal.
 3. Single-bucket report fetches (`/reports/sector/:sector`, `/reports/skill-level/:skillLevel` with a value other than `all`) now match the bucket case-insensitively on both routes; the dashboard only uses the `all` variant, so the single-bucket paths are lightly exercised.
 4. The retained-but-unused `workforce_occupations` / `workforce_export_jobs` tables and the vestigial `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor` tables are dead weight in the schema; `workforce_occupations` cannot be dropped until the SkillsHunt rare-skill snapshot and the demo seed stop referencing it.
-5. `GET /api/workforce/admin/audit-events` is implemented (admin-gated, paginated, self-audited) but no web or mobile admin screen calls it — the audit trail has no viewing surface yet. Acknowledged gap: build an admin audit view against the existing route, or retire the route by owner decision.
+5. ~~`GET /api/workforce/admin/audit-events` is implemented (admin-gated, paginated, self-audited) but no web or mobile admin screen calls it — the audit trail has no viewing surface yet.~~ Resolved (2026-08-04) — the web admin screen now has an "Audit trail" panel (`AuditTrailPanel` in `workforce-admin-shell.tsx`) that loads the route on demand, lists events newest-first (command, allow/deny, reason, target, actor, timestamp), and pages with a "Load more" control.
 6. `DELETE /api/workforce/profile` (the service-scoped compliance soft delete mandated by the deletion contract §9) has no member-facing control yet — no screen offers the "Delete Workforce plugin data only?" confirmation. The route is kept because the deletion contract requires it; the gap is the missing UI control. Full-account deletion is separately handled by the central deletion registry (`lib/account/deletion-registry.ts`), which soft-deletes `workforce_user_extension` directly.
 7. The profile API's `region` field is always `null` — `getOwnProfile` never populates it (no upstream region source exists). The web profile panel and mobile `WorkforceProfileCard` render the region row only when the value is present, so nothing shows today; either wire a region source or drop the field.
 
@@ -224,6 +224,12 @@ Profile read + compliance-delete surface: the profile is read-only (owner decisi
 
 ## 10) Change Log
 
+- 2026-08-04: **Audit trail viewing surface (closes Gaps item 5).** The admin screen
+  (`workforce-admin-shell.tsx`) gained an "Audit trail" panel below the config card. It fetches
+  `GET /api/workforce/admin/audit-events` only when the admin clicks "Load audit trail" (each read
+  is itself audited server-side, so no automatic fetch on page load), renders events newest-first
+  with command, allow/deny, reason, target, actor, and timestamp, and pages with "Load more" using
+  the route's existing `page`/`pageSize` parameters. UI-only — no route, schema, or contract change.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
   the previous in-app page and falls back to All Apps when there is no in-app history. The admin
