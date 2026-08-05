@@ -72,6 +72,7 @@ contracts:
       - socket_relay_requests
       - socket_relay_fulfillments
       - socket_relay_request_events
+      - member_blocks
     purpose: fulfillment_lifecycle
     retentionClass: transactional_long_lived
     idempotency: true

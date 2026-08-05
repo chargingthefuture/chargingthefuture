@@ -957,7 +957,26 @@ function resolveFeedTimelineQueryParams(
 }
 
 // Count the timeline items visible under the shared filter, for pagination totals.
-async function countFeedTimeline(client: PoolClient, params: FeedTimelineQueryParams): Promise<number> {
+// Hides a community post authored by a member who is blocked (either direction) relative to the
+// viewer (issue #809 task 4) — the Commons must not show a blocked person's posts. Announcements and
+// AI Q&A items have no member author and pass through (`source_community_post_id IS NULL`). The
+// placeholder holds the viewer id; count and page queries number their arguments differently.
+function hideBlockedCommunityAuthorsSql(viewer: string): string {
+  return `
+          AND (
+            f.source_community_post_id IS NULL
+            OR NOT EXISTS (
+              SELECT 1
+              FROM feed_community_posts p
+              JOIN member_blocks mb
+                ON (mb.blocker_user_id = ${viewer} AND mb.blocked_user_id = p.author_user_id)
+                OR (mb.blocker_user_id = p.author_user_id AND mb.blocked_user_id = ${viewer})
+              WHERE p.id = f.source_community_post_id
+            )
+          )`;
+}
+
+async function countFeedTimeline(client: PoolClient, params: FeedTimelineQueryParams, viewerUserId: string): Promise<number> {
   const count = await client.query<CountRow>(
     `
         SELECT COUNT(*)::text AS total
@@ -973,9 +992,9 @@ async function countFeedTimeline(client: PoolClient, params: FeedTimelineQueryPa
             WHERE t.item_id = f.id
               AND t.target_role IN ($1, 'member', 'admin', 'all')
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
-          )
+          )${hideBlockedCommunityAuthorsSql('$5')}
       `,
-    [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns],
+    [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns, viewerUserId],
   );
 
   return Number.parseInt(count.rows[0]?.total ?? '0', 10);
@@ -1012,6 +1031,7 @@ async function resolveEffectiveOffset(
     aroundCommunityPostId: string | null | undefined;
     aroundAnnouncementId: string | null | undefined;
     params: FeedTimelineQueryParams;
+    viewerUserId: string;
   },
 ): Promise<number> {
   const around = resolveAroundTarget(options.aroundCommunityPostId, options.aroundAnnouncementId);
@@ -1054,9 +1074,9 @@ async function resolveEffectiveOffset(
                   AND t.target_role IN ($1, 'member', 'admin', 'all')
                   AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
               )
-              AND (f.published_at > $5 OR (f.published_at = $5 AND f.id > $6::uuid))
+              AND (f.published_at > $5 OR (f.published_at = $5 AND f.id > $6::uuid))${hideBlockedCommunityAuthorsSql('$7')}
           `,
-    [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns, target.published_at, target.id],
+    [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns, target.published_at, target.id, options.viewerUserId],
   );
   const rank = Number.parseInt(rankRes.rows[0]?.rank ?? '0', 10);
   return Math.max(0, rank - Math.floor(options.pageSize / 2));
@@ -1104,7 +1124,7 @@ async function queryFeedTimelineRows(
             WHERE t.item_id = f.id
               AND t.target_role IN ($1, 'member', 'admin', 'all')
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
-          )
+          )${hideBlockedCommunityAuthorsSql('$4')}
         ORDER BY f.published_at DESC, f.id DESC
         OFFSET $5 LIMIT $6
       `,
@@ -1333,9 +1353,15 @@ async function loadCommunityDetails(
             FROM feed_community_replies
             WHERE post_id = ANY($1::uuid[])
               AND moderation_status = 'accepted'
+              AND NOT EXISTS (
+                SELECT 1
+                FROM member_blocks mb
+                WHERE (mb.blocker_user_id = $2 AND mb.blocked_user_id = feed_community_replies.author_user_id)
+                   OR (mb.blocker_user_id = feed_community_replies.author_user_id AND mb.blocked_user_id = $2)
+              )
             ORDER BY created_at ASC
           `,
-      [communityIds],
+      [communityIds, userId],
     ),
     // Aggregate reactions for every visible community post in one batched query.
     // BOOL_OR(user_id = $2) tells us whether the requesting member reacted with each emoji.
@@ -1489,13 +1515,14 @@ export async function listFeedTimeline(
       };
     }
 
-    const total = await countFeedTimeline(client, params);
+    const total = await countFeedTimeline(client, params, userId);
     const effectiveOffset = await resolveEffectiveOffset(client, {
       offset,
       pageSize: pagination.pageSize,
       aroundCommunityPostId: filters.aroundCommunityPostId,
       aroundAnnouncementId: filters.aroundAnnouncementId,
       params,
+      viewerUserId: userId,
     });
 
     const rows = await queryFeedTimelineRows(client, {

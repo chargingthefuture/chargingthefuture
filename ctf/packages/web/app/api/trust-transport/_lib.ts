@@ -97,6 +97,8 @@ const TRUST_TRANSPORT_ERROR_RESPONSES: Record<string, TrustTransportErrorRespons
     status: 409,
   },
   policy_denied: { code: TRUST_TRANSPORT_ERROR_CODE.policyDenied, message: 'Operation denied by policy.', status: 403 },
+  // Neutral copy on purpose (mirrors LightHouse): a block must not reveal itself to the blocked person.
+  blocked_pair: { code: TRUST_TRANSPORT_ERROR_CODE.mutualBlock, message: 'This request is not available to you.', status: 403 },
   insufficient_balance: { code: TRUST_TRANSPORT_ERROR_CODE.insufficientBalance, message: 'Insufficient available balance.', status: 409 },
   account_restricted: { code: TRUST_TRANSPORT_ERROR_CODE.accountRestricted, message: 'Account is restricted.', status: 403 },
   invalid_payload: { code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid payload.', status: 400 },

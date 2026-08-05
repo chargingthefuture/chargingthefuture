@@ -180,6 +180,14 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+- 2026-08-05: **Member blocks enforced (issue #809 task 4).** The browse feed
+  (`GET /api/socket-relay/requests`) now hides posts whose owner is blocked (either direction)
+  relative to the signed-in viewer — owner-scoped "Mine" lists and admin lists stay complete — and
+  `claimRequest` refuses a blocked pair with the new `blocked_pair` → `SOCKET_RELAY_BLOCKED_PAIR`
+  mapping (403, neutral copy "This request is not available to you." so the block never reveals
+  itself; checked before the idempotent-retry branch so a blocked retry cannot resurrect an old
+  claim). `member_blocks` added to the `socket-relay.fulfillment.claim` contract `dataAccess`. No
+  schema change.
 - 2026-08-04: **Favors now count toward the Community Value Index at the value their post names.** A
   post can name an offered value since issue #120 (`price_amount`/`price_currency`), but the GDP
   value layer still counted every SocketRelay favor as one `FREE` point — both the projected

@@ -153,14 +153,30 @@ member surface to carry it — so a seeker can block a host from the place they 
 also enforces the block: a blocked host's listings are left out of browse, and a stay request between
 a blocked pair is refused with `blocked_pair` (403). See §1.6 of the LightHouse inventory.
 
-Enforcement is not yet everywhere, and that is the open gap on this control. `isBlockedBetween`
-(`lib/blocks/repository.ts`) is the single check every member-to-member surface is meant to consult;
-as of 2026-08-03 it is consulted by the Chyme back-channel and LightHouse only. Foundation threads,
-SocketRelay favors, TrustTransport rides, MutualTime, and the Commons author list do not consult it,
-so a block does not yet hide or stop a person there. Each remaining surface needs its own read-path
-filter and write-path refusal, the same shape as the two that are done. Mobile: Android still has no
-per-member profile menu to host the button (the directory list navigates to Foundation), so on
-Android the block is started from the manage screen rather than from a member's context.
+**Enforcement now covers every member-to-member surface (issue #809 task 4 closed, 2026-08-05).**
+`isBlockedBetween` / `isBlockedBetweenTx` (`lib/blocks/repository.ts`) is the shared check, consulted
+on each surface's read path (hide the person) and write path (refuse the contact, always with neutral
+copy so a block never reveals itself):
+
+- Chyme Back Channel — invite refusal (`back-channel.ts`, since 2026-07-20).
+- LightHouse — browse filter + stay-request refusal (inline SQL that also honors the legacy
+  read-only `lighthouse_blocks` rows, since 2026-08-03).
+- Foundation — provider search hides a blocked provider; `createConnectionThread` and
+  `ringInstantCall` refuse a blocked pair (a block created after the thread exists still stops new
+  calls).
+- SocketRelay — the browse feed hides a blocked owner's posts (owner "Mine" and admin lists stay
+  complete); `claimRequest` refuses a blocked pair before the idempotent-retry branch.
+- TrustTransport — helper discovery (`listAvailableRequests`) hides a blocked requester's rides;
+  `createOffer` and `acceptOffer` refuse a blocked pair.
+- Commons — the timeline hides community posts and replies authored by a blocked pair member
+  (announcements and AI answers have no member author and always show); the deep-link
+  "load around" offset applies the same filter so pagination stays consistent.
+
+MutualTime needs no enforcement and gets none: an event shows only aggregated anonymous voter counts
+— no member identity, no member-to-member contact path — so there is nothing for a block to hide or
+stop. Mobile: Android still has no per-member profile menu to host the button (the directory list
+navigates to Foundation), so on Android the block is started from the manage screen rather than from
+a member's context.
 
 ### 1.7 Admin Account Restrictions (platform-wide member restriction)
 

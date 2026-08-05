@@ -38,6 +38,23 @@ export async function isBlockedBetween(userA: string, userB: string): Promise<bo
   return result.rows[0]?.blocked ?? false;
 }
 
+// Same check as isBlockedBetween, but on the caller's open transaction client — for enforcement
+// inside a write transaction (e.g. a claim or offer), so the check and the write see one snapshot
+// and no second pool connection is taken mid-transaction.
+export async function isBlockedBetweenTx(client: PoolClient, userA: string, userB: string): Promise<boolean> {
+  const result = await client.query<{ blocked: boolean }>(
+    `SELECT EXISTS(
+       SELECT 1
+       FROM member_blocks
+       WHERE (blocker_user_id = $1 AND blocked_user_id = $2)
+          OR (blocker_user_id = $2 AND blocked_user_id = $1)
+     ) AS blocked`,
+    [userA, userB],
+  );
+
+  return result.rows[0]?.blocked ?? false;
+}
+
 // --- Member block management (issue #809, task 2) ---------------------------------------------
 //
 // These three functions back the block / unblock / manage-list flow. A block is created one-way by
