@@ -162,6 +162,13 @@ export async function createGatedChannelPost(input: {
   if (!passesGatedChannelModeration(body)) {
     throw new Error('content_policy_violation');
   }
+  // The rate limit is the first database check, before the reply-target lookup, so a member who
+  // is over the posting window always gets 'rate_limit_exceeded' — the reply id they send cannot
+  // change which error comes back, and no extra query runs for a caller who cannot post anyway.
+  const allowed = await evaluateGatedChannelPostRateLimit(input.authorUserId);
+  if (!allowed) {
+    throw new Error('rate_limit_exceeded');
+  }
   if (input.replyToPostId) {
     const target = await queryDb<{ id: string }>(
       `SELECT id FROM contributor_access_channel_posts
@@ -171,10 +178,6 @@ export async function createGatedChannelPost(input: {
     if (target.rows.length === 0) {
       throw new Error('reply_target_not_found');
     }
-  }
-  const allowed = await evaluateGatedChannelPostRateLimit(input.authorUserId);
-  if (!allowed) {
-    throw new Error('rate_limit_exceeded');
   }
   const result = await queryDb<{ id: string; created_at: string }>(
     `INSERT INTO contributor_access_channel_posts (id, author_user_id, author_username, body, reply_to_post_id, moderation_status)
