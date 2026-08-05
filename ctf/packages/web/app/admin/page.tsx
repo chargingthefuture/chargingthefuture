@@ -39,6 +39,8 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // inside AI Assistant: it has its own queue, and a contribution waiting to be read should show up
   // in the admin directory on its own.
   { href: '/admin/comic/contributions', name: 'Contributed Writing' },
+  // Curation of the assistant's grounding library: switch what the assistant can quote off/on.
+  { href: '/admin/comic/knowledge', name: 'AI Knowledge Base' },
   { href: '/admin/foundation', name: 'Foundation' },
   { href: '/admin/level-up', name: 'LevelUp' },
   { href: '/admin/lighthouse', name: 'LightHouse' },
