@@ -30,7 +30,6 @@ export type WorkforceProfile = {
   occupationId: string | null;
   occupationName: string | null;
   skillLevel: string;
-  region: string | null;
   recruitedState: boolean;
   recruitedResolvedAtIso: string | null;
   availabilityPreferences: Record<string, unknown>;
