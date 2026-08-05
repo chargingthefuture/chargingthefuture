@@ -33,6 +33,7 @@ contracts:
       - feed_item_targets
       - feed_render_config
       - feed_questions
+      - member_blocks
     purpose: timeline_discovery
     retentionClass: derived_short_lived
     idempotency: true

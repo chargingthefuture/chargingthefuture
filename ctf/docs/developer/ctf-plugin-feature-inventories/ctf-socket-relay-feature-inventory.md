@@ -185,6 +185,14 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+- 2026-08-05: **Member blocks enforced (issue #809 task 4).** The browse feed
+  (`GET /api/socket-relay/requests`) now hides posts whose owner is blocked (either direction)
+  relative to the signed-in viewer — owner-scoped "Mine" lists and admin lists stay complete — and
+  `claimRequest` refuses a blocked pair with the new `blocked_pair` → `SOCKET_RELAY_BLOCKED_PAIR`
+  mapping (403, neutral copy "This request is not available to you." so the block never reveals
+  itself; checked before the idempotent-retry branch so a blocked retry cannot resurrect an old
+  claim). `member_blocks` added to the `socket-relay.fulfillment.claim` contract `dataAccess`. No
+  schema change.
 - 2026-08-04: **Two false gaps reclassified as decisions (inventory audit).** (1) §1.2 Profile
   Management described a profile CRUD surface as in-scope; history shows the v2 profile page was
   retired with the legacy app and the v3 profile read was removed in the 2026-05-10 pixel pass, with

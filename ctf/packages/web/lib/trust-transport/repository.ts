@@ -32,6 +32,7 @@ import type {
 } from './types';
 import { ensureTrustTransportTripChannel } from './stream';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
+import { isBlockedBetween, isBlockedBetweenTx } from 'lib/blocks/repository';
 
 // Cross-plugin presence: a TrustTransport ride request marks its requester (the rider) as active.
 // A request counts as active presence unless its status is terminal, so the live hooks clear presence
@@ -507,10 +508,20 @@ export async function listAvailableRequests(options: {
   const offset = (page - 1) * pageSize;
   const excludeUserId = options.excludeUserId;
 
+  // Blocked pairs are hidden from discovery (issue #809 task 4): a helper never sees a blocked
+  // requester's ride, in either block direction, mirroring the LightHouse browse filter.
+  const hideBlockedRequestersSql = `
+     AND NOT EXISTS (
+       SELECT 1
+       FROM member_blocks
+       WHERE (blocker_user_id = $1 AND blocked_user_id = trust_transport_requests.requester_user_id)
+          OR (blocker_user_id = trust_transport_requests.requester_user_id AND blocked_user_id = $1)
+     )`;
+
   const count = await queryDb<CountRow>(
     `SELECT COUNT(*)::text AS total
      FROM trust_transport_requests
-     WHERE status = 'open' AND requester_user_id <> $1`,
+     WHERE status = 'open' AND requester_user_id <> $1${hideBlockedRequestersSql}`,
     [excludeUserId],
   );
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
@@ -524,7 +535,7 @@ export async function listAvailableRequests(options: {
   }>(
     `SELECT id, mode, price_amount, price_currency, created_at
      FROM trust_transport_requests
-     WHERE status = 'open' AND requester_user_id <> $1
+     WHERE status = 'open' AND requester_user_id <> $1${hideBlockedRequestersSql}
      ORDER BY created_at DESC
      OFFSET $2 LIMIT $3`,
     [excludeUserId, offset, pageSize],
@@ -580,6 +591,13 @@ export async function createOffer(
   // You cannot make an offer on your own request, and you can only offer while it is still open.
   if (request.requesterUserId === providerUserId) {
     throw new Error('policy_denied');
+  }
+
+  // Block check (issue #809 task 4): a block in either direction means these two members must not
+  // reach each other — the driver cannot offer on a blocked requester's ride, and vice versa. The
+  // route maps blocked_pair to neutral copy so the block never reveals itself.
+  if (await isBlockedBetween(providerUserId, request.requesterUserId)) {
+    throw new Error('blocked_pair');
   }
 
   if (request.status !== 'open') {
@@ -656,6 +674,12 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
     }
 
     const offer = offerResult.rows[0];
+
+    // Block check (issue #809 task 4): a block created after the offer was made still stops the pair
+    // from being joined into a trip. Neutral blocked_pair mapping at the route.
+    if (await isBlockedBetweenTx(client, actorUserId, offer.provider_user_id)) {
+      throw new Error('blocked_pair');
+    }
 
     const existingTrip = await client.query<TripRow>(
       `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at

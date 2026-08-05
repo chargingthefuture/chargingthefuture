@@ -297,6 +297,13 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 ## Change Log
 
 
+- 2026-08-05: **Member blocks enforced (issue #809 task 4).** Helper discovery
+  (`listAvailableRequests`) now leaves out rides whose requester is blocked (either direction)
+  relative to the browsing helper; `createOffer` and `acceptOffer` refuse a blocked pair with the
+  `blocked_pair` → `TRUST_TRANSPORT_MUTUAL_BLOCK` mapping (403, neutral copy "This request is not
+  available to you." so the block never reveals itself). A block created after an offer was made
+  still stops the pair from being joined into a trip at accept time. `member_blocks` added to the
+  `trust-transport.offer.create` / `offer.accept` contract `dataAccess`. No schema change.
 - 2026-08-04: **Driver offers now write Member Presence live.** `createOffer` records a presence row
   for the offering driver (ref type `offer`, label "Offering rides") after the offer commits, and
   `acceptOffer` clears presence for the drivers whose offers were rejected while the accepted driver

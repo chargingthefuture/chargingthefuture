@@ -493,6 +493,28 @@ web ☐
 
 ---
 
+### SR-20 — Member block hides posts and stops a claim (added 2026-08-05)
+
+**Role:** two members (A and B) · **Surfaces:** web
+
+**Precondition:** Member B has an open post. Member A blocks Member B (from B's Directory profile or `/account/blocks`).
+
+**Steps:**
+1. As A, open the SocketRelay feed and look for B's post.
+2. As A, attempt `POST /api/socket-relay/requests/<B's request id>/claim` directly (deep link or API).
+3. As B, open the feed and look for A's posts.
+4. As an admin, open `/admin/socket-relay` and check the requests list.
+
+**Expected:**
+- Steps 1 and 3: neither member sees the other's posts (the block hides in both directions).
+- Step 2: 403 with the neutral message "This request is not available to you." — never wording that names a block.
+- Step 4: the admin list still shows every request (admin views are never filtered).
+- B gets no notification or any other signal that a block exists.
+
+web ☐
+
+---
+
 ### SR-DEL · Account deletion clears the Stream chat copy (privacy)
 **Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
 SocketRelay fulfillment message; access to the Stream dashboard for the app behind `STREAM_API_KEY`.

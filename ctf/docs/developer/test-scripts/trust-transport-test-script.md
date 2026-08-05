@@ -344,6 +344,27 @@ Result: web ☐
 
 ---
 
+### TT-18b — Member block hides rides and stops offers (added 2026-08-05)
+
+**Role:** two members (requester R, driver D) · **Surfaces:** web
+
+**Precondition:** R has an open ride request. D blocks R (or R blocks D) via `/account/blocks` or the Directory profile.
+
+**Steps:**
+1. As D, open the "help out" discovery list and look for R's request.
+2. As D, attempt `POST /api/trust-transport/requests/<R's request id>/offers` directly.
+3. Undo the block, have D offer, re-create the block, then as R try to accept D's offer.
+
+**Expected:**
+- Step 1: R's request is absent from D's discovery list.
+- Step 2: 403 with the neutral message "This request is not available to you." — never wording that names a block.
+- Step 3: the accept is refused the same way — a block created after the offer still stops the pair from being joined into a trip.
+- Neither member gets any signal that a block exists.
+
+Result: web ☐
+
+---
+
 ### TT-19 — Refresh the request list (header button / pull-to-refresh)
 
 **Role:** member · **Surfaces:** web, android

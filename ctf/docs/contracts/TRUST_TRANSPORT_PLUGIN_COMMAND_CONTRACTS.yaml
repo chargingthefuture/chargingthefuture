@@ -52,6 +52,7 @@ contracts:
       - trust_transport_offers
       - trust_transport_requests
       - trust_transport_admin_audit_trail
+      - member_blocks
     purpose: marketplace_offer_creation
     retentionClass: transactional_long_lived
     idempotency: true
@@ -76,6 +77,7 @@ contracts:
       - trust_transport_offers
       - trust_transport_trips
       - trust_transport_status_events
+      - member_blocks
     purpose: marketplace_fulfillment_start
     retentionClass: transactional_long_lived
     idempotency: true

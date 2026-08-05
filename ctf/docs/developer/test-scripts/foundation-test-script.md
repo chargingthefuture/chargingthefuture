@@ -88,6 +88,27 @@ Result: web ☐
 
 ---
 
+### FDN-2b — Member block hides a provider and stops contact (added 2026-08-05)
+
+**Role:** two members (survivor S, provider P) · **Surfaces:** web
+
+**Precondition:** P is an active provider. S blocks P (or P blocks S) via `/account/blocks` or the Directory profile.
+
+**Steps:**
+1. As S, search providers with a query that would match P.
+2. As S, attempt to open a connection thread to P directly (`POST /api/foundation/connections/threads` with P's provider id).
+3. If a thread between S and P existed from before the block, try to start an instant call on it.
+
+**Expected:**
+- Step 1: P is absent from S's search results.
+- Step 2: 403 with the neutral message "This provider is not available to you." — never wording that names a block.
+- Step 3: the ring is refused with "This call is not available right now." — a block created after the thread existed still stops new calls.
+- Neither member gets any signal that a block exists.
+
+Result: web ☐
+
+---
+
 ### FDN-3 — Provider search: empty-state messaging
 
 **Role:** Member (survivor)
