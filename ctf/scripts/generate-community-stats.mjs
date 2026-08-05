@@ -5,7 +5,9 @@
  * Sibling of generate-update.mjs. Where that one turns recent commits into a
  * product-update post, this one turns privacy-safe, aggregate plugin activity
  * into a short Quora draft: how many open SocketRelay posts are waiting for
- * help, how many Directory profiles exist, which skills are represented. The
+ * help, how many Directory profiles exist, which skills are represented, and
+ * the two Community Value Index figures (real and projected — index numbers,
+ * never money). The
  * point is to show real need and real activity so newcomers see a reason to
  * join — without ever exposing an individual person, post, or profile.
  *
@@ -23,6 +25,7 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { Pool } from 'pg';
+import { PROJECTION_SOURCES, RECOGNITION_SOURCES, computeValueIndex } from './lib/gdpValueIndex.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -61,9 +64,11 @@ const pool = new Pool({
  * missing table on a legacy database can't block the post.
  *
  * SocketRelay and Directory are the two flagship signals; ServiceCredits adds
- * the community-currency signal. Other marketplace plugins (LightHouse,
- * Foundation, TrustTransport, Workforce) are easy follow-ups — add them the
- * same way once their headline count is chosen.
+ * the community-currency signal; GDP adds the two Community Value Index
+ * figures (the real index and the projected open-board figure — index
+ * numbers, never money). Other marketplace plugins (LightHouse, Foundation,
+ * TrustTransport, Workforce) are easy follow-ups — add them the same way once
+ * their headline count is chosen.
  */
 const STAT_PROVIDERS = [
   {
@@ -169,6 +174,30 @@ const STAT_PROVIDERS = [
       ];
     },
   },
+  {
+    slug: 'gdp',
+    displayName: 'GDP',
+    async collect(client) {
+      // The two Community Value Index figures, computed with the same source SQL and contribution
+      // weights the GDP dashboard and the weekly rollup use (shared in ./lib/gdpValueIndex.mjs).
+      // Whole-community aggregates only — every underlying query is a SUM/COUNT, never a row. Both
+      // figures are relative index numbers, NOT money: no currency symbol, no price, no redemption
+      // value. The projected figure is a separate number from the index and is never added to it.
+      const real = await computeValueIndex(client, RECOGNITION_SOURCES);
+      const projected = await computeValueIndex(client, PROJECTION_SOURCES);
+      return [
+        {
+          label: 'Community Value Index — value already exchanged on the platform (an index number, not money)',
+          value: Math.round(real.valueIndex),
+        },
+        {
+          label:
+            'value waiting to happen — what the open posts on the board would add to the index if every one of them closed (most posts never close; also an index number, not money)',
+          value: Math.round(projected.valueIndex),
+        },
+      ];
+    },
+  },
 ];
 
 async function collectStats() {
@@ -259,11 +288,12 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
   body: JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 2048,
-    system: `You write short weekly community notes for Charging the Future, an open-source platform built for survivors of Specterati harassment. Follow the brand voice guide carefully.\n\nBRAND VOICE:\n${brandVoice}\n\nWHAT THIS POST IS:\nA plain, honest weekly snapshot of how much is happening on the platform, using only whole-community totals. The goal is to show real activity and real need so someone reading sees a reason to join: open requests are waiting for help, people have listed skills, a skill they have is needed. Never describe any single person, post, or profile — only the totals you are given.\n\nWRITING RULES (these override any instinct toward marketing copy):\n- Write at about a 6th-grade reading level. Short sentences. Everyday words. If a 12-year-old would stumble on a word, pick a simpler one.\n- Sound like one person talking to a friend, not a company announcing. First person ("this week", "you can") over corporate "we are proud".\n- Use ONLY the numbers given below. Never invent, round up, or guess a number. If a number is 0, say it plainly.\n- A count of posts, requests, or items is a count of THINGS, not people. The same person can create several posts, so these totals are cumulative activity, not a headcount. Never say or imply how many people are behind them (do not turn "2 open posts" into "2 people"). Only call a number people or members when the fact is explicitly labeled "people" or "members".\n- Each app is given with its exact direct link ("direct link: https://app.chargingthefuture.com/apps/..."). The FIRST time you mention an app by name, put its full link right after the name, in parentheses, copied EXACTLY as given. Never invent, shorten, or guess a link, and never link an app you have no link for.\n- Never sell the importance of the numbers. State what they are and what someone can do, then stop. Banned: "matters deeply", "build trust", "deserve", "we're committed", "game-changer", "powerful", "seamless", "thriving", "vibrant", and any sentence about what the numbers "say about us".\n- No negative framing. Don't shame low numbers or hype high ones. A small number is fine to read small.\n- No rhetorical questions. No applause lines. No closing flourish.\n- Don't perform kindness or guess at anyone's feelings. Warmth comes from being useful and plain.\n- The project's code lives at exactly this URL: ${repoUrl} — use it verbatim when mentioning where to find the project.\n\nToday: ${today}`,
+    system: `You write short weekly community notes for Charging the Future, an open-source platform built for survivors of Specterati harassment. Follow the brand voice guide carefully.\n\nBRAND VOICE:\n${brandVoice}\n\nWHAT THIS POST IS:\nA plain, honest weekly snapshot of how much is happening on the platform, using only whole-community totals. The goal is to show real activity and real need so someone reading sees a reason to join: open requests are waiting for help, people have listed skills, a skill they have is needed. Never describe any single person, post, or profile — only the totals you are given.\n\nWRITING RULES (these override any instinct toward marketing copy):\n- Write at about a 6th-grade reading level. Short sentences. Everyday words. If a 12-year-old would stumble on a word, pick a simpler one.\n- Sound like one person talking to a friend, not a company announcing. First person ("this week", "you can") over corporate "we are proud".\n- Use ONLY the numbers given below. Never invent, round up, or guess a number. If a number is 0, say it plainly.\n- A count of posts, requests, or items is a count of THINGS, not people. The same person can create several posts, so these totals are cumulative activity, not a headcount. Never say or imply how many people are behind them (do not turn "2 open posts" into "2 people"). Only call a number people or members when the fact is explicitly labeled "people" or "members".\n- Each app is given with its exact direct link ("direct link: https://app.chargingthefuture.com/apps/..."). The FIRST time you mention an app by name, put its full link right after the name, in parentheses, copied EXACTLY as given. Never invent, shorten, or guess a link, and never link an app you have no link for.\n- Never sell the importance of the numbers. State what they are and what someone can do, then stop. Banned: "matters deeply", "build trust", "deserve", "we're committed", "game-changer", "powerful", "seamless", "thriving", "vibrant", and any sentence about what the numbers "say about us".\n- The Community Value Index and its "value waiting to happen" figure are relative index numbers, NOT money. Never put a currency symbol on them, never call them dollars or credits, never present them as a price, a worth, or something anyone can cash out. Say them as plain numbers with their plain meaning: what has been exchanged so far, and what the open posts would add if they all closed (most never close).
+- No negative framing. Don't shame low numbers or hype high ones. A small number is fine to read small.\n- No rhetorical questions. No applause lines. No closing flourish.\n- Don't perform kindness or guess at anyone's feelings. Warmth comes from being useful and plain.\n- The project's code lives at exactly this URL: ${repoUrl} — use it verbatim when mentioning where to find the project.\n\nToday: ${today}`,
     messages: [
       {
         role: 'user',
-        content: `This week's whole-community totals:\n\n${statsForPrompt}\n\nWrite a community snapshot. Return ONLY a JSON object with these exact keys:\n- title: A short, plain in-list title (max 80 chars), e.g. "Community activity — ${today}".\n- quoraDraft: A 2-4 short-paragraph Quora post, written like a personal note. Lead with the SocketRelay open posts and the Directory numbers, since those show need most clearly. Work in the skills-coverage line — how many of the 650 skills a functioning economy needs have at least one person behind them now, and the percentage — since it shows how the economy is filling in; use only the exact numbers given for it, and never treat the separate "skills available to pick from in total" number as coverage (that one is the size of the pick-list, not how many skills someone has listed). When you first name each app, paste its exact direct link (given above as "direct link: ...") right after the name in parentheses, so a reader can tap straight through to it. Remember an open-post count is a count of posts, not people. Plain words, ~6th-grade reading level. Make it concrete: a number, what it means, and one simple thing a reader can do (join, list a skill, answer an open post). One sentence on where the project lives, giving the GitHub URL exactly as ${repoUrl}. Do not invent numbers or links, do not sell importance, no rhetorical questions.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
+        content: `This week's whole-community totals:\n\n${statsForPrompt}\n\nWrite a community snapshot. Return ONLY a JSON object with these exact keys:\n- title: A short, plain in-list title (max 80 chars), e.g. "Community activity — ${today}".\n- quoraDraft: A 2-4 short-paragraph Quora post, written like a personal note. Lead with the SocketRelay open posts and the Directory numbers, since those show need most clearly. If the GDP figures are present, give them one plain sentence each: the Community Value Index is what members have already exchanged, and the "value waiting to happen" number is what the open posts would add if they all closed — both are index numbers, not money, so no currency symbol and no talk of worth or cashing out. Work in the skills-coverage line — how many of the 650 skills a functioning economy needs have at least one person behind them now, and the percentage — since it shows how the economy is filling in; use only the exact numbers given for it, and never treat the separate "skills available to pick from in total" number as coverage (that one is the size of the pick-list, not how many skills someone has listed). When you first name each app, paste its exact direct link (given above as "direct link: ...") right after the name in parentheses, so a reader can tap straight through to it. Remember an open-post count is a count of posts, not people. Plain words, ~6th-grade reading level. Make it concrete: a number, what it means, and one simple thing a reader can do (join, list a skill, answer an open post). One sentence on where the project lives, giving the GitHub URL exactly as ${repoUrl}. Do not invent numbers or links, do not sell importance, no rhetorical questions.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
       },
     ],
   }),
