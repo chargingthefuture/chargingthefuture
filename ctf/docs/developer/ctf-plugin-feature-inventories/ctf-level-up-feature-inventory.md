@@ -25,8 +25,10 @@
 3. Trainer dashboard data layer (`getTrainerDashboardData`: cohorts, pending validations, trainees,
    payout ledger summary). Note: this is a repository function with no member-shell surface today —
    the inline "pending validations" approve panel was removed with the member-shell right panel
-   (see the 2026-07-21 change-log entry). Trainers validate via
-   `POST /api/level-up/milestones/[milestoneId]/validate` (server-scoped by `isTrainerForCohort`).
+   (see the 2026-07-21 change-log entry). An **admin** validates, releases, resolves, and claims
+   from the admin panel's actionable review queues (2026-08-05); a non-admin **trainer** still acts
+   via the API (`POST /api/level-up/milestones/[milestoneId]/validate` etc., server-scoped by
+   `isTrainerForCohort`) — a trainer-facing member-shell surface remains open (see Gaps).
 
 ## Implemented Admin Features
 
@@ -34,7 +36,7 @@
 2. Dispute resolution endpoint with optional adjustment transfer.
 3. Admin panel with operational KPIs (enrollments, completions, avg days to first trainer payout) plus a read-only cohort overview (title, track, status, seats open, required deposit, trainer split, completion bonus) from `GET /api/level-up/cohorts`.
 4. Cohort proposal queue (issue #904, proposal-queue model — owner decision 2026-07-23): a ranked, sector-diverse list of proposed cohorts derived from the Workforce talent gaps. Each row shows the occupation, sector, and gap, with a 1/3/5-month **term** selector and **Approve & open** / **Dismiss** actions; a **Refresh proposals** button re-reads the current gaps. Approving opens a real cohort (the admin picks the term); dismissing removes the proposal. The admin cohort overview shows `auto` and `needs trainer` badges on cohorts opened from proposals that have no human trainer yet.
-5. Review queues on the admin panel (read-only lists): **Open disputes** (`level_up_disputes` `status='open'`, newest first, with title, description, opener name, and time) and **Pending milestone validations** (`level_up_milestone_validations` `status='pending'`, newest first). Both are server-rendered from `getAdminPanelData()` (`listOpenDisputes` / `listPendingMilestoneValidations`) and drive the admin-landing "new to review" dot (an item created since the admin last opened this area). Resolving a dispute / approving a validation stays in the existing dispute and trainer-validation flows; these lists exist so the dot leads somewhere that shows what is new.
+5. Review queues on the admin panel — **actionable since 2026-08-05** (`lu-review-actions.tsx`): **Open disputes** (`level_up_disputes` `status='open'`, newest first, with title, description, opener name, and time) each carry a **Resolve…** control (a written resolution posted to `POST /api/level-up/disputes/:id/resolve`; credit adjustments deliberately stay out of the form — an adjustment case goes through the ServiceCredits admin). **Pending milestone validations** (`level_up_milestone_validations` `status='pending'`, newest first) each carry **Validate** and **Release credits** buttons calling the live milestone routes (the server stays the referee on ordering; a row missing its cohort id shows a handle-via-API note instead of a broken button). Cohorts flagged `needs trainer` carry a **Claim as trainer** button (`POST /api/level-up/cohorts/:id/claim-trainer`). Both queue lists are server-rendered from `getAdminPanelData()` and drive the admin-landing "new to review" dot; a completed action re-pulls them via `router.refresh()`.
 
 ## Cohort Proposals from Workforce Gaps (issue #904)
 
@@ -224,6 +226,15 @@ that exist today.
 
 ## Gaps and Known Technical Debt
 
+0. **The member has no in-app way to OPEN a dispute, and a non-admin trainer has no in-app
+   validate/release/claim surface.** (History-checked 2026-08-05: never built on any platform.)
+   The admin side became actionable 2026-08-05 (see Admin Features #5), but the member-side dispute
+   form is blocked on a missing own-enrollments read endpoint — the member shell only knows about
+   enrollments made in the current session (the same missing `GET` noted in the delivery-status
+   "active-enrollment banner" line), so a member who enrolled earlier has no enrollment to attach a
+   dispute to. Order of work when built: add the own-enrollments read route (+ contract), then the
+   dispute form on the Progress tab, then the trainer surface (which can reuse
+   `getTrainerDashboardData` behind a trainer-gated read route).
 1. Dispute attachment storage uses URL metadata only (no secure file storage backend). This is a known limitation; full storage integration is a future optimization.
 2. No admin KPI read endpoint exists; the web admin page renders KPIs from server-side `getAdminPanelData()` and the Android admin screen has no KPI cards (no GET route to call). Add a `GET /api/level-up/admin/kpis` route to give the mobile screen the same KPI cards as web.
 3. No admin-gated GET route exists for the LevelUp admin screens, so the mobile admin screen cannot pre-gate by role before render; it relies on the server-side admin gate on `POST /adjust-credits` to deny non-admins. The cohort list (`GET /api/level-up/cohorts`) is read-access for any approved user. A dedicated admin-gated read route would let the mobile screen show the admin-only notice without attempting a mutation.
@@ -232,6 +243,18 @@ that exist today.
 
 ## Change Log
 
+- 2026-08-05: **The admin review queues act (closes "read-only lists" scope, part of the inventory
+  audit).** The history check found five live, hardened LevelUp routes with zero UI callers on any
+  platform, ever. The admin panel's queues are now actionable via the new `lu-review-actions.tsx`
+  (kept out of the 862-line `lu-admin-shell.tsx` per rule 116): each open dispute carries a
+  **Resolve…** control (written resolution → `POST /disputes/:id/resolve`; credit adjustments
+  deliberately stay out of the form — an adjustment case goes through the ServiceCredits admin),
+  each pending validation carries **Validate** and **Release credits** (the milestone routes; the
+  server referees ordering; a row missing its cohort id shows a handle-via-API note), and a
+  `needs trainer` cohort carries **Claim as trainer**. Completed actions re-pull the
+  server-rendered queues via `router.refresh()`; the claim re-pulls the client-fetched cohort list.
+  Still open (new Gaps #0): the member-side dispute form (blocked on an own-enrollments read
+  endpoint) and a non-admin trainer surface. UI-only — no route, schema, or contract change.
 - 2026-08-02: **Deletion burn-down batch 4.** On account deletion, `level_up_trainers` (your trainer profile) and `level_up_user_achievements` are now deleted. Shared/admin records (`level_up_cohorts`, `level_up_cohort_proposals`, `level_up_milestone_validations`, auto-cohort config and term overrides) are classified retained — admin decision audit and ledger-adjacent validation history.
 - 2026-08-02: **Deletion burn-down batch 3: disbursements and disputes classified as retained.** On account deletion, `level_up_disbursements`, `level_up_disputes`, and `level_up_dispute_comments` are retained — they are the record of why cohort escrow balances moved and how contests over them were resolved, matching the ServiceCredits ledger policy. Caught by the deletion-coverage gate added in #2056.
 - 2026-07-31: **Stored status value respelled to US English (owner-directed).** `level_up_cohorts.status` now stores `canceled`; existing rows are migrated by the idempotent US-spelling data migration block at the end of `ctf/schema.sql`. Code, contracts, and docs were renamed in the same PR.
