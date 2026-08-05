@@ -75,11 +75,6 @@ export function WorkforceProfilePanel({ profile, loading }: WorkforceProfilePane
           >
             {profile.skillLevel !== 'unknown' ? `Skill level: ${profile.skillLevel}` : 'Skill level not set'}
           </div>
-          {profile.region ? (
-            <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>
-              Region: <span style={{ color: t.SUBTLE }}>{profile.region}</span>
-            </div>
-          ) : null}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             {profile.recruitedState ? (
               <Badge
