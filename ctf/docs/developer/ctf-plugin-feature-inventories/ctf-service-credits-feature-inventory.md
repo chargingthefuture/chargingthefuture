@@ -67,9 +67,12 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 
 ### 1.5 Account Deletion Reclaim Experience
 
-1. User-visible notice that a 7-day reclaim window applies after full account deletion request.
-2. Clear messaging that credits are returned to treasury after the reclaim window and are not withdrawable externally.
-3. Reclaim status messaging when deletion reclaim is blocked by active escrow holds.
+Implemented 2026-08-05 on the Account & Data deletion surface (`components/account-data/` — the
+desktop card, the mobile card, and the confirm/queued dialog):
+
+1. User-visible notice that a 7-day reclaim window applies after a full account deletion request. Done — every deletion copy site names the 7-day hold (matching the `SERVICE_CREDITS_RECLAIM_WINDOW_DAYS` constant the sweep enforces).
+2. Clear messaging that credits are returned to the community treasury after the reclaim window and are never withdrawable externally. Done.
+3. Reclaim status messaging when deletion reclaim is blocked by active escrow holds. Done as standing copy: the deletion surfaces state that a return waits for any active escrow to resolve. (There is no live per-member escrow-status readout on this surface — the sweep's `active_escrow_holds` state is surfaced as the general rule, not a personalized status; a live readout would need a member-facing reclaim-status route and is not currently planned.)
 
 ---
 
@@ -282,6 +285,14 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 ## 10) Change Log
 
 
+- 2026-08-05: **Deletion-reclaim messaging shipped (§1.5, promised since 2026-02-25 and never
+  built).** The Account & Data deletion surfaces (`account-data-desktop.tsx`,
+  `account-data-mobile.tsx`, `account-data-confirm-delete.tsx`) replace the vague "settled via the
+  standard process" wording with the concrete policy: credits are held for 7 days after the deletion
+  request (matching `SERVICE_CREDITS_RECLAIM_WINDOW_DAYS`), then returned to the community treasury,
+  never withdrawable externally, and a return waits for any active escrow to resolve. Copy only —
+  no route, schema, or contract change; the reclaim sweep and its `reclaim_window_not_elapsed` /
+  `active_escrow_holds` states are unchanged.
 - 2026-08-03: **A completed send can be recorded as an ongoing arrangement, without leaving
   ServiceCredits.** The Recurring Activity inventory names "a ServiceCredits send" as one of the places
   the "Is this ongoing?" prompt must appear (its Gaps #1, the owner's intended primary entry point); it

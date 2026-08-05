@@ -270,12 +270,12 @@ function MobileDanger({ serviceCount, onOpenAccountDelete, tokens }: { serviceCo
           <span style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Delete Entire Account</span>
         </div>
         <div style={{ fontSize: 13, color: '#9CA3AF', lineHeight: 1.6, marginBottom: 14 }}>
-          Removes your profile and all personal data across all {serviceCount} services. Your ServiceCredits are settled — not destroyed. Some audit records are retained by design.
+          Removes your profile and all personal data across all {serviceCount} services. Your ServiceCredits are held for 7 days, then returned to the community treasury (an active escrow resolves first) — never withdrawable externally. Some audit records are retained by design.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
           {([
             { t: 'All personal data permanently deleted', warn: true },
-            { t: 'ServiceCredits settled via standard process', warn: false },
+            { t: 'ServiceCredits: held 7 days, then returned to the community treasury', warn: false },
             { t: 'Audit records retained (by design)', warn: false },
             { t: 'Profile removed from all directories', warn: true },
           ]).map(({ t, warn }, i) => (
