@@ -13,6 +13,17 @@ vi.mock('lib/db/postgres', () => ({
     if (sql.includes('lighthouse_matches')) {
       return { rows: [{ currency_code: 'USD', total: '1200' }, { currency_code: 'FREE', total: '2' }] };
     }
+    if (sql.includes('socket_relay_fulfillments')) {
+      // Two closed favors that offered ServiceCredits (15 total), one that offered 30 USD, and three
+      // with no named value — each recognized at the value its request posted (issue #120 columns).
+      return {
+        rows: [
+          { currency_code: 'SC', total: '15' },
+          { currency_code: 'USD', total: '30' },
+          { currency_code: 'FREE', total: '3' },
+        ],
+      };
+    }
     if (sql.includes('recurring_activities')) {
       recurringSql.push(sql);
       // 3 confirmed fiat lines; 500 declared credits on lines whose value is the only record;
@@ -30,6 +41,7 @@ vi.mock('lib/db/postgres', () => ({
 const {
   lighthouseHousingSource,
   recurringActivitySource,
+  socketRelayFavorSource,
   foldVolumesIntoIndex,
   DEFAULT_CONTRIBUTION_WEIGHTS,
   RECOGNITION_SOURCES,
@@ -68,6 +80,34 @@ describe('lighthouseHousingSource', () => {
 
   it('is registered as a recognition source exactly once', () => {
     const registered = RECOGNITION_SOURCES.filter((s) => s.pluginSlug === 'lighthouse');
+    expect(registered).toHaveLength(1);
+  });
+});
+
+describe('socketRelayFavorSource', () => {
+  it('recognizes a completed favor at the value its request posted, and an unpriced one at one point', async () => {
+    const volumes = await socketRelayFavorSource.loadVolumes();
+    const folded = foldVolumesIntoIndex(volumes, DEFAULT_CONTRIBUTION_WEIGHTS);
+    // 15 offered ServiceCredits + 30 offered USD + 3 favors with no named value. Before issue #120's
+    // optional price columns were folded in, every completed favor counted one point regardless of the
+    // value its post named, which under-read the index.
+    expect(folded.valueIndex).toBe(15 + 30 + 3);
+    expect(folded.unweightedCurrencies).toEqual([]);
+  });
+
+  it('reads only favors the requester closed as successful, priced from the request row', async () => {
+    await socketRelayFavorSource.loadVolumes();
+    const sql = executed.join('\n');
+    expect(sql).toContain("close_reason = 'successful'");
+    // The posted value lives on the request, so the fulfillment must join back to it — and only the
+    // request's posted price is read, never a transfer ledger (the standalone SocketRelay credits
+    // transfer route is deliberately not counted, or one favor could count twice).
+    expect(sql).toContain('JOIN socket_relay_requests');
+    expect(sql).not.toContain('service_credits_transfers');
+  });
+
+  it('is registered as a recognition source exactly once', () => {
+    const registered = RECOGNITION_SOURCES.filter((s) => s.pluginSlug === 'socket-relay');
     expect(registered).toHaveLength(1);
   });
 });

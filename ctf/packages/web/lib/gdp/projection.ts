@@ -123,25 +123,28 @@ export const lighthouseOpenListingSource: ProjectionSource = {
 
 /**
  * SocketRelay favors waiting to be done: a favor posted (`open`) or picked up but not yet closed
- * (`claimed`), and not past its 28-day expiry. A favor carries no price, so each one counts as a single
- * FREE exchange — the same unit the index uses for a favor that closed successfully. Expired, closed,
- * and canceled posts contribute nothing.
+ * (`claimed`), and not past its 28-day expiry. A post may name an offered value (issue #120): a priced
+ * post is projected at its `price_amount` in `price_currency`, and a post with no named value (NULL) or
+ * an amount-less type (Free, Barter) counts one point per post — the same unit the index uses for a
+ * favor that closed successfully, so a favor moves between the two figures at the same size. Expired,
+ * closed, and canceled posts contribute nothing.
  */
 export const socketRelayOpenFavorSource: ProjectionSource = {
   pluginSlug: 'socket-relay',
   label: 'SocketRelay favors waiting to be done',
   async loadVolumes() {
-    const result = await queryDb<{ total: string | null }>(
-      `SELECT COUNT(*)::text AS total
+    const result = await queryDb<{ currency_code: string; total: string }>(
+      `SELECT COALESCE(price_currency, $1) AS currency_code,
+              SUM(CASE WHEN price_amount IS NULL THEN 1 ELSE price_amount END)::text AS total
          FROM socket_relay_requests
          WHERE status IN ('open', 'claimed')
-           AND (expires_at IS NULL OR expires_at > NOW())`,
+           AND (expires_at IS NULL OR expires_at > NOW())
+         GROUP BY 1`,
+      [FREE_CODE],
     );
-    const total = Number(result.rows[0]?.total ?? 0);
-    if (!Number.isFinite(total) || total <= 0) {
-      return [];
-    }
-    return [{ amount: total, currencyCode: FREE_CODE }];
+    return result.rows
+      .filter((row) => Number(row.total) > 0)
+      .map((row) => ({ amount: Number(row.total), currencyCode: row.currency_code }));
   },
 };
 
