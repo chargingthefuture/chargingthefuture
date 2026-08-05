@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/apps/trust-transport`, `/admin/trust-transport`) · android (`TrustTransport.tsx`, `AdminTrustTransport.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:trust-transport` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md` |
-| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed; 2026-07-08: mutual completion confirmation — TT-8 reworded (no unilateral complete) and TT-8b added; 2026-07-08: fiat payout flow removed — TT-13 reworded to a read-only earnings record and TT-14 (payout validation) dropped) |
+| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed; 2026-07-08: mutual completion confirmation — TT-8 reworded (no unilateral complete) and TT-8b added; 2026-07-08: fiat payout flow removed — TT-13 reworded to a read-only earnings record and TT-14 (payout validation) dropped; 2026-08-04: driver offers now write Member Presence live — TT-18 expectation extended) |
 
 ---
 
@@ -338,7 +338,7 @@ Result: web ☐
 2. Confirm the open-requests list shows mode, settlement, and a relative age for each — and nothing else.
 3. Tap "Make an offer" on one, optionally add a note and a proposed amount, and send it.
 
-**Expected:** The list never shows a pickup/drop-off location, a title, or the requester's identity — only mode + settlement + age (discovery model B). This is correct behavior, not a missing feature. The offer sends and the card confirms it ("Offer sent..."). Submitting a second offer on the same request updates your existing pending offer rather than creating a duplicate.
+**Expected:** The list never shows a pickup/drop-off location, a title, or the requester's identity — only mode + settlement + age (discovery model B). This is correct behavior, not a missing feature. The offer sends and the card confirms it ("Offer sent..."). Submitting a second offer on the same request updates your existing pending offer rather than creating a duplicate. Member Presence (added 2026-08-04): after sending the offer, the offering member's own Directory profile "Also active in" section lists an "Offering rides" entry; when the requester later accepts a *different* driver's offer, the rejected driver's entry clears (the accepted driver's stays while the trip runs).
 
 Result: web ☐
 

@@ -220,10 +220,16 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
 
 1. Admin pre-approval submitter pathway is intentionally disabled in the current scope (decision recorded, no UI affordance).
 2. URL liveness verification fallback behavior follows a best-effort policy; a stronger SLO contract has not been finalized.
-3. Team leaderboard aggregation by profession taxonomy depends on Skills Taxonomy sign-off on grouping semantics.
+3. ~~Team leaderboard aggregation by profession taxonomy depends on Skills Taxonomy sign-off on grouping semantics.~~ Resolved (2026-08-04) — the backend team aggregation had been shipped all along (`?mode=team`, grouped by `LOWER(TRIM(profession))`); what was missing was any way to reach it: the shell never passed the `mode` parameter. The leaderboard tab now has a Scouts/Teams toggle and renders team rows by profession. If Skills Taxonomy later formalizes different grouping semantics, that lands as a follow-up change to the aggregation SQL.
 
 ## 9) Change Log
 
+- 2026-08-04: **Team leaderboard is now reachable.** The leaderboard tab
+  (`sh-leaderboard-tab.tsx`) gained a Scouts/Teams toggle; the shell passes
+  `?mode=individual|team` to `GET /api/skills-hunt/rounds/:roundId/leaderboard` and re-fetches on
+  switch. Team rows (grouped by claimed profession) render the profession as the row name; the
+  "(You)" highlight applies only in individual mode. UI-only — the team aggregation SQL, route, and
+  contract were already shipped and unchanged.
 - 2026-08-02: **Deletion burn-down batch 4.** On account deletion, `skills_hunt_submission_reports` you filed are pseudonymized (`reporter_user_id` → `deleted_member`): the moderation record stays with the reported submission, your identity does not (`resolved_by_user_id` remains as admin audit). Rounds, missions, generated directory profiles, and the reward card are classified retained (shared/admin content).
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to

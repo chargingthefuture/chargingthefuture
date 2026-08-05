@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual update: WF-7 points at the real `/account/data` delete control; region row removed (field dropped) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) |
 
 ## How to run this
 
@@ -208,10 +208,15 @@ an "admins only" notice (401/403), not a raw error.
 ### WF-A2 · Audit trail visible
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
-1. As admin, open the audit events list.
-2. Save a config change (WF-A1), then re-open the list.
-**Expected:** The config update and the config/dashboard reads appear as audit entries with their
-outcome. The list is admin-gated; a non-admin cannot read it.
+1. As admin, open `/admin/workforce` and scroll to the "Audit trail" panel (below the Config card).
+2. Click "Load audit trail" — events load newest-first.
+3. Save a config change (WF-A1), then click "Load audit trail" again (or reload the page and re-open).
+4. If more than one page of events exists, click "Load more".
+**Expected:** Each entry shows the command, an allow/deny marker, the reason, target, actor, and
+timestamp. The config update (and the config/dashboard reads) appear as entries with their outcome.
+The panel loads only on demand — no automatic fetch on page load, because each read is itself an
+audited action. "Load more" appends the next page. The route is admin-gated; a non-admin cannot
+read it.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### WF-A3 · No sync / recompute / export / occupation-edit controls
@@ -252,8 +257,6 @@ of these, it is already tracked, not a new bug:
   `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor`) are unused
   dead weight in the schema, kept only because the SkillsHunt rare-skill snapshot and the demo seed
   still reference `workforce_occupations`.
-- The admin audit-trail read endpoint (`GET /api/workforce/admin/audit-events`) has no admin screen
-  yet, so there is nothing to test from the UI.
 - The member-facing service-scoped delete lives on the Account & Data screen (`/account/data`), not
   inside the Workforce shell — that is by design, not a missing control (reclassified 2026-08-04).
   The in-plugin `DELETE /api/workforce/profile` route stays because the deletion contract §9
