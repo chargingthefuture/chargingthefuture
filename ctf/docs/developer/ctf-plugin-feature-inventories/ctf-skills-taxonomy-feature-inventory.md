@@ -32,12 +32,21 @@ This plugin must:
 
 ### 1.2 Admin Feature Scope
 
-1. Hierarchy browser for Sector → Job Title → Skill with expand/collapse controls.
+**The in-app admin write surface is retired by owner decision — do not build a taxonomy editor.**
+Decided in `SKILLS_TAXONOMY_CHANGE_GOVERNANCE_PLAN.md` (owner-approved 2026-07-03) and reconfirmed
+by the owner 2026-08-04: the plugin is read-only for everyone; admins use the same member browse
+view; every taxonomy change goes through the append-only change list
+(`ctf/scripts/lib/taxonomyChange.mjs`) via a PR, never through an in-app form. No admin editor page
+has ever existed in v3 (the dead "+"/"Add" buttons that linked to a nonexistent `/admin/skills-taxonomy`
+page were removed 2026-07-14, PR #1528). What remains in scope for admins:
+
+1. Hierarchy browser for Sector → Job Title → Skill with expand/collapse controls (the same
+   read-only browse view members use).
 2. Ordered hierarchy display using `display_order` then `name` within each level.
-3. Sector CRUD with `name`, `display_order`, and workforce share/count metadata fields.
-4. Job title CRUD under parent sector constraints.
-5. Skill CRUD under parent job title constraints.
-6. Dependency-impact preview prior to destructive actions.
+3. The admin write API routes (`POST/PUT/DELETE /api/skills-taxonomy/admin/{sectors,job-titles,skills}[/:id]`)
+   still exist with no callers, parked on the orphan-route allowlist. Their removal is governance-plan
+   task 7, blocked on task 5 (the first governed change applying end-to-end) — retire them then, per
+   the plan; do not wire an editor to them.
 
 ## 2) API and Command Surface
 
@@ -133,7 +142,7 @@ The canonical entities live in `skills_taxonomy_sectors`, `skills_taxonomy_job_t
 
 ## 7) Web and Android Delivery Status
 
-Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Web admin taxonomy management lives under `/apps/skills-taxonomy`. Historical parity detail: a former Android surface consumed the same read models via `packages/mobile/src/features/skills-taxonomy` (now removed); hierarchy/flattened reads, admin CRUD, dependency-impact preview, and destructive delete safeguards were consistent across platforms.
+Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Admins use the same read-only browse view as members at `/apps/skills-taxonomy`; there is no admin management surface (retired by owner decision — see §1.2). Historical parity detail: a former Android surface consumed the same read models via `packages/mobile/src/features/skills-taxonomy` (now removed); hierarchy/flattened reads and the then-planned admin CRUD were consistent across platforms.
 
 Web pixel pass (design `c5d83c0`): the user-facing `/apps/skills-taxonomy` surface is rebuilt to `design/.../survivor-hub/SkillsTaxonomy.tsx` and its Empty/Loading states — the full-height 3-column browser (sectors → job titles → skills) with icon rail, breadcrumb, and in-role skill search. The whole tree loads from the existing `GET /api/skills-taxonomy/hierarchy` route (response `{ items }`); sectors/titles/skills are derived client-side from that nested payload, and sector/title counts use the real `jobTitles.length` / `skills.length`. The mockup's demand/level/category chips and per-sector totals have no backing in the data model and were omitted rather than faked; the browser is read-only — there is no in-app taxonomy editor (taxonomy changes go through the append-only change list, not the UI). Decomposed into modular sub-components within the rule-116 limits.
 
@@ -154,6 +163,13 @@ Android pixel pass (2026-05-31): the `SkillsTaxonomy` mobile screen is rebuilt f
 
 ## 10) Change Log
 
+- 2026-08-04: **Recorded the admin-editor retirement so it stops reading as a gap.** An inventory
+  audit had flagged "17 admin CRUD routes with no admin editor page" as unimplemented scope. History
+  check: no admin editor page ever existed in v3; §1.2 as previously written described an editor that
+  was never going to be built, because the owner retired the in-app write surface (governance plan,
+  2026-07-03) and reconfirmed it 2026-08-04 ("not needed"). §1.2, the delivery-status prose, and the
+  two build-checklist items are rewritten as decision records. The write routes stay parked on the
+  orphan-route allowlist until governance-plan task 7 (blocked on task 5) removes them. Docs only.
 - 2026-07-17: **History-aware back navigation (app-wide sweep).** The member shell's hand-rolled
   back chevron was replaced by the shared `BackChevronButton` — it returns to the previous in-app
   page and falls back to All Apps when there is no in-app history. UI-only; no schema, route, or
@@ -265,7 +281,7 @@ Android pixel pass (2026-05-31): the `SkillsTaxonomy` mobile screen is rebuilt f
 
 ### �� Web and Mobile Parity
 
-- [ ] Deliver web admin hierarchy management surface. (Deferred: owner `taxonomy-web-admin-phase1`, target milestone `2026-03-22`)
+- [x] ~~Deliver web admin hierarchy management surface.~~ Retired, will not be built (owner decision 2026-07-03, reconfirmed 2026-08-04): the plugin is read-only in-app for everyone; taxonomy changes go through the append-only change list, never an in-app editor. See §1.2 and `SKILLS_TAXONOMY_CHANGE_GOVERNANCE_PLAN.md`.
   - Acceptance criteria:
     - Hierarchy browse + CRUD + dependency warnings are functional.
 - [ ] Deliver Android read-model parity for approved dependent apps. (Deferred: owner `taxonomy-android-read-parity`, target milestone `2026-04-15`)
@@ -309,7 +325,7 @@ Android pixel pass (2026-05-31): the `SkillsTaxonomy` mobile screen is rebuilt f
 
 - [x] Final dependency threshold values for hard-delete denial.
 - [x] Final elevated-role policy for destructive actions.
-- [ ] Full Android admin CRUD parity plan.
+- [x] ~~Full Android admin CRUD parity plan.~~ Retired, will not be built: the Android surface was removed under rule 105 (2026-07-20) and the admin write surface itself is retired (owner decision — see §1.2).
 
 ### Change Log
 

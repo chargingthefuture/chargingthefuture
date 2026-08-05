@@ -195,8 +195,8 @@ Note: there is no snapshot table — the dashboard, sector/skill/occupation brea
 3. Single-bucket report fetches (`/reports/sector/:sector`, `/reports/skill-level/:skillLevel` with a value other than `all`) now match the bucket case-insensitively on both routes; the dashboard only uses the `all` variant, so the single-bucket paths are lightly exercised.
 4. The retained-but-unused `workforce_occupations` / `workforce_export_jobs` tables and the vestigial `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor` tables are dead weight in the schema; `workforce_occupations` cannot be dropped until the SkillsHunt rare-skill snapshot and the demo seed stop referencing it.
 5. `GET /api/workforce/admin/audit-events` is implemented (admin-gated, paginated, self-audited) but no web or mobile admin screen calls it — the audit trail has no viewing surface yet. Acknowledged gap: build an admin audit view against the existing route, or retire the route by owner decision.
-6. `DELETE /api/workforce/profile` (the service-scoped compliance soft delete mandated by the deletion contract §9) has no member-facing control yet — no screen offers the "Delete Workforce plugin data only?" confirmation. The route is kept because the deletion contract requires it; the gap is the missing UI control. Full-account deletion is separately handled by the central deletion registry (`lib/account/deletion-registry.ts`), which soft-deletes `workforce_user_extension` directly.
-7. The profile API's `region` field is always `null` — `getOwnProfile` never populates it (no upstream region source exists). The web profile panel and mobile `WorkforceProfileCard` render the region row only when the value is present, so nothing shows today; either wire a region source or drop the field.
+6. ~~`DELETE /api/workforce/profile` has no member-facing control yet.~~ Reclassified (2026-08-04): the member-facing control already exists — the Account & Data screen (`/account/data`, `account-data-shell.tsx`) offers a per-service "Delete your Workforce data?" confirmation that runs the same service-scoped soft delete via `DELETE /api/account/services/workforce` and the central deletion registry. The plugin route is kept only because the deletion contract §9 mandates it; no separate in-plugin control is needed. Not a gap.
+7. ~~The profile API's `region` field is always `null`.~~ Resolved (2026-08-04) by dropping the field: `region` was left as an always-null vestige when the profile went read-only/Directory-derived (2026-06-16) and `directory_profiles` carries no region column, so there was never anything to render. Removed from `WorkforceProfile`, `getOwnProfile`, and the profile panel's dead conditional row.
 
 ## 9) Web and Android Delivery Status
 
@@ -224,6 +224,14 @@ Profile read + compliance-delete surface: the profile is read-only (owner decisi
 
 ## 10) Change Log
 
+- 2026-08-04: **Two gaps closed by history check, not by building (inventory audit).** Gap #6: the
+  "missing" member delete control has existed on the Account & Data screen since 2026-06-05 — the
+  gap text predated that surface and was never reconciled; reclassified as not-a-gap. Gap #7: the
+  always-null `region` field is dropped from the profile type, `getOwnProfile`, and the panel's dead
+  conditional row — it became a vestige when the profile went read-only/Directory-derived
+  (2026-06-16) and no upstream region source exists. API shape change is removal-only (a field that
+  was always `null`); no schema change (`workforce_profiles.region` stays in the dead legacy table
+  already listed in gap #4).
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
   the previous in-app page and falls back to All Apps when there is no in-app history. The admin

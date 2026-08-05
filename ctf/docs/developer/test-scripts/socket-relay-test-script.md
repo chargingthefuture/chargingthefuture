@@ -12,7 +12,7 @@
 | **Surfaces** | web (`/apps/socket-relay`, `/admin/socket-relay`) · android (`SocketRelay.tsx`, `AdminSocketRelay.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:socket-relay` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socket-relay-feature-inventory.md` |
-| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) · 2026-08-04 (SR-16 marked API-only by design — no profile UI exists or is planned) |
 
 ---
 
@@ -404,9 +404,14 @@ web ☐
 
 ---
 
-### SR-16 — Profile create, update, delete
+### SR-16 — Profile create, update, delete (API only — no UI by design)
 
 **Role:** member · **Surfaces:** web
+
+> No SocketRelay profile screen exists or is planned (recorded 2026-08-04): member identity and
+> location live on the shared Directory profile, and a post's location only defaults from it. This
+> case exercises the API contract directly; the route family is slated for retirement — when it is
+> removed, delete this case.
 
 **Precondition:** Signed in as a member with no existing SocketRelay profile extension (or delete it first).
 

@@ -35,9 +35,14 @@ SocketRelay is a request-and-fulfillment plugin with profile management, request
 
 ### 1.2 Profile Management
 
-1. Profile read/create/update/delete flows under authenticated context.
-2. Deterministic validation for user-editable profile fields.
-3. Deletion flow with explicit reason and policy-compliant outcomes.
+**Superseded — no SocketRelay profile surface exists or is planned.** Member identity and location
+live once on the shared Directory profile (recorded 2026-07-11: "Member location itself lives once
+on the directory profile"); the shell reads `GET /api/directory/profile`, and a per-request location
+only defaults from it. History: the v2 legacy app had a full profile CRUD page (retired with the
+legacy tree, 2026-04-12); the v3 shell's profile read/gate was removed in the 2026-05-10 pixel pass
+and never rebuilt. The four-verb `/api/socket-relay/profile` route family remains with zero callers,
+parked on the orphan-route allowlist — burn down by retiring it (with its contracts) rather than
+building a UI for it, unless the owner asks for a plugin-specific profile.
 
 ### 1.3 Fulfillment Lifecycle
 
@@ -175,11 +180,18 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 ## 8) Gaps and Known Technical Debt
 
 1. Audit retention policy for `socket_relay_admin_audit_trail` follows the platform default; a plugin-specific retention contract has not been finalized.
-2. The design mockup (`MobileSocketRelayAdmin.tsx`) shows per-request approve/reject moderation, but the backend exposes no approve/reject request endpoint — the only admin request-state mutation is `DELETE /api/socket-relay/admin/requests/:id`. The Android admin mirrors delete only; an approve/reject command/contract + route would be needed to back that mockup affordance.
+2. ~~The design mockup (`MobileSocketRelayAdmin.tsx`) shows per-request approve/reject moderation, but the backend exposes no approve/reject request endpoint.~~ Reclassified as a dropped mockup affordance, not a gap (2026-08-04): no approve/reject endpoint has ever existed, posts publish without pre-moderation by design (admin delete is the only request-state mutation), and design mockups are reference-only under the production-era policy (rule 127). Do not build an approve/reject flow unless the owner asks for pre-moderation.
 3. Android requests now go through the shared `authedFetch` wrapper (Clerk bearer token, base URL from runtime config) like chyme/currency; earlier the SocketRelay mobile client used plain dev-only `fetch`. The admin client (`admin-api.ts`) and the chat-credentials fetcher (`fetchFulfillmentChatCredentials` in `api.ts`) now use the same wrapper. Ownership detection still leans on `GET /api/socket-relay/my-requests` (a card is "mine" if its id appears in that list) because the client does not compare user ids locally; one extra request per feed load.
 
 ## 9) Change Log
 
+- 2026-08-04: **Two false gaps reclassified as decisions (inventory audit).** (1) §1.2 Profile
+  Management described a profile CRUD surface as in-scope; history shows the v2 profile page was
+  retired with the legacy app and the v3 profile read was removed in the 2026-05-10 pixel pass, with
+  the recorded direction that identity/location live on the shared Directory profile — §1.2 now says
+  so, and the orphaned `/api/socket-relay/profile` route family is marked for retirement, not for a
+  UI. (2) Gap #2 (admin approve/reject) is a mockup affordance with no backing endpoint ever;
+  reclassified as dropped per the production-era design policy. Docs only.
 - 2026-08-04: **Favors now count toward the Community Value Index at the value their post names.** A
   post can name an offered value since issue #120 (`price_amount`/`price_currency`), but the GDP
   value layer still counted every SocketRelay favor as one `FREE` point — both the projected
@@ -360,7 +372,7 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 - [ ] Deliver dashboard and request lifecycle UX.
   - Acceptance criteria:
     - Create/update/repost/claim flows complete with deterministic status UX.
-- [ ] Deliver profile CRUD UX.
+- [x] ~~Deliver profile CRUD UX.~~ Superseded (2026-08-04): identity/location live on the shared Directory profile — see §1.2. No SocketRelay profile surface will be built.
   - Acceptance criteria:
     - Validation, delete confirmation, and post-delete behavior are stable.
 - [ ] Deliver fulfillment chat UX.
