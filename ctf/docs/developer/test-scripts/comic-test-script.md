@@ -252,7 +252,29 @@ withdrawal by either still reaches it.
 **Steps:** Open the apps launcher, find **Knowledge Library**, and tap it.
 
 **Expected:** It lands on `/knowledge` — `/apps/knowledge` redirects there, so there is one page
-rather than two copies to keep in step. The admin landing also lists **Contributed Writing**.
+rather than two copies to keep in step. The admin landing also lists **Contributed Writing** and
+**AI Knowledge Base**.
+
+**Result:** web ☐
+
+---
+
+## CMC-A6 · Knowledge-base curation: switch an entry off and on (added 2026-08-05)
+**Role:** admin (plus a member session to check retrieval)
+**Precondition:** at least one active `comic_knowledge_entries` row exists (accept a contribution via CMC-A1, or use seeded/imported entries).
+
+**Steps:**
+1. Open `/admin` and tap **AI Knowledge Base** (lands on `/admin/comic/knowledge`).
+2. Read the list; use the `all` / `active` / `inactive` pills.
+3. Switch one entry **off**, then ask the assistant a question whose only grounding is that entry.
+4. Switch the same entry back **on**.
+5. As a non-admin, open `/admin/comic/knowledge` directly and call `PUT /api/comic/admin/knowledge/<id>`.
+
+**Expected:**
+- Step 2: entries list newest-first with source, type, title/question, a content snippet, active state, and an "N of M entries active" summary; the pills filter and the counts follow.
+- Step 3: the toggle saves without a page reload (the row shows "off" and dims); the assistant's draft for that question no longer quotes the switched-off entry (retrieval skips inactive rows). The row is NOT deleted.
+- Step 4: the entry is active again and retrievable — off/on is reversible.
+- Step 5: the page redirects the non-admin away, and the direct PUT is denied server-side (401/403); the PUT also requires the same-origin CSRF header.
 
 **Result:** web ☐
 
