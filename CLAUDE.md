@@ -58,8 +58,11 @@ not reach for a banned word even to talk about it; use the replacement below ins
 - stale → drop the word; if you mean something specific, name it (out-of-date, superseded, no longer current)
 - console → dashboard (the code identifiers `console.log` / `console.error` / `console.info` are exempt)
 
-When the hook blocks a reply, restate the result in plain, factual language — none of the terms above,
-no jargon, no first-person feeling words — then stop.
+When the hook blocks a reply, restate **once and briefly** in plain, factual language — none of the
+terms above, no jargon, no first-person feeling words — then stop. Do not re-send the blocked
+reply's full content with one word swapped; a repeat of the same update reads as noise. Summarize
+the point in a sentence or two instead. Better: write with the replacement vocabulary from the
+start so no rewrite is ever needed (owner directive, 2026-08-04).
 
 ## Design Pass Gating (Critical — Read Before Touching UI)
 
