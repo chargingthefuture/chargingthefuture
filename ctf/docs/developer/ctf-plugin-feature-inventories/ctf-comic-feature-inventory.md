@@ -316,6 +316,13 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
 - `GET /api/comic/admin/training-stats` (`comic.training.stats`) — admin. Read-only at-a-glance
   counts for the dashboard: total non-discarded `comic_training_examples` (with a pending/exported
   breakdown) and the number of distinct rated answered turns. Aggregate counts only — no PII.
+- `GET /api/comic/admin/knowledge` (`comic.admin.knowledge.list`) — admin. Paginated browse of
+  `comic_knowledge_entries` (source, type, title/question, content snippet, active flag, plus
+  total/active counts; `?filter=all|active|inactive`). Backs the `/admin/comic/knowledge` curation
+  page (`comic-knowledge-admin.tsx`), linked from the `/admin` landing as "AI Knowledge Base".
+- `PUT /api/comic/admin/knowledge/[entryId]` (`comic.admin.knowledge.set-active`) — admin,
+  CSRF-guarded. Switch one grounding entry on/off for retrieval. Off never deletes: the row stays
+  and retrieval simply skips inactive rows; the entry can be switched back on.
 - `GET /api/comic/conversation` (`comic.conversation.read`) — member/approved-or-admin. The
   asker-facing read powering the unified stream: returns the **requesting user's own** @comic Q&A
   items as answered cards (approved/corrected reviews only) or pending "Reviewing for safety" cards.
@@ -634,7 +641,10 @@ reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the 
    no word overlap against the knowledge base retrieve nothing. The embedding upgrade is
    unblocked (#502, the GPU host with the stronger model, closed 2026-07-22) and is follow-up
    work: serve an embedding model on the same self-hosted engine and rank by vector similarity.
-   Knowledge-base curation is manual (`active` flag); no admin UI for it yet.
+   ~~Knowledge-base curation is manual (`active` flag); no admin UI for it yet.~~ Resolved
+   (2026-08-05): `/admin/comic/knowledge` lists every entry with its active flag and switches
+   entries off/on for retrieval (routes `GET /api/comic/admin/knowledge`,
+   `PUT /api/comic/admin/knowledge/:entryId`).
 
 ## Future Notes (deliberately deferred — do not get bogged down now)
 
@@ -687,7 +697,18 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
-- 2026-07-29 (latest): **Knowledge Library now actually appears in the Apps launcher.** The plugin
+- 2026-08-05 (latest): **Knowledge-base curation admin shipped (closes the manual-curation gap).**
+  New page `/admin/comic/knowledge` (`comic-knowledge-admin.tsx`, linked from the `/admin` landing
+  as "AI Knowledge Base") lists `comic_knowledge_entries` newest-first with source, type,
+  title/question, a content snippet, and the active flag, filterable all/active/inactive with
+  active-of-total counts, and switches entries off/on for retrieval. Backed by two new admin routes —
+  `GET /api/comic/admin/knowledge` (`comic.admin.knowledge.list`) and CSRF-guarded
+  `PUT /api/comic/admin/knowledge/[entryId]` (`comic.admin.knowledge.set-active`) — over a new
+  `lib/comic/knowledge-admin.ts` module (kept out of the already-large `repository.ts` per rule
+  116). Off never deletes: retrieval skips inactive rows and an entry can be switched back on; the
+  withdrawal and deletion paths are unchanged. Command + access-policy contracts added. No schema
+  change.
+- 2026-07-29: **Knowledge Library now actually appears in the Apps launcher.** The plugin
   was added to `fallbackPluginRegistry` in `lib/plugins/repository.ts` and to the parity contracts,
   but never to the `ctf_plugin_registry` seed in `schema.sql` — and `listPluginRegistry` only falls
   back to the in-code array when that table is empty or unreadable, which never happens in
