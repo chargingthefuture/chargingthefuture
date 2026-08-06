@@ -332,6 +332,8 @@ Result: web ☐ mobile-responsive ☐
 
 **Expected:** Exactly 12 emojis are available (more than the Commons' 6). Adding the reaction shows it on the message with a count. Clicking it again removes your reaction (count decreases or disappears). No emoji outside the fixed gated set can be submitted.
 
+**API edge (optional, developer tools):** a POST to `/api/contributor-access/channel/messages/not-a-uuid/reactions` with a valid emoji returns a 404 ("That message is no longer available."), not a 503 — a malformed post id is treated as not-found (2026-08-06 hardening, issues #2125/#2127).
+
 Result: web ☐ mobile-responsive ☐
 
 ---

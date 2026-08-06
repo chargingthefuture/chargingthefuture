@@ -52,6 +52,10 @@ type ReactionRow = {
   reacted_by_me: boolean;
 };
 
+// A malformed post id is treated as not-found (mirrors the Commons' normalizeUuid handling)
+// instead of surfacing a database cast error as a 503.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Recent messages, oldest-first, with quoted-reply references and the viewer's reaction state.
 // Reads exclude soft-deleted posts and filter to moderation_status 'accepted' (mirroring the
 // Commons column); a quote whose source post was since deleted or not accepted resolves to
@@ -60,21 +64,29 @@ export async function listGatedChannelMessages(
   viewerUserId: string,
   limit = 50,
 ): Promise<GatedChannelMessage[]> {
+  // The inner query selects the most-recent window; the outer ORDER BY flips it to oldest-first
+  // so the database returns the rows in display order and no in-process reversal is needed.
   const posts = await queryDb<PostRow>(
-    `SELECT p.id, p.author_user_id, p.author_username, p.body, p.reply_to_post_id,
-            p.created_at::text,
-            q.author_user_id AS quoted_author_user_id,
-            q.author_username AS quoted_author_username,
-            q.body AS quoted_body
-     FROM contributor_access_channel_posts p
-     LEFT JOIN contributor_access_channel_posts q
-       ON q.id = p.reply_to_post_id
-      AND q.deleted_at IS NULL
-      AND q.moderation_status = 'accepted'
-     WHERE p.deleted_at IS NULL
-       AND p.moderation_status = 'accepted'
-     ORDER BY p.created_at DESC, p.id DESC
-     LIMIT $1`,
+    `SELECT recent.id, recent.author_user_id, recent.author_username, recent.body,
+            recent.reply_to_post_id, recent.created_at::text,
+            recent.quoted_author_user_id, recent.quoted_author_username, recent.quoted_body
+     FROM (
+       SELECT p.id, p.author_user_id, p.author_username, p.body, p.reply_to_post_id,
+              p.created_at,
+              q.author_user_id AS quoted_author_user_id,
+              q.author_username AS quoted_author_username,
+              q.body AS quoted_body
+       FROM contributor_access_channel_posts p
+       LEFT JOIN contributor_access_channel_posts q
+         ON q.id = p.reply_to_post_id
+        AND q.deleted_at IS NULL
+        AND q.moderation_status = 'accepted'
+       WHERE p.deleted_at IS NULL
+         AND p.moderation_status = 'accepted'
+       ORDER BY p.created_at DESC, p.id DESC
+       LIMIT $1
+     ) recent
+     ORDER BY recent.created_at ASC, recent.id ASC`,
     [Math.max(1, Math.min(limit, 100))],
   );
 
@@ -96,7 +108,7 @@ export async function listGatedChannelMessages(
     }
   }
 
-  return posts.rows.reverse().map((row) => ({
+  return posts.rows.map((row) => ({
     id: row.id,
     authorUserId: row.author_user_id,
     authorUsername: row.author_username,
@@ -198,9 +210,7 @@ export async function deleteGatedChannelPost(input: {
   actorId: string;
   isAdmin: boolean;
 }): Promise<'author' | 'admin'> {
-  // A malformed id is treated as not-found (mirrors the Commons' normalizeUuid handling) instead
-  // of surfacing a database cast error.
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.postId)) {
+  if (!UUID_PATTERN.test(input.postId)) {
     throw new Error('post_not_found');
   }
   const post = await queryDb<{ author_user_id: string }>(
@@ -233,6 +243,9 @@ export async function toggleGatedChannelReaction(input: {
 }): Promise<{ reacted: boolean }> {
   if (!isGatedReactionEmoji(input.emoji)) {
     throw new Error('invalid_emoji');
+  }
+  if (!UUID_PATTERN.test(input.postId)) {
+    throw new Error('post_not_found');
   }
   const post = await queryDb<{ id: string }>(
     `SELECT id FROM contributor_access_channel_posts
