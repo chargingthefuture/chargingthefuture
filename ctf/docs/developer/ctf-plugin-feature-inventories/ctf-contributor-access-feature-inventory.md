@@ -133,7 +133,9 @@ audit-trailed, same posture as the Commons hub routes — post deletions ARE aud
   at most three links — a failing post is refused with 422 `content_policy_violation`, never
   stored, never visible to anyone) and the per-member posting rate limit (8 posts per 30 minutes,
   counted in the database like the Commons' `evaluateFeedRateLimit` — over the window is 429
-  `rate_limit_exceeded`, shown to the member as the same error banner the Commons shows).
+  `rate_limit_exceeded`, shown to the member as the same error banner the Commons shows). The rate
+  limit is checked before the reply-target lookup, so a member over the window always gets
+  `rate_limit_exceeded` whatever `replyToPostId` they send.
   Contract: `contributor-access.channel.message.create`.
 - `DELETE /api/contributor-access/channel/messages/[postId]` — soft-delete a post (same route
   shape as the Commons' `DELETE /api/hub/messages/[postId]`): the author may delete their own
@@ -372,6 +374,13 @@ fill on the first recompute / config save / member post.
   is nothing to tear down, and a throw from the `finally` could mask the real channel-operation
   error — the Commons (`lib/feed/stream.ts`) removed it earlier for the same reason. Member-visible
   behavior otherwise unchanged; no schema, route, or contract change.
+- 2026-08-05 — Gated channel post creation: the per-member posting rate limit now runs as the first
+  database check, before the reply-target lookup (`createGatedChannelPost` in
+  `lib/contributor-access/channel-repository.ts`). A member over the 8-per-30-minutes window used to
+  get `reply_target_not_found` instead of `rate_limit_exceeded` when they also sent an unknown
+  `replyToPostId`; the error a caller sees no longer depends on the reply id, and no reply lookup
+  runs for someone who cannot post anyway. Both cases were already refused, so nothing that was
+  blocked before is allowed now. No schema, route, or contract change. Code review issue #2121.
 - 2026-07-23 — Contributor eligibility now grants a **second private surface**: a private "Weavers of the Commons" **Chyme audio room** (`chyme-contributors-room`), alongside the existing gated Commons chat channel. Same gate as the channel — the channel-open switch plus the eligibility flag (or admin) — enforced by a new `requireChymeContributorAccess` in the Chyme plugin, with the same bare-404 no-shaming behavior. Built entirely in the Chyme plugin (room switcher + room-scoped routes/repository); this module's eligibility engine and `isMemberEligible`/`getContributorAccessConfig` are reused unchanged — no change to contributor-access schema, routes, or contracts. See the Chyme inventory for the implementation. Audio + room-chat MVP (tips/Back Channel deferred). Web-only (rule 105).
 - 2026-07-22 — Gated #contributors channel: added an **Edit** action on a member's own message (edit = delete + repost, matching the Commons home channel). It loads the message text into the composer and deletes the original (existing author-only delete), so the member fixes it and sends a fresh message — no in-place edit, a new row with a new timestamp. Edit shows on your own messages only (admins keep delete-any as moderation, but cannot "edit" someone else's). `gated-chat-panel.tsx` + `use-gated-chat.ts`; reuses the existing delete + send, no schema/route/contract change. Verified: `@ctf/web` typecheck + eslint clean.
 - 2026-07-19 — Gated channel: tapping a quoted reply now jumps to the original message on web (same

@@ -299,6 +299,8 @@ Result: web ☐
 
 **Expected:** Messages 1–8 appear in the channel. The 9th attempt is rejected with a 429 error. The UI shows the same rate-limit error banner the Commons shows (`rate_limit_exceeded`). The 9th message does not appear in the channel.
 
+**API edge (optional, developer tools):** while over the window, a POST to `/api/contributor-access/channel/messages` with an unknown `replyToPostId` still returns the 429 `rate_limit_exceeded` — the rate limit is checked before the reply-target lookup, so the reply id cannot change which error comes back (2026-08-05 fix, issue #2121).
+
 Result: web ☐
 
 ---
