@@ -249,10 +249,11 @@ Result: web ☐
 **Precondition:** Seeded member is signed in and viewing account/deletion settings (wherever the platform surfaces the deletion flow).
 
 **Steps:**
-1. Navigate to the account deletion initiation screen.
-2. Look for a notice about ServiceCredits.
+1. Navigate to `/account/data` and read the "Delete Entire Account" card (desktop and the phone-width layout).
+2. Open the delete confirmation dialog and read the "What will happen" list.
+3. (If safe on a throwaway account) submit and read the "Deletion queued" screen.
 
-**Expected:** A user-visible notice states that a 7-day reclaim window applies after a full account deletion request and that any remaining credits will be returned to treasury after that window — not withdrawn externally. The notice does not say credits are burned.
+**Expected (shipped 2026-08-05):** Every one of those copy sites states the concrete policy — credits are **held for 7 days** after the request, then **returned to the community treasury**, **never withdrawable externally**, and a return **waits for any active escrow to resolve**. No site says "settled via the standard process" anymore, and none says credits are burned or destroyed. There is no personalized escrow-status readout on this surface — the escrow rule is standing copy, which is correct, not a bug.
 
 Result: web ☐
 
