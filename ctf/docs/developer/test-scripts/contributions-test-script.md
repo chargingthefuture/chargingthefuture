@@ -376,6 +376,7 @@ Each filter shows only claims with the matching status. No cross-status leakage.
 - `creditsGranted` = 20 × `creditsPerUsd` (e.g. 20 × 10 = 200 SC), unless clamped by the per-cycle cap.
 - The `creditGovernanceEventId` field is populated (non-null) — confirming the ServiceCredits mint path ran.
 - Attempting to confirm the same claim a second time is rejected (the review can only happen once).
+- The audit row written for the confirm records the reviewed member as `targetUserId` in its metadata alongside the admin who acted (check `contributions_audit_log` if you are verifying the audit trail).
 
 **Result:** web ☐
 
@@ -432,6 +433,7 @@ The server returns 400 or 422 (missing required field). The claim stays pending.
 - `creditsGranted` is 0.
 - No ServiceCredits are minted.
 - The claim cannot be reviewed again.
+- The audit row for the rejection records the reviewed member as `targetUserId` in its metadata, same as the confirm path.
 
 **Result:** web ☐
 

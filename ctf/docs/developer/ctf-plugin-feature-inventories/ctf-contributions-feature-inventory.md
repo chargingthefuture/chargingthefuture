@@ -296,6 +296,12 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-08-06: Submission review audit rows now record the reviewed member. The confirm/reject audit
+  write in `app/api/contributions/admin/submissions/[submissionId]/review/route.ts` passed only the
+  admin (`actorUserId`), so the `targetUserId` the audit contract declares for
+  `contributions.admin.submission.confirm` / `.reject` was never stored. The member's id is now
+  written as `targetUserId` inside the audit `metadata` object (the `contributions_audit_log` table
+  keeps its existing columns — no schema or contract change).
 - 2026-07-19: Banner dismiss snooze shortened from six months to **two** (owner request). Changed the
   `banner_snooze_months` default in `schema.sql` / `schema.demo.sql` (6 → 2), the `DEFAULT_CONFIG`
   fallback in `repository.ts`, and the demo seed, and added a one-time data migration
