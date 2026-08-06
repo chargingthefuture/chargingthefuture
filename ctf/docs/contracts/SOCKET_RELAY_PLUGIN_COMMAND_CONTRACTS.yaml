@@ -57,8 +57,11 @@ contracts:
 
   - pluginId: socket-relay
     command: socket-relay.fulfillment.claim
-    version: 1.0.0
-    description: Claim an eligible request for fulfillment.
+    version: 1.1.0
+    description: >-
+      Claim an eligible request for fulfillment. A helper whose earlier claim on the same request
+      was canceled by the requester (resolve outcome unsuccessful_reopen) is not eligible to claim
+      it again — the reopen is for other helpers (helper_previously_canceled, 409).
     inputSchema:
       requestId:
         type: string
