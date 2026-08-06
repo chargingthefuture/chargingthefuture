@@ -153,14 +153,18 @@ Admins see the shared Admin pill in the member shell header, and the admin scree
 over Signal). On confirm, credits = confirmed amount × `credits_per_usd`, clamped by the
 per-user-per-cycle cap; a positive grant goes through the canonical service-credits mint exactly
 once. A grant clamped to 0 still confirms with `credits_granted = 0`. A claim can be reviewed only
-once.
+once. The audit row written for the confirm records the reviewed member as `targetUserId` in its
+metadata alongside the admin who acted (check `contributions_audit_log` if you are verifying the
+audit trail).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CON-A2 · Review queue (reject)
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
 1. Reject a pending claim with a review note.
-**Expected:** The claim moves to `rejected` and grants nothing. It cannot be reviewed again.
+**Expected:** The claim moves to `rejected` and grants nothing. It cannot be reviewed again. The
+audit row for the rejection records the reviewed member as `targetUserId` in its metadata, same as
+the confirm path.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CON-A3 · Duplicate star confirms with zero credits
