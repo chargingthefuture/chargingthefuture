@@ -1,14 +1,21 @@
 contracts:
   - pluginId: contributor-access
     command: contributor-access.config.get
-    version: 1.0.0
-    description: Read the single owner-tunable eligibility config row (weights, threshold, gate minimums, channel_open); defaults when the row has never been written.
+    version: 1.1.0
+    description: >-
+      Read the single owner-tunable eligibility config row (weights, threshold, gate minimums,
+      channel_open); defaults when the row has never been written. Also returns the best-effort
+      synced Stream member count for the admin status card (null when Stream is unconfigured or
+      the channel is not open).
     inputSchema: {}
     outputSchema:
       ok:
         type: boolean
       config:
         type: object
+      channelMemberCount:
+        type: number
+        required: false
     dataAccess:
       - contributor_access_config
       - contributor_access_audit_trail
@@ -339,7 +346,7 @@ contracts:
 
   - pluginId: contributor-access
     command: contributor-access.channel.join
-    version: 1.0.0
+    version: 1.1.0
     description: >-
       Mint Stream live-layer credentials for the gated channel (same posture as the Commons'
       /api/hub/join): the client opens a live connection beneath the custom UI for instant refresh
@@ -347,7 +354,7 @@ contracts:
       the client stays on polling. Same three-way gate as the list command - the add to the Stream
       channel only reconciles a flag-verified member into the synced membership, never grants
       access. Reuses the existing Stream credential helpers unchanged (demo mode selects the
-      *_STAGING app).
+      *_STAGING app). CSRF-confirmed mutation.
     inputSchema: {}
     outputSchema:
       ok:
@@ -403,3 +410,12 @@ changelog:
       author and admin paths are audited under distinct commands
       (contributor-access.channel.post.delete / contributor-access.channel.post.moderator-delete)
       and a non-owner attempt is a 403 with an audited deny.
+  - date: 2026-08-06
+    change: >-
+      channel.join 1.1.0 - now a CSRF-confirmed mutation like every other mutation in this
+      plugin: the route requires the x-ctf-csrf header before minting credentials, because the
+      join has a Stream-side effect (the member is reconciled into the channel) that a
+      cross-origin POST must not be able to trigger. config.get 1.1.0 - the output schema now
+      records the channelMemberCount field the route has always returned for the admin status
+      card (best-effort synced Stream member count; null when Stream is unconfigured or the
+      channel is not open). Code-review issues #2122 and #2128.
