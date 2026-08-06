@@ -200,6 +200,8 @@ Result: web ☐
 
 **Mobile-responsive expected:** A channel-pill switch row appears in the chat section showing both `#general` and `#contributors`. (This row only appears when the member has more than one channel.)
 
+**API edge (optional, developer tools):** opening the channel still connects the live layer normally — the client's join call sends the `x-ctf-csrf: '1'` header. A bare `fetch('/api/contributor-access/channel/join', {method: 'POST'})` from the dev-tools console **without** that header is refused (the CSRF deny), the same posture as every other mutation in this plugin (2026-08-06 fix, issue #2122).
+
 Result: web ☐ mobile-responsive ☐
 
 ---

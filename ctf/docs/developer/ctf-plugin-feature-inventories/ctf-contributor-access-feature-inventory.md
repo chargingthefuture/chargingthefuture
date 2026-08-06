@@ -150,7 +150,9 @@ audit-trailed, same posture as the Commons hub routes — post deletions ARE aud
   error. Contract: `contributor-access.channel.reaction.toggle`.
 - `POST /api/contributor-access/channel/join` — mints Stream live-layer credentials (channel type
   `ctf-gated`, channel `ctf-contributors`) via the shared resolver; `configured: false` when
-  Stream is absent and the client stays on polling. Contract: `contributor-access.channel.join`.
+  Stream is absent and the client stays on polling. A CSRF-confirmed mutation like the others —
+  joining reconciles the member into the Stream channel, so the route requires the `x-ctf-csrf`
+  header. Contract: `contributor-access.channel.join`.
 
 Cross-plugin read: `GET /api/hub/channels` (the Hub) reads `contributor_access_config` +
 `contributor_access_eligibility` to append the `#contributors` entry server-side for eligible
@@ -351,6 +353,14 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-08-06 — Channel join CSRF + config contract catch-up (code-review issues #2122, #2128).
+  `POST /api/contributor-access/channel/join` now runs `ensureMutationCsrf` like every other
+  mutation in this plugin — the join reconciles the member into the Stream channel, a side effect
+  a cross-origin POST must not be able to trigger; the web client's join call sends the
+  `x-ctf-csrf: '1'` header (`use-gated-chat.ts`). Contracts: `channel.join` 1.1.0 (command
+  description + access policy record the CSRF requirement and `csrf_denied` deny) and
+  `config.get` 1.1.0 (output schema now lists the `channelMemberCount` field the route has always
+  returned for the admin status card). No schema change; member-visible behavior unchanged.
 - 2026-08-06 — Gated channel hardening from the code-review sweep (issues #2124, #2125, #2126,
   #2127; `lib/contributor-access/channel-repository.ts` + `lib/contributor-access/gated-channel.ts`).
   (1) `toggleGatedChannelReaction` now runs the same UUID format guard as
