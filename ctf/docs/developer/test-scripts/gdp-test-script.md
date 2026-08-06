@@ -52,11 +52,13 @@
 1. Look at the hero section of the dashboard.
 2. Confirm a "Members" count tile is shown.
 3. Confirm no "Active · 7d" tile appears anywhere on the page (it was removed 2026-07-11).
+4. Read the small line directly under the big headline figure.
 
 **Expected:**
 - One hero tile labeled "Members" shows a whole number greater than zero.
 - The weekly-active-members tile is absent.
 - No mock or placeholder numbers (e.g. "1,234,567") appear — the count matches what the Directory shows for total active members.
+- The line "Cumulative since June 12, 2026" appears directly under the headline Community Value Index figure (added 2026-08-06: the index is all-time from the soft launch date, never a yearly figure).
 
 Result: web ☐
 
