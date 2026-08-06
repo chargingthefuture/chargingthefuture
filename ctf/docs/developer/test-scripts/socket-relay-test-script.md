@@ -362,6 +362,12 @@ web ☐
 - The 28-day expiry clock is reset, so the re-opened request is claimable again (not immediately expired), even if it had aged close to expiry before the claim.
 - The Direct Line row for this fulfillment disappears.
 - A pending-request placeholder row appears in the Direct Line for the now-open request.
+- The **canceled helper cannot claim this request again**: signed in as that helper, the feed card
+  shows a "You already offered to help" note instead of the "I can help" button, and a direct
+  `POST /api/socket-relay/requests/{id}/fulfill` returns **409**
+  (`SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED`). The copy must read as "one offer per post" — it must
+  **not** say the member was blocked or that the poster reopened the post for others. A different
+  member can still claim the re-opened request normally.
 
 web ☐
 
