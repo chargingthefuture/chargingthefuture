@@ -101,6 +101,15 @@ export const COMMUNITY_VALUE_INDEX_LABEL = "Community Value Index";
 export const COMMUNITY_VALUE_INDEX_DISCLAIMER =
   "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through a fixed set of weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
 
+// The date the index counts from. The index is cumulative — every recognition source sums its full
+// table history with no time window (lib/gdp/recognition.ts), so the honest anchor is the launch
+// date: 2026-06-12, the soft launch (owner decision, 2026-08-06). The Render production deploy came
+// slightly earlier (2026-05-25, PRs #98–#117), but the announced launch is the date members count
+// from. If the owner fixes a different date later, change it here only — every surface reads this
+// one constant.
+export const COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO = "2026-06-12";
+export const COMMUNITY_VALUE_INDEX_SINCE_LABEL = "Cumulative since June 12, 2026";
+
 // The projected figure: what the posts already on the board would add IF every one of them closed
 // successfully. It is a separate number from the Community Value Index and is never added to it — the
 // index counts only exchanges that actually completed. Kept here as its own metric key/label/disclaimer

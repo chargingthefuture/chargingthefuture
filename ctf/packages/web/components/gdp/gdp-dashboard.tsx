@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   
   COMMUNITY_VALUE_INDEX_DISCLAIMER,
+  COMMUNITY_VALUE_INDEX_SINCE_LABEL,
   GDP_ESTIMATE_CHIP_LABEL,
   type GdpCountry,
   type GdpMetrics,
@@ -54,6 +55,9 @@ function GdpHero({ metrics }: { metrics: GdpMetrics }) {
             <div style={{ fontSize: 48, fontWeight: 900, color: t.TITLE, lineHeight: 1 }}>{metrics.currentValue || "—"}</div>
             {isEstimate ? <EstimateChip /> : null}
           </div>
+          {/* The index sums all recognized exchanges since production launch — it never resets, so the
+              as-of anchor is the launch date (one constant in gdp-shared.ts). */}
+          <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 6 }}>{COMMUNITY_VALUE_INDEX_SINCE_LABEL}</div>
           <div style={{ fontSize: 16, color: t.SUBTLE }}>
             {metrics.target ? `of ${metrics.target} opportunity` : ""}
             {metrics.progress ? ` · ${metrics.progress} reached` : ""}
