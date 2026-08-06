@@ -145,8 +145,9 @@ audit-trailed, same posture as the Commons hub routes — post deletions ARE aud
   message content never enters Stream (the live layer carries only presence/typing). Contract:
   `contributor-access.channel.post.delete`.
 - `POST /api/contributor-access/channel/messages/[postId]/reactions` — body `{ emoji }`; toggles
-  the viewer's reaction; emoji validated against the fixed twelve-emoji gated set. Contract:
-  `contributor-access.channel.reaction.toggle`.
+  the viewer's reaction; emoji validated against the fixed twelve-emoji gated set. A malformed
+  (non-UUID) post id is a 404 `post_not_found`, same as a missing post — never a database cast
+  error. Contract: `contributor-access.channel.reaction.toggle`.
 - `POST /api/contributor-access/channel/join` — mints Stream live-layer credentials (channel type
   `ctf-gated`, channel `ctf-contributors`) via the shared resolver; `configured: false` when
   Stream is absent and the client stays on polling. Contract: `contributor-access.channel.join`.
@@ -350,6 +351,17 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-08-06 — Gated channel hardening from the code-review sweep (issues #2124, #2125, #2126,
+  #2127; `lib/contributor-access/channel-repository.ts` + `lib/contributor-access/gated-channel.ts`).
+  (1) `toggleGatedChannelReaction` now runs the same UUID format guard as
+  `deleteGatedChannelPost` (shared `UUID_PATTERN`), so a malformed post id returns the mapped 404
+  `post_not_found` instead of a Postgres cast error surfacing as a 503. (2) The message-list query
+  orders its most-recent window oldest-first in SQL (inner `DESC LIMIT` window, outer `ASC`) —
+  same rows, same order as before, no in-process `.reverse()`. (3) The Stream helpers dropped the
+  `disconnectUser()` `finally` teardown: server-side clients never open a user WebSocket, so there
+  is nothing to tear down, and a throw from the `finally` could mask the real channel-operation
+  error — the Commons (`lib/feed/stream.ts`) removed it earlier for the same reason. Member-visible
+  behavior otherwise unchanged; no schema, route, or contract change.
 - 2026-07-23 — Contributor eligibility now grants a **second private surface**: a private "Weavers of the Commons" **Chyme audio room** (`chyme-contributors-room`), alongside the existing gated Commons chat channel. Same gate as the channel — the channel-open switch plus the eligibility flag (or admin) — enforced by a new `requireChymeContributorAccess` in the Chyme plugin, with the same bare-404 no-shaming behavior. Built entirely in the Chyme plugin (room switcher + room-scoped routes/repository); this module's eligibility engine and `isMemberEligible`/`getContributorAccessConfig` are reused unchanged — no change to contributor-access schema, routes, or contracts. See the Chyme inventory for the implementation. Audio + room-chat MVP (tips/Back Channel deferred). Web-only (rule 105).
 - 2026-07-22 — Gated #contributors channel: added an **Edit** action on a member's own message (edit = delete + repost, matching the Commons home channel). It loads the message text into the composer and deletes the original (existing author-only delete), so the member fixes it and sends a fresh message — no in-place edit, a new row with a new timestamp. Edit shows on your own messages only (admins keep delete-any as moderation, but cannot "edit" someone else's). `gated-chat-panel.tsx` + `use-gated-chat.ts`; reuses the existing delete + send, no schema/route/contract change. Verified: `@ctf/web` typecheck + eslint clean.
 - 2026-07-19 — Gated channel: tapping a quoted reply now jumps to the original message on web (same
