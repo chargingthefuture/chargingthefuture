@@ -30,6 +30,9 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [priceCurrency, setPriceCurrency] = useState("FREE");
   const [priceAmount, setPriceAmount] = useState("");
   const [requiresAmount, setRequiresAmount] = useState(false);
+  // Split settlements: every currency the requester accepts, independent of the single settlement
+  // above (a ride settled part in ServiceCredits and part in dollars checks both).
+  const [acceptedCurrencies, setAcceptedCurrencies] = useState<string[]>([]);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<TripRequest | null>(null);
@@ -109,6 +112,8 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             const n = Number(priceAmount);
             return Number.isFinite(n) && n > 0 ? n : null;
           })(),
+          // Split settlements: every currency the requester accepts, independent of the price above.
+          acceptedCurrencies,
         }),
       });
       if (!res.ok) throw new Error("Failed to create request");
@@ -186,11 +191,15 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             if (!needs) setPriceAmount("");
           }}
           onPriceAmount={setPriceAmount}
+          acceptedCurrencies={acceptedCurrencies}
+          onToggleAcceptedCurrency={(code) =>
+            setAcceptedCurrencies((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]))
+          }
           bookingError={bookingError}
           booked={booked}
           submitting={submitting}
           onBook={() => void handleBook()}
-          onReset={() => { setBooked(false); setFrom(""); setTo(""); setPriceCurrency("FREE"); setPriceAmount(""); setRequiresAmount(false); }}
+          onReset={() => { setBooked(false); setFrom(""); setTo(""); setPriceCurrency("FREE"); setPriceAmount(""); setRequiresAmount(false); setAcceptedCurrencies([]); }}
         />
       )}
       {tab === "tracking" && (

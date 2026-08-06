@@ -138,8 +138,36 @@ web ☐
 
 **Expected:**
 - The created request card shows a settlement badge that names ServiceCredits (e.g. "SC" or "ServiceCredits") — never a fiat equivalent.
-- "Accepts ServiceCredits" is true only because the `socket_relay_request_accepted_currencies` record was written; this is not derived from `price_currency` alone.
+- "Accepts ServiceCredits" is true only when a `socket_relay_request_accepted_currencies` row with the ServiceCredits code exists (written by the Accepted-currencies checkboxes — see SR-4a); it is never derived from `price_currency` alone.
 - On `/apps/gdp`, the "Value waiting to happen" panel's SocketRelay row grows by the posted amount (e.g. +15 for a 15-ServiceCredits post), not by 1; a post with no named value (or Free/Barter) adds one point. When a favor later closes successfully, the same amount leaves the panel and enters the Community Value Index (see GDP-12 in the GDP test script).
+
+web ☐
+
+---
+
+### SR-4a — Split settlement: accepted-currencies checkboxes (added 2026-08-06)
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Signed in as a member.
+
+**Steps:**
+1. Open the post form and fill in title, details, and one tag.
+2. Select "ServiceCredits" as the settlement and enter the whole value of the transaction (e.g. 20).
+3. In the **Accepted currencies** checkbox list below the amount, check **ServiceCredits** and
+   **United States Dollar ($)** (the same checkbox pattern as the LightHouse listing form).
+4. Submit, then find the new card in the feed.
+5. Edit the post, uncheck United States Dollar, and save.
+
+**Expected:**
+- The checkbox list loads from the live currency catalog (ServiceCredits listed first) and shows a
+  "Loading currencies…" state before it arrives; a failed load shows a Retry control instead of
+  silently hiding the checkboxes.
+- After step 4, the card shows the settlement badge **and** a separate "Accepts ServiceCredits +1"
+  badge — ServiceCredits always named first, the remainder capped as "+N", never a fiat equivalent
+  for a ServiceCredits amount.
+- After step 5, the badge reads "Accepts ServiceCredits" (the stored set was replaced, not appended).
+- Re-opening the edit form shows the saved checkboxes checked.
 
 web ☐
 
