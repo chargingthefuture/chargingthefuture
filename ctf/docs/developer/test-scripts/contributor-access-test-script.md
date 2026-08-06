@@ -166,7 +166,7 @@ Result: web ☐
 
 **Expected:**
 - `#contributors` does not appear anywhere in the channel list.
-- There is no locked entry, no greyed-out entry, no "members only" teaser, no gap in the list — the layout is identical to that of a Commons with only `#general`.
+- There is no locked entry, no grayed-out entry, no "members only" teaser, no gap in the list — the layout is identical to that of a Commons with only `#general`.
 
 Result: web ☐ mobile-responsive ☐
 
