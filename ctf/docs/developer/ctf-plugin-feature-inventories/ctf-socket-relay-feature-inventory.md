@@ -49,8 +49,10 @@ building a UI for it, unless the owner asks for a plugin-specific profile.
 1. Fulfillment claim flow for eligible requests. A helper whose earlier claim on the same request
    was canceled by the requester ("didn't work — reopen for others", outcome `unsuccessful_reopen`)
    cannot claim that request again: the reopen is for **other** helpers. The server rejects the
-   re-claim (409, `SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED`) and the web feed shows an
-   "Open to other helpers" note in place of the "I can help" button on those posts.
+   re-claim (409, `SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED`) and the web feed shows a
+   "You already offered to help" note in place of the "I can help" button on those posts. The
+   member-facing copy is deliberately soft (owner directive): it reads as "one offer per post",
+   never as being blocked, and never reveals that the poster ended the earlier Direct Line.
 2. Fulfillment detail and “my fulfillments” views.
 3. Closure outcomes with canonical status taxonomy.
 4. **Record a favor as a regular one, without leaving SocketRelay (2026-08-03).** The Direct Line carries
@@ -197,12 +199,14 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
   re-opening the very conversation the requester had just ended. `claimRequest` now rejects a claim
   when the caller already has a **canceled** fulfillment on that request (the only path to
   'canceled' is `unsuccessful_reopen`), with the new `helper_previously_canceled` →
-  `SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED` mapping (409, "You already offered to help with this
-  request, and the poster reopened it for other helpers."); checked inside the claim transaction,
-  before the idempotent-retry branch, so a retry cannot resurrect the canceled claim. The web feed
-  hides the "I can help" button on those posts (derived client-side from the member's own
-  `my-fulfillments`) and shows an "Open to other helpers" note instead. Claim command contract
-  bumped to 1.1.0 (eligibility change; no dataAccess change). No schema or route change.
+  `SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED` mapping (409, "You’ve already offered to help with this
+  request — each member can offer once per post."); checked inside the claim transaction, before
+  the idempotent-retry branch, so a retry cannot resurrect the canceled claim. The web feed hides
+  the "I can help" button on those posts (derived client-side from the member's own
+  `my-fulfillments`) and shows a "You already offered to help" note instead. The member-facing copy
+  is deliberately soft (owner directive): it never reads as being blocked or reveals the poster's
+  choice. Claim command contract bumped to 1.1.0 (eligibility change; no dataAccess change). No
+  schema or route change.
 - 2026-08-05: **Member blocks enforced (issue #809 task 4).** The browse feed
   (`GET /api/socket-relay/requests`) now hides posts whose owner is blocked (either direction)
   relative to the signed-in viewer — owner-scoped "Mine" lists and admin lists stay complete — and

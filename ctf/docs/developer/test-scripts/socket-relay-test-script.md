@@ -363,10 +363,11 @@ web ☐
 - The Direct Line row for this fulfillment disappears.
 - A pending-request placeholder row appears in the Direct Line for the now-open request.
 - The **canceled helper cannot claim this request again**: signed in as that helper, the feed card
-  shows an "Open to other helpers" note instead of the "I can help" button, and a direct
+  shows a "You already offered to help" note instead of the "I can help" button, and a direct
   `POST /api/socket-relay/requests/{id}/fulfill` returns **409**
-  (`SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED`) with a readable message. A different member can still
-  claim the re-opened request normally.
+  (`SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED`). The copy must read as "one offer per post" — it must
+  **not** say the member was blocked or that the poster reopened the post for others. A different
+  member can still claim the re-opened request normally.
 
 web ☐
 

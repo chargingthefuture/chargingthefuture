@@ -719,6 +719,23 @@ async function findExistingActiveClaim(
   return (existing.rowCount ?? 0) > 0 ? mapFulfillmentRow(existing.rows[0]) : null;
 }
 
+// A helper the requester already canceled off this request (resolve outcome `unsuccessful_reopen`,
+// the only path that sets a fulfillment to 'canceled') cannot claim the same post again — "reopen
+// for others" means other helpers, not the same person coming back (owner directive, 2026-08-06).
+// Runs before the idempotency branch so a retry cannot resurrect the canceled claim.
+async function ensureHelperNotPreviouslyCanceled(client: PoolClient, requestId: string, actorUserId: string): Promise<void> {
+  const canceledBefore = await client.query(
+    `SELECT 1
+     FROM socket_relay_fulfillments
+     WHERE request_id = $1::uuid AND fulfiller_user_id = $2 AND status = 'canceled'
+     LIMIT 1`,
+    [requestId, actorUserId],
+  );
+  if ((canceledBefore.rowCount ?? 0) > 0) {
+    throw new Error('helper_previously_canceled');
+  }
+}
+
 export async function claimRequest(requestId: string, actorUserId: string, actorUsername: string | null = null): Promise<{ request: SocketRelayRequest; fulfillment: SocketRelayFulfillment }> {
   const created = await withDbTransaction(async (client) => {
     const requestResult = await client.query<RequestRow>(
@@ -747,21 +764,7 @@ export async function claimRequest(requestId: string, actorUserId: string, actor
       throw new Error('blocked_pair');
     }
 
-    // A helper the requester already canceled off this request (resolve outcome
-    // `unsuccessful_reopen`, the only path that sets a fulfillment to 'canceled') cannot claim the
-    // same post again — "reopen for others" means other helpers, not the same person coming back
-    // (owner directive, 2026-08-06). Checked before the idempotency branch so a retry cannot
-    // resurrect the canceled claim.
-    const canceledBefore = await client.query(
-      `SELECT 1
-       FROM socket_relay_fulfillments
-       WHERE request_id = $1::uuid AND fulfiller_user_id = $2 AND status = 'canceled'
-       LIMIT 1`,
-      [requestId, actorUserId],
-    );
-    if ((canceledBefore.rowCount ?? 0) > 0) {
-      throw new Error('helper_previously_canceled');
-    }
+    await ensureHelperNotPreviouslyCanceled(client, requestId, actorUserId);
 
     if (requestRow.status !== 'open') {
       const existing = await findExistingActiveClaim(client, requestRow, actorUserId);

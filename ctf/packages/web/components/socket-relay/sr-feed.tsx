@@ -56,6 +56,26 @@ function CardAction({
   if (status === "claimed") return <div style={{ fontSize: 12, color: "#F59E0B", fontWeight: 600 }}>Being helped</div>;
   if (status === "canceled") return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600 }}>Canceled</div>;
   if (!open) return <div style={{ fontSize: 12, color: "#22C55E", fontWeight: 600 }}>✓ closed</div>;
+  return <OpenCardAction isOwn={isOwn} reclaimBlocked={reclaimBlocked} submitting={submitting} onClaim={onClaim} onEdit={onEdit} t={t} />;
+}
+
+// The action column for an open, claimable post: the owner edits, a canceled-off helper sees a plain
+// note, anyone else gets the claim button. Split from CardAction to stay within the complexity limit.
+function OpenCardAction({
+  isOwn,
+  reclaimBlocked,
+  submitting,
+  onClaim,
+  onEdit,
+  t,
+}: {
+  isOwn: boolean;
+  reclaimBlocked: boolean;
+  submitting: boolean;
+  onClaim: () => void;
+  onEdit: () => void;
+  t: SocketRelayTokens;
+}) {
   if (isOwn) {
     return (
       <>
@@ -66,8 +86,10 @@ function CardAction({
       </>
     );
   }
+  // Soft copy on purpose (owner directive): reads as "you already offered", never as being blocked
+  // or as the poster having ended the earlier Direct Line.
   if (reclaimBlocked) {
-    return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600, textAlign: "right" }}>Open to other helpers</div>;
+    return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600, textAlign: "right" }}>You already offered to help</div>;
   }
   return (
     <button onClick={onClaim} disabled={submitting} style={{ padding: "8px 14px", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer" }}>
