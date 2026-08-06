@@ -88,7 +88,7 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: TEXT, marginBottom: 10 }}>Deletion queued</div>
           <div style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.7 }}>
-            Your request has been received. Your personal data is being removed across all services, and your ServiceCredits balance will be settled through the standard process. Some audit records are retained for platform integrity.
+            Your request has been received. Your personal data is being removed across all services. Your ServiceCredits are held for 7 days from now, then returned to the community treasury; if any are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
           </div>
         </div>
       </div>
@@ -127,7 +127,7 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 22 }}>
             {([
               { t: `All personal data deleted across ${serviceCount} services`, Icon: Trash2, c: '#EF4444' },
-              { t: 'ServiceCredits balance settled via standard process — not destroyed', Icon: CheckCircle, c: '#9CA3AF' },
+              { t: 'ServiceCredits: held 7 days, then returned to the community treasury (an active escrow resolves first)', Icon: CheckCircle, c: '#9CA3AF' },
               { t: 'Some audit records retained for platform integrity — this is intentional', Icon: Lock, c: '#9CA3AF' },
               { t: 'Your profile and username removed from all directories', Icon: Trash2, c: '#EF4444' },
             ]).map(({ t, Icon, c }, i) => (
