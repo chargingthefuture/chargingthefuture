@@ -232,12 +232,12 @@ function DangerZone({ serviceCount, onOpenAccountDelete, tokens }: { serviceCoun
           <span style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>Delete Entire Account</span>
         </div>
         <div style={{ fontSize: 14, color: '#9CA3AF', lineHeight: 1.7, marginBottom: 16 }}>
-          This removes your profile and all personal data across all {serviceCount} services. Your ServiceCredits balance is settled via the standard process — not silently destroyed. Some audit records are retained for platform integrity.
+          This removes your profile and all personal data across all {serviceCount} services. Your ServiceCredits are held for 7 days after the request, then returned to the community treasury — never silently destroyed, and never withdrawable externally. If any of your credits are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 18 }}>
           {([
             { t: `All personal data across ${serviceCount} services permanently deleted`, warn: true },
-            { t: 'ServiceCredits balance settled via standard process — not destroyed', warn: false },
+            { t: 'ServiceCredits: held 7 days, then returned to the community treasury (an active escrow resolves first)', warn: false },
             { t: 'Some audit records retained for platform integrity (by design)', warn: false },
             { t: 'Profile and username removed from all directories', warn: true },
           ]).map(({ t, warn }, i) => (
