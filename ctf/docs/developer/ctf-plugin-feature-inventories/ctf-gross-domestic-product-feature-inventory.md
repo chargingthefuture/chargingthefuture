@@ -31,7 +31,13 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 ### 1.1 GDP Transparency Overview
 
 1. Authenticated survivor-facing GDP summary dashboard.
-2. Current annual `Total GDP`, `Service GDP`, `Goods/Local GDP` with plain-language explanations.
+2. An as-of anchor under the headline Community Value Index: "Cumulative since May 25, 2026" — the
+   day the app first went live in production (Render migration completed, PRs #98–#117). The index
+   sums all recognized exchanges from launch onward and never resets to a calendar year. The date is
+   one constant (`COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO` in
+   `ctf/packages/web/components/gdp/gdp-shared.ts`) so a corrected public launch date changes in one
+   place.
+3. Current annual `Total GDP`, `Service GDP`, `Goods/Local GDP` with plain-language explanations.
 3. Per-capita indicators based on population baseline and selected period.
 4. Progress-to-target indicators for $300B total and $210B services goals.
 
@@ -348,6 +354,15 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-08-05: **Dashboard hero now says what period the Community Value Index covers: "Cumulative
+  since May 25, 2026".** The index is all-time — every recognition source sums its full table history
+  with no date filter — but the surface never said so, leaving a reader to guess whether the figure
+  was yearly. Added `COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO` / `COMMUNITY_VALUE_INDEX_SINCE_LABEL` to
+  `gdp-shared.ts` (single source of truth) and rendered the label under the headline figure in
+  `gdp-dashboard.tsx`. The anchor date is the production go-live on Render: the migration PRs
+  (#98–#117) all merged 2026-05-25, with PR #117's health-check fix bringing `ctf-web` to "Live".
+  If the owner fixes a different public launch date (e.g. from the announcement post), only the
+  constant changes. UI copy only — no schema, route, or contract change.
 - 2026-08-04: **Both Community Value Index figures now appear in the weekly community-stats draft, via a
   shared script module.** The weekly community-stats draft generator
   (`ctf/scripts/generate-community-stats.mjs`, run by `.github/workflows/generate-community-stats.yml`)
