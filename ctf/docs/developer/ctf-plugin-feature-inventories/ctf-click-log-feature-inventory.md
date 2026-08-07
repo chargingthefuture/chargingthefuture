@@ -168,6 +168,17 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-07: **Recorded a further owner refinement to the pendulum comment (documentation
+  only).** The groundwork for turning someone into an operative is laid long before that person
+  knows anything is happening — the same con played on others is played on them. The windfall is
+  arranged to read as merit-based so the recruit believes they earned the scholarship, job, or
+  marriage themselves; by the time they are asked to participate they are already bound to the
+  network and dependent on it, and what bound them was built on the exploitation of others. The
+  merit story is the cover, the binding is the point — which is why a recruit's sincerity proves
+  nothing about whether the setup was real. Comment recorded in the pendulum block above
+  `windfall`/`jinx` in `lib/click-log/tags.ts`. No code behavior, schema, route, contract, or
+  public-list change.
+
 - 2026-08-07: **Two new scheme tags: Psyop Marketing and The Acquire and Fold, plus a
   consolidation-of-power refinement to the pendulum comment (owner-named).** `psyop-marketing` —
   a company the member has no tie to beyond being a customer runs marketing built to read as a
