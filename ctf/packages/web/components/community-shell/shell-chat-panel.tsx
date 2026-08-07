@@ -21,6 +21,7 @@ import { NotificationsPanel } from './notifications-panel';
 import { ChatReactionRow } from './chat-reaction-row';
 import { CommonsFirstVisitNotice } from './commons-first-visit-notice';
 import { ComicConsentModal } from './comic-consent-modal';
+import { ContributionsGiftTrigger } from '../contributions/contributions-banner';
 import type { HubTypingUser } from '../../lib/hub/live-stream';
 import type { HubSuggestionChip } from '../../lib/concierge/hub-suggestions';
 import styles from './community-shell.module.css';
@@ -946,6 +947,11 @@ function ConciergeChipRail({
       <MentionsFilterButton active={mentionsOnly && !notificationsOpen} on={mentionsOnly} onClick={onToggleMentions} />
       <AnnouncementsFilterButton active={announcementsOnly && !notificationsOpen} on={announcementsOnly} onClick={onToggleAnnouncements} />
       <NotificationsFilterButton open={notificationsOpen} onClick={onToggleNotifications} />
+      {/* Fundraiser gift reminder — moved here from the top bar, which ran out of room on a 375px
+          phone (owner directive, 2026-08-07). It renders itself as null unless a drive is running
+          and the full banner is dismissed or snoozed, so most of the time this row is unchanged.
+          It stays visible with the notifications feed open, like the three glyph chips before it. */}
+      <ContributionsGiftTrigger className={styles.contributeGiftBtn} />
       {notificationsOpen ? null : <SuggestionChips chips={chips} onAsk={onAsk} />}
     </div>
   );

@@ -57,12 +57,11 @@ flow is one-way, like gas-station reward points.
 - See their own claim history and statuses (pending / confirmed / rejected).
 - See the current fundraiser cycle and collective progress (USD raised, comments, stars,
   contributor count) toward the owner-set goals.
-- Dismiss the fundraiser banner — a silent two-month snooze. On phone width, dismissing does not
-  remove the reminder entirely: the full banner collapses to a small gift emoji (🎁) in its place that
-  still opens the plugin, so it stays a subtle nudge without taking up space; the full banner returns
-  on its own when the snooze lapses. On desktop, dismissing hides it until the snooze lapses (no
-  emoji — the slim desktop bar is already unobtrusive). If the admin turns the banner feature off,
-  neither the banner nor the emoji shows.
+- Dismiss the fundraiser banner — a silent two-month snooze. Dismissing does not remove the reminder
+  entirely: the full banner collapses to a small gift emoji (🎁) that appears in the Commons chip row
+  just after the 🔔 notifications chip and still opens the plugin, so it stays a subtle nudge without
+  taking up space; the full banner returns on its own when the snooze lapses. If the admin turns the
+  banner feature off, neither the banner nor the emoji shows.
 - Open to any signed-in member: contributing requires no Unlock verification and never changes
   Unlock state.
 
@@ -315,6 +314,14 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
   computes `changedKnobs` from the fields present in the request body (the list the audit contract
   already declares) and keeps the resulting values under `resultingConfig`. No schema, route, or
   contract change.
+- 2026-08-07: **Gift reminder moved out of the top bar and into the Commons chip row (owner report:
+  the top bar was crowded on an iPhone SE).** `ContributionsGiftTrigger` is no longer mounted by
+  `community-shell.tsx`; it now renders in `ConciergeChipRail` (`shell-chat-panel.tsx`) immediately
+  after the 🔔 notifications chip, styled by a new `.contributeGiftBtn` chip class (rose accent, same
+  size as the @ / 📣 / 🔔 pills, with a comic-theme variant). The component takes a `className` prop
+  instead of carrying its old inline top-bar box style. When it shows and where it goes on tap are
+  unchanged: only while a drive is running and the full banner is dismissed or snoozed, and it opens
+  `/apps/contributions`. UI-only — no route, schema, or contract change.
 - 2026-08-06: Submission review audit rows now record the reviewed member. The confirm/reject audit
   write in `app/api/contributions/admin/submissions/[submissionId]/review/route.ts` passed only the
   admin (`actorUserId`), so the `targetUserId` the audit contract declares for

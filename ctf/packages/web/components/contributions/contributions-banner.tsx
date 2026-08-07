@@ -29,14 +29,12 @@ function bannerGoals(f: FundraiserResponse['fundraiser']): BannerGoal[] {
  * only renders while a drive is active and the banner feature is on. "Contribute" opens the plugin;
  * "Not now" calls the server-side silent snooze (the duration is never shown).
  *
- * On phone width, dismissing does not remove the reminder entirely — the reminder becomes the small
- * gift emoji in the top bar (ContributionsGiftTrigger below, mounted between the brand mark and the
- * section tabs), so no strip of vertical space is spent on it. The full banner returns on its own
- * when the snooze lapses. On desktop, dismissing hides it until the snooze lapses (no emoji — a
- * slim desktop bar is already unobtrusive).
+ * Dismissing does not remove the reminder entirely — the reminder becomes the small gift emoji in
+ * the Commons chip row, just after the 🔔 notifications chip (ContributionsGiftTrigger below), so no
+ * strip of vertical space is spent on it. The full banner returns on its own when the snooze lapses.
  */
 
-// Cross-component signal: the banner's "Not now" tells the top-bar trigger to appear without a
+// Cross-component signal: the banner's "Not now" tells the gift trigger to appear without a
 // reload (the two components fetch fundraiser state independently).
 const BANNER_DISMISSED_EVENT = 'ctf:contributions-banner-dismissed';
 export function ContributionsBanner() {
@@ -86,8 +84,8 @@ export function ContributionsBanner() {
 
   const showFullBanner = fundraiser.bannerVisible && !collapsed;
 
-  // Dismissed or snoozed → nothing here. On phone width the reminder lives on as the gift emoji
-  // in the top bar (ContributionsGiftTrigger); a dedicated strip here read as wasted space.
+  // Dismissed or snoozed → nothing here. The reminder lives on as the gift emoji in the Commons
+  // chip row (ContributionsGiftTrigger); a dedicated strip here read as wasted space.
   if (!showFullBanner) {
     return null;
   }
@@ -128,13 +126,16 @@ export function ContributionsBanner() {
 }
 
 /**
- * The phone-top-bar gift reminder: a small 🎁 between the brand mark and the section tabs (owner
- * placement decision, 2026-07-19). It appears only while a drive is active AND the full banner is
- * not showing (dismissed this session or server-snoozed), so the reminder survives without
- * spending a strip of vertical space. Opens the Contributions plugin. Phone widths only — on
- * desktop a dismissed banner shows nothing until the snooze lapses, unchanged.
+ * The gift reminder: a small 🎁 that opens the Contributions plugin. It appears only while a drive
+ * is active AND the full banner is not showing (dismissed this session or server-snoozed), so the
+ * reminder survives without spending a strip of vertical space.
+ *
+ * It used to sit in the top bar beside the brand mark, but on a narrow phone (iPhone SE) that bar
+ * ran out of room, so it now rides in the Commons chip row just after the 🔔 notifications chip
+ * (owner placement decision, 2026-08-07). The caller supplies `className` so the button matches
+ * whichever row it sits in.
  */
-export function ContributionsGiftTrigger() {
+export function ContributionsGiftTrigger({ className }: { className: string }) {
   const router = useRouter();
 
   const [fundraiser, setFundraiser] = useState<FundraiserResponse['fundraiser'] | null>(null);
@@ -177,26 +178,7 @@ export function ContributionsGiftTrigger() {
       onClick={() => router.push('/apps/contributions')}
       aria-label="Contribute to the platform"
       title="Contribute"
-      // Boxed to match the rest of the phone top bar's icon controls (help, settings,
-      // admin) — the same surface + border + radius the plugin header uses — so the gift
-      // is no longer a bare emoji floating among bordered buttons. Theme tokens carry the
-      // default and comic looks.
-      style={{
-        width: 38,
-        height: 38,
-        borderRadius: 10,
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--ctf-surface, rgba(255, 255, 255, 0.06))',
-        border: '1px solid var(--ctf-border, rgba(255, 255, 255, 0.12))',
-        color: 'var(--ctf-text, #E5E7EB)',
-        cursor: 'pointer',
-        fontSize: 16,
-        lineHeight: 1,
-        padding: 0,
-        flexShrink: 0,
-      }}
+      className={className}
     >
       🎁
     </button>
