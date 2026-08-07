@@ -160,6 +160,14 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // which ties back to the money-and-dependency mechanism the pendulum runs on: a person or
   // business made dependent is a person or business that can be directed.
   //
+  // Owner's further refinement (2026-08-07): the groundwork is laid long before the future
+  // operative knows anything is happening — the same con that was played on others is played on
+  // them. The windfall is arranged to read as merit-based, so the person believes they earned
+  // the scholarship, the job, the marriage on their own. By the time they are asked to
+  // participate, they are already bound to the network and dependent on it, and what bound them
+  // was built on the exploitation of others. The merit story is the cover; the binding is the
+  // point. This is why the recruit's sincerity proves nothing about the setup being real.
+  //
   // Good-luck swing: sudden fortune lands on someone near the member (a scholarship, a job, a
   // whirlwind marriage or baby). It elevates them over the member so they read the member as the
   // incompetent one when the reverse is often true, hands them an ego boost plus a set of new
