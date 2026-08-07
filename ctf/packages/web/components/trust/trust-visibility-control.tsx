@@ -11,7 +11,7 @@
 // nothing. So the audience is named inside each choice, the effect is restated underneath, and a
 // short confirmation appears once the change is stored.
 //
-// Honest labelling: `restricted` and `private` both resolve to owner-or-admin at the only place
+// Honest labeling: `restricted` and `private` both resolve to owner-or-admin at the only place
 // visibility is enforced (GET /api/trust/user/[userId]), so Restricted does not claim a
 // members-only audience the app cannot currently deliver.
 import React from "react";

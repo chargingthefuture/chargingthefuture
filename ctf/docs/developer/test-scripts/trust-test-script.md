@@ -12,7 +12,7 @@
 | **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-visibility-control.tsx`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md` |
-| **Generated** | 2026-08-07 (hand-updated: visibility control labelled and confirmed on save — TR-A5b; admin verification page `/admin/trust` — TR-A9b) |
+| **Generated** | 2026-08-07 (hand-updated: visibility control labeled and confirmed on save — TR-A5b; admin verification page `/admin/trust` — TR-A9b) |
 
 ---
 
