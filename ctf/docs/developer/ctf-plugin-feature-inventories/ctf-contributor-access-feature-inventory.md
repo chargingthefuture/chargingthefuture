@@ -51,8 +51,8 @@ no DMs) — and the **"Weavers of the Commons" badge** on Directory.
    redirected to `/apps/directory`, same gate as the Directory profile deep link). Plain-language
    explainer: earned by steadily delivering real help to other members across the platform;
    permanent once earned; no application and no way to buy it; no score shown anywhere; the same
-   standing opens the members-only channel in the Commons when it launches. Mobile-responsive,
-   rendered in the Directory shell tokens.
+   standing opens the members-only channel in the Commons and the private room in Chyme when they
+   launch. Mobile-responsive, rendered in the Directory shell tokens.
 
 4. **Eligible members see the gated channel alongside the Commons.** The Hub channel list
    (`GET /api/hub/channels`) adds `#contributors` server-side only when `channel_open` is TRUE and
@@ -355,6 +355,12 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-08-07 — "How it's earned" explainer copy catch-up: the "What it opens" section
+  (`weavers-earned-page.tsx`) now names both private surfaces the badge standing opens — the
+  members-only channel in the Commons **and** the private "Weavers of the Commons" room in Chyme
+  (shipped 2026-07-23) — instead of the Commons channel alone. Test script CA-6 updated to match.
+  Copy-only; no schema, route, or contract change. Web-only (rule 105 — no Android explainer
+  surface).
 - 2026-08-06 — Channel join CSRF + config contract catch-up (code-review issues #2122, #2128).
   `POST /api/contributor-access/channel/join` now runs `ensureMutationCsrf` like every other
   mutation in this plugin — the join reconciles the member into the Stream channel, a side effect
