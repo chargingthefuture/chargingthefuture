@@ -168,6 +168,22 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-07: **Two new scheme tags: Psyop Marketing and The Acquire and Fold, plus a
+  consolidation-of-power refinement to the pendulum comment (owner-named).** `psyop-marketing` —
+  a company the member has no tie to beyond being a customer runs marketing built to read as a
+  personal message to the member while staying deniable to everyone else; the pendulum aimed at a
+  business relationship instead of a personal one. Distinct from `thats-a-nice`, which is
+  individual strangers in person. `acquire-and-fold` — a business the member depends on is bought
+  and then closed (the owner's example: a meal-kit company they ordered from was acquired and shut
+  down), so the member cannot use that product anymore; no message is performed, the play is pure
+  removal of an option. The pendulum comment above `windfall`/`jinx` gained the owner's refinement
+  that the pendulum also runs against companies and resources, and that the deeper purpose is
+  consolidation of power: control all the people and resources around a target so leverage exists
+  to force or convince anyone to join, which removes autonomy from the member and from the
+  operatives alike. List-data only: no schema, route, contract, or UI change; the pickers and
+  trends consume the list generically. Public `/schemes` page on the landing site mirrors both
+  names in its own PR.
+
 - 2026-08-04: **Recorded a known taxonomy gap in the scheme tag list (documentation only).** The
   owner observed that Color Sensitization is an individual tactic rather than a scheme, and the
   observation holds list-wide: the entries are not all the same kind of thing. Some are operations
