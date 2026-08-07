@@ -9,10 +9,10 @@
 | **Plugin** | Trust (`trust`) |
 | **Visibility** | Internal |
 | **Roles to test** | Admin only |
-| **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
+| **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-visibility-control.tsx`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md` |
-| **Generated** | 2026-08-04 (hand-updated: live visibility selector on self widgets — TR-A5b; admin verification page `/admin/trust` — TR-A9b) |
+| **Generated** | 2026-08-07 (hand-updated: visibility control labelled and confirmed on save — TR-A5b; admin verification page `/admin/trust` — TR-A9b) |
 
 ---
 
@@ -160,14 +160,18 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 **Precondition:** Admin signed in.
 
 **Steps:**
-1. Open the account hub (or the community shell right rail) and find the Trust widget's "Visible to:" row.
-2. Change the dropdown to `Private`, then reload the page.
+1. Open the account hub (or the community shell right rail) and find the Trust widget's "Who can see your trust signals" control.
+2. Change the dropdown to `Private — only you and admins`, then reload the page.
 3. Open another member's Directory profile and find their Trust widget (member with `public` visibility).
-4. Reset your own visibility to `Public`.
+4. Reset your own visibility to `Public — any signed-in member`.
 
 **Expected:**
-- On your own widget the row is a live dropdown (Public / Private / Restricted). Changing it POSTs `/api/trust/visibility`; after reload the chosen value is still selected.
-- On failure (e.g. network cut), the dropdown reverts to the previous value and a short plain-language error appears under the row.
+- On your own widget the control has a heading ("Who can see your trust signals") above a full-width dropdown, so it reads as something you can change rather than a status line.
+- Each choice names its audience: "Public — any signed-in member", "Private — only you and admins", "Restricted — only you and admins". Below the dropdown, a sentence states what the current choice does and that your own card always shows everything whichever one you pick.
+- `Restricted` says plainly that it behaves the same as `Private` today — the two enforce identically at `GET /api/trust/user/[userId]`, so neither claims a members-only audience.
+- Changing it POSTs `/api/trust/visibility`, shows "Saving…" while in flight, then a "Saved" confirmation that clears itself after a few seconds. After reload the chosen value is still selected.
+- Your own evidence list does **not** change when the setting changes — that is correct, and the sentence under the dropdown says so. Do not file it as a bug.
+- On failure (e.g. network cut), the dropdown reverts to the previous value and a short plain-language error appears under it, replacing the confirmation.
 - On **another member's** widget the row is plain text ("Visible to: …"), never a dropdown — the route is self-scope only.
 
 **Result:** web ☐
