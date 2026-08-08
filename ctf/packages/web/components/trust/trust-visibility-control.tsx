@@ -8,9 +8,9 @@
 // Why the control spells out its own effect: the setting changes only what OTHER members see. The
 // owner's card always renders the full evidence list whatever the setting says, so a member who
 // changes it and watches their own card sees nothing move and reasonably concludes it does
-// nothing. So the audience is named inside each choice, the effect is restated underneath, a live
-// preview shows what a peer would actually receive, and a short confirmation appears once the
-// change is stored.
+// nothing. So each choice states the outcome in plain words, the effect is restated underneath, a
+// live preview shows what a member would actually receive, and a short confirmation appears once
+// the change is stored.
 //
 // The three choices are three real outcomes at `GET /api/trust/user/[userId]`: `public` serves the
 // full panel to any signed-in member, `restricted` serves the summary projection, `private` refuses
@@ -31,24 +31,37 @@ const VISIBILITY_ORDER: readonly TrustVisibility[] = ["public", "restricted", "p
 // The 5% hairline has no exact shell-token equivalent, so it stays as the shipped literal.
 const HAIRLINE = "rgba(255,255,255,0.05)";
 
-// Each choice names its audience in the option itself, so the effect is readable without opening
-// the menu. "Admins" is stated because an admin can always read a member's trust panel.
+// Each choice states who sees what, in plain words, as a sentence about members rather than an
+// abstract label. "Public" / "Restricted" / "Private" named a category and left the reader to guess
+// the category's rules — which is how the three got read as kinds of transaction. These say the
+// outcome instead, so no guessing is required and the three read as one scale.
+//
+// The stored values are still `public` / `restricted` / `private`; only what the member reads
+// changed. Nothing here is a promise about the rest of the app — this setting governs the trust
+// panel and nothing else.
 const OPTION_LABEL: Record<TrustVisibility, string> = {
-  public: "Public — any signed-in member",
-  restricted: "Restricted — a summary, no detail",
-  private: "Private — only you and admins",
+  public: "Members see everything",
+  restricted: "Members see a summary",
+  private: "Only you see this",
 };
 
+// Admins are named in the effect line rather than the label: they can read any member's panel, so
+// leaving it out would make "Only you see this" a claim the app does not keep.
 const OPTION_EFFECT: Record<TrustVisibility, string> = {
-  public: "Any signed-in member who opens your profile can see the signals listed above.",
+  public: "Any signed-in member who opens your profile sees the signals listed above.",
   restricted:
-    "Other members see how active you are, without the detail or the dates. Enough for someone to tell you take part here.",
-  private: "Other members cannot open your trust panel at all. Only you and admins can see these signals.",
+    "Members see how active you are, without the detail or the dates. Enough to tell that you take part here.",
+  private: "No other member can open this panel. Admins can, as they can for every member.",
 };
 
-function titleCase(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
+// The same three outcomes described from a viewer's side, for the read-only row on another member's
+// card. `private` is listed for completeness; that card is never rendered, because the route refuses
+// the read before there is anything to draw.
+const PEER_LABEL: Record<TrustVisibility, string> = {
+  public: "This member shares everything",
+  restricted: "This member shares a summary",
+  private: "This member keeps this to themselves",
+};
 
 // A member's stored value should always be one of the three, but a row written before the column
 // was constrained (or by hand) could be anything; fall back to the column default rather than
@@ -65,13 +78,13 @@ function wrapperStyle(bordered: boolean): React.CSSProperties {
   };
 }
 
-// Another member's card: their setting is shown, never edited.
-function ReadOnlyRow({ current, bordered, t }: { current: string; bordered: boolean; t: TrustTokens }) {
+// Another member's card: what they chose to share, stated from the viewer's side, never edited.
+function ReadOnlyRow({ current, bordered, t }: { current: TrustVisibility; bordered: boolean; t: TrustTokens }) {
   return (
     <div style={wrapperStyle(bordered)}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <Eye size={11} style={{ color: t.FAINT }} />
-        <span style={{ fontSize: 11, color: t.FAINT }}>Visible to: {titleCase(current)}</span>
+        <span style={{ fontSize: 11, color: t.FAINT }}>{PEER_LABEL[current]}</span>
       </div>
     </div>
   );
@@ -106,13 +119,13 @@ function PeerPreview({ current, evidence, t }: { current: TrustVisibility; evide
   return (
     <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: `1px solid ${HAIRLINE}` }}>
       <div style={{ fontSize: 10, fontWeight: 600, color: t.FAINT, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
-        What other members see
+        What members see
       </div>
       {current === "public" && (
         <div style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>Everything listed above, exactly as you see it.</div>
       )}
       {current === "private" && (
-        <div style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>Nothing. Your panel is hidden from other members.</div>
+        <div style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>Nothing — this panel does not appear on your profile for them.</div>
       )}
       {current === "restricted" && lines.length === 0 && (
         <div style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
@@ -199,7 +212,7 @@ export function TrustVisibilityControl({ visibility, bordered, editable, evidenc
     <div style={wrapperStyle(bordered)}>
       <label htmlFor={selectId} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
         <Eye size={12} style={{ color: t.SUBTLE }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE }}>Who can see your trust signals</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE }}>Who sees your trust signals</span>
       </label>
       <select
         id={selectId}
@@ -224,7 +237,7 @@ export function TrustVisibilityControl({ visibility, bordered, editable, evidenc
         ))}
       </select>
       <p style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.5, margin: "6px 0 0" }}>
-        {OPTION_EFFECT[current]} Your own card always shows everything, whichever one you pick.
+        {OPTION_EFFECT[current]} You always see everything on your own card, whichever one you pick.
       </p>
       <PeerPreview current={current} evidence={evidence ?? []} t={t} />
       <SaveStatus saving={saving} saved={saved} error={error} t={t} />

@@ -128,9 +128,13 @@ function EvidenceBody({ evidence, visibility, editable, disclosure }: { evidence
           <EvidenceItem key={idx} item={item} />
         ))}
       </div>
-      <div style={{ paddingTop: 7, borderTop: `1px solid ${HAIRLINE}` }}>
-        <TrustVisibilityControl visibility={visibility} bordered={false} editable={editable} evidence={evidence} />
-      </div>
+      {/* On a peer's summary card the note above already says the member shares a summary, so the
+          read-only row would repeat it. Keep the row for a full peer card and for the owner. */}
+      {(editable || disclosure === "full") && (
+        <div style={{ paddingTop: 7, borderTop: `1px solid ${HAIRLINE}` }}>
+          <TrustVisibilityControl visibility={visibility} bordered={false} editable={editable} evidence={evidence} />
+        </div>
+      )}
     </div>
   );
 }

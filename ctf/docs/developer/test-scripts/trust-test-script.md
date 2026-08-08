@@ -12,7 +12,7 @@
 | **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-visibility-control.tsx`, `lib/trust/peer-summary.ts`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md` |
-| **Generated** | 2026-08-07 (hand-updated: restricted serves the summary projection — TR-A4b; visibility control preview and save confirmation — TR-A5b; admin verification page `/admin/trust` — TR-A9b) |
+| **Generated** | 2026-08-08 (hand-updated: plain-language choice labels — TR-A5b; restricted serves the summary projection — TR-A4b; admin verification page `/admin/trust` — TR-A9b) |
 
 ---
 
@@ -149,6 +149,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - No per-plugin item survives — the response must not name SkillsHunt, Chyme, LightHouse, Foundation, or any other plugin, and must not carry a per-plugin count.
 - The breadth line counts DISTINCT plugins: a member with both a SocketRelay trades item and a SocketRelay requests item counts SocketRelay once.
 - On the Directory profile the Trust card renders normally with the shorter list, above it the note "This member shares a summary of their participation, not the detail." The "This member limits who can view their trust" refusal note must **not** appear (that is now the `private` state only).
+- The read-only visibility row at the bottom of that card is **not** rendered on a summary card — the note above the list already says the member shares a summary, so repeating it below would be noise. It is still rendered on a full peer card, reading "This member shares everything".
 - The read writes a `trust.summary.read` row with `policy_status = allow` and reason `restricted_summary_read`.
 
 **Result:** web ☐
@@ -184,20 +185,21 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 **Precondition:** Admin signed in.
 
 **Steps:**
-1. Open the account hub (or the community shell right rail) and find the Trust widget's "Who can see your trust signals" control.
-2. Change the dropdown to `Private — only you and admins`, then reload the page.
+1. Open the account hub (or the community shell right rail) and find the Trust widget's "Who sees your trust signals" control.
+2. Change the dropdown to "Only you see this", then reload the page.
 3. Open another member's Directory profile and find their Trust widget (member with `public` visibility).
-4. Reset your own visibility to `Public — any signed-in member`.
+4. Reset your own choice to "Members see everything".
 
 **Expected:**
-- On your own widget the control has a heading ("Who can see your trust signals") above a full-width dropdown, so it reads as something you can change rather than a status line.
-- The choices are ordered most open to most private and each names its audience: "Public — any signed-in member", "Restricted — a summary, no detail", "Private — only you and admins". Below the dropdown, a sentence states what the current choice does and that your own card always shows everything whichever one you pick.
-- Under that, a **"What other members see"** preview shows the result of the current choice: on `Public`, "Everything listed above, exactly as you see it."; on `Private`, "Nothing. Your panel is hidden from other members."; on `Restricted`, the actual summary lines a peer would receive.
-- The `Restricted` preview must match what the API returns for a peer (cross-check against TR-A4b) — both come from the same projection function, so any disagreement is a bug.
+- On your own widget the control has a heading ("Who sees your trust signals") above a full-width dropdown, so it reads as something you can change rather than a status line.
+- The choices are ordered most open to most private and each states the outcome in plain words — **"Members see everything"**, **"Members see a summary"**, **"Only you see this"**. No choice is named after a category ("Public"/"Restricted"/"Private" must not appear as option text).
+- Below the dropdown, a sentence states what the current choice does and that you always see everything on your own card whichever one you pick. On "Only you see this" that sentence must also say admins can read the panel — the label alone would otherwise overpromise.
+- Under that, a **"What members see"** preview shows the result of the current choice: on "Members see everything", "Everything listed above, exactly as you see it."; on "Only you see this", "Nothing — this panel does not appear on your profile for them."; on "Members see a summary", the actual summary lines a member would receive.
+- The summary preview must match what the API returns for a peer (cross-check against TR-A4b) — both come from the same projection function, so any disagreement is a bug.
 - Changing it POSTs `/api/trust/visibility`, shows "Saving…" while in flight, then a "Saved" confirmation that clears itself after a few seconds. After reload the chosen value is still selected.
 - Your own evidence list above the control does **not** change when the setting changes — that is correct; the preview is where the effect shows. Do not file the unchanged list as a bug.
 - On failure (e.g. network cut), the dropdown reverts to the previous value and a short plain-language error appears under it, replacing the confirmation.
-- On **another member's** widget the row is plain text ("Visible to: …"), never a dropdown, and no preview is shown — the route is self-scope only.
+- On **another member's** widget the row is plain text stating what they share ("This member shares everything"), never a dropdown, and no preview is shown — the route is self-scope only.
 
 **Result:** web ☐
 

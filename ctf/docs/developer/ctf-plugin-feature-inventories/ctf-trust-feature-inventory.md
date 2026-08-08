@@ -18,13 +18,15 @@ Trust gives the community a privacy-respecting, **non-numeric** way to gauge how
 1. View their trust badge (qualitative standing, not a number), evidence panel, and verification status on profile/directory surfaces.
 2. Choose who can see their own trust signals, from a labeled "Who can see your trust signals"
    dropdown on their own Trust card (account hub, community right rail, own Directory profile).
-   The choices name their audience: **Public** — any signed-in member who opens your profile sees
-   every signal; **Restricted** — other members see a summary of how active you are (sign-in days,
-   how many plugins you take part in, and any ServiceCredits counts) without the detail or the
-   dates; **Private** — other members cannot open your panel at all. The member's own card always
-   lists every signal whichever choice is active, and a "What other members see" preview under the
-   dropdown shows exactly what a peer would receive at the current choice. A "Saved" confirmation
-   appears when the choice is stored.
+   Each choice states the outcome in plain words rather than naming a category: **"Members see
+   everything"** — any signed-in member who opens your profile sees every signal; **"Members see a
+   summary"** — members see how active you are (sign-in days, how many plugins you take part in, and
+   any ServiceCredits counts) without the detail or the dates; **"Only you see this"** — no other
+   member can open the panel, though admins can, as they can for every member. The member always
+   sees every signal on their own card whichever choice is active, and a "What members see" preview
+   under the dropdown shows exactly what a member would receive at the current choice. A "Saved"
+   confirmation appears when the choice is stored. The setting governs the trust panel only; it is
+   not a platform-wide visibility switch.
 3. Inspect their own trust signal snapshot via `GET /api/trust/user/self`.
 
 ## Admin Features
@@ -163,6 +165,21 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
    closing if the status is ever meant to stay admin-side.
 
 ## Change Log
+
+- 2026-08-08: **Plain-language names for the three choices.** Owner direction: the labels named a
+  category and left the member to work out the category's rules, which is how the three were read as
+  kinds of transaction in the first place. "Public" / "Restricted" / "Private" are now
+  **"Members see everything"** / **"Members see a summary"** / **"Only you see this"** — each states
+  who sees what, so the three read as one scale and nothing has to be inferred. Admins stay named in
+  the effect line under the dropdown rather than in the label, so "Only you see this" is not a claim
+  the app fails to keep. The read-only row on another member's card is relabeled from
+  "Visible to: Public" to the same outcome stated from the viewer's side ("This member shares
+  everything" / "This member shares a summary"), and is dropped from a peer's summary card where the
+  note above the list already says it. The stored enum values are unchanged
+  (`public` / `restricted` / `private`) — this is presentation only, no route, contract, or schema
+  change. Also corrected an error in the previous entry's framing: this setting governs the trust
+  panel and nothing else, so `private` was never a claim of platform-wide invisibility and the
+  ungated presence list is not in tension with it.
 
 - 2026-08-07: **`Restricted` became a real middle tier.** Owner direction: a member checking whether
   someone is an engaged participant should be able to see *something*, otherwise only admins can.
