@@ -257,7 +257,7 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   `lib/beacon/stream.ts` now states both values Stream validates together: `audio_only: false` and
   `quality: '720p'`. 720p landscape matches what Beacon actually broadcasts — a shared screen or
   window from the browser, or a phone pushing RTMP — so the saved replay records the broadcast
-  without being stretched. Recording behaviour is otherwise unchanged: recording is still
+  without being stretched. Recording behavior is otherwise unchanged: recording is still
   `available` (started later by `start-broadcast` once someone is publishing), the recording-ready
   webhook and the Commons replay post are untouched. No schema, route, or contract change.
   Quota-impact note: `ctf/docs/quota-impact/2026-08-08-beacon-recording-quality.md`.

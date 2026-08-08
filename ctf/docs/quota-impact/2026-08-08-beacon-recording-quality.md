@@ -30,7 +30,7 @@
   Beacon broadcast could start, so the feature consumed **zero** video minutes and produced zero
   recordings. With it working, Beacon consumes what it was always designed to consume: one live
   event at a time, HLS distribution to viewers, and one recording per event. That is the budgeted
-  behaviour from the original Beacon note (`2026-06-21-beacon-livestream-video.md`), not new
+  behavior from the original Beacon note (`2026-06-21-beacon-livestream-video.md`), not new
   spending on top of it. The recording is written at 720p; a 1080p recording would have been roughly
   double the stored bytes per minute, so this choice is the cheaper of the two sensible ones and is
   bounded by how often the owner broadcasts and for how long.
