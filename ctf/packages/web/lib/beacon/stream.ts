@@ -239,7 +239,13 @@ export async function ensureBeaconCallAndIngest(input: {
         settings_override: {
           // Backstage on: the call is not visible to viewers until goLive() is called.
           backstage: { enabled: true },
-          recording: { mode: 'available' },
+          // `quality` is not optional in practice: Stream rejects the whole get-or-create with 400
+          // "recording quality is required when audio_only is false and recording is enabled" when a
+          // video recording is turned on without one, which failed every "Go live" click. Both inputs
+          // are landscape — the in-browser host shares a screen or window, and the phone path pushes
+          // RTMP — so 720p records what is broadcast without upscaling. `audio_only: false` is stated
+          // rather than left to default so the pairing Stream validates is visible in one place.
+          recording: { mode: 'available', audio_only: false, quality: '720p' },
         },
       },
     },
