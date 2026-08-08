@@ -9,10 +9,10 @@
 | **Plugin** | Trust (`trust`) |
 | **Visibility** | Internal |
 | **Roles to test** | Admin only |
-| **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-visibility-control.tsx`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
+| **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-visibility-control.tsx`, `lib/trust/peer-summary.ts`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md` |
-| **Generated** | 2026-08-07 (hand-updated: visibility control labeled and confirmed on save — TR-A5b; admin verification page `/admin/trust` — TR-A9b) |
+| **Generated** | 2026-08-07 (hand-updated: restricted serves the summary projection — TR-A4b; visibility control preview and save confirmation — TR-A5b; admin verification page `/admin/trust` — TR-A9b) |
 
 ---
 
@@ -112,7 +112,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 ---
 
-### TR-A4 — Cross-user read: private/restricted visibility blocks non-owner non-admin
+### TR-A4 — Cross-user read: private visibility refuses a non-owner non-admin
 
 **Role:** Admin (to set up); tested from a non-owner non-admin caller  
 **Surfaces:** Web API  
@@ -124,8 +124,32 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 **Expected:**
 - Non-owner, non-admin caller: HTTP 403.
-- Admin caller: HTTP 200 with full panel.
-- Each read writes a `trust.summary.read` row to `trust_admin_audit_trail`: the blocked non-owner read as `policy_status = deny` (reason `forbidden_visibility`), the admin read as `policy_status = allow` (reason `admin_summary_read`).
+- Admin caller: HTTP 200 with the full panel and `trustDisclosure: "full"`.
+- Each read writes a `trust.summary.read` row to `trust_admin_audit_trail`: the refused non-owner read as `policy_status = deny` (reason `forbidden_visibility`), the admin read as `policy_status = allow` (reason `admin_summary_read`).
+
+**Result:** web ☐
+
+---
+
+### TR-A4b — Cross-user read: restricted visibility serves the summary, not a refusal
+
+**Role:** Admin (to set up); tested from a non-owner non-admin caller  
+**Surfaces:** Web API + Web UI  
+**Precondition:** Member B's `trust_visibility` is set to `restricted`, and Member B has real upstream activity (sign-ins plus participation in at least two plugins) so the summary has something to report.
+
+**Steps:**
+1. Authenticate as a **different** member (not Member B, not admin) and call `GET /api/trust/user/[memberB_userId]`.
+2. Compare the response against Member B's own full panel (read it as admin).
+3. Open Member B's Directory profile as that same non-admin member.
+
+**Expected:**
+- HTTP 200, **not** 403 — this is the point of the setting. `trustDisclosure` is `"summary"`.
+- `trustEvidence` contains headline counts only. Specifically: a sign-in line ("Active on N days") if they have one, a single breadth line reading "Took part in N plugins", and any ServiceCredits count lines.
+- **No item carries a `createdAt` or a `details` field.** The full panel's last-sign-in detail must not appear anywhere in the response.
+- No per-plugin item survives — the response must not name SkillsHunt, Chyme, LightHouse, Foundation, or any other plugin, and must not carry a per-plugin count.
+- The breadth line counts DISTINCT plugins: a member with both a SocketRelay trades item and a SocketRelay requests item counts SocketRelay once.
+- On the Directory profile the Trust card renders normally with the shorter list, above it the note "This member shares a summary of their participation, not the detail." The "This member limits who can view their trust" refusal note must **not** appear (that is now the `private` state only).
+- The read writes a `trust.summary.read` row with `policy_status = allow` and reason `restricted_summary_read`.
 
 **Result:** web ☐
 
@@ -167,12 +191,13 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 **Expected:**
 - On your own widget the control has a heading ("Who can see your trust signals") above a full-width dropdown, so it reads as something you can change rather than a status line.
-- Each choice names its audience: "Public — any signed-in member", "Private — only you and admins", "Restricted — only you and admins". Below the dropdown, a sentence states what the current choice does and that your own card always shows everything whichever one you pick.
-- `Restricted` says plainly that it behaves the same as `Private` today — the two enforce identically at `GET /api/trust/user/[userId]`, so neither claims a members-only audience.
+- The choices are ordered most open to most private and each names its audience: "Public — any signed-in member", "Restricted — a summary, no detail", "Private — only you and admins". Below the dropdown, a sentence states what the current choice does and that your own card always shows everything whichever one you pick.
+- Under that, a **"What other members see"** preview shows the result of the current choice: on `Public`, "Everything listed above, exactly as you see it."; on `Private`, "Nothing. Your panel is hidden from other members."; on `Restricted`, the actual summary lines a peer would receive.
+- The `Restricted` preview must match what the API returns for a peer (cross-check against TR-A4b) — both come from the same projection function, so any disagreement is a bug.
 - Changing it POSTs `/api/trust/visibility`, shows "Saving…" while in flight, then a "Saved" confirmation that clears itself after a few seconds. After reload the chosen value is still selected.
-- Your own evidence list does **not** change when the setting changes — that is correct, and the sentence under the dropdown says so. Do not file it as a bug.
+- Your own evidence list above the control does **not** change when the setting changes — that is correct; the preview is where the effect shows. Do not file the unchanged list as a bug.
 - On failure (e.g. network cut), the dropdown reverts to the previous value and a short plain-language error appears under it, replacing the confirmation.
-- On **another member's** widget the row is plain text ("Visible to: …"), never a dropdown — the route is self-scope only.
+- On **another member's** widget the row is plain text ("Visible to: …"), never a dropdown, and no preview is shown — the route is self-scope only.
 
 **Result:** web ☐
 

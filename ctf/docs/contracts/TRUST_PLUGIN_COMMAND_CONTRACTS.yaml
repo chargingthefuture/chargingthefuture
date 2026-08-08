@@ -2,7 +2,7 @@ contracts:
   - pluginId: trust
     command: trust.summary.read
     version: 1.0.0
-    description: Read a member's trust panel (status, derived evidence, visibility). Implemented by GET /api/trust/user/self and GET /api/trust/user/[userId]; cross-user reads enforce the subject's trustVisibility.
+    description: Read a member's trust panel (status, derived evidence, visibility). Implemented by GET /api/trust/user/self and GET /api/trust/user/[userId]; cross-user reads enforce the subject's trustVisibility at one of two disclosure levels — full for public (and always for the owner or an admin), summary for restricted. Private refuses a non-owner non-admin read.
     inputSchema:
       subjectUserId:
         type: string
@@ -24,6 +24,12 @@ contracts:
         type: string
       updatedAt:
         type: string
+      trustDisclosure:
+        type: string
+        enum:
+          - full
+          - summary
+        description: Which projection the viewer received. summary carries headline counts only — no timestamps, no supporting detail, per-plugin items collapsed to a single breadth line.
     dataAccess:
       - trust_user_extension
       - trust_signal_snapshot
