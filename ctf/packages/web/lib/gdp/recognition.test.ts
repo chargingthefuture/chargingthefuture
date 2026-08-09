@@ -46,7 +46,7 @@ const {
   DEFAULT_CONTRIBUTION_WEIGHTS,
   RECOGNITION_SOURCES,
 } = await import('./recognition');
-const { PER_OCCURRENCE_ORIGIN_PLUGINS } = await import('lib/recurring-activity/types');
+const { PER_OCCURRENCE_ORIGIN_PLUGINS } = await import('lib/shared/recurring-activity-interface');
 
 beforeEach(() => {
   executed.length = 0;

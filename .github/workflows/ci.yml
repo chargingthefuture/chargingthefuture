@@ -529,6 +529,12 @@ jobs:
       - name: Check lockfile/package.json sync
         run: bash ctf/scripts/check-lockfile-sync.sh
 
+      # Strict plugin isolation (owner decision 2026-08-03): one plugin's code must not import
+      # another plugin's code. Cross-plugin capability use goes through the narrow
+      # lib/shared/*-interface.ts modules only.
+      - name: Run plugin boundary gate
+        run: node ctf/scripts/check-plugin-boundaries.mjs
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --dir ctf
 

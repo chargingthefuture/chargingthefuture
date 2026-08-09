@@ -1,5 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
-import { cadenceMonthlyFactorSql } from 'lib/recurring-activity/types';
+import { cadenceMonthlyFactorSql } from 'lib/shared/recurring-activity-interface';
 import {
   DEFAULT_CONTRIBUTION_WEIGHTS,
   FREE_CODE,

@@ -5,7 +5,7 @@ import {
   markUnlockIncentiveGranted,
   markUnlockRewardWithheld,
 } from './repository';
-import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/repository';
+import { insertServiceCreditsAudit, mintGrant } from 'lib/shared/credits-interface';
 import { reportError } from 'lib/observability/report';
 import type { UnlockSubmission } from './types';
 
