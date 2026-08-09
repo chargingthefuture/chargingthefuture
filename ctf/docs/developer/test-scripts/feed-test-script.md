@@ -26,7 +26,7 @@
 
 1. **Seed is clean.** Run `pnpm --dir ctf seed:demo`. Confirm the command exits without errors and the app starts. web ☐
 
-2. **Commons home loads.** Sign in as a member. Navigate to the Survivor Hub home. The feed timeline renders with at least one item (announcement, question, or community post) and no unhandled error is shown. web ☐
+2. **Commons home loads.** Sign in as a member. Navigate to the Commons home. The feed timeline renders with at least one item (announcement, question, or community post) and no unhandled error is shown. web ☐
 
 3. **Admin page loads.** Sign in as an admin. Navigate to `/admin/feed-announcements`. The page renders with a feed config panel and an announcement list. No 404 or 500. web ☐
 
@@ -44,7 +44,7 @@
 **Precondition:** Signed in as a member. Seed has run (`pnpm --dir ctf seed:demo`).
 
 **Steps:**
-1. Navigate to the Survivor Hub home (the Commons).
+1. Navigate to the Commons home.
 2. Observe the default feed — all channels.
 3. Use the channel filter to switch to **Announcements**.
 4. Switch to **Questions**.
@@ -96,6 +96,8 @@
 2. Confirm the card uses the accent color `#84CC16` and Lucide icons (Megaphone or equivalent), not emoji icons.
 3. Confirm there is no "GetStream ⚡" badge anywhere on the card.
 4. If the announcement has a linked plugin slug, confirm the card body contains an "Open \<Plugin\>:" link pointing to `https://app.chargingthefuture.com/apps/<slug>`.
+5. Confirm the name on the card reads **Farah** — not "Survivor Hub" — and that the shield "Official" badge still sits beside it (added 2026-08-09). The name says who wrote it, the badge says it is official; both must be present.
+6. Confirm the round avatar on the card reads **F**, the first letter of that name, and that no card anywhere in the stream shows the old fixed **SH** glyph. Scroll a peer post into view and confirm its avatar is likewise the first letter of its author's handle.
 
 **Expected:**
 - Card matches the design spec: `#84CC16` accent, Lucide icons, no badge.
@@ -405,7 +407,7 @@
 **Precondition:** Signed out completely.
 
 **Steps:**
-1. Navigate to the Survivor Hub home (or call `GET /api/feed/public/community`).
+1. Navigate to the Commons home (or call `GET /api/feed/public/community`).
 2. Observe what is shown.
 3. Send more than 30 requests to `GET /api/feed/public/community` within one minute from the same IP.
 

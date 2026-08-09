@@ -24,7 +24,7 @@
 > surfaces live in `ctf-feed-feature-inventory.md` /
 > `ctf-survivor-hub-chat-feature-inventory.md`.
 >
-> **`@comic` already exists** as a defined persona in the Survivor Hub inventory (a
+> **`@comic` already exists** as a defined persona in the Commons (Hub Home) inventory (a
 > hub-owned assistive bot that introduces survivor stories, gives onboarding nudges, and
 > routes users to plugins). This document **extends** that persona from a navigation
 > router into a **conversational Q&A assistant** backed by Rasa + Ollama. It does not
@@ -125,7 +125,7 @@ design that this plan unifies:
    client-side `getActionForText()` keyword→plugin navigation (`ctf-home-bot`, "I'm still
    learning…" fallback, localStorage history). **Navigation only, not Q&A.** The Hub
    consolidation already calls for replacing this hardcoded router with Feed-backed data.
-4. **`@comic` persona + `hub_bots` design** — defined in the Survivor Hub inventory
+4. **`@comic` persona + `hub_bots` design** — defined in the Commons (Hub Home) inventory
    (persona, `hub_bots` table, deterministic seed, DM wiring). **But** the consolidation
    dropped the `hub_*` tables and **none exist in schema** — so the persona is real, its
    backing tables are not.
@@ -133,7 +133,7 @@ design that this plan unifies:
 ## Scope and Boundary
 
 - Subsystem name: `comic`. Bot handle: `@comic`.
-- Surfaced inside: the unified Hub/Feed chat (web `/apps/feed` → Survivor Hub homepage;
+- Surfaced inside: the unified Hub/Feed chat (web `/apps/feed` → the Commons homepage;
   Android `packages/mobile/src/features/feed`).
 - Owned data layer: `comic_*` conversation/training/rating tables + (target) a Rasa tracker
   store. `llm_inference_log` and `feed_answer_ratings` are **not** reused (their FKs target the

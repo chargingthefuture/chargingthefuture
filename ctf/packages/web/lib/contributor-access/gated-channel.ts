@@ -6,6 +6,7 @@ import {
   GATED_STREAM_CHANNEL_ID,
   GATED_STREAM_CHANNEL_TYPE,
 } from './gated-channel-shared';
+import { OFFICIAL_SENDER_LABEL } from 'lib/hub/constants';
 
 // Server-side Stream helpers for the single gated contributor channel. Mirrors lib/feed/stream.ts
 // exactly (same credential resolver — demo mode selects the *_STAGING app — same create/watch
@@ -61,7 +62,7 @@ export async function ensureGatedChannel(): Promise<boolean> {
   const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) return false;
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
-  await streamClient.upsertUser({ id: GATED_SYSTEM_USER_ID, name: 'Survivor Hub' });
+  await streamClient.upsertUser({ id: GATED_SYSTEM_USER_ID, name: OFFICIAL_SENDER_LABEL });
   await createOrWatchGatedChannel(streamClient);
   return true;
 }
@@ -79,7 +80,7 @@ export async function syncGatedChannelMembership(): Promise<GatedChannelSyncResu
   if (!streamConfig) return null;
   const targets = await listChannelMembershipTargets();
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
-  await streamClient.upsertUser({ id: GATED_SYSTEM_USER_ID, name: 'Survivor Hub' });
+  await streamClient.upsertUser({ id: GATED_SYSTEM_USER_ID, name: OFFICIAL_SENDER_LABEL });
   const channel = await createOrWatchGatedChannel(streamClient);
 
   const eligibleIds = targets.eligibleUserIds.map(streamMemberId);

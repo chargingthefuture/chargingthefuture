@@ -199,6 +199,11 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-08-09: **"Survivor Hub" retired from the Unlock copy (owner decision).** The web submission
+  view said "To unlock full access to Survivor Hub", and the mobile screen said "Survivor Hub uses
+  Quora profile verification". Both now say **Skills Economy** — the product's actual name in the
+  brand hierarchy, which "Survivor Hub" never was. This finishes the sweep the 2026-08-03 approved-
+  card fix started on this surface. Copy only; no route, schema, or contract change.
 - 2026-08-03: **Approved card drops "Hub" (owner report).** The verification approved card said
   "Welcome to the Survivor Hub!" with a "Continue to Hub" button. Per the brand lexicon, the card
   title now reads "Welcome to Skills Economy (SE)" (the first-meeting form of the product name,

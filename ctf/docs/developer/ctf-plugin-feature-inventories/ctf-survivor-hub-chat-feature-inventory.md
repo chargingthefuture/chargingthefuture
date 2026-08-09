@@ -1,4 +1,4 @@
-# Survivor Hub Feature Inventory (CTF Rewrite)
+# Commons (Hub Home) Feature Inventory (CTF Rewrite)
 
 ## Consolidation Decision (2026-05-31): Survivor Hub absorbs Feed
 
@@ -49,7 +49,7 @@
 
 - Rewrite target only: `ctf/`. Legacy `platform/` is reference-only.
 - Plugin slug: `hub` (the homepage at `/`; not a separately navigable app tile).
-- Hub owns the unified Survivor Hub home/landing experience: app shell, the single blended
+- Hub owns the unified Commons home/landing experience: app shell, the single blended
   `community` channel, live hero stats, and the plugin grid.
 - Data layer: the Hub channel is backed by the Feed model (`feed_items` + `lib/feed/inference.ts`)
   as the single source of truth — see the Consolidation Decision above. The Hub does not own a
@@ -59,7 +59,7 @@
 
 ## Intent and Outcome
 
-The Survivor Hub is the primary entry point of CTF for both unauthenticated visitors and authenticated survivors. It provides the home shell, one blended publicly-viewable `community` channel (interleaving admin-only announcements, AI Q&A, and peer-to-peer community posts), the live hero stats, and the plugin grid. Hub is the canonical "home" route at `/`; opening a plugin moves the user into that plugin's own scope. This is deliberately not social media: peer-to-peer posting is the only user-authored surface, kept economy-scoped. Separate channels, direct messages, and system bots are deferred (see Gaps) — the MVP is one channel.
+The Commons is the primary entry point of CTF for both unauthenticated visitors and authenticated survivors. It provides the home shell, one blended publicly-viewable `community` channel (interleaving admin-only announcements, AI Q&A, and peer-to-peer community posts), the live hero stats, and the plugin grid. Hub is the canonical "home" route at `/`; opening a plugin moves the user into that plugin's own scope. This is deliberately not social media: peer-to-peer posting is the only user-authored surface, kept economy-scoped. Separate channels, direct messages, and system bots are deferred (see Gaps) — the MVP is one channel.
 
 ## User Features
 
@@ -68,7 +68,7 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 1. Four-column layout on `/apps`: icon rail (72px), left sidebar (240px), main content (flex), right rail (280px).
 2. Section toggle between **Chat** and **Apps** controlled by icon rail buttons; section state is shell-local.
 3. Right rail renders auth-provider username/display name for signed-in users and a sign-in CTA for unsigned visitors.
-4. Right rail "About Survivor Hub" section with chat-first copy that points members to ask in the chat (no plugin-count framing).
+4. Right rail "About Skills Economy" section with chat-first copy that points members to ask in the chat (no plugin-count framing).
 5. Right rail no longer shows a "Ready/Active Apps" list (removed 2026-06-18) — apps are reached via the Apps section; the "· N ready apps" line was also dropped from the signed-in profile card.
 6. Sign-in and Create-Account CTAs visible in icon rail and right rail for unsigned visitors.
 7. Hero banner ("Free to join · End-to-end encrypted") visible to unsigned visitors.
@@ -78,12 +78,12 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 ### Hub Chat (the blended `community` channel)
 
 1. Hero banner with live stats from the platform-owned GDP snapshot table: member count, GDP value (USD), opportunity value (target GDP minus current GDP).
-2. Hero banner copy adapts: "Welcome to Survivor Hub" for unsigned visitors; "Good morning, {displayName} — your network is active." for signed-in users.
+2. Hero banner copy adapts: "Welcome to Skills Economy" for unsigned visitors; "Good morning, {displayName} — your network is active." for signed-in users.
 3. One blended stream interleaving admin-only announcements, AI Q&A answers, and peer-to-peer community posts. History loaded via `GET /api/hub/messages` (backed by `listFeedTimeline` over `feed_items`), polled while the shell is mounted.
 4. Sending from the input creates a peer-to-peer community post via `POST /api/hub/messages` (backed by `createFeedCommunityPost`, CSRF-guarded); dedup on display by `(from, sender, text, time)` tuple.
 5. AI Q&A uses the Feed inference pipeline (`lib/feed/inference.ts`, consent-gated). The hardcoded `getActionForText()` keyword routing has been **removed** (2026-07-16): it was wrongly attaching an "Open <Plugin>" action button to any peer post whose body happened to contain a keyword like "economy"/"housing", making it look as if the author had linked a plugin. Action buttons now come only from an explicit source — the local concierge reply sets its own `actionLabel`/`actionSlug`; a peer community post never carries an inferred action, and members cannot attach one.
 6. One-tap suggestion chips render persistently above the composer (whether or not the chat already has messages). Each chip's behavior is explicit (`lib/concierge/hub-suggestions.ts`), so a tap always does the right thing and never merely pre-fills the composer (#471): a **navigate** chip ("Show housing options" → LightHouse, "Open the provider directory" → Foundation, "Browse the skills directory" → Directory, "Check my Service Credits" → ServiceCredits) opens that plugin directly (`/apps/<slug>`) — it is an action, not a question; an **ask** chip ("What is the GDP tracker showing this week?") routes the question to the `@comic` AI assistant via `askComic`, which prepends the `@comic` mention (the server only routes a mentioned body) and shows the "Reviewing for safety" pending card immediately, then the human-approved answer when it is ready. The local keyword concierge (`lib/concierge/resolver`, `sendConciergeAsk`) remains available for free-text asks but no longer backs the visible chip row.
-7. Announcements render as official Survivor Hub items; community posts render with their author.
+7. Announcements render as official items on their own card, signed with the operator's name (Farah, `OFFICIAL_SENDER_LABEL` in `lib/hub/constants.ts`) and marked official by the shield badge — the name says who wrote it, the badge says it is official. Community posts render with their author. Every avatar glyph, official or peer, is the first letter of that sender's name; there is no fixed house glyph.
 8. Connection state visible as footer status (connecting, live, fallback).
 9. Unsigned visitors see a sign-in gate in place of the input; the channel itself is publicly readable when `feed_render_config.is_public` is TRUE (public read enforcement is a tracked follow-up). The gate is one short line under the posts explaining that signing in — free — is what lets you post, reply, and reach housing, work, and safety resources. It carries no button of its own: signing in is the "Sign in" button in the top bar (and the outline "Sign In" in the right rail on wide screens), so the hero, the posts, and that line fit on one screen (2026-08-03).
 10. Signal-style quoted reply: each peer message shows a small "Reply" affordance. Tapping it sets the composer's "Replying to …" banner (a one-line quote preview + cancel X); sending while it is set posts the message with `replyToPostId` so it stores and renders a compact quoted block (author + ~120-char snippet) above its body. Backed by `feed_community_posts.reply_to_post_id`; the quote is resolved server-side into `HubMessage.quotedMessage`.
@@ -141,7 +141,7 @@ Feed routes that own the data layer remain under `/api/feed/*` (timeline, announ
 
 Web entry routes:
 
-- `GET /` — Survivor Hub home page (Next.js `app/page.tsx`, `CommunityShell` chat section).
+- `GET /` — Commons home page (Next.js `app/page.tsx`, `CommunityShell` chat section).
 - `GET /apps` — Hub home, Apps section (`app/apps/page.tsx`).
 
 ## Data Model and Storage Contracts
@@ -181,7 +181,7 @@ The previously-specified `hub_channels` / `hub_bots` / `hub_bot_routes` / `hub_d
   channel from `GET /api/hub/messages` (the same feed-backed timeline the web Hub uses, flattened to
   the `HubMessage` shape) and sends a peer-to-peer community post via `POST /api/hub/messages` with
   the `x-ctf-csrf: 1` header, mirroring the web CSRF handling. `HubHome` is the default surface in
-  the mobile app shell. Announcements render with the official Survivor Hub treatment; community
+  the mobile app shell. Announcements render with the official announcement treatment; community
   posts render with their author. The dead GetStream-based survivor-hub-chat mobile fixtures were
   removed. The single AI Assistant (`@comic`) surfaces — answer cards, the "Reviewing for safety"
   pending card, the `@comic` composer, consent, and ratings — are delivered separately in the comic
@@ -212,6 +212,26 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 
 ## Change Log
 
+- 2026-08-09 (latest): **"Survivor Hub" retired as a name, and the "SH" avatar glyph is gone
+  (owner decision).** The name was doing two unrelated jobs and was wrong at both. As the signature
+  on official posts it was an institution's name over first-person writing ("I will be hosting a
+  live Q&A"), which reads as an institution performing a personal voice. As a stand-in for the
+  product — "unlock full access to Survivor Hub", "one identity across Survivor Hub", "Survivor Hub
+  apps", "self-hosted inside Survivor Hub" — it named something that is not in the brand hierarchy
+  at all; the product is Skills Economy.
+  Official posts are now signed **Farah**, the operator, from the single shared
+  `OFFICIAL_SENDER_LABEL` in `lib/hub/constants.ts` (used by `app/api/hub/messages/route.ts`, the
+  `shell-chat-panel.tsx` fallback, and the Stream system user in
+  `lib/contributor-access/gated-channel.ts`), matching how Beacon already names her publicly.
+  Whether a post is official stays with the shield badge, not the name. Product-name copy became
+  **Skills Economy** across the account-data, Unlock, account hub, AI-consent and Chyme
+  lock-screen surfaces on both web and mobile.
+  The hardcoded **"SH"** avatar is deleted rather than renamed: both `avatarFromSender` and the
+  announcement card now take the first letter of whatever name they are given, so the avatar can
+  never disagree with the name beside it and there is no house glyph left to go out of date.
+  AI answers are untouched — they render through their own card and keep their own identity, so a
+  person is never credited with text a bot wrote. No route, schema, or contract change (the
+  `schema.sql` edits are comment-only, with `schema.demo.sql` regenerated).
 - 2026-08-09: **All Apps sort had nothing to sort by, so Recent and Most Used both showed A-Z
   (owner report).** The two counters that drive those orderings were only written by
   `handleAppSelect`, which fires when a member taps a card body — and a card tap only highlights
@@ -389,7 +409,7 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 ### Scope
 
 - Rewrite target: `ctf/packages/web`, `ctf/packages/mobile`, `ctf/schema.sql`, `ctf/docs/contracts`.
-- Surface: Survivor Hub home experience (`community-shell` + supporting APIs and schema).
+- Surface: Commons home experience (`community-shell` + supporting APIs and schema).
 - Canonical spec: `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-survivor-hub-chat-feature-inventory.md`.
 - Hub has no cross-plugin runtime dependency. See [112-platform-architecture-rules.mdc](../../../../.claude/rules/112-platform-architecture-rules.mdc).
 - 100% web↔Android parity is the baseline. See [105-web-android-feature-parity-rules.mdc](../../../../.claude/rules/105-web-android-feature-parity-rules.mdc). No phased rollouts.

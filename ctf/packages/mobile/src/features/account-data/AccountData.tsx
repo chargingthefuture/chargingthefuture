@@ -600,7 +600,7 @@ function EmptyState({ s, hasRetained }: { s: Styles; hasRetained: boolean }) {
       </View>
       <Text style={s.emptyTitle}>No personal data stored yet</Text>
       <Text style={s.emptySub}>
-        As you use Survivor Hub apps, any personal data they hold will appear here for you to see
+        As you use Skills Economy apps, any personal data they hold will appear here for you to see
         and delete.
       </Text>
       {hasRetained ? (

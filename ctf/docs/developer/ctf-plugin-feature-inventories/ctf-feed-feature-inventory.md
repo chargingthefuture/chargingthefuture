@@ -79,7 +79,7 @@ Architecture decisions in effect:
 1. Community support posts for peer-to-peer engagement (general, peer support, resource sharing, events).
 2. Threaded replies on community posts.
 3. Content moderation and rate limiting on post creation. Members are capped at 1,200 characters and 3 links per post (anti-spam in the publicly-readable Commons); admins get a higher cap (4,000 characters, 20 links) so the owner's detailed welcome/help posts are not blocked. The raw-HTML (`<>`) block applies to everyone.
-4. The Commons (Survivor Hub home chat) now opens a live Stream connection to this channel's `ctf-feed-community` Stream channel for real-time updates and typing indicators. `POST /api/hub/join` mints the credentials via `getFeedStreamCredentials(userId, displayName, 'community')` — the same channel and Stream identity (`feed-<userId>`) the Questions/Community Stream surfaces use. The post data itself stays in `feed_community_posts` (our database); Stream is the real-time signal only. See the Commons live-layer entry in `ctf-survivor-hub-chat-feature-inventory.md` and the quota note `ctf/docs/quota-impact/2026-06-21-commons-live-stream-layer.md`.
+4. The Commons (the hub home chat) now opens a live Stream connection to this channel's `ctf-feed-community` Stream channel for real-time updates and typing indicators. `POST /api/hub/join` mints the credentials via `getFeedStreamCredentials(userId, displayName, 'community')` — the same channel and Stream identity (`feed-<userId>`) the Questions/Community Stream surfaces use. The post data itself stays in `feed_community_posts` (our database); Stream is the real-time signal only. See the Commons live-layer entry in `ctf-survivor-hub-chat-feature-inventory.md` and the quota note `ctf/docs/quota-impact/2026-06-21-commons-live-stream-layer.md`.
 
 ### 1.5 Membership-Aware Personalization
 
@@ -351,6 +351,19 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-08-09: **Official posts are signed with the operator's name, and the "SH" avatar is gone
+  (owner decision).** `hubMessageAuthor` in `app/api/hub/messages/route.ts` labeled every
+  non-community item "Survivor Hub" — an institution's name over first-person writing. It now reads
+  the shared `OFFICIAL_SENDER_LABEL` (`lib/hub/constants.ts`), which is **Farah**, the operator,
+  matching how Beacon already names her publicly. The same constant backs the
+  `shell-chat-panel.tsx` sender fallback and the Stream system user in
+  `lib/contributor-access/gated-channel.ts`, so the official identity cannot drift between them.
+  Whether a post is official is still carried by the shield badge on the announcement card, not by
+  the name. The hardcoded **"SH"** avatar is deleted rather than renamed: `avatarFromSender` and the
+  announcement card both take the first letter of whatever name they are given, so no house glyph
+  can disagree with the name printed beside it. AI answers are unaffected — they render through
+  their own card branch and never used this label. Copy-and-label only: no route, schema, or
+  contract change.
 - 2026-08-05: **Member blocks enforced on the Commons timeline (issue #809 task 4).**
   `listFeedTimeline` now leaves out community posts authored by a member who is blocked (either
   direction) relative to the viewer, and the replies batch-loader applies the same filter, so a

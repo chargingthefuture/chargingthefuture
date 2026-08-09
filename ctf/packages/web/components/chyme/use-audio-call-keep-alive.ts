@@ -73,7 +73,7 @@ export function useAudioCallKeepAlive(active: boolean, title = 'Chyme audio room
     const mediaSession = typeof navigator !== 'undefined' ? navigator.mediaSession : undefined;
     if (mediaSession && typeof MediaMetadata !== 'undefined') {
       try {
-        mediaSession.metadata = new MediaMetadata({ title, artist: 'Survivor Hub' });
+        mediaSession.metadata = new MediaMetadata({ title, artist: 'Skills Economy' });
         mediaSession.playbackState = 'playing';
       } catch {
         // Some browsers throw on unsupported metadata fields — ignore.

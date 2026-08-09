@@ -119,6 +119,9 @@ not see this banner. On android the client Unlock gate lets a treatment member t
    home page (`/`), not the plugin navigator (`/apps`).
 4. On android, confirm the same "Welcome to Skills Economy (SE)" title (that card has no continue
    button).
+5. Before approval, on the submission screen: confirm the explanation says "To unlock full access to
+   Skills Economy" on web, and "Skills Economy uses Quora profile verification" on android — neither
+   should say "Survivor Hub" (name retired 2026-08-09).
 **Expected:** The approved card welcomes the member to Skills Economy (SE) and the web continue
 button goes to the Commons home so the label matches the destination. No "Hub" wording anywhere on
 the card.

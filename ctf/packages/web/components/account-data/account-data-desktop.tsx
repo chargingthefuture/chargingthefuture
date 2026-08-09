@@ -84,7 +84,7 @@ export function AccountDataDesktop({
           <Shield size={18} color={BRAND} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>Your Data &amp; Privacy</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>See and delete the data Survivor Hub holds across all services</div>
+            <div style={{ fontSize: 12, color: SUBTLE }}>See and delete the data Skills Economy holds across all services</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
             <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: SUBTLE, textTransform: 'uppercase' }}>Theme</span>
@@ -208,7 +208,7 @@ function EmptyState({ retained, tokens }: { retained: AccountService[]; tokens: 
       </div>
       <div style={{ fontSize: 22, fontWeight: 800, color: TEXT, marginBottom: 8 }}>No personal data stored yet</div>
       <div style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.7, maxWidth: 480, marginBottom: 28 }}>
-        As you use Survivor Hub apps, any personal data they hold will appear here — where you can see it and delete it on your own terms.
+        As you use Skills Economy apps, any personal data they hold will appear here — where you can see it and delete it on your own terms.
       </div>
       {retained.length > 0 ? (
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 16px', borderRadius: 12, background: `${BRAND}05`, border: `1px solid ${BRAND}15`, maxWidth: 560, width: '100%', textAlign: 'left' }}>
