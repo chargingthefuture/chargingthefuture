@@ -210,6 +210,32 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 
 ## Change Log
 
+- 2026-08-09: **Return on "Not now" no longer turns the AI Assistant on (#2158), plus two smaller
+  Commons fixes (#2156, #2160).** The first-use consent dialog for the AI Assistant treated Return as
+  "turn it on" no matter what had focus. That rule exists for a real reason — on a phone the soft
+  keyboard keeps focus in the chat composer, and without it a press of Return fell through to the
+  composer and re-opened the same dialog instead of answering it. But it also meant a member using a
+  keyboard could tab to "Not now", press Return, and grant consent to AI processing instead of
+  declining it. Return now leaves the press alone whenever a button inside the dialog already has
+  focus, so the browser fires that button's own click — "Not now" and the close button dismiss, the
+  confirm button confirms — and keeps the old behavior only when focus is outside the dialog, which is
+  the mobile case it was written for. Also: the "Got it" dismiss on the first-visit Commons notice now
+  sends the `x-ctf-csrf: 1` header like every other state-changing POST in the shell (the route checks
+  the Origin header rather than that one, so nothing was failing — this is consistency, so a later
+  switch to the header check cannot turn it into a dismiss that never sticks); and the notifications
+  panel now drops the result of a poll that lands after the member closes the panel, matching the
+  canceled-flag pattern used elsewhere in the shell. Web-only; no schema, route, or contract change.
+- 2026-08-09: **Removed the concierge slug-remapping layer that never ran (#2152, #2153).**
+  `lib/concierge/intents.ts` carried a `SLUG_OVERRIDES` map and a `conciergeRouteSlug()` helper meant
+  to translate a display slug into the registry slug that owns the route. Two things were wrong with
+  it. The map's only key was `lighthouse-safety`, which is not the slug of any intent in
+  `CONCIERGE_INTENTS`, so the lookup could never hit. And `lib/concierge/resolver.ts` built each
+  `ConciergeMatch` from `intent.slug` directly and never called the helper, so even a valid key would
+  have been ignored. Every one of the 16 intent slugs is already a real slug in the plugin registry
+  (`lib/plugins/repository.ts`), so nothing needs remapping: the map and the helper are deleted rather
+  than wired up, and the file header now says plainly that an intent's `slug` **is** the registry slug,
+  with no translation step to catch a typo. No member-visible change — routing behaves exactly as it
+  did, because the removed code never affected it. Web-only; no schema, route, or contract change.
 - 2026-08-03: **Removed the `GET /api/hub/bots` stub and corrected the channel/DM descriptions.** The
   route answered every caller with a hardcoded empty list behind a `TODO`, and no caller existed — a
   documented capability the product did not have. Deleted the route and its `HubBotInfo` /

@@ -479,14 +479,19 @@ The server returns an error (400 or 409 — the claim is not pending). The exist
 **Precondition:** A member already has one confirmed GitHub star with `credits_granted > 0`. A second GitHub star submission from the same member exists in the queue (submitted while the first was still pending, or forced into the DB for testing).
 
 **Steps:**
-1. Find the second GitHub star claim for that member in the admin queue.
-2. Confirm it.
+1. Open `/apps/contributions` as any member and write down the "Stars" number on the drive progress bar.
+2. Find the second GitHub star claim for that member in the admin queue.
+3. Confirm it.
+4. Reload `/apps/contributions` and read the "Stars" number again.
 
 **Expected:**
 - The claim status becomes "confirmed".
 - `creditsGranted` is 0.
 - The mint path is not called (no new `creditGovernanceEventId` from this claim).
 - A review note or similar record explains the duplicate star rule.
+- The "Stars" number on the progress bar is **unchanged** from step 1. The bar counts how many
+  members starred, not how many star rows exist, so a member's second confirmed star must not move
+  it. (A rise of 1 here is the bug fixed in #2143 coming back.)
 
 **Result:** web ☐
 
