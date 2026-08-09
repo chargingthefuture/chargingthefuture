@@ -827,7 +827,7 @@ CREATE TABLE IF NOT EXISTS feed_render_config (
   render_mode TEXT NOT NULL,
   max_timeline_page_size INTEGER NOT NULL DEFAULT 100,
   enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb,
-  -- Survivor Hub consolidation: the blended channel is publicly viewable (read-only)
+  -- Commons consolidation: the blended channel is publicly viewable (read-only)
   -- to unauthenticated visitors when TRUE. Public-read enforcement route is tracked
   -- as a follow-up; this flag is the canonical config the admin/seed sets.
   is_public BOOLEAN NOT NULL DEFAULT TRUE,
@@ -2341,7 +2341,7 @@ CREATE INDEX IF NOT EXISTS idx_announcement_reactions_announcement
   ON announcement_reactions(announcement_id);
 
 -- Replies on official announcements. Mirrors feed_community_replies but keyed on the announcement:
--- a member can reply to an official Survivor Hub announcement, and the replies group under that
+-- a member can reply to an official announcement, and the replies group under that
 -- announcement as a thread. author_username is captured at reply time so the thread can show the
 -- member's handle without a second lookup. Deleting the announcement cascades its replies.
 CREATE TABLE IF NOT EXISTS announcement_replies (
@@ -2472,7 +2472,7 @@ ON CONFLICT (plugin_slug) DO UPDATE SET
   is_visible         = EXCLUDED.is_visible,
   updated_at         = NOW();
 
--- Feed + Announcements was consolidated into the Survivor Hub and is no longer a
+-- Feed + Announcements was consolidated into the Commons and is no longer a
 -- navigable app: its data layer (the feed_* tables + /api/feed/*) and its admin
 -- page at /admin/feed-announcements remain, but it is not a plugin tile/route.
 -- Remove any registry row left from when it was seeded as a visible app so the

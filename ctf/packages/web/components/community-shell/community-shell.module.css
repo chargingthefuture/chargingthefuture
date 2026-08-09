@@ -527,7 +527,7 @@
   background: rgba(14, 165, 233, 0.18);
 }
 
-/* Official Survivor Hub announcement card. Emerald treatment + a left accent + a shield "Official"
+/* Official announcement card. Emerald treatment + a left accent + a shield "Official"
    badge so an official post reads as a distinct, must-see message instead of blending into the
    purple peer bubbles or the cyan AI card. Mirrors the comic card's header structure. */
 .announcementCard {
@@ -2105,7 +2105,7 @@
 }
 
 /* ─── AI Assistant (@comic) — answered card ──────────────────────────────── */
-/* Translated from the locked Survivor Hub design (cyan #0EA5E9 accent, Sparkles, AI Q&A badge). */
+/* Translated from the locked Commons design (cyan #0EA5E9 accent, Sparkles, AI Q&A badge). */
 .comicCard {
   margin-bottom: 16px;
   padding: 20px;

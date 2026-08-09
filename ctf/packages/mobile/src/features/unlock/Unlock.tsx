@@ -89,7 +89,7 @@ function PublicView({ s, t, accent }: { s: Styles; t: ThemeTokens; accent: strin
         <Text style={{ color: accent }}>the verification process</Text>
       </Text>
       <Text style={[s.bodyText, { marginBottom: 20 }]}>
-        Survivor Hub uses Quora profile verification to confirm members are real people. This protects the community.
+        Skills Economy uses Quora profile verification to confirm members are real people. This protects the community.
       </Text>
       {[
         { n: '1', title: 'Create a free account', desc: 'Sign up in 60 seconds.' },

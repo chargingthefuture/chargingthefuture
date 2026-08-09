@@ -246,7 +246,7 @@ function MobileEmpty({ retained, tokens }: { retained: AccountService[]; tokens:
       </div>
       <div style={{ fontSize: 19, fontWeight: 800, color: TEXT, marginBottom: 8 }}>No personal data stored yet</div>
       <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, marginBottom: 20 }}>
-        As you use Survivor Hub apps, any personal data they hold will appear here for you to see and delete.
+        As you use Skills Economy apps, any personal data they hold will appear here for you to see and delete.
       </div>
       {retained.length > 0 ? (
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '12px', borderRadius: 12, background: `${BRAND}05`, border: `1px solid ${BRAND}15`, width: '100%', textAlign: 'left' }}>

@@ -14,7 +14,7 @@ type ComicConsentModalProps = {
 // First-use AI-processing consent (the llm_consent_granted gate). Translated from the locked
 // design's AIConsent mockup into the app's CSS-module approach. Self-hosted, no third parties.
 const POINTS = [
-  { icon: Server, title: 'Runs on our own servers', desc: 'The AI Assistant is self-hosted inside Survivor Hub. Your questions never leave our infrastructure.' },
+  { icon: Server, title: 'Runs on our own servers', desc: 'The AI Assistant is self-hosted inside Skills Economy. Your questions never leave our infrastructure.' },
   { icon: EyeOff, title: 'No third parties', desc: "We don't send your messages to outside AI companies, advertisers, or data brokers — ever." },
   { icon: ShieldCheck, title: 'A teammate reviews answers', desc: 'Sensitive answers are checked by a trained human before they reach you.' },
   { icon: Lock, title: 'Your safety comes first', desc: 'The assistant will never reveal your location or identity, or ask you to.' },

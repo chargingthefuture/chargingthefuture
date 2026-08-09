@@ -31,7 +31,7 @@ export type HubMessage = {
   displayName: string;
   avatarUrl: string | null;
   // Which feed channel this message came from. `community` for peer posts (the common case),
-  // `announcement` for official Survivor Hub posts, `question` for AI Q&A items.
+  // `announcement` for official operator posts, `question` for AI Q&A items.
   kind: HubMessageKind;
   // The announcement's own title, rendered as a heading above the body on the official card.
   // Null for peer posts and AI answers (their `text` is the whole message).

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { reportError } from 'lib/observability/report';
 import type { HubMessagesResponse, HubMessage } from 'lib/hub/types';
+import { OFFICIAL_SENDER_LABEL } from 'lib/hub/constants';
 import type { FeedTimelineItem } from 'lib/feed/types';
 import {
   FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH,
@@ -21,9 +22,9 @@ import { requireHubAccess } from '../_lib';
 import { ensureMutationCsrf } from '../../feed/_lib';
 import { failureReason } from 'lib/errors/failure';
 
-// Survivor Hub consolidation: the Hub home channel is backed by the Feed model
-// (feed_items) as the single source of truth. The channel is one blended stream
-// interleaving admin announcements, AI Q&A, and peer-to-peer community posts.
+// The Commons home channel is backed by the Feed model (feed_items) as the single source of truth.
+// The channel is one blended stream interleaving admin announcements, AI Q&A, and peer-to-peer
+// community posts.
 
 function hubMessageAuthor(
   item: FeedTimelineItem,
@@ -32,10 +33,10 @@ function hubMessageAuthor(
   const userId = isCommunity ? item.community?.authorUserId ?? 'hub-system' : 'hub-system';
   // This route is gated to signed-in members, so a peer post leads with the
   // author's @username when we captured it at post time. Posts created before
-  // usernames were stored (and official announcements/AI answers) fall back to
-  // the pseudonymous "Community member" / "Survivor Hub" labels.
+  // usernames were stored fall back to the pseudonymous "Community member" label; official
+  // announcements are signed with the operator's name (see OFFICIAL_SENDER_LABEL).
   const username = isCommunity ? item.community?.authorUsername ?? null : null;
-  const displayName = isCommunity ? feedAuthorHandle(username, userId) : 'Survivor Hub';
+  const displayName = isCommunity ? feedAuthorHandle(username, userId) : OFFICIAL_SENDER_LABEL;
   return { userId, username, displayName };
 }
 

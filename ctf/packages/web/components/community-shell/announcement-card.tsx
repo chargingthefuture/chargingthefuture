@@ -11,8 +11,9 @@ import styles from './community-shell.module.css';
 import { NoticeParagraphs } from './notice-paragraphs';
 
 type AnnouncementCardProps = {
-  // The posting authority — almost always "Survivor Hub". Passed in so the card matches whatever
-  // label the stream resolved rather than hardcoding it.
+  // Who posted it — the operator's name for an official announcement. Passed in so the card matches
+  // whatever label the stream resolved rather than hardcoding it. Whether the post is official is
+  // carried by the shield badge, not by this name.
   senderName: string;
   // The announcement heading, shown bold above the body. Null when the announcement has no title.
   title: string | null;
@@ -198,7 +199,14 @@ function AnnouncementEngagement({
   );
 }
 
-// Official Survivor Hub announcement, rendered as a distinct card (emerald treatment, shield
+// First letter of whoever posted the announcement, for the card's round avatar.
+function announcementAvatarGlyph(senderName: string): string {
+  const trimmed = senderName.trim();
+  const handle = trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
+  return handle.charAt(0).toUpperCase() || '?';
+}
+
+// Official announcement, rendered as a distinct card (emerald treatment, shield
 // "Official" badge) so it stands out from peer chat bubbles and AI answers instead of blending into
 // the purple stream. Members can react to an announcement with the same fixed emoji quick set as a
 // peer post, and reply to it — the replies group under the announcement as a thread (loaded on
@@ -284,7 +292,9 @@ export function AnnouncementCard({
       data-announcement-id={announcementId ?? undefined}
     >
       <div className={styles.announcementHead}>
-        <div className={styles.announcementAvatar} aria-hidden="true">SH</div>
+        {/* Derived from the sender's name rather than a fixed pair of letters, so the avatar can
+            never disagree with the name printed beside it (it used to read a hardcoded "SH"). */}
+        <div className={styles.announcementAvatar} aria-hidden="true">{announcementAvatarGlyph(senderName)}</div>
         <div className={styles.announcementHeadText}>
           <div className={styles.announcementTitleRow}>
             <span className={styles.announcementName}>{senderName}</span>

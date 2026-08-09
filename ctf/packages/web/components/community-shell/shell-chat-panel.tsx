@@ -27,14 +27,16 @@ import type { HubSuggestionChip } from '../../lib/concierge/hub-suggestions';
 import styles from './community-shell.module.css';
 import { feedPostLength } from '../../lib/feed/normalize';
 import { FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH, FEED_MAX_COMMUNITY_POST_LENGTH } from '../../lib/feed/constants';
+import { OFFICIAL_SENDER_LABEL } from '../../lib/hub/constants';
 
-// Avatar glyph for a chat sender: "SH" for the Survivor Hub system/AI, otherwise the first letter of
-// the member's handle. Keeps each post attributable instead of every row reading as the same "SH".
+// Avatar glyph for a chat sender: the first letter of the sender's name, whoever they are. The
+// official house account used to get a hardcoded "SH" here; now that official posts are signed with
+// the operator's own name, there is no special case left to make — the same rule covers every row
+// and keeps each post attributable (owner decision, 2026-08-09).
 function avatarFromSender(label: string): string {
   const trimmed = label.trim();
-  if (!trimmed || trimmed.toLowerCase() === 'survivor hub') return 'SH';
   const handle = trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
-  return handle.charAt(0).toUpperCase() || 'SH';
+  return handle.charAt(0).toUpperCase() || '?';
 }
 
 // One unified stream entry: either a peer/hub chat message or an AI Assistant (@comic) Q&A item.
@@ -690,7 +692,7 @@ function StreamEntryView({ entry, showDivider, ownHandle, currentUser, inputRef,
   // The author shown above the bubble. Your own messages are attributed to you (handle when we have
   // it) so every message has a visible author, not just other people's — peer posts were rendering
   // with no name on the sender's own side.
-  const senderName = msg.from === 'user' ? ownHandle : (msg.senderLabel ?? 'Survivor Hub');
+  const senderName = msg.from === 'user' ? ownHandle : (msg.senderLabel ?? OFFICIAL_SENDER_LABEL);
 
   // An official announcement renders as its own distinct card (badge + optional title), not a chat
   // bubble, so it stands apart from peer posts and AI answers.

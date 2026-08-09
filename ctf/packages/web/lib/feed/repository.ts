@@ -2487,7 +2487,7 @@ export async function toggleAnnouncementReaction(
       throw new Error('announcement_not_found');
     }
     // Same rule as peer posts: you may not react to an announcement you authored. Members are never
-    // the author of a Survivor Hub announcement, so this only guards the owner reacting to their own.
+    // the author of an official announcement, so this only guards the owner reacting to their own.
     if (announcement.rows[0].created_by_user_id === userId) {
       throw new Error('cannot_react_to_own_post');
     }

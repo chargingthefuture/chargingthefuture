@@ -92,7 +92,7 @@ export type FeedCommunityDetail = {
   reactions: FeedReactionSummary[];
 };
 
-// One reply on an official announcement. Members can reply to a Survivor Hub announcement; the
+// One reply on an official announcement. Members can reply to an official announcement; the
 // replies group under it as a thread. author_username is captured at reply time so the thread can
 // render the member's handle without a second lookup.
 export type FeedAnnouncementReply = {
