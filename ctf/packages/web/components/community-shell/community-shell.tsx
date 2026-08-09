@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
-import { SlidersHorizontal, Settings } from 'lucide-react';
+import { SlidersHorizontal, Settings, MessagesSquare, LayoutGrid } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import type { TrustUserExtension } from '../../lib/trust/types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
@@ -193,24 +193,34 @@ function MobileTopBar({ section, onSectionChange, isAuthenticated, isAdmin, sign
       {/* The fundraiser gift reminder used to sit here, between the mark and the tabs. On a 375px
           phone that made the bar too crowded, so it moved down into the Commons chip row after the
           🔔 chip (owner directive, 2026-08-09) — see ConciergeChipRail in shell-chat-panel.tsx. */}
+      {/* Section switch. These were word buttons ("Commons" / "Apps") sized by their text, so they
+          stood shorter than the 38px square icon controls beside them and the bar read as two
+          different rows of boxes. They are icons now (owner directive, 2026-08-09) so every control
+          in the bar is the same square. The words are not lost: the icon carries an aria-label and
+          a tooltip, and each destination names itself on arrival — the Apps page heads "All Apps",
+          and the Commons page now leads its channel row with a "Commons" label. */}
       <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
         <button
           type="button"
           role="tab"
           aria-selected={section === 'chat'}
+          aria-label="Commons"
+          title="Commons — the community channels"
           className={sectionTabClass(section === 'chat')}
           onClick={() => onSectionChange('chat')}
         >
-          Commons
+          <MessagesSquare size={18} aria-hidden="true" />
         </button>
         <button
           type="button"
           role="tab"
           aria-selected={section === 'apps'}
+          aria-label="Apps"
+          title="Apps — every app on the platform"
           className={sectionTabClass(section === 'apps')}
           onClick={() => onSectionChange('apps')}
         >
-          Apps
+          <LayoutGrid size={18} aria-hidden="true" />
         </button>
       </div>
       {/* Admins reach /admin straight from the top bar on phones — the left rail
@@ -271,31 +281,38 @@ function ChannelSwitchRow({ channels, activeChannel, onChannelSelect, onLockedCh
   const hasGatedChannel = channels.some((ch) => ch.slug === GATED_CHANNEL_SLUG);
 
   return (
-    <div className={styles.channelSwitchRow} role="tablist" aria-label="Channels">
-      {channels.map((ch) => (
-        <button
-          key={ch.slug}
-          type="button"
-          role="tab"
-          aria-selected={fallbackSlug === ch.slug}
-          className={channelSwitchClass(fallbackSlug === ch.slug)}
-          onClick={() => onChannelSelect(ch.slug)}
-        >
-          #{ch.slug}
-        </button>
-      ))}
-      {!hasGatedChannel ? (
-        <button
-          type="button"
-          className={`${styles.channelSwitchBtn} ${styles.channelSwitchBtnLocked}`}
-          onClick={onLockedChannelClick}
-          aria-haspopup="dialog"
-          title="Weavers of the Commons"
-        >
-          <WeaversBadge size={13} />
-          <span>#{GATED_CHANNEL_SLUG}</span>
-        </button>
-      ) : null}
+    <div className={styles.channelSwitchBar}>
+      {/* Page name, sitting left of the channel chips. With the top-bar section switch now icon-only,
+          this is what tells a member which page they landed on — the Commons — the same way the Apps
+          page announces itself with its "All Apps" heading. It is a label, not a control: no chip
+          chrome, and it stays outside the tablist so screen readers still read exactly two tabs. */}
+      <span className={styles.channelSwitchPageLabel}>Commons</span>
+      <div className={styles.channelSwitchRow} role="tablist" aria-label="Channels">
+        {channels.map((ch) => (
+          <button
+            key={ch.slug}
+            type="button"
+            role="tab"
+            aria-selected={fallbackSlug === ch.slug}
+            className={channelSwitchClass(fallbackSlug === ch.slug)}
+            onClick={() => onChannelSelect(ch.slug)}
+          >
+            #{ch.slug}
+          </button>
+        ))}
+        {!hasGatedChannel ? (
+          <button
+            type="button"
+            className={`${styles.channelSwitchBtn} ${styles.channelSwitchBtnLocked}`}
+            onClick={onLockedChannelClick}
+            aria-haspopup="dialog"
+            title="Weavers of the Commons"
+          >
+            <WeaversBadge size={13} />
+            <span>#{GATED_CHANNEL_SLUG}</span>
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

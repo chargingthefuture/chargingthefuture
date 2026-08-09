@@ -72,6 +72,7 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 5. Right rail no longer shows a "Ready/Active Apps" list (removed 2026-06-18) — apps are reached via the Apps section; the "· N ready apps" line was also dropped from the signed-in profile card.
 6. Sign-in and Create-Account CTAs visible in icon rail and right rail for unsigned visitors.
 7. Hero banner ("Free to join · End-to-end encrypted") visible to unsigned visitors.
+8. The phone-width top bar switches sections with two icon buttons — a speech-bubbles icon for the Commons and a grid icon for Apps — the same 38px square as the admin, help and settings buttons beside them, so the whole bar is one row of equal boxes. Each button names itself for screen readers and on hover ("Commons", "Apps"). Once a member is there, the page says which one it is: the Apps page heads "All Apps", and the Commons channel row starts with the word "Commons" ahead of the `#general` chip.
 
 ### Hub Chat (the blended `community` channel)
 
@@ -210,6 +211,22 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 
 ## Change Log
 
+- 2026-08-09: **One row of equal boxes in the phone top bar, and the Commons page says its own name
+  (owner report).** The "Commons" and "Apps" section tabs were word buttons sized by their text
+  (`padding: 6px 9px`), so they stood noticeably shorter than the 38px square admin, help and
+  settings buttons next to them and the bar read as two mismatched rows. Both tabs are icons now
+  (`MessagesSquare` for the Commons, `LayoutGrid` for Apps, from `lucide-react`) in the same 38px
+  square with the same surface, border and radius, so every control in the bar matches. Nothing is
+  lost by dropping the words: each button keeps an `aria-label` and a hover title, `role="tab"` and
+  `aria-selected` are unchanged, and each destination announces itself on arrival — the Apps page
+  already heads "All Apps", and `ChannelSwitchRow` now leads with a plain "Commons" label before the
+  `#general` chip (new `.channelSwitchBar` wrapper carrying the row's padding, plus
+  `.channelSwitchPageLabel`, deliberately without pill chrome so it does not read as a tappable
+  channel). The label sits outside the `role="tablist"` element, so screen readers still count only
+  the real channel tabs. Also hyphenated the composer helper line to "AI Assistant
+  (human-in-the-loop)", matching the spelling every doc and contract already uses. Web-only (the
+  Commons is web-only per rule 105); UI and copy only — no backend, schema, route, or contract
+  change. Verified: `@ctf/web` typecheck, lint, and a production build.
 - 2026-08-09: **The Weavers of the Commons explainer is usable from the keyboard now (#2159).** That
   dialog — shown when a member taps the locked contributor chip — declared `role="dialog"` and
   `aria-modal="true"` but did none of what those promise. Focus stayed on the page behind it, Tab

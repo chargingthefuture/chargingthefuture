@@ -1920,17 +1920,23 @@
 }
 
 .mobileBarSectionBtn {
-  padding: 6px 9px;
   /* Both section tabs carry the same boxed chrome as the other top-bar controls so
      the pair reads as one segmented control; the active state (below) only changes
-     the tint, not the presence of the box. */
+     the tint, not the presence of the box. They are icon-only now and share the exact
+     38px square of the admin, help and settings buttons, so every box in the bar is
+     one height — text padding used to leave these two visibly shorter than the rest. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
   border-radius: 10px;
   background: var(--ctf-surface);
   border: 1px solid var(--ctf-border);
-  color: var(--ctf-text-subtle);
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--ctf-text-secondary);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .mobileBarSectionBtnActive {
@@ -3247,7 +3253,26 @@
   gap: 8px;
   flex-wrap: wrap;
   flex-shrink: 0;
+}
+
+/* Wrapper holding the page name plus the channel pills on one line. The padding that used to sit
+   on .channelSwitchRow lives here now so the label shares the row's inset. */
+.channelSwitchBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
   padding: 10px 16px 0;
+}
+
+/* "Commons" page name. Deliberately unlike a pill — no border, no fill — so it reads as the name of
+   the page rather than another channel a member could tap. */
+.channelSwitchPageLabel {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ctf-text-shell, #E2E8F0);
 }
 
 .channelSwitchBtn {
