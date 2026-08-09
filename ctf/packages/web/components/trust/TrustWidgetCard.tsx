@@ -13,7 +13,7 @@
 //   surfaces (`editable`), because POST /api/trust/visibility is self-scope only;
 //   when the card shows another member's trust the row stays read-only.
 //
-// On the member's own card the body is two labelled sections — "Your trust" (these signals, always
+// On the member's own card the body is two labeled sections — "Your trust" (these signals, always
 // all of them) then "What members see" (the choice and a preview of the result). Before the labels
 // the two ran together and read as one jumbled block, which is what made the setting hard to place.
 import React from "react";
