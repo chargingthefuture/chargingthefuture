@@ -257,7 +257,7 @@ The fundraiser banner is visible. It shows collective drive progress and a way t
 
 ---
 
-### CONT-11 — Dismissing the banner on phone width collapses it to a 🎁 emoji in the top bar
+### CONT-11 — Dismissing the banner collapses it to a 🎁 chip in the Commons chip row
 
 **Role:** Member
 **Surfaces:** Web (phone width)
@@ -266,12 +266,13 @@ The fundraiser banner is visible. It shows collective drive progress and a way t
 **Steps:**
 1. At phone width, locate the fundraiser banner in the Hub.
 2. Click "Not now".
-3. Observe the banner area and the top bar.
+3. Observe the banner area, the top bar, and the chip row above the message box.
 
 **Expected:**
 - The full banner collapses.
-- A small 🎁 (gift emoji) appears in the top bar between the SE mark and the section tabs.
-- The emoji is tappable and opens the contributions plugin.
+- A small 🎁 (gift emoji) chip appears in the Commons chip row, immediately after the 🔔 notifications chip.
+- No 🎁 appears in the top bar.
+- The chip is tappable and opens the contributions plugin.
 - The large banner strip is no longer shown.
 
 **Result:** web ☐
@@ -511,6 +512,29 @@ The server returns an error (400 or 409 — the claim is not pending). The exist
 
 **Expected:**
 The new cycle is saved and displayed with correct start/end dates and all three goals. No error is shown.
+
+**Result:** web ☐
+
+---
+
+### CONT-A10b — Opening the Drive tab early does not wipe the cycle goals
+
+**Role:** Admin
+**Surfaces:** Web (`/admin/contributions`)
+**Precondition:** Signed in as admin, with an existing cycle whose three goals are all non-zero (CONT-A10 leaves one). Note the three goal values before you start.
+
+**Steps:**
+1. Throttle the connection in browser dev tools (Network → Slow 3G) so the dashboard's data takes a few seconds to arrive. This is the whole point of the case — the bug only appears while the cycle is still loading.
+2. Load `/admin/contributions` and tap the **Drive** tab immediately, before the page finishes loading.
+3. Wait for loading to finish and look at the three goal boxes.
+4. Without editing anything, save.
+5. Reload `/apps/contributions` as a member and read the drive progress targets.
+
+**Expected:**
+- After loading finishes, the three goal boxes show the cycle's real values — not empty boxes.
+- The save leaves all three goals unchanged, matching what you noted in the precondition.
+- Empty boxes at step 3, or goals that read 0 at step 5, is the bug from #2137: the form kept its first-render empty values and the save wrote 0 over each real goal.
+- Typing 0 into a goal box on purpose and saving still stores 0. That is a valid goal, not the bug.
 
 **Result:** web ☐
 

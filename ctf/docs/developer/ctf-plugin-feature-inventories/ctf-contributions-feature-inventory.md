@@ -57,12 +57,11 @@ flow is one-way, like gas-station reward points.
 - See their own claim history and statuses (pending / confirmed / rejected).
 - See the current fundraiser cycle and collective progress (USD raised, comments, stars,
   contributor count) toward the owner-set goals.
-- Dismiss the fundraiser banner — a silent two-month snooze. On phone width, dismissing does not
-  remove the reminder entirely: the full banner collapses to a small gift emoji (🎁) in its place that
-  still opens the plugin, so it stays a subtle nudge without taking up space; the full banner returns
-  on its own when the snooze lapses. On desktop, dismissing hides it until the snooze lapses (no
-  emoji — the slim desktop bar is already unobtrusive). If the admin turns the banner feature off,
-  neither the banner nor the emoji shows.
+- Dismiss the fundraiser banner — a silent two-month snooze. Dismissing does not remove the reminder
+  entirely: the full banner collapses to a small gift emoji (🎁) that appears in the Commons chip row
+  just after the 🔔 notifications chip and still opens the plugin, so it stays a subtle nudge without
+  taking up space; the full banner returns on its own when the snooze lapses. If the admin turns the
+  banner feature off, neither the banner nor the emoji shows.
 - Open to any signed-in member: contributing requires no Unlock verification and never changes
   Unlock state.
 
@@ -296,6 +295,20 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-08-09: Opening the admin Drive tab before the cycle finished loading could wipe all three
+  goals (#2137), and the contract now says plainly that the web form requires a contribution link
+  even though the command does not (#2140). The drive form seeds its three goal inputs with
+  `useState`, which reads the cycle only on the component's first render. The admin dashboard fetches
+  the cycle after mount and opens on the review queue, so an admin who reached the Drive tab before
+  that fetch landed saw three empty boxes — and saving an empty box sends `0`, which the update's
+  `COALESCE` treats as a real value and writes over the stored goal. `ContributionsAdminDrive` is now
+  keyed on the cycle id in `contributions-admin-shell.tsx`, so it remounts with the loaded values the
+  moment the cycle arrives. Nothing about `0` itself changed: an admin who deliberately types 0 still
+  gets a goal of 0, which is a legitimate setting. Separately,
+  `CONTRIBUTIONS_PLUGIN_COMMAND_CONTRACTS.yaml` now records why `quoraPostUrl` / `githubProfileUrl`
+  are optional on `contributions.submission.create` while the web form still insists on them — the
+  owner can record a link during review, but a member-submitted claim with no link cannot be found
+  and confirmed. Contract text only; no behavior, schema, or route change from either.
 - 2026-08-09: The star count on the cycle progress bar now counts members, not rows (#2143), and
   dismissing the banner no longer hands back the snooze date (#2144). A GitHub star earns credits at
   most once per member ever, and the block that enforces it at submission time only looks at stars
@@ -309,6 +322,14 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
   though the route threw it away — the command contract says the snooze length is internal and is not
   returned to the member, so the function now returns nothing and the `RETURNING` clause is gone. No
   member-visible change from the dismiss edit; no schema, route, or contract change from either.
+- 2026-08-09: **Gift reminder moved out of the top bar and into the Commons chip row (owner report:
+  the top bar was crowded on an iPhone SE).** `ContributionsGiftTrigger` is no longer mounted by
+  `community-shell.tsx`; it now renders in `ConciergeChipRail` (`shell-chat-panel.tsx`) immediately
+  after the 🔔 notifications chip, styled by a new `.contributeGiftBtn` chip class (violet accent,
+  same size as the @ / 📣 / 🔔 pills, with a comic-theme variant). The component takes a `className` prop
+  instead of carrying its old inline top-bar box style. When it shows and where it goes on tap are
+  unchanged: only while a drive is running and the full banner is dismissed or snoozed, and it opens
+  `/apps/contributions`. UI-only — no route, schema, or contract change.
 - 2026-08-07: Admin settings audit rows now record which settings the admin actually sent. The
   audit write in `app/api/contributions/admin/config/route.ts` logged every setting's resulting
   value, so a record could not show whether a knob was edited or merely carried over. The route now

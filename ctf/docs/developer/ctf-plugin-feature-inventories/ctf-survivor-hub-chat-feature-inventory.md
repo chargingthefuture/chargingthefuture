@@ -72,6 +72,7 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 5. Right rail no longer shows a "Ready/Active Apps" list (removed 2026-06-18) — apps are reached via the Apps section; the "· N ready apps" line was also dropped from the signed-in profile card.
 6. Sign-in and Create-Account CTAs visible in icon rail and right rail for unsigned visitors.
 7. Hero banner ("Free to join · End-to-end encrypted") visible to unsigned visitors.
+8. The phone-width top bar switches sections with two icon buttons — a speech-bubbles icon for the Commons and a grid icon for Apps — the same 38px square as the admin, help and settings buttons beside them, so the whole bar is one row of equal boxes. Each button names itself for screen readers and on hover ("Commons", "Apps"). Once a member is there, the page says which one it is: the Apps page heads "All Apps", and the Commons channel row starts with the word "Commons" ahead of the `#general` chip.
 
 ### Hub Chat (the blended `community` channel)
 
@@ -210,6 +211,31 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 
 ## Change Log
 
+- 2026-08-09: **One row of equal boxes in the phone top bar, and the Commons page says its own name
+  (owner report).** The "Commons" and "Apps" section tabs were word buttons sized by their text
+  (`padding: 6px 9px`), so they stood noticeably shorter than the 38px square admin, help and
+  settings buttons next to them and the bar read as two mismatched rows. Both tabs are icons now
+  (`MessagesSquare` for the Commons, `LayoutGrid` for Apps, from `lucide-react`) in the same 38px
+  square with the same surface, border and radius, so every control in the bar matches. Nothing is
+  lost by dropping the words: each button keeps an `aria-label` and a hover title, `role="tab"` and
+  `aria-selected` are unchanged, and each destination announces itself on arrival — the Apps page
+  already heads "All Apps", and `ChannelSwitchRow` now leads with a plain "Commons" label before the
+  `#general` chip (new `.channelSwitchBar` wrapper carrying the row's padding, plus
+  `.channelSwitchPageLabel`, deliberately without pill chrome so it does not read as a tappable
+  channel). The label sits outside the `role="tablist"` element, so screen readers still count only
+  the real channel tabs. Also hyphenated the composer helper line to "AI Assistant
+  (human-in-the-loop)", matching the spelling every doc and contract already uses. Web-only (the
+  Commons is web-only per rule 105); UI and copy only — no backend, schema, route, or contract
+  change. Verified: `@ctf/web` typecheck, lint, and a production build.
+- 2026-08-09: **The Weavers of the Commons explainer is usable from the keyboard now (#2159).** That
+  dialog — shown when a member taps the locked contributor chip — declared `role="dialog"` and
+  `aria-modal="true"` but did none of what those promise. Focus stayed on the page behind it, Tab
+  walked straight out into content the member could no longer see, Escape did nothing, and closing
+  the dialog dropped focus at the top of the document instead of returning it to the chip. It now
+  moves focus into the card on open, cycles Tab and Shift+Tab within it, closes on Escape, and
+  restores focus to whatever opened it. The trap itself moved out of `comic-consent-modal.tsx` into a
+  new `dialog-focus.ts` so both dialogs share one copy rather than each carrying its own; the consent
+  dialog's behavior is unchanged. Web-only; no schema, route, or contract change.
 - 2026-08-09: **Return on "Not now" no longer turns the AI Assistant on (#2158), plus two smaller
   Commons fixes (#2156, #2160).** The first-use consent dialog for the AI Assistant treated Return as
   "turn it on" no matter what had focus. That rule exists for a real reason — on a phone the soft
@@ -236,6 +262,21 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
   than wired up, and the file header now says plainly that an intent's `slug` **is** the registry slug,
   with no translation step to catch a typo. No member-visible change — routing behaves exactly as it
   did, because the removed code never affected it. Web-only; no schema, route, or contract change.
+- 2026-08-09: **Two Commons changes for a crowded phone screen (owner report, iPhone SE).** (1) The
+  Contributions fundraiser gift reminder moved out of the top bar, which had no room left at 375px,
+  and into the chip row: `ConciergeChipRail` (`shell-chat-panel.tsx`) now renders
+  `ContributionsGiftTrigger` immediately after the 🔔 chip and before the suggestion chips, styled
+  by the new `.contributeGiftBtn` class (violet accent, same pill size as the @ / 📣 / 🔔 chips,
+  comic-theme variant included). It stays visible with the notifications feed open, like the three
+  chips before it, and still shows only while a drive is running and the full banner is dismissed or
+  snoozed. The row already scrolls sideways, so the fourth glyph costs no width. (2) The footnote
+  under the composer dropped its live-state sentence ("Human-in-the-loop AI support and community
+  support channel.") — it repeated the helper line directly above the message box, and two
+  near-identical explanations cost a line of screen height on every phone. While the stream is live
+  the footnote is now the "Community guidelines" link alone; the not-live wording ("Support channel
+  keeps syncing as new messages arrive.") stays, because that one reports real connection status.
+  Web-only (the Commons is web-only per rule 105); UI and copy only — no backend, schema, route, or
+  contract change. Verified: `@ctf/web` typecheck, lint, and a production build.
 - 2026-08-03: **Removed the `GET /api/hub/bots` stub and corrected the channel/DM descriptions.** The
   route answered every caller with a hardcoded empty list behind a `TODO`, and no caller existed — a
   documented capability the product did not have. Deleted the route and its `HubBotInfo` /
