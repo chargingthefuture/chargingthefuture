@@ -72,7 +72,8 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 5. Right rail no longer shows a "Ready/Active Apps" list (removed 2026-06-18) — apps are reached via the Apps section; the "· N ready apps" line was also dropped from the signed-in profile card.
 6. Sign-in and Create-Account CTAs visible in icon rail and right rail for unsigned visitors.
 7. Hero banner ("Free to join · End-to-end encrypted") visible to unsigned visitors.
-8. The phone-width top bar switches sections with two icon buttons — a speech-bubbles icon for the Commons and a grid icon for Apps — the same 38px square as the admin, help and settings buttons beside them, so the whole bar is one row of equal boxes. Each button names itself for screen readers and on hover ("Commons", "Apps"). Once a member is there, the page says which one it is: the Apps page heads "All Apps", and the Commons channel row starts with the word "Commons" ahead of the `#general` chip.
+8. Signed-in members see the product name "Skills Economy" beside the brand mark in the phone top bar, set on two short lines so it fits the narrowest phone. Signed-out visitors keep the single-line "SE / SKILLS ECONOMY" lockup.
+9. The phone-width top bar switches sections with two icon buttons — a speech-bubbles icon for the Commons and a grid icon for Apps — the same 38px square as the admin, help and settings buttons beside them, so the whole bar is one row of equal boxes. Each button names itself for screen readers and on hover ("Commons", "Apps"). Once a member is there, the page says which one it is: the Apps page heads "All Apps", and the Commons channel row starts with the word "Commons" ahead of the `#general` chip.
 
 ### Hub Chat (the blended `community` channel)
 
@@ -211,6 +212,24 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 
 ## Change Log
 
+- 2026-08-09: **Even spacing across the phone top bar, and the product name is back on it for
+  signed-in members (owner report, follow-up to the icon tabs below).** Three different gaps ran
+  across one row of identical squares: `.mobileBar` used 5px, `.mobileBarSections` used 4px between
+  the two section tabs, and `.mobileBarAuth` had no gap at all, so help, settings and the avatar sat
+  flush against each other. All three are 5px now. The avatar was also sitting 4px low: the shared
+  `.clerkAvatarSlot` carries `margin-top: 4px` for the vertical desktop icon rail, where it separates
+  the avatar from the button above it; that margin is reset to 0 inside `.mobileBarAuth`, where the
+  controls sit side by side. Second, turning the section tabs into icons freed room beside the brand
+  mark, so the signed-in bar shows the product name again instead of the mark alone. It is not the
+  signed-out lockup: measured in Chromium at the app's own Inter, that lockup is 85px wide and an
+  admin on a 375px phone has only 65px to spare. Setting the two words on their own lines
+  (`.mobileBarWordmarkStacked`, 8px uppercase) is 50px and fits with room left at every phone width —
+  verified at 360, 375, 393, 430 and 560px, with and without the admin button, the wordmark never
+  shrinking below its full width and nothing reaching the right edge. The single-line "SE / SKILLS
+  ECONOMY" lockup is untouched for signed-out visitors, whose bar carries no admin, help, settings or
+  avatar and has the width for it. Web-only (the Commons is web-only per rule 105); UI only — no
+  backend, schema, route, or contract change. Verified: `@ctf/web` typecheck, lint, and a production
+  build.
 - 2026-08-09: **One row of equal boxes in the phone top bar, and the Commons page says its own name
   (owner report).** The "Commons" and "Apps" section tabs were word buttons sized by their text
   (`padding: 6px 9px`), so they stood noticeably shorter than the 38px square admin, help and
