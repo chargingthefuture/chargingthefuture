@@ -16,17 +16,20 @@ Trust gives the community a privacy-respecting, **non-numeric** way to gauge how
 ## User Features
 
 1. View their trust badge (qualitative standing, not a number), evidence panel, and verification status on profile/directory surfaces.
-2. Choose who can see their own trust signals, from a labeled "Who can see your trust signals"
-   dropdown on their own Trust card (account hub, community right rail, own Directory profile).
-   Each choice states the outcome in plain words rather than naming a category: **"Members see
-   everything"** — any signed-in member who opens your profile sees every signal; **"Members see a
-   summary"** — members see how active you are (sign-in days, how many plugins you take part in, and
-   any ServiceCredits counts) without the detail or the dates; **"Only you see this"** — no other
-   member can open the panel, though admins can, as they can for every member. The member always
-   sees every signal on their own card whichever choice is active, and a "What members see" preview
-   under the dropdown shows exactly what a member would receive at the current choice. A "Saved"
-   confirmation appears when the choice is stored. The setting governs the trust panel only; it is
-   not a platform-wide visibility switch.
+2. Choose what other members see of their trust signals, on their own Trust card (account hub,
+   community right rail, own Directory profile). The card body is two labeled sections: **"Your
+   trust"** — every signal the member has, always all of them, whatever the choice is — then **"What
+   members see"**, which holds the choice and its result. The choice is three buttons, not a
+   dropdown, each completing the section heading: **"Everything"** (any signed-in member who opens
+   the profile sees every signal), **"A summary"** (members see how active you are — sign-in days,
+   how many plugins you take part in, and any ServiceCredits counts — without the detail or the
+   dates), **"Nothing"** (the Trust card does not appear on the profile for other members). Under the
+   buttons, the exact rows another member would receive are rendered with the same components their
+   screen uses, so the preview is the copy they get rather than a description of it; on "Nothing" a
+   single line stands in, because a member receives no card at all. A "Saved" confirmation appears
+   when the choice is stored. The card names no admin caveat — nothing in the app is end-to-end
+   encrypted, so admin access is a given everywhere and repeating it here only crowded the section.
+   The setting governs the trust card only; it is not a platform-wide visibility switch.
 3. Inspect their own trust signal snapshot via `GET /api/trust/user/self`.
 
 ## Admin Features
@@ -130,7 +133,7 @@ numeric score is ever computed or stored. The snapshot route never changes `trus
 
 ## Web and Android Delivery Status
 
-**Web: delivered (signal-only).** The live member-facing surface is the right-rail card `components/shared/trust/TrustRightRailCard.tsx`, which renders `components/trust/TrustWidgetCard.tsx` — an inline-styled widget aligned to `design/.../survivor-hub/Trust.tsx` (blue brand palette, ShieldCheck header, real `trustEvidence` list when present, an empty state with onboarding prompts, and the visibility control `components/trust/trust-visibility-control.tsx` — on self surfaces a labeled "Who can see your trust signals" dropdown whose choices name their audience, with a sentence stating the effect of the current choice and a "Saved" confirmation; it POSTs `/api/trust/visibility` and stays a read-only "Visible to: …" row when the card shows another member). It is consumed by `account-hub-shell.tsx`, `community-shell/shell-right-rail.tsx`, `directory-profile-detail.tsx` (editable on own profile), and `lighthouse-host.tsx`. The admin surface is `/admin/trust` (`app/admin/trust/page.tsx` + `components/trust/trust-admin-shell.tsx`), a verification-review form over `POST /api/trust/admin/verification`, linked from the `/admin` landing. The signed-out marketing view is `components/trust/trust-public-shell.tsx`. The header has no Verified/Unverified status chip: the platform does not verify members, so Trust is signal-only and shows derived evidence, not a status badge. Per the real-data-only rule the design's verified-state signal buckets are omitted. Removed in the signal-only cleanup (2026-06-21): `TrustDirectoryProfilePanel.tsx`, `TrustEvidencePanel.tsx`, `TrustStatusBadge.tsx`, `TrustVisibilityBadge.tsx`, and the unused re-export `components/trust/TrustRightRailCard.tsx` — all dead after verification was dropped from the UI (no importers).
+**Web: delivered (signal-only).** The live member-facing surface is the right-rail card `components/shared/trust/TrustRightRailCard.tsx`, which renders `components/trust/TrustWidgetCard.tsx` — an inline-styled widget aligned to `design/.../survivor-hub/Trust.tsx` (blue brand palette, ShieldCheck header, real `trustEvidence` list when present, an empty state with onboarding prompts, and the visibility control `components/trust/trust-visibility-control.tsx` — on self surfaces a "What members see" section holding three buttons (Everything / A summary / Nothing), a preview built from the real evidence rows, and a "Saved" confirmation; it POSTs `/api/trust/visibility` and stays a read-only one-line row when the card shows another member). The evidence row, the summary note, and the section label live in `components/trust/trust-evidence-row.tsx` so the card and the preview render the same components. It is consumed by `account-hub-shell.tsx`, `community-shell/shell-right-rail.tsx`, `directory-profile-detail.tsx` (editable on own profile), and `lighthouse-host.tsx`. The admin surface is `/admin/trust` (`app/admin/trust/page.tsx` + `components/trust/trust-admin-shell.tsx`), a verification-review form over `POST /api/trust/admin/verification`, linked from the `/admin` landing. The signed-out marketing view is `components/trust/trust-public-shell.tsx`. The header has no Verified/Unverified status chip: the platform does not verify members, so Trust is signal-only and shows derived evidence, not a status badge. Per the real-data-only rule the design's verified-state signal buckets are omitted. Removed in the signal-only cleanup (2026-06-21): `TrustDirectoryProfilePanel.tsx`, `TrustEvidencePanel.tsx`, `TrustStatusBadge.tsx`, `TrustVisibilityBadge.tsx`, and the unused re-export `components/trust/TrustRightRailCard.tsx` — all dead after verification was dropped from the UI (no importers).
 
 **Android: surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Historical detail: `Trust.tsx` under `packages/mobile/src/features/trust` had been rewritten to align with `design/.../survivor-hub/MobileTrust.tsx`, `MobileTrustEmpty.tsx`, `MobileTrustLoading.tsx`, and `MobileTrustPublic.tsx`. A new `api.ts` binds to `GET /api/trust/user/self` for real data. The screen covers all four states: loading (branded taglines), public/unauthenticated (visitor marketing view), empty (no evidence yet), and populated (evidence list). `MockTrust.tsx` is retired. Real bindings: `trustStatus`, `trustVisibility`, `trustEvidence` array (type/summary/createdAt per item). Omissions per real-data-only rule: Last Active / Activity / Transactions / Active Plugins stats from the design's Trust Score card have no backing API field and are omitted; signal-progress percentage and hardcoded checklist items are omitted (snapshot route is a stub); visibility update dropdown rendered as display-only at the time of the pixel pass. The backend for signal derivation, visibility update, and admin verification is now implemented (2026-06-08); the web client is wired to the live visibility mutation as of 2026-08-04 (Android stays retired per rule 105).
 
@@ -165,6 +168,35 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
    closing if the status is ever meant to stay admin-side.
 
 ## Change Log
+
+- 2026-08-09: **The card is two labeled sections and the dropdown is gone.** Owner direction: the
+  block read as three different ideas stacked with nothing separating them — a heading, a dropdown
+  whose closed line stood alone, an effect sentence, and a boxed preview with its own label. It is
+  now **"Your trust"** (the signals, always all of them) above **"What members see"** (the choice and
+  its result). The dropdown is replaced by three buttons that complete the heading — **Everything /
+  A summary / Nothing** — so the three read as amounts of one thing rather than three concepts. The
+  separate effect sentence is dropped: the two section labels carry what it said. The preview no
+  longer carries its own "WHAT MEMBERS SEE" label (that text never appears on a member's screen) and
+  no longer describes the result in prose — it renders the real evidence rows, and the summary note
+  for "A summary", using the same components another member's screen uses, so it is exactly the copy
+  they receive. The admin sentence is removed everywhere on this card per owner direction: nothing in
+  the app is end-to-end encrypted, so admin access is a given and does not belong in this choice. The
+  row shown on another member's card is unchanged. `TrustEvidenceRow`, the summary note, and the
+  section label moved to `components/trust/trust-evidence-row.tsx` so the card and the preview draw
+  the same components (rule 116). Presentation only: the stored values, routes, contracts, and schema
+  are unchanged.
+
+- 2026-08-09: **Each choice now names what is being shared.** Owner report: with the dropdown closed
+  the selected line read "Only you see this" on its own, with the "Who sees your trust signals"
+  heading above it easily scrolled past, so the member had no way to tell what "this" was. The three
+  labels now name the subject — **"Members see all your trust signals"** / **"Members see a summary
+  of your trust signals"** / **"Only you see your trust signals"** — and the same pointing words are
+  removed from the private effect line ("No other member can see your trust signals"), the preview
+  lines ("Every trust signal listed above, exactly as you see it." / "Nothing — your trust signals do
+  not appear on your profile for them."), and the read-only row on another member's card ("This
+  member shares all their trust signals" / "…a summary of their trust signals" / "…keeps their trust
+  signals private"). Wording only: the stored enum values, routes, contracts, and schema are
+  unchanged.
 
 - 2026-08-08: **Plain-language names for the three choices.** Owner direction: the labels named a
   category and left the member to work out the category's rules, which is how the three were read as
