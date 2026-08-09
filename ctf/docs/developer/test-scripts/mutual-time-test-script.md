@@ -32,7 +32,7 @@ Run the seed first: `pnpm --dir ctf seed:mutual-time`
 
 2. **Admin dashboard loads.** Sign in as an admin, navigate to `/apps/mutual-time`. The page renders without error and shows at least two events — "Weekly check-in" (open) and "Q3 onboarding" (closed). web ☐ mobile ☐
 
-3. **Public event link loads unauthenticated.** Sign out entirely. Open the shareable link for the seeded open event (copy it from the dashboard or use the known fixed slug). The page renders the event title, the line saying where the meeting is (for example "We'll meet in Chyme") with a button to that plugin, a sign-in prompt, and below it a greyed-out preview of the voting form showing the days and times on offer — no error, no blank screen. web ☐ mobile ☐
+3. **Public event link loads unauthenticated.** Sign out entirely. Open the shareable link for the seeded open event (copy it from the dashboard or use the known fixed slug). The page renders the event title, the line saying where the meeting is (for example "We'll meet in Chyme") with a button to that plugin, a sign-in prompt, and below it a grayed-out preview of the voting form showing the days and times on offer — no error, no blank screen. web ☐ mobile ☐
 
 4. **Closed event shows a result.** Open the shareable link for "Q3 onboarding" (seeded closed event) while signed out. The page shows the winning time and how many members can make it — no vote controls visible. web ☐ mobile ☐
 
@@ -53,13 +53,13 @@ Run the seed first: `pnpm --dir ctf seed:mutual-time`
 2. Navigate to `/mutual-time/<open-event-slug>`.
 3. Read the page.
 
-**Expected:** The event title and description are visible. The page says something to the effect that the visitor can come listen in at whatever time is chosen. A sign-in prompt is shown. Below that prompt, the real voting form is shown greyed out as a preview under the line "Here are the times on offer — sign in to pick yours" — no live slot-picking controls, just a look at what is on offer.
+**Expected:** The event title and description are visible. The page says something to the effect that the visitor can come listen in at whatever time is chosen. A sign-in prompt is shown. Below that prompt, the real voting form is shown grayed out as a preview under the line "Here are the times on offer — sign in to pick yours" — no live slot-picking controls, just a look at what is on offer.
 
 Result: web ☐ mobile ☐
 
 ---
 
-### MT-1b — The greyed-out preview cannot be used
+### MT-1b — The grayed-out preview cannot be used
 
 **Role:** None (signed out)
 **Surfaces:** Web, Mobile
@@ -67,7 +67,7 @@ Result: web ☐ mobile ☐
 
 **Steps:**
 1. Navigate to `/mutual-time/<open-event-slug>`.
-2. Scroll to the greyed-out form below the sign-in prompt.
+2. Scroll to the grayed-out form below the sign-in prompt.
 3. Tap several of the day chips and time buttons in it.
 4. On a keyboard, press Tab repeatedly through the page.
 
@@ -87,7 +87,7 @@ Result: web ☐ mobile ☐
 1. Sign in as a member whose Unlock tier is not yet `approved_full`.
 2. Navigate to `/mutual-time/<open-event-slug>`.
 
-**Expected:** The event is visible. The page shows a listen-in message and a prompt to complete approval, plus the same greyed-out preview of the form below it. The member cannot vote — nothing in the preview responds.
+**Expected:** The event is visible. The page shows a listen-in message and a prompt to complete approval, plus the same grayed-out preview of the form below it. The member cannot vote — nothing in the preview responds.
 
 Result: web ☐ mobile ☐
 

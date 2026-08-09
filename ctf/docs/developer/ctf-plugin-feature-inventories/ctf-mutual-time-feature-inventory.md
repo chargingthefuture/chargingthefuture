@@ -33,7 +33,7 @@ to the meeting surface; members who did not vote can still come listen in.
    see the event and a message that they can come listen in at whatever time is chosen — the link is
    their invite. They are shown a sign-in prompt if they want a say in the time.
 4. **See the days and times before signing in.** Under that sign-in prompt, a visitor sees the real
-   voting form — the same day chips and one-hour windows a member picks from — greyed out and not
+   voting form — the same day chips and one-hour windows a member picks from — grayed out and not
    tappable, with the line "Here are the times on offer — sign in to pick yours". They can see exactly
    what they would be choosing from before they decide to sign in.
 5. **Know where the meeting is, from the moment the link opens.** Every state of the shared link —
@@ -121,7 +121,7 @@ is added to `TrustSignalMetrics`, `computeTrustSignalMetrics`, or `buildTrustEvi
 
 - **Web:** complete — admin dashboard (`/apps/mutual-time`), the public one-link surface
   (`/mutual-time/[slug]`) with vote/result/gate states, and all API routes. The day chips and slot grid
-  live in `components/mutual-time/mutual-time-slot-picker.tsx` so the voting form and the greyed-out
+  live in `components/mutual-time/mutual-time-slot-picker.tsx` so the voting form and the grayed-out
   preview on the sign-in gate are the same component, not two that can drift apart.
 - **Mobile-responsive web:** complete — the same web components render at phone width (single-column
   layout, horizontally scrollable date chips, wrapping slot grid).
@@ -206,7 +206,7 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   clear picks nobody made.** All on `/mutual-time/<slug>`; no schema, contract, or API change.
   (1) A signed-out or not-yet-approved visitor used to see only a locked box. They now see the sign-in
   prompt with the real voting form below it — the same day chips and one-hour windows a member picks
-  from — greyed out, not tappable, not keyboard-focusable, and skipped by screen readers, under the line
+  from — grayed out, not tappable, not keyboard-focusable, and skipped by screen readers, under the line
   "Here are the times on offer — sign in to pick yours". The reason to sign in is visible instead of
   described. (2) "We'll meet in <plugin>" with a button to that plugin now shows on every state of the
   link, not just after the survey closes: the gate, the not-yet-open state, and the voting form. The

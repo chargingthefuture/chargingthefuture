@@ -179,7 +179,7 @@ function MeetingPlaceRow({ event, t }: { event: MutualTimePublicEvent; t: Tokens
 }
 
 // The signed-out / not-yet-approved view. It shows the real voting form underneath the sign-in prompt,
-// greyed out and inert, so a visitor sees the actual days and times on offer rather than only a locked
+// grayed out and inert, so a visitor sees the actual days and times on offer rather than only a locked
 // box — the reason to sign in is visible, not described.
 function GateView({ event, tz, isSignedIn, signInUrl, verifyUrl, closesLabel, t }: { event: MutualTimePublicEvent; tz: string; isSignedIn: boolean; signInUrl: string; verifyUrl?: string; closesLabel: string | null; t: Tokens }) {
   return (
@@ -244,21 +244,21 @@ function TimeZoneRow({ tz, showTz, setShowTz, setTz, t }: { tz: string; showTz: 
 // picks selected and nothing saved yet it reads "Save my picks" and is switched off, so a first-time
 // voter is never shown a Clear button before they have picked anything.
 function SaveBar({ saving, picks, hasSavedPicks, save, t }: { saving: boolean; picks: string[]; hasSavedPicks: boolean; save: () => void; t: Tokens }) {
-  const isClear = picks.length === 0 && hasSavedPicks;
-  const nothingToDo = picks.length === 0 && !hasSavedPicks;
+  const hasSelection = picks.length > 0;
+  const isClear = !hasSelection && hasSavedPicks;
+  const nothingToDo = !hasSelection && !hasSavedPicks;
   const inactive = saving || nothingToDo;
+  const tone: React.CSSProperties = inactive
+    ? { background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.SUBTLE, cursor: 'not-allowed' }
+    : { background: `${t.ACCENT}22`, border: `1px solid ${t.ACCENT}`, color: t.ACCENT, cursor: 'pointer' };
+  const label = saving ? 'Saving…' : isClear ? 'Clear my picks' : 'Save my picks';
+  const showHint = nothingToDo && !saving;
   return (
     <div>
-      <button
-        onClick={save}
-        disabled={inactive}
-        style={{ padding: '10px 20px', borderRadius: 10, background: inactive ? t.SURFACE : `${t.ACCENT}22`, border: `1px solid ${inactive ? t.BORDER_SOLID : t.ACCENT}`, color: inactive ? t.SUBTLE : t.ACCENT, fontSize: 14, fontWeight: 700, cursor: inactive ? 'not-allowed' : 'pointer' }}
-      >
-        {saving ? 'Saving…' : isClear ? 'Clear my picks' : 'Save my picks'}
+      <button onClick={save} disabled={inactive} style={{ ...tone, padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700 }}>
+        {label}
       </button>
-      {nothingToDo && !saving && (
-        <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 8 }}>Pick a time above, then save.</div>
-      )}
+      {showHint && <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 8 }}>Pick a time above, then save.</div>}
     </div>
   );
 }

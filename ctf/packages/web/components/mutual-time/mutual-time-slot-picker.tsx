@@ -18,12 +18,36 @@ type VotePeriod = { label: string; order: number; slots: string[] };
 
 // The candidate-slot picker: the count row, the day chips, and the grid of one-hour windows for the
 // chosen day. Lives in its own file because two surfaces render it — an approved member votes with it,
-// and a signed-out visitor sees the same thing greyed out behind the sign-in prompt, so the link shows
+// and a signed-out visitor sees the same thing grayed out behind the sign-in prompt, so the link shows
 // what they'd be picking from instead of only a locked box.
 //
 // `disabled` makes the whole picker inert: nothing responds to a tap, nothing takes keyboard focus, and
 // screen readers skip it (the surface around it carries the real message). Everything is still laid out
 // exactly as a voter sees it.
+
+// Colors for one time button: picked, unavailable (already at the pick limit), or plain.
+function slotColors(isSel: boolean, isDis: boolean, t: Tokens): React.CSSProperties {
+  return {
+    background: isSel ? `${t.ACCENT}22` : t.SURFACE,
+    border: `1px solid ${isSel ? t.ACCENT : t.BORDER_SOLID}`,
+    color: isSel ? t.ACCENT : isDis ? t.SUBTLE : t.TITLE,
+    fontWeight: isSel ? 700 : 400,
+  };
+}
+
+function SlotButton({ iso, isSel, isDis, dimmed, disabled, toggle, tz, t }: { iso: string; isSel: boolean; isDis: boolean; dimmed: boolean; disabled: boolean; toggle: (iso: string) => void; tz: string; t: Tokens }) {
+  return (
+    <button
+      onClick={() => !isDis && toggle(iso)}
+      disabled={disabled}
+      tabIndex={disabled ? -1 : undefined}
+      style={{ ...slotColors(isSel, isDis, t), padding: '5px 10px', borderRadius: 6, fontSize: 12, cursor: isDis ? 'not-allowed' : 'pointer', opacity: dimmed ? 0.4 : 1, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+    >
+      {isSel && <Check size={11} />}
+      {formatSlotTime(iso, tz)}
+    </button>
+  );
+}
 
 function SlotGrid({ periods, picks, atMax, toggle, tz, disabled, t }: { periods: VotePeriod[]; picks: string[]; atMax: boolean; toggle: (iso: string) => void; tz: string; disabled: boolean; t: Tokens }) {
   return (
@@ -38,18 +62,9 @@ function SlotGrid({ periods, picks, atMax, toggle, tz, disabled, t }: { periods:
               {period.slots.map((iso) => {
                 const isSel = picks.includes(iso);
                 const isDis = disabled || (!isSel && atMax);
-                return (
-                  <button
-                    key={iso}
-                    onClick={() => !isDis && toggle(iso)}
-                    disabled={disabled}
-                    tabIndex={disabled ? -1 : undefined}
-                    style={{ padding: '5px 10px', borderRadius: 6, background: isSel ? `${t.ACCENT}22` : t.SURFACE, border: `1px solid ${isSel ? t.ACCENT : t.BORDER_SOLID}`, color: isSel ? t.ACCENT : isDis ? t.SUBTLE : t.TITLE, fontSize: 12, fontWeight: isSel ? 700 : 400, cursor: isDis ? 'not-allowed' : 'pointer', opacity: !disabled && isDis ? 0.4 : 1, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                  >
-                    {isSel && <Check size={11} />}
-                    {formatSlotTime(iso, tz)}
-                  </button>
-                );
+                // The preview is already faded as a whole, so only fade a button here when it is a live
+                // form and the member has used up their picks.
+                return <SlotButton key={iso} iso={iso} isSel={isSel} isDis={isDis} dimmed={!disabled && isDis} disabled={disabled} toggle={toggle} tz={tz} t={t} />;
               })}
             </div>
           </div>
