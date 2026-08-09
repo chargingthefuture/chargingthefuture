@@ -6,7 +6,7 @@ import {
   GATED_STREAM_CHANNEL_ID,
   GATED_STREAM_CHANNEL_TYPE,
 } from './gated-channel-shared';
-import { OFFICIAL_SENDER_LABEL } from 'lib/hub/constants';
+import { OFFICIAL_SENDER_LABEL } from 'lib/commons/constants';
 
 // Server-side Stream helpers for the single gated contributor channel. Mirrors lib/feed/stream.ts
 // exactly (same credential resolver — demo mode selects the *_STAGING app — same create/watch

@@ -11,11 +11,11 @@
 // This is deliberately a small, curated set (the five the design shipped), authored here so each
 // chip's behavior is explicit and predictable instead of re-inferred from the text at tap time.
 
-export type HubSuggestionChip =
+export type CommonsSuggestionChip =
   | { id: string; label: string; kind: 'navigate'; slug: string }
   | { id: string; label: string; kind: 'ask'; question: string };
 
-const HUB_SUGGESTION_CHIPS: readonly HubSuggestionChip[] = [
+const COMMONS_SUGGESTION_CHIPS: readonly CommonsSuggestionChip[] = [
   { id: 'housing', label: 'Show housing options', kind: 'navigate', slug: 'lighthouse' },
   // The provider directory is Foundation (talent, tools, repairs, infrastructure support), NOT the
   // Directory plugin — that one is the community skills directory below.
@@ -35,6 +35,6 @@ const HUB_SUGGESTION_CHIPS: readonly HubSuggestionChip[] = [
 
 // The chips shown under the Commons composer, in order. Kept as a function (not a bare export) to
 // match the sibling `conciergeStarterPrompts` shape and leave room for future per-viewer filtering.
-export function hubSuggestionChips(): HubSuggestionChip[] {
-  return [...HUB_SUGGESTION_CHIPS];
+export function commonsSuggestionChips(): CommonsSuggestionChip[] {
+  return [...COMMONS_SUGGESTION_CHIPS];
 }

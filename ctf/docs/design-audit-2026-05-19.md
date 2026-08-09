@@ -50,7 +50,7 @@
     - **File**: `ctf/packages/web/components/community/community-shell.tsx` (new)
     - **Design ref**: `Desktop.tsx` — purple/cyan gradient, Discord-style hub
     - **Structure**: 72px icon rail + 240px sidebar (channels/mini-apps) + main content (chat/apps grid) + 280px right rail (profile, trust widget, GDP progress). Two sections: Chat and Mini-Apps.
-    - **API backing**: `/api/hub/channels` (GET), `/api/hub/messages` (GET/POST)
+    - **API backing**: `/api/commons/channels` (GET), `/api/commons/messages` (GET/POST)
     - **Status**: ✅ committed
 
     ### 6. Mood shell — tab switching + trends + crisis widget

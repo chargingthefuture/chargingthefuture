@@ -3,7 +3,7 @@ import { reportError } from 'lib/observability/report';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { deleteCommunityPost, normalizeUuid } from 'lib/feed/repository';
-import { requireHubAccess } from '../../_lib';
+import { requireCommonsAccess } from '../../_lib';
 import { ensureMutationCsrf } from '../../../feed/_lib';
 
 // Delete the signed-in member's own Commons community (peer) post. Author-only: the repository
@@ -15,7 +15,7 @@ export async function DELETE(
   request: Request,
   context: { params: Promise<{ postId: string }> },
 ) {
-  const gate = await requireHubAccess();
+  const gate = await requireCommonsAccess();
   if (!gate.allowed) {
     return gate.response;
   }

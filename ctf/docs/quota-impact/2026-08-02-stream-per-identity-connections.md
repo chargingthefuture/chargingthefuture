@@ -1,7 +1,7 @@
 # Stream Quota Impact — one chat connection per Stream identity in the browser
 
 Change: `fix: keep one Stream Chat connection per identity so a Direct Line send is never rejected`.
-Touches `ctf/packages/web/components/shared/stream-chat-panel.tsx`, `ctf/packages/web/lib/hub/live-stream.ts`,
+Touches `ctf/packages/web/components/shared/stream-chat-panel.tsx`, `ctf/packages/web/lib/commons/live-stream.ts`,
 and the new `ctf/packages/web/lib/shared/stream-chat-connection.ts`, which is why the Stream quota gate
 requires this note.
 

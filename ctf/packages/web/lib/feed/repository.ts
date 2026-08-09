@@ -2627,7 +2627,7 @@ export async function listAnnouncementReplies(announcementId: string): Promise<F
 // Read a member's last-seen marker for the Hub home channel. Returns null when the member
 // has never been recorded (so the caller shows every message as new). Best-effort: callers
 // must treat a thrown error as "no marker" and never let it break the chat.
-export async function getHubLastSeen(userId: string): Promise<string | null> {
+export async function getCommonsLastSeen(userId: string): Promise<string | null> {
   const result = await queryDb<{ last_seen_at: Date }>(
     'SELECT last_seen_at FROM feed_hub_last_seen WHERE user_id = $1 LIMIT 1',
     [userId],
@@ -2637,7 +2637,7 @@ export async function getHubLastSeen(userId: string): Promise<string | null> {
 
 // Move a member's last-seen marker to now (or to the supplied time, capped at now). Used after
 // the member views the Hub chat so the "New messages" divider reflects where they left off.
-export async function updateHubLastSeen(userId: string, seenAtIso?: string | null): Promise<string> {
+export async function updateCommonsLastSeen(userId: string, seenAtIso?: string | null): Promise<string> {
   const parsed = typeof seenAtIso === 'string' && isValidIsoDatetime(seenAtIso) ? new Date(seenAtIso) : null;
   // Never let a client push the marker into the future; clamp to server NOW().
   const useClientTime = parsed !== null && parsed.getTime() <= Date.now();

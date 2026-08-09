@@ -3,7 +3,7 @@
 ## Summary
 
 - Feature/Change: Wire the Android Hub home to the same Feed-backed `community` channel the web Hub
-  uses (read `GET /api/hub/messages`, post via `POST /api/hub/messages`). Remove the dead
+  uses (read `GET /api/commons/messages`, post via `POST /api/commons/messages`). Remove the dead
   GetStream-based `survivor-hub-chat` mobile fixtures (nothing imported them; GetStream was already
   removed from the platform).
 - PR: #236
@@ -22,7 +22,7 @@
 - Chat MAU impact estimate: net **zero to slight reduction**. The removed stub never ran in production
   (nothing imported it); the new Hub home adds no Stream chat MAU.
 - Activity Feed API calls estimate: no change to Stream — the Hub stream is the in-app activity feed
-  backed by Postgres, not a GetStream feed. Mobile polls the same `GET /api/hub/messages` the web Hub
+  backed by Postgres, not a GetStream feed. Mobile polls the same `GET /api/commons/messages` the web Hub
   already serves.
 - Video participant-minutes estimate: no change (no video on this surface).
 - AI Moderation credits estimate: no change.
@@ -36,7 +36,7 @@
 
 ## Fallback and Degradation Plan
 
-- What degrades first: if `GET /api/hub/messages` is unavailable, the mobile Hub shows its existing
+- What degrades first: if `GET /api/commons/messages` is unavailable, the mobile Hub shows its existing
   empty/error state; there is no Stream dependency to degrade.
 - User-visible messaging behavior: posting is disabled and the existing error state is shown when the
   API is unreachable.
@@ -51,6 +51,6 @@
 ## Validation
 
 - Tests added for degraded mode: none added (no Stream path here). Manual validation: the mobile Hub
-  reads and posts against `/api/hub/messages` with the `x-ctf-csrf: 1` header, matching the web Hub.
+  reads and posts against `/api/commons/messages` with the `x-ctf-csrf: 1` header, matching the web Hub.
 - Rollback strategy: revert the PR; the previous mobile home (and the now-removed dead stub) are
   restored, with no Stream-quota consequence either way.

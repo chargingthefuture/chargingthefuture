@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import type { HubLastSeenResponse } from 'lib/hub/types';
-import { getHubLastSeen, updateHubLastSeen } from 'lib/feed/repository';
+import type { CommonsLastSeenResponse } from 'lib/commons/types';
+import { getCommonsLastSeen, updateCommonsLastSeen } from 'lib/feed/repository';
 import { reportError } from 'lib/observability/report';
-import { requireHubAccess } from '../_lib';
+import { requireCommonsAccess } from '../_lib';
 import { ensureMutationCsrf } from '../../feed/_lib';
 import { failureReason } from 'lib/errors/failure';
 
@@ -12,14 +12,14 @@ import { failureReason } from 'lib/errors/failure';
 // error as "no marker" / "not recorded".
 
 export async function GET() {
-  const gate = await requireHubAccess();
+  const gate = await requireCommonsAccess();
   if (!gate.allowed) {
     return gate.response;
   }
 
   try {
-    const lastSeenAtIso = await getHubLastSeen(gate.auth.userId);
-    const response: HubLastSeenResponse = { ok: true, lastSeenAtIso };
+    const lastSeenAtIso = await getCommonsLastSeen(gate.auth.userId);
+    const response: CommonsLastSeenResponse = { ok: true, lastSeenAtIso };
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'hub', op: 'read_last_seen' });
@@ -37,7 +37,7 @@ type LastSeenRequestBody = {
 };
 
 export async function POST(request: Request) {
-  const gate = await requireHubAccess();
+  const gate = await requireCommonsAccess();
   if (!gate.allowed) {
     return gate.response;
   }
@@ -64,8 +64,8 @@ export async function POST(request: Request) {
   const seenAtIso = typeof body.seenAtIso === 'string' ? body.seenAtIso : null;
 
   try {
-    const lastSeenAtIso = await updateHubLastSeen(gate.auth.userId, seenAtIso);
-    const response: HubLastSeenResponse = { ok: true, lastSeenAtIso };
+    const lastSeenAtIso = await updateCommonsLastSeen(gate.auth.userId, seenAtIso);
+    const response: CommonsLastSeenResponse = { ok: true, lastSeenAtIso };
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'hub', op: 'update_last_seen' });

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import type { HubChannelsResponse } from 'lib/hub/types';
-import { requireHubAccess } from '../_lib';
+import type { CommonsChannelsResponse } from 'lib/commons/types';
+import { requireCommonsAccess } from '../_lib';
 import { getContributorAccessConfig, isMemberEligible } from 'lib/contributor-access/repository';
 import {
   GATED_CHANNEL_DISPLAY_NAME,
@@ -10,13 +10,13 @@ import {
 import { reportError } from 'lib/observability/report';
 
 export async function GET() {
-  const gate = await requireHubAccess();
+  const gate = await requireCommonsAccess();
   if (!gate.allowed) {
     return gate.response;
   }
 
   try {
-    const response: HubChannelsResponse = {
+    const response: CommonsChannelsResponse = {
       channels: [
         {
           slug: 'general',

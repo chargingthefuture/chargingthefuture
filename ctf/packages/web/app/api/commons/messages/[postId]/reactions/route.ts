@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { reportError } from 'lib/observability/report';
 import { FEED_ERROR_CODE, isAllowedFeedReactionEmoji } from 'lib/feed/constants';
 import { normalizeUuid, toggleCommunityPostReaction } from 'lib/feed/repository';
-import { requireHubAccess } from '../../../_lib';
+import { requireCommonsAccess } from '../../../_lib';
 import { ensureMutationCsrf } from '../../../../feed/_lib';
 import { failureReason } from 'lib/errors/failure';
 
@@ -16,7 +16,7 @@ type ReactionRequestBody = {
 
 // Map a toggle-reaction failure to its response. Known error codes carry their own status; anything
 // else is reported to Sentry and returned as a generic 503.
-function mapHubReactionError(error: unknown): NextResponse {
+function mapCommonsReactionError(error: unknown): NextResponse {
   const code = error instanceof Error ? error.message : 'unknown_error';
   if (code === 'reaction_emoji_invalid') {
     return NextResponse.json(
@@ -50,7 +50,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ postId: string }> },
 ) {
-  const gate = await requireHubAccess();
+  const gate = await requireCommonsAccess();
   if (!gate.allowed) {
     return gate.response;
   }
@@ -92,6 +92,6 @@ export async function POST(
     const result = await toggleCommunityPostReaction(gate.auth.userId, postId, emoji);
     return NextResponse.json({ ok: true, reacted: result.reacted }, { status: 200 });
   } catch (error) {
-    return mapHubReactionError(error);
+    return mapCommonsReactionError(error);
   }
 }

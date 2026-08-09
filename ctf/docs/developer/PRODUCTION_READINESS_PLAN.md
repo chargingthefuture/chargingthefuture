@@ -137,7 +137,7 @@ All rows are complete (backend + web pixel + Android parity + gates + deployed).
 Note: "community" is **not** a standalone plugin — it is a channel within the Feed plugin
 (`feed_render_config.enabled_channels` includes `community`; routes under `/api/feed/community/*`).
 It is tracked under `feed-announcements`, not as its own row. The Hub/Home shell is separate (its own
-`/api/hub/*` routes) and is listed under Cross-cutting below.
+`/api/commons/*` routes) and is listed under Cross-cutting below.
 
 Cross-cutting (non-plugin): Hub/Home shell (🎨 design exists), account, auth (Clerk), Sentry observability.
 
@@ -572,7 +572,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   `feed-announcements` as a standalone app via registry alias (blocked by #1); (4) reconcile contracts
   to the `feed.*` namespace (blocked by #1); (5) mobile parity (blocked by #1).
 - 2026-05-31: Survivor Hub ⟵ Feed consolidation implemented (web + backend). Repointed
-  `GET/POST /api/hub/messages` at the Feed model (`listFeedTimeline` reads the blended `feed_items`
+  `GET/POST /api/commons/messages` at the Feed model (`listFeedTimeline` reads the blended `feed_items`
   timeline; `createFeedCommunityPost` persists peer posts, CSRF-guarded via the home-chat hook).
   Added `feed_render_config.is_public` (default TRUE) + read into `FeedConfig`; this is the schema
   change that unblocked removing the phantom `feed_user_extension` seed `INSERT` (resolving the feed

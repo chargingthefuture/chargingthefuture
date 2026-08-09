@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import type { HubJoinResponse } from 'lib/hub/types';
+import type { CommonsJoinResponse } from 'lib/commons/types';
 import { getFeedStreamCredentials } from 'lib/feed/stream';
-import { requireHubAccess } from '../_lib';
+import { requireCommonsAccess } from '../_lib';
 import { reportError } from 'lib/observability/report';
 
 export async function POST() {
-  const gate = await requireHubAccess();
+  const gate = await requireCommonsAccess();
   if (!gate.allowed) {
     return gate.response;
   }
@@ -24,11 +24,11 @@ export async function POST() {
     // Stream not configured in this environment (no API key/secret). Tell the client clearly so it
     // skips the live connection and stays on polling. Commons must never break when Stream is absent.
     if (!credentials) {
-      const notConfigured: HubJoinResponse = { ok: true, configured: false };
+      const notConfigured: CommonsJoinResponse = { ok: true, configured: false };
       return NextResponse.json(notConfigured, { status: 200 });
     }
 
-    const response: HubJoinResponse = {
+    const response: CommonsJoinResponse = {
       ok: true,
       configured: true,
       streamApiKey: credentials.streamApiKey,

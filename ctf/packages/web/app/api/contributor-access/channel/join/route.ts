@@ -4,7 +4,7 @@ import { ensureMutationCsrf } from '../../admin/_lib';
 import { getGatedStreamCredentials } from 'lib/contributor-access/gated-channel';
 import { reportError } from 'lib/observability/report';
 
-// Mint Stream live-layer credentials for the gated channel — same posture as /api/hub/join:
+// Mint Stream live-layer credentials for the gated channel — same posture as /api/commons/join:
 // the client opens a live connection beneath the custom UI for real-time refresh and typing, and
 // when Stream is not configured the response says so and the client stays on polling. The gate
 // has already verified the eligibility flag (or the moderator role) — membership is only ever

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { reportError } from 'lib/observability/report';
-import type { HubMessagesResponse, HubMessage } from 'lib/hub/types';
-import { OFFICIAL_SENDER_LABEL } from 'lib/hub/constants';
+import type { CommonsMessagesResponse, CommonsMessage } from 'lib/commons/types';
+import { OFFICIAL_SENDER_LABEL } from 'lib/commons/constants';
 import type { FeedTimelineItem } from 'lib/feed/types';
 import {
   FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH,
@@ -18,7 +18,7 @@ import {
   validateFeedCommunityPostInput,
 } from 'lib/feed/repository';
 import { feedPostLength as normalizedPostLength } from 'lib/feed/normalize';
-import { requireHubAccess } from '../_lib';
+import { requireCommonsAccess } from '../_lib';
 import { ensureMutationCsrf } from '../../feed/_lib';
 import { failureReason } from 'lib/errors/failure';
 
@@ -26,9 +26,9 @@ import { failureReason } from 'lib/errors/failure';
 // The channel is one blended stream interleaving admin announcements, AI Q&A, and peer-to-peer
 // community posts.
 
-function hubMessageAuthor(
+function commonsMessageAuthor(
   item: FeedTimelineItem,
-): { userId: string; username: HubMessage['username']; displayName: string } {
+): { userId: string; username: CommonsMessage['username']; displayName: string } {
   const isCommunity = item.itemType === 'community';
   const userId = isCommunity ? item.community?.authorUserId ?? 'hub-system' : 'hub-system';
   // This route is gated to signed-in members, so a peer post leads with the
@@ -42,7 +42,7 @@ function hubMessageAuthor(
 
 // A peer post may quote another peer post (Signal-style reply). The quoted author handle
 // and short snippet are resolved server-side in the feed repository and carried here.
-function hubQuotedMessage(item: FeedTimelineItem): HubMessage['quotedMessage'] {
+function commonsQuotedMessage(item: FeedTimelineItem): CommonsMessage['quotedMessage'] {
   const isCommunity = item.itemType === 'community';
   if (isCommunity && item.community?.quotedPost) {
     return {
@@ -57,7 +57,7 @@ function hubQuotedMessage(item: FeedTimelineItem): HubMessage['quotedMessage'] {
 
 // Emoji reactions resolved server-side for the requesting member: from the community post for a
 // peer message, from the announcement for an official one. Other messages carry an empty array.
-function hubReactions(item: FeedTimelineItem): HubMessage['reactions'] {
+function commonsReactions(item: FeedTimelineItem): CommonsMessage['reactions'] {
   const isCommunity = item.itemType === 'community';
   const isAnnouncement = item.itemType === 'announcement';
   if (isCommunity && item.community) {
@@ -73,14 +73,14 @@ function hubReactions(item: FeedTimelineItem): HubMessage['reactions'] {
 // linked plugins (0–3) resolved to { slug, name } for the "Open <Plugin>" chips, the id
 // reactions/replies key on, and the reply count for the "N replies" affordance. Peer posts and AI
 // answers carry null / [] / 0.
-function hubAnnouncementParts(
+function commonsAnnouncementParts(
   item: FeedTimelineItem,
   linkedPluginsByAnnouncementId: Map<string, Array<{ slug: string; name: string }>>,
 ): {
-  title: HubMessage['title'];
-  linkedPlugins: HubMessage['linkedPlugins'];
-  announcementId: HubMessage['announcementId'];
-  replyCount: HubMessage['replyCount'];
+  title: CommonsMessage['title'];
+  linkedPlugins: CommonsMessage['linkedPlugins'];
+  announcementId: CommonsMessage['announcementId'];
+  replyCount: CommonsMessage['replyCount'];
 } {
   const isAnnouncement = item.itemType === 'announcement';
   const title = isAnnouncement ? item.title || null : null;
@@ -92,12 +92,12 @@ function hubAnnouncementParts(
   return { title, linkedPlugins, announcementId, replyCount };
 }
 
-function mapTimelineItemToHubMessage(
+function mapTimelineItemToCommonsMessage(
   item: FeedTimelineItem,
   linkedPluginsByAnnouncementId: Map<string, Array<{ slug: string; name: string }>>,
-): HubMessage {
-  const author = hubMessageAuthor(item);
-  const { title, linkedPlugins, announcementId, replyCount } = hubAnnouncementParts(
+): CommonsMessage {
+  const author = commonsMessageAuthor(item);
+  const { title, linkedPlugins, announcementId, replyCount } = commonsAnnouncementParts(
     item,
     linkedPluginsByAnnouncementId,
   );
@@ -117,15 +117,15 @@ function mapTimelineItemToHubMessage(
     sentAtIso: item.publishedAtIso,
     communityPostId: item.itemType === 'community' ? item.sourceCommunityPostId : null,
     announcementId,
-    quotedMessage: hubQuotedMessage(item),
-    reactions: hubReactions(item),
+    quotedMessage: commonsQuotedMessage(item),
+    reactions: commonsReactions(item),
     replyCount,
   };
 }
 
 // Resolve the timeline options from the request query. Precedence: mentions, then announcements,
 // then the unfiltered "all" stream (with optional deep-link "load around" ids).
-function resolveHubFeedOptions(
+function resolveCommonsFeedOptions(
   url: string,
   username: string | null,
   userId: string,
@@ -156,14 +156,14 @@ function resolveHubFeedOptions(
 }
 
 export async function GET(request: Request) {
-  const gate = await requireHubAccess();
+  const gate = await requireCommonsAccess();
   if (!gate.allowed) {
     return gate.response;
   }
 
   try {
     const pagination = parsePaginationParams(request.url);
-    const options = resolveHubFeedOptions(request.url, gate.identity.username, gate.auth.userId);
+    const options = resolveCommonsFeedOptions(request.url, gate.identity.username, gate.auth.userId);
     const timeline = await listFeedTimeline(gate.auth.userId, gate.auth.role, pagination, options);
 
     // Resolve the linked plugin (if any) for the announcements on this page, so each official card
@@ -174,11 +174,11 @@ export async function GET(request: Request) {
     const linkedPluginsByAnnouncementId = await resolveAnnouncementLinkedPlugins(announcementIds);
 
     // Feed timeline is newest-first; present oldest-first for the chat stream.
-    const messages: HubMessage[] = [...timeline.items]
+    const messages: CommonsMessage[] = [...timeline.items]
       .reverse()
-      .map((item) => mapTimelineItemToHubMessage(item, linkedPluginsByAnnouncementId));
+      .map((item) => mapTimelineItemToCommonsMessage(item, linkedPluginsByAnnouncementId));
 
-    const response: HubMessagesResponse = {
+    const response: CommonsMessagesResponse = {
       channelId: 'community',
       messages,
     };
@@ -208,7 +208,7 @@ type MessageRequestBody = {
   quotedMessage?: unknown;
 };
 
-function readQuotedMessage(value: unknown): HubMessage['quotedMessage'] {
+function readQuotedMessage(value: unknown): CommonsMessage['quotedMessage'] {
   if (!value || typeof value !== 'object') {
     return null;
   }
@@ -226,19 +226,19 @@ function readQuotedMessage(value: unknown): HubMessage['quotedMessage'] {
   return { author: author.slice(0, 160), snippet: snippet.slice(0, 160), postId };
 }
 
-type HubPostInput = { body: string; replyToPostId: string | null };
+type CommonsPostInput = { body: string; replyToPostId: string | null };
 
 // Parse and validate the composer body. Admins (the owner) get a higher length + link cap so a
 // detailed welcome/help post is not blocked as spam; members keep the low caps. Returns a 400
 // response when the text is missing or fails the community-post rules.
-function validateHubPostInput(
+function validateCommonsPostInput(
   body: MessageRequestBody,
   isPrivileged: boolean,
-): { error: NextResponse } | { text: string; input: HubPostInput; echoedQuote: HubMessage['quotedMessage'] } {
+): { error: NextResponse } | { text: string; input: CommonsPostInput; echoedQuote: CommonsMessage['quotedMessage'] } {
   const text = typeof body.text === 'string' ? body.text.trim() : '';
   const replyToPostId = typeof body.replyToPostId === 'string' ? body.replyToPostId.trim() : null;
   const echoedQuote = readQuotedMessage(body.quotedMessage);
-  const input: HubPostInput = { body: text, replyToPostId };
+  const input: CommonsPostInput = { body: text, replyToPostId };
   const maxLength = isPrivileged ? FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH : FEED_MAX_COMMUNITY_POST_LENGTH;
   if (!text || !validateFeedCommunityPostInput(input, maxLength)) {
     // Name the length when that is the reason. The composer blocks an over-limit send before it gets
@@ -264,7 +264,7 @@ function validateHubPostInput(
 // Map a create-post failure to its response. Known error codes carry their own status; anything
 // else is reported to Sentry (caught errors do not reach it on their own) and returned as a
 // generic 503 — the underlying error is not safe to leak to the client.
-function mapHubPostError(error: unknown): NextResponse {
+function mapCommonsPostError(error: unknown): NextResponse {
   const code = error instanceof Error ? error.message : 'unknown_error';
   if (code === 'rate_limit_exceeded') {
     return NextResponse.json(
@@ -296,7 +296,7 @@ function mapHubPostError(error: unknown): NextResponse {
 }
 
 export async function POST(request: Request) {
-  const gate = await requireHubAccess();
+  const gate = await requireCommonsAccess();
   if (!gate.allowed) {
     return gate.response;
   }
@@ -322,7 +322,7 @@ export async function POST(request: Request) {
   // Admins (the owner) get a higher length + link cap so a detailed welcome/help post is not blocked
   // as spam; members keep the low caps.
   const isPrivileged = gate.auth.isAdmin;
-  const validated = validateHubPostInput(body, isPrivileged);
+  const validated = validateCommonsPostInput(body, isPrivileged);
   if ('error' in validated) {
     return validated.error;
   }
@@ -333,9 +333,9 @@ export async function POST(request: Request) {
     const authorUsername = gate.auth.username ?? null;
     const result = await createFeedCommunityPost(gate.auth.userId, input, authorUsername, isPrivileged);
 
-    // Normalize to the same public author shape as mapTimelineItemToHubMessage so the
+    // Normalize to the same public author shape as mapTimelineItemToCommonsMessage so the
     // optimistic send and the next polled copy share a dedup key (from, senderLabel, text, time).
-    const message: HubMessage = {
+    const message: CommonsMessage = {
       id: result.postId,
       userId: gate.identity.userId,
       username: authorUsername,
@@ -361,6 +361,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, message }, { status: 201 });
   } catch (error) {
-    return mapHubPostError(error);
+    return mapCommonsPostError(error);
   }
 }

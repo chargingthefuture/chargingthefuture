@@ -5,8 +5,8 @@
 - Feature/Change: The mobile (React Native / Android) Commons — the Survivor Hub home/community chat
   (`ctf/packages/mobile/src/features/hub/HubHome.tsx`) — now opens a live Stream Chat connection,
   matching what web already does for the same channel. Before this change the mobile Hub polled
-  `GET /api/hub/messages` every 15 seconds and never touched Stream. Now, on entry, it calls
-  `POST /api/hub/join` through `authedFetch` for real credentials and, when Stream is configured,
+  `GET /api/commons/messages` every 15 seconds and never touched Stream. Now, on entry, it calls
+  `POST /api/commons/join` through `authedFetch` for real credentials and, when Stream is configured,
   opens one `stream-chat` connection per mobile Hub viewer to the shared `ctf-feed-community` channel.
   It watches that channel for new posts (which trigger an immediate history reload) and surfaces a
   typing indicator. This adds real, ongoing Stream Chat connection usage on mobile where there was
@@ -40,7 +40,7 @@
   (`channel.keystroke()` debounces, so a member typing a sentence sends roughly one `typing.start`
   and one `typing.stop`, not one per keystroke). Real-time new-post delivery replaces poll volume:
   the 15-second poll slows to a 30-second backstop once a member is live, so per-member background
-  request volume to `/api/hub/messages` drops by about half while connected.
+  request volume to `/api/commons/messages` drops by about half while connected.
 
 ## Budget Threshold Risk
 
@@ -62,7 +62,7 @@
   line.
 - Kill switch / feature flag: the natural kill path is configuration. When `STREAM_API_KEY` /
   `STREAM_API_SECRET` are absent, `resolveStreamCredentials()` returns null, `getFeedStreamCredentials`
-  returns null, and `POST /api/hub/join` returns `{ ok: true, configured: false }` — the mobile client
+  returns null, and `POST /api/commons/join` returns `{ ok: true, configured: false }` — the mobile client
   (`fetchHubJoin` returns null) never opens a connection and stays on polling. So removing/rotating the
   Stream credentials (or the demo-mode routing to the staging Stream app per rule 110) cuts the mobile
   Hub connection load back to zero without breaking the chat. There is no separate per-feature flag
@@ -79,7 +79,7 @@
 ## Validation
 
 - Tests added for degraded mode: none automated. The degraded path is exercised by the
-  `configured: false` branch in `POST /api/hub/join` and the null-credentials/null-connection branches
+  `configured: false` branch in `POST /api/commons/join` and the null-credentials/null-connection branches
   in the mobile `live-stream.ts` (`fetchHubJoin` returns null or `connectHubLive` returns null → the
   screen stays on the 15-second poll and clears the typing state). The mobile typecheck and lint pass.
   The connection is best-effort and wrapped so any failure resolves to null without throwing.
