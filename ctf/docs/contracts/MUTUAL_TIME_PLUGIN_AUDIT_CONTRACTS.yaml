@@ -21,7 +21,7 @@ auditEvents:
     targetContext:
       eventId: <event id>
       slug: <event slug>
-      meetingPlugin: <chyme|peer-programming>
+      meetingPlugin: <chyme|peer-programming|beacon>
     requestId: <request id>
     traceId: <trace id>
     result: success

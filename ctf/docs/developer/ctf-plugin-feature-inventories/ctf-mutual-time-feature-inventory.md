@@ -6,7 +6,7 @@ Mutual Time is a one-link meeting-time picker (spec #1780). An admin (the platfo
 event that has a single shareable link. Approved members open that link and pick up to three one-hour
 windows — snapped to the half-hour — in their own timezone. When the survey closes, the app chooses the
 window the most members can make (ties go to the earliest) and shows it, in each viewer's own timezone,
-with a link to where the meeting happens (Chyme or Peer Programming).
+with a link to where the meeting happens (Chyme, Peer Programming, or Beacon).
 
 - **In scope:** owner/admin event creation and manual close; a public shareable link with three viewer
   states (vote / result / sign-in gate); timezone-aware voting; the most-overlap algorithm; auto-close
@@ -37,7 +37,7 @@ to the meeting surface; members who did not vote can still come listen in.
 ## Admin Features
 
 1. **Create an event** at `/apps/mutual-time`: optional title, optional description, a "Where we'll
-   meet" plugin (Chyme or Peer Programming), and optional survey open/close date-times. Leaving close
+   meet" plugin (Chyme, Peer Programming, or Beacon), and optional survey open/close date-times. Leaving close
    blank means the admin closes it manually.
 2. **Manage events:** the dashboard lists the admin's events with voter counts, a status pill
    (scheduled / open / closed), Copy-link, View, "Close and choose the time", and — once closed — the
@@ -69,7 +69,7 @@ Defined in `ctf/schema.sql` (CREATE TABLE IF NOT EXISTS + ALTER TABLE IF EXISTS 
 1. `mutual_time_events`
    - One row per event, keyed by `id`, with a unique shareable `slug`. Columns: `created_by_user_id`
      (the admin creator), `title` (nullable), `description` (nullable), `meeting_plugin`
-     (`chyme|peer-programming`), `window_start_date` (UTC date the 7-day candidate window begins),
+     (`chyme|peer-programming|beacon`), `window_start_date` (UTC date the 7-day candidate window begins),
      `window_days` (default 7), `opens_at` (nullable — null opens immediately), `closes_at` (nullable —
      null closes manually), `status` (`open|closed`), `result_slot_start` (winning UTC slot, nullable),
      `result_can_make_it` (count, nullable), `created_at`, `closed_at` (nullable). Indexed by slug
@@ -116,8 +116,8 @@ is added to `TrustSignalMetrics`, `computeTrustSignalMetrics`, or `buildTrustEvi
 - **Mobile-responsive web:** complete — the same web components render at phone width (single-column
   layout, horizontally scrollable date chips, wrapping slot grid).
 - **Android:** **out of scope (web-only per rule 105).** Mutual Time is not on the Chyme keep-list; there
-  is intentionally no React Native surface. The meeting the result points to (Chyme / Peer Programming)
-  is where any native experience lives, not the scheduling.
+  is intentionally no React Native surface. The meeting the result points to (Chyme / Peer Programming /
+  Beacon) is where any native experience lives, not the scheduling.
 
 ## Seed Coverage Status
 
@@ -180,6 +180,18 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   members only ever reach an event through its shared link (`/mutual-time/<slug>`), never
   `/apps/mutual-time`. The admin dashboard now renders the shared `MobileScreenHeader` top nav (accent
   back chevron + brand icon + title + the bug/settings/avatar actions), matching every other page.
+- 2026-08-09: **Beacon added to "Where we'll meet" + the date fields stopped running off the screen.**
+  (1) `beacon` is now a third choice in the meeting-plugin list, alongside Chyme and Peer Programming:
+  added to `MUTUAL_TIME_MEETING_PLUGINS`, to the display-name map (`Beacon`), to the command-contract
+  enum and the audit contract's target context, and to the `meeting_plugin` check in `schema.sql`
+  (plus a drop-and-re-add of `mutual_time_events_meeting_plugin_check` so a database created before
+  today accepts the new value too). The result link points at `/apps/beacon`, the same
+  `/apps/<slug>` shape as the other two. (2) The two "Survey opens / Survey closes" date-and-time
+  fields ran past the right edge of the card on a phone. A grid column sized `1fr` keeps a floor of the
+  item's own minimum width, and a `datetime-local` control reports a minimum wider than the phone-width
+  column, so the column grew and took the field with it. The column is now `minmax(0, 1fr)`, each
+  wrapper carries `minWidth: 0`, and the shared input style carries `maxWidth: 100%` — the fields line
+  up with the title, description, and dropdown above them.
 
 Ordered, dependency-based (no phases). Each item done in this initial build.
 
