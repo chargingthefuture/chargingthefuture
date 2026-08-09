@@ -833,7 +833,13 @@ async function connectLiveWhenConfigured(
 // failure, fall back to the frequent poll.
 async function joinAndConnect(ctx: ChatBootstrapContext): Promise<void> {
   try {
-    const join = await requestJson<HubJoinResponse>('/api/hub/join', { method: 'POST' });
+    // The join route gates on Origin today, not on this header, so the call works without it. The
+    // header is sent so the join keeps working if the route ever moves to the header-based check
+    // that the rest of the Commons POSTs use, and so no Commons mutation is the odd one out.
+    const join = await requestJson<HubJoinResponse>('/api/hub/join', {
+      method: 'POST',
+      headers: { 'x-ctf-csrf': '1' },
+    });
     if (!ctx.controller.active) return;
     ctx.setters.setConnectionState('live');
     ctx.setters.setError(null);
@@ -1046,7 +1052,10 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
       setters: settersRef.current,
     });
     return () => teardownBootstrap(controller, liveConnectionRef);
-  }, [currentUser.displayName, currentUser.userId, refreshHistory, refreshComic, refreshLastSeen, loadAroundDeepLink]);
+    // Deliberately keyed on userId only: nothing in the bootstrap reads the display name (incoming
+    // messages carry their own sender name from the server), so listing it here tore down the whole
+    // chat — cleared messages, re-joined, restarted the poll — every time a member edited their name.
+  }, [currentUser.userId, refreshHistory, refreshComic, refreshLastSeen, loadAroundDeepLink]);
 
   const routeToComic = useCallback(
     (questionText: string) => runRouteToComic(questionText, refreshComic, settersRef.current),
