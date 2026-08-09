@@ -245,6 +245,21 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
   than wired up, and the file header now says plainly that an intent's `slug` **is** the registry slug,
   with no translation step to catch a typo. No member-visible change — routing behaves exactly as it
   did, because the removed code never affected it. Web-only; no schema, route, or contract change.
+- 2026-08-09: **Two Commons changes for a crowded phone screen (owner report, iPhone SE).** (1) The
+  Contributions fundraiser gift reminder moved out of the top bar, which had no room left at 375px,
+  and into the chip row: `ConciergeChipRail` (`shell-chat-panel.tsx`) now renders
+  `ContributionsGiftTrigger` immediately after the 🔔 chip and before the suggestion chips, styled
+  by the new `.contributeGiftBtn` class (violet accent, same pill size as the @ / 📣 / 🔔 chips,
+  comic-theme variant included). It stays visible with the notifications feed open, like the three
+  chips before it, and still shows only while a drive is running and the full banner is dismissed or
+  snoozed. The row already scrolls sideways, so the fourth glyph costs no width. (2) The footnote
+  under the composer dropped its live-state sentence ("Human-in-the-loop AI support and community
+  support channel.") — it repeated the helper line directly above the message box, and two
+  near-identical explanations cost a line of screen height on every phone. While the stream is live
+  the footnote is now the "Community guidelines" link alone; the not-live wording ("Support channel
+  keeps syncing as new messages arrive.") stays, because that one reports real connection status.
+  Web-only (the Commons is web-only per rule 105); UI and copy only — no backend, schema, route, or
+  contract change. Verified: `@ctf/web` typecheck, lint, and a production build.
 - 2026-08-03: **Removed the `GET /api/hub/bots` stub and corrected the channel/DM descriptions.** The
   route answered every caller with a hardcoded empty list behind a `TODO`, and no caller existed — a
   documented capability the product did not have. Deleted the route and its `HubBotInfo` /

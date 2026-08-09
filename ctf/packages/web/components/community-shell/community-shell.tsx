@@ -18,7 +18,7 @@ import { ShellChatPanel } from './shell-chat-panel';
 import { GatedChatPanel } from './gated-chat-panel';
 import { ShellAppsPanel } from './shell-apps-panel';
 import { ShellRightRail } from './shell-right-rail';
-import { ContributionsBanner, ContributionsGiftTrigger } from '../contributions/contributions-banner';
+import { ContributionsBanner } from '../contributions/contributions-banner';
 import { UnlockVerifyBanner } from './unlock-verify-banner';
 import { HelpControl } from '../bug-reports/help-control';
 import { SeMark } from '../shared/se-mark';
@@ -180,20 +180,19 @@ function MobileTopBar({ section, onSectionChange, isAuthenticated, isAdmin, sign
       <div className={styles.mobileBarLogo}>
         <SeMark size={26} />
       </div>
-      {/* Signed out, the bar carries far fewer controls (no gift reminder, help, settings or
-          avatar), so the full "SE / SKILLS ECONOMY" lockup fits beside the mark and a first-time
-          visitor sees the product name, not just a symbol. Signed in, the name is dropped again
-          so the mark, gift reminder, tabs and account controls all fit a 390px phone. */}
+      {/* Signed out, the bar carries far fewer controls (no help, settings or avatar), so the full
+          "SE / SKILLS ECONOMY" lockup fits beside the mark and a first-time visitor sees the
+          product name, not just a symbol. Signed in, the name is dropped again so the mark, tabs
+          and account controls all fit a 375px phone (iPhone SE). */}
       {!isAuthenticated ? (
         <span className={styles.mobileBarWordmark} aria-hidden="true">
           <span className={styles.mobileBarWordmarkInitials}>SE</span>
           <span className={styles.mobileBarWordmarkName}>Skills Economy</span>
         </span>
       ) : null}
-      {/* Fundraiser gift reminder — sits between the brand mark and the section tabs (owner
-          placement). Renders only on phone widths while a drive is active and the full banner is
-          dismissed or snoozed; the banner itself (when open) stays in the content area below. */}
-      {isAuthenticated ? <ContributionsGiftTrigger /> : null}
+      {/* The fundraiser gift reminder used to sit here, between the mark and the tabs. On a 375px
+          phone that made the bar too crowded, so it moved down into the Commons chip row after the
+          🔔 chip (owner directive, 2026-08-09) — see ConciergeChipRail in shell-chat-panel.tsx. */}
       <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
         <button
           type="button"
