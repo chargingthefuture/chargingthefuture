@@ -73,7 +73,7 @@ When user deletes Feed usage only:
 - Delete immediately:
   - per-user state rows in `feed_user_read_state`, `feed_user_dismissals`, `feed_answer_ratings`,
     `feed_community_post_reactions`, `announcement_user_state`, `announcement_reactions`, and
-    `feed_hub_last_seen` (2026-08-02: the last three now have registry entries — this contract
+    `feed_commons_last_seen` (2026-08-02: the last three now have registry entries — this contract
     already promised `feed_community_post_reactions` would clear, but no registry entry existed, so
     the deletion engine never executed that promise until the deletion-coverage gate caught it)
 - Anonymize/pseudonymize:

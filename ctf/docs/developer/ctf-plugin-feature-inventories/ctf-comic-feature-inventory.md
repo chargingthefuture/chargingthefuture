@@ -366,8 +366,11 @@ DBs converge: `comic_conversations(channel, status)`, `comic_turns(role, engine,
 
 1. `comic_conversations` — a chat thread (`id` uuid pk, `user_id` text, `asker_username` text null
    [the asker's @username snapshotted at ask time, shown in the review dashboard in place of the raw
-   user id; null for rows created before this was captured], `channel` text [hub|feed], `status` text
+   user id; null for rows created before this was captured], `channel` text [commons|feed], `status` text
    [open|closed], `created_at`, `updated_at`). Indexed on `user_id`, `created_at`.
+   `channel` was `hub|feed` until 2026-08-09; existing rows were migrated to `commons` and nothing
+   writes `hub` any more. The CHECK still accepts `hub` for one release so the deploy window cannot
+   fail an insert, and reads fold it to `commons` — see the Commons inventory's change log.
 2. `comic_turns` — one row per turn, including `grounding_entry_ids` (jsonb array, default `[]`;
    the `comic_knowledge_entries` ids injected as grounding when a bot draft was generated —
    added 2026-07-23) (`id` uuid pk, `conversation_id` uuid FK→comic_conversations,

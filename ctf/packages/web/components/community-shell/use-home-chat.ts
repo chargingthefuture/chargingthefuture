@@ -434,7 +434,7 @@ async function runRouteToComic(questionText: string, refreshComic: () => Promise
     await requestJson<ComicMessageResponse>('/api/comic/message', {
       method: 'POST',
       headers: JSON_CSRF_HEADERS,
-      body: JSON.stringify({ body: questionText, channel: 'hub', consentGranted: true }),
+      body: JSON.stringify({ body: questionText, channel: 'commons', consentGranted: true }),
     });
     // Pull the server stream so the pending card reflects the persisted turn.
     await refreshComic().catch(() => undefined);

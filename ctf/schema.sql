@@ -1282,15 +1282,38 @@ ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS use
 ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- Per-member "last seen" marker for the Hub home channel, used to draw a single
+-- Per-member "last seen" marker for the Commons home channel, used to draw a single
 -- "New messages" divider where a member left off. One row per member; updated to NOW()
 -- after the member views the chat. Best-effort: a read/write failure must never break chat.
-CREATE TABLE IF NOT EXISTS feed_hub_last_seen (
+--
+-- Renamed from `feed_hub_last_seen` on 2026-08-09 with the rest of the hub → commons rename. The
+-- rename MUST run before the CREATE TABLE below: otherwise `CREATE TABLE IF NOT EXISTS` would make
+-- an empty `feed_commons_last_seen` first and every member's marker would be stranded in the old
+-- table, resetting the unread divider for everyone. Guarded on both sides so it happens exactly
+-- once and a re-run is a no-op.
+DO $rename_feed_hub_last_seen$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = current_schema() AND table_name = 'feed_hub_last_seen'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = current_schema() AND table_name = 'feed_commons_last_seen'
+  ) THEN
+    ALTER TABLE feed_hub_last_seen RENAME TO feed_commons_last_seen;
+    -- RENAME TO leaves the primary key named after the old table; rename it too so a later reader
+    -- of \d output is not sent looking for a table that no longer exists.
+    ALTER INDEX IF EXISTS feed_hub_last_seen_pkey RENAME TO feed_commons_last_seen_pkey;
+  END IF;
+END
+$rename_feed_hub_last_seen$;
+
+CREATE TABLE IF NOT EXISTS feed_commons_last_seen (
   user_id TEXT PRIMARY KEY,
   last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS feed_commons_last_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS feed_commons_last_seen ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- Per-admin "last opened" marker for each admin area, powering the "new to review" dot on the admin
 -- landing tiles. A dot shows for an area when its newest actionable item (a pending review, a new
@@ -4924,7 +4947,7 @@ CREATE TABLE IF NOT EXISTS comic_conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   asker_username TEXT NULL,
-  channel TEXT NOT NULL DEFAULT 'hub' CHECK (channel IN ('hub', 'feed')),
+  channel TEXT NOT NULL DEFAULT 'commons' CHECK (channel IN ('commons', 'feed', 'hub')),
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -4932,7 +4955,7 @@ CREATE TABLE IF NOT EXISTS comic_conversations (
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS asker_username TEXT NULL;
-ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'hub';
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'commons';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -5215,6 +5238,24 @@ CREATE INDEX IF NOT EXISTS idx_comic_knowledge_entries_contribution
 
 -- Named CHECK constraints for the comic_* enum/range columns. Idempotent (skip if present) so
 -- legacy DBs that predate the inline CHECKs converge. Enum values mirror lib/comic/constants.ts.
+-- comic_conversations.channel: 'hub' → 'commons' (2026-08-09, with the rest of the rename).
+--
+-- Order is load-bearing. The old constraint forbids 'commons', so it has to go before the data can
+-- move; the new one is added after. Dropping unconditionally and letting the guarded block below
+-- re-add it keeps this convergent on a fresh DB (where CREATE TABLE already made the constraint
+-- under the same auto-generated name) and on a legacy one, and a re-run is a no-op.
+ALTER TABLE IF EXISTS comic_conversations DROP CONSTRAINT IF EXISTS comic_conversations_channel_check;
+UPDATE comic_conversations SET channel = 'commons' WHERE channel = 'hub';
+ALTER TABLE IF EXISTS comic_conversations ALTER COLUMN channel SET DEFAULT 'commons';
+
+-- 'hub' is still ACCEPTED here, deliberately and temporarily. This file is applied by
+-- update-neon-db.yml on push to main, while the web app redeploys separately — so for a few minutes
+-- the previous release is still serving with the database already migrated. A strict
+-- CHECK (channel IN ('commons', 'feed')) would make any @comic question asked in that window fail
+-- on a constraint violation. No row is written with 'hub' after this ships (the API coerces every
+-- non-'feed' value to 'commons'), and reads normalize a legacy 'hub' to 'commons', so the value is
+-- write-dead already. Drop 'hub' from this list in a follow-up once the deploy has settled — that
+-- change is this one line plus the matching UPDATE above becoming a no-op.
 DO $comic_conversations_channel_check$
 BEGIN
   IF NOT EXISTS (
@@ -5224,7 +5265,7 @@ BEGIN
     BEGIN
       ALTER TABLE comic_conversations
         ADD CONSTRAINT comic_conversations_channel_check
-        CHECK (channel IN ('hub', 'feed'));
+        CHECK (channel IN ('commons', 'feed', 'hub'));
     EXCEPTION WHEN duplicate_object THEN
       NULL;
     END;

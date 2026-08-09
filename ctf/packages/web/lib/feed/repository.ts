@@ -2629,7 +2629,7 @@ export async function listAnnouncementReplies(announcementId: string): Promise<F
 // must treat a thrown error as "no marker" and never let it break the chat.
 export async function getCommonsLastSeen(userId: string): Promise<string | null> {
   const result = await queryDb<{ last_seen_at: Date }>(
-    'SELECT last_seen_at FROM feed_hub_last_seen WHERE user_id = $1 LIMIT 1',
+    'SELECT last_seen_at FROM feed_commons_last_seen WHERE user_id = $1 LIMIT 1',
     [userId],
   );
   return result.rows.length > 0 ? toIso(result.rows[0].last_seen_at) : null;
@@ -2643,10 +2643,10 @@ export async function updateCommonsLastSeen(userId: string, seenAtIso?: string |
   const useClientTime = parsed !== null && parsed.getTime() <= Date.now();
   const result = await queryDb<{ last_seen_at: Date }>(
     `
-      INSERT INTO feed_hub_last_seen (user_id, last_seen_at)
+      INSERT INTO feed_commons_last_seen (user_id, last_seen_at)
       VALUES ($1, COALESCE($2::timestamptz, NOW()))
       ON CONFLICT (user_id)
-      DO UPDATE SET last_seen_at = GREATEST(feed_hub_last_seen.last_seen_at, EXCLUDED.last_seen_at)
+      DO UPDATE SET last_seen_at = GREATEST(feed_commons_last_seen.last_seen_at, EXCLUDED.last_seen_at)
       RETURNING last_seen_at
     `,
     [userId, useClientTime && parsed ? parsed.toISOString() : null],

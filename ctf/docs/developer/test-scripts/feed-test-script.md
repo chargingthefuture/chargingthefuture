@@ -446,7 +446,7 @@
 ### Account deletion clears reactions and Hub read-state
 
 **Expected:** Deleting the account removes the member's post reactions, announcement reactions, and
-`feed_hub_last_seen` row along with the per-user state the script already covers.
+`feed_commons_last_seen` row along with the per-user state the script already covers.
 
 ## Admin walkthrough
 

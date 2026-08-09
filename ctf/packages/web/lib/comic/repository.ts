@@ -162,8 +162,11 @@ function normalizeNullableText(value: string | null | undefined): string | null 
   return normalized.length > 0 ? normalized : null;
 }
 
+// Anything that is not the feed channel is the Commons. This also folds the legacy 'hub' value —
+// what this channel was called before the 2026-08-09 rename — into 'commons' on read, so a row
+// written before the migration renders the same as one written after.
 function normalizeChannel(value: unknown): ComicChannel {
-  return value === 'feed' ? 'feed' : 'hub';
+  return value === 'feed' ? 'feed' : 'commons';
 }
 
 function toNumberOrNull(value: string | null): number | null {
