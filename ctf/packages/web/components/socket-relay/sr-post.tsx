@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { MAX_TAG_LENGTH, MAX_TAGS_PER_POST, SUBTLE } from "./sr-shared";
 import { CurrencySelect } from "@/components/shared/currency-select";
+import { AcceptedCurrencyPicker } from "@/components/shared/accepted-currency-picker";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { FormField } from "@/components/shared/form-field";
 import type { Currency } from "lib/currency/types";
@@ -28,6 +29,10 @@ export type PostDraft = {
   // Whether the chosen value type needs an amount. Kept on the draft (not local state) so it resets
   // together with the rest of the form — otherwise it would drift after a reset.
   requiresAmount: boolean;
+  // Every currency the poster accepts for settling (split settlements) — checkboxes mirroring the
+  // LightHouse listing form, independent of the single listed price above. A post settled part in
+  // ServiceCredits and part in dollars checks both.
+  acceptedCurrencies: string[];
 };
 
 type FieldA11y = { id: string; "aria-describedby"?: string; "aria-invalid"?: boolean };
@@ -201,6 +206,19 @@ export function SocketRelayPost({
             )}
           </FormField>
         )}
+        <AcceptedCurrencyPicker
+          accepted={draft.acceptedCurrencies}
+          onToggle={(code) =>
+            onChange({
+              acceptedCurrencies: draft.acceptedCurrencies.includes(code)
+                ? draft.acceptedCurrencies.filter((c) => c !== code)
+                : [...draft.acceptedCurrencies, code],
+            })
+          }
+          hint="Choose every currency this post accepts — e.g. check ServiceCredits and United States Dollar if you would settle part in each. This is separate from the settlement above."
+          colors={{ text: t.TEXT, muted: t.MUTED, border: t.BORDER_STRONG, accent: t.ACCENT }}
+        />
+
         {error && <div role="alert" style={{ fontSize: 13, color: "#EF4444" }}>{error}</div>}
         {success && <div role="status" style={{ fontSize: 13, color: "#22C55E" }}>{editing ? "Saved! View it in the feed." : "Posted successfully! View it in the feed."}</div>}
         <SubmitButton submitting={submitting} editing={editing} t={t} onSubmit={onSubmit} />

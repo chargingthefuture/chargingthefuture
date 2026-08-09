@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { HandHeart, Loader2, Check, MessageCircle } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getTrustTransportTokens, ttSettlementLabel, type AvailableRequest, type ChatCreds, type ProviderTrip } from "./tt-shared";
+import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-currency-picker";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
 
 function modeLabel(mode: string | undefined): string {
@@ -405,6 +406,11 @@ function HelpCard({ request }: { request: AvailableRequest }) {
         <span style={{ fontSize: 12, color: "#22C55E", background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 20, padding: "2px 10px" }}>
           {ttSettlementLabel(request.priceCurrency, request.priceAmount)}
         </span>
+        {acceptedCurrenciesBadgeLabel(request.acceptedCurrencies) && (
+          <span style={{ fontSize: 12, color: t.ACCENT, background: `${t.ACCENT}10`, border: `1px solid ${t.ACCENT}30`, borderRadius: 20, padding: "2px 10px" }}>
+            {acceptedCurrenciesBadgeLabel(request.acceptedCurrencies)}
+          </span>
+        )}
         <span style={{ marginLeft: "auto", fontSize: 12, color: t.MUTED }}>{postedAgo(request.createdAtIso)}</span>
       </div>
       <div style={{ marginTop: 8, fontSize: 12, color: t.SUBTLE, lineHeight: 1.5 }}>
