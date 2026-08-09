@@ -293,6 +293,24 @@ Result: web ☐ mobile ☐
 
 ---
 
+### MT-13 — There is a way back off the survey
+
+**Role:** Member (`approved_full`), then none (signed out)
+**Surfaces:** Web, Mobile
+**Precondition:** An open event slug. Best run in the installed web app, where there is no browser back button.
+
+**Steps:**
+1. Signed in, open the app, go to any screen, then open `/mutual-time/<open-event-slug>`.
+2. Look at the top of the screen, then press the back chevron.
+3. Sign out. Paste the same link into a fresh tab so nothing in the app came before it, and look next to the event name.
+4. Still signed out, open the app first, then navigate to the link, and look next to the event name again.
+
+**Expected:** Signed in, the standard top bar is there — back chevron, calendar icon, "Mutual Time", and the bug / settings / account controls — and the chevron returns to the screen you came from. Signed out in a fresh tab, there is no back chevron (there is nowhere in the app to go back to) and the browser's own back still works. Signed out after moving through the app, the back chevron appears next to the event name and returns to the previous page. No screen shows two back controls.
+
+Result: web ☐ mobile ☐
+
+---
+
 ## Admin walkthrough
 
 ### MT-A1 — Create an event (Chyme, no close date)

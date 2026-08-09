@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CalendarClock, Copy, Check, Globe, ChevronDown, Clock, Lock, ArrowUpRight } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { BackChevronButton, useSmartBack } from '@/lib/nav/back-history';
 import { MUTUAL_TIME_MAX_PICKS } from 'lib/mutual-time/constants';
 import type { MutualTimePublicEvent, MutualTimeViewerState } from 'lib/mutual-time/types';
 import { SlotPicker, PicksSummary } from './mutual-time-slot-picker';
@@ -38,7 +40,6 @@ export function MutualTimePublic({ initialEvent, initialViewer, isSignedIn, sign
   const [picks, setPicks] = useState<string[]>(initialViewer.picks);
   const [tz, setTz] = useState<string>('UTC');
   const [showTz, setShowTz] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   // Detect the viewer's timezone on mount (client-only, so SSR stays deterministic).
   useEffect(() => {
@@ -46,6 +47,51 @@ export function MutualTimePublic({ initialEvent, initialViewer, isSignedIn, sign
   }, []);
 
   const [canVote, setCanVote] = useState(initialViewer.canVote);
+
+  return (
+    <div style={{ background: t.BG, minHeight: '100vh', color: t.TITLE }}>
+      {/* Way back (rule 134). A signed-in member gets the standard top bar every other screen has —
+          back chevron, brand icon, title, and the bug/settings/account cluster — so the way back sits
+          where they expect it. A signed-out visitor does not: that bar would offer them an account
+          menu and a settings link they cannot use. Their back control lives in the page header below. */}
+      {isSignedIn && (
+        <MobileScreenHeader title="Mutual Time" accent={t.ACCENT} icon={<CalendarClock size={18} color={t.ACCENT} />} />
+      )}
+      <div style={{ maxWidth: 780, margin: '0 auto', padding: isSignedIn ? '20px 20px 32px' : '32px 20px' }}>
+        <EventHeader event={event} isSignedIn={isSignedIn} t={t} />
+        <EventBody
+          event={event}
+          setEvent={setEvent}
+          tz={tz}
+          setTz={setTz}
+          showTz={showTz}
+          setShowTz={setShowTz}
+          picks={picks}
+          setPicks={setPicks}
+          canVote={canVote}
+          setCanVote={setCanVote}
+          isSignedIn={isSignedIn}
+          signInUrl={signInUrl}
+          verifyUrl={verifyUrl}
+          t={t}
+        />
+      </div>
+    </div>
+  );
+}
+
+// The page's own header: the event name, the Copy-link button, and — for a signed-out visitor only —
+// the shared back chevron.
+//
+// That chevron shows only when there is somewhere in-app to go back to. A visitor usually arrives here
+// from a link pasted somewhere else entirely, so there is nothing in-app behind them; the one-level-up
+// fallback would push them to the all-apps page, which needs an account. Their browser's own back still
+// returns them to wherever the link came from. A signed-in member never needs it here — they already
+// have the standard top bar above.
+function EventHeader({ event, isSignedIn, t }: { event: MutualTimePublicEvent; isSignedIn: boolean; t: Tokens }) {
+  const [copied, setCopied] = useState(false);
+  const { hasHistory } = useSmartBack();
+  const showVisitorBack = !isSignedIn && hasHistory;
 
   const onCopy = useCallback(async () => {
     const ok = await copyToClipboard(eventShareUrl(event.slug));
@@ -55,9 +101,10 @@ export function MutualTimePublic({ initialEvent, initialViewer, isSignedIn, sign
     }
   }, [event.slug]);
 
-  const header = (
+  return (
     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {showVisitorBack && <BackChevronButton accent={t.ACCENT} size={34} />}
         <CalendarClock size={22} style={{ color: t.ACCENT }} />
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{event.title || 'Meeting time'}</h1>
       </div>
@@ -70,38 +117,69 @@ export function MutualTimePublic({ initialEvent, initialViewer, isSignedIn, sign
       </button>
     </div>
   );
+}
 
+// Picks the one view the visitor should see: the result (closed), the not-yet-open notice, the vote
+// grid (open + an approved member), or the sign-in / listen-in gate.
+function EventBody({
+  event,
+  setEvent,
+  tz,
+  setTz,
+  showTz,
+  setShowTz,
+  picks,
+  setPicks,
+  canVote,
+  setCanVote,
+  isSignedIn,
+  signInUrl,
+  verifyUrl,
+  t,
+}: {
+  event: MutualTimePublicEvent;
+  setEvent: (next: MutualTimePublicEvent) => void;
+  tz: string;
+  setTz: (v: string) => void;
+  showTz: boolean;
+  setShowTz: (v: boolean) => void;
+  picks: string[];
+  setPicks: (next: string[]) => void;
+  canVote: boolean;
+  setCanVote: (v: boolean) => void;
+  isSignedIn: boolean;
+  signInUrl: string;
+  verifyUrl?: string;
+  t: Tokens;
+}) {
   const closesLabel = event.closesAtIso ? formatSlotDate(event.closesAtIso, tz) : null;
 
   return (
-    <div style={{ background: t.BG, minHeight: '100vh', color: t.TITLE }}>
-      <div style={{ maxWidth: 780, margin: '0 auto', padding: '32px 20px' }}>
-        {header}
-        {event.description && <p style={{ color: t.SUBTLE, fontSize: 14, margin: '0 0 16px' }}>{event.description}</p>}
+    <>
+      {event.description && <p style={{ color: t.SUBTLE, fontSize: 14, margin: '0 0 16px' }}>{event.description}</p>}
 
-        {event.effectiveState === 'closed' ? (
-          <ResultView event={event} tz={tz} canVote={canVote} t={t} />
-        ) : event.effectiveState === 'scheduled' ? (
-          <ScheduledView event={event} tz={tz} t={t} />
-        ) : canVote ? (
-          <VoteView
-            event={event}
-            tz={tz}
-            picks={picks}
-            setPicks={setPicks}
-            setEvent={setEvent}
-            setCanVote={setCanVote}
-            showTz={showTz}
-            setShowTz={setShowTz}
-            setTz={setTz}
-            closesLabel={closesLabel}
-            t={t}
-          />
-        ) : (
-          <GateView event={event} tz={tz} isSignedIn={isSignedIn} signInUrl={signInUrl} verifyUrl={verifyUrl} closesLabel={closesLabel} t={t} />
-        )}
-      </div>
-    </div>
+      {event.effectiveState === 'closed' ? (
+        <ResultView event={event} tz={tz} canVote={canVote} t={t} />
+      ) : event.effectiveState === 'scheduled' ? (
+        <ScheduledView event={event} tz={tz} t={t} />
+      ) : canVote ? (
+        <VoteView
+          event={event}
+          tz={tz}
+          picks={picks}
+          setPicks={setPicks}
+          setEvent={setEvent}
+          setCanVote={setCanVote}
+          showTz={showTz}
+          setShowTz={setShowTz}
+          setTz={setTz}
+          closesLabel={closesLabel}
+          t={t}
+        />
+      ) : (
+        <GateView event={event} tz={tz} isSignedIn={isSignedIn} signInUrl={signInUrl} verifyUrl={verifyUrl} closesLabel={closesLabel} t={t} />
+      )}
+    </>
   );
 }
 
