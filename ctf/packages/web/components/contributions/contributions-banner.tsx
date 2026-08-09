@@ -132,7 +132,7 @@ export function ContributionsBanner() {
  *
  * It used to sit in the top bar beside the brand mark, but on a narrow phone (iPhone SE) that bar
  * ran out of room, so it now rides in the Commons chip row just after the 🔔 notifications chip
- * (owner placement decision, 2026-08-07). The caller supplies `className` so the button matches
+ * (owner placement decision, 2026-08-09). The caller supplies `className` so the button matches
  * whichever row it sits in.
  */
 export function ContributionsGiftTrigger({ className }: { className: string }) {

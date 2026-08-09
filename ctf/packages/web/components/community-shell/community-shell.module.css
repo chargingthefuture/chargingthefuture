@@ -1814,7 +1814,7 @@
   align-items: center;
   /* Tightened (owner report, 2026-07-19): with the brand mark, tabs, admin, help, settings, and
      avatar all present, 8px gaps + 12px padding overflowed a 390px phone and clipped the avatar off
-     the right edge. The gift reminder was later moved out of this bar entirely (2026-08-07) because
+     the right edge. The gift reminder was later moved out of this bar entirely (2026-08-09) because
      even at these gaps the bar was crowded on a 375px phone (iPhone SE). */
   gap: 5px;
   height: 52px;
@@ -2425,8 +2425,9 @@
 
 /* ─── Fundraiser gift (🎁) chip ──────────────────────────────────────────── */
 /* Fourth glyph pill, right after the 🔔 chip. It moved down here from the top bar, which had no
-   room left on a 375px phone (iPhone SE). Rose accent so it reads distinct from the sky-blue @,
-   emerald 📣 and amber 🔔. Sized like the other three so the four read as one row. */
+   room left on a 375px phone (iPhone SE). Violet accent so it reads distinct from the sky-blue @,
+   emerald 📣 and amber 🔔, and does not read as a warning the way the earlier rose did. Sized like
+   the other three so the four read as one row. */
 .contributeGiftBtn {
   flex: 0 0 auto;
   display: inline-flex;
@@ -2435,15 +2436,15 @@
   padding: 3px 9px;
   border-radius: 7px;
   background: transparent;
-  border: 1px solid rgba(244, 114, 182, 0.35);
-  color: #F472B6;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  color: #A78BFA;
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
 }
 
 .contributeGiftBtn:hover {
-  background: rgba(244, 114, 182, 0.12);
+  background: rgba(167, 139, 250, 0.12);
 }
 
 /* ─── Notifications center panel ─────────────────────────────────────────── */

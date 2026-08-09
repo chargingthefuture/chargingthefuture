@@ -191,7 +191,7 @@ function MobileTopBar({ section, onSectionChange, isAuthenticated, isAdmin, sign
       ) : null}
       {/* The fundraiser gift reminder used to sit here, between the mark and the tabs. On a 375px
           phone that made the bar too crowded, so it moved down into the Commons chip row after the
-          🔔 chip (owner directive, 2026-08-07) — see ConciergeChipRail in shell-chat-panel.tsx. */}
+          🔔 chip (owner directive, 2026-08-09) — see ConciergeChipRail in shell-chat-panel.tsx. */}
       <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
         <button
           type="button"
