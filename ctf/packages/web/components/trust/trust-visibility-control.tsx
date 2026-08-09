@@ -5,7 +5,7 @@
 // Split out of TrustWidgetCard (rule 116) so the card stays a rendering component and this file
 // owns the one piece of state and the one write call in it (POST /api/trust/visibility).
 //
-// The card reads as two labelled sections: the member's own signals under "Your trust", then this
+// The card reads as two labeled sections: the member's own signals under "Your trust", then this
 // one under "What members see". That split is what makes the setting legible. It changes only what
 // OTHER members get — the owner's own list never moves — so a member who changed it and watched
 // their own card used to conclude it did nothing.
