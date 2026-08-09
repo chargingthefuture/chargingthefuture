@@ -18,11 +18,13 @@ Trust gives the community a privacy-respecting, **non-numeric** way to gauge how
 1. View their trust badge (qualitative standing, not a number), evidence panel, and verification status on profile/directory surfaces.
 2. Choose who can see their own trust signals, from a labeled "Who can see your trust signals"
    dropdown on their own Trust card (account hub, community right rail, own Directory profile).
-   Each choice states the outcome in plain words rather than naming a category: **"Members see
-   everything"** — any signed-in member who opens your profile sees every signal; **"Members see a
-   summary"** — members see how active you are (sign-in days, how many plugins you take part in, and
-   any ServiceCredits counts) without the detail or the dates; **"Only you see this"** — no other
-   member can open the panel, though admins can, as they can for every member. The member always
+   Each choice states the outcome in plain words rather than naming a category, and names what is
+   being shared so the selected line still makes sense with the dropdown closed: **"Members see all
+   your trust signals"** — any signed-in member who opens your profile sees every signal; **"Members
+   see a summary of your trust signals"** — members see how active you are (sign-in days, how many
+   plugins you take part in, and any ServiceCredits counts) without the detail or the dates; **"Only
+   you see your trust signals"** — no other member can see them, though admins can, as they can for
+   every member. The member always
    sees every signal on their own card whichever choice is active, and a "What members see" preview
    under the dropdown shows exactly what a member would receive at the current choice. A "Saved"
    confirmation appears when the choice is stored. The setting governs the trust panel only; it is
@@ -165,6 +167,18 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
    closing if the status is ever meant to stay admin-side.
 
 ## Change Log
+
+- 2026-08-09: **Each choice now names what is being shared.** Owner report: with the dropdown closed
+  the selected line read "Only you see this" on its own, with the "Who sees your trust signals"
+  heading above it easily scrolled past, so the member had no way to tell what "this" was. The three
+  labels now name the subject — **"Members see all your trust signals"** / **"Members see a summary
+  of your trust signals"** / **"Only you see your trust signals"** — and the same pointing words are
+  removed from the private effect line ("No other member can see your trust signals"), the preview
+  lines ("Every trust signal listed above, exactly as you see it." / "Nothing — your trust signals do
+  not appear on your profile for them."), and the read-only row on another member's card ("This
+  member shares all their trust signals" / "…a summary of their trust signals" / "…keeps their trust
+  signals private"). Wording only: the stored enum values, routes, contracts, and schema are
+  unchanged.
 
 - 2026-08-08: **Plain-language names for the three choices.** Owner direction: the labels named a
   category and left the member to work out the category's rules, which is how the three were read as
