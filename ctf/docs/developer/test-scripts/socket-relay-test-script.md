@@ -396,6 +396,10 @@ web ☐
   (`SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED`). The copy must read as "one offer per post" — it must
   **not** say the member was blocked or that the poster reopened the post for others. A different
   member can still claim the re-opened request normally.
+- The two sides see different closure notices on the ended Direct Line. The requester's read-only
+  notice says the conversation ended **and** that the request is open again on the feed. The canceled
+  helper's notice says only "This conversation ended when the offer was canceled and can't be
+  reopened." — it must **not** mention that the request is open again on the feed.
 
 web ☐
 
