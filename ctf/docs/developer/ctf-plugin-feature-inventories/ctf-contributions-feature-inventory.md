@@ -57,12 +57,11 @@ flow is one-way, like gas-station reward points.
 - See their own claim history and statuses (pending / confirmed / rejected).
 - See the current fundraiser cycle and collective progress (USD raised, comments, stars,
   contributor count) toward the owner-set goals.
-- Dismiss the fundraiser banner — a silent two-month snooze. On phone width, dismissing does not
-  remove the reminder entirely: the full banner collapses to a small gift emoji (🎁) in its place that
-  still opens the plugin, so it stays a subtle nudge without taking up space; the full banner returns
-  on its own when the snooze lapses. On desktop, dismissing hides it until the snooze lapses (no
-  emoji — the slim desktop bar is already unobtrusive). If the admin turns the banner feature off,
-  neither the banner nor the emoji shows.
+- Dismiss the fundraiser banner — a silent two-month snooze. Dismissing does not remove the reminder
+  entirely: the full banner collapses to a small gift emoji (🎁) that appears in the Commons chip row
+  just after the 🔔 notifications chip and still opens the plugin, so it stays a subtle nudge without
+  taking up space; the full banner returns on its own when the snooze lapses. If the admin turns the
+  banner feature off, neither the banner nor the emoji shows.
 - Open to any signed-in member: contributing requires no Unlock verification and never changes
   Unlock state.
 
@@ -309,6 +308,14 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
   though the route threw it away — the command contract says the snooze length is internal and is not
   returned to the member, so the function now returns nothing and the `RETURNING` clause is gone. No
   member-visible change from the dismiss edit; no schema, route, or contract change from either.
+- 2026-08-09: **Gift reminder moved out of the top bar and into the Commons chip row (owner report:
+  the top bar was crowded on an iPhone SE).** `ContributionsGiftTrigger` is no longer mounted by
+  `community-shell.tsx`; it now renders in `ConciergeChipRail` (`shell-chat-panel.tsx`) immediately
+  after the 🔔 notifications chip, styled by a new `.contributeGiftBtn` chip class (violet accent,
+  same size as the @ / 📣 / 🔔 pills, with a comic-theme variant). The component takes a `className` prop
+  instead of carrying its old inline top-bar box style. When it shows and where it goes on tap are
+  unchanged: only while a drive is running and the full banner is dismissed or snoozed, and it opens
+  `/apps/contributions`. UI-only — no route, schema, or contract change.
 - 2026-08-07: Admin settings audit rows now record which settings the admin actually sent. The
   audit write in `app/api/contributions/admin/config/route.ts` logged every setting's resulting
   value, so a record could not show whether a knob was edited or merely carried over. The route now

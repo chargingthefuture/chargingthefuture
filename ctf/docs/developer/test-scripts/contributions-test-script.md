@@ -257,7 +257,7 @@ The fundraiser banner is visible. It shows collective drive progress and a way t
 
 ---
 
-### CONT-11 — Dismissing the banner on phone width collapses it to a 🎁 emoji in the top bar
+### CONT-11 — Dismissing the banner collapses it to a 🎁 chip in the Commons chip row
 
 **Role:** Member
 **Surfaces:** Web (phone width)
@@ -266,12 +266,13 @@ The fundraiser banner is visible. It shows collective drive progress and a way t
 **Steps:**
 1. At phone width, locate the fundraiser banner in the Hub.
 2. Click "Not now".
-3. Observe the banner area and the top bar.
+3. Observe the banner area, the top bar, and the chip row above the message box.
 
 **Expected:**
 - The full banner collapses.
-- A small 🎁 (gift emoji) appears in the top bar between the SE mark and the section tabs.
-- The emoji is tappable and opens the contributions plugin.
+- A small 🎁 (gift emoji) chip appears in the Commons chip row, immediately after the 🔔 notifications chip.
+- No 🎁 appears in the top bar.
+- The chip is tappable and opens the contributions plugin.
 - The large banner strip is no longer shown.
 
 **Result:** web ☐

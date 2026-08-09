@@ -47,10 +47,9 @@ export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthe
 
       <div className={styles.iconRailSpacer} aria-hidden="true" />
 
-      {/* Contribute shortcut: the phone top bar carries a gift trigger, but the desktop rail had no
-          equivalent, so on desktop there was no gift/contribute affordance at all. This restores
-          parity — a persistent entry to the Contributions plugin for signed-in members. Uses the
-          lucide Gift icon to match the rail's other icons (the phone bar keeps its 🎁 emoji). */}
+      {/* Contribute shortcut: a persistent entry to the Contributions plugin for signed-in members,
+          shown whether or not a drive is running. Uses the lucide Gift icon to match the rail's
+          other icons; the Commons chip row's fundraiser reminder keeps its 🎁 emoji. */}
       {isAuthenticated ? (
         <Link
           href="/apps/contributions"
