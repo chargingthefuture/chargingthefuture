@@ -184,7 +184,9 @@ export function MutualTimeAdmin() {
 
   const card: React.CSSProperties = { marginTop: 20, borderRadius: 14, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, padding: 20 };
   const labelStyle: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: t.SUBTLE, margin: '10px 0 4px' };
-  const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, padding: '10px 12px', color: t.TITLE, fontSize: 14, fontFamily: 'inherit' };
+  // maxWidth + minWidth 0 keep a field inside the phone-width column even when the control has a wide
+  // intrinsic size — a `datetime-local` input reports one wider than the column on iOS Safari.
+  const inputStyle: React.CSSProperties = { width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, padding: '10px 12px', color: t.TITLE, fontSize: 14, fontFamily: 'inherit' };
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TITLE }}>
@@ -221,14 +223,17 @@ export function MutualTimeAdmin() {
           <p style={{ fontSize: 12, color: t.SUBTLE, margin: '4px 0 10px' }}>After the time is chosen, voters see a link directly to this plugin.</p>
 
           {/* Stack the two datetime-local fields: side by side they overflowed the phone-width column
-              (each datetime picker has a wide intrinsic min-width). Mobile-first = one column. */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-            <div>
+              (each datetime picker has a wide intrinsic min-width). Mobile-first = one column.
+              `minmax(0, 1fr)` + `minWidth: 0` are both needed: a grid track defaults to a floor of the
+              item's min-content width, so without them the datetime picker's wide intrinsic size grew
+              the track and pushed the field past the right edge of the card. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
               <label htmlFor="mt-opens" style={labelStyle}>Survey opens (optional)</label>
               <input id="mt-opens" type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} style={inputStyle} />
               <p style={{ fontSize: 11, color: t.SUBTLE, margin: '4px 0 0' }}>Leave blank to open immediately.</p>
             </div>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <label htmlFor="mt-closes" style={labelStyle}>Survey closes (optional)</label>
               <input id="mt-closes" type="datetime-local" value={closesAt} onChange={(e) => setClosesAt(e.target.value)} style={inputStyle} />
               <p style={{ fontSize: 11, color: t.SUBTLE, margin: '4px 0 0' }}>Leave blank to close manually below.</p>

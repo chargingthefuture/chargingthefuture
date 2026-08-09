@@ -20,7 +20,7 @@ contracts:
       meetingPlugin:
         type: string
         required: true
-        enum: [chyme, peer-programming]
+        enum: [chyme, peer-programming, beacon]
       opensAt:
         type: string
         required: false
