@@ -34,11 +34,17 @@ contracts:
       quoraPostUrl:
         type: string
         required: false
-        note: Optional for kind quora_comment (the owner can paste it in during review).
+        note: >-
+          Optional for kind quora_comment (the owner can paste it in during review). The web form
+          asks for it and will not submit without it, on purpose — an untrackable claim cannot be
+          confirmed, so the form points the member to the Commons for help finding the link instead.
+          The command stays optional so a claim recorded by the owner during review is still valid.
       githubProfileUrl:
         type: string
         required: false
-        note: Optional for kind github_star (the owner can paste it in during review).
+        note: >-
+          Optional for kind github_star (the owner can paste it in during review). Same as
+          quoraPostUrl: the web form requires it by design, the command does not.
     outputSchema:
       ok:
         type: boolean

@@ -24,6 +24,7 @@ import { HelpControl } from '../bug-reports/help-control';
 import { SeMark } from '../shared/se-mark';
 import type { UnlockReviewStatus } from '../../lib/unlock/types';
 import styles from './community-shell.module.css';
+import { cycleFocusTrap, focusableWithin } from './dialog-focus';
 import { failureText } from 'lib/errors/client-failure';
 
 // Verification state for a signed-in member who has not yet completed Quora verification but reaches
@@ -406,6 +407,32 @@ function ShellMainContent({
 // contributor chip. Same honest copy the Directory braided badge shows (proposal
 // section 3: no "verified", no "vetted"). "Anyone can earn this."
 function ContributorExplainerModal({ onClose }: { onClose: () => void }) {
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  // This dialog says aria-modal, so it has to behave like one for a keyboard member: focus starts
+  // inside it, Escape closes it, Tab cannot walk out into the page behind the backdrop, and focus
+  // returns to whatever opened it. Same handling the AI-consent dialog uses.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    focusableWithin(cardRef.current ?? document.body)[0]?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const root = cardRef.current;
+      if (root) cycleFocusTrap(root, event);
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      opener?.focus?.();
+    };
+  }, [onClose]);
+
   return (
     <div
       className={styles.explainerOverlay}
@@ -419,7 +446,7 @@ function ContributorExplainerModal({ onClose }: { onClose: () => void }) {
         className={styles.explainerBackdrop}
         onClick={onClose}
       />
-      <div className={styles.explainerCard}>
+      <div className={styles.explainerCard} ref={cardRef}>
         <div className={styles.explainerHead}>
           <WeaversBadge size={30} />
           <div className={styles.explainerTitle}>Weavers of the Commons</div>

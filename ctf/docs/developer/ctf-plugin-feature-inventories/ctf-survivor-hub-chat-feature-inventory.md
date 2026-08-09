@@ -210,6 +210,15 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 
 ## Change Log
 
+- 2026-08-09: **The Weavers of the Commons explainer is usable from the keyboard now (#2159).** That
+  dialog — shown when a member taps the locked contributor chip — declared `role="dialog"` and
+  `aria-modal="true"` but did none of what those promise. Focus stayed on the page behind it, Tab
+  walked straight out into content the member could no longer see, Escape did nothing, and closing
+  the dialog dropped focus at the top of the document instead of returning it to the chip. It now
+  moves focus into the card on open, cycles Tab and Shift+Tab within it, closes on Escape, and
+  restores focus to whatever opened it. The trap itself moved out of `comic-consent-modal.tsx` into a
+  new `dialog-focus.ts` so both dialogs share one copy rather than each carrying its own; the consent
+  dialog's behavior is unchanged. Web-only; no schema, route, or contract change.
 - 2026-08-09: **Return on "Not now" no longer turns the AI Assistant on (#2158), plus two smaller
   Commons fixes (#2156, #2160).** The first-use consent dialog for the AI Assistant treated Return as
   "turn it on" no matter what had focus. That rule exists for a real reason — on a phone the soft

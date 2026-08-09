@@ -296,6 +296,20 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-08-09: Opening the admin Drive tab before the cycle finished loading could wipe all three
+  goals (#2137), and the contract now says plainly that the web form requires a contribution link
+  even though the command does not (#2140). The drive form seeds its three goal inputs with
+  `useState`, which reads the cycle only on the component's first render. The admin dashboard fetches
+  the cycle after mount and opens on the review queue, so an admin who reached the Drive tab before
+  that fetch landed saw three empty boxes — and saving an empty box sends `0`, which the update's
+  `COALESCE` treats as a real value and writes over the stored goal. `ContributionsAdminDrive` is now
+  keyed on the cycle id in `contributions-admin-shell.tsx`, so it remounts with the loaded values the
+  moment the cycle arrives. Nothing about `0` itself changed: an admin who deliberately types 0 still
+  gets a goal of 0, which is a legitimate setting. Separately,
+  `CONTRIBUTIONS_PLUGIN_COMMAND_CONTRACTS.yaml` now records why `quoraPostUrl` / `githubProfileUrl`
+  are optional on `contributions.submission.create` while the web form still insists on them — the
+  owner can record a link during review, but a member-submitted claim with no link cannot be found
+  and confirmed. Contract text only; no behavior, schema, or route change from either.
 - 2026-08-09: The star count on the cycle progress bar now counts members, not rows (#2143), and
   dismissing the banner no longer hands back the snooze date (#2144). A GitHub star earns credits at
   most once per member ever, and the block that enforces it at submission time only looks at stars
