@@ -567,6 +567,11 @@ The cycle shows the updated fiat goal (150 USD). Other fields are unchanged.
 - Settings save without error.
 - The member-facing page now shows the updated SC-per-comment-or-star value (matching the new setting).
 - The admin settings display the helper line showing the underlying USD value that the control converts to before saving.
+- The audit row written for this save names only the setting that was actually edited. Its metadata
+  has a `changedKnobs` list holding just that one field, and the full set of values after the save
+  sits separately under `resultingConfig` (check `contributions_audit_log` if you are verifying the
+  audit trail). A `changedKnobs` list naming every setting means the row cannot tell an edit from a
+  value that was simply carried over.
 
 **Result:** web ☐
 
