@@ -1903,6 +1903,33 @@
   white-space: nowrap;
 }
 
+/* Compact wordmark for the signed-in bar. Turning the section tabs into icons freed room beside the
+   mark, but not enough for the signed-out lockup: measured in Chromium at the app's own Inter, that
+   lockup is 85px wide and an admin on a 375px phone has 65px to spare. Setting the two words on their
+   own lines instead of one is 50px, which fits every phone width with room left over — so the product
+   name reads on the bar for signed-in members too, without risking the avatar being clipped off the
+   right edge again (the 2026-07-19 report). The single-line lockup is unchanged for signed-out
+   visitors, whose bar carries no admin, help, settings or avatar and has the width for it. */
+.mobileBarWordmarkStacked {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1;
+  min-width: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+.mobileBarWordmarkStackedLine {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ctf-text-subtle);
+  white-space: nowrap;
+}
+
 .mobileBarTitle {
   font-size: 14px;
   font-weight: 700;
@@ -1912,9 +1939,12 @@
   text-overflow: ellipsis;
 }
 
+/* One gap value governs the whole bar (owner report, 2026-08-09): this row's own 4px, the auth
+   cluster's missing gap, and .mobileBar's 5px used to give three different spacings across one row
+   of identical squares. All three are 5px now, so the boxes are evenly spaced end to end. */
 .mobileBarSections {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   margin-left: auto;
   flex-shrink: 0;
 }
@@ -1948,7 +1978,17 @@
 .mobileBarAuth {
   display: flex;
   align-items: center;
+  /* Help, settings and the avatar sat flush against each other with no gap at all, while every other
+     pair in the bar had one — the same 5px used everywhere else separates them now. */
+  gap: 5px;
   flex-shrink: 0;
+}
+
+/* The shared avatar slot carries margin-top: 4px for the vertical desktop icon rail, where it
+   separates the avatar from the button above it. In this horizontal row that margin only pushed the
+   avatar 4px below the line of squares beside it, so it is dropped here. */
+.mobileBarAuth .clerkAvatarSlot {
+  margin-top: 0;
 }
 
 /* The phone top bar carries tabs + (admin) + help + settings + avatar in one non-wrapping row.

@@ -182,14 +182,21 @@ function MobileTopBar({ section, onSectionChange, isAuthenticated, isAdmin, sign
       </div>
       {/* Signed out, the bar carries far fewer controls (no help, settings or avatar), so the full
           "SE / SKILLS ECONOMY" lockup fits beside the mark and a first-time visitor sees the
-          product name, not just a symbol. Signed in, the name is dropped again so the mark, tabs
-          and account controls all fit a 375px phone (iPhone SE). */}
-      {!isAuthenticated ? (
+          product name, not just a symbol. Signed in, the bar used to show the mark alone so
+          everything fit a 375px phone (iPhone SE); icon section tabs freed enough room to bring the
+          name back, set on two lines so it fits even the narrowest phone with an admin button
+          present (see .mobileBarWordmarkStacked for the measurements). */}
+      {isAuthenticated ? (
+        <span className={styles.mobileBarWordmarkStacked} aria-hidden="true">
+          <span className={styles.mobileBarWordmarkStackedLine}>Skills</span>
+          <span className={styles.mobileBarWordmarkStackedLine}>Economy</span>
+        </span>
+      ) : (
         <span className={styles.mobileBarWordmark} aria-hidden="true">
           <span className={styles.mobileBarWordmarkInitials}>SE</span>
           <span className={styles.mobileBarWordmarkName}>Skills Economy</span>
         </span>
-      ) : null}
+      )}
       {/* The fundraiser gift reminder used to sit here, between the mark and the tabs. On a 375px
           phone that made the bar too crowded, so it moved down into the Commons chip row after the
           🔔 chip (owner directive, 2026-08-09) — see ConciergeChipRail in shell-chat-panel.tsx. */}
