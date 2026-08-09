@@ -27,7 +27,11 @@ the tests worth running slowly.
 - Step 1 → the **public landing page**, not a redirect to sign-in. It says what the library is, what
   happens to your writing, that you can take it back, and that contributing also verifies you. This
   is the page the invitation post links to from Quora, so a visitor with no account has to be able to
-  read it and decide.
+  read it and decide. The page also carries the standard back chevron to the left of the title
+  (added 2026-08-09) — it looks and behaves like the one on every other screen, and on a phone it is
+  the only way back, since the installed web app has no browser back button. Reach the page from
+  inside the app and it returns you to the page you came from; open it cold from the Quora link and
+  it goes to the apps grid, which a signed-out visitor can also see.
 - Step 2 → the form loads. An unverified member is **not** turned away — contributing is the way in,
   not something behind the gate.
 - Step 3 → send is blocked until the profile field is filled; the receipt then says the Quora profile

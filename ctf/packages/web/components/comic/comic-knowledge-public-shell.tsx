@@ -2,6 +2,7 @@
 
 import { BookOpen, ShieldCheck, PenLine, KeyRound } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { BackChevronButton } from '@/lib/nav/back-history';
 import { getComicTokens } from './comic-shared';
 
 // The signed-out landing page for the knowledge library.
@@ -21,7 +22,15 @@ export function ComicKnowledgePublicShell({ signInUrl }: { signInUrl: string }) 
   return (
     <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Inter',system-ui,sans-serif" }}>
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 16px 56px' }}>
+        {/* This shell builds its own header rather than using MobileScreenHeader, whose right-hand
+            cluster (report a bug, account settings, the account menu) is all signed-in chrome that
+            means nothing to a visitor with no account. So the way back is the shared standalone
+            chevron, which is what rule 134 prescribes for exactly this shape of screen — never a
+            hand-rolled arrow or "Back to …" link. It returns to the previous in-app page when there
+            is one, and to the all-apps grid otherwise; that grid renders for a signed-out visitor
+            too, so the fallback lands somewhere real. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <BackChevronButton accent={t.ACCENT} size={34} />
           <BookOpen size={22} color={t.ACCENT} />
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>Knowledge library</h1>
         </div>

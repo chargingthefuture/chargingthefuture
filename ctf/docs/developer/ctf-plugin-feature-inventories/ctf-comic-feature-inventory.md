@@ -178,7 +178,10 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
    contributor's Quora account and seeing a real person writing real things, which is the same look
    Unlock asks for — so gating it behind Unlock would review the same account twice. A **signed-out
    visitor gets a public landing page**, because this is the URL the invitation post links to from
-   Quora and most people opening it have no account yet.
+   Quora and most people opening it have no account yet. Both the signed-in and signed-out versions
+   carry the shared back control (rule 134): the signed-in shell through `MobileScreenHeader`, and
+   the public shell through the standalone `BackChevronButton` in its own header, since that
+   header's signed-in chrome would mean nothing to a visitor with no account.
    The path is `/knowledge`, deliberately **not**
    `/contribute` — the Contributions plugin is a different thing entirely (the fundraiser and donation
    surface), and two member-facing paths a word apart would be a standing source of confusion (owner
@@ -697,7 +700,20 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
-- 2026-08-05 (latest): **Knowledge-base curation admin shipped (closes the manual-curation gap).**
+- 2026-08-09 (latest): **The signed-out Knowledge library page had no way back (owner report).**
+  `comic-knowledge-public-shell.tsx` builds its own header — the BookOpen mark and the title — and
+  carried no back control at all, so a visitor who reached `/knowledge` from inside the app was
+  stranded there at phone width, where there is no browser back button in the installed web app.
+  This is the case rule 134 names outright as forbidden. The signed-in shell was never affected; it
+  gets its back control from `MobileScreenHeader`. Fixed by adding the shared `BackChevronButton`
+  to the left of the icon and title, tinted to the plugin accent and sized to match the header —
+  the same placement `mutual-time-public.tsx` already uses for a public shell with its own header.
+  `MobileScreenHeader` would have been the wrong piece here: its right-hand cluster is report-a-bug,
+  account settings, and the account menu, all of which are signed-in chrome a visitor with no
+  account cannot use. Back resolves through the shared `useSmartBack` — the previous in-app page
+  when there is one, the all-apps grid otherwise, and that grid renders for a signed-out visitor
+  too, so the fallback lands somewhere real. No route, schema, or contract change.
+- 2026-08-05: **Knowledge-base curation admin shipped (closes the manual-curation gap).**
   New page `/admin/comic/knowledge` (`comic-knowledge-admin.tsx`, linked from the `/admin` landing
   as "AI Knowledge Base") lists `comic_knowledge_entries` newest-first with source, type,
   title/question, a content snippet, and the active flag, filterable all/active/inactive with
