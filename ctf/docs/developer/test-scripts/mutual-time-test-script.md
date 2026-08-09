@@ -210,14 +210,14 @@ Result: web ☐ mobile ☐
 
 **Role:** Member (`approved_full`) and signed-out visitor
 **Surfaces:** Web, Mobile
-**Precondition:** "Q3 onboarding" closed event. Meeting plugin is Chyme or Peer Programming.
+**Precondition:** "Q3 onboarding" closed event. Meeting plugin is Chyme, Peer Programming, or Beacon.
 
 **Steps:**
 1. Open `/mutual-time/<closed-event-slug>`.
 2. Find the link to the meeting surface.
 3. Confirm the link target.
 
-**Expected:** A "Go to Chyme" or "Go to Peer Programming" link (matching whichever plugin was configured) is visible. The winning time and the count of members who can make it are shown alongside it.
+**Expected:** A "Go to Chyme", "Go to Peer Programming", or "Go to Beacon" link (matching whichever plugin was configured) is visible. The winning time and the count of members who can make it are shown alongside it.
 
 Result: web ☐ mobile ☐
 
@@ -257,6 +257,24 @@ Result: web ☐
 6. Submit.
 
 **Expected:** The new event appears in the dashboard list with status "open" (or "scheduled" if opens_at defaults to now). A shareable link / slug is shown. The Copy-link button is present. Voter count is 0.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-A1b — "Where we'll meet" lists all three, and no field runs off the screen
+
+**Role:** Admin
+**Surfaces:** Web, Mobile
+**Precondition:** Signed in as admin. On `/apps/mutual-time`, on a phone-width screen.
+
+**Steps:**
+1. Open the "Where we'll meet" dropdown.
+2. Read every option in the list.
+3. Pick "Beacon" and submit the form with everything else left blank.
+4. Close the dropdown and look at the right edge of the "Survey opens" and "Survey closes" date-and-time fields.
+
+**Expected:** The dropdown lists exactly three options — Chyme, Peer Programming, Beacon — and the event saves with Beacon. The two date-and-time fields end at the same right edge as the title box, the description box, and the dropdown above them; nothing sticks out past the edge of the card and the page does not scroll sideways.
 
 Result: web ☐ mobile ☐
 

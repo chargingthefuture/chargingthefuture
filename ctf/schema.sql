@@ -6194,7 +6194,7 @@ CREATE TABLE IF NOT EXISTS mutual_time_events (
   created_by_user_id TEXT NOT NULL,
   title TEXT NULL,
   description TEXT NULL,
-  meeting_plugin TEXT NOT NULL CHECK (meeting_plugin IN ('chyme', 'peer-programming')),
+  meeting_plugin TEXT NOT NULL CHECK (meeting_plugin IN ('chyme', 'peer-programming', 'beacon')),
   window_start_date DATE NOT NULL,
   window_days INTEGER NOT NULL DEFAULT 7 CHECK (window_days BETWEEN 1 AND 14),
   opens_at TIMESTAMPTZ NULL,
@@ -6217,6 +6217,12 @@ ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS status TEXT NO
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS result_slot_start TIMESTAMPTZ;
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS result_can_make_it INTEGER;
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+-- "Where we'll meet" vocabulary. Beacon was added after the table shipped, so an existing database
+-- still carries the two-value check from the original CREATE TABLE. Drop + re-add keeps it idempotent
+-- and brings a legacy database up to date (same idiom as currencies_kind_check). NOT VALID so the ADD
+-- can never fail on an existing row and stop the rest of the file from being applied.
+ALTER TABLE IF EXISTS mutual_time_events DROP CONSTRAINT IF EXISTS mutual_time_events_meeting_plugin_check;
+ALTER TABLE IF EXISTS mutual_time_events ADD CONSTRAINT mutual_time_events_meeting_plugin_check CHECK (meeting_plugin IN ('chyme', 'peer-programming', 'beacon')) NOT VALID;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_mutual_time_events_slug ON mutual_time_events(slug);
 CREATE INDEX IF NOT EXISTS idx_mutual_time_events_creator ON mutual_time_events(created_by_user_id, created_at DESC);
 

@@ -1,8 +1,9 @@
 export const MUTUAL_TIME_PLUGIN_ID = 'mutual-time';
 
 // The plugins a chosen meeting can point to ("Where we'll meet"). Chyme (live audio) is the default;
-// PeerProgramming is the weekly mastermind call. Both are live-meeting surfaces the result links to.
-export const MUTUAL_TIME_MEETING_PLUGINS = ['chyme', 'peer-programming'] as const;
+// PeerProgramming is the weekly mastermind call; Beacon is the live one-way broadcast. All three are
+// live-meeting surfaces the result links to.
+export const MUTUAL_TIME_MEETING_PLUGINS = ['chyme', 'peer-programming', 'beacon'] as const;
 export type MutualTimeMeetingPlugin = (typeof MUTUAL_TIME_MEETING_PLUGINS)[number];
 
 // Candidate-slot grid. Votes are one-hour windows whose start is snapped to the half-hour, so votes
