@@ -24,6 +24,10 @@ type ShellAppsPanelProps = {
   plugins: PluginRegistryItem[];
   activeApp: string | null;
   onAppSelect: (slug: string | null) => void;
+  // Called when the member actually opens a plugin (the "Open plugin →" link), as opposed to
+  // tapping the card to highlight it. This is the event the Recent and Most Used orderings are
+  // counted from, so it has to fire on the link — the card tap alone is not a use.
+  onAppOpen: (slug: string) => void;
   sortMode: PluginSortMode;
   onSortModeChange: (mode: PluginSortMode) => void;
   // Search now lives here (it used to be in the nav drawer). The grid is the single
@@ -32,7 +36,7 @@ type ShellAppsPanelProps = {
   onQueryChange: (q: string) => void;
 };
 
-export function ShellAppsPanel({ plugins, activeApp, onAppSelect, sortMode, onSortModeChange, query, onQueryChange }: ShellAppsPanelProps) {
+export function ShellAppsPanel({ plugins, activeApp, onAppSelect, onAppOpen, sortMode, onSortModeChange, query, onQueryChange }: ShellAppsPanelProps) {
   const { theme } = useTheme();
 
   return (
@@ -112,7 +116,12 @@ export function ShellAppsPanel({ plugins, activeApp, onAppSelect, sortMode, onSo
                 href={pluginHref}
                 className={styles.appCardAction}
                 style={{ color, borderColor: `${color}35`, background: `${color}15` }}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  // Stop the card's own click handler from also toggling the highlight, but still
+                  // record the open so Recent and Most Used have something to order by.
+                  e.stopPropagation();
+                  onAppOpen(plugin.slug);
+                }}
               >
                 Open plugin →
               </Link>

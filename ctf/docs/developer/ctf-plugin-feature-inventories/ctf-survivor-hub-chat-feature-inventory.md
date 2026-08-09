@@ -112,8 +112,8 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 3. Sort modes: **recent**, **alphabetical**, **most-used**. Selection persists in `localStorage` (`ctf.communityShell.pluginSortMode`).
 4. Recent-use tracking persists in `localStorage` (`ctf.communityShell.recentPluginSlugs`); capped at 12 entries.
 5. Most-used tracking persists in `localStorage` (`ctf.communityShell.pluginUsageCounts`).
-6. Sidebar in apps mode shows a flat searchable plugin list; selection sets the active app and updates recent/used counters.
-7. Search filters by name and summary.
+6. Both counters are recorded when the member opens a plugin from a card's "Open plugin →" link. Tapping the card body only highlights it and is not counted as a use.
+7. Search filters by name and summary. The search box sits in the apps grid header, not the sidebar.
 8. Cards link to `/apps/[slug]` for each plugin.
 
 ## Admin Features
@@ -212,6 +212,19 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 
 ## Change Log
 
+- 2026-08-09: **All Apps sort had nothing to sort by, so Recent and Most Used both showed A-Z
+  (owner report).** The two counters that drive those orderings were only written by
+  `handleAppSelect`, which fires when a member taps a card body — and a card tap only highlights
+  the card, it does not open anything. The control a member actually uses, the card's
+  "Open plugin →" link, called `stopPropagation()` and recorded nothing. So
+  `ctf.communityShell.pluginUsageCounts` and `ctf.communityShell.recentPluginSlugs` stayed empty in
+  normal use, both modes fell through to their alphabetical tie-break, and all three sort options
+  produced the same order — the sort control looked dead even though it was applying. Recording now
+  happens on the link, in a new `handleAppOpen` passed down to `ShellAppsPanel` as `onAppOpen`;
+  `handleAppSelect` is left as highlight-only so a tap no longer inflates a plugin's count. The two
+  `localStorage` writes also moved out of the `setState` updater callbacks they were nested in, so
+  a double-invoked updater under React strict mode in development cannot write the count twice. No
+  route, schema, or contract change; web-only (the native app has no apps grid).
 - 2026-08-09: **Even spacing across the phone top bar, and the product name is back on it for
   signed-in members (owner report, follow-up to the icon tabs below).** Three different gaps ran
   across one row of identical squares: `.mobileBar` used 5px, `.mobileBarSections` used 4px between

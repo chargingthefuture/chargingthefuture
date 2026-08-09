@@ -355,6 +355,7 @@ type ShellMainContentProps = {
   currentUser: ShellCurrentUser;
   activeApp: string | null;
   onAppSelect: (slug: string | null) => void;
+  onAppOpen: (slug: string) => void;
   sortMode: PluginSortMode;
   onSortModeChange: (mode: PluginSortMode) => void;
   query: string;
@@ -376,6 +377,7 @@ function ShellMainContent({
   currentUser,
   activeApp,
   onAppSelect,
+  onAppOpen,
   sortMode,
   onSortModeChange,
   query,
@@ -416,6 +418,7 @@ function ShellMainContent({
           plugins={filteredPlugins}
           activeApp={activeApp}
           onAppSelect={onAppSelect}
+          onAppOpen={onAppOpen}
           sortMode={sortMode}
           onSortModeChange={onSortModeChange}
           query={query}
@@ -607,21 +610,28 @@ export function CommunityShell(props: CommunityShellProps) {
     );
   }, [normalizedQuery, orderedPlugins]);
 
+  // Tapping a card only highlights it — it does not open anything — so it must not count as a use.
+  // Counting it did, which is why Most Used and Recent had no real data to order by: the link that
+  // actually opens a plugin stops propagation, so nothing was ever recorded and both modes fell
+  // back to the alphabetical tie-break, making the sort control look broken.
   const handleAppSelect = (slug: string | null) => {
     setActiveApp(slug);
-    if (!slug || typeof window === 'undefined') return;
+  };
 
-    setRecentPluginSlugs((previous) => {
-      const next = [slug, ...previous.filter((item) => item !== slug)].slice(0, MAX_RECENT_PLUGINS);
-      window.localStorage.setItem(RECENT_PLUGIN_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  // Fired by the card's "Open plugin →" link — the real signal that a member used a plugin. The
+  // localStorage writes sit outside the state updaters so a double-invoked updater (React strict
+  // mode in development) cannot write twice and inflate the count.
+  const handleAppOpen = (slug: string) => {
+    setActiveApp(slug);
+    if (typeof window === 'undefined') return;
 
-    setPluginUsageCounts((previous) => {
-      const next = { ...previous, [slug]: (previous[slug] ?? 0) + 1 };
-      window.localStorage.setItem(PLUGIN_USAGE_COUNTS_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+    const nextRecent = [slug, ...recentPluginSlugs.filter((item) => item !== slug)].slice(0, MAX_RECENT_PLUGINS);
+    setRecentPluginSlugs(nextRecent);
+    window.localStorage.setItem(RECENT_PLUGIN_STORAGE_KEY, JSON.stringify(nextRecent));
+
+    const nextCounts = { ...pluginUsageCounts, [slug]: (pluginUsageCounts[slug] ?? 0) + 1 };
+    setPluginUsageCounts(nextCounts);
+    window.localStorage.setItem(PLUGIN_USAGE_COUNTS_STORAGE_KEY, JSON.stringify(nextCounts));
   };
 
   // Escape closes the contributor-channel explainer; listener attached only while open.
@@ -684,6 +694,7 @@ export function CommunityShell(props: CommunityShellProps) {
           currentUser={currentUser}
           activeApp={activeApp}
           onAppSelect={handleAppSelect}
+          onAppOpen={handleAppOpen}
           sortMode={sortMode}
           onSortModeChange={handleSortModeChange}
           query={query}
