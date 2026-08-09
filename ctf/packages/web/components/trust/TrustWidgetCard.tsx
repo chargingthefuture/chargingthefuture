@@ -12,35 +12,24 @@
 // - The visibility control (`trust-visibility-control.tsx`) is live only on self
 //   surfaces (`editable`), because POST /api/trust/visibility is self-scope only;
 //   when the card shows another member's trust the row stays read-only.
+//
+// On the member's own card the body is two labelled sections — "Your trust" (these signals, always
+// all of them) then "What members see" (the choice and a preview of the result). Before the labels
+// the two ran together and read as one jumbled block, which is what made the setting hard to place.
 import React from "react";
-import { ShieldCheck, CheckCircle2, Eye } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import type { TrustUserExtension, TrustPeerView, TrustPeerEvidenceItem, TrustDisclosure } from "../../lib/trust/types";
 import { getTrustTokens } from "./trust-shared";
 import { TrustVisibilityControl } from "./trust-visibility-control";
+import { TrustEvidenceRow, TrustSummaryNote, TrustSectionLabel, TRUST_HAIRLINE } from "./trust-evidence-row";
 
-// Accent-with-alpha card tints and the 5% hairline have no exact shell-token equivalent
-// (the token helper carries solid values only), so they stay as the shipped literals.
+// Accent-with-alpha card tints have no exact shell-token equivalent (the token helper carries solid
+// values only), so they stay as the shipped literals.
 const CARD_BG = "rgba(14,165,233,0.06)";
 const CARD_BORDER = "rgba(14,165,233,0.18)";
-const HAIRLINE = "rgba(255,255,255,0.05)";
 
 const STEPS = ["Complete your profile", "Make your first transaction", "Use at least one plugin"];
-
-// Turn an internal evidence `type` slug (e.g. "engagement-login-frequency") into readable text. Only
-// used as a fallback when an item has no `summary` — a well-formed derived item always has one.
-function humanizeType(type: string): string {
-  const words = (type || "").replace(/[-_]+/g, " ").trim();
-  return words ? words.charAt(0).toUpperCase() + words.slice(1) : "Trust signal";
-}
-
-// Render the evidence date only when `createdAt` is a real, parseable timestamp — otherwise nothing,
-// never the literal "Invalid Date" a bad/missing value would produce.
-function formatEvidenceDate(value?: string): string | null {
-  if (!value) return null;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toLocaleDateString();
-}
 
 // Header is just the Trust label. There is no verified/unverified status chip: the platform does
 // not verify members, so showing a "Verified"/"Unverified" badge would promise something it cannot
@@ -61,7 +50,7 @@ function EmptyBody({ visibility, editable, evidence }: { visibility: string; edi
   const t = getTrustTokens(theme);
   return (
     <div style={{ padding: "4px 14px 14px" }}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 0 14px", borderTop: `1px solid ${HAIRLINE}` }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 0 14px", borderTop: `1px solid ${TRUST_HAIRLINE}` }}>
         <div style={{ width: 48, height: 48, borderRadius: "50%", border: "2px dashed rgba(14,165,233,0.3)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
           <ShieldCheck size={22} style={{ color: "rgba(14,165,233,0.4)" }} />
         </div>
@@ -73,7 +62,7 @@ function EmptyBody({ visibility, editable, evidence }: { visibility: string; edi
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
         {STEPS.map((label) => (
-          <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: `1px solid ${HAIRLINE}` }}>
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: `1px solid ${TRUST_HAIRLINE}` }}>
             <div style={{ width: 16, height: 16, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.12)", flexShrink: 0 }} />
             <span style={{ fontSize: 11, color: t.MUTED }}>{label}</span>
           </div>
@@ -85,53 +74,22 @@ function EmptyBody({ visibility, editable, evidence }: { visibility: string; edi
   );
 }
 
-function EvidenceItem({ item }: { item: TrustPeerEvidenceItem }) {
-  const { theme } = useTheme();
-  const t = getTrustTokens(theme);
-  return (
-    <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "8px 10px", border: `1px solid ${HAIRLINE}` }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <CheckCircle2 size={12} style={{ color: "#38BDF8", flexShrink: 0 }} />
-        <span style={{ fontSize: 11, fontWeight: 600, color: "#E2E8F0", flex: 1, minWidth: 0 }}>
-          {item.summary && item.summary.trim() ? item.summary : humanizeType(item.type)}
-        </span>
-        {formatEvidenceDate(item.createdAt) && (
-          <span style={{ fontSize: 10, color: t.FAINT, flexShrink: 0 }}>{formatEvidenceDate(item.createdAt)}</span>
-        )}
-      </div>
-      {item.details && <div style={{ fontSize: 10, color: t.MUTED, marginTop: 3, lineHeight: 1.5 }}>{item.details}</div>}
-    </div>
-  );
-}
-
-// Shown above a summary projection so a viewer never mistakes the reduced list for the member's
-// whole record. Without it, "Took part in 6 plugins" reads as everything they have ever done.
-function SummaryNote() {
-  const { theme } = useTheme();
-  const t = getTrustTokens(theme);
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12 }}>
-      <Eye size={11} style={{ color: t.FAINT, flexShrink: 0 }} />
-      <span style={{ fontSize: 10, color: t.MUTED, lineHeight: 1.5 }}>
-        This member shares a summary of their participation, not the detail.
-      </span>
-    </div>
-  );
-}
-
 function EvidenceBody({ evidence, visibility, editable, disclosure }: { evidence: TrustPeerEvidenceItem[]; visibility: string; editable?: boolean; disclosure: TrustDisclosure }) {
   return (
-    <div style={{ padding: "4px 14px 14px", borderTop: `1px solid ${HAIRLINE}` }}>
-      {disclosure === "summary" && <SummaryNote />}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "12px 0 10px" }}>
+    <div style={{ padding: "4px 14px 14px", borderTop: `1px solid ${TRUST_HAIRLINE}` }}>
+      {disclosure === "summary" && <div style={{ marginTop: 12 }}><TrustSummaryNote /></div>}
+      {/* The label only makes sense on your own card, where a second section follows it. On another
+          member's card there is one list and nothing to tell it apart from. */}
+      {editable && <div style={{ marginTop: 12 }}><TrustSectionLabel>Your trust</TrustSectionLabel></div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: editable ? "7px 0 10px" : "12px 0 10px" }}>
         {evidence.map((item, idx) => (
-          <EvidenceItem key={idx} item={item} />
+          <TrustEvidenceRow key={idx} item={item} />
         ))}
       </div>
       {/* On a peer's summary card the note above already says the member shares a summary, so the
           read-only row would repeat it. Keep the row for a full peer card and for the owner. */}
       {(editable || disclosure === "full") && (
-        <div style={{ paddingTop: 7, borderTop: `1px solid ${HAIRLINE}` }}>
+        <div style={{ paddingTop: 7, borderTop: `1px solid ${TRUST_HAIRLINE}` }}>
           <TrustVisibilityControl visibility={visibility} bordered={false} editable={editable} evidence={evidence} />
         </div>
       )}
