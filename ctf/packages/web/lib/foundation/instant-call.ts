@@ -6,7 +6,7 @@ import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { sendWebPushToUser } from 'lib/notifications/push';
 import { sendExpoPushToUser } from 'lib/notifications/expo-push';
 import { reportError } from 'lib/observability/report';
-import { createTransfer, getOrCreateWallet } from 'lib/service-credits/repository';
+import { createTransfer, getOrCreateWallet } from 'lib/shared/credits-interface';
 import {
   FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS,
   FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS,

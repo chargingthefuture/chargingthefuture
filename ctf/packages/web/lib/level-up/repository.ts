@@ -8,7 +8,7 @@ import {
   mintGrant,
   refundEscrow,
   releaseEscrow,
-} from 'lib/service-credits/repository';
+} from 'lib/shared/credits-interface';
 import { createTransfer } from 'lib/shared/service-credits/createTransfer';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { LEVEL_UP_AUTO_COHORT_ACTOR_ID, LEVEL_UP_DEFAULT_TRAINER_SPLIT_PERCENT, LEVEL_UP_PLUGIN_SLUG } from 'lib/level-up/constants';

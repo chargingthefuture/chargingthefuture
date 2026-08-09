@@ -21,6 +21,17 @@ Mandatory:
 - **No cross-plugin API calls.** Plugin A's UI or server code must not fetch another plugin's API routes (for example, the Hub plugin must not call `/api/chyme/*`). Each plugin owns its own `/api/<plugin-slug>/*` namespace.
 - **No cross-plugin database access.** Plugin A must not read or write another plugin's tables. If two plugins genuinely need a shared concept, promote it to a plugin-neutral table owned by the platform, not by one plugin.
 - **No cross-plugin third-party scope sharing.** Tokens, channel IDs, user IDs, and other third-party (GetStream, Sentry, etc.) resources are scoped per plugin. See [107-integration-stack-rules.mdc](107-integration-stack-rules.mdc).
+- **One sanctioned crossing point per capability.** When a plugin genuinely needs a capability another
+  plugin owns (Comic granting credits, Unlock reading a directory profile), it imports a narrow
+  platform-owned interface module — `ctf/packages/web/lib/shared/<capability>-interface.ts` — never the
+  providing plugin's own files. Each interface re-exports only the specific functions its consumers
+  call, so the crossing is visible in review and the provider keeps its internals free to change.
+  Adding an export to one of those files needs a reason; re-exporting a whole repository defeats the
+  point. Enforced by `ctf/scripts/check-plugin-boundaries.mjs` in the Quality Gates job: any direct
+  plugin-to-plugin import fails the build, and the interface files are the only place under
+  `lib/shared/` allowed to import a plugin's code. Owner decision, 2026-08-03: plugin isolation stays
+  strict — the existing crossings were rewired through these interfaces rather than blessing any
+  plugin as shared infrastructure.
 - **Shared, plugin-neutral primitives only.** Plugins may consume:
   - `packages/shared` library primitives (per [102-shared-boundary-rules.mdc](102-shared-boundary-rules.mdc)).
   - Platform-level tables and APIs (auth, plugin registry, GDP snapshots, etc.) — these are not owned by any single plugin.

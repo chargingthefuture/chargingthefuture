@@ -1,5 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
-import { PER_OCCURRENCE_ORIGIN_PLUGINS, cadenceMonthlyFactorSql } from 'lib/recurring-activity/types';
+import { PER_OCCURRENCE_ORIGIN_PLUGINS, cadenceMonthlyFactorSql } from 'lib/shared/recurring-activity-interface';
 
 // Community Value Index recognition (issue #121). This module is the GDP plugin's "value layer": it
 // rolls all recognized economic activity across applicable plugins into ONE composite figure — the

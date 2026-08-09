@@ -1,6 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
-import { recordQuoraUrlChangeStandalone } from 'lib/directory/repository';
+import { recordQuoraUrlChangeStandalone } from 'lib/shared/directory-interface';
 import { addSpamQuoraUrl, isSpamQuoraUrl, removeSpamQuoraUrl } from './spam-denylist';
 import type {
   CreateUnlockSubmissionInput,

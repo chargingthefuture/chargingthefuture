@@ -6,7 +6,7 @@
 
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
-import { mintGrant } from 'lib/service-credits/repository';
+import { mintGrant } from 'lib/shared/credits-interface';
 import type {
   ContributionKind,
   ContributionStatus,

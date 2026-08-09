@@ -1,7 +1,7 @@
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
-import { createTransfer } from 'lib/service-credits/repository';
+import { createTransfer } from 'lib/shared/credits-interface';
 import { reportError } from 'lib/observability/report';
 import {
   getAccountRestrictionStatus,
