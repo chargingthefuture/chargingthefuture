@@ -40,6 +40,20 @@ function parsePriceCurrency(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+// Accepted-currencies multi-select (split settlements): keep only non-empty strings, trimmed and
+// deduped. Codes are validated against the active currency catalog in the repository, where unknown
+// or inactive codes are dropped rather than rejected.
+function parseAcceptedCurrencies(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value
+        .filter((code): code is string => typeof code === 'string' && code.trim().length > 0)
+        .map((code) => code.trim()),
+    ),
+  );
+}
+
 function parseRequestInput(body: Record<string, unknown>): TrustTransportRequestInput {
   return {
     mode: parseMode(body.mode),
@@ -51,6 +65,7 @@ function parseRequestInput(body: Record<string, unknown>): TrustTransportRequest
     dropoffGeoRedacted: optionalString(body.dropoffGeoRedacted),
     priceCurrency: parsePriceCurrency(body.priceCurrency),
     priceAmount: parsePriceAmount(body.priceAmount),
+    acceptedCurrencies: parseAcceptedCurrencies(body.acceptedCurrencies),
   };
 }
 

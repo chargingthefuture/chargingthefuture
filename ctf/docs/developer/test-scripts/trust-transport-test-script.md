@@ -90,6 +90,33 @@ Result: web ☐
 
 ---
 
+### TT-2a — Split settlement: accepted-currencies checkboxes (added 2026-08-06)
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Signed in as a member.
+
+**Steps:**
+1. Open the booking surface, select **Ride**, and enter origin and destination.
+2. Set the settlement type to **ServiceCredits** and enter the whole value of the ride (e.g. 20).
+3. In the **Accepted currencies** checkbox list below the amount, check **ServiceCredits** and
+   **United States Dollar ($)** (the same checkbox pattern as the LightHouse listing form).
+4. Submit, then open the **Track** tab.
+
+**Expected:**
+- The checkbox list loads from the live currency catalog (ServiceCredits listed first); a failed
+  load shows a Retry control instead of silently hiding the checkboxes.
+- The Track card shows the settlement badge **and** a separate "Accepts ServiceCredits +1" badge —
+  ServiceCredits always named first, the remainder capped as "+N", never a fiat equivalent for a
+  ServiceCredits amount.
+- As a second member on the **Help out** tab, the same request's card also shows the
+  "Accepts ServiceCredits +1" badge next to its settlement badge (still no locations before an
+  offer is accepted).
+
+Result: web ☐
+
+---
+
 ### TT-3 — Booking validation: priced request without an amount is blocked
 
 **Role:** member · **Surfaces:** web, android
@@ -335,7 +362,7 @@ Result: web ☐
 
 **Steps:**
 1. Open the **Help out** tab.
-2. Confirm the open-requests list shows mode, settlement, and a relative age for each — and nothing else.
+2. Confirm the open-requests list shows mode, settlement (including any "Accepts …" accepted-currencies badge), and a relative age for each — and nothing else.
 3. Tap "Make an offer" on one, optionally add a note and a proposed amount, and send it.
 
 **Expected:** The list never shows a pickup/drop-off location, a title, or the requester's identity — only mode + settlement + age (discovery model B). This is correct behavior, not a missing feature. The offer sends and the card confirms it ("Offer sent..."). Submitting a second offer on the same request updates your existing pending offer rather than creating a duplicate. Member Presence (added 2026-08-04): after sending the offer, the offering member's own Directory profile "Also active in" section lists an "Offering rides" entry; when the requester later accepts a *different* driver's offer, the rejected driver's entry clears (the accepted driver's stays while the trip runs).

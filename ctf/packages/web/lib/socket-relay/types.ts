@@ -37,6 +37,10 @@ export type SocketRelayRequest = {
   // null amount; "Free" is never shown as $0.
   priceCurrency: string | null;
   priceAmount: number | null;
+  // Every currency the poster accepts for settling (split settlements) — one code per accepted
+  // currency, ServiceCredits first, from socket_relay_request_accepted_currencies. Independent of the
+  // single listed price above, mirroring LightHouse's accepted-currencies model.
+  acceptedCurrencies: string[];
   createdAtIso: string;
   updatedAtIso: string;
   // When this post auto-expires (28 days after it was posted or last re-posted). `isExpired` is the
@@ -57,6 +61,7 @@ export type SocketRelayRequestInput = {
   isPublic: boolean;
   priceCurrency: string | null;
   priceAmount: number | null;
+  acceptedCurrencies: string[];
 };
 
 export type SocketRelayFulfillmentStatus = 'active' | 'closed' | 'canceled';

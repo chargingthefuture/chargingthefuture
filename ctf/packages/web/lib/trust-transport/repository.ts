@@ -1,3 +1,4 @@
+import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
 import { createTransfer } from 'lib/service-credits/repository';
@@ -249,6 +250,9 @@ function mapRequestRow(row: RequestRow): TrustTransportRequest {
     status: row.status,
     priceCurrency: row.price_currency,
     priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
+    // The accepted-currencies set lives in a join table and is loaded separately by
+    // attachAcceptedCurrencies; mapRequestRow stays pure and defaults it to empty here.
+    acceptedCurrencies: [],
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
     tripId: row.trip_id ?? null,
@@ -260,6 +264,79 @@ function mapRequestRow(row: RequestRow): TrustTransportRequest {
     requesterCompletionConfirmedAtIso: row.requester_completion_confirmed_at ? toIso(row.requester_completion_confirmed_at) : null,
     providerCompletionConfirmedAtIso: row.provider_completion_confirmed_at ? toIso(row.provider_completion_confirmed_at) : null,
   };
+}
+
+type AcceptedCurrencyRow = { request_id: string; currency_code: string };
+
+// Ordered so ServiceCredits leads (currencies.sort_order = 0) — the platform's preferred currency
+// wherever multiple options appear — and clients can render the set in server order.
+const ACCEPTED_CURRENCIES_SQL = `
+  SELECT rac.request_id::text AS request_id, rac.currency_code
+  FROM trust_transport_request_accepted_currencies rac
+  JOIN currencies c ON c.code = rac.currency_code
+  WHERE rac.request_id = ANY($1::uuid[])
+  ORDER BY c.sort_order, rac.currency_code
+`;
+
+function acceptedCodesByRequest(rows: AcceptedCurrencyRow[]): Map<string, string[]> {
+  const codesByRequest = new Map<string, string[]>();
+  for (const row of rows) {
+    const codes = codesByRequest.get(row.request_id) ?? [];
+    codes.push(row.currency_code);
+    codesByRequest.set(row.request_id, codes);
+  }
+  return codesByRequest;
+}
+
+// Load each request's accepted currencies from trust_transport_request_accepted_currencies and attach
+// them to the mapped requests (split settlements — a ride can accept several currencies, e.g.
+// ServiceCredits and USD, independent of its single listed price).
+async function attachAcceptedCurrencies(requests: TrustTransportRequest[]): Promise<TrustTransportRequest[]> {
+  const requestIds = requests.map((request) => request.id);
+  if (requestIds.length === 0) {
+    return requests;
+  }
+  const result = await queryDb<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]);
+  const codesByRequest = acceptedCodesByRequest(result.rows);
+  return requests.map((request) => ({ ...request, acceptedCurrencies: codesByRequest.get(request.id) ?? [] }));
+}
+
+// Same as attachAcceptedCurrencies but on a transaction client, so freshly inserted rows are visible
+// inside createRequest.
+async function attachAcceptedCurrenciesWithClient(
+  client: PoolClient,
+  requests: TrustTransportRequest[],
+): Promise<TrustTransportRequest[]> {
+  const requestIds = requests.map((request) => request.id);
+  if (requestIds.length === 0) {
+    return requests;
+  }
+  const result = await client.query<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]);
+  const codesByRequest = acceptedCodesByRequest(result.rows);
+  return requests.map((request) => ({ ...request, acceptedCurrencies: codesByRequest.get(request.id) ?? [] }));
+}
+
+// Validate the requested accepted-currency codes against the active currencies catalog and persist
+// them for a request. Unknown or inactive codes are skipped. Runs inside the caller's transaction.
+async function replaceAcceptedCurrencies(client: PoolClient, requestId: string, codes: string[]): Promise<void> {
+  const requested = Array.from(
+    new Set(codes.filter((code): code is string => typeof code === 'string' && code.trim().length > 0).map((code) => code.trim())),
+  );
+  if (requested.length === 0) {
+    return;
+  }
+  const valid = await client.query<{ code: string }>(
+    `SELECT code FROM currencies WHERE code = ANY($1::text[]) AND is_active = TRUE`,
+    [requested],
+  );
+  for (const row of valid.rows) {
+    await client.query(
+      `INSERT INTO trust_transport_request_accepted_currencies (request_id, currency_code)
+       VALUES ($1::uuid, $2)
+       ON CONFLICT (request_id, currency_code) DO NOTHING`,
+      [requestId, row.code],
+    );
+  }
 }
 
 function mapOfferRow(row: OfferRow): TrustTransportOffer {
@@ -376,7 +453,8 @@ export async function createRequest(
     );
 
     if ((existing.rowCount ?? 0) > 0) {
-      return mapRequestRow(existing.rows[0]);
+      const [replayed] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(existing.rows[0])]);
+      return replayed;
     }
 
     const created = await client.query<RequestRow>(
@@ -416,7 +494,10 @@ export async function createRequest(
       [created.rows[0].id, actorUserId],
     );
 
-    return mapRequestRow(created.rows[0]);
+    await replaceAcceptedCurrencies(client, created.rows[0].id, input.acceptedCurrencies);
+
+    const [withAccepted] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(created.rows[0])]);
+    return withAccepted;
   });
 
   // Best-effort presence write after the request is durably committed: a new open request makes the
@@ -439,7 +520,8 @@ export async function getRequestById(requestId: string): Promise<TrustTransportR
     return null;
   }
 
-  return mapRequestRow(result.rows[0]);
+  const [request] = await attachAcceptedCurrencies([mapRequestRow(result.rows[0])]);
+  return request;
 }
 
 export async function listRequests(options?: { page?: number; pageSize?: number; requesterUserId?: string }) {
@@ -475,7 +557,7 @@ export async function listRequests(options?: { page?: number; pageSize?: number;
   );
 
   return {
-    items: result.rows.map(mapRequestRow),
+    items: await attachAcceptedCurrencies(result.rows.map(mapRequestRow)),
     page,
     pageSize,
     total,
@@ -541,12 +623,20 @@ export async function listAvailableRequests(options: {
     [excludeUserId, offset, pageSize],
   );
 
+  // Attach each open request's accepted-currencies set (split settlements) so a driver sees the whole
+  // offer (e.g. ServiceCredits + USD). Mode/settlement/age only — still no locations before acceptance.
+  const requestIds = result.rows.map((row) => row.id);
+  const acceptedRows =
+    requestIds.length > 0 ? (await queryDb<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds])).rows : [];
+  const codesByRequest = acceptedCodesByRequest(acceptedRows);
+
   return {
     items: result.rows.map((row) => ({
       id: row.id,
       mode: row.mode,
       priceCurrency: row.price_currency,
       priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
+      acceptedCurrencies: codesByRequest.get(row.id) ?? [],
       createdAtIso: toIso(row.created_at),
     })),
     page,

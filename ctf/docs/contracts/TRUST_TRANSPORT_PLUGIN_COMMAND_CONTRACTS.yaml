@@ -1,8 +1,14 @@
 contracts:
   - pluginId: trust-transport
     command: trust-transport.request.create
-    version: 1.0.0
-    description: Create a trust-transport request for ride, package, or food mode.
+    version: 1.1.0
+    description: >-
+      Create a trust-transport request for ride, package, or food mode. The payload carries
+      the settlement value type (priceCurrency + priceAmount) plus acceptedCurrencies — a
+      multi-select of every currency the requester accepts (split settlements, e.g. part
+      ServiceCredits and part USD). Accepted codes are validated against the active
+      currencies catalog; unknown/inactive codes are dropped, never a fiat-parity claim
+      for ServiceCredits.
     inputSchema:
       mode:
         type: string
@@ -23,6 +29,8 @@ contracts:
     dataAccess:
       - trust_transport_requests
       - trust_transport_status_events
+      - trust_transport_request_accepted_currencies
+      - currencies
     purpose: marketplace_request_creation
     retentionClass: transactional_long_lived
     idempotency: true
