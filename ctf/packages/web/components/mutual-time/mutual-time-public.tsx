@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Copy, Check, Globe, ChevronDown, Clock, Lock } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { CalendarClock, Copy, Check, Globe, ChevronDown, Clock, Lock, ArrowUpRight } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MUTUAL_TIME_MAX_PICKS } from 'lib/mutual-time/constants';
 import type { MutualTimePublicEvent, MutualTimeViewerState } from 'lib/mutual-time/types';
+import { SlotPicker, PicksSummary } from './mutual-time-slot-picker';
 import {
   getMutualTimeTokens,
   requestJson,
@@ -13,12 +14,8 @@ import {
   detectTimeZone,
   listTimeZones,
   timeZoneLabel,
-  formatSlotTime,
-  formatSlotRange,
   formatSlotDate,
   formatResultDateTime,
-  localDateKey,
-  localPeriod,
 } from './mutual-time-shared';
 
 type Props = {
@@ -101,7 +98,7 @@ export function MutualTimePublic({ initialEvent, initialViewer, isSignedIn, sign
             t={t}
           />
         ) : (
-          <GateView isSignedIn={isSignedIn} signInUrl={signInUrl} verifyUrl={verifyUrl} closesLabel={closesLabel} t={t} />
+          <GateView event={event} tz={tz} isSignedIn={isSignedIn} signInUrl={signInUrl} verifyUrl={verifyUrl} closesLabel={closesLabel} t={t} />
         )}
       </div>
     </div>
@@ -155,7 +152,8 @@ function ScheduledView({ event, tz, t }: { event: MutualTimePublicEvent; tz: str
   return (
     <>
       <StatusChip label="Voting hasn't opened yet" accentActive={false} t={t} />
-      <div style={{ borderRadius: 14, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, padding: '32px 24px', marginTop: 16, textAlign: 'center' }}>
+      <MeetingPlaceRow event={event} t={t} />
+      <div style={{ borderRadius: 14, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, padding: '32px 24px', textAlign: 'center' }}>
         <Clock size={28} style={{ color: t.SUBTLE, display: 'block', margin: '0 auto 12px' }} />
         <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE, marginBottom: 6 }}>Voting opens {opensLabel}</div>
         <div style={{ fontSize: 13, color: t.SUBTLE }}>Times shown in {timeZoneLabel(tz)}. Check back when voting opens to pick your times.</div>
@@ -164,12 +162,35 @@ function ScheduledView({ event, tz, t }: { event: MutualTimePublicEvent; tz: str
   );
 }
 
-function GateView({ isSignedIn, signInUrl, verifyUrl, closesLabel, t }: { isSignedIn: boolean; signInUrl: string; verifyUrl?: string; closesLabel: string | null; t: Tokens }) {
+// Where the meeting itself happens, shown before the time is picked as well as after. A visitor who
+// lands on the link should know what they're being invited to — and be able to go look at it — without
+// waiting for the survey to close. The href is the in-app plugin route, so it stays on this host.
+function MeetingPlaceRow({ event, t }: { event: MutualTimePublicEvent; t: Tokens }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '12px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
+      <span style={{ fontSize: 13, color: t.SUBTLE }}>
+        We&apos;ll meet in <strong style={{ color: t.ACCENT, fontWeight: 700 }}>{event.meetingPluginName}</strong>
+      </span>
+      <a href={event.meetingPluginRoute} style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, background: `${t.ACCENT}18`, border: `1px solid ${t.ACCENT}44`, color: t.ACCENT, fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
+        Go to {event.meetingPluginName} <ArrowUpRight size={13} />
+      </a>
+    </div>
+  );
+}
+
+// The signed-out / not-yet-approved view. It shows the real voting form underneath the sign-in prompt,
+// greyed out and inert, so a visitor sees the actual days and times on offer rather than only a locked
+// box — the reason to sign in is visible, not described.
+function GateView({ event, tz, isSignedIn, signInUrl, verifyUrl, closesLabel, t }: { event: MutualTimePublicEvent; tz: string; isSignedIn: boolean; signInUrl: string; verifyUrl?: string; closesLabel: string | null; t: Tokens }) {
   return (
     <>
       <StatusChip label={closesLabel ? `Voting open · closes ${closesLabel}` : 'Voting open'} accentActive t={t} />
-      <div style={{ borderRadius: 14, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, padding: '36px 24px', marginTop: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
-        <Lock size={28} style={{ color: t.SUBTLE }} />
+      <p style={{ color: t.SUBTLE, fontSize: 14, margin: '0 0 16px' }}>When works for everyone? Pick up to {MUTUAL_TIME_MAX_PICKS} windows — we&apos;ll find the overlap.</p>
+
+      <MeetingPlaceRow event={event} t={t} />
+
+      <div style={{ borderRadius: 14, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
+        <Lock size={26} style={{ color: t.SUBTLE }} />
         <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE }}>
           {isSignedIn ? 'Approved members can vote' : 'Sign in and get approved to vote'}
         </div>
@@ -181,6 +202,18 @@ function GateView({ isSignedIn, signInUrl, verifyUrl, closesLabel, t }: { isSign
         <a href={isSignedIn && verifyUrl ? verifyUrl : signInUrl} style={{ display: 'inline-block', padding: '10px 20px', borderRadius: 10, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}55`, color: t.ACCENT, fontSize: 14, fontWeight: 700, textDecoration: 'none', marginTop: 4 }}>
           {isSignedIn && verifyUrl ? 'Go to verification' : 'Sign in to vote'}
         </a>
+      </div>
+
+      <div style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, margin: '20px 0 8px', textAlign: 'center' }}>
+        Here are the times on offer — sign in to pick yours
+      </div>
+      {/* Inert preview of the real form: no taps, no keyboard focus, skipped by screen readers (the
+          prompt above already says everything a non-voter needs). */}
+      <div aria-hidden="true" style={{ borderRadius: 14, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, padding: 20, opacity: 0.45, pointerEvents: 'none', userSelect: 'none' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: t.SUBTLE, fontSize: 13, fontWeight: 500, marginBottom: 18 }}>
+          <Globe size={13} /> Times shown in {timeZoneLabel(tz)}
+        </div>
+        <SlotPicker event={event} tz={tz} picks={[]} toggle={() => {}} disabled t={t} />
       </div>
     </>
   );
@@ -207,64 +240,26 @@ function TimeZoneRow({ tz, showTz, setShowTz, setTz, t }: { tz: string; showTz: 
   );
 }
 
-type VotePeriod = { label: string; order: number; slots: string[] };
-
-function SlotGrid({ periods, picks, atMax, toggle, tz, t }: { periods: VotePeriod[]; picks: string[]; atMax: boolean; toggle: (iso: string) => void; tz: string; t: Tokens }) {
+// The button under the grid. It only offers to clear when there is something saved to clear: with no
+// picks selected and nothing saved yet it reads "Save my picks" and is switched off, so a first-time
+// voter is never shown a Clear button before they have picked anything.
+function SaveBar({ saving, picks, hasSavedPicks, save, t }: { saving: boolean; picks: string[]; hasSavedPicks: boolean; save: () => void; t: Tokens }) {
+  const isClear = picks.length === 0 && hasSavedPicks;
+  const nothingToDo = picks.length === 0 && !hasSavedPicks;
+  const inactive = saving || nothingToDo;
   return (
-    <div style={{ borderRadius: 14, border: `1px solid ${t.BORDER_SOLID}`, background: t.HEADER, marginBottom: 16, overflow: 'hidden' }}>
-      {periods.length === 0 ? (
-        <div style={{ padding: 14, color: t.SUBTLE, fontSize: 13 }}>No times on this day.</div>
-      ) : (
-        periods.map((period) => (
-          <div key={period.order} style={{ padding: '10px 14px', borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: t.SUBTLE, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{period.label}</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {period.slots.map((iso) => {
-                const isSel = picks.includes(iso);
-                const isDis = !isSel && atMax;
-                return (
-                  <button key={iso} onClick={() => !isDis && toggle(iso)} style={{ padding: '5px 10px', borderRadius: 6, background: isSel ? `${t.ACCENT}22` : t.SURFACE, border: `1px solid ${isSel ? t.ACCENT : t.BORDER_SOLID}`, color: isSel ? t.ACCENT : isDis ? t.SUBTLE : t.TITLE, fontSize: 12, fontWeight: isSel ? 700 : 400, cursor: isDis ? 'not-allowed' : 'pointer', opacity: isDis ? 0.4 : 1, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    {isSel && <Check size={11} />}
-                    {formatSlotTime(iso, tz)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))
+    <div>
+      <button
+        onClick={save}
+        disabled={inactive}
+        style={{ padding: '10px 20px', borderRadius: 10, background: inactive ? t.SURFACE : `${t.ACCENT}22`, border: `1px solid ${inactive ? t.BORDER_SOLID : t.ACCENT}`, color: inactive ? t.SUBTLE : t.ACCENT, fontSize: 14, fontWeight: 700, cursor: inactive ? 'not-allowed' : 'pointer' }}
+      >
+        {saving ? 'Saving…' : isClear ? 'Clear my picks' : 'Save my picks'}
+      </button>
+      {nothingToDo && !saving && (
+        <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 8 }}>Pick a time above, then save.</div>
       )}
     </div>
-  );
-}
-
-function PicksSummary({ picks, tz, toggle, t }: { picks: string[]; tz: string; toggle: (iso: string) => void; t: Tokens }) {
-  if (picks.length === 0) return null;
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: t.SUBTLE, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your picks</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {[...picks].sort().map((iso) => (
-          <div key={iso} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', borderRadius: 6, background: `${t.ACCENT}12`, border: `1px solid ${t.ACCENT}40`, fontSize: 13, color: t.TITLE }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Clock size={12} style={{ color: t.ACCENT }} /> {formatSlotDate(iso, tz)} · {formatSlotRange(iso, tz)}
-            </span>
-            <button onClick={() => toggle(iso)} style={{ background: 'transparent', border: 'none', color: t.SUBTLE, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>remove</button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function SaveBar({ saving, picks, save, t }: { saving: boolean; picks: string[]; save: () => void; t: Tokens }) {
-  return (
-    <button
-      onClick={save}
-      disabled={saving}
-      style={{ padding: '10px 20px', borderRadius: 10, background: `${t.ACCENT}22`, border: `1px solid ${t.ACCENT}`, color: t.ACCENT, fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}
-    >
-      {saving ? 'Saving…' : picks.length === 0 ? 'Clear my picks' : 'Save my picks'}
-    </button>
   );
 }
 
@@ -296,39 +291,11 @@ function VoteView({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeDate, setActiveDate] = useState<string | null>(null);
+  // What the server currently holds for this voter, as opposed to what they have selected on screen.
+  // The two differ the moment they deselect everything, and that gap is what makes "Clear my picks"
+  // the right label — without it the button offered to clear picks nobody had made yet.
+  const [savedPicks, setSavedPicks] = useState<string[]>(picks);
   const atMax = picks.length >= MUTUAL_TIME_MAX_PICKS;
-
-  // Group candidate slots by the viewer's LOCAL date, then by local period. Recomputed when tz changes.
-  const { dateKeys, dateLabels, slotsByDate } = useMemo(() => {
-    const byDate = new Map<string, string[]>();
-    const labels = new Map<string, string>();
-    for (const iso of event.candidateSlots) {
-      const key = localDateKey(iso, tz);
-      if (!byDate.has(key)) {
-        byDate.set(key, []);
-        labels.set(key, formatSlotDate(iso, tz));
-      }
-      byDate.get(key)!.push(iso);
-    }
-    const keys = Array.from(byDate.keys()).sort();
-    return { dateKeys: keys, dateLabels: labels, slotsByDate: byDate };
-  }, [event.candidateSlots, tz]);
-
-  const currentDate = activeDate && dateKeys.includes(activeDate) ? activeDate : dateKeys[0] ?? null;
-
-  const periods = useMemo(() => {
-    if (!currentDate) return [] as { label: string; order: number; slots: string[] }[];
-    const groups = new Map<number, { label: string; order: number; slots: string[] }>();
-    for (const iso of slotsByDate.get(currentDate) ?? []) {
-      const p = localPeriod(iso, tz);
-      if (!groups.has(p.order)) {
-        groups.set(p.order, { label: p.label, order: p.order, slots: [] });
-      }
-      groups.get(p.order)!.slots.push(iso);
-    }
-    return Array.from(groups.values()).sort((a, b) => a.order - b.order);
-  }, [currentDate, slotsByDate, tz]);
 
   const toggle = (iso: string) => {
     setSaved(false);
@@ -349,6 +316,7 @@ function VoteView({
         body: JSON.stringify({ slots: picks }),
       });
       setPicks(data.picks);
+      setSavedPicks(data.picks);
       setSaved(true);
       // Refresh the voter count shown in the status area, and reconcile the viewer's own state
       // (canVote, picks) from the same fresh read so the UI never renders off a load-time snapshot —
@@ -361,6 +329,7 @@ function VoteView({
         if (refreshed.viewer) {
           setCanVote(refreshed.viewer.canVote);
           setPicks(refreshed.viewer.picks);
+          setSavedPicks(refreshed.viewer.picks);
         }
       } catch {
         /* count refresh is best-effort */
@@ -372,12 +341,12 @@ function VoteView({
     }
   }
 
-  const picksOnDate = (key: string) => picks.filter((p) => localDateKey(p, tz) === key).length;
-
   return (
     <>
       <StatusChip label={closesLabel ? `Voting open · closes ${closesLabel}` : 'Voting open'} accentActive t={t} />
       <p style={{ color: t.SUBTLE, fontSize: 14, margin: '0 0 16px' }}>When works for everyone? Pick up to {MUTUAL_TIME_MAX_PICKS} windows — we&apos;ll find the overlap.</p>
+
+      <MeetingPlaceRow event={event} t={t} />
 
       {saved && (
         <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.ACCENT}55`, color: t.ACCENT, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -389,34 +358,15 @@ function VoteView({
         {/* Timezone row */}
         <TimeZoneRow tz={tz} showTz={showTz} setShowTz={setShowTz} setTz={setTz} t={t} />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: t.TITLE }}>Pick up to {MUTUAL_TIME_MAX_PICKS} one-hour windows you&apos;re free</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: atMax ? t.ACCENT : t.SUBTLE }}>{picks.length} of {MUTUAL_TIME_MAX_PICKS} selected</span>
-        </div>
-
-        {/* Date chips */}
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 6, marginBottom: 14 }}>
-          {dateKeys.map((key) => {
-            const isActive = key === currentDate;
-            const count = picksOnDate(key);
-            return (
-              <button key={key} onClick={() => setActiveDate(key)} style={{ position: 'relative', flexShrink: 0, padding: '7px 12px', borderRadius: 6, background: isActive ? `${t.ACCENT}22` : t.SURFACE, border: `1px solid ${isActive ? t.ACCENT : t.BORDER_SOLID}`, color: isActive ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: isActive ? 700 : 400, cursor: 'pointer' }}>
-                {dateLabels.get(key)}
-                {count > 0 && <span style={{ position: 'absolute', top: -5, right: -5, width: 14, height: 14, borderRadius: '50%', background: t.ACCENT, color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Slot grid */}
-        <SlotGrid periods={periods} picks={picks} atMax={atMax} toggle={toggle} tz={tz} t={t} />
+        {/* Count row, day chips, and the grid of one-hour windows */}
+        <SlotPicker event={event} tz={tz} picks={picks} toggle={toggle} t={t} />
 
         {/* Picks summary */}
         <PicksSummary picks={picks} tz={tz} toggle={toggle} t={t} />
 
         {error && <div style={{ marginBottom: 10, fontSize: 13, color: '#F87171' }}>{error}</div>}
 
-        <SaveBar saving={saving} picks={picks} save={save} t={t} />
+        <SaveBar saving={saving} picks={picks} hasSavedPicks={savedPicks.length > 0} save={save} t={t} />
       </div>
     </>
   );

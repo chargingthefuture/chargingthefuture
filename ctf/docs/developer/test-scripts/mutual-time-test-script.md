@@ -32,7 +32,7 @@ Run the seed first: `pnpm --dir ctf seed:mutual-time`
 
 2. **Admin dashboard loads.** Sign in as an admin, navigate to `/apps/mutual-time`. The page renders without error and shows at least two events — "Weekly check-in" (open) and "Q3 onboarding" (closed). web ☐ mobile ☐
 
-3. **Public event link loads unauthenticated.** Sign out entirely. Open the shareable link for the seeded open event (copy it from the dashboard or use the known fixed slug). The page renders the event title, a set of time slots, and a sign-in prompt — no error, no blank screen. web ☐ mobile ☐
+3. **Public event link loads unauthenticated.** Sign out entirely. Open the shareable link for the seeded open event (copy it from the dashboard or use the known fixed slug). The page renders the event title, the line saying where the meeting is (for example "We'll meet in Chyme") with a button to that plugin, a sign-in prompt, and below it a greyed-out preview of the voting form showing the days and times on offer — no error, no blank screen. web ☐ mobile ☐
 
 4. **Closed event shows a result.** Open the shareable link for "Q3 onboarding" (seeded closed event) while signed out. The page shows the winning time and how many members can make it — no vote controls visible. web ☐ mobile ☐
 
@@ -53,7 +53,25 @@ Run the seed first: `pnpm --dir ctf seed:mutual-time`
 2. Navigate to `/mutual-time/<open-event-slug>`.
 3. Read the page.
 
-**Expected:** The event title and description are visible. The page says something to the effect that the visitor can come listen in at whatever time is chosen. A sign-in prompt is shown. No slot-picking controls are present.
+**Expected:** The event title and description are visible. The page says something to the effect that the visitor can come listen in at whatever time is chosen. A sign-in prompt is shown. Below that prompt, the real voting form is shown greyed out as a preview under the line "Here are the times on offer — sign in to pick yours" — no live slot-picking controls, just a look at what is on offer.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-1b — The greyed-out preview cannot be used
+
+**Role:** None (signed out)
+**Surfaces:** Web, Mobile
+**Precondition:** Seed run. Open event slug known. Signed out.
+
+**Steps:**
+1. Navigate to `/mutual-time/<open-event-slug>`.
+2. Scroll to the greyed-out form below the sign-in prompt.
+3. Tap several of the day chips and time buttons in it.
+4. On a keyboard, press Tab repeatedly through the page.
+
+**Expected:** Nothing in the preview responds to a tap — no time highlights, no day switches, no count changes. Tab focus moves from the sign-in button straight past the preview; no control inside it can be focused. The days and times shown match what an approved member sees on the live form.
 
 Result: web ☐ mobile ☐
 
@@ -69,7 +87,7 @@ Result: web ☐ mobile ☐
 1. Sign in as a member whose Unlock tier is not yet `approved_full`.
 2. Navigate to `/mutual-time/<open-event-slug>`.
 
-**Expected:** The event is visible. The page shows a listen-in message and a prompt to complete approval, not a slot picker. The member cannot vote.
+**Expected:** The event is visible. The page shows a listen-in message and a prompt to complete approval, plus the same greyed-out preview of the form below it. The member cannot vote — nothing in the preview responds.
 
 Result: web ☐ mobile ☐
 
@@ -131,6 +149,24 @@ Result: web ☐ mobile ☐
 3. Save with zero picks.
 
 **Expected:** The save succeeds (no error). Reloading the page shows no picks selected for this member.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-5b — The Clear button only appears when there is something saved to clear
+
+**Role:** Member (`approved_full`)
+**Surfaces:** Web, Mobile
+**Precondition:** Member has never voted on this open event.
+
+**Steps:**
+1. Navigate to `/mutual-time/<open-event-slug>` and read the button under the grid before touching anything.
+2. Select one time, then read the button again.
+3. Save.
+4. Deselect that time so nothing is selected, and read the button again.
+
+**Expected:** On first load the button reads "Save my picks", is switched off, and the hint below it reads "Pick a time above, then save." — it never reads "Clear my picks" before anything has been picked. After selecting a time it reads "Save my picks" and is active. After saving and then deselecting everything it reads "Clear my picks" and is active, and pressing it removes the saved picks.
 
 Result: web ☐ mobile ☐
 
@@ -237,6 +273,23 @@ Result: web ☐ mobile ☐
 **Expected:** Step 2 returns HTTP 400 with code `invalidSlot` (well-formed but unknown slot). Step 3 returns HTTP 400 with code `invalidPayload` (malformed list — element is not a string). No vote is stored in either case.
 
 Result: web ☐
+
+---
+
+### MT-12 — Where the meeting is, shown before the time is chosen
+
+**Role:** None (signed out), then Member (`approved_full`)
+**Surfaces:** Web, Mobile
+**Precondition:** An open event whose meeting plugin is known (for example Chyme).
+
+**Steps:**
+1. Signed out, open `/mutual-time/<open-event-slug>` and look above the sign-in prompt.
+2. Follow the button next to it.
+3. Sign in as an approved member, reopen the same link, and look above the voting form.
+
+**Expected:** Both views show "We'll meet in <plugin>" — for example "We'll meet in Chyme" — with a "Go to <plugin>" button beside it. The button opens that plugin's page in the app (for example `/apps/chyme`, which is `https://app.chargingthefuture.com/apps/chyme` in production). This shows before the survey closes, not only after.
+
+Result: web ☐ mobile ☐
 
 ---
 

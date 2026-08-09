@@ -32,7 +32,15 @@ to the meeting surface; members who did not vote can still come listen in.
 3. **Listen-in for everyone.** A signed-out or not-yet-approved visitor can still open the link: they
    see the event and a message that they can come listen in at whatever time is chosen — the link is
    their invite. They are shown a sign-in prompt if they want a say in the time.
-4. **Copy the link.** Every surface has a Copy-link button (rule 130) for sharing the one event link.
+4. **See the days and times before signing in.** Under that sign-in prompt, a visitor sees the real
+   voting form — the same day chips and one-hour windows a member picks from — greyed out and not
+   tappable, with the line "Here are the times on offer — sign in to pick yours". They can see exactly
+   what they would be choosing from before they decide to sign in.
+5. **Know where the meeting is, from the moment the link opens.** Every state of the shared link —
+   before voting opens, while voting is open, for a signed-out visitor, and after the time is chosen —
+   shows "We'll meet in <plugin>" with a button straight to that plugin (for example Chyme, at
+   `/apps/chyme`). It no longer waits for the survey to close.
+6. **Copy the link.** Every surface has a Copy-link button (rule 130) for sharing the one event link.
 
 ## Admin Features
 
@@ -112,7 +120,9 @@ is added to `TrustSignalMetrics`, `computeTrustSignalMetrics`, or `buildTrustEvi
 ## Web and Android Delivery Status
 
 - **Web:** complete — admin dashboard (`/apps/mutual-time`), the public one-link surface
-  (`/mutual-time/[slug]`) with vote/result/gate states, and all API routes.
+  (`/mutual-time/[slug]`) with vote/result/gate states, and all API routes. The day chips and slot grid
+  live in `components/mutual-time/mutual-time-slot-picker.tsx` so the voting form and the greyed-out
+  preview on the sign-in gate are the same component, not two that can drift apart.
 - **Mobile-responsive web:** complete — the same web components render at phone width (single-column
   layout, horizontally scrollable date chips, wrapping slot grid).
 - **Android:** **out of scope (web-only per rule 105).** Mutual Time is not on the Chyme keep-list; there
@@ -192,6 +202,22 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   column, so the column grew and took the field with it. The column is now `minmax(0, 1fr)`, each
   wrapper carries `minWidth: 0`, and the shared input style carries `maxWidth: 100%` — the fields line
   up with the title, description, and dropdown above them.
+- 2026-08-09: **The shared link now previews the form, names the meeting place, and stops offering to
+  clear picks nobody made.** All on `/mutual-time/<slug>`; no schema, contract, or API change.
+  (1) A signed-out or not-yet-approved visitor used to see only a locked box. They now see the sign-in
+  prompt with the real voting form below it — the same day chips and one-hour windows a member picks
+  from — greyed out, not tappable, not keyboard-focusable, and skipped by screen readers, under the line
+  "Here are the times on offer — sign in to pick yours". The reason to sign in is visible instead of
+  described. (2) "We'll meet in <plugin>" with a button to that plugin now shows on every state of the
+  link, not just after the survey closes: the gate, the not-yet-open state, and the voting form. The
+  candidate slots and the meeting plugin were already in the public read, so nothing new is exposed.
+  (3) The button under the grid read "Clear my picks" whenever nothing was selected — including on a
+  first visit, where there was nothing to clear. It now tracks what the server holds separately from
+  what is selected on screen: "Save my picks" when there is a selection, "Clear my picks" only when the
+  member has saved picks and has deselected them all, and switched off with the hint "Pick a time above,
+  then save." when there is neither. The day chips and slot grid moved to
+  `components/mutual-time/mutual-time-slot-picker.tsx` so the voting form and the gate preview share one
+  component.
 
 Ordered, dependency-based (no phases). Each item done in this initial build.
 
