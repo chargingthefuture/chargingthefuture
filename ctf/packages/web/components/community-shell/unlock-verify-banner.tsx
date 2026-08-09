@@ -157,9 +157,12 @@ export function UnlockVerifyBanner({
     setSubmitting(true);
     setError(null);
     try {
+      // The submission route gates on Origin today, not on this header, so the submit works without
+      // it. The header is sent so this keeps working if the route ever moves to the header-based
+      // check the rest of the Commons POSTs use.
       const res = await fetch('/api/unlock/submission', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
         body: JSON.stringify({ quoraProfileUrl: trimmed }),
       });
       if (!res.ok) {
