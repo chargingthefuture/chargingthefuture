@@ -56,12 +56,13 @@ This folder contains the rewrite monorepo scaffold for:
 - Plugin deny taxonomy baseline: `ctf/docs/contracts/PLUGIN_AUTH_DENY_TAXONOMY_BASELINE.md`
 - Legacy Clerk username rollout reference: `ctf/docs/developer/CLERK_USERNAME_ROLLOUT_PLAN.md`
 
-## Railway Deploy Baseline
+## Deploy Baseline
 
-- Railway service root is `ctf/packages/web`; build/start commands run from that directory.
-- Keep `ctf/railway.toml` commands package-local (`pnpm build`, `pnpm start`) and do not add a second workspace-level `pnpm install --filter ...` step.
-- Reason: Railpack already performs install, and a second filtered install/build chain can trigger Node heap OOM during deploy.
-- Keep package manager alignment pinned to `pnpm@9.12.0` in deploy commands for deterministic behavior.
+- The web app deploys on Render (`render.yaml` at the repo root is the service definition); Railway
+  hosts only the supporting services (Infisical, Unleash, Formance). The old `ctf/railway.toml` web
+  deploy entry point was removed 2026-08-03 — the web app has not deployed from Railway since the
+  Render migration.
+- Keep package manager alignment pinned to `pnpm@9.12.0` for deterministic builds.
 
 ## Schema Drift Full Report
 

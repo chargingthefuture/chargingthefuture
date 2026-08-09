@@ -88,6 +88,27 @@ Result: web ☐
 
 ---
 
+### FDN-2b — Member block hides a provider and stops contact (added 2026-08-05)
+
+**Role:** two members (survivor S, provider P) · **Surfaces:** web
+
+**Precondition:** P is an active provider. S blocks P (or P blocks S) via `/account/blocks` or the Directory profile.
+
+**Steps:**
+1. As S, search providers with a query that would match P.
+2. As S, attempt to open a connection thread to P directly (`POST /api/foundation/connections/threads` with P's provider id).
+3. If a thread between S and P existed from before the block, try to start an instant call on it.
+
+**Expected:**
+- Step 1: P is absent from S's search results.
+- Step 2: 403 with the neutral message "This provider is not available to you." — never wording that names a block.
+- Step 3: the ring is refused with "This call is not available right now." — a block created after the thread existed still stops new calls.
+- Neither member gets any signal that a block exists.
+
+Result: web ☐
+
+---
+
 ### FDN-3 — Provider search: empty-state messaging
 
 **Role:** Member (survivor)
@@ -770,5 +791,26 @@ Result: web ☐
 
 **Expected:** Deleting the account removes the provider's accepted-currencies rows along with their
 skills and threads (existing behavior) — no currency preference survives the account.
+
+Result: web ☐
+
+
+### FN-R1 — Record a closed quote as ongoing work
+
+**Role:** member (survivor side)
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in as the survivor on a quote with an open Direct Line thread, and no recurring arrangement recorded with that provider yet.
+
+**Steps:**
+1. Open the Quotes panel and open the Direct Line for that quote.
+2. Look at the bottom of the thread for the "Is this ongoing?" prompt.
+3. Click it, pick a cadence, and record it.
+4. Sign in as the provider, open the same thread, and look for the prompt.
+
+**Expected:**
+- The prompt sits on the thread itself — the relationship — not only on a closed quote, and appears whatever lifecycle state the quote is in.
+- The provider does NOT see it on their own side; it is offered to the survivor, the side that would keep calling the same provider.
+- The provider is already filled in — no member search.
+- After recording, the row appears in the Recurring Activity app marked "Recorded from Foundation", awaiting the provider's confirmation, and the prompt is gone from both the thread and the quote row.
 
 Result: web ☐

@@ -3,6 +3,7 @@ import { requireComicAdminAccess } from '../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { listContributionsForReview } from 'lib/comic/contribution-repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
   } catch (error) {
     reportError(error, { area: 'comic', op: 'admin_contributions_list' });
     return NextResponse.json(
-      { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Could not load contributions.' },
+      { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: `Could not load contributions: ${failureReason(error)}` },
       { status: 503 },
     );
   }

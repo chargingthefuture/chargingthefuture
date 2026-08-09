@@ -11,7 +11,9 @@
 // to every problem so none rendered blank; that real problem→best-app mapping is still to be done).
 // Routing "every app solves it" is wrong and overwhelming, so this table stays narrow and the resolver
 // surfaces only the best match(es). Keep slugs in sync with the plugin registry
-// (`lib/plugins/repository.ts`); each `slug` resolves to a route via `getPluginRoute(slug)`.
+// (`lib/plugins/repository.ts`); each `slug` resolves to a route via `getPluginRoute(slug)`. There is
+// no remapping step between the two — a `slug` here IS the registry slug, so a typo routes a member to
+// a page that does not exist. Check the registry before adding or renaming an intent.
 //
 // This is deliberately a deterministic keyword map, not an LLM: it is instant, runs server-side with
 // no model dependency, and never sends a member's words to a third party (a hard privacy rule for
@@ -203,13 +205,3 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
     starter: 'Does any of the work we all do here actually add up to anything?',
   },
 ];
-
-// A few intents share a problem space with a different canonical slug than their display name (kept
-// readable above). Resolve display→registry slug here so routes are always valid.
-const SLUG_OVERRIDES: Record<string, string> = {
-  'lighthouse-safety': 'click-log',
-};
-
-export function conciergeRouteSlug(intent: ConciergeIntent): string {
-  return SLUG_OVERRIDES[intent.slug] ?? intent.slug;
-}

@@ -3,4 +3,4 @@
 // never lib/trust or components/trust directly. Keep it narrow — a new export needs a reason, and
 // re-exporting whole modules is prohibited. Enforced by ctf/scripts/check-plugin-boundaries.mjs.
 export { TrustWidgetCard } from 'components/trust/TrustWidgetCard';
-export type { TrustUserExtension } from 'lib/trust/types';
+export type { TrustPeerView, TrustUserExtension } from 'lib/trust/types';

@@ -95,6 +95,12 @@ for (const root of SEARCH_ROOTS) {
   for (const file of walk(root)) {
     if (!SEARCHABLE.test(file)) continue;
     if (routeFileSet.has(file)) continue;
+    // The allowlist lives under ctf/scripts, which is a search root, and it spells out route paths
+    // in full. Left in the haystack it would answer for the routes it lists: taking an entry off the
+    // list to burn it down would still "find" a caller, because a sibling entry sharing the static
+    // prefix (…/items/[id]/read next to …/items/[id]/dismiss) satisfies the dynamic-route match.
+    // The list is a record of orphans, not a caller — so it never counts as one.
+    if (file === ALLOWLIST_PATH) continue;
     searchFiles.push(file);
   }
 }
@@ -112,7 +118,7 @@ let allowlist = { routes: [] };
 try {
   allowlist = JSON.parse(readFileSync(ALLOWLIST_PATH, 'utf8'));
 } catch {
-  // A missing allowlist is treated as empty rather than fatal, so the gate still runs.
+  // no-trace: a missing allowlist is treated as empty rather than fatal, so the gate still runs.
 }
 const allowed = new Map((allowlist.routes ?? []).map((entry) => [entry.route, entry.reason]));
 

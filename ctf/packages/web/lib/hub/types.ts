@@ -123,15 +123,3 @@ export type HubChannelInfo = {
 export type HubChannelsResponse = {
   channels: HubChannelInfo[];
 };
-
-export type HubBotInfo = {
-  slug: string;
-  displayName: string;
-  avatarUrl: string | null;
-  personaBlurb: string;
-  isActive: boolean;
-};
-
-export type HubBotsResponse = {
-  bots: HubBotInfo[];
-};

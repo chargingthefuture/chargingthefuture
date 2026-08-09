@@ -209,7 +209,7 @@ function ClickLogNoteForm({
           onChange={(e) => onShareChange(e.target.checked)}
           style={{ accentColor: t.ACCENT }}
         />
-        Share this incident with the owner (coarse trend data only)
+        Share this incident with the owner (only the date, rough area, and tags)
       </label>
       <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
         <ClickLogLocationButton

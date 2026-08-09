@@ -9,10 +9,10 @@
 | **Plugin** | Trust (`trust`) |
 | **Visibility** | Internal |
 | **Roles to test** | Admin only |
-| **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
+| **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-visibility-control.tsx`, `lib/trust/peer-summary.ts`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md` |
-| **Generated** | 2026-07-14 (hand-updated: demo trust evidence shape fix — human summaries, no raw type slug, no "Invalid Date") |
+| **Generated** | 2026-08-08 (hand-updated: plain-language choice labels — TR-A5b; restricted serves the summary projection — TR-A4b; admin verification page `/admin/trust` — TR-A9b) |
 
 ---
 
@@ -112,7 +112,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 ---
 
-### TR-A4 — Cross-user read: private/restricted visibility blocks non-owner non-admin
+### TR-A4 — Cross-user read: private visibility refuses a non-owner non-admin
 
 **Role:** Admin (to set up); tested from a non-owner non-admin caller  
 **Surfaces:** Web API  
@@ -124,8 +124,33 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 **Expected:**
 - Non-owner, non-admin caller: HTTP 403.
-- Admin caller: HTTP 200 with full panel.
-- Each read writes a `trust.summary.read` row to `trust_admin_audit_trail`: the blocked non-owner read as `policy_status = deny` (reason `forbidden_visibility`), the admin read as `policy_status = allow` (reason `admin_summary_read`).
+- Admin caller: HTTP 200 with the full panel and `trustDisclosure: "full"`.
+- Each read writes a `trust.summary.read` row to `trust_admin_audit_trail`: the refused non-owner read as `policy_status = deny` (reason `forbidden_visibility`), the admin read as `policy_status = allow` (reason `admin_summary_read`).
+
+**Result:** web ☐
+
+---
+
+### TR-A4b — Cross-user read: restricted visibility serves the summary, not a refusal
+
+**Role:** Admin (to set up); tested from a non-owner non-admin caller  
+**Surfaces:** Web API + Web UI  
+**Precondition:** Member B's `trust_visibility` is set to `restricted`, and Member B has real upstream activity (sign-ins plus participation in at least two plugins) so the summary has something to report.
+
+**Steps:**
+1. Authenticate as a **different** member (not Member B, not admin) and call `GET /api/trust/user/[memberB_userId]`.
+2. Compare the response against Member B's own full panel (read it as admin).
+3. Open Member B's Directory profile as that same non-admin member.
+
+**Expected:**
+- HTTP 200, **not** 403 — this is the point of the setting. `trustDisclosure` is `"summary"`.
+- `trustEvidence` contains headline counts only. Specifically: a sign-in line ("Active on N days") if they have one, a single breadth line reading "Took part in N plugins", and any ServiceCredits count lines.
+- **No item carries a `createdAt` or a `details` field.** The full panel's last-sign-in detail must not appear anywhere in the response.
+- No per-plugin item survives — the response must not name SkillsHunt, Chyme, LightHouse, Foundation, or any other plugin, and must not carry a per-plugin count.
+- The breadth line counts DISTINCT plugins: a member with both a SocketRelay trades item and a SocketRelay requests item counts SocketRelay once.
+- On the Directory profile the Trust card renders normally with the shorter list, above it the note "This member shares a summary of their participation, not the detail." The "This member limits who can view their trust" refusal note must **not** appear (that is now the `private` state only).
+- The read-only visibility row at the bottom of that card is **not** rendered on a summary card — the note above the list already says the member shares a summary, so repeating it below would be noise. It is still rendered on a full peer card, reading "This member shares everything".
+- The read writes a `trust.summary.read` row with `policy_status = allow` and reason `restricted_summary_read`.
 
 **Result:** web ☐
 
@@ -148,6 +173,33 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - Each POST returns HTTP 200 with `{ userId, trustVisibility, updatedAt }` matching the value just sent.
 - Subsequent self-reads reflect the updated visibility.
 - A row is written to `trust_admin_audit_trail` for each mutation (verify by checking the table or an admin audit endpoint if exposed).
+
+**Result:** web ☐
+
+---
+
+### TR-A5b — Visibility selector in the widget (self surfaces only)
+
+**Role:** Admin acting as any authenticated user  
+**Surfaces:** Web (desktop + mobile-responsive)  
+**Precondition:** Admin signed in.
+
+**Steps:**
+1. Open the account hub (or the community shell right rail) and find the Trust widget's "Who sees your trust signals" control.
+2. Change the dropdown to "Only you see this", then reload the page.
+3. Open another member's Directory profile and find their Trust widget (member with `public` visibility).
+4. Reset your own choice to "Members see everything".
+
+**Expected:**
+- On your own widget the control has a heading ("Who sees your trust signals") above a full-width dropdown, so it reads as something you can change rather than a status line.
+- The choices are ordered most open to most private and each states the outcome in plain words — **"Members see everything"**, **"Members see a summary"**, **"Only you see this"**. No choice is named after a category ("Public"/"Restricted"/"Private" must not appear as option text).
+- Below the dropdown, a sentence states what the current choice does and that you always see everything on your own card whichever one you pick. On "Only you see this" that sentence must also say admins can read the panel — the label alone would otherwise overpromise.
+- Under that, a **"What members see"** preview shows the result of the current choice: on "Members see everything", "Everything listed above, exactly as you see it."; on "Only you see this", "Nothing — this panel does not appear on your profile for them."; on "Members see a summary", the actual summary lines a member would receive.
+- The summary preview must match what the API returns for a peer (cross-check against TR-A4b) — both come from the same projection function, so any disagreement is a bug.
+- Changing it POSTs `/api/trust/visibility`, shows "Saving…" while in flight, then a "Saved" confirmation that clears itself after a few seconds. After reload the chosen value is still selected.
+- Your own evidence list above the control does **not** change when the setting changes — that is correct; the preview is where the effect shows. Do not file the unchanged list as a bug.
+- On failure (e.g. network cut), the dropdown reverts to the previous value and a short plain-language error appears under it, replacing the confirmation.
+- On **another member's** widget the row is plain text stating what they share ("This member shares everything"), never a dropdown, and no preview is shown — the route is self-scope only.
 
 **Result:** web ☐
 
@@ -226,6 +278,27 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 **Expected:**
 - No evidence item mentions Mood, GentlePulse, ClickLog, Unlock, Foundation seeker activity, member blocks, or safety reports.
 - No numeric trust score appears anywhere.
+
+**Result:** web ☐
+
+---
+
+### TR-A9b — Admin verification page (`/admin/trust`)
+
+**Role:** Admin  
+**Surfaces:** Web (desktop + mobile-responsive)  
+**Precondition:** Seed complete. Member B exists. Admin signed in.
+
+**Steps:**
+1. Open `/admin` and confirm a **Trust** card is listed; click it (lands on `/admin/trust`).
+2. In the "Verification review" form, enter Member B's user id, pick `verified`, add a note, and save.
+3. Save again with an empty target user id.
+4. As a non-admin member, open `/admin/trust` directly.
+
+**Expected:**
+- Step 2: a status line confirms the save ("… is now verified") and Member B's trust panel gains the admin evidence item.
+- Step 3: an inline plain-language error asks for the target user id; nothing is sent.
+- Step 4: the non-admin is redirected away — the page never renders for them.
 
 **Result:** web ☐
 

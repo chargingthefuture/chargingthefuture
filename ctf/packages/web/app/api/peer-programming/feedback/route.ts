@@ -3,6 +3,7 @@ import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammin
 import { insertPeerProgrammingAudit, submitFeedback } from 'lib/peer-programming/repository';
 import { PEER_PROGRAMMING_MAX_FEEDBACK_LENGTH } from 'lib/peer-programming/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type FeedbackBody = {
   cohortId?: string | null;
@@ -38,8 +39,8 @@ async function parseFeedbackBody(request: Request): Promise<ParsedFeedbackBody> 
   let body: FeedbackBody;
   try {
     body = (await request.json()) as FeedbackBody;
-  } catch {
-    return { ok: false, response: NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: 'Invalid JSON body.' }, { status: 400 }) };
+  } catch (error) {
+    return { ok: false, response: NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 }) };
   }
 
   if (!body.issueType || !body.suggestionCategory || !body.note) {

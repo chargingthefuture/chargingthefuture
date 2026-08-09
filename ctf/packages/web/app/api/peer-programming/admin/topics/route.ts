@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingAdminAccess } from 'lib/peer-programming/_lib';
 import { getPublishedWeeklyTopic, insertPeerProgrammingAudit, upsertWeeklyTopic } from 'lib/peer-programming/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type TopicBody = {
   weekStartDate?: string;
@@ -28,8 +29,8 @@ async function parseTopicBody(request: NextRequest): Promise<ParsedTopicBody> {
   let body: TopicBody;
   try {
     body = (await request.json()) as TopicBody;
-  } catch {
-    return { ok: false, response: NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: 'Invalid JSON body.' }, { status: 400 }) };
+  } catch (error) {
+    return { ok: false, response: NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: `Invalid JSON body: ${failureReason(error)}` }, { status: 400 }) };
   }
 
   if (!body.weekStartDate || !body.title || !body.guidance) {

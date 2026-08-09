@@ -177,7 +177,10 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
       }
 
       try {
-        const join = await requestJson<GatedJoinResponse>('/api/contributor-access/channel/join', { method: 'POST' });
+        const join = await requestJson<GatedJoinResponse>('/api/contributor-access/channel/join', {
+          method: 'POST',
+          headers: { 'x-ctf-csrf': '1' },
+        });
         if (!active) return;
 
         const live = await connectLiveIfConfigured(join, {

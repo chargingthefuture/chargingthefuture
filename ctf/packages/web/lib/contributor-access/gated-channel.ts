@@ -9,7 +9,10 @@ import {
 
 // Server-side Stream helpers for the single gated contributor channel. Mirrors lib/feed/stream.ts
 // exactly (same credential resolver — demo mode selects the *_STAGING app — same create/watch
-// fallback, same per-call client + disconnect). The only differences are the distinct channel type
+// fallback, same per-call server client). Server-side clients (apiKey + apiSecret) issue tokens
+// and make REST calls; they never open a user WebSocket, so there is no disconnectUser() teardown
+// to run — calling it in a finally only risked masking a real error from the channel operation
+// (the Commons removed it for the same reason). The only differences are the distinct channel type
 // ('ctf-gated': threads on, richer reactions, longer messages, uploads OFF — created once by
 // ctf/scripts/setupGatedChannelType.mjs) and that membership is derived ONLY from the
 // contributor_access_eligibility flag: eligible members are added, for-cause-revoked members are
@@ -58,13 +61,9 @@ export async function ensureGatedChannel(): Promise<boolean> {
   const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) return false;
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
-  try {
-    await streamClient.upsertUser({ id: GATED_SYSTEM_USER_ID, name: 'Survivor Hub' });
-    await createOrWatchGatedChannel(streamClient);
-    return true;
-  } finally {
-    await streamClient.disconnectUser();
-  }
+  await streamClient.upsertUser({ id: GATED_SYSTEM_USER_ID, name: 'Survivor Hub' });
+  await createOrWatchGatedChannel(streamClient);
+  return true;
 }
 
 export type GatedChannelSyncResult = {
@@ -80,26 +79,22 @@ export async function syncGatedChannelMembership(): Promise<GatedChannelSyncResu
   if (!streamConfig) return null;
   const targets = await listChannelMembershipTargets();
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
-  try {
-    await streamClient.upsertUser({ id: GATED_SYSTEM_USER_ID, name: 'Survivor Hub' });
-    const channel = await createOrWatchGatedChannel(streamClient);
+  await streamClient.upsertUser({ id: GATED_SYSTEM_USER_ID, name: 'Survivor Hub' });
+  const channel = await createOrWatchGatedChannel(streamClient);
 
-    const eligibleIds = targets.eligibleUserIds.map(streamMemberId);
-    const revokedIds = targets.revokedUserIds.map(streamMemberId);
+  const eligibleIds = targets.eligibleUserIds.map(streamMemberId);
+  const revokedIds = targets.revokedUserIds.map(streamMemberId);
 
-    // Stream member/user calls are capped per request, so batch in chunks of 100.
-    for (const ids of chunk(eligibleIds, 100)) {
-      await streamClient.upsertUsers(ids.map((id) => ({ id })));
-      await channel.addMembers(ids);
-    }
-    for (const ids of chunk(revokedIds, 100)) {
-      await channel.removeMembers(ids);
-    }
-
-    return { added: eligibleIds.length, removed: revokedIds.length };
-  } finally {
-    await streamClient.disconnectUser();
+  // Stream member/user calls are capped per request, so batch in chunks of 100.
+  for (const ids of chunk(eligibleIds, 100)) {
+    await streamClient.upsertUsers(ids.map((id) => ({ id })));
+    await channel.addMembers(ids);
   }
+  for (const ids of chunk(revokedIds, 100)) {
+    await channel.removeMembers(ids);
+  }
+
+  return { added: eligibleIds.length, removed: revokedIds.length };
 }
 
 // Guarded membership sync for the eligibility-changing paths (recompute, revoke, reinstate).
@@ -132,8 +127,6 @@ export async function getGatedChannelMemberCount(): Promise<number | null> {
     return typeof state.channel.member_count === 'number' ? state.channel.member_count : null;
   } catch {
     return null;
-  } finally {
-    await streamClient.disconnectUser();
   }
 }
 
@@ -156,20 +149,16 @@ export async function getGatedStreamCredentials(
   const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) return null;
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
-  try {
-    const streamUserId = streamMemberId(userId);
-    await streamClient.upsertUser({ id: streamUserId, name: displayName });
-    const token = streamClient.createToken(streamUserId);
-    const channel = await createOrWatchGatedChannel(streamClient);
-    await channel.addMembers([streamUserId]);
-    return {
-      streamApiKey: streamConfig.apiKey,
-      streamToken: token,
-      streamUserId,
-      streamChannelType: GATED_STREAM_CHANNEL_TYPE,
-      streamChannelId: GATED_STREAM_CHANNEL_ID,
-    };
-  } finally {
-    await streamClient.disconnectUser();
-  }
+  const streamUserId = streamMemberId(userId);
+  await streamClient.upsertUser({ id: streamUserId, name: displayName });
+  const token = streamClient.createToken(streamUserId);
+  const channel = await createOrWatchGatedChannel(streamClient);
+  await channel.addMembers([streamUserId]);
+  return {
+    streamApiKey: streamConfig.apiKey,
+    streamToken: token,
+    streamUserId,
+    streamChannelType: GATED_STREAM_CHANNEL_TYPE,
+    streamChannelId: GATED_STREAM_CHANNEL_ID,
+  };
 }

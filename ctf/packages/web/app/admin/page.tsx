@@ -39,9 +39,14 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // inside AI Assistant: it has its own queue, and a contribution waiting to be read should show up
   // in the admin directory on its own.
   { href: '/admin/comic/contributions', name: 'Contributed Writing' },
+  // Curation of the assistant's grounding library: switch what the assistant can quote off/on.
+  { href: '/admin/comic/knowledge', name: 'AI Knowledge Base' },
   { href: '/admin/foundation', name: 'Foundation' },
   { href: '/admin/level-up', name: 'LevelUp' },
   { href: '/admin/lighthouse', name: 'LightHouse' },
+  // Read-only review of who confirms whose recurring arrangements — the two-sided confirmation rule
+  // stops one member inflating their own standing, not a small group confirming each other's.
+  { href: '/admin/recurring-activity', name: 'Recurring Activity Review' },
   // Mutual Time has no /admin/* route — its admin dashboard (create/manage polls) lives at
   // /apps/mutual-time (MutualTimeAdmin renders there for admins), so this row points there.
   { href: '/apps/mutual-time', name: 'Mutual Time' },
@@ -50,6 +55,8 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/service-credits', name: 'ServiceCredits' },
   { href: '/admin/skills-hunt', name: 'SkillsHunt' },
   { href: '/admin/socket-relay', name: 'SocketRelay' },
+  // Verification review: set a member's trust status (verified / flagged) with an evidence note.
+  { href: '/admin/trust', name: 'Trust' },
   { href: '/admin/trust-transport', name: 'TrustTransport' },
   { href: '/admin/weekly-performance', name: 'Weekly Performance' },
   { href: '/admin/what-works', name: 'WhatWorks' },

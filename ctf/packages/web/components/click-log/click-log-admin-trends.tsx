@@ -103,7 +103,7 @@ export function ClickLogAdminTrends() {
         {!loading && !error && (
           <>
             <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.5, marginBottom: 16 }}>
-              Aggregate of incidents members chose to share, last 90 days. Coarse data only: day, an
+              Aggregate of incidents members chose to share, last 90 days. Grouped data only: day, an
               approximate area (about 11 km), counts, and which problem/scheme tags members picked —
               no notes, exact locations, or member identity.
             </div>

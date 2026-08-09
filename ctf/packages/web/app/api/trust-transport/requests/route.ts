@@ -4,6 +4,7 @@ import { TRUST_TRANSPORT_DEFAULT_PAGE, TRUST_TRANSPORT_DEFAULT_PAGE_SIZE, TRUST_
 import { createRequest, insertTrustTransportAudit, isValidRequestPrice, listRequests, validateRequestInput } from 'lib/trust-transport/repository';
 import type { TrustTransportMode, TrustTransportRequestInput } from 'lib/trust-transport/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Only a real number or a non-empty numeric string becomes an amount; booleans, arrays, objects, and
 // `null`/`undefined` never coerce to a price (so e.g. `true` is not read as 1).
@@ -39,6 +40,20 @@ function parsePriceCurrency(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+// Accepted-currencies multi-select (split settlements): keep only non-empty strings, trimmed and
+// deduped. Codes are validated against the active currency catalog in the repository, where unknown
+// or inactive codes are dropped rather than rejected.
+function parseAcceptedCurrencies(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value
+        .filter((code): code is string => typeof code === 'string' && code.trim().length > 0)
+        .map((code) => code.trim()),
+    ),
+  );
+}
+
 function parseRequestInput(body: Record<string, unknown>): TrustTransportRequestInput {
   return {
     mode: parseMode(body.mode),
@@ -50,6 +65,7 @@ function parseRequestInput(body: Record<string, unknown>): TrustTransportRequest
     dropoffGeoRedacted: optionalString(body.dropoffGeoRedacted),
     priceCurrency: parsePriceCurrency(body.priceCurrency),
     priceAmount: parsePriceAmount(body.priceAmount),
+    acceptedCurrencies: parseAcceptedCurrencies(body.acceptedCurrencies),
   };
 }
 
@@ -85,9 +101,9 @@ export async function POST(request: Request) {
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

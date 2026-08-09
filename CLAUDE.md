@@ -58,8 +58,11 @@ not reach for a banned word even to talk about it; use the replacement below ins
 - stale → drop the word; if you mean something specific, name it (out-of-date, superseded, no longer current)
 - console → dashboard (the code identifiers `console.log` / `console.error` / `console.info` are exempt)
 
-When the hook blocks a reply, restate the result in plain, factual language — none of the terms above,
-no jargon, no first-person feeling words — then stop.
+When the hook blocks a reply, restate **once and briefly** in plain, factual language — none of the
+terms above, no jargon, no first-person feeling words — then stop. Do not re-send the blocked
+reply's full content with one word swapped; a repeat of the same update reads as noise. Summarize
+the point in a sentence or two instead. Better: write with the replacement vocabulary from the
+start so no rewrite is ever needed (owner directive, 2026-08-04).
 
 ## Design Pass Gating (Critical — Read Before Touching UI)
 
@@ -165,6 +168,7 @@ needed to authenticate `infisical run`.
 | Auth (Clerk) | `.claude/rules/107-integration-stack-rules.mdc` |
 | File size limits | `.claude/rules/116-file-size-and-modularity-rules.mdc` |
 | Agent cost/readability | `.claude/rules/117-agent-readability-and-cost-rules.mdc` |
+| Error handling (say what failed and why) | `.claude/rules/137-verbose-error-handling-rules.mdc` |
 
 # Codespaces Environment Notice
 
@@ -287,6 +291,7 @@ and hides meaning.
 - [134-navigation-and-back-control-rules.mdc](.claude/rules/134-navigation-and-back-control-rules.mdc)
 - [135-ai-behavior-change-log-and-user-preferences.mdc](.claude/rules/135-ai-behavior-change-log-and-user-preferences.mdc)
 - [136-backup-and-restore-testing-rules.mdc](.claude/rules/136-backup-and-restore-testing-rules.mdc)
+- [137-verbose-error-handling-rules.mdc](.claude/rules/137-verbose-error-handling-rules.mdc)
 - [200-plugin-command-contract-templates.mdc](.claude/rules/200-plugin-command-contract-templates.mdc)
 - [201-plugin-command-schema-template.mdc](.claude/rules/201-plugin-command-schema-template.mdc)
 - [202-plugin-access-policy-schema-template.mdc](.claude/rules/202-plugin-access-policy-schema-template.mdc)

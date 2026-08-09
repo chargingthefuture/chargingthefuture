@@ -18,12 +18,16 @@ contracts:
     command: recurring-activity.create
     version: 1.0.0
     description: >-
-      Declare a new PENDING recurring activity with another member. The caller is the owner. A fiat
+      Declare a new PENDING recurring activity with another member. The caller is the owner. A
+      counterparty that nothing on the platform knows about is rejected (permissive check: a claimed
+      directory profile, a recorded sign-in, or the accounts table where it exists). A fiat
       (non-ServiceCredits) line MUST NOT carry an amount — the value firewall is enforced server-side,
       not just in the UI — so the platform never holds a summable recurring-fiat-payment total. Only
       ServiceCredits (an internal utility token) may carry a declared value, and even that is a declared
-      figure, never an executed transfer. No free-text is accepted; sector is a fixed enum. Implemented
-      by POST /api/recurring-activity.
+      figure, never an executed transfer. No free-text is accepted; sector is a fixed enum. Callable
+      both from this plugin's own form and from the inline "this happens regularly" control other apps
+      render beside a finished arrangement, which passes originPlugin. Implemented by
+      POST /api/recurring-activity.
     inputSchema:
       counterpartyUserId:
         type: string
@@ -58,6 +62,22 @@ contracts:
           - private
           - restricted
           - public
+      originPlugin:
+        type: string
+        required: false
+        description: >-
+          The app the member declared this from, when they used that app's inline control instead of
+          this plugin's own form. Absent for a line created in the plugin. Rejected if not one of the
+          values below, because the value decides how GDP recognizes the line: a declaration made in an
+          app that already settles every exchange on-platform is recognized as a relationship (one
+          point) rather than by its declared ServiceCredits value, so the same credits are never counted
+          twice.
+        enum:
+          - lighthouse
+          - foundation
+          - socket-relay
+          - trust-transport
+          - service-credits
     outputSchema:
       activity:
         type: object
@@ -65,6 +85,9 @@ contracts:
       - recurring_activities
       - recurring_activity_audit_trail
       - currencies
+      # Read-only, for the counterparty-exists check:
+      - directory_profiles
+      - login_events
     purpose: recurring_activity_declaration
     retentionClass: member_scoped
     idempotency: false
@@ -146,4 +169,33 @@ contracts:
       - recurring_activity_audit_trail
     purpose: privacy_safety_preference_update
     retentionClass: member_scoped
+    idempotency: true
+
+  - pluginId: recurring-activity
+    command: recurring-activity.admin.review.read
+    version: 1.0.0
+    description: >-
+      Admin-only, READ-ONLY collusion review over confirmed recurring activities. A recurring activity
+      counts only once the counterparty confirms it, which stops one member inflating their own
+      standing but not a small group confirming each other's. Returns the three shapes that pattern
+      makes: members who each declared an arrangement with the other, arrangements confirmed within a
+      minute of being declared, and groups of three to eight members whose confirmed arrangements loop
+      back within the group. Reads a bounded slice of the graph and says so when the cap was hit rather
+      than presenting a partial picture as complete. Member ids on flagged rows only are resolved to
+      display names (via the identity provider, not a stored table) so a reviewer can see who is
+      involved without this becoming a member directory. Changes nothing, scores nobody, and feeds no
+      member-facing surface. Every read — allow or deny — writes an audit row, because looking at who
+      is connected to whom is itself a use of admin power. Implemented by
+      GET /api/recurring-activity/admin/review.
+    inputSchema: {}
+    outputSchema:
+      review:
+        type: object
+      names:
+        type: object
+    dataAccess:
+      - recurring_activities
+      - recurring_activity_audit_trail
+    purpose: fraud_pattern_review
+    retentionClass: derived_medium_lived
     idempotency: true

@@ -6,6 +6,7 @@ import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { createSubmission, listSubmissions, validateSubmissionInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntSubmissionInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type SubmissionBody = Partial<Omit<SkillsHuntSubmissionInput, 'roundId'>>;
 
@@ -148,9 +149,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
   let body: SubmissionBody;
   try {
     body = (await request.json()) as SubmissionBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
+import { isBlockedBetweenTx } from 'lib/blocks/repository';
 import {
   FOUNDATION_DEFAULT_PAGE,
   FOUNDATION_DEFAULT_PAGE_SIZE,
@@ -121,12 +122,28 @@ export async function searchProviders(input: {
   skillId?: string | null;
   page?: number;
   pageSize?: number;
+  // When set, providers blocked (either direction) relative to this viewer are hidden from the
+  // results (issue #809 task 4). A `IS NULL` arm keeps this a no-op when no viewer is passed.
+  viewerUserId?: string | null;
 }): Promise<{ items: FoundationProviderSearchItem[]; total: number; pagination: { page: number; pageSize: number } }> {
   const paging = normalizePage(input.page, input.pageSize);
   const searchValue = input.query.trim();
 
   const searchPattern = searchValue.length > 0 ? `%${searchValue}%` : '%';
   const skillId = input.skillId && input.skillId.trim().length > 0 ? input.skillId.trim() : null;
+  const viewerUserId = input.viewerUserId && input.viewerUserId.trim().length > 0 ? input.viewerUserId.trim() : null;
+
+  // Mirrors the LightHouse browse filter: hide a provider who is blocked relative to the viewer.
+  const hideBlockedProvidersSql = (viewer: string) => `
+          AND (
+            ${viewer}::text IS NULL
+            OR NOT EXISTS (
+              SELECT 1
+              FROM member_blocks
+              WHERE (blocker_user_id = ${viewer} AND blocked_user_id = dp.claimed_by_user_id)
+                 OR (blocker_user_id = dp.claimed_by_user_id AND blocked_user_id = ${viewer})
+            )
+          )`;
 
   // A Foundation provider is a claimed directory profile that has opted in to offer at least one
   // skill (a row in foundation_provider_skills). When a skill is given, restrict to providers who
@@ -149,9 +166,9 @@ export async function searchProviders(input: {
             OR TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) ILIKE $1
             OR COALESCE(dp.headline, '') ILIKE $1
             OR COALESCE(dp.bio, '') ILIKE $1
-          )
+          )${hideBlockedProvidersSql('$3')}
       `,
-      [searchPattern, skillId],
+      [searchPattern, skillId, viewerUserId],
     ),
     queryDb<FoundationProviderRow>(
       `
@@ -193,11 +210,11 @@ export async function searchProviders(input: {
             OR TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) ILIKE $1
             OR COALESCE(dp.headline, '') ILIKE $1
             OR COALESCE(dp.bio, '') ILIKE $1
-          )
+          )${hideBlockedProvidersSql('$5')}
         ORDER BY score DESC, dp.updated_at DESC
         LIMIT $2 OFFSET $3
       `,
-      [searchPattern, paging.pageSize, paging.offset, skillId],
+      [searchPattern, paging.pageSize, paging.offset, skillId, viewerUserId],
     ),
   ]);
 
@@ -696,6 +713,12 @@ export async function createConnectionThread(input: {
     const providerUserId = provider.claimed_by_user_id;
     if (providerUserId === input.actorUserId) {
       throw new Error('policy_denied');
+    }
+
+    // Block check (issue #809 task 4): a blocked pair must not be joined into a connection thread.
+    // The route maps blocked_pair to neutral copy so the block never reveals itself.
+    if (await isBlockedBetweenTx(client, input.actorUserId, providerUserId)) {
+      throw new Error('blocked_pair');
     }
 
     const thread = await getOrCreateConnectionThread(client, {

@@ -12,7 +12,7 @@ import { TrustWidgetCard } from "@/lib/shared/trust-interface";
 import { BlockMemberButton } from "@/components/blocks/block-member-button";
 import { WeaversBadgeControl } from "@/components/contributor-access/weavers-badge-control";
 import { ShareLink } from "@/components/shared/share-link";
-import type { TrustUserExtension } from "@/lib/shared/trust-interface";
+import type { TrustPeerView, TrustUserExtension } from "@/lib/shared/trust-interface";
 
 // One cross-plugin presence entry returned by GET /api/presence/user/[userId].
 interface PresenceEntry {
@@ -28,8 +28,8 @@ interface PresenceEntry {
 // trust response renders a calm note rather than an error.
 type TrustState =
   | { kind: "loading" }
-  | { kind: "ready"; trust: TrustUserExtension }
-  | { kind: "restricted" }
+  | { kind: "ready"; trust: TrustUserExtension | TrustPeerView }
+  | { kind: "withheld" }
   | { kind: "hidden" };
 
 // Shared uppercase section-label style, so every section reads identically.
@@ -93,15 +93,16 @@ function usePresenceAndTrust(claimedUserId: string | null, isOwnProfile: boolean
         const res = await fetch(url, { signal: controller.signal });
         if (controller.signal.aborted) return;
         if (res.status === 403) {
-          // The member limits who can view their trust details — a calm state, not an error.
-          setTrustState({ kind: "restricted" });
+          // Only a `private` profile refuses now: `restricted` returns 200 with the summary
+          // projection, which renders as an ordinary (shorter) card. A calm state, not an error.
+          setTrustState({ kind: "withheld" });
           return;
         }
         if (!res.ok) {
           setTrustState({ kind: "hidden" });
           return;
         }
-        const trust = (await res.json()) as TrustUserExtension;
+        const trust = (await res.json()) as TrustUserExtension | TrustPeerView;
         setTrustState({ kind: "ready", trust });
       } catch {
         if (!controller.signal.aborted) setTrustState({ kind: "hidden" });
@@ -405,9 +406,9 @@ function PresenceRow({ tokens: t, entry }: { tokens: DirectoryTokens; entry: Pre
 }
 
 // The trust card (or a calm restricted note) that sits beneath the presence list.
-function TrustPanel({ tokens: t, trustState }: { tokens: DirectoryTokens; trustState: TrustState }) {
-  if (trustState.kind === "ready") return <TrustWidgetCard trust={trustState.trust} />;
-  if (trustState.kind === "restricted") {
+function TrustPanel({ tokens: t, trustState, isOwnProfile }: { tokens: DirectoryTokens; trustState: TrustState; isOwnProfile: boolean }) {
+  if (trustState.kind === "ready") return <TrustWidgetCard trust={trustState.trust} editable={isOwnProfile} />;
+  if (trustState.kind === "withheld") {
     return (
       <div style={{ padding: "14px 16px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}` }}>
         <div style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.5 }}>
@@ -427,11 +428,13 @@ function AlsoActiveInSection({
   claimedUserId,
   presence,
   trustState,
+  isOwnProfile,
 }: {
   tokens: DirectoryTokens;
   claimedUserId: string | null;
   presence: PresenceEntry[];
   trustState: TrustState;
+  isOwnProfile: boolean;
 }) {
   if (!claimedUserId) return null;
   const hasPresence = presence.length > 0;
@@ -453,7 +456,7 @@ function AlsoActiveInSection({
         </div>
       )}
 
-      <TrustPanel tokens={t} trustState={trustState} />
+      <TrustPanel tokens={t} trustState={trustState} isOwnProfile={isOwnProfile} />
     </section>
   );
 }
@@ -643,7 +646,7 @@ export function DirectoryProfileDetail({
           <BlockSection claimedUserId={claimedUserId} isOwnProfile={isOwnProfile} name={p.name} />
 
           {/* Also active in + Trust */}
-          <AlsoActiveInSection tokens={t} claimedUserId={claimedUserId} presence={presence} trustState={trustState} />
+          <AlsoActiveInSection tokens={t} claimedUserId={claimedUserId} presence={presence} trustState={trustState} isOwnProfile={isOwnProfile} />
 
           <AttachToAccountPanel
             tokens={t}

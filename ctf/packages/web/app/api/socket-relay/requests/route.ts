@@ -17,6 +17,7 @@ import {
 import type { SocketRelayRequestStatus } from 'lib/socket-relay/types';
 import { parseRequestInput } from 'lib/socket-relay/parse-input';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 const REQUEST_STATUSES: SocketRelayRequestStatus[] = ['open', 'claimed', 'closed', 'canceled'];
 
@@ -46,7 +47,9 @@ export async function GET(request: Request) {
     // Optional ?status=open (comma-separated) scopes the feed to claimable posts so resolved/claimed
     // ones don't crowd out open requests on a page. Absent/unknown values leave the full-status list.
     const statuses = parseStatusFilter(url.searchParams.get('status'));
-    const response = await listRequests({ page, pageSize, statuses });
+    // viewerUserId hides posts from a blocked pair (either direction) for the browsing member
+    // (issue #809 task 4). Owner-scoped and admin lists do not pass a viewer and stay complete.
+    const response = await listRequests({ page, pageSize, statuses, viewerUserId: gate.auth.userId });
     return NextResponse.json({ ok: true, ...response }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'socket-relay', op: 'requests' });
@@ -96,9 +99,9 @@ export async function POST(request: Request) {
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

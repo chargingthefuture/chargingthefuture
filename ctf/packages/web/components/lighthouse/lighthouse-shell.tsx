@@ -17,6 +17,7 @@ import { LighthouseLoadingSkeleton } from "./lighthouse-loading-skeleton";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { failureText } from 'lib/errors/client-failure';
 
 /** GET a list endpoint and return its `items`; [] when the request fails or has no items. */
 async function fetchItems<T>(url: string): Promise<T[]> {
@@ -39,6 +40,7 @@ function LighthouseTabContent({
   chatError,
   chatCredentials,
   username,
+  viewerUserId,
   editPropertyId,
   onToggleSave,
   onSelectProperty,
@@ -57,6 +59,9 @@ function LighthouseTabContent({
   chatError: string | null;
   chatCredentials: ChatCredentials | null;
   username: string | null;
+  // Passed to the matches tab so an accepted match can offer to record the arrangement as ongoing,
+  // naming the other side of the match.
+  viewerUserId: string;
   editPropertyId: string | null;
   onToggleSave: (id: string) => void;
   onSelectProperty: (property: Property) => void;
@@ -77,7 +82,7 @@ function LighthouseTabContent({
         />
       )}
       {tab === "matches" && (
-        <LighthouseMatches matches={matches} properties={properties} onSelectProperty={onSelectProperty} />
+        <LighthouseMatches matches={matches} properties={properties} onSelectProperty={onSelectProperty} viewerUserId={viewerUserId} />
       )}
       {tab === "chat" && (
         <LighthouseChat
@@ -140,8 +145,8 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
         const data = await currencyRes.json() as { currencies?: Currency[] };
         setCurrencies(Array.isArray(data.currencies) ? data.currencies : []);
       }
-    } catch {
-      setError("Failed to load LightHouse data.");
+    } catch (caught) {
+      setError(failureText(caught, { area: 'lighthouse', op: 'fetch_all', fallback: "Failed to load LightHouse data.", audience: 'member' }));
     } finally {
       if (initial) setLoading(false);
     }
@@ -210,6 +215,11 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
           setSelectedProperty(null);
           setTab("profile");
         }}
+        // Blocking the host hides their listings, so go back to browse and re-read the list.
+        onBlocked={() => {
+          setSelectedProperty(null);
+          void fetchAll();
+        }}
       />
     );
   }
@@ -239,6 +249,7 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       chatError={chatError}
       chatCredentials={chatCredentials}
       username={username}
+      viewerUserId={userId}
       editPropertyId={editPropertyId}
       onToggleSave={toggleSave}
       onSelectProperty={setSelectedProperty}

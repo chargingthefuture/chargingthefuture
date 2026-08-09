@@ -286,12 +286,13 @@ policies:
 
   - pluginId: contributor-access
     command: contributor-access.channel.join
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles:
       - member
       - admin
     attributePolicies:
       tenancy: same_workspace
+      csrfHeader: required
       channelGate: channel_open_and_eligibility_flag_or_admin
       denyShape: bare_404_no_channel_trace
       credentialScope: stream_live_layer_only_shared_resolver
@@ -309,6 +310,7 @@ policies:
       - unauthenticated
       - channel_closed
       - not_eligible
+      - csrf_denied
 
 changelog:
   - date: 2026-07-18
@@ -332,3 +334,9 @@ changelog:
       only, or admin as the disclosed moderator power; soft delete (hidden, not erased); both
       allowed paths audited under distinct commands and a non-owner attempt denied with
       not_post_owner (audited).
+  - date: 2026-08-06
+    change: >-
+      channel.join 1.1.0 - the policy now records csrfHeader required and the csrf_denied deny
+      condition, matching the route: joining is a mutation (the member is reconciled into the
+      Stream channel), so it carries the same CSRF posture as every other mutation in this
+      plugin. Code-review issue #2122.

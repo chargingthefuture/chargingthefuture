@@ -8,14 +8,16 @@
 //   Transactions / Active Plugins) have no backing — the signal-snapshot route
 //   is a stub and no snapshot table exists — so we render the real
 //   `trustEvidence` list instead of fabricating bucket values.
-// - There is no "request verification" endpoint (verification is admin-only),
-//   and the visibility-update route is a stub, so we render the truthful admin
-//   note and a static visibility row rather than non-functional controls.
+// - There is no "request verification" endpoint (verification is admin-only).
+// - The visibility control (`trust-visibility-control.tsx`) is live only on self
+//   surfaces (`editable`), because POST /api/trust/visibility is self-scope only;
+//   when the card shows another member's trust the row stays read-only.
 import React from "react";
-import { ShieldCheck, Eye, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, CheckCircle2, Eye } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import type { TrustUserExtension, TrustEvidenceItem } from "../../lib/trust/types";
+import type { TrustUserExtension, TrustPeerView, TrustPeerEvidenceItem, TrustDisclosure } from "../../lib/trust/types";
 import { getTrustTokens } from "./trust-shared";
+import { TrustVisibilityControl } from "./trust-visibility-control";
 
 // Accent-with-alpha card tints and the 5% hairline have no exact shell-token equivalent
 // (the token helper carries solid values only), so they stay as the shipped literals.
@@ -24,10 +26,6 @@ const CARD_BORDER = "rgba(14,165,233,0.18)";
 const HAIRLINE = "rgba(255,255,255,0.05)";
 
 const STEPS = ["Complete your profile", "Make your first transaction", "Use at least one plugin"];
-
-function titleCase(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
 
 // Turn an internal evidence `type` slug (e.g. "engagement-login-frequency") into readable text. Only
 // used as a fallback when an item has no `summary` — a well-formed derived item always has one.
@@ -58,18 +56,7 @@ function WidgetHeader() {
   );
 }
 
-function VisibilityRow({ visibility, bordered }: { visibility: string; bordered: boolean }) {
-  const { theme } = useTheme();
-  const t = getTrustTokens(theme);
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: bordered ? "9px 0 0" : 0, marginTop: bordered ? 0 : 4, borderTop: bordered ? `1px solid ${HAIRLINE}` : "none" }}>
-      <Eye size={11} style={{ color: t.FAINT }} />
-      <span style={{ fontSize: 11, color: t.FAINT }}>Visible to: {titleCase(visibility)}</span>
-    </div>
-  );
-}
-
-function EmptyBody({ visibility }: { visibility: string }) {
+function EmptyBody({ visibility, editable, evidence }: { visibility: string; editable?: boolean; evidence: readonly TrustPeerEvidenceItem[] }) {
   const { theme } = useTheme();
   const t = getTrustTokens(theme);
   return (
@@ -93,12 +80,12 @@ function EmptyBody({ visibility }: { visibility: string }) {
         ))}
       </div>
 
-      <VisibilityRow visibility={visibility} bordered />
+      <TrustVisibilityControl visibility={visibility} bordered editable={editable} evidence={evidence} />
     </div>
   );
 }
 
-function EvidenceItem({ item }: { item: TrustEvidenceItem }) {
+function EvidenceItem({ item }: { item: TrustPeerEvidenceItem }) {
   const { theme } = useTheme();
   const t = getTrustTokens(theme);
   return (
@@ -117,33 +104,59 @@ function EvidenceItem({ item }: { item: TrustEvidenceItem }) {
   );
 }
 
-function EvidenceBody({ evidence, visibility }: { evidence: TrustEvidenceItem[]; visibility: string }) {
+// Shown above a summary projection so a viewer never mistakes the reduced list for the member's
+// whole record. Without it, "Took part in 6 plugins" reads as everything they have ever done.
+function SummaryNote() {
+  const { theme } = useTheme();
+  const t = getTrustTokens(theme);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12 }}>
+      <Eye size={11} style={{ color: t.FAINT, flexShrink: 0 }} />
+      <span style={{ fontSize: 10, color: t.MUTED, lineHeight: 1.5 }}>
+        This member shares a summary of their participation, not the detail.
+      </span>
+    </div>
+  );
+}
+
+function EvidenceBody({ evidence, visibility, editable, disclosure }: { evidence: TrustPeerEvidenceItem[]; visibility: string; editable?: boolean; disclosure: TrustDisclosure }) {
   return (
     <div style={{ padding: "4px 14px 14px", borderTop: `1px solid ${HAIRLINE}` }}>
+      {disclosure === "summary" && <SummaryNote />}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "12px 0 10px" }}>
         {evidence.map((item, idx) => (
           <EvidenceItem key={idx} item={item} />
         ))}
       </div>
-      <div style={{ paddingTop: 7, borderTop: `1px solid ${HAIRLINE}` }}>
-        <VisibilityRow visibility={visibility} bordered={false} />
-      </div>
+      {/* On a peer's summary card the note above already says the member shares a summary, so the
+          read-only row would repeat it. Keep the row for a full peer card and for the owner. */}
+      {(editable || disclosure === "full") && (
+        <div style={{ paddingTop: 7, borderTop: `1px solid ${HAIRLINE}` }}>
+          <TrustVisibilityControl visibility={visibility} bordered={false} editable={editable} evidence={evidence} />
+        </div>
+      )}
     </div>
   );
 }
 
 export interface TrustWidgetCardProps {
-  trust: TrustUserExtension;
+  // Either the owner's own extension or the peer view the cross-user route returns. The peer view
+  // carries `trustDisclosure`; an extension does not, and is always the full record.
+  trust: TrustUserExtension | TrustPeerView;
+  // True only when the card renders the signed-in member's own trust — the
+  // visibility route is self-scope, so other-member cards stay read-only.
+  editable?: boolean;
 }
 
-export const TrustWidgetCard: React.FC<TrustWidgetCardProps> = ({ trust }) => {
+export const TrustWidgetCard: React.FC<TrustWidgetCardProps> = ({ trust, editable }) => {
   const hasEvidence = trust.trustEvidence.length > 0;
+  const disclosure: TrustDisclosure = "trustDisclosure" in trust ? trust.trustDisclosure : "full";
   return (
     <div style={{ borderRadius: 12, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif" }}>
       <WidgetHeader />
       {hasEvidence
-        ? <EvidenceBody evidence={trust.trustEvidence} visibility={trust.trustVisibility} />
-        : <EmptyBody visibility={trust.trustVisibility} />}
+        ? <EvidenceBody evidence={trust.trustEvidence} visibility={trust.trustVisibility} editable={editable} disclosure={disclosure} />
+        : <EmptyBody visibility={trust.trustVisibility} editable={editable} evidence={trust.trustEvidence} />}
     </div>
   );
 };

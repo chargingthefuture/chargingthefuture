@@ -6,6 +6,7 @@ import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { useTheme } from '@/hooks/useTheme';
 import { getComicTokens } from './comic-shared';
+import { failureText } from 'lib/errors/client-failure';
 
 // Admin review of member-contributed writing. This screen is the human step the knowledge page
 // promises: nothing a member sends can reach the assistant until someone reads it here.
@@ -102,8 +103,8 @@ export function ComicContributionReview() {
         setContributions(data?.contributions ?? []);
         setError(null);
       }
-    } catch {
-      setError('Could not reach the server.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'comic', op: 'load', fallback: 'Could not reach the server.' }));
     } finally {
       setLoading(false);
     }
@@ -148,8 +149,8 @@ export function ComicContributionReview() {
           : acceptNotice(data),
       );
       await load();
-    } catch {
-      setError('Could not reach the server.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'comic', op: 'review', fallback: 'Could not reach the server.' }));
     } finally {
       setBusyId(null);
     }

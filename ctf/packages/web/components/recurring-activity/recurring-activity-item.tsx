@@ -19,6 +19,15 @@ const VISIBILITY_ORDER: RecurringActivityVisibility[] = ['private', 'restricted'
 
 type ActionKind = 'confirm' | 'decline' | 'end' | 'visibility';
 
+// Plain names for the apps a recurring activity can be declared from inline.
+const ORIGIN_LABEL: Record<string, string> = {
+  lighthouse: 'LightHouse',
+  foundation: 'Foundation',
+  'socket-relay': 'SocketRelay',
+  'trust-transport': 'TrustTransport',
+  'service-credits': 'ServiceCredits',
+};
+
 export function RecurringActivityItem({
   activity,
   currencies,
@@ -62,6 +71,13 @@ export function RecurringActivityItem({
             {CADENCE_LABEL[activity.cadence]}
           </div>
           {scLine ? <div style={{ fontSize: 13, color: t.TEXT, marginTop: 4 }}>{scLine}</div> : null}
+          {/* Says where a line came from, so a member who recorded it from inside another app
+              recognizes it here instead of wondering how it appeared. */}
+          {activity.originPlugin ? (
+            <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 4 }}>
+              Recorded from {ORIGIN_LABEL[activity.originPlugin] ?? activity.originPlugin}
+            </div>
+          ) : null}
         </div>
         <span
           style={{

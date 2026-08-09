@@ -3,6 +3,7 @@ import { requireComicAdminAccess } from '../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { getComicTrainingStats } from 'lib/comic/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ export async function GET() {
   } catch (error) {
     reportError(error, { area: 'comic', op: 'training_stats' });
     return NextResponse.json(
-      { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Unable to read training stats.' },
+      { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: `Unable to read training stats: ${failureReason(error)}` },
       { status: 503 },
     );
   }

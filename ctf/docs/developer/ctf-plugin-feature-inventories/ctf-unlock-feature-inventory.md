@@ -199,6 +199,12 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-08-03: **Approved card drops "Hub" (owner report).** The verification approved card said
+  "Welcome to the Survivor Hub!" with a "Continue to Hub" button. Per the brand lexicon, the card
+  title now reads "Welcome to Skills Economy (SE)" (the first-meeting form of the product name,
+  owner-specified) and the web button reads "Continue to the Commons", linking to `/` (the Commons
+  home) instead of `/apps` so the label matches where it goes. The mobile approved card
+  (`Unlock.tsx`) gets the same title. Copy-only change; no route, schema, or contract change.
 - 2026-08-01: **The review queue names the member instead of printing a Clerk id (owner report).**
   Each card showed only `User: user_38IaPPUrRq0…`, so deciding whether to approve someone meant
   copying the id out and cross-referencing it elsewhere to find out whose account it was.

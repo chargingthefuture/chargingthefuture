@@ -108,6 +108,22 @@ not see this banner. On android the client Unlock gate lets a treatment member t
 (instead of walling them) and the banner behaves the same. Inert when the flag is off everywhere.
 **Result:** web ☐ android ☐ — notes:
 
+### UNLOCK-M3 · Approved status card wording (no "Hub")
+**Role:** member (approved) · **Surfaces:** web + mobile-responsive (member Unlock status screen), android
+**Precondition:** a member whose submission has been approved.
+**Steps:**
+1. Open the Unlock status screen as the approved member.
+2. Confirm the approved card title reads "Welcome to Skills Economy (SE)" — not "Survivor Hub" or
+   "Hub" (terminology fix, 2026-08-03, owner-specified wording per the brand lexicon).
+3. On web, confirm the button reads "Continue to the Commons" and tapping it lands on the Commons
+   home page (`/`), not the plugin navigator (`/apps`).
+4. On android, confirm the same "Welcome to Skills Economy (SE)" title (that card has no continue
+   button).
+**Expected:** The approved card welcomes the member to Skills Economy (SE) and the web continue
+button goes to the Commons home so the label matches the destination. No "Hub" wording anywhere on
+the card.
+**Result:** web ☐ android ☐ — notes:
+
 ---
 
 ## Admin walkthrough

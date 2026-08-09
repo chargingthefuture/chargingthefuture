@@ -72,6 +72,7 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 5. Right rail no longer shows a "Ready/Active Apps" list (removed 2026-06-18) — apps are reached via the Apps section; the "· N ready apps" line was also dropped from the signed-in profile card.
 6. Sign-in and Create-Account CTAs visible in icon rail and right rail for unsigned visitors.
 7. Hero banner ("Free to join · End-to-end encrypted") visible to unsigned visitors.
+8. The phone-width top bar switches sections with two icon buttons — a speech-bubbles icon for the Commons and a grid icon for Apps — the same 38px square as the admin, help and settings buttons beside them, so the whole bar is one row of equal boxes. Each button names itself for screen readers and on hover ("Commons", "Apps"). Once a member is there, the page says which one it is: the Apps page heads "All Apps", and the Commons channel row starts with the word "Commons" ahead of the `#general` chip.
 
 ### Hub Chat (the blended `community` channel)
 
@@ -83,7 +84,7 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 6. One-tap suggestion chips render persistently above the composer (whether or not the chat already has messages). Each chip's behavior is explicit (`lib/concierge/hub-suggestions.ts`), so a tap always does the right thing and never merely pre-fills the composer (#471): a **navigate** chip ("Show housing options" → LightHouse, "Open the provider directory" → Foundation, "Browse the skills directory" → Directory, "Check my Service Credits" → ServiceCredits) opens that plugin directly (`/apps/<slug>`) — it is an action, not a question; an **ask** chip ("What is the GDP tracker showing this week?") routes the question to the `@comic` AI assistant via `askComic`, which prepends the `@comic` mention (the server only routes a mentioned body) and shows the "Reviewing for safety" pending card immediately, then the human-approved answer when it is ready. The local keyword concierge (`lib/concierge/resolver`, `sendConciergeAsk`) remains available for free-text asks but no longer backs the visible chip row.
 7. Announcements render as official Survivor Hub items; community posts render with their author.
 8. Connection state visible as footer status (connecting, live, fallback).
-9. Unsigned visitors see a sign-in gate in place of the input; the channel itself is publicly readable when `feed_render_config.is_public` is TRUE (public read enforcement is a tracked follow-up).
+9. Unsigned visitors see a sign-in gate in place of the input; the channel itself is publicly readable when `feed_render_config.is_public` is TRUE (public read enforcement is a tracked follow-up). The gate is one short line under the posts explaining that signing in — free — is what lets you post, reply, and reach housing, work, and safety resources. It carries no button of its own: signing in is the "Sign in" button in the top bar (and the outline "Sign In" in the right rail on wide screens), so the hero, the posts, and that line fit on one screen (2026-08-03).
 10. Signal-style quoted reply: each peer message shows a small "Reply" affordance. Tapping it sets the composer's "Replying to …" banner (a one-line quote preview + cancel X); sending while it is set posts the message with `replyToPostId` so it stores and renders a compact quoted block (author + ~120-char snippet) above its body. Backed by `feed_community_posts.reply_to_post_id`; the quote is resolved server-side into `HubMessage.quotedMessage`.
 11. Unread divider: on entry the chat reads the member's `feed_hub_last_seen` marker (`GET /api/hub/last-seen`) and draws a single "New messages" divider before the first stream entry newer than it (none if everything is already seen). After the member has viewed the chat it marks seen once (`POST /api/hub/last-seen`, debounced/best-effort). Placement uses the per-entry `epoch` already computed for the unified stream.
 12. Emoji reactions: under each peer bubble a compact reaction row shows any emoji with at least one reaction as a pill (emoji + count, highlighted when the member reacted), plus a small "add reaction" affordance that reveals a fixed quick set (👍 ❤️ 😂 🎉 🙏 😢) to pick from. Tapping a pill or a picker emoji toggles the member's reaction (`POST /api/hub/messages/:postId/reactions`), flips it optimistically, and reconciles via the existing 10s poll. Reactions are stored in our own database (`feed_community_post_reactions`), not Stream — the first feature of the Stream-adoption initiative ("approach b").
@@ -97,11 +98,11 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 
 ### Sidebar — Direct Messages (deferred)
 
-- Direct messages are out of scope for the consolidated MVP — peer-to-peer interaction happens only in the public blended channel (intentional, for soft moderation and marketing visibility). `GET /api/hub/dms` is a stub returning an empty list; there is no `hub_dm_threads` table.
+- Direct messages are out of scope for the consolidated MVP — peer-to-peer interaction happens only in the public blended channel (intentional, for soft moderation and marketing visibility). There is no `GET /api/hub/dms` route and no `hub_dm_threads` table.
 
 ### Sidebar — Bots (deferred)
 
-- There is no `hub_bots` / `hub_bot_routes` system-bot entity in the MVP. The assistant capability is the Feed AI Q&A — now built as the `comic` subsystem (`@comic` mention; user-facing label "AI Assistant"), specified in `ctf-comic-feature-inventory.md` (the source of truth for the AI assistant). `GET /api/hub/bots` is a stub returning an empty list.
+- There is no `hub_bots` / `hub_bot_routes` system-bot entity in the MVP. The assistant capability is the Feed AI Q&A — now built as the `comic` subsystem (`@comic` mention; user-facing label "AI Assistant"), specified in `ctf-comic-feature-inventory.md` (the source of truth for the AI assistant). `GET /api/hub/bots` used to answer here with a hardcoded empty list that nothing read; it was removed on 2026-08-03 rather than left standing as a capability that did not exist.
 
 ### Hub Apps (Apps Section)
 
@@ -129,9 +130,10 @@ The Hub home channel is backed by the Feed model. Hub routes under `/api/hub/*`:
 - `DELETE /api/hub/messages/:postId` — delete the requesting member's own community (peer) post (hub access gate + `x-ctf-csrf: '1'`). The `postId` path segment must be a well-formed UUID, else 400 before the repository is called. Author-only: backed by `deleteCommunityPost`, which verifies the caller owns the post (else 403), then hard-deletes it — cascading its replies + reactions and removing the projected `feed_items` row (with its targets, read state, and dismissals). Returns `{ ok, postId }`; 404 if the post is gone. There is no edit endpoint by design: a member corrects a post by deleting and reposting, so a corrected message is a fresh row with its own moderation and no inherited reactions/replies (closes the bait-and-switch edit vector).
 - `GET /api/hub/last-seen` — read the member's last-seen marker for the Hub home channel (`{ ok, lastSeenAtIso }`); `lastSeenAtIso` is null when never recorded. Backed by `getHubLastSeen` over `feed_hub_last_seen`. Best-effort.
 - `POST /api/hub/last-seen` — move the member's last-seen marker to now (CSRF-guarded; optional `seenAtIso` clamped to server NOW() and never moved backwards). Backed by `updateHubLastSeen`. Best-effort.
-- `GET /api/hub/channels` — stub returning the single `community` channel (multi-channel deferred).
-- `GET /api/hub/dms` — stub returning an empty list (DMs deferred).
-- `GET /api/hub/bots` — stub returning an empty list (bots deferred).
+- `GET /api/hub/channels` — the channel list the Commons shell reads. Returns `#general` for everyone,
+  plus the gated contributor channel when it is open and this member is eligible (or is an admin) —
+  filtered server-side so a non-eligible member's response contains no trace of it. Multi-channel
+  beyond that is deferred.
 - `POST /api/hub/join` — mints the live Stream credentials for the Commons home shell. Backed by `getFeedStreamCredentials(userId, displayName, 'community')` (the shared `ctf-feed-community` channel). Returns `{ ok: true, configured: true, streamApiKey, streamChannelId, streamUserId, streamToken }` when Stream is configured, or `{ ok: true, configured: false }` when it is not (no API key/secret) so the client stays on polling. Hub access gate enforced. Previously returned hardcoded stub credentials (`'todo-stream-token'`); the stub is removed.
 
 Feed routes that own the data layer remain under `/api/feed/*` (timeline, announcements lifecycle, questions/answers, community posts/replies) and `/admin/feed-announcements`.
@@ -204,11 +206,87 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 1. Public unauthenticated read of the blended channel: `feed_render_config.is_public` is set and read into config, but `GET /api/hub/messages` / `listFeedTimeline` still require an authenticated session. A public read path (and the policy for which item types are exposed publicly) is the tracked follow-up.
 2. Mobile Hub parity: delivered. The mobile home reads/writes the feed-backed channel via `GET/POST /api/hub/messages` (`ctf/packages/mobile/src/features/hub/`). The parity contract reconciliation was done on the existing `feed-announcements` entry (its `mobileFeatureDirs` now includes `hub`) rather than a standalone `hub` contract entry, because the web/Android parity gate requires every contract slug to exist in the plugin registry and the Hub is the home route (`/`), not a navigable app tile with its own registry slug.
 3. Separate channels, direct messages, and system bots were dropped from the MVP (single blended channel). Revisit splitting into multiple Hub channels after feedback.
-4. `GET /api/hub/channels|dms|bots` are stubs (single-channel / empty); they can be removed or formalized when/if multi-channel returns.
+4. ~~`GET /api/hub/channels|dms|bots` are stubs (single-channel / empty); they can be removed or formalized when/if multi-channel returns.~~ **Closed (2026-08-03).** The description was out of date on all three counts: `/api/hub/dms` never existed; `/api/hub/channels` is not a stub (it is read by the Commons shell and does the real eligibility filtering for the gated contributor channel); and `/api/hub/bots` was a hardcoded empty list nothing called, so it was removed along with its `HubBotInfo` / `HubBotsResponse` types. Nothing to formalize until multi-channel actually returns.
 5. Live-layer follow-ups deferred from the foundation pass (task 1): read receipts (#18) and delivery status (#19) are not implemented in Commons — Commons messages live in our own `feed_community_posts`, not as Stream messages, so "seen"/"delivered" would need a separate model and are deferred. Online presence dots on peer avatars (#20) are also deferred: avatars are keyed by our own author identity, and the watched channel's `presence` set is keyed by Stream user ids (`feed-<userId>`), so mapping presence onto our cards is not clean enough to force in the foundation pass. Typing (#17) is delivered (web and now Android, #730); these three are tracked for the presence cluster (task 6). The same three (read receipts, delivery status, presence dots) are likewise deferred on mobile to match web.
 
 ## Change Log
 
+- 2026-08-09: **One row of equal boxes in the phone top bar, and the Commons page says its own name
+  (owner report).** The "Commons" and "Apps" section tabs were word buttons sized by their text
+  (`padding: 6px 9px`), so they stood noticeably shorter than the 38px square admin, help and
+  settings buttons next to them and the bar read as two mismatched rows. Both tabs are icons now
+  (`MessagesSquare` for the Commons, `LayoutGrid` for Apps, from `lucide-react`) in the same 38px
+  square with the same surface, border and radius, so every control in the bar matches. Nothing is
+  lost by dropping the words: each button keeps an `aria-label` and a hover title, `role="tab"` and
+  `aria-selected` are unchanged, and each destination announces itself on arrival — the Apps page
+  already heads "All Apps", and `ChannelSwitchRow` now leads with a plain "Commons" label before the
+  `#general` chip (new `.channelSwitchBar` wrapper carrying the row's padding, plus
+  `.channelSwitchPageLabel`, deliberately without pill chrome so it does not read as a tappable
+  channel). The label sits outside the `role="tablist"` element, so screen readers still count only
+  the real channel tabs. Also hyphenated the composer helper line to "AI Assistant
+  (human-in-the-loop)", matching the spelling every doc and contract already uses. Web-only (the
+  Commons is web-only per rule 105); UI and copy only — no backend, schema, route, or contract
+  change. Verified: `@ctf/web` typecheck, lint, and a production build.
+- 2026-08-09: **The Weavers of the Commons explainer is usable from the keyboard now (#2159).** That
+  dialog — shown when a member taps the locked contributor chip — declared `role="dialog"` and
+  `aria-modal="true"` but did none of what those promise. Focus stayed on the page behind it, Tab
+  walked straight out into content the member could no longer see, Escape did nothing, and closing
+  the dialog dropped focus at the top of the document instead of returning it to the chip. It now
+  moves focus into the card on open, cycles Tab and Shift+Tab within it, closes on Escape, and
+  restores focus to whatever opened it. The trap itself moved out of `comic-consent-modal.tsx` into a
+  new `dialog-focus.ts` so both dialogs share one copy rather than each carrying its own; the consent
+  dialog's behavior is unchanged. Web-only; no schema, route, or contract change.
+- 2026-08-09: **Return on "Not now" no longer turns the AI Assistant on (#2158), plus two smaller
+  Commons fixes (#2156, #2160).** The first-use consent dialog for the AI Assistant treated Return as
+  "turn it on" no matter what had focus. That rule exists for a real reason — on a phone the soft
+  keyboard keeps focus in the chat composer, and without it a press of Return fell through to the
+  composer and re-opened the same dialog instead of answering it. But it also meant a member using a
+  keyboard could tab to "Not now", press Return, and grant consent to AI processing instead of
+  declining it. Return now leaves the press alone whenever a button inside the dialog already has
+  focus, so the browser fires that button's own click — "Not now" and the close button dismiss, the
+  confirm button confirms — and keeps the old behavior only when focus is outside the dialog, which is
+  the mobile case it was written for. Also: the "Got it" dismiss on the first-visit Commons notice now
+  sends the `x-ctf-csrf: 1` header like every other state-changing POST in the shell (the route checks
+  the Origin header rather than that one, so nothing was failing — this is consistency, so a later
+  switch to the header check cannot turn it into a dismiss that never sticks); and the notifications
+  panel now drops the result of a poll that lands after the member closes the panel, matching the
+  canceled-flag pattern used elsewhere in the shell. Web-only; no schema, route, or contract change.
+- 2026-08-09: **Removed the concierge slug-remapping layer that never ran (#2152, #2153).**
+  `lib/concierge/intents.ts` carried a `SLUG_OVERRIDES` map and a `conciergeRouteSlug()` helper meant
+  to translate a display slug into the registry slug that owns the route. Two things were wrong with
+  it. The map's only key was `lighthouse-safety`, which is not the slug of any intent in
+  `CONCIERGE_INTENTS`, so the lookup could never hit. And `lib/concierge/resolver.ts` built each
+  `ConciergeMatch` from `intent.slug` directly and never called the helper, so even a valid key would
+  have been ignored. Every one of the 16 intent slugs is already a real slug in the plugin registry
+  (`lib/plugins/repository.ts`), so nothing needs remapping: the map and the helper are deleted rather
+  than wired up, and the file header now says plainly that an intent's `slug` **is** the registry slug,
+  with no translation step to catch a typo. No member-visible change — routing behaves exactly as it
+  did, because the removed code never affected it. Web-only; no schema, route, or contract change.
+- 2026-08-09: **Two Commons changes for a crowded phone screen (owner report, iPhone SE).** (1) The
+  Contributions fundraiser gift reminder moved out of the top bar, which had no room left at 375px,
+  and into the chip row: `ConciergeChipRail` (`shell-chat-panel.tsx`) now renders
+  `ContributionsGiftTrigger` immediately after the 🔔 chip and before the suggestion chips, styled
+  by the new `.contributeGiftBtn` class (violet accent, same pill size as the @ / 📣 / 🔔 chips,
+  comic-theme variant included). It stays visible with the notifications feed open, like the three
+  chips before it, and still shows only while a drive is running and the full banner is dismissed or
+  snoozed. The row already scrolls sideways, so the fourth glyph costs no width. (2) The footnote
+  under the composer dropped its live-state sentence ("Human-in-the-loop AI support and community
+  support channel.") — it repeated the helper line directly above the message box, and two
+  near-identical explanations cost a line of screen height on every phone. While the stream is live
+  the footnote is now the "Community guidelines" link alone; the not-live wording ("Support channel
+  keeps syncing as new messages arrive.") stays, because that one reports real connection status.
+  Web-only (the Commons is web-only per rule 105); UI and copy only — no backend, schema, route, or
+  contract change. Verified: `@ctf/web` typecheck, lint, and a production build.
+- 2026-08-03: **Removed the `GET /api/hub/bots` stub and corrected the channel/DM descriptions.** The
+  route answered every caller with a hardcoded empty list behind a `TODO`, and no caller existed — a
+  documented capability the product did not have. Deleted the route and its `HubBotInfo` /
+  `HubBotsResponse` types, and took it off `ctf/scripts/orphan-route-allowlist.json`. Also fixed two
+  inventory lines that no longer matched the code: `GET /api/hub/dms` is described as a stub but no
+  such route exists, and `GET /api/hub/channels` is described as a stub when it is the real,
+  Commons-read channel list that filters the gated contributor channel by eligibility. Docs plus one
+  route removal; no schema or contract change.
+- 2026-08-03: **Fixed the double scroll that hid the bottom of the Commons on a phone (owner report, follow-up to the sign-in button removal below).** Removing the button was not enough: the line under the message list was still off screen, and reaching it meant scrolling the list to its end and then scrolling the page. Cause: `.shell` and `.frame` were `height: 100vh`, and on a phone `100vh` is the *large* viewport — the height the page would have with the browser's address bar hidden — so the shell was taller than the visible area and the document could scroll by that difference. Both now use `100dvh` (the dynamic viewport, which tracks the visible height), with `100vh` kept first as the fallback for browsers without `dvh`, so the document has nothing left to scroll. Added `overscroll-behavior: contain` to `.chatMessages` so finishing the message list no longer hands the rest of the gesture to the page behind it. Net effect: the shell is exactly one screen, only the message list scrolls, and whatever sits under it is always visible — the closing line when signed out, the composer when signed in. Web-only (the Commons is web-only per rule 105); CSS only, no component, backend, schema, route, or contract change. Verified: `@ctf/web` typecheck, lint, and a production build.
+- 2026-08-03: **Removed the full-width "Sign In to Get Started" button from the signed-out Commons (owner request).** On a phone the gradient button sat below the last community post and pushed the closing line off the first screen, so a visitor had to scroll past the posts to see the whole page. The button is gone from `PublicCommunityPanel` (`shell-chat-panel.tsx`); the short line under the posts stays and now spans the full row (`.chatSuggestionsInfo` gets `flex: 1 1 100%` and drops the top margin that only separated it from the button). Signing in is unchanged and still offered twice — the gradient "Sign in" in the mobile top bar and the outline "Sign In" in the right rail on wide screens. The now-unused `.chatSignInLink` rules (and its comic-theme override) were deleted, and the `signInUrl` prop was dropped from `ShellChatPanel` / `ChatSection` / `ShellMainContent`, which only existed to feed that button — the top bar and right rail read `signInUrl` directly from the shell as before. Signed-out view only; the authenticated panel is untouched. Web-only (the Commons is web-only per rule 105); no backend, schema, route, or contract change. Verified: `@ctf/web` typecheck, lint, and a production build.
 - 2026-07-25: **Code-review sweep fixes (hub plugin).** Four findings addressed. (1) `DELETE /api/hub/messages/:postId` and `POST /api/hub/messages/:postId/reactions` now reject a malformed (non-UUID) `postId` with 400 before touching the repository, via the newly exported `normalizeUuid` (`lib/feed/repository.ts`) — an arbitrarily long/malformed path can no longer waste a DB round-trip (#1874). (2) The Commons live layer (`lib/hub/live-stream.ts`) no longer calls `connectUser` on the shared `StreamChat.getInstance` singleton when it is already connected as a different user: it disconnects the stale user first and reuses the client when it is already this user, closing a cross-user real-time event leak on account switch/reconnect (#1872). (3) `HubChannelInfo.visibilityScope` is now a real union (`'public' | 'authenticated' | 'eligible' | \`role:${string}\``, `HubVisibilityScope`) instead of collapsing to `string` (#1875). (4) Corrected the misleading "moderators keep read access" comment in `app/api/hub/channels/route.ts` — the gated channel's disclosed moderator is an admin acting as moderator (`gate.auth.isAdmin`); there is no separate moderator role for this channel, so behavior was already correct (#1873). Two sweep findings were assessed as not applicable and closed: #1876 (the DELETE audit's `pluginId: 'feed'` is correct — `logFeedAudit` only accepts `'feed' | 'announcements'`, and the command/target are feed-domain) and #1871 (already verified: `replyToPostId` is the quoted post's own id). UI/route-guard + types only — no schema or contract change. Verified: `@ctf/web` typecheck, lint, build.
 - 2026-07-23: **Suggestion chips are true one-tap asks now (#471), split by behavior.** The Commons chips previously all ran the local keyword concierge (`sendConciergeAsk`) — an instant reply pointing at a feature, but not the AI assistant and not a real navigation. They now carry an explicit behavior (new `lib/concierge/hub-suggestions.ts`, `HubSuggestionChip`): **navigate** chips ("Show housing options" → LightHouse, "Open the provider directory" → **Foundation** (the provider directory is Foundation, not the Directory plugin), "Browse the skills directory" → Directory, "Check my Service Credits" → ServiceCredits) render as links that open `/apps/<slug>` in one tap (Workforce is intentionally not a chip — it's the macro real-time work/skills-distribution dashboard and doesn't reduce to an accurate one-line action); the **ask** chip ("What is the GDP tracker showing this week?") calls a new `askComic` in `use-home-chat.ts` that prepends the `@comic` mention (the `/api/comic/message` route only routes a mentioned body — an unmentioned one is a peer post no-op), goes through the same first-use consent gate, and shows the "Reviewing for safety" pending card immediately, then the human-approved answer. So a chip tap always returns something — a navigation or an AI answer — never just a composer pre-fill. Web-only (the Commons is web-only per rule 105; Android is narrowed to Chyme). `sendConciergeAsk`/the keyword resolver stay for free-text. No schema, route, or contract change. Verified: `@ctf/web` typecheck, lint, a11y lint, and `build:ci`.
 - 2026-07-22: **Fix: an in-app notification "Open" tap now actually jumps to the message.** A

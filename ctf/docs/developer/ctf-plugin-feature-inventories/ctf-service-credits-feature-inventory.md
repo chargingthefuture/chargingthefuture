@@ -54,6 +54,10 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 1. Direct credit transfer between permitted wallets — **delivered immediately**: `createTransfer` debits the sender and credits the recipient in one atomic step and marks the transfer `completed`. A plain send does **not** hold the funds in escrow (it previously did, which left the transfer `pending` and the recipient unpaid).
 2. Escrow hold creation for cross-plugin transactional commitments (the separate `createEscrowHold` path, for hold-then-resolve use cases only).
 3. Escrow release/refund resolution based on plugin workflow outcomes.
+4. **Record a send as an ongoing arrangement, without leaving ServiceCredits (2026-08-03).** After a send
+   goes through, an "Is this ongoing?" prompt appears under the success line: pick how often, and it
+   records a standing arrangement with the member you just sent to, who confirms it in the Recurring
+   Activity app. The prompt does not appear when an arrangement with that member is already recorded.
 
 ### 1.4 Trust and Safety Adjustments
 
@@ -63,9 +67,12 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 
 ### 1.5 Account Deletion Reclaim Experience
 
-1. User-visible notice that a 7-day reclaim window applies after full account deletion request.
-2. Clear messaging that credits are returned to treasury after the reclaim window and are not withdrawable externally.
-3. Reclaim status messaging when deletion reclaim is blocked by active escrow holds.
+Implemented 2026-08-05 on the Account & Data deletion surface (`components/account-data/` — the
+desktop card, the mobile card, and the confirm/queued dialog):
+
+1. User-visible notice that a 7-day reclaim window applies after a full account deletion request. Done — every deletion copy site names the 7-day hold (matching the `SERVICE_CREDITS_RECLAIM_WINDOW_DAYS` constant the sweep enforces).
+2. Clear messaging that credits are returned to the community treasury after the reclaim window and are never withdrawable externally. Done.
+3. Reclaim status messaging when deletion reclaim is blocked by active escrow holds. Done as standing copy: the deletion surfaces state that a return waits for any active escrow to resolve. (There is no live per-member escrow-status readout on this surface — the sweep's `active_escrow_holds` state is surfaced as the general rule, not a personalized status; a live readout would need a member-facing reclaim-status route and is not currently planned.)
 
 ---
 
@@ -277,6 +284,24 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 
 ## 10) Change Log
 
+
+- 2026-08-05: **Deletion-reclaim messaging shipped (§1.5, promised since 2026-02-25 and never
+  built).** The Account & Data deletion surfaces (`account-data-desktop.tsx`,
+  `account-data-mobile.tsx`, `account-data-confirm-delete.tsx`) replace the vague "settled via the
+  standard process" wording with the concrete policy: credits are held for 7 days after the deletion
+  request (matching `SERVICE_CREDITS_RECLAIM_WINDOW_DAYS`), then returned to the community treasury,
+  never withdrawable externally, and a return waits for any active escrow to resolve. Copy only —
+  no route, schema, or contract change; the reclaim sweep and its `reclaim_window_not_elapsed` /
+  `active_escrow_holds` states are unchanged.
+- 2026-08-03: **A completed send can be recorded as an ongoing arrangement, without leaving
+  ServiceCredits.** The Recurring Activity inventory names "a ServiceCredits send" as one of the places
+  the "Is this ongoing?" prompt must appear (its Gaps #1, the owner's intended primary entry point); it
+  now does, below the success line in the send panel, naming the recipient the server resolved rather
+  than the text that was typed in the box. It records the usual pending Recurring Activity row with
+  `origin_plugin = 'service-credits'`, which the recipient confirms there. Nothing about the transfer
+  itself changes — no ledger, balance, route, or schema change — and because every completed send is
+  already recognized by GDP from `service_credits_transfers`, a declared value on such a line is
+  recognized as a relationship rather than counted a second time.
 - 2026-08-02: **Deletion burn-down batch 3: the rest of the ledger's supporting records classified.** On account deletion, `service_credits_escrow_holds`, `service_credits_disputes`, `service_credits_dispute_adjustments`, `service_credits_governance_events`, `service_credits_treasury_events`, and `service_credits_treasury_config` are retained — they are the record of why balances moved and of supply/treasury changes, and the reclaim-and-tombstone flow depends on that history surviving the account. `service_credits_credit_limits` is deleted: it is current-state configuration, not ledger history, and with the wallet tombstoned there is nothing left for a limit to bound. Caught by the deletion-coverage gate added in #2056. Contract updated to match.
 - 2026-07-31: **Stored status value respelled to US English (owner-directed).** `service_credits_transfers.status` now stores `canceled`; existing rows are migrated by the idempotent US-spelling data migration block at the end of `ctf/schema.sql`. Code, contracts, and docs were renamed in the same PR.
 - 2026-07-23: **Open-disputes review list on the admin panel + admin-landing dot.** The disputes panel was an operator form keyed on a hand-typed dispute case ID with no way to see which disputes were open. New read-only route `GET /api/service-credits/admin/disputes` (admin-only) backed by a new `listOpenDisputes(limit)` — "open" derived as a `service_credits_disputes` row with no matching `service_credits_dispute_adjustments` (the table has no status column), newest first, opener names resolved via Clerk. `sca-disputes-panel.tsx` now lists open disputes above the form; each row's "Resolve" pre-fills the adjustment form's case ID, and the list refreshes after an adjustment is applied. Wired ServiceCredits into the admin-landing "new to review" dot (`lib/admin/area-attention.ts`): a dot shows when an unresolved dispute arrived since the admin last opened the area. Read-only addition — the credit-moving adjustment path is unchanged; no schema or contract change.

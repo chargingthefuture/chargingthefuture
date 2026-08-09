@@ -97,8 +97,10 @@ string. Trailing whitespace on a note is trimmed before the length check.
 **Expected:** Both the global setting and the form checkbox start **off**; an untouched log
 produces a **Private** row. With the default on, a new incident logs as **Shared with owner**;
 the form checkbox is seeded from the default and can be overridden per incident. The per-row
-pill flips a single incident either way at any time, and each change is logged. The copy states
-that only coarse trend data is shared — never the note or exact location.
+pill flips a single incident either way at any time, and each change is logged. The copy names
+what is shared in plain words — the global default says "only trend data — never your notes" and
+the per-incident checkbox says "only the date, rough area, and tags"; the word "coarse" appears
+nowhere on screen.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CL-7 · Tag an incident with a problem and a scheme (location required)
@@ -206,3 +208,19 @@ of these, it is already tracked, not a new bug:
 - There is no advanced search or filtering on incident history.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+
+> _Scheme list update (2026-08-03): added "The Fabricated Flaw" to the canonical scheme tags. List-data only — no test steps changed; CL-7/CL-8 cover tagging and suggestions generically._
+
+> _Scheme list update (2026-08-04): added "The Pot and Kettle", "Staged Road Rage", "The Insurance Bleed", and "Road Sensitization". List-data only — no test steps changed._
+
+> _Scheme list update (2026-08-04): added "The Poisoned Well", "The Windfall", "The Jinx", and "The Fake Job". List-data only — no test steps changed._
+
+> _Scheme list update (2026-08-04): added "The Warm Spell". List-data only — no test steps changed._
+
+> _Scheme list update (2026-08-04): added "Color Sensitization". List-data only — no test steps changed._
+
+> _Documentation note (2026-08-04): recorded a known taxonomy gap in the scheme tag list — it mixes operations with an arc, ambient tactics without one, and one entry that is a shape over time. Comment only; no tag added, removed, or renamed, and no test steps changed._
+
+> _Scheme list update (2026-08-07): added "Psyop Marketing" and "The Acquire and Fold". List-data only — no test steps changed; CL-7/CL-8 cover tagging and suggestions generically._
+
+> _Documentation note (2026-08-07): recorded an owner refinement in the pendulum comment — the recruit's windfall is arranged long in advance to read as merit-based, binding them to the network before they know anything. Comment only; no tag added, removed, or renamed, and no test steps changed._

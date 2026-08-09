@@ -4,13 +4,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   
   COMMUNITY_VALUE_INDEX_DISCLAIMER,
+  COMMUNITY_VALUE_INDEX_SINCE_LABEL,
   GDP_ESTIMATE_CHIP_LABEL,
   type GdpCountry,
   type GdpMetrics,
+  type GdpProjection,
   type GdpSector,
 } from "./gdp-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getGdpTokens } from './gdp-shared';
+import { GdpProjectionPanel } from './gdp-projection-panel';
 
 // Understated chip shown beside the GDP headline figure only when the figure is a
 // normalized USD estimate. Matches design/.../survivor-hub/GDP.tsx.
@@ -52,6 +55,9 @@ function GdpHero({ metrics }: { metrics: GdpMetrics }) {
             <div style={{ fontSize: 48, fontWeight: 900, color: t.TITLE, lineHeight: 1 }}>{metrics.currentValue || "—"}</div>
             {isEstimate ? <EstimateChip /> : null}
           </div>
+          {/* The index sums all recognized exchanges since production launch — it never resets, so the
+              as-of anchor is the launch date (one constant in gdp-shared.ts). */}
+          <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 6 }}>{COMMUNITY_VALUE_INDEX_SINCE_LABEL}</div>
           <div style={{ fontSize: 16, color: t.SUBTLE }}>
             {metrics.target ? `of ${metrics.target} opportunity` : ""}
             {metrics.progress ? ` · ${metrics.progress} reached` : ""}
@@ -133,10 +139,14 @@ export function GdpDashboard({
   sectors,
   countries,
   metrics,
+  projection,
 }: {
   sectors: GdpSector[];
   countries: GdpCountry[];
   metrics: GdpMetrics;
+  // Open posts that have not closed yet — rendered below the real headline, clearly apart from it, and
+  // never folded into the Community Value Index above. Optional: absent means no panel.
+  projection?: GdpProjection | null;
 }) {
   const { theme } = useTheme();
   const t = getGdpTokens(theme);
@@ -146,6 +156,7 @@ export function GdpDashboard({
     <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "24px" }}>
         <GdpHero metrics={metrics} />
+        <GdpProjectionPanel projection={projection} />
         <div style={{ display: "grid", gridTemplateColumns: hasSectors && hasCountries ? "3fr 2fr" : "1fr", gap: 20 }}>
           {hasSectors ? <GdpSectors sectors={sectors} /> : null}
           {hasCountries ? <GdpCountries countries={countries} /> : null}

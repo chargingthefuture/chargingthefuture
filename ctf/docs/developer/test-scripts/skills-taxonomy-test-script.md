@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:skills-taxonomy` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only) |
 
 ## How to run this
 
@@ -159,8 +159,15 @@ directly).
 
 ## Admin walkthrough
 
+> **The in-app admin write surface is retired (owner decision 2026-07-03, reconfirmed 2026-08-04).**
+> There is no taxonomy editor UI and none will be built — admins browse with the same read-only view
+> as members, and every taxonomy change goes through the append-only change list
+> (`ctf/scripts/lib/taxonomyChange.mjs`) via a PR. The cases below exercise the still-existing write
+> **API routes** directly (API calls, no UI); they remain valid only until governance-plan task 7
+> removes those routes, at which point delete TAX-A1–TAX-A4 from this script.
+
 ### TAX-A1 · Create sector, job title, skill
-**Role:** admin · **Surfaces:** web (admin surface)
+**Role:** admin · **Surfaces:** web (API only — no UI)
 **Steps:**
 1. Create a sector with a name (and optional display order / workforce share).
 2. Create a job title under that sector.

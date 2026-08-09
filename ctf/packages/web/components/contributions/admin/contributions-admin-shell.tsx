@@ -183,7 +183,11 @@ export function ContributionsAdminShell() {
         />
       )}
       {tab === 'drive' && (
-        <ContributionsAdminDrive t={t} cycle={currentCycle} saving={savingDrive} error={driveError} onSave={onSaveDrive} isMobile={true} />
+        // Keyed on the cycle so the form re-reads its fields when the cycle finishes loading. The
+        // form seeds its inputs with useState, which only reads the cycle on the first render — open
+        // this tab before the fetch lands and the boxes stay empty, and saving an empty box writes a
+        // goal of 0 over the real one. Changing the key remounts the form with the loaded values.
+        <ContributionsAdminDrive key={currentCycle?.id ?? 'new-cycle'} t={t} cycle={currentCycle} saving={savingDrive} error={driveError} onSave={onSaveDrive} isMobile={true} />
       )}
       {tab === 'settings' &&
         (config ? (

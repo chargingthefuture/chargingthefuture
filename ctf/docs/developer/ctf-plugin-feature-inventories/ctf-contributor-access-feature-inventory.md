@@ -51,8 +51,8 @@ no DMs) — and the **"Weavers of the Commons" badge** on Directory.
    redirected to `/apps/directory`, same gate as the Directory profile deep link). Plain-language
    explainer: earned by steadily delivering real help to other members across the platform;
    permanent once earned; no application and no way to buy it; no score shown anywhere; the same
-   standing opens the members-only channel in the Commons when it launches. Mobile-responsive,
-   rendered in the Directory shell tokens.
+   standing opens the members-only channel in the Commons and the private room in Chyme when they
+   launch. Mobile-responsive, rendered in the Directory shell tokens.
 
 4. **Eligible members see the gated channel alongside the Commons.** The Hub channel list
    (`GET /api/hub/channels`) adds `#contributors` server-side only when `channel_open` is TRUE and
@@ -133,7 +133,9 @@ audit-trailed, same posture as the Commons hub routes — post deletions ARE aud
   at most three links — a failing post is refused with 422 `content_policy_violation`, never
   stored, never visible to anyone) and the per-member posting rate limit (8 posts per 30 minutes,
   counted in the database like the Commons' `evaluateFeedRateLimit` — over the window is 429
-  `rate_limit_exceeded`, shown to the member as the same error banner the Commons shows).
+  `rate_limit_exceeded`, shown to the member as the same error banner the Commons shows). The rate
+  limit is checked before the reply-target lookup, so a member over the window always gets
+  `rate_limit_exceeded` whatever `replyToPostId` they send.
   Contract: `contributor-access.channel.message.create`.
 - `DELETE /api/contributor-access/channel/messages/[postId]` — soft-delete a post (same route
   shape as the Commons' `DELETE /api/hub/messages/[postId]`): the author may delete their own
@@ -145,11 +147,14 @@ audit-trailed, same posture as the Commons hub routes — post deletions ARE aud
   message content never enters Stream (the live layer carries only presence/typing). Contract:
   `contributor-access.channel.post.delete`.
 - `POST /api/contributor-access/channel/messages/[postId]/reactions` — body `{ emoji }`; toggles
-  the viewer's reaction; emoji validated against the fixed twelve-emoji gated set. Contract:
-  `contributor-access.channel.reaction.toggle`.
+  the viewer's reaction; emoji validated against the fixed twelve-emoji gated set. A malformed
+  (non-UUID) post id is a 404 `post_not_found`, same as a missing post — never a database cast
+  error. Contract: `contributor-access.channel.reaction.toggle`.
 - `POST /api/contributor-access/channel/join` — mints Stream live-layer credentials (channel type
   `ctf-gated`, channel `ctf-contributors`) via the shared resolver; `configured: false` when
-  Stream is absent and the client stays on polling. Contract: `contributor-access.channel.join`.
+  Stream is absent and the client stays on polling. A CSRF-confirmed mutation like the others —
+  joining reconciles the member into the Stream channel, so the route requires the `x-ctf-csrf`
+  header. Contract: `contributor-access.channel.join`.
 
 Cross-plugin read: `GET /api/hub/channels` (the Hub) reads `contributor_access_config` +
 `contributor_access_eligibility` to append the `#contributors` entry server-side for eligible
@@ -350,6 +355,38 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-08-07 — "How it's earned" explainer copy catch-up: the "What it opens" section
+  (`weavers-earned-page.tsx`) now names both private surfaces the badge standing opens — the
+  members-only channel in the Commons **and** the private "Weavers of the Commons" room in Chyme
+  (shipped 2026-07-23) — instead of the Commons channel alone. Test script CA-6 updated to match.
+  Copy-only; no schema, route, or contract change. Web-only (rule 105 — no Android explainer
+  surface).
+- 2026-08-06 — Channel join CSRF + config contract catch-up (code-review issues #2122, #2128).
+  `POST /api/contributor-access/channel/join` now runs `ensureMutationCsrf` like every other
+  mutation in this plugin — the join reconciles the member into the Stream channel, a side effect
+  a cross-origin POST must not be able to trigger; the web client's join call sends the
+  `x-ctf-csrf: '1'` header (`use-gated-chat.ts`). Contracts: `channel.join` 1.1.0 (command
+  description + access policy record the CSRF requirement and `csrf_denied` deny) and
+  `config.get` 1.1.0 (output schema now lists the `channelMemberCount` field the route has always
+  returned for the admin status card). No schema change; member-visible behavior unchanged.
+- 2026-08-06 — Gated channel hardening from the code-review sweep (issues #2124, #2125, #2126,
+  #2127; `lib/contributor-access/channel-repository.ts` + `lib/contributor-access/gated-channel.ts`).
+  (1) `toggleGatedChannelReaction` now runs the same UUID format guard as
+  `deleteGatedChannelPost` (shared `UUID_PATTERN`), so a malformed post id returns the mapped 404
+  `post_not_found` instead of a Postgres cast error surfacing as a 503. (2) The message-list query
+  orders its most-recent window oldest-first in SQL (inner `DESC LIMIT` window, outer `ASC`) —
+  same rows, same order as before, no in-process `.reverse()`. (3) The Stream helpers dropped the
+  `disconnectUser()` `finally` teardown: server-side clients never open a user WebSocket, so there
+  is nothing to tear down, and a throw from the `finally` could mask the real channel-operation
+  error — the Commons (`lib/feed/stream.ts`) removed it earlier for the same reason. Member-visible
+  behavior otherwise unchanged; no schema, route, or contract change.
+- 2026-08-05 — Gated channel post creation: the per-member posting rate limit now runs as the first
+  database check, before the reply-target lookup (`createGatedChannelPost` in
+  `lib/contributor-access/channel-repository.ts`). A member over the 8-per-30-minutes window used to
+  get `reply_target_not_found` instead of `rate_limit_exceeded` when they also sent an unknown
+  `replyToPostId`; the error a caller sees no longer depends on the reply id, and no reply lookup
+  runs for someone who cannot post anyway. Both cases were already refused, so nothing that was
+  blocked before is allowed now. No schema, route, or contract change. Code review issue #2121.
 - 2026-07-23 — Contributor eligibility now grants a **second private surface**: a private "Weavers of the Commons" **Chyme audio room** (`chyme-contributors-room`), alongside the existing gated Commons chat channel. Same gate as the channel — the channel-open switch plus the eligibility flag (or admin) — enforced by a new `requireChymeContributorAccess` in the Chyme plugin, with the same bare-404 no-shaming behavior. Built entirely in the Chyme plugin (room switcher + room-scoped routes/repository); this module's eligibility engine and `isMemberEligible`/`getContributorAccessConfig` are reused unchanged — no change to contributor-access schema, routes, or contracts. See the Chyme inventory for the implementation. Audio + room-chat MVP (tips/Back Channel deferred). Web-only (rule 105).
 - 2026-07-22 — Gated #contributors channel: added an **Edit** action on a member's own message (edit = delete + repost, matching the Commons home channel). It loads the message text into the composer and deletes the original (existing author-only delete), so the member fixes it and sends a fresh message — no in-place edit, a new row with a new timestamp. Edit shows on your own messages only (admins keep delete-any as moderation, but cannot "edit" someone else's). `gated-chat-panel.tsx` + `use-gated-chat.ts`; reuses the existing delete + send, no schema/route/contract change. Verified: `@ctf/web` typecheck + eslint clean.
 - 2026-07-19 — Gated channel: tapping a quoted reply now jumps to the original message on web (same

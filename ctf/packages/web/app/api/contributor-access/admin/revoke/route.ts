@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireContributorAccessAdmin } from '../_lib';
 import { insertContributorAccessAudit, revokeEligibility } from 'lib/contributor-access/repository';
 import { syncGatedChannelMembershipIfOpen } from 'lib/contributor-access/gated-channel';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // For-cause revoke — the ONLY way eligibility is removed (a reviewed harm/abuse action). Never for
 // inactivity, and never on an unreviewed report alone. A non-empty reason is required.
@@ -42,9 +43,9 @@ export async function POST(request: Request) {
   let body: RevokeBody;
   try {
     body = (await request.json()) as RevokeBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: 'contributor_access_invalid_json', message: 'Invalid JSON body.' },
+      { ok: false, code: 'contributor_access_invalid_json', message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
   } catch (error) {
     reportError(error, { area: 'contributor-access', op: 'admin_member_revoke' });
     return NextResponse.json(
-      { ok: false, code: 'contributor_access_unavailable', message: 'Revoke unavailable.' },
+      { ok: false, code: 'contributor_access_unavailable', message: `Revoke unavailable: ${failureReason(error)}` },
       { status: 503 },
     );
   }

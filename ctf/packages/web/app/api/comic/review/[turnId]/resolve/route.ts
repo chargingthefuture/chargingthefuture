@@ -5,6 +5,7 @@ import { logComicAudit } from 'lib/comic/audit';
 import { resolveComicReview } from 'lib/comic/repository';
 import type { ComicReviewResolveInput } from 'lib/comic/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type ResolveBody = Partial<ComicReviewResolveInput>;
 
@@ -95,9 +96,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ tur
   let body: ResolveBody;
   try {
     body = (await request.json()) as ResolveBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

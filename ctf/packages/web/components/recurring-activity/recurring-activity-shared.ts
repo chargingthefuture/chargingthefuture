@@ -55,6 +55,9 @@ export interface Activity {
   createdAt: string;
   role: 'owner' | 'counterparty';
   counterpartyName: string | null;
+  // The app this was declared from, when the member used that app's inline control instead of the
+  // form here. Null for a line created on this screen.
+  originPlugin?: string | null;
 }
 
 export interface ActivitiesResponse {

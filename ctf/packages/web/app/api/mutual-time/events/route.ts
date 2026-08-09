@@ -5,6 +5,7 @@ import { logMutualTimeAudit } from 'lib/mutual-time/audit';
 import { reportError } from 'lib/observability/report';
 import { checkMutationOrigin } from 'lib/auth/csrf';
 import { requireMutualTimeAdmin, ensureMutationCsrf, mutualTimeErrorResponse } from '../_lib';
+import { failureReason } from 'lib/errors/failure';
 
 // Route convention (deliberate): admin surfaces are keyed by event id under the plural
 // /api/mutual-time/events/* (create, list, close), while the public shareable surface is keyed by
@@ -52,9 +53,9 @@ export async function POST(request: Request) {
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: MUTUAL_TIME_ERROR_CODE.invalidPayload, message: 'Invalid request body.' },
+      { ok: false, code: MUTUAL_TIME_ERROR_CODE.invalidPayload, message: 'Invalid request body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

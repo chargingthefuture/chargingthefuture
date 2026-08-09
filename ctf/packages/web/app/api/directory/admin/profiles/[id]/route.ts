@@ -5,6 +5,7 @@ import { deleteAdminProfile, updateAdminProfile, validateProfileInput } from 'li
 import { logDirectoryAudit } from 'lib/directory/audit';
 import type { DirectoryProfileInput } from 'lib/directory/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -75,9 +76,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
   let body: AdminProfileBody;
   try {
     body = (await request.json()) as AdminProfileBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -187,7 +188,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to delete profile.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: `Unable to delete profile: ${failureReason(error)}` },
       { status: 503 },
     );
   }

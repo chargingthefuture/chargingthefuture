@@ -50,32 +50,6 @@ policies:
       - blocked_participant_pair
 
   - pluginId: lighthouse
-    command: lighthouse.block.create
-    version: 1.0.0
-    requiredRoles:
-      - member
-      - admin
-    attributePolicies:
-      tenancy: same_workspace
-      selfBlockDisallowed: true
-      safetyPolicyChecks: required
-    consentRequirements:
-      scopes:
-        - lighthouse_safety_controls
-      fallbackLawfulBasis: vital_interest_support
-    regionRestrictions:
-      allowedTransferMechanisms:
-        - local_processing
-        - scc
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: true
-    denyConditions:
-      - actor_not_authenticated
-      - self_block_attempt
-      - blocked_user_not_in_workspace
-
-  - pluginId: lighthouse
     command: lighthouse.property.create
     version: 1.0.0
     requiredRoles:

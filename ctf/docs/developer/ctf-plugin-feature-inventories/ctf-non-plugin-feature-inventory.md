@@ -145,7 +145,38 @@
 2. `GET /api/account/blocks` lists the member's blocks newest-first (`listBlocksForUser`). `POST /api/account/blocks` creates a block (body `{ blockedUserId }`; CSRF-guarded; idempotent; a self-block or a blank target returns 400). `DELETE /api/account/blocks/[blockedUserId]` removes a block (CSRF-guarded; idempotent — unblocking a member who is not blocked still returns ok).
 3. Optional safety escalation (opt-in): a `POST` with `safetyConcern: true` and an optional short `safetyDetail` writes the block AND a `member_safety_reports` row in one transaction (they succeed or fail together) — the only path by which a member block reaches an admin. Without the flag, nothing is written to the reports table.
 
-**Web and Android delivery status: complete on both.** Web ships the manage-list (`components/blocks/blocked-members-shell.tsx`, mounted at `/account/blocks`) and the reusable block action (`components/blocks/block-member-button.tsx`, with the opt-in safety escalation). Android ships the matching surface in `packages/mobile/src/features/blocks/`: an API client (`api.ts` — `fetchBlockedMembers`, `blockMember`, `unblockMember`, all through the shared authenticated fetch with the `x-ctf-csrf: 1` header on mutations), the "Blocked members" manage screen (`BlockedMembers.tsx` — loading / empty / error / populated states with per-row Unblock), and the reusable `BlockMemberButton.tsx` (confirm dialog with the same opt-in safety escalation). The screen is mounted in the mobile navigator (`App.tsx`, feature key `blocked-members`). Both clients call the same three account routes; no backend, schema, or contract change. Mobile gap: there is no shipped per-member profile menu on Android to host the reusable `BlockMemberButton` yet (the directory list navigates to Foundation rather than a member-profile menu), so the block action is wired and exported for reuse but not yet attached to a member context — matching the web, where the reusable button is also not yet attached to a specific member surface beyond being available for task-4 wiring.
+**Web and Android delivery status: complete on both.** Web ships the manage-list (`components/blocks/blocked-members-shell.tsx`, mounted at `/account/blocks`) and the reusable block action (`components/blocks/block-member-button.tsx`, with the opt-in safety escalation). Android ships the matching surface in `packages/mobile/src/features/blocks/`: an API client (`api.ts` — `fetchBlockedMembers`, `blockMember`, `unblockMember`, all through the shared authenticated fetch with the `x-ctf-csrf: 1` header on mutations), the "Blocked members" manage screen (`BlockedMembers.tsx` — loading / empty / error / populated states with per-row Unblock), and the reusable `BlockMemberButton.tsx` (confirm dialog with the same opt-in safety escalation). The screen is mounted in the mobile navigator (`App.tsx`, feature key `blocked-members`). Both clients call the same three account routes; no backend, schema, or contract change.
+
+**Where a member can start a block, and where the block is enforced (updated 2026-08-03).** On web the
+reusable `BlockMemberButton` is attached to the LightHouse listing detail — the first real member-to-
+member surface to carry it — so a seeker can block a host from the place they meet them. LightHouse
+also enforces the block: a blocked host's listings are left out of browse, and a stay request between
+a blocked pair is refused with `blocked_pair` (403). See §1.6 of the LightHouse inventory.
+
+**Enforcement now covers every member-to-member surface (issue #809 task 4 closed, 2026-08-05).**
+`isBlockedBetween` / `isBlockedBetweenTx` (`lib/blocks/repository.ts`) is the shared check, consulted
+on each surface's read path (hide the person) and write path (refuse the contact, always with neutral
+copy so a block never reveals itself):
+
+- Chyme Back Channel — invite refusal (`back-channel.ts`, since 2026-07-20).
+- LightHouse — browse filter + stay-request refusal (inline SQL that also honors the legacy
+  read-only `lighthouse_blocks` rows, since 2026-08-03).
+- Foundation — provider search hides a blocked provider; `createConnectionThread` and
+  `ringInstantCall` refuse a blocked pair (a block created after the thread exists still stops new
+  calls).
+- SocketRelay — the browse feed hides a blocked owner's posts (owner "Mine" and admin lists stay
+  complete); `claimRequest` refuses a blocked pair before the idempotent-retry branch.
+- TrustTransport — helper discovery (`listAvailableRequests`) hides a blocked requester's rides;
+  `createOffer` and `acceptOffer` refuse a blocked pair.
+- Commons — the timeline hides community posts and replies authored by a blocked pair member
+  (announcements and AI answers have no member author and always show); the deep-link
+  "load around" offset applies the same filter so pagination stays consistent.
+
+MutualTime needs no enforcement and gets none: an event shows only aggregated anonymous voter counts
+— no member identity, no member-to-member contact path — so there is nothing for a block to hide or
+stop. Mobile: Android still has no per-member profile menu to host the button (the directory list
+navigates to Foundation), so on Android the block is started from the manage screen rather than from
+a member's context.
 
 ### 1.7 Admin Account Restrictions (platform-wide member restriction)
 
@@ -262,6 +293,14 @@ An owner-curated list of real community comments, shown two ways on the public (
 
 ## 5) Change Log
 
+- 2026-08-03: **The member block now has a real starting point and a first enforcing surface (§1.6).**
+  The reusable `BlockMemberButton` had been built, exported, and attached to nothing, so the only way
+  to block anyone was the manage-list at `/account/blocks` — which needs you to already know who you
+  are blocking. It is now attached to the LightHouse listing detail, and LightHouse honors the block
+  on both paths: a blocked host's listings are left out of browse, and a stay request between a
+  blocked pair is refused. Recorded plainly in §1.6 which surfaces do and do not yet consult
+  `isBlockedBetween`, so the remaining enforcement work is visible instead of implied. No change to
+  the block routes, schema, or contracts.
 - 2026-07-26: **Orphan v2 table audit tool (issue #520, ops tooling — no app change).** New read-only script `ctf/scripts/audit-orphan-tables.mjs`: run wherever `DATABASE_URL` is available (e.g. through Infisical) to list live production tables, subtract the v3 keep-set derived from `ctf/schema.sql`, scan the whole codebase for references (two strengths: SQL-context hits keep a table; bare-word-only hits are flagged "likely orphan" for hand review — the scan always fails toward keeping, so e.g. `users` is kept on its real SQL references), and write two review artifacts — a `pg_dump` backup command and a guarded `DROP TABLE … CASCADE` script — for the owner to review and run **manually**. The tool never executes a drop (only SELECTs). `--offline` audits the issue #520 candidate list against the codebase without a database; its current result (30 confirmed orphans, `users`/`announcements` kept) is posted on the issue. `ctf/schema-prod4.6.2026.sql` is treated as an annotation source only, NOT a keep-set — it is an April-2026 production snapshot that itself contains the v2 leftovers. Generated artifacts are gitignored.
 - 2026-07-26: **JSON data export on Account & Data — download your data, the read-side twin of delete (issue #1264, web).** A signed-in member can now download their data as a JSON file from `/account/data`: per service (a Download button beside each Delete button, and on retained-list services that still hold the member's own rows, e.g. Notifications), or the whole account ("Download all my data (JSON)" at the top of the data view). New pure `lib/account/export-engine.ts` mirrors the deletion engine over the SAME schema-validated registry (`SELECT * FROM <table> WHERE <userColumn> = $1`; retain tables skipped — MVP scope 2a, stated in the file's own `notes`), with `lib/account/export-orchestrator.ts` assembling the self-describing envelope (`exportVersion: 1`, `generatedAtIso`, `userId`, `scope`, `services[].tables[]` with `rowCount` + `rows`) in one transaction for a consistent snapshot. New routes `GET /api/account/services/:slug/export` and `GET /api/account/full-account/export` — auth-gated (`requireAccountAccess`), self-only ($1-bound user id), audit-logged (`account.data.export.service` / `.full`), per-user rate-limited (10 service / 3 full per 10 min → 429), downloaded via `Content-Disposition: attachment`. `GET /api/account/services` gains `exportable` per entry. New CI check `ctf/scripts/check-export-engine.mjs` validates every generated SELECT without a DB, exactly like the deletion-engine check. No schema change (read-only; no new table). Follow-ups deliberately deferred: exporting user-owned retained rows (money/audit ledgers — scope 2b) and the Android share-sheet flow.
 - 2026-07-23: **Admin landing "new to review" dots (§1.14).** The admin landing (`/admin`) now shows an amber dot on an area's tile when that area has actionable items an admin has not seen yet — a new pending review, report, or dispute since they last opened it — so an admin knows which area to open without checking each. New table `admin_area_seen` (per-admin, per-area last-opened marker) and route `POST /api/admin/area-seen` (admin-only, CSRF-guarded) that clears a dot on open. The per-area signal registry (`lib/admin/area-attention.ts`) counts actionable rows newer than the marker for: unlock, comic, bug-reports, contributions, safety, skills-hunt (nominations + reports), trust-transport (disputes + risk signals), and what-works. Areas that are dashboards/config/browse (directory et al.) get no dot. Server-computed on the landing (`app/admin/page.tsx`), rendered by the new client tile grid (`app/admin/admin-area-grid.tsx`). Best-effort throughout: any failure degrades to "no dot" and never breaks the landing. `schema.demo.sql` regenerated. Admin-facing and separate from the member notifications center.

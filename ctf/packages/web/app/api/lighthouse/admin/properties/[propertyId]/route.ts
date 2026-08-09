@@ -4,6 +4,7 @@ import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { insertLighthouseAudit, updateProperty, validatePropertyInput } from 'lib/lighthouse/repository';
 import type { LighthousePropertyInput } from 'lib/lighthouse/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteParams = {
   params: Promise<{ propertyId: string }>;
@@ -63,9 +64,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
   let body: PropertyBody;
   try {
     body = (await request.json()) as PropertyBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -98,7 +99,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     if (code === 'property_not_found') {
       return NextResponse.json(
-        { ok: false, code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: 'Lighthouse property not found.' },
+        { ok: false, code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: `Lighthouse property not found: ${failureReason(error)}` },
         { status: 404 },
       );
     }

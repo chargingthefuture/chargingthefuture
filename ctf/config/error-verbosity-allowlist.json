@@ -1,0 +1,5 @@
+{
+  "note": "Burn-down list for rule 137 (verbose error handling). Per-file budget of known opaque error paths that existed when the gate landed. A budget may shrink, never grow; a file not listed must be clean. Never add an entry to silence the gate — fix the route.",
+  "rule": ".claude/rules/137-verbose-error-handling-rules.mdc",
+  "files": {}
+}

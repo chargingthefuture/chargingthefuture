@@ -351,6 +351,14 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-08-05: **Member blocks enforced on the Commons timeline (issue #809 task 4).**
+  `listFeedTimeline` now leaves out community posts authored by a member who is blocked (either
+  direction) relative to the viewer, and the replies batch-loader applies the same filter, so a
+  blocked person's posts and replies no longer render in the Commons. Announcements and AI Q&A items
+  have no member author and always show. The count query and the deep-link "load around" offset
+  apply the identical filter so pagination stays consistent. A post's stored `reply_count` may
+  overstate the visible replies for a viewer with a block — accepted, the counter is denormalized.
+  `member_blocks` added to the `feed.timeline.fetch` contract `dataAccess`. No schema change.
 - 2026-08-02: **Deletion burn-down batch 4.** On account deletion, `announcement_replies` (your replies to announcements) and `llm_inference_log` rows carrying your id are now deleted (the log mostly FK-cascades with your questions/answers already; the direct delete closes any path the cascades miss). Admin-authored platform content (`announcements`, `announcement_revisions`, `announcement_delivery_events`, `feed_items`, `feed_render_config`) is classified retained — authorship columns are the publish audit.
 - 2026-08-02: **Four code-review fixes (issues #2045, #2046, #2048, #2017).** (1) `evaluateFeedRateLimit`
   no longer interpolates the table/column names it received: both are looked up from a frozen

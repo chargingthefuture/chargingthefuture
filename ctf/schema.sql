@@ -1579,6 +1579,17 @@ BEGIN
   END IF;
 END
 $trust_transport_requests_price_consistency$;
+-- Accepted currencies (split settlements): every currency the requester can settle the ride in,
+-- independent of the single listed price above — one row per accepted code, mirroring
+-- lighthouse_property_accepted_currencies and socket_relay_request_accepted_currencies.
+CREATE TABLE IF NOT EXISTS trust_transport_request_accepted_currencies (
+  request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  PRIMARY KEY (request_id, currency_code)
+);
+ALTER TABLE IF EXISTS trust_transport_request_accepted_currencies ADD COLUMN IF NOT EXISTS request_id UUID;
+ALTER TABLE IF EXISTS trust_transport_request_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
+CREATE INDEX IF NOT EXISTS idx_trust_transport_request_accepted_currencies_request ON trust_transport_request_accepted_currencies(request_id);
 -- === foundation_capacity_policies ===
 CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
@@ -6004,6 +6015,15 @@ ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS ended_at TIM
 ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS ended_by_user_id TEXT;
 ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Which app the member declared this from, when they used that app's inline "mark as recurring"
+-- control instead of walking over to the Recurring Activity plugin (the plugin's own form leaves this
+-- NULL). Two jobs: it lets a surface show where a relationship came from, and it lets GDP recognition
+-- tell apart a declaration made in an app that already records every single exchange (Foundation calls,
+-- TrustTransport trips, SocketRelay favors — where counting a declared ServiceCredits value again would
+-- count the same value twice) from one made in an app that only records the arrangement (LightHouse).
+-- Free text rather than a CHECK: the plugin list changes, and an unknown value simply falls back to the
+-- safe treatment. Validated against the plugin registry at write time.
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS origin_plugin TEXT;
 CREATE INDEX IF NOT EXISTS recurring_activities_owner_idx ON recurring_activities (owner_user_id, status);
 CREATE INDEX IF NOT EXISTS recurring_activities_counterparty_idx ON recurring_activities (counterparty_user_id, status);
 CREATE INDEX IF NOT EXISTS recurring_activities_status_currency_idx ON recurring_activities (status, currency_code);

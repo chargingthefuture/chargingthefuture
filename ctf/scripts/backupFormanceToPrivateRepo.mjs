@@ -130,7 +130,7 @@ async function main() {
     process.exit(1);
   } finally {
     // Clean up local file
-    try { unlinkSync(filename); } catch {}
+    try { unlinkSync(filename); } catch { /* no-trace: the temporary file is already gone */ }
   }
 }
 

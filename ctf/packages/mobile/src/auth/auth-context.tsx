@@ -27,6 +27,7 @@ import {
   type StoredSession,
 } from "./sessionStore";
 import { decodeJwtClaims } from "./jwt";
+import { reportError } from '../observability/report';
 
 // Lets the OAuth browser tab hand control back to the app.
 WebBrowser.maybeCompleteAuthSession();
@@ -243,7 +244,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const next = buildRefreshedSession(refreshed, current);
       await persistSession(next);
       return next.idToken;
-    } catch {
+    } catch (caught) {
+      // A failed refresh signs the member out, so the reason must not vanish with it.
+      reportError(caught, { area: 'auth', op: 'refresh_session' });
       await persistSession(null);
       return null;
     }
@@ -287,7 +290,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       await persistSession(buildStoredSession(tokenResponse.idToken, tokenResponse));
-    } catch {
+    } catch (caught) {
+      reportError(caught, { area: 'auth', op: 'sign_in' });
       Alert.alert("Sign in failed", "Could not complete sign-in. Please try again.");
     }
   }, [clientId, discovery, persistSession, promptAsync, redirectUri, request]);

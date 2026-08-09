@@ -4,6 +4,7 @@ import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { ringInstantCall } from 'lib/foundation/instant-call';
 import { insertFoundationAudit } from 'lib/foundation/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RingInput = {
   authorizedBlocks?: number;
@@ -22,11 +23,11 @@ async function readRingInput(request: Request): Promise<ParsedRingInput> {
     if (text.trim().length > 0) {
       body = JSON.parse(text) as RingInput;
     }
-  } catch {
+  } catch (error) {
     return {
       ok: false,
       response: NextResponse.json(
-        { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON.' },
+        { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON.', reason: failureReason(error) },
         { status: 400 },
       ),
     };
@@ -84,6 +85,14 @@ function mapRingError(error: unknown): NextResponse {
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.calleeBusy, message: 'This person already has an incoming call. Try again shortly.' },
       { status: 409 },
+    );
+  }
+
+  // Neutral copy on purpose (mirrors LightHouse): a block must not reveal itself to the blocked person.
+  if (code === 'blocked_pair') {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.policyDenied, message: 'This call is not available right now.' },
+      { status: 403 },
     );
   }
 

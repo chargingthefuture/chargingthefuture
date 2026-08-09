@@ -32,6 +32,12 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
    - Food.
 2. Structured origin/destination/location input with map and list fallbacks.
 3. Real-time quote previews (eta/price ranges) before submission.
+4. Split settlements (2026-08-06): besides the single settlement value type + amount, the booking
+   form carries an **"Accepted currencies" checkbox list** (the standardized LightHouse pattern,
+   shared `AcceptedCurrencyPicker`) naming every currency the requester accepts — e.g. part
+   ServiceCredits and part USD on one ride. The requester's Track card and the driver-facing
+   "Help out" cards show a compact "Accepts ServiceCredits +N" badge next to the settlement badge;
+   ServiceCredits always leads. Never a fiat-parity claim for ServiceCredits.
 
 ### 1.2 Ride Marketplace
 
@@ -83,6 +89,10 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 1. Canonical lifecycle states by mode (ride/package/food) with shared status vocabulary.
 2. In-context communication channel scoped to each order/trip between exactly the two parties (rider and driver). The chat opens with the trip and closes when the trip reaches a terminal state (completed, canceled, disputed): no new messages may be sent, both parties keep read-only access for a limited window, and messages are retained server-side for moderation/abuse evidence per the deletion contract. No 1:1 messaging exists outside an active trip (platform rule 100, "Messaging Scope and Lifecycle").
 3. Clear non-technical status and failure messaging.
+4. **Record a ride as a regular one, without leaving TrustTransport (2026-08-03).** Once a driver has
+   accepted, the ride carries an "Is this ongoing?" prompt: pick how often and how it is settled, and it records
+   an ongoing arrangement with the member who drove, who confirms it in the Recurring Activity app. A
+   money arrangement records no amount — only that it happens and how often.
 
 ### 1.6 Earnings and Completion History
 
@@ -149,8 +159,11 @@ settlement; see the Earnings section and the Change Log.)
 User routes:
 
 - `GET /api/trust-transport/modes` — Available transport modes (requires member read access).
-- `POST /api/trust-transport/requests` — Create a request.
-- `GET /api/trust-transport/requests/available` — Open requests a member can offer to help with: everyone's open requests except the caller's own, returning **only mode + settlement + age** (no pickup/drop-off, no title) per discovery model B. Location is shared with a provider only after the requester accepts their offer.
+- `POST /api/trust-transport/requests` — Create a request. Body includes optional
+  `acceptedCurrencies: string[]` (split settlements); codes are validated against the active
+  currencies catalog, unknown/inactive codes dropped. Request read paths return the stored set as
+  `acceptedCurrencies` (ServiceCredits first).
+- `GET /api/trust-transport/requests/available` — Open requests a member can offer to help with: everyone's open requests except the caller's own, returning **only mode + settlement (including the accepted-currencies set) + age** (no pickup/drop-off, no title) per discovery model B. Location is shared with a provider only after the requester accepts their offer.
 - `GET /api/trust-transport/requests/:requestId` — Request detail.
 - `GET /api/trust-transport/requests/:requestId/offers` — Offers on a request.
 - `POST /api/trust-transport/requests/:requestId/offers` — Make an offer on an open request (one pending offer per provider per request; re-offering updates it).
@@ -195,16 +208,23 @@ Extension entity:
 Tables owned by this plugin:
 
 1. `trust_transport_requests` — Request rows across ride/package/food modes.
-2. `trust_transport_offers` — Offers placed by providers on a request.
-3. `trust_transport_trips` — Accepted-offer trips with lifecycle state. Includes `requester_completion_confirmed_at` and `provider_completion_confirmed_at` (both nullable timestamps): a trip only transitions to `completed` (and settles) once both are set — mutual completion confirmation.
-4. `trust_transport_status_events` — Append-only event log for status transitions.
-5. `trust_transport_proof_artifacts` — Pickup/delivery proof captures (photo, code, signature references).
-6. `trust_transport_disputes` — Dispute records and adjudication state.
-7. `trust_transport_earnings_ledger` — Earnings entries per completed task (`amount` is `NUMERIC`; `trip_id` links a settlement credit to its trip). A completed non-SC trip writes one `credit` row here; this is the read-only earnings record and the GDP recognition source. No `hold`/`debit` rows are written any more (the payout flow that created them was removed).
-8. `trust_transport_payout_requests` — **Deprecated / write-frozen (2026-07-08).** No code writes to it now that the payout flow is removed. Retained (not dropped) for historical/financial integrity and kept in the deletion registry.
-9. `trust_transport_risk_signals` — Fraud/risk signals captured for monitoring.
-10. `trust_transport_market_config` — Region/service-zone/fee/commission/capacity configuration.
-11. `trust_transport_admin_audit_trail` — Admin mutation audit log.
+2. `trust_transport_request_accepted_currencies` — join (`request_id`, `currency_code` FK →
+   `currencies.code`) for every currency the requester accepts (split settlements — e.g. part
+   ServiceCredits and part USD), independent of the single listed `price_amount`/`price_currency`.
+   Written at request create (codes validated against the active catalog, unknown/inactive dropped),
+   read by every request read path (requester lists, request detail, driver-facing available list)
+   and returned as `acceptedCurrencies` ordered by `currencies.sort_order` (ServiceCredits first).
+   Rows cascade-delete with the request.
+3. `trust_transport_offers` — Offers placed by providers on a request.
+4. `trust_transport_trips` — Accepted-offer trips with lifecycle state. Includes `requester_completion_confirmed_at` and `provider_completion_confirmed_at` (both nullable timestamps): a trip only transitions to `completed` (and settles) once both are set — mutual completion confirmation.
+5. `trust_transport_status_events` — Append-only event log for status transitions.
+6. `trust_transport_proof_artifacts` — Pickup/delivery proof captures (photo, code, signature references).
+7. `trust_transport_disputes` — Dispute records and adjudication state.
+8. `trust_transport_earnings_ledger` — Earnings entries per completed task (`amount` is `NUMERIC`; `trip_id` links a settlement credit to its trip). A completed non-SC trip writes one `credit` row here; this is the read-only earnings record and the GDP recognition source. No `hold`/`debit` rows are written any more (the payout flow that created them was removed).
+9. `trust_transport_payout_requests` — **Deprecated / write-frozen (2026-07-08).** No code writes to it now that the payout flow is removed. Retained (not dropped) for historical/financial integrity and kept in the deletion registry.
+10. `trust_transport_risk_signals` — Fraud/risk signals captured for monitoring.
+11. `trust_transport_market_config` — Region/service-zone/fee/commission/capacity configuration.
+12. `trust_transport_admin_audit_trail` — Admin mutation audit log.
 
 Multi-currency (issue #120): `trust_transport_payout_requests` and `trust_transport_earnings_ledger` gain
 `price_currency` (FK → `currencies.code`), the admin-curated, referenced settlement currency that supersedes
@@ -292,6 +312,49 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+
+- 2026-08-06: **Split settlements — the booking form now writes an accepted-currencies set (owner
+  report from SocketRelay: a split ServiceCredits + USD arrangement forced a zero into the form).**
+  New `trust_transport_request_accepted_currencies` join table (`request_id`, `currency_code` FK →
+  `currencies.code`, cascade with the request; schema.sql + regenerated schema.demo.sql). The Book
+  tab adds the standardized LightHouse-style **"Accepted currencies" checkbox list** (shared
+  `components/shared/accepted-currency-picker.tsx`, catalog from `GET /api/currencies`), independent
+  of the single settlement + amount. Server: `POST /requests` parses `acceptedCurrencies: string[]`
+  (trimmed, deduped; codes validated against the active catalog, unknown/inactive dropped, written
+  in the create transaction), and request read paths — requester list/detail and the driver-facing
+  `GET /requests/available` — attach the stored set (ServiceCredits first via
+  `currencies.sort_order`). The requester's Track card and the "Help out" cards add a compact
+  "Accepts ServiceCredits +N" badge. Command contract `trust-transport.request.create` → 1.1.0
+  (dataAccess + `trust_transport_request_accepted_currencies` + `currencies`). With the real total
+  price enterable and the accepted set named, projected and actual GDP/value recognition can count
+  the entire transaction instead of a forced zero. No new route; no Android change (TrustTransport
+  is not on the Android keep-list — web-only per rule 105).
+
+- 2026-08-05: **Member blocks enforced (issue #809 task 4).** Helper discovery
+  (`listAvailableRequests`) now leaves out rides whose requester is blocked (either direction)
+  relative to the browsing helper; `createOffer` and `acceptOffer` refuse a blocked pair with the
+  `blocked_pair` → `TRUST_TRANSPORT_MUTUAL_BLOCK` mapping (403, neutral copy "This request is not
+  available to you." so the block never reveals itself). A block created after an offer was made
+  still stops the pair from being joined into a trip at accept time. `member_blocks` added to the
+  `trust-transport.offer.create` / `offer.accept` contract `dataAccess`. No schema change.
+- 2026-08-04: **Driver offers now write Member Presence live.** `createOffer` records a presence row
+  for the offering driver (ref type `offer`, label "Offering rides") after the offer commits, and
+  `acceptOffer` clears presence for the drivers whose offers were rejected while the accepted driver
+  stays active. Closes the last backfill-only source in the Member Presence inventory. Best-effort —
+  a presence failure is reported and never breaks the offer or the acceptance. No schema, route, or
+  contract change.
+- 2026-08-03: **A completed ride can be recorded as ongoing without leaving TrustTransport.** The same
+  school run every week is one arrangement, not a stack of unrelated trips. The Tracking card now shows
+  the shared "Is this ongoing?" prompt (`components/shared/mark-recurring-control.tsx`) as soon as a
+  driver has accepted (a trip exists, so there is someone to name) and onward through completion,
+  pre-set to the service sector and to the member who drove. It hides itself once an arrangement with
+  that member exists. To name them, the requester's
+  request payload gained `tripProviderUserId`, selected from the existing LATERAL trip join and present
+  only once a trip exists — by which point the two are already paired and talking on the Direct Line, so
+  it reveals nothing they cannot already see. It creates the usual pending Recurring Activity row with
+  `origin_plugin = 'trust-transport'`; because TrustTransport already recognizes each completed trip, a
+  declared ServiceCredits value on one of these lines is recognized as a relationship rather than counted
+  twice. No schema or route-signature change.
 - 2026-08-02: **Deletion burn-down batch 4.** On account deletion, `trust_transport_status_events` and `trust_transport_proof_artifacts` rows you appear on are pseudonymized (actor/captured-by → `deleted_member`): events and proofs belong to the shared trip/request record that disputes rely on. `trust_transport_risk_signals` (abuse evidence) and `trust_transport_market_config` (admin-audited settings) are classified retained.
 - 2026-08-02: **Deletion burn-down batch 3: disputes classified as retained.** On account deletion, `trust_transport_disputes` is retained — the accountability record for value that moved between two members over a trip, matching the earnings-ledger policy already in the registry. The deletion contract already documented this; the registry entry makes the coverage gate see it. Caught by the deletion-coverage gate added in #2056.
 - 2026-08-02: **A departing member's id no longer survives on the other party's rows (owner

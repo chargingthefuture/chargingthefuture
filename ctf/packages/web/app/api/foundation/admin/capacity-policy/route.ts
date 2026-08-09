@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFoundationAdminAccess } from 'lib/foundation
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { getCapacityPolicy, insertFoundationAudit, updateCapacityPolicy } from 'lib/foundation/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export async function GET() {
   const gate = await requireFoundationAdminAccess();
@@ -17,7 +18,7 @@ export async function GET() {
     reportError(error, { area: 'foundation', op: 'admin_capacity_policy' });
     console.error('[Foundation] Capacity policy read failed:', error);
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Capacity policy unavailable.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: `Capacity policy unavailable: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -72,9 +73,9 @@ export async function PUT(request: Request) {
   let payload: CapacityPolicyPayload = {};
   try {
     payload = await request.json();
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: `Invalid JSON payload: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -113,7 +114,7 @@ export async function PUT(request: Request) {
     reportError(error, { area: 'foundation', op: 'admin_capacity_policy' });
     console.error('[Foundation] Capacity policy update failed:', error);
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Capacity policy update unavailable.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: `Capacity policy update unavailable: ${failureReason(error)}` },
       { status: 503 },
     );
   }

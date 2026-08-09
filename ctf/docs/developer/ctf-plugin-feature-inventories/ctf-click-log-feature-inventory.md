@@ -37,8 +37,10 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - Choose whether an incident is shared with the owner for trend tracking: a global "share new
   incidents by default" setting plus a per-incident override (in the log form and on each history
   row). Sharing is opt-in and off until the member turns it on, and can be turned off again per
-  incident at any time. Shared incidents contribute only coarse trend data (day, approximate area,
-  count) — never the note or exact location.
+  incident at any time. Shared incidents contribute only grouped trend data (day, approximate area,
+  count) — never the note or exact location. The member-facing copy says so in plain words: the
+  global default reads "only trend data — never your notes" and the per-incident checkbox reads
+  "only the date, rough area, and tags". Neither uses the word "coarse".
 
 ## 4. Admin Features
 
@@ -166,6 +168,130 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-07: **Recorded a further owner refinement to the pendulum comment (documentation
+  only).** The groundwork for turning someone into an operative is laid long before that person
+  knows anything is happening — the same con played on others is played on them. The windfall is
+  arranged to read as merit-based so the recruit believes they earned the scholarship, job, or
+  marriage themselves; by the time they are asked to participate they are already bound to the
+  network and dependent on it, and what bound them was built on the exploitation of others. The
+  merit story is the cover, the binding is the point — which is why a recruit's sincerity proves
+  nothing about whether the setup was real. Comment recorded in the pendulum block above
+  `windfall`/`jinx` in `lib/click-log/tags.ts`. No code behavior, schema, route, contract, or
+  public-list change.
+
+- 2026-08-07: **Two new scheme tags: Psyop Marketing and The Acquire and Fold, plus a
+  consolidation-of-power refinement to the pendulum comment (owner-named).** `psyop-marketing` —
+  a company the member has no tie to beyond being a customer runs marketing built to read as a
+  personal message to the member while staying deniable to everyone else; the pendulum aimed at a
+  business relationship instead of a personal one. Distinct from `thats-a-nice`, which is
+  individual strangers in person. `acquire-and-fold` — a business the member depends on is bought
+  and then closed (the owner's example: a meal-kit company they ordered from was acquired and shut
+  down), so the member cannot use that product anymore; no message is performed, the play is pure
+  removal of an option. The pendulum comment above `windfall`/`jinx` gained the owner's refinement
+  that the pendulum also runs against companies and resources, and that the deeper purpose is
+  consolidation of power: control all the people and resources around a target so leverage exists
+  to force or convince anyone to join, which removes autonomy from the member and from the
+  operatives alike. List-data only: no schema, route, contract, or UI change; the pickers and
+  trends consume the list generically. Public `/schemes` page on the landing site mirrors both
+  names in its own PR.
+
+- 2026-08-04: **Recorded a known taxonomy gap in the scheme tag list (documentation only).** The
+  owner observed that Color Sensitization is an individual tactic rather than a scheme, and the
+  observation holds list-wide: the entries are not all the same kind of thing. Some are operations
+  with an arc (setup, mechanism, intended end state — `poisoned-well`, `fake-job`, `jinx`,
+  `windfall`, `conspiracy-carousel`, `honey-pot`, `lure-to-location`, `staged-road-rage`,
+  `fabricated-flaw`, `scapegoating-by-proxy`). Some are ambient tactics with no arc, a standing
+  condition nobody is working to conclude (`color-sensitization`, `road-sensitization`,
+  `thats-a-nice`, `staged-narratives`). One is a shape over time rather than an act
+  (`performed-kindness`). This matters beyond naming because ambient tactics are near-continuous
+  and operations are episodic, so ranking tags by raw count places a daily-logged condition above a
+  quarterly operation — true and misleading at once. Deliberately not fixed: nothing consumes tag
+  type today and no logged data exists to distort, so a `kind` field now would be guessing at a
+  shape before seeing one. The trigger to add it is the first tag ranking on real data that
+  misleads; at that point add the field rather than reordering or renaming, since slugs are frozen.
+  Comment recorded above `CLICK_LOG_SCHEME_TAGS` in `lib/click-log/tags.ts`. No code behavior,
+  schema, route, contract, or public-list change.
+
+- 2026-08-04: **New scheme tag: Color Sensitization, plus a correction to The Warm Spell
+  (owner-named).** `color-sensitization` — the people around a member all start wearing the same
+  color, and it changes on a schedule; the cover story is a fashion trend. The owner reports this
+  runs simultaneously across targets who have no connection to each other, which no individual can
+  observe and which only appears in aggregate. That makes it the strongest candidate for showing
+  that cross-member trend reporting finds what one member cannot: several members in different
+  cities logging this tag in the same week is not what a real fashion trend produces. Distinct from
+  `thats-a-nice`, where strangers comment on what the member owns; here the display is on them.
+  The Warm Spell comment was also corrected: the warm phase is the setup for a positive-surface
+  scheme rather than a pause between attacks, so the dangerous moment is the middle of a warm
+  stretch and not its end. Recorded explicitly as the owner's observation of their own case and not
+  as a rule — the owner notes each target gets a variation, that whether the sequencing holds
+  generally is unclear, and that what they see driving the repetition is cost efficiency (reusing
+  plays is cheaper than bespoke operations per target) and plausible deniability. Related structural
+  note from the owner, recorded here rather than as a tag: which group puts a person on the list
+  differs between targets, but the other groups join in regardless, which is consistent with a
+  distributed network rather than one directing body. List-data only: no schema, route, contract, or
+  UI change. Landing `/schemes` mirror in a companion PR.
+
+- 2026-08-04: **New scheme tag: The Warm Spell (owner-named).** `performed-kindness` — weeks or
+  months of performed friendliness, then overt harassment resumes. The only scheme in the list
+  defined by its shape over time rather than by a single act, and separate from `good-cop-bad-cop`
+  on that basis: that one is two people working the same moment, this one is the whole environment
+  alternating and can be the same people doing both. Purpose per the owner: lower the member's
+  guard so new information can be collected, and keep them swinging between relief and dread.
+  Recorded alongside it: alternation is more destabilizing than constant hostility because constant
+  hostility becomes background a person adapts to, and the kind stretches damage the member's
+  ability to report the pattern at all, since bystanders get the line "they were nice to you last
+  month". List-data only: no schema, route, contract, or UI change. Landing `/schemes` mirror in a
+  companion PR.
+
+- 2026-08-04: **Four more scheme tags: The Poisoned Well and the luck-pendulum family (owner-named).**
+  `poisoned-well` — an easy-to-recruit newcomer is steered into the member's orbit, gossip about
+  that newcomer is staged within their earshot so it reads as coming from the member, and a second
+  operative then baits the member into saying something about them; the newcomer dislikes the
+  member before any real relationship exists. The owner's good-luck / bad-luck pendulum split into
+  two tags because the mechanism, tell, and outcome differ: `windfall` (sudden fortune lands on
+  someone near the member — scholarship, job, whirlwind marriage or baby — elevating them so they
+  read the member as incompetent, handing them fake friends and an ego boost, and seeding
+  insecurity in the member; a flattered person converts easily; distinct from `honey-pot`, where
+  the romance targets the member directly) and `jinx` (someone near the member is hit with a
+  ticket, crash, theft, or repair bill and is then told the member's presence caused it — cause the
+  problem, sell the story, break the tie, isolate the member). `fake-job` — a job offer good enough
+  to leave the current one for, then a firing shortly after, leaving the target without the old job
+  and further from a better one; aimed at the member directly or at someone near them. List-data
+  only: no schema, route, contract, or UI change. The landing `/schemes` page gains matching
+  entries in a companion PR.
+
+- 2026-08-04: **Four new scheme tags: The Pot and Kettle plus three vehicle schemes (owner-named).**
+  `pot-and-kettle` — the insult is delivered by someone who visibly embodies it (a fat person
+  calling the member fat, a disabled person mocking a disability), made obnoxiously inappropriate
+  on purpose; it forces the operative to live a lie while still aiming at the member's self-esteem.
+  Sibling of `fabricated-flaw` but distinct: fabricated = the flaw is invented, projected = the
+  insulter contradicts their own insult. The owner's car material split into three tags so trend
+  data can tell the plays apart: `staged-road-rage` (a cyclist or pedestrian cuts in front at the
+  last moment — usually a pump fake, sometimes a real strike — to provoke a filmed reaction used
+  as recruiting material), `insurance-bleed` (repeated strikes on the member's car so premiums
+  climb until they bleed money or cannot stay insured), and `road-sensitization` (high beams,
+  brake checks, cars pacing or boxing them in, so every drive becomes something to second-guess).
+  Recorded in `tags.ts` as context but deliberately not a tag: the owner reports that killing a
+  Target in a motor-vehicle "accident" is the most common plausible-deniability murder. List-data
+  only: no schema, route, contract, or UI change — pickers, validation, and trends read the
+  canonical list. The landing `/schemes` page gains matching entries in a companion PR.
+
+- 2026-08-03: **New scheme tag: The Fabricated Flaw (owner-named).** Added slug `fabricated-flaw`
+  to `CLICK_LOG_SCHEME_TAGS` — staged criticism of an invented flaw, timed to be absurd, meant to
+  sensitize the member into self-criticism and to capture audio of the remark so uninvolved
+  operatives believe the "problem" is real and recurring. First scheme named through the
+  ClickLog-era flow (Discourse stays deprecated). List-data only: no schema, route, contract, or
+  UI change — the pickers, validation, and trends pick the new slug up from the canonical list.
+  The landing `/schemes` page gains the matching entry in a companion landing-page PR.
+
+- 2026-08-03: **Dropped the word "coarse" from the sharing copy.** "Coarse" is a technical term for
+  data that has been rounded off and grouped; a member reading the sharing checkbox has no way to
+  know that, and the word can be read as "rude". The two member-facing sharing controls now name
+  what is actually sent: the per-incident checkbox reads "Share this incident with the owner (only
+  the date, rough area, and tags)" and the global default reads "Share new incidents with the owner
+  by default (only trend data — never your notes)" (owner-set wording). The owner
+  trends dashboard blurb says "Grouped data only" instead of "Coarse data only". Copy only — no
+  change to what is shared, to any route, schema, or contract.
 - 2026-08-03: **"Not listed" scheme-suggestion intake + naming pipeline (owner request).** The
   catch-all scheme tag's label changed "Other / not named yet" → "Not listed" (slug `other-scheme`
   frozen; the landing `/schemes` mirror is renamed in a companion landing-page PR). Picking it now

@@ -6,6 +6,7 @@ import { ShieldOff, Trash2 } from 'lucide-react';
 import type { SpamQuoraUrlEntry } from 'lib/unlock/types';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens } from './unlock-shared';
+import { failureText } from 'lib/errors/client-failure';
 
 // Admin panel: view and remove entries on the persistent spam Quora-URL denylist. Marking a submission
 // spam records its normalized URL here so the same Quora account is auto-blocked on re-submission (even
@@ -38,8 +39,8 @@ export function UnlockSpamDenylistPanel({ initialEntries }: { initialEntries: Sp
       setConfirmUrl(null);
       setEntries((prev) => prev.filter((e) => e.quoraProfileUrlNormalized !== normalized));
       router.refresh();
-    } catch {
-      setError('Network error. Try again.');
+    } catch (caught) {
+      setError(failureText(caught, { area: 'unlock', op: 'remove', fallback: 'Network error. Try again.' }));
     } finally {
       setBusyUrl(null);
     }

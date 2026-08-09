@@ -160,15 +160,25 @@ can't also request stays (hosting and seeking are separate accounts). There is n
 save a seeker profile that the server would reject.
 **Result:** web ☐ mobile ☐ — notes:
 
-### LH-8 · Block a user (safety)
+### LH-8 · Block a host from their listing (safety)
 **Role:** member · **Surfaces:** all
 **Steps:**
-1. Block another seeded user.
-2. List your blocks, then remove the block.
-3. Attempt to block yourself.
-**Expected:** Block create/list/remove all work. A self-block is refused with a readable message.
-Where applicable, a blocked pair cannot send a match request to each other.
+1. Open a listing that is not yours and press **Block member** at the bottom of the listing card.
+   Confirm in the dialog, leaving the safety-report checkbox off.
+2. You are returned to Browse. Look for that host's listings.
+3. Open `/account/blocks` and check the host is in the list. Unblock them there.
+4. Go back to LightHouse, refresh Browse, and try **Request to stay** on that host's listing.
+**Expected:** Blocking returns you to Browse and the host's listings are gone from the list. The host
+appears on the blocked-members page and can be unblocked there. After unblocking, their listings come
+back on a refresh and a stay request works normally. While the block is in place, a stay request
+between the two of you is refused from either side, and the refusal reads "This listing is not
+available to you." — it must never say or hint that a block exists, because the person who was
+blocked is never told.
 **Result:** web ☐ mobile ☐ — notes:
+
+Note: LightHouse has no block list of its own. Blocking is one product-wide thing — the same block
+used everywhere else in the app — so the list of who you have blocked lives at `/account/blocks`, not
+inside LightHouse.
 
 ### LH-9 · Refresh re-pulls listings without reopening the app
 **Role:** member · **Surfaces:** all
@@ -204,6 +214,27 @@ is down at delete time, the deletion still succeeds and the failure is logged fo
 
 ---
 
+### LH-R1 — Record an accepted match as ongoing housing
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in as either side of a LightHouse match the host has accepted. Also have one match still pending.
+
+**Steps:**
+1. Open the Matches tab.
+2. Look at the accepted match card, then at the pending one.
+3. On the accepted card, click "Is this ongoing?", pick a cadence, and record it.
+
+**Expected:**
+- The prompt appears on the accepted match and NOT on the pending one, and is absent altogether if an arrangement with that member is already recorded.
+- The other side of the match is already filled in — no member search.
+- With a money currency chosen there is no amount field; the panel says only that this happens and how often.
+- After recording, the card shows "Recorded — waiting for … to confirm it." with a link to the Recurring Activity hub, and the row appears there marked "Recorded from LightHouse", awaiting the other member.
+
+Result: web ☐
+
+---
+
 ## Admin walkthrough
 
 ### LH-A1 · Admin stats and tables
@@ -236,10 +267,11 @@ write is CSRF-guarded and the change is reflected in the list.
 ### LH-A4 · Audit trail
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
-1. After doing a block create/remove (LH-8) and a match update (LH-A2), open the admin audit-events
-   list.
+1. After doing a match request (LH-4) and a match update (LH-A2), open the admin audit-events list.
 **Expected:** The audit list shows rows for those actions with actor, command, and a policy status of
-allow or deny. A denied action (e.g. a self-block) records a `deny` entry, not only successes.
+allow or deny. A denied action (e.g. a second request for the same listing) records a `deny` entry,
+not only successes. Blocks are not in this list — a block is the member's own private boundary and is
+never shown to an admin unless they also filed a safety report.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---
@@ -270,10 +302,10 @@ of these, it is already tracked, not a new bug:
 
 - Host-profile deletion for linked properties/matches uses a defensive cascade documented in code, not
   yet promoted to an explicit deletion contract.
-- Block flow policy errors are handled inline; a shared block error-code contract has not been
-  published.
 - LightHouse uses shared platform rate-limit defaults; a plugin-specific rate-limit and anti-scraping
   contract is a known follow-up.
+- A match that was already accepted keeps its chat thread even if one side later blocks the other. A
+  block stops new stay requests and hides listings; it does not close an existing conversation yet.
 
 ## Recurring rent is captured elsewhere (2026-07-04, issue #885)
 

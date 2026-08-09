@@ -4,6 +4,7 @@ import { createMessage, insertPeerProgrammingAudit, isCohortEnded, isCohortMembe
 import { PEER_PROGRAMMING_ERROR_CODE, PEER_PROGRAMMING_MAX_MESSAGE_LENGTH } from 'lib/peer-programming/constants';
 import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type CreateMessageBody = {
   cohortId?: string;
@@ -20,8 +21,8 @@ async function parseCreateMessageBody(request: Request): Promise<ParsedMessageBo
   let body: CreateMessageBody;
   try {
     body = (await request.json()) as CreateMessageBody;
-  } catch {
-    return { ok: false, response: NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: 'Invalid JSON body.' }, { status: 400 }) };
+  } catch (error) {
+    return { ok: false, response: NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 }) };
   }
 
   if (!body.cohortId || !body.body) {

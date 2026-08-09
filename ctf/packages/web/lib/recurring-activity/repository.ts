@@ -2,6 +2,9 @@ import { queryDb } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
 import type { Currency } from 'lib/currency/types';
 import { SERVICE_CREDITS_CODE } from './constants';
+import {
+  RECURRING_ACTIVITY_ORIGIN_PLUGINS,
+} from './types';
 import type {
   CreateRecurringActivityInput,
   RecurringActivity,
@@ -26,11 +29,12 @@ interface RecurringActivityRow {
   ended_by_user_id: string | null;
   created_at: Date;
   updated_at: Date;
+  origin_plugin: string | null;
 }
 
 const SELECT_COLUMNS = `id, owner_user_id, counterparty_user_id, sector, currency_code, cadence,
   sc_value::text AS sc_value, status, visibility, confirmed_at, ended_at, ended_by_user_id,
-  created_at, updated_at`;
+  created_at, updated_at, origin_plugin`;
 
 function mapRow(row: RecurringActivityRow): RecurringActivity {
   return {
@@ -48,6 +52,7 @@ function mapRow(row: RecurringActivityRow): RecurringActivity {
     endedByUserId: row.ended_by_user_id,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
+    originPlugin: row.origin_plugin,
   };
 }
 
@@ -125,6 +130,45 @@ function resolveScValue(currency: Currency, scValue: number | null | undefined):
   return null;
 }
 
+// The app the declaration came from, or null for the Recurring Activity plugin's own form. An
+// unrecognized slug is rejected rather than stored: origin_plugin decides how GDP recognizes the line,
+// so a client must not be able to put an arbitrary value there.
+function resolveOriginPlugin(originPlugin: string | null | undefined): string | null {
+  if (originPlugin === undefined || originPlugin === null || originPlugin === '') {
+    return null;
+  }
+  if (!RECURRING_ACTIVITY_ORIGIN_PLUGINS.includes(originPlugin)) {
+    throw new RecurringActivityValidationError('Unknown originPlugin.');
+  }
+  return originPlugin;
+}
+
+/**
+ * Is this counterparty a real member? Inventory gap #3: the schema only guarded against naming
+ * yourself, so a client could name any string and it would be stored. Now that the prompt appears in
+ * five apps rather than one picker, the id arrives from more places and is worth checking.
+ *
+ * Deliberately permissive — it rejects only an id that NOTHING on the platform knows about. `users`
+ * does not exist in every environment (it is not in schema.sql; see countTotalMembers), so the check
+ * asks three sources and accepts a match from any: a claimed directory profile, a recorded sign-in, or
+ * the accounts table where it exists. A member who has signed in even once is known, so this cannot
+ * reject a legitimate arrangement while still refusing an invented id.
+ */
+async function counterpartyIsAMember(userId: string): Promise<boolean> {
+  const result = await queryDb<{ known: boolean }>(
+    `SELECT (
+       EXISTS (SELECT 1 FROM directory_profiles WHERE claimed_by_user_id = $1)
+       OR EXISTS (SELECT 1 FROM login_events WHERE user_id = $1)
+       OR (
+         to_regclass('public.users') IS NOT NULL
+         AND EXISTS (SELECT 1 FROM users WHERE id = $1)
+       )
+     ) AS known`,
+    [userId],
+  );
+  return result.rows[0]?.known === true;
+}
+
 // Create a pending recurring activity declared by the owner. Validates: no self-activity, a real
 // active currency, and that a ServiceCredits value (if any) is present only for SC lines. Fiat lines
 // never carry an amount — the value firewall is enforced here, not just in the UI.
@@ -136,15 +180,24 @@ export async function createRecurringActivity(input: CreateRecurringActivityInpu
     throw new RecurringActivityValidationError('Unknown or inactive currency.');
   }
 
+  // A failed lookup must not block a real member from recording an arrangement, so an unreadable
+  // check is treated as "known" — the guard exists to refuse an invented id, not to add a new way for
+  // the feature to break.
+  const counterpartyKnown = await counterpartyIsAMember(counterpartyUserId).catch(() => true);
+  if (!counterpartyKnown) {
+    throw new RecurringActivityValidationError('That member could not be found.');
+  }
+
   const scValue = resolveScValue(currency, input.scValue);
   const visibility: RecurringActivityVisibility = input.visibility ?? 'private';
+  const originPlugin = resolveOriginPlugin(input.originPlugin);
 
   const result = await queryDb<RecurringActivityRow>(
     `INSERT INTO recurring_activities
-       (owner_user_id, counterparty_user_id, sector, currency_code, cadence, sc_value, visibility, status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+       (owner_user_id, counterparty_user_id, sector, currency_code, cadence, sc_value, visibility, status, origin_plugin)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8)
      RETURNING ${SELECT_COLUMNS}`,
-    [ownerUserId, counterpartyUserId, input.sector, currency.code, input.cadence, scValue, visibility],
+    [ownerUserId, counterpartyUserId, input.sector, currency.code, input.cadence, scValue, visibility, originPlugin],
   );
   return mapRow(result.rows[0]);
 }

@@ -5,6 +5,7 @@ import { CheckCircle2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { CountrySelect } from "@/components/shared/location-select";
 import { getLighthouseTokens, type Profile } from "./shared";
+import { failureText } from 'lib/errors/client-failure';
 
 // Seeker self-service setup. A member fills in their housing needs here so they can request a stay
 // on a listing. Saving upserts the shared lighthouse_profiles row via POST /api/lighthouse/profile.
@@ -144,8 +145,8 @@ export function LighthouseSeekerProfile() {
         return;
       }
       setSaved(true);
-    } catch {
-      setError("Could not save your details. Please try again.");
+    } catch (caught) {
+      setError(failureText(caught, { area: 'lighthouse', op: 'submit', fallback: "Could not save your details. Please try again.", audience: 'member' }));
     } finally {
       setSubmitting(false);
     }

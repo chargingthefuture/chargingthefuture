@@ -4,6 +4,7 @@ import { SKILLS_TAXONOMY_ERROR_CODE } from 'lib/skills-taxonomy/constants';
 import { createSkill, listSkills, validateSkillCreateInput } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type SkillCreateBody = {
   jobTitleId?: unknown;
@@ -84,7 +85,7 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to list skills.' },
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: `Unable to list skills: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -104,9 +105,9 @@ export async function POST(request: Request) {
   let body: SkillCreateBody;
   try {
     body = (await request.json()) as SkillCreateBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }

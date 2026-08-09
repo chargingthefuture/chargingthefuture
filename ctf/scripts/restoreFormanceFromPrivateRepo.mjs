@@ -153,7 +153,7 @@ async function main() {
     console.error('Restore failed:', err instanceof Error ? err.message : err);
     process.exit(1);
   } finally {
-    try { unlinkSync(safePath); } catch {}
+    try { unlinkSync(safePath); } catch { /* no-trace: the temporary file is already gone */ }
   }
 }
 

@@ -48,13 +48,13 @@ export function UnlockStatusCard({
         {status === "approved" && (
           <div style={{ padding: "14px", borderRadius: 12, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20`, textAlign: "center" }}>
             <div style={{ fontSize: 28 }}>🎉</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: t.ACCENT, marginTop: 6 }}>Welcome to the Survivor Hub!</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: t.ACCENT, marginTop: 6 }}>Welcome to Skills Economy (SE)</div>
             <div style={{ fontSize: 13, color: t.MUTED, marginTop: 4 }}>Your profile has been verified. All features are now unlocked.</div>
             <div style={{ fontSize: 12, color: t.MUTED, marginTop: 10, lineHeight: 1.5 }}>
               Your ServiceCredits reward is issued automatically and arrives within {UNLOCK_REWARD_SLA_HOURS} hours, if not sooner.
             </div>
-            <a href="/apps" style={{ marginTop: 12, padding: "10px 24px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
-              Continue to Hub <ChevronRight size={14} />
+            <a href="/" style={{ marginTop: 12, padding: "10px 24px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
+              Continue to the Commons <ChevronRight size={14} />
             </a>
           </div>
         )}

@@ -336,6 +336,6 @@ export async function markFirstVisitNoticeSeen(userId: string): Promise<void> {
       [userId, COMMONS_FIRST_VISIT_NOTICE_KEY],
     );
   } catch {
-    // Deliberately swallowed — see above.
+    // no-trace: deliberately swallowed, for the reason given above.
   }
 }

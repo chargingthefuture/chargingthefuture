@@ -4,6 +4,7 @@ import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { createConnectionThread, insertFoundationAudit } from 'lib/foundation/repository';
 import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type CreateThreadInput =
   | { ok: true; providerId: string; idempotencyKey: string }
@@ -15,11 +16,11 @@ async function readCreateThreadInput(request: Request): Promise<CreateThreadInpu
   let payload: { providerId?: string; idempotencyKey?: string } = {};
   try {
     payload = await request.json();
-  } catch {
+  } catch (error) {
     return {
       ok: false,
       response: NextResponse.json(
-        { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.' },
+        { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.', reason: failureReason(error) },
         { status: 400 },
       ),
     };
@@ -65,6 +66,14 @@ function mapCreateThreadError(error: unknown): NextResponse {
   if (code === 'policy_denied') {
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.policyDenied, message: 'Connection request denied by policy.' },
+      { status: 403 },
+    );
+  }
+
+  // Neutral copy on purpose (mirrors LightHouse): a block must not reveal itself to the blocked person.
+  if (code === 'blocked_pair') {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.policyDenied, message: 'This provider is not available to you.' },
       { status: 403 },
     );
   }

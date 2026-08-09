@@ -4,6 +4,7 @@ import { CheckCircle } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getTrustTransportTokens, rideTypeName, type RideType } from "./tt-shared";
 import { CurrencySelect } from "@/components/shared/currency-select";
+import { AcceptedCurrencyPicker } from "@/components/shared/accepted-currency-picker";
 import type { Currency } from "lib/currency/types";
 
 interface BookTabProps {
@@ -19,6 +20,9 @@ interface BookTabProps {
   requiresAmount: boolean;
   onPriceCurrency: (code: string, currency: Currency | null) => void;
   onPriceAmount: (v: string) => void;
+  // Split settlements: every currency the requester accepts, independent of the single settlement.
+  acceptedCurrencies: string[];
+  onToggleAcceptedCurrency: (code: string) => void;
   bookingError: string | null;
   booked: boolean;
   submitting: boolean;
@@ -55,7 +59,7 @@ function BookSubmitButton({ name, submitting, hasValidAmount, onBook }: { name: 
 }
 
 export function TrustTransportBookTab(props: BookTabProps) {
-  const { rideTypes, rideType, onRideType, from, to, onFrom, onTo, priceCurrency, priceAmount, requiresAmount, onPriceCurrency, onPriceAmount, bookingError, booked, submitting, onBook, onReset } = props;
+  const { rideTypes, rideType, onRideType, from, to, onFrom, onTo, priceCurrency, priceAmount, requiresAmount, onPriceCurrency, onPriceAmount, acceptedCurrencies, onToggleAcceptedCurrency, bookingError, booked, submitting, onBook, onReset } = props;
   const { theme } = useTheme();
   const t = getTrustTransportTokens(theme);
   const name = rideTypeName(rideTypes, rideType);
@@ -113,6 +117,12 @@ export function TrustTransportBookTab(props: BookTabProps) {
               style={{ width: "100%", padding: "14px 16px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, borderRadius: 12, fontSize: 14, color: t.TEXT, outline: "none", boxSizing: "border-box" }}
             />
           )}
+          <AcceptedCurrencyPicker
+            accepted={acceptedCurrencies}
+            onToggle={onToggleAcceptedCurrency}
+            hint="Choose every currency this ride accepts — e.g. check ServiceCredits and United States Dollar if you would settle part in each. This is separate from the settlement above."
+            colors={{ text: t.TEXT, muted: t.MUTED, border: t.BORDER_STRONG, accent: t.ACCENT }}
+          />
         </div>
 
         {bookingError && <div style={{ fontSize: 13, color: "#EF4444" }}>{bookingError}</div>}

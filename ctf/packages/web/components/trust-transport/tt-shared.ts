@@ -53,6 +53,8 @@ export interface TripRequest {
   status?: string;
   priceCurrency?: string | null;
   priceAmount?: number | null;
+  // Every currency the requester accepts (split settlements), ServiceCredits first.
+  acceptedCurrencies?: string[];
   createdAt?: string;
   // The trip id once an offer has been accepted. Chat is keyed by trip id, so opening chat needs this
   // (a request id is not a trip id). Null/absent until a trip exists.
@@ -60,6 +62,8 @@ export interface TripRequest {
   // The underlying trip's own status. Needed because `status` above already reads "completed" once the
   // trip reaches "delivered" — before mutual completion confirmation (and settlement) actually happens.
   tripStatus?: string | null;
+  // The member who drove/delivered, once a trip exists. Used to offer recording a regular ride.
+  tripProviderUserId?: string | null;
   requesterCompletionConfirmedAtIso?: string | null;
   providerCompletionConfirmedAtIso?: string | null;
 }
@@ -120,6 +124,8 @@ export interface AvailableRequest {
   mode?: string;
   priceCurrency?: string | null;
   priceAmount?: number | null;
+  // Accepted settlement currencies, so a driver sees a split offer (e.g. ServiceCredits + USD) whole.
+  acceptedCurrencies?: string[];
   createdAtIso?: string;
 }
 

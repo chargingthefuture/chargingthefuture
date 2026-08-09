@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { Bath, Bed, Calendar, CheckCircle2, Home, MapPin, Pencil, UserRoundPlus } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { BlockMemberButton } from "@/components/blocks/block-member-button";
 import { acceptedCurrencyLabels, formatRentParts, getLighthouseTokens, listingAcceptsCredits, type CurrencyMap, type LighthouseTokens, type Property } from "./shared";
+import { failureText } from 'lib/errors/client-failure';
 
 // The chips row under the title: property type, location, and a credits flag when accepted.
 function ListingBadges({ l, t }: { l: Property; t: LighthouseTokens }) {
@@ -84,6 +86,7 @@ export function LighthousePropertyDetail({
   onEdit,
   onRequested,
   onNeedsProfile,
+  onBlocked,
 }: {
   property: Property;
   currencies: CurrencyMap;
@@ -96,6 +99,9 @@ export function LighthousePropertyDetail({
   // Called when the member has no active seeker profile yet, so the shell can send them to the
   // "Your details" tab to set one up before requesting.
   onNeedsProfile?: () => void;
+  // Called after the host is blocked, so the shell can re-read the listings — a blocked host's
+  // places are left out of browse. Optional so the detail view still renders without it.
+  onBlocked?: () => void;
 }) {
   const l = property;
   const isOwn = !!currentUserId && property.hostUserId === currentUserId;
@@ -130,12 +136,26 @@ export function LighthousePropertyDetail({
                   <button onClick={() => onEdit(property)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#0F1117", fontWeight: 800, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Pencil size={14} /> Edit listing</button>
                 </>
               ) : (
-                <RequestToStay
-                  property={property}
-                  t={t}
-                  onRequested={onRequested}
-                  onNeedsProfile={onNeedsProfile}
-                />
+                <>
+                  <RequestToStay
+                    property={property}
+                    t={t}
+                    onRequested={onRequested}
+                    onNeedsProfile={onNeedsProfile}
+                  />
+                  {/* The listing is where a seeker actually meets a host, so it is where blocking
+                      belongs. This is the shared product-wide block (POST /api/account/blocks), not
+                      a LightHouse-only one: once blocked, the host's listings drop out of browse and
+                      neither person can request or accept a stay with the other. Going back to the
+                      list re-reads the listings so the blocked host's places disappear. */}
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${t.BORDER}`, display: "flex", justifyContent: "center" }}>
+                    <BlockMemberButton
+                      targetUserId={property.hostUserId}
+                      onBlocked={onBlocked}
+                      style={{ width: "100%", justifyContent: "center" }}
+                    />
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -267,8 +287,8 @@ function RequestToStay({
         return;
       }
       setError(data.message ?? "Could not send your request. Please try again.");
-    } catch {
-      setError("Could not send your request. Please try again.");
+    } catch (caught) {
+      setError(failureText(caught, { area: 'lighthouse', op: 'submit', fallback: "Could not send your request. Please try again.", audience: 'member' }));
     } finally {
       setSubmitting(false);
     }

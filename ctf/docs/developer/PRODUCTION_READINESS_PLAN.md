@@ -646,3 +646,71 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   `member.safety-report.create` / `admin.safety-report.list` / `admin.safety-report.review` command
   and access-policy contracts and updated the profile/deletion contract. Android parity deferred
   (Parity Ticket #809). Owner-review lane.
+- 2026-08-03: **Verbose error handling is now a written rule with a CI gate, and every API route in the
+  app was brought up to it** (owner directive after an opaque "Broadcast input unavailable." blocked a
+  go-live with nothing to act on; the owner's point was that this had been asked for since the start of
+  v3 and kept slipping). Cross-cutting, all plugins, no schema/contract/route change.
+  - New rule `.claude/rules/137-verbose-error-handling-rules.mdc`: never discard the caught value; every
+    5xx reports the error; operator surfaces (admin / internal / cron) carry the underlying reason in the
+    message a person reads; member-facing surfaces keep plain copy plus a `code` and a short `reference`;
+    each step of a multi-step handler names itself; bookkeeping (audit rows, notices) never fails the
+    action; upstream text is passed through truncated and never secret.
+  - New shared helper `ctf/packages/web/lib/errors/failure.ts` — `failureResponse` (reports and answers
+    in one call, with a `reference` in both), `failureReason`, `withReason`.
+  - New gate `ctf/scripts/check-error-verbosity.mjs` (`pnpm --dir ctf run check:error-verbosity`, job
+    **Error Verbosity Gate** in `ci.yml`, required by Quality Gates). It fails on an answering `catch`
+    with no binding, a 5xx that never reports, and an operator message with no reason.
+  - Burn-down: the gate found **235 opaque error paths across 179 route files**. All 235 are fixed in
+    this change, so `ctf/config/error-verbosity-allowlist.json` ships **empty** — the list exists only so
+    a future exception is recorded rather than hidden, and it may only shrink.
+  - Shape of the fix: an operator message now reads `Could not update the marker: <reason>`; a
+    member-facing caller-input failure (a malformed request body) keeps its copy and gains a
+    machine-readable `reason` field; a member-facing 5xx reports the error instead of dropping it. No
+    member-facing copy was rewritten.
+  - Not covered yet (follow-up): client shells that replace a route's `message` with their own fallback
+    string, and the same standard for non-route server code (`lib/**`, scripts, the mobile app). The gate
+    scans `ctf/packages/web/app/api/**/route.ts` only.
+- 2026-08-03: **Closed the client-side half of verbose error handling** (rule 137, follow-up 1 of 2 from
+  the entry above; owner asked for the screens first). A route that explains itself is worth nothing if
+  the screen replaces the explanation with its own fallback sentence — which is where the reason was
+  disappearing a second time. Cross-cutting, 25 screens/panels/hooks, no schema/contract/route change.
+  - Rule 137 gained points 8–12 for client surfaces: show what the route said; a caught value on a screen
+    is still reported; operator screens name the reason and member screens do not; show a `reference`
+    when the response carries one; and not every string literal is a message (a state machine and a
+    local validation of the person's own input are handled differently).
+  - New helper `ctf/packages/web/lib/errors/client-failure.ts` — `responseFailureText` (what the route
+    said, falling back to the screen's sentence, with the `reference` appended), `failureText` (report
+    the caught value and return the text to show), `reasonText` (the reason with nothing reported, for a
+    local parse of the person's own input). Import-safe from a component; the server helper imports
+    `next/server` and must not be used from one.
+  - The gate now scans screens and hooks too and fails on: a `!res.ok` branch that shows a fixed string
+    instead of the route's message, and a `catch` that shows a fixed string and never uses the caught
+    value. It found **49 sites across 25 files** — all fixed here, so the burn-down list stays empty.
+  - Audience split, so no member-facing copy changed: 13 member screens keep their exact sentence and
+    send the reason to the error report; admin panels append the reason. Two sites were hand-corrected
+    rather than swept — `foundation-call-alerts` (its `setStatus` drives a state machine, so it reports
+    and keeps the fixed status) and `sca-treasury-panel` (a JSON textarea the admin typed, so it shows
+    the parse reason and reports nothing).
+  - Next (follow-up 2 of 2): the same standard outside route handlers — `lib/**`, `ctf/scripts/**`, and
+    the mobile app.
+- 2026-08-03: **Closed the last surface for verbose error handling** (rule 137, follow-up 2 of 2): the
+  code that is neither a route handler nor a screen — the web server libraries, the operational scripts,
+  the shared packages, and the native app's own modules. Cross-cutting, no schema/contract/route change.
+  - Rule 137 gained points 13–15: a catch that does work records the reason (`reportError` in
+    `web/lib/**` and the native app, `console.error` in a script — a script that fails silently and exits
+    0 is the worst case for anyone debugging it); a catch whose whole body is one `return` or one
+    assignment is fine as it is, because producing the alternative value is its job and the caller sees
+    it; and an empty catch must state why in the code as `no-trace: <reason>`, so a deliberate silence is
+    visible and greppable instead of invisible. A bare `// ignore` no longer passes.
+  - **The native app had no error reporting at all** for caught failures. Added
+    `ctf/packages/mobile/src/observability/report.ts` (`reportError` + `reasonText`) alongside the
+    existing Sentry init: a log line always, Sentry when a DSN is configured. Nine silent failures now
+    report, including a failed token refresh that signed the member out with no trace, a bug report whose
+    submission failed silently, and the Chyme back-channel join.
+  - The gate covers all three surfaces and found **82 sites**; all are resolved — the ones that were
+    hiding a real failure now report it, and the deliberate ones (releasing a client that is already
+    gone, a share sheet the member dismissed, a temporary file already deleted, the Stream
+    create-or-watch idiom) carry a stated `no-trace:` reason. The burn-down list stays empty.
+  - Two gate refinements while measuring: a catch whose body is a single return/assignment is exempt
+    (that is the fallback being the answer, not a hidden failure), and the statement split ignores
+    semicolons inside strings.

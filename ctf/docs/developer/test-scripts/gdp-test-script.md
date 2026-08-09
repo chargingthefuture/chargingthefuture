@@ -36,6 +36,8 @@
 
 5. **No currency symbol on the Community Value Index.** The hero figure on the dashboard has no `$`, `€`, or other currency prefix. web ☐
 
+6. **Projected figure stays out of the index.** In the `GET /api/gdp/report/current` body, any projected value appears only inside the `projection` object; the `metrics` array contains no projected row. If the community has open posts, a "Value waiting to happen" panel renders below the hero, visually apart from it. web ☐
+
 ---
 
 ## Member walkthrough
@@ -50,11 +52,13 @@
 1. Look at the hero section of the dashboard.
 2. Confirm a "Members" count tile is shown.
 3. Confirm no "Active · 7d" tile appears anywhere on the page (it was removed 2026-07-11).
+4. Read the small line directly under the big headline figure.
 
 **Expected:**
 - One hero tile labeled "Members" shows a whole number greater than zero.
 - The weekly-active-members tile is absent.
 - No mock or placeholder numbers (e.g. "1,234,567") appear — the count matches what the Directory shows for total active members.
+- The line "Cumulative since June 12, 2026" appears directly under the headline Community Value Index figure (added 2026-08-06: the index is all-time from the soft launch date, never a yearly figure).
 
 Result: web ☐
 
@@ -254,6 +258,71 @@ Result: web ☐
 
 ---
 
+### GDP-12 — "Value waiting to happen" is separate from the Community Value Index
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Seed run. Signed in. At least one open post exists that carries a value — an open TrustTransport request with a price type chosen, a Foundation quote a provider has answered but nobody has closed, an unexpired SocketRelay favor, or a recurring activity awaiting confirmation. Note the hero index figure before you start.
+
+**Steps:**
+1. On `/apps/gdp`, look below the hero for the "Value waiting to happen" panel.
+2. Read its figure, its open-post count, and the italic sentence under them.
+3. Compare the panel's figure with the hero's Community Value Index figure.
+4. Complete or close one of the open posts (for example, close a SocketRelay favor successfully), then refresh `/apps/gdp`.
+5. In DevTools, look at the `GET /api/gdp/report/current` response body.
+
+**Expected:**
+- The panel is visually apart from the hero (dashed border, muted surface) and never sits inside it.
+- The panel figure carries no `$`, `€`, or other currency symbol.
+- The sentence says the number is what open posts would add if they all closed, that most posts never close, and that it is not part of the Community Value Index and is not money.
+- The hero index figure does **not** include the projected number — the two figures move independently.
+- After a post closes, the projected figure goes down and the hero index goes up. The post is never counted in both at once.
+- A post that names an offered value moves both figures by that value, not by 1 — a SocketRelay favor offering 15 ServiceCredits adds 15 to "Value waiting to happen" while open and 15 to the hero index when it closes successfully. A post with no named value (or Free/Barter) moves each figure by one point.
+- In the response body, the projected number appears only under `projection`; the `metrics` array contains no `gdp_projected_value_index` row and no projected value.
+- Each per-app row shows a count of posts still open, and rows with nothing open are not listed.
+
+Result: web ☐
+
+---
+
+### GDP-13 — A LightHouse home moves from projected to recognized when a host accepts
+
+**Role:** member
+**Surfaces:** web (desktop)
+**Precondition:** Seed run. An active LightHouse listing with a monthly rent set (say 1,200 USD) and no accepted match. A seeker account able to request a stay, and the host account able to accept. Note the hero index figure and the projected figure before you start.
+
+**Steps:**
+1. On `/apps/gdp`, note the "LightHouse homes still available" row in the projected panel and the hero index figure.
+2. As the seeker, request a stay at that listing. Refresh `/apps/gdp`.
+3. As the host, accept the request. Refresh `/apps/gdp` again.
+
+**Expected:**
+- Before the request: the listing contributes one month of its rent (1,200 for a 1,200/month home) to the projected figure — not several months, and not the yearly total.
+- After the request but before acceptance: the projected figure is unchanged. A pending request does not add anything; the home was already counted once.
+- After the host accepts: the listing leaves the projected figure and the hero Community Value Index rises by the same one month. The home is counted in exactly one figure at each point, never both.
+- The hero index does not keep rising on later refreshes — one month is recognized per arrangement, not one per visit or per month elapsed.
+
+Result: web ☐
+
+---
+
+### GDP-14 — The projected panel disappears when nothing is open
+
+**Role:** member
+**Surfaces:** web (desktop)
+**Precondition:** A database (or fixture) where every TrustTransport request is completed/canceled, every Foundation quote is closed, every SocketRelay favor is closed or expired, and no recurring activity is pending.
+
+**Steps:**
+1. Load `/apps/gdp` and scan the area under the hero.
+
+**Expected:**
+- No "Value waiting to happen" panel appears at all — not an empty panel, not a zero, not a dash.
+- The rest of the dashboard renders normally.
+
+Result: web ☐
+
+---
+
 ## Admin walkthrough
 
 The GDP admin was retired 2026-07-11 (weekly publications, currency-rate management). There is no live admin UI for this plugin. The cases below verify the retirement is complete and that the built-in weights require no admin action.
@@ -335,6 +404,14 @@ The member count shown on the GDP dashboard must equal the member count shown in
 
 Pulled from §9 of the feature inventory:
 
+0. **The weekly community-stats draft reports both index figures, but is not member-testable here.**
+   The Monday community-stats draft issue (label `community-stats`, generated by
+   `ctf/scripts/generate-community-stats.mjs`) includes the real Community Value Index and the
+   projected "value waiting to happen" figure, computed from the same shared source SQL and weights
+   the dashboard uses (`ctf/scripts/lib/gdpValueIndex.mjs`). It runs from a scheduled GitHub Action
+   against the production database, so there is no in-app surface to test; sanity-check it by
+   comparing the two numbers in the next draft issue against the `/apps/gdp` dashboard on the same
+   day (they should match to rounding). Not a member-facing test.
 1. **Metric ownership roster not surfaced.** Ownership assignments for economics metrics are documented in contracts but there is no single roster page. A missing owner page is not a bug.
 2. **No plugin-specific cross-region transfer contract.** Regional/legal constraints for authenticated cross-region GDP publication are governed by platform defaults; a GDP-specific transfer-control contract has not been finalized. The absence of a plugin-level override is not a bug.
 3. **No explicit SLA document for snapshot publication.** Snapshot publication SLA and freeze windows follow operational best-effort; a formal SLA document has not been published. Missing SLA documentation is not a testable bug here.

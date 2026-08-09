@@ -3,8 +3,11 @@ import { queryDb } from 'lib/db/postgres';
 // Per-instance memory of who we already recorded today (UTC), so a signed-in
 // member browsing the app does not write a `login_events` row on every request.
 // The DB insert below is also guarded, so correctness does not depend on this
-// cache — it only spares the database from repeated no-op writes.
-const recordedToday = new Map<string, string>();
+// cache — it only spares the database from repeated no-op writes. Only the
+// current day's set is kept: when the UTC day rolls over the set is cleared,
+// so the cache is bounded by the number of members active today rather than
+// growing by one entry per member ever seen over the process lifetime.
+const recordedToday = { day: '', seen: new Set<string>() };
 
 function utcDayKey(now = new Date()): string {
   return now.toISOString().slice(0, 10);
@@ -27,10 +30,14 @@ export function recordLoginEvent(userId: string): void {
   }
 
   const today = utcDayKey();
-  if (recordedToday.get(trimmed) === today) {
+  if (recordedToday.day !== today) {
+    recordedToday.day = today;
+    recordedToday.seen.clear();
+  }
+  if (recordedToday.seen.has(trimmed)) {
     return;
   }
-  recordedToday.set(trimmed, today);
+  recordedToday.seen.add(trimmed);
 
   // ON CONFLICT against the (user_id, UTC-day) unique index makes the once-per-day dedupe
   // atomic at the database level, so concurrent requests/instances cannot write two rows for
@@ -43,7 +50,11 @@ export function recordLoginEvent(userId: string): void {
     [trimmed],
   ).catch(() => {
     // Let a later request try again rather than silently never recording this member.
-    recordedToday.delete(trimmed);
+    // Guarded on the day so a failure that resolves after a UTC-day rollover does not
+    // clear a marker that now belongs to the new day.
+    if (recordedToday.day === today) {
+      recordedToday.seen.delete(trimmed);
+    }
   });
 }
 
@@ -52,7 +63,7 @@ export async function getActiveUserIdsLastDays(days: number): Promise<string[]> 
   const result = await queryDb<{ user_id: string }>(
     `SELECT DISTINCT user_id
      FROM login_events
-     WHERE created_at >= NOW() - ($1::text || ' days')::interval
+     WHERE created_at >= NOW() - make_interval(days => $1::int)
      ORDER BY user_id ASC`,
     [safeDays],
   );
@@ -65,23 +76,40 @@ export async function countActiveUsersLastDays(days: number): Promise<number> {
   const result = await queryDb<{ total: string }>(
     `SELECT COUNT(DISTINCT user_id)::text AS total
      FROM login_events
-     WHERE created_at >= NOW() - ($1::text || ' days')::interval`,
+     WHERE created_at >= NOW() - make_interval(days => $1::int)`,
     [safeDays],
   );
 
   return Number.parseInt(result.rows[0]?.total ?? '0', 10);
 }
 
+// Whether the `users` table exists, probed once per process. The table is created (or not) at
+// deploy time and never appears or disappears while the process runs, so the probe does not need
+// to repeat on every call. Left null until the first successful probe so a transient query
+// failure is retried on the next call.
+let usersTableExists: boolean | null = null;
+
 // Total people signed up — the headline "Members" figure. Prefer the Clerk-mirrored `users`
 // identity table (one row per account), which is the true signup count. Environments built only
 // from the canonical schema.sql have no `users` table, so fall back to the count of distinct
 // authenticated users seen in login_events. Returns null only if neither source can be read.
 export async function countTotalMembers(): Promise<number | null> {
-  const usersTable = await queryDb<{ reg: string | null }>(
-    `SELECT to_regclass('public.users')::text AS reg`,
-  );
+  if (usersTableExists === null) {
+    const usersTable = await queryDb<{ reg: string | null }>(
+      `SELECT to_regclass('public.users')::text AS reg`,
+    );
+    usersTableExists = Boolean(usersTable.rows[0]?.reg);
+    if (!usersTableExists) {
+      // Expected only in schema.sql-only environments. In production this means the Clerk
+      // mirror is missing and the member count is degraded to distinct login_events users,
+      // which undercounts signups — log so an operator can spot the misconfiguration.
+      console.error(
+        '[engagement.login-activity] users table not found; countTotalMembers is using the login_events fallback, which undercounts total signups',
+      );
+    }
+  }
 
-  if (usersTable.rows[0]?.reg) {
+  if (usersTableExists) {
     const result = await queryDb<{ total: string }>(`SELECT COUNT(*)::text AS total FROM users`);
     return Number.parseInt(result.rows[0]?.total ?? '0', 10);
   }

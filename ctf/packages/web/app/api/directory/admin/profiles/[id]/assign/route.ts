@@ -4,6 +4,7 @@ import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { assignAdminProfile } from 'lib/directory/repository';
 import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -27,9 +28,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
   let body: AssignBody;
   try {
     body = (await request.json()) as AssignBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -114,7 +115,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to assign profile.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: `Unable to assign profile: ${failureReason(error)}` },
       { status: 503 },
     );
   }

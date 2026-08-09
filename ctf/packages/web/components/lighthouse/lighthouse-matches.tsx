@@ -2,7 +2,14 @@
 
 import { CheckCircle, Clock, XCircle } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
 import { getLighthouseTokens, type Match, type Property } from "./shared";
+
+// A match the host said yes to is a real housing arrangement, and housing is the clearest case of
+// something that carries on month after month. LightHouse only ever sees this one moment — it never
+// sees the rent that changes hands later — so this is where the member is offered the chance to record
+// that it is ongoing, right on the match, instead of being sent to another app to type it in again.
+const ACCEPTED_MATCH_STATUSES = new Set(["accepted", "approved", "completed"]);
 
 function StatusIcon({ status }: { status: string }) {
   const { theme } = useTheme();
@@ -16,10 +23,14 @@ export function LighthouseMatches({
   matches,
   properties,
   onSelectProperty,
+  viewerUserId,
 }: {
   matches: Match[];
   properties: Property[];
   onSelectProperty: (property: Property) => void;
+  // Needed only to work out which side of the match the reader is on, so the ongoing-arrangement
+  // control names the other member. Optional so the component still renders without it.
+  viewerUserId?: string;
 }) {
   const { theme } = useTheme();
   const t = getLighthouseTokens(theme);
@@ -53,6 +64,16 @@ export function LighthouseMatches({
                     </button>
                     <button style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: t.INPUT_BG, border: `1px solid ${t.ACCENT}35`, color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Message</button>
                   </div>
+                  {ACCEPTED_MATCH_STATUSES.has(m.status) && viewerUserId ? (
+                    <MarkRecurringControl
+                      counterpartyUserId={viewerUserId === m.hostUserId ? m.seekerUserId : m.hostUserId}
+                      originPlugin="lighthouse"
+                      sector="housing"
+                      sectorLabel="a place to stay"
+                      accent={t.ACCENT}
+                      style={{ marginTop: 10 }}
+                    />
+                  ) : null}
                 </div>
               </div>
             );

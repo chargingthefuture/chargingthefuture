@@ -4,6 +4,7 @@ import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { overrideSuppressedQuoraUrl } from 'lib/directory/repository';
 import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -25,9 +26,9 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     const body = (await request.json()) as { reason?: unknown };
     reason = typeof body.reason === 'string' ? body.reason : '';
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -80,7 +81,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_suppressed_url_override' });
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to lift the suppression.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: `Unable to lift the suppression: ${failureReason(error)}` },
       { status: 503 },
     );
   }

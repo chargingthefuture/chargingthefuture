@@ -17,6 +17,7 @@ import {
 } from './sca-shared';
 import { useTheme } from '@/hooks/useTheme';
 import { getServiceCreditsTokens, type ServiceCreditsTokens } from './sc-shared';
+import { reasonText } from 'lib/errors/client-failure';
 
 // Fee collection is ready once both members, a finite positive amount, a reason code, and an
 // origin plugin are supplied.
@@ -141,8 +142,8 @@ export function ServiceCreditsTreasuryPanel() {
       }
       setPolicyError(null);
       return parsed as Record<string, unknown>;
-    } catch {
-      setPolicyError('Policy is not valid JSON.');
+    } catch (caught) {
+      setPolicyError(`Policy is not valid JSON: ${reasonText(caught)}`);
       return null;
     }
   }

@@ -4,6 +4,7 @@ import { withDbTransaction } from 'lib/db/postgres';
 import { notifyRoundsEndingSoon } from 'lib/skills-hunt/notifications';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Round-ending-24h notification cron entry point.
 // Idempotent: notifyRoundsEndingSoon checks per (user, round) for an existing
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_notifications_round_ending_soon' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to run round-ending-soon notifications.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to run round-ending-soon notifications: ${failureReason(error)}` },
       { status: 503 },
     );
   }

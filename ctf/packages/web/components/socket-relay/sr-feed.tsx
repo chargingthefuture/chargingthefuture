@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Share2 } from "lucide-react";
 import { FAINT, SUBTLE, requestTags, settlementLabel, srHandle, timeAgo, type SrRequest, type SrRequestStatus } from "./sr-shared";
+import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-currency-picker";
 import { ShareLink } from "@/components/shared/share-link";
 import { useTheme } from '@/hooks/useTheme';
 import { getSocketRelayTokens, type SocketRelayTokens } from './sr-shared';
@@ -14,6 +15,7 @@ function CardAction({
   status,
   expired,
   isOwn,
+  reclaimBlocked,
   submitting,
   onClaim,
   onEdit,
@@ -22,6 +24,9 @@ function CardAction({
   status: SrRequestStatus;
   expired: boolean;
   isOwn: boolean;
+  // The poster canceled this member's earlier claim ("didn't work — reopen for others"), so the
+  // server refuses a re-claim; show a plain note instead of a button that would fail.
+  reclaimBlocked: boolean;
   submitting: boolean;
   onClaim: () => void;
   onEdit: () => void;
@@ -52,6 +57,26 @@ function CardAction({
   if (status === "claimed") return <div style={{ fontSize: 12, color: "#F59E0B", fontWeight: 600 }}>Being helped</div>;
   if (status === "canceled") return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600 }}>Canceled</div>;
   if (!open) return <div style={{ fontSize: 12, color: "#22C55E", fontWeight: 600 }}>✓ closed</div>;
+  return <OpenCardAction isOwn={isOwn} reclaimBlocked={reclaimBlocked} submitting={submitting} onClaim={onClaim} onEdit={onEdit} t={t} />;
+}
+
+// The action column for an open, claimable post: the owner edits, a canceled-off helper sees a plain
+// note, anyone else gets the claim button. Split from CardAction to stay within the complexity limit.
+function OpenCardAction({
+  isOwn,
+  reclaimBlocked,
+  submitting,
+  onClaim,
+  onEdit,
+  t,
+}: {
+  isOwn: boolean;
+  reclaimBlocked: boolean;
+  submitting: boolean;
+  onClaim: () => void;
+  onEdit: () => void;
+  t: SocketRelayTokens;
+}) {
   if (isOwn) {
     return (
       <>
@@ -61,6 +86,11 @@ function CardAction({
         </button>
       </>
     );
+  }
+  // Soft copy on purpose (owner directive): reads as "you already offered", never as being blocked
+  // or as the poster having ended the earlier Direct Line.
+  if (reclaimBlocked) {
+    return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600, textAlign: "right" }}>You already offered to help</div>;
   }
   return (
     <button onClick={onClaim} disabled={submitting} style={{ padding: "8px 14px", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer" }}>
@@ -88,6 +118,9 @@ function CardBadges({
         <Badge key={tag} style={{ background: t.INPUT_BG, color: t.SUBTLE, border: "1px solid rgba(255,255,255,0.06)", fontSize: 11 }}>{tag}</Badge>
       ))}
       <Badge style={{ background: "rgba(34,197,94,0.10)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)", fontSize: 11 }}>{settlementLabel(r.priceCurrency, r.priceAmount)}</Badge>
+      {acceptedCurrenciesBadgeLabel(r.acceptedCurrencies) && (
+        <Badge style={{ background: `${t.ACCENT}10`, color: t.ACCENT, border: `1px solid ${t.ACCENT}30`, fontSize: 11 }}>{acceptedCurrenciesBadgeLabel(r.acceptedCurrencies)}</Badge>
+      )}
       <Badge style={{ background: open ? "#22C55E20" : t.INPUT_BG, color: expired ? "#F59E0B" : open ? "#22C55E" : SUBTLE, border: `1px solid ${expired ? "#F59E0B40" : open ? "#22C55E40" : t.BORDER}`, fontSize: 11, textTransform: "capitalize" }}>{expired ? "expired" : r.status}</Badge>
     </div>
   );
@@ -113,6 +146,7 @@ function CardMeta({ request: r, t }: { request: SrRequest; t: SocketRelayTokens 
 function RequestCard({
   request,
   isOwn,
+  reclaimBlocked,
   submitting,
   onClaim,
   onEdit,
@@ -120,6 +154,7 @@ function RequestCard({
 }: {
   request: SrRequest;
   isOwn: boolean;
+  reclaimBlocked: boolean;
   submitting: boolean;
   onClaim: (id: string) => void;
   onEdit: (request: SrRequest) => void;
@@ -148,7 +183,7 @@ function RequestCard({
           <CardMeta request={r} t={t} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
-          <CardAction status={r.status} expired={expired} isOwn={isOwn} submitting={submitting} onClaim={() => onClaim(r.id)} onEdit={() => onEdit(r)} onRepost={() => onRepost(r.id)} />
+          <CardAction status={r.status} expired={expired} isOwn={isOwn} reclaimBlocked={reclaimBlocked} submitting={submitting} onClaim={() => onClaim(r.id)} onEdit={() => onEdit(r)} onRepost={() => onRepost(r.id)} />
         </div>
       </div>
     </div>
@@ -207,6 +242,7 @@ function LoadMoreButton({
 export function SocketRelayFeed({
   requests,
   currentUserId,
+  reclaimBlockedIds,
   submitting,
   filterActive = false,
   hasMore = false,
@@ -219,6 +255,9 @@ export function SocketRelayFeed({
 }: {
   requests: SrRequest[];
   currentUserId: string | undefined;
+  // Ids of requests this member cannot claim again (their earlier claim was canceled by the poster,
+  // who reopened the post for other helpers). The server refuses these; the card shows a note instead.
+  reclaimBlockedIds?: Set<string>;
   submitting: boolean;
   // True when a search term or a non-"All" category/"Mine" filter is active, so the empty state can say
   // "no matches" instead of falsely claiming the whole board is empty.
@@ -242,7 +281,7 @@ export function SocketRelayFeed({
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {requests.map((r) => (
-              <RequestCard key={r.id} request={r} isOwn={r.ownerUserId === currentUserId} submitting={submitting} onClaim={onClaim} onEdit={onEdit} onRepost={onRepost} />
+              <RequestCard key={r.id} request={r} isOwn={r.ownerUserId === currentUserId} reclaimBlocked={reclaimBlockedIds?.has(r.id) ?? false} submitting={submitting} onClaim={onClaim} onEdit={onEdit} onRepost={onRepost} />
             ))}
             {hasMore && onLoadMore && (
               <LoadMoreButton loadingMore={loadingMore} onLoadMore={onLoadMore} t={t} />

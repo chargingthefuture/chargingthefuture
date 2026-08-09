@@ -4,6 +4,7 @@ import { saveVote } from 'lib/mutual-time/repository';
 import { logMutualTimeAudit } from 'lib/mutual-time/audit';
 import { reportError } from 'lib/observability/report';
 import { requireMutualTimeVote, ensureMutationCsrf, mutualTimeErrorResponse } from '../../../_lib';
+import { failureReason } from 'lib/errors/failure';
 
 // POST /api/mutual-time/event/[slug]/vote  { slots: string[] }
 // Save (replace) the signed-in, Unlock-approved member's picks for an event. Up to 3 half-hour-snapped
@@ -22,9 +23,9 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: MUTUAL_TIME_ERROR_CODE.invalidPayload, message: 'Invalid request body.' },
+      { ok: false, code: MUTUAL_TIME_ERROR_CODE.invalidPayload, message: 'Invalid request body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

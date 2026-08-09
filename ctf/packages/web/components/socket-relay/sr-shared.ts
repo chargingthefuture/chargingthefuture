@@ -43,6 +43,9 @@ export type SrRequest = {
   claimedFulfillmentId: string | null;
   priceCurrency: string | null;
   priceAmount: number | null;
+  // Every currency the poster accepts for settling (split settlements), ServiceCredits first.
+  // Optional so older cached payloads without the field keep rendering.
+  acceptedCurrencies?: string[];
   createdAtIso: string;
   updatedAtIso: string;
   // When the post auto-expires (28 days after posting/re-posting); `isExpired` is true only while it is

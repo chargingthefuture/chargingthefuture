@@ -12,7 +12,7 @@
 | **Surfaces** | web (`/apps/socket-relay`, `/admin/socket-relay`) · android (`SocketRelay.tsx`, `AdminSocketRelay.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:socket-relay` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socket-relay-feature-inventory.md` |
-| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) · 2026-08-04 (SR-16 marked API-only by design — no profile UI exists or is planned) |
 
 ---
 
@@ -138,7 +138,36 @@ web ☐
 
 **Expected:**
 - The created request card shows a settlement badge that names ServiceCredits (e.g. "SC" or "ServiceCredits") — never a fiat equivalent.
-- "Accepts ServiceCredits" is true only because the `socket_relay_request_accepted_currencies` record was written; this is not derived from `price_currency` alone.
+- "Accepts ServiceCredits" is true only when a `socket_relay_request_accepted_currencies` row with the ServiceCredits code exists (written by the Accepted-currencies checkboxes — see SR-4a); it is never derived from `price_currency` alone.
+- On `/apps/gdp`, the "Value waiting to happen" panel's SocketRelay row grows by the posted amount (e.g. +15 for a 15-ServiceCredits post), not by 1; a post with no named value (or Free/Barter) adds one point. When a favor later closes successfully, the same amount leaves the panel and enters the Community Value Index (see GDP-12 in the GDP test script).
+
+web ☐
+
+---
+
+### SR-4a — Split settlement: accepted-currencies checkboxes (added 2026-08-06)
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Signed in as a member.
+
+**Steps:**
+1. Open the post form and fill in title, details, and one tag.
+2. Select "ServiceCredits" as the settlement and enter the whole value of the transaction (e.g. 20).
+3. In the **Accepted currencies** checkbox list below the amount, check **ServiceCredits** and
+   **United States Dollar ($)** (the same checkbox pattern as the LightHouse listing form).
+4. Submit, then find the new card in the feed.
+5. Edit the post, uncheck United States Dollar, and save.
+
+**Expected:**
+- The checkbox list loads from the live currency catalog (ServiceCredits listed first) and shows a
+  "Loading currencies…" state before it arrives; a failed load shows a Retry control instead of
+  silently hiding the checkboxes.
+- After step 4, the card shows the settlement badge **and** a separate "Accepts ServiceCredits +1"
+  badge — ServiceCredits always named first, the remainder capped as "+N", never a fiat equivalent
+  for a ServiceCredits amount.
+- After step 5, the badge reads "Accepts ServiceCredits" (the stored set was replaced, not appended).
+- Re-opening the edit form shows the saved checkboxes checked.
 
 web ☐
 
@@ -361,6 +390,16 @@ web ☐
 - The 28-day expiry clock is reset, so the re-opened request is claimable again (not immediately expired), even if it had aged close to expiry before the claim.
 - The Direct Line row for this fulfillment disappears.
 - A pending-request placeholder row appears in the Direct Line for the now-open request.
+- The **canceled helper cannot claim this request again**: signed in as that helper, the feed card
+  shows a "You already offered to help" note instead of the "I can help" button, and a direct
+  `POST /api/socket-relay/requests/{id}/fulfill` returns **409**
+  (`SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED`). The copy must read as "one offer per post" — it must
+  **not** say the member was blocked or that the poster reopened the post for others. A different
+  member can still claim the re-opened request normally.
+- The two sides see different closure notices on the ended Direct Line. The requester's read-only
+  notice says the conversation ended **and** that the request is open again on the feed. The canceled
+  helper's notice says only "This conversation ended when the offer was canceled and can't be
+  reopened." — it must **not** mention that the request is open again on the feed.
 
 web ☐
 
@@ -403,9 +442,14 @@ web ☐
 
 ---
 
-### SR-16 — Profile create, update, delete
+### SR-16 — Profile create, update, delete (API only — no UI by design)
 
 **Role:** member · **Surfaces:** web
+
+> No SocketRelay profile screen exists or is planned (recorded 2026-08-04): member identity and
+> location live on the shared Directory profile, and a post's location only defaults from it. This
+> case exercises the API contract directly; the route family is slated for retirement — when it is
+> removed, delete this case.
 
 **Precondition:** Signed in as a member with no existing SocketRelay profile extension (or delete it first).
 
@@ -487,6 +531,28 @@ web ☐
 
 ---
 
+### SR-20 — Member block hides posts and stops a claim (added 2026-08-05)
+
+**Role:** two members (A and B) · **Surfaces:** web
+
+**Precondition:** Member B has an open post. Member A blocks Member B (from B's Directory profile or `/account/blocks`).
+
+**Steps:**
+1. As A, open the SocketRelay feed and look for B's post.
+2. As A, attempt `POST /api/socket-relay/requests/<B's request id>/claim` directly (deep link or API).
+3. As B, open the feed and look for A's posts.
+4. As an admin, open `/admin/socket-relay` and check the requests list.
+
+**Expected:**
+- Steps 1 and 3: neither member sees the other's posts (the block hides in both directions).
+- Step 2: 403 with the neutral message "This request is not available to you." — never wording that names a block.
+- Step 4: the admin list still shows every request (admin views are never filtered).
+- B gets no notification or any other signal that a block exists.
+
+web ☐
+
+---
+
 ### SR-DEL · Account deletion clears the Stream chat copy (privacy)
 **Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
 SocketRelay fulfillment message; access to the Stream dashboard for the app behind `STREAM_API_KEY`.
@@ -514,6 +580,28 @@ naming them.
    read **Deleted member**, never `user_…`.
 4. In the SocketRelay admin Fulfillments tab, the same row reads **Deleted member**, not the raw id
    and not the literal text `deleted_member`.
+
+### SR-R1 — Record a completed favor as a regular one
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in as either party on a fulfillment closed as successful, with no recurring arrangement recorded with that member. Also have one ACTIVE fulfillment and, if possible, one closed as unsuccessful.
+
+**Steps:**
+1. Open the Direct Line and select the active conversation.
+2. Look for "Is this ongoing?" above the resolve bar.
+3. Select the conversation closed as successful, then the unsuccessful or canceled one, and look again.
+4. On one of them, pick a cadence and record it.
+
+**Expected:**
+- The prompt appears on the ACTIVE conversation as well as on one closed successfully — a member usually knows a favor is standing while it is still happening.
+- It does NOT appear on a conversation closed unsuccessfully or canceled.
+- The other participant is already filled in and named — no member search.
+- After recording, the row appears in the Recurring Activity app marked "Recorded from SocketRelay", awaiting the other member.
+
+Result: web ☐
+
+---
 
 ## Admin walkthrough
 

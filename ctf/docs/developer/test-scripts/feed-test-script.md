@@ -64,6 +64,28 @@
 
 ---
 
+### FD-1b — Member block hides a person's Commons posts and replies (added 2026-08-05)
+
+**Role:** two members (A and B) · **Surfaces:** web
+
+**Precondition:** B has authored at least one community post and one reply on someone else's post. A blocks B (from B's Directory profile or `/account/blocks`).
+
+**Steps:**
+1. As A, open the Commons and scroll the timeline.
+2. As A, open a post that B replied to.
+3. As B, open the Commons and look for A's posts.
+4. As an admin, open the Commons moderation admin and check the full post list.
+
+**Expected:**
+- Steps 1–3: B's posts and replies do not render for A, and A's do not render for B (both directions). Announcements and AI answers always show — they have no member author.
+- A post's reply counter may read higher than the replies shown to a member with a block — accepted, not a bug.
+- Step 4: admin/moderation views are never filtered.
+- Neither member gets any signal that a block exists.
+
+**Result:** web ☐
+
+---
+
 ### FD-2 — Announcement card renders correctly
 **Role:** member | **Surface:** web
 
