@@ -12,7 +12,7 @@ import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
 import { BlockMemberButton } from "@/components/blocks/block-member-button";
 import { WeaversBadgeControl } from "@/components/contributor-access/weavers-badge-control";
 import { ShareLink } from "@/components/shared/share-link";
-import type { TrustUserExtension } from "@/lib/trust/types";
+import type { TrustPeerView, TrustUserExtension } from "@/lib/trust/types";
 
 // One cross-plugin presence entry returned by GET /api/presence/user/[userId].
 interface PresenceEntry {
@@ -28,8 +28,8 @@ interface PresenceEntry {
 // trust response renders a calm note rather than an error.
 type TrustState =
   | { kind: "loading" }
-  | { kind: "ready"; trust: TrustUserExtension }
-  | { kind: "restricted" }
+  | { kind: "ready"; trust: TrustUserExtension | TrustPeerView }
+  | { kind: "withheld" }
   | { kind: "hidden" };
 
 // Shared uppercase section-label style, so every section reads identically.
@@ -93,15 +93,16 @@ function usePresenceAndTrust(claimedUserId: string | null, isOwnProfile: boolean
         const res = await fetch(url, { signal: controller.signal });
         if (controller.signal.aborted) return;
         if (res.status === 403) {
-          // The member limits who can view their trust details — a calm state, not an error.
-          setTrustState({ kind: "restricted" });
+          // Only a `private` profile refuses now: `restricted` returns 200 with the summary
+          // projection, which renders as an ordinary (shorter) card. A calm state, not an error.
+          setTrustState({ kind: "withheld" });
           return;
         }
         if (!res.ok) {
           setTrustState({ kind: "hidden" });
           return;
         }
-        const trust = (await res.json()) as TrustUserExtension;
+        const trust = (await res.json()) as TrustUserExtension | TrustPeerView;
         setTrustState({ kind: "ready", trust });
       } catch {
         if (!controller.signal.aborted) setTrustState({ kind: "hidden" });
@@ -407,7 +408,7 @@ function PresenceRow({ tokens: t, entry }: { tokens: DirectoryTokens; entry: Pre
 // The trust card (or a calm restricted note) that sits beneath the presence list.
 function TrustPanel({ tokens: t, trustState, isOwnProfile }: { tokens: DirectoryTokens; trustState: TrustState; isOwnProfile: boolean }) {
   if (trustState.kind === "ready") return <TrustWidgetCard trust={trustState.trust} editable={isOwnProfile} />;
-  if (trustState.kind === "restricted") {
+  if (trustState.kind === "withheld") {
     return (
       <div style={{ padding: "14px 16px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}` }}>
         <div style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.5 }}>

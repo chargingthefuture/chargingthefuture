@@ -24,10 +24,17 @@ policies:
     highRiskFlags:
       containsPHI: false
       requiresAdditionalAudit: true
+    disclosureLevels:
+      # `restricted` is served, not refused: a non-owner non-admin viewer receives the summary
+      # projection (headline counts, no timestamps, per-plugin items collapsed to one breadth
+      # line). Only `private` refuses. The owner and admins always read `full`.
+      public: full
+      restricted: summary
+      private: denied_for_non_owner_non_admin
     denyConditions:
       - unauthenticated_session
       - unauthorized_scope
-      - trust_visibility_restricted
+      - trust_visibility_private
       - raw_signal_request_detected
 
   - pluginId: trust
