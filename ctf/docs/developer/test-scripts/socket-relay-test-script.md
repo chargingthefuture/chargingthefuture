@@ -24,6 +24,9 @@
 - Mark each result line: ✅ pass · ❌ fail · ⛔ blocked.
 - A ❌ becomes a row in the Bug Reporting plugin: note the case ID, the surface, and what you actually saw versus what was expected.
 - Run **Core smoke** at the start of every session before going further.
+- Nothing to re-test from the 2026-08-09 Commons rename: the Commons API routes moved from
+  `/api/hub/*` to `/api/commons/*` and `lib/hub/` became `lib/commons/`, so this plugin's
+  inventory was updated only where it names one of those paths. No step below changes.
 
 ---
 

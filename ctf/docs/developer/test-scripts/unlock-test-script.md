@@ -31,6 +31,9 @@
   next run knows it's already filed.
 - Run the **Core smoke** block every session. Run the full walkthrough when you changed this
   plugin or on a pre-release sweep.
+- Nothing to re-test from the 2026-08-09 Commons rename: the Commons API routes moved from
+  `/api/hub/*` to `/api/commons/*` and `lib/hub/` became `lib/commons/`, so this plugin's
+  inventory was updated only where it names one of those paths. No step below changes.
 - This plugin has no member-facing screen for the verification queue. Test it as an admin /
   internal reviewer on the admin surface only.
 

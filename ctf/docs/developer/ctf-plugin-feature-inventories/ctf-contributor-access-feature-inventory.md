@@ -156,7 +156,7 @@ audit-trailed, same posture as the Commons hub routes — post deletions ARE aud
   joining reconciles the member into the Stream channel, so the route requires the `x-ctf-csrf`
   header. Contract: `contributor-access.channel.join`.
 
-Cross-plugin read: `GET /api/commons/channels` (the Hub) reads `contributor_access_config` +
+Cross-plugin read: `GET /api/commons/channels` (the Commons) reads `contributor_access_config` +
 `contributor_access_eligibility` to append the `#contributors` entry server-side for eligible
 members and admins only.
 

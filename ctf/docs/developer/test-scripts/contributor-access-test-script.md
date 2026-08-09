@@ -22,6 +22,9 @@
 - A **❌** becomes a row in the Bug Reporting plugin — note the case ID, what you expected, and what actually happened.
 - Run **Core smoke** at the start of every test session before anything else.
 - "Web" means desktop browser unless the step says "narrow the browser to phone width" — do that for mobile-responsive checks.
+- Nothing to re-test from the 2026-08-09 Commons rename: the Commons API routes moved from
+  `/api/hub/*` to `/api/commons/*` and `lib/hub/` became `lib/commons/`, so this plugin's
+  inventory was updated only where it names one of those paths. No step below changes.
 
 ---
 
