@@ -14,7 +14,7 @@
 // deferred (that is where `max_concurrent` becomes load-bearing again). All knobs live in
 // `level_up_auto_cohort_config` (admin-editable).
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
-import { fetchOccupationGapReport } from 'lib/workforce/repository';
+import { fetchOccupationGapReport } from 'lib/shared/workforce-interface';
 import { createCohort, insertLevelUpAudit } from 'lib/level-up/repository';
 import {
   LEVEL_UP_AUTO_COHORT_ACTOR_ID,

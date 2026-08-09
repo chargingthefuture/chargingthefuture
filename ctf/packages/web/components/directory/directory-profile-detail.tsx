@@ -8,11 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/useTheme";
 import { getDirectoryTokens, initials, type DirectoryTokens, type Member } from "./shared";
 import { DirectoryProfileEdit } from "./directory-profile-edit";
-import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
+import { TrustWidgetCard } from "@/lib/shared/trust-interface";
 import { BlockMemberButton } from "@/components/blocks/block-member-button";
 import { WeaversBadgeControl } from "@/components/contributor-access/weavers-badge-control";
 import { ShareLink } from "@/components/shared/share-link";
-import type { TrustUserExtension } from "@/lib/trust/types";
+import type { TrustUserExtension } from "@/lib/shared/trust-interface";
 
 // One cross-plugin presence entry returned by GET /api/presence/user/[userId].
 interface PresenceEntry {
