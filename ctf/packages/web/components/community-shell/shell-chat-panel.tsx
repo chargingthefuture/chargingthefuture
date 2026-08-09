@@ -1071,7 +1071,7 @@ function ChatComposer({
           dropped and the line is relabeled to name the assistant and its human-in-the-loop review. */}
       <div className={styles.comicComposerHelper}>
         <span className={styles.comicComposerHelperText}>
-          AI Assistant (human in the loop) — type <span className={styles.comicComposerHelperToken}>@comic</span> to ask
+          AI Assistant (human-in-the-loop) — type <span className={styles.comicComposerHelperToken}>@comic</span> to ask
         </span>
       </div>
 
