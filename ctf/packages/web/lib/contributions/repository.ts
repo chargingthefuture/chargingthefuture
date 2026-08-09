@@ -28,7 +28,11 @@ export const CONTRIBUTION_KINDS: readonly ContributionKind[] = ['gift_card', 'qu
 export const GIFT_CARD_METHODS: readonly GiftCardMethod[] = ['amazon', 'apple', 'dennys'];
 export const CONTRIBUTION_STATUSES: readonly ContributionStatus[] = ['pending', 'confirmed', 'rejected'];
 
-export const GIFT_CARD_MIN_USD = 0;
+// Gift-card claims are whole dollars, 1 to 500 (owner decision, 2026-08-09). Real gift cards do not
+// come in fractions of a dollar, so nothing is lost by refusing them, and it keeps a claim amount
+// something a member can say out loud. The floor is not what keeps credit grants whole — see
+// roundCredits below for that — the two rules are independent on purpose.
+export const GIFT_CARD_MIN_USD = 1;
 export const GIFT_CARD_MAX_USD = 500;
 
 const GRANT_REASON = 'contributions_confirmed';
@@ -180,10 +184,10 @@ export function assertNoGiftCardCodeFields(rawBody: Record<string, unknown>): vo
   }
 }
 
-function isValidGiftCardAmount(amount: unknown): boolean {
+function isValidGiftCardAmount(amount: unknown): amount is number {
   return typeof amount === 'number'
-    && Number.isFinite(amount)
-    && amount > GIFT_CARD_MIN_USD
+    && Number.isInteger(amount)
+    && amount >= GIFT_CARD_MIN_USD
     && amount <= GIFT_CARD_MAX_USD;
 }
 
@@ -621,8 +625,10 @@ function resolveConfirmedAmount(
   config: ContributionsRuntimeConfig,
 ): number {
   if (row.kind === 'gift_card') {
+    // Same whole-dollar rule the member's claim had to clear. The admin types what was actually
+    // redeemed, which can differ from the claim, so it is checked here too rather than trusted.
     const amount = input.confirmedAmountUsd;
-    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= GIFT_CARD_MIN_USD || amount > GIFT_CARD_MAX_USD) {
+    if (!isValidGiftCardAmount(amount)) {
       throw new Error('confirmed_amount_required');
     }
     return amount;
@@ -633,6 +639,23 @@ function resolveConfirmedAmount(
     throw new Error('invalid_amount');
   }
   return amount;
+}
+
+// Credits are a whole-number unit, so a grant is rounded before it is stored or minted.
+//
+// Nothing upstream guarantees this on its own. Credits are `confirmedAmountUsd × creditsPerUsd`, and
+// `creditsPerUsd` is an admin-editable number with no requirement to be a whole number or to divide
+// evenly into a dollar — set it to 3 and a whole-dollar claim still lands on a third of a credit. The
+// per-cycle cap can be fractional too, so the clamp below can produce a fraction from inputs that
+// were both whole. `credits_granted` and the ledger balance are unconstrained NUMERIC columns, so a
+// fraction would persist exactly rather than being cleaned up by the database. Rounding here is the
+// one place that holds regardless of what the rate is set to.
+//
+// Rounded, not truncated: at the boundary the member gets the nearer number rather than always the
+// lower one. A grant that rounds to 0 still confirms the claim with 0 credits, which is the same
+// outcome the cap clamp already produces and is documented on applyConfirmReview.
+function roundCredits(credits: number): number {
+  return Math.round(credits);
 }
 
 async function computeCycleCappedGrant(
@@ -648,7 +671,8 @@ async function computeCycleCappedGrant(
 
   const alreadyGranted = Number(result.rows[0]?.already_granted ?? 0);
   const remaining = Math.max(params.cap - alreadyGranted, 0);
-  return Math.max(Math.min(params.computedCredits, remaining), 0);
+  // Rounded after the clamp, never before: rounding first could push a grant back over the cap.
+  return roundCredits(Math.max(Math.min(params.computedCredits, remaining), 0));
 }
 
 async function applyReviewUpdate(

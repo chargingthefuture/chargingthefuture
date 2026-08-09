@@ -43,8 +43,8 @@ flow is one-way, like gas-station reward points.
 ## 3. User Features
 
 - Submit a contribution claim of one of three kinds:
-  - **Gift card** (`amazon`, `apple`, or `dennys`): the member states the amount (over 0, at most
-    500 USD) and their own Signal contact (URL or phone number — reduces fraud). It can be a physical
+  - **Gift card** (`amazon`, `apple`, or `dennys`): the member states the amount — a whole number of
+    US dollars, from $1 to $500, no cents — and their own Signal contact (URL or phone number — reduces fraud). It can be a physical
     or a digital gift card. The gift-card **code is never collected or stored anywhere** — the member
     sends the code to the owner over Signal, outside the app. The member is warned, on both the form
     and the post-submit confirmation, to **never post the code in the Commons** (the single public
@@ -72,9 +72,14 @@ flow is one-way, like gas-station reward points.
 - Confirm or reject each claim, exactly once:
   - On confirm the admin supplies the confirmed USD amount (for gift cards: what was actually
     redeemed; for comments/stars it defaults to the configured USD-equivalent unit value).
-  - Credits = confirmed amount x `credits_per_usd`, clamped by the per-user-per-cycle cap; a
-    positive grant goes through the canonical service-credits mint with idempotency key
-    `contribution-<submissionId>`. A grant clamped to 0 still confirms with `credits_granted = 0`.
+  - Credits = confirmed amount x `credits_per_usd`, clamped by the per-user-per-cycle cap, then
+    rounded to a whole number; a positive grant goes through the canonical service-credits mint with
+    idempotency key `contribution-<submissionId>`. A grant clamped or rounded to 0 still confirms
+    with `credits_granted = 0`. The rounding is what keeps credits whole: `credits_per_usd` is an
+    admin-set number that need not divide evenly into a dollar, the per-cycle cap can be fractional,
+    and both `credits_granted` and the ledger balance are unconstrained `NUMERIC`, so a fraction
+    would otherwise persist exactly. The whole-dollar rule on gift-card amounts is a separate,
+    claim-shape rule and does not by itself guarantee this.
   - Rejection grants nothing.
 - Create and edit fundraiser cycles (window plus the three goals).
 - Edit runtime configuration: credit valuation knobs, per-cycle cap, banner on/off, banner snooze
@@ -131,7 +136,8 @@ additionally require the admin role (`ensureContributionsAdmin`).
   - `user_id TEXT NOT NULL`
   - `kind TEXT NOT NULL` CHECK in (`gift_card`, `quora_comment`, `github_star`)
   - `method TEXT` (null unless gift_card; `amazon` / `apple` / `dennys`)
-  - `claimed_amount_usd NUMERIC` (gift_card only; validated over 0, at most 500)
+  - `claimed_amount_usd NUMERIC` (gift_card only; validated as a whole number, 1 to 500 — the column
+    stays unconstrained `NUMERIC` so rows recorded before that rule keep their exact value)
   - `signal_contact TEXT` (gift_card only; required at submit; personal data — admin-only
     projection, never logged, deleted with the account). **There is deliberately no gift-card
     code column, and validation rejects any code-like request field.**
@@ -295,6 +301,26 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-08-09: **Gift-card claims are whole dollars, $1 to $500, and credit grants are rounded**
+  (owner decision, from the #2141 review discussion). Two independent changes, made together because
+  they were raised together:
+  - `GIFT_CARD_MIN_USD` moves from 0 to 1 and `isValidGiftCardAmount` now requires a whole number, so
+    `$0.001` and `$12.50` are both refused where before anything above zero was accepted. Real gift
+    cards are not sold in parts of a dollar, so nothing real is being turned away. The admin confirm
+    path applies the same rule, because the admin records what was actually redeemed and that can
+    differ from the claim. The member form and the admin field state the rule up front instead of
+    letting a member find it on submit, and the two error strings in `_lib.ts` were rewritten to
+    match.
+  - `computeCycleCappedGrant` rounds the grant after the cap clamp (rounded, not truncated, so the
+    member gets the nearer number; after, not before, so rounding cannot push a grant back over the
+    cap). This — not the whole-dollar rule — is what actually guarantees whole credits: the
+    credits-per-dollar rate is admin-set with no requirement to divide evenly into a dollar, the cap
+    can be fractional, and the `NUMERIC` columns involved carry any fraction through to the ledger
+    exactly. A grant that rounds to 0 confirms with `credits_granted = 0`, the same outcome the cap
+    clamp already produced.
+
+  No schema change: both columns stay `NUMERIC`, and existing rows with fractional grants are left
+  as they are. New test case CONT-3b covers the whole-dollar rule and the rounding.
 - 2026-08-09: Opening the admin Drive tab before the cycle finished loading could wipe all three
   goals (#2137), and the contract now says plainly that the web form requires a contribution link
   even though the command does not (#2140). The drive form seeds its three goal inputs with

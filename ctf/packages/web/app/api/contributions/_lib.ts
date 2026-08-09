@@ -122,11 +122,11 @@ const BAD_REQUEST_CODES: Record<string, string> = {
   invalid_payload: 'Invalid request payload.',
   invalid_kind: 'kind must be gift_card, quora_comment, or github_star.',
   invalid_method: 'method must be amazon, apple, or dennys.',
-  invalid_amount: 'Amount must be greater than 0 and at most 500 USD.',
+  invalid_amount: 'Amount must be a whole number of US dollars, from 1 to 500 — no cents.',
   invalid_url: 'URL must be a valid http(s) link.',
   invalid_cycle_window: 'ends_at must be after starts_at.',
   signal_contact_required: 'A Signal contact is required for gift-card contributions.',
-  confirmed_amount_required: 'confirmedAmountUsd is required (greater than 0, at most 500 USD).',
+  confirmed_amount_required: 'confirmedAmountUsd is required, as a whole number of US dollars from 1 to 500.',
   gift_card_code_rejected: 'Never send a gift-card code here. Codes go to the owner over Signal only.',
 };
 

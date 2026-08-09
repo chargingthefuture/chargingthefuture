@@ -106,13 +106,44 @@ The member-facing copy shows the same numbers as the admin settings. If admin se
 1. Open the gift-card form.
 2. Try submitting with amount `0`.
 3. Try submitting with amount `501`.
-4. Try submitting without a Signal contact.
+4. Try submitting with amount `12.50`.
+5. Try submitting with amount `0.001`.
+6. Try submitting without a Signal contact.
 
 **Expected:**
 - Amount `0` is rejected with a validation error before submission reaches the server.
 - Amount `501` is rejected with a validation error.
+- `12.50` and `0.001` are both rejected, and the message says whole dollars with no cents — gift-card amounts are whole US dollars from 1 to 500.
 - Missing Signal contact is rejected with a validation error.
-- In all three cases the form stays open and no claim is created.
+- In every case the form stays open and no claim is created.
+- The amount field's label reads "Card value (whole US dollars, $1 to $500)", and on a phone the keypad it opens has no decimal point.
+
+**Result:** web ☐
+
+---
+
+### CONT-3b — A confirmed contribution never grants a fraction of a credit
+
+**Role:** Admin
+**Surfaces:** Web (`/admin/contributions`, API)
+**Precondition:** Signed in as an admin, with one pending gift-card claim in the queue.
+
+**Steps:**
+1. Go to `/admin/contributions` → Settings and set "Credits per USD" to `3`. Save. (A rate that does not divide evenly into a dollar is the point of this case — at the default rate of 10 the problem is invisible.)
+2. Go to the review queue and open the pending gift-card claim.
+3. Confirm it with a confirmed value of `10`.
+4. Read the credits granted on the reviewed claim, and the member's ServiceCredits balance.
+5. Try confirming another gift-card claim with a confirmed value of `12.50`.
+6. Put "Credits per USD" back to its original value when you are done.
+
+**Steps to check the stored value directly (optional):**
+7. In the database, read `credits_granted` for the claim you confirmed in step 3.
+
+**Expected:**
+- The confirm in step 3 succeeds and grants a whole number of credits — 30 at a rate of 3. No decimal appears in the granted figure, on the claim or in the member's balance.
+- `credits_granted` in step 7 is a whole number. A value like `29.999` or `30.5` is the bug this case exists for.
+- Step 5 is rejected: the confirmed value for a gift card is whole dollars, 1 to 500, the same rule the member's claim had to clear.
+- A grant that rounds down to 0 still marks the claim confirmed, with 0 credits granted — that is the same outcome as a claim capped to 0, not an error.
 
 **Result:** web ☐
 
