@@ -157,6 +157,10 @@ there too, with `policy_status = 'allow'`.
 to the Commons. The host stage mounts after go-live; HLS + recording start once a host is actually
 publishing (the in-browser screen-share triggers `start-broadcast`). Only the host can publish —
 viewers never can. On error, the underlying Stream message is surfaced, not a generic text.
+Opening the call must succeed on the first press: Beacon asks Stream to record at 720p, and a
+missing recording size is what previously made every Go Live come back with `(400)` and
+`recording quality is required when audio_only is false and recording is enabled`. Seeing that
+message again means the recording settings sent on call creation regressed.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A2b · A failed Go Live says which step failed

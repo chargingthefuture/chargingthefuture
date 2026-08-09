@@ -69,6 +69,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       action: body.action === 'confirm' ? 'contributions.admin.submission.confirm' : 'contributions.admin.submission.reject',
       targetSubmissionId: submission.id,
       metadata: {
+        // The reviewed member — required by the audit contract's targetContext for
+        // contributions.admin.submission.confirm / .reject.
+        targetUserId: submission.userId,
         kind: submission.kind,
         confirmedAmountUsd: submission.confirmedAmountUsd,
         creditsGranted: submission.creditsGranted,

@@ -71,6 +71,34 @@ export interface TrustUserExtension {
   updatedAt: string;
 }
 
+// How much of a member's trust panel the viewer is being shown.
+//   full    — every derived evidence item, with its timestamp and supporting detail. The owner, an
+//             admin, and (on a `public` profile) any signed-in member get this.
+//   summary — headline counts only: no timestamps, no supporting detail, and the per-plugin items
+//             collapsed to a single breadth line. What a `restricted` profile shows a peer.
+export type TrustDisclosure = 'full' | 'summary';
+
+// One evidence line as a viewer other than the owner sees it. `createdAt` and `details` are optional
+// here because the summary disclosure deliberately carries neither — a peer learns the coarse fact,
+// never the record of when it happened.
+export interface TrustPeerEvidenceItem {
+  type: string;
+  summary: string;
+  details?: string;
+  createdAt?: string;
+}
+
+// The payload `GET /api/trust/user/[userId]` returns. Same shape at both disclosure levels so the
+// widget renders one way; `trustDisclosure` tells the viewer which one they are looking at.
+export interface TrustPeerView {
+  userId: string;
+  trustStatus: TrustStatus;
+  trustEvidence: TrustPeerEvidenceItem[];
+  trustVisibility: TrustVisibility;
+  updatedAt: string;
+  trustDisclosure: TrustDisclosure;
+}
+
 export interface TrustSignalSnapshot {
   id: string;
   userId: string;

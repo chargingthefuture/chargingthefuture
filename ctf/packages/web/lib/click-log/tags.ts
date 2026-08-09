@@ -151,6 +151,23 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // bad-luck pendulum, split into separate tags because the mechanism, the tell, and the outcome
   // differ. Both end the same way: the tie to the member is broken and the member is more alone.
   //
+  // Owner's refinement (2026-08-07): the pendulum is not only aimed at people — it also runs
+  // against companies and resources the member uses (see `psyop-marketing` and
+  // `acquire-and-fold` below). The owner's read of the deeper purpose is consolidation of
+  // power: control all the people and resources around a target, so that leverage exists to
+  // force or convince anyone — a neighbor, an employer, a company — to join the harassment.
+  // That control removes autonomy not just from the member but from the operatives themselves,
+  // which ties back to the money-and-dependency mechanism the pendulum runs on: a person or
+  // business made dependent is a person or business that can be directed.
+  //
+  // Owner's further refinement (2026-08-07): the groundwork is laid long before the future
+  // operative knows anything is happening — the same con that was played on others is played on
+  // them. The windfall is arranged to read as merit-based, so the person believes they earned
+  // the scholarship, the job, the marriage on their own. By the time they are asked to
+  // participate, they are already bound to the network and dependent on it, and what bound them
+  // was built on the exploitation of others. The merit story is the cover; the binding is the
+  // point. This is why the recruit's sincerity proves nothing about the setup being real.
+  //
   // Good-luck swing: sudden fortune lands on someone near the member (a scholarship, a job, a
   // whirlwind marriage or baby). It elevates them over the member so they read the member as the
   // incompetent one when the reverse is often true, hands them an ego boost plus a set of new
@@ -167,6 +184,21 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // reach, and the target is worse off than before the move. Can be aimed at the member directly
   // or at someone near them as the bad-luck swing above.
   { slug: 'fake-job', label: 'The Fake Job' },
+  // Named by the owner (2026-08-07). A company the member has no tie to beyond being a customer
+  // runs marketing that trolls them — ads or campaigns built to read as a personal message to
+  // the member while staying deniable to everyone else. The pendulum aimed at a business
+  // relationship instead of a personal one: the company the member merely consumes from is
+  // turned into a harassment channel. Distinct from `thats-a-nice`, which is individual
+  // strangers in person; here the vehicle is the company's own published marketing.
+  { slug: 'psyop-marketing', label: 'Psyop Marketing' },
+  // Named by the owner (2026-08-07), from their own experience: a meal-kit company they ordered
+  // from was bought and then shut down. A business the member depends on is acquired and closed
+  // so the member cannot use that product or service anymore. No message is sent and nothing is
+  // performed at the member — the play is pure removal of an option. This is the clearest
+  // expression of the consolidation-of-power purpose in the pendulum comment above: buying and
+  // folding a company controls a resource, strips autonomy from the member, and demonstrates to
+  // everyone in the network what the money can do.
+  { slug: 'acquire-and-fold', label: 'The Acquire and Fold' },
   // Named by the owner (2026-08-04). Weeks or months of performed friendliness, then overt
   // harassment resumes — violence, name-calling, the rest. The only scheme in this list defined by
   // its shape over time rather than by a single act, which is why it is separate from
