@@ -6,7 +6,7 @@ Mutual Time is a one-link meeting-time picker (spec #1780). An admin (the platfo
 event that has a single shareable link. Approved members open that link and pick up to three one-hour
 windows — snapped to the half-hour — in their own timezone. When the survey closes, the app chooses the
 window the most members can make (ties go to the earliest) and shows it, in each viewer's own timezone,
-with a link to where the meeting happens (Chyme or Peer Programming).
+with a link to where the meeting happens (Chyme, Peer Programming, or Beacon).
 
 - **In scope:** owner/admin event creation and manual close; a public shareable link with three viewer
   states (vote / result / sign-in gate); timezone-aware voting; the most-overlap algorithm; auto-close
@@ -32,12 +32,24 @@ to the meeting surface; members who did not vote can still come listen in.
 3. **Listen-in for everyone.** A signed-out or not-yet-approved visitor can still open the link: they
    see the event and a message that they can come listen in at whatever time is chosen — the link is
    their invite. They are shown a sign-in prompt if they want a say in the time.
-4. **Copy the link.** Every surface has a Copy-link button (rule 130) for sharing the one event link.
+4. **See the days and times before signing in.** Under that sign-in prompt, a visitor sees the real
+   voting form — the same day chips and one-hour windows a member picks from — grayed out and not
+   tappable, with the line "Here are the times on offer — sign in to pick yours". They can see exactly
+   what they would be choosing from before they decide to sign in.
+5. **Know where the meeting is, from the moment the link opens.** Every state of the shared link —
+   before voting opens, while voting is open, for a signed-out visitor, and after the time is chosen —
+   shows "We'll meet in <plugin>" with a button straight to that plugin (for example Chyme, at
+   `/apps/chyme`). It no longer waits for the survey to close.
+6. **A way back off the survey.** A signed-in member sees the standard top bar on the shared link —
+   back chevron, brand icon, "Mutual Time", and the bug / settings / account controls — the same bar
+   every other screen has. A signed-out visitor sees the shared back chevron next to the event name,
+   and only when there is somewhere in-app to go back to.
+7. **Copy the link.** Every surface has a Copy-link button (rule 130) for sharing the one event link.
 
 ## Admin Features
 
 1. **Create an event** at `/apps/mutual-time`: optional title, optional description, a "Where we'll
-   meet" plugin (Chyme or Peer Programming), and optional survey open/close date-times. Leaving close
+   meet" plugin (Chyme, Peer Programming, or Beacon), and optional survey open/close date-times. Leaving close
    blank means the admin closes it manually.
 2. **Manage events:** the dashboard lists the admin's events with voter counts, a status pill
    (scheduled / open / closed), Copy-link, View, "Close and choose the time", and — once closed — the
@@ -69,7 +81,7 @@ Defined in `ctf/schema.sql` (CREATE TABLE IF NOT EXISTS + ALTER TABLE IF EXISTS 
 1. `mutual_time_events`
    - One row per event, keyed by `id`, with a unique shareable `slug`. Columns: `created_by_user_id`
      (the admin creator), `title` (nullable), `description` (nullable), `meeting_plugin`
-     (`chyme|peer-programming`), `window_start_date` (UTC date the 7-day candidate window begins),
+     (`chyme|peer-programming|beacon`), `window_start_date` (UTC date the 7-day candidate window begins),
      `window_days` (default 7), `opens_at` (nullable — null opens immediately), `closes_at` (nullable —
      null closes manually), `status` (`open|closed`), `result_slot_start` (winning UTC slot, nullable),
      `result_can_make_it` (count, nullable), `created_at`, `closed_at` (nullable). Indexed by slug
@@ -112,12 +124,14 @@ is added to `TrustSignalMetrics`, `computeTrustSignalMetrics`, or `buildTrustEvi
 ## Web and Android Delivery Status
 
 - **Web:** complete — admin dashboard (`/apps/mutual-time`), the public one-link surface
-  (`/mutual-time/[slug]`) with vote/result/gate states, and all API routes.
+  (`/mutual-time/[slug]`) with vote/result/gate states, and all API routes. The day chips and slot grid
+  live in `components/mutual-time/mutual-time-slot-picker.tsx` so the voting form and the grayed-out
+  preview on the sign-in gate are the same component, not two that can drift apart.
 - **Mobile-responsive web:** complete — the same web components render at phone width (single-column
   layout, horizontally scrollable date chips, wrapping slot grid).
 - **Android:** **out of scope (web-only per rule 105).** Mutual Time is not on the Chyme keep-list; there
-  is intentionally no React Native surface. The meeting the result points to (Chyme / Peer Programming)
-  is where any native experience lives, not the scheduling.
+  is intentionally no React Native surface. The meeting the result points to (Chyme / Peer Programming /
+  Beacon) is where any native experience lives, not the scheduling.
 
 ## Seed Coverage Status
 
@@ -180,6 +194,46 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   members only ever reach an event through its shared link (`/mutual-time/<slug>`), never
   `/apps/mutual-time`. The admin dashboard now renders the shared `MobileScreenHeader` top nav (accent
   back chevron + brand icon + title + the bug/settings/avatar actions), matching every other page.
+- 2026-08-09: **Beacon added to "Where we'll meet" + the date fields stopped running off the screen.**
+  (1) `beacon` is now a third choice in the meeting-plugin list, alongside Chyme and Peer Programming:
+  added to `MUTUAL_TIME_MEETING_PLUGINS`, to the display-name map (`Beacon`), to the command-contract
+  enum and the audit contract's target context, and to the `meeting_plugin` check in `schema.sql`
+  (plus a drop-and-re-add of `mutual_time_events_meeting_plugin_check` so a database created before
+  today accepts the new value too). The result link points at `/apps/beacon`, the same
+  `/apps/<slug>` shape as the other two. (2) The two "Survey opens / Survey closes" date-and-time
+  fields ran past the right edge of the card on a phone. A grid column sized `1fr` keeps a floor of the
+  item's own minimum width, and a `datetime-local` control reports a minimum wider than the phone-width
+  column, so the column grew and took the field with it. The column is now `minmax(0, 1fr)`, each
+  wrapper carries `minWidth: 0`, and the shared input style carries `maxWidth: 100%` — the fields line
+  up with the title, description, and dropdown above them.
+- 2026-08-09: **The shared link now previews the form, names the meeting place, and stops offering to
+  clear picks nobody made.** All on `/mutual-time/<slug>`; no schema, contract, or API change.
+  (1) A signed-out or not-yet-approved visitor used to see only a locked box. They now see the sign-in
+  prompt with the real voting form below it — the same day chips and one-hour windows a member picks
+  from — grayed out, not tappable, not keyboard-focusable, and skipped by screen readers, under the line
+  "Here are the times on offer — sign in to pick yours". The reason to sign in is visible instead of
+  described. (2) "We'll meet in <plugin>" with a button to that plugin now shows on every state of the
+  link, not just after the survey closes: the gate, the not-yet-open state, and the voting form. The
+  candidate slots and the meeting plugin were already in the public read, so nothing new is exposed.
+  (3) The button under the grid read "Clear my picks" whenever nothing was selected — including on a
+  first visit, where there was nothing to clear. It now tracks what the server holds separately from
+  what is selected on screen: "Save my picks" when there is a selection, "Clear my picks" only when the
+  member has saved picks and has deselected them all, and switched off with the hint "Pick a time above,
+  then save." when there is neither. The day chips and slot grid moved to
+  `components/mutual-time/mutual-time-slot-picker.tsx` so the voting form and the gate preview share one
+  component.
+- 2026-08-09: **The shared survey link now has a way back (rule 134).** `/mutual-time/<slug>` shipped
+  with no back control at all — on a phone, and especially in the installed web app where there is no
+  browser back button, a member who opened it was stranded. It is the one screen a signed-out stranger
+  can open, so the two viewers get different chrome. A signed-in member now gets the shared
+  `MobileScreenHeader` (back chevron, brand icon, "Mutual Time", and the bug / settings / account
+  cluster), the same bar as every other screen. A signed-out visitor gets the shared
+  `BackChevronButton` beside the event name instead, and only when `useSmartBack` reports in-app
+  history: the full bar would offer them an account menu and a settings link they cannot use, and the
+  one-level-up fallback would push them to the all-apps page, which needs an account. With no in-app
+  history there is nothing in-app behind them and their browser's own back still works. No hand-rolled
+  back control — both pieces are the shared ones. `MutualTimePublic` was also split into `EventHeader`
+  and `EventBody` to stay under the complexity limit.
 
 Ordered, dependency-based (no phases). Each item done in this initial build.
 
