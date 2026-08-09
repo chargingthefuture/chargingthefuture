@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { Check, EyeOff, Lock, Server, ShieldCheck, Sparkles, X } from 'lucide-react';
 import styles from './community-shell.module.css';
+import { cycleFocusTrap } from './dialog-focus';
 
 type ComicConsentModalProps = {
   open: boolean;
@@ -18,34 +19,6 @@ const POINTS = [
   { icon: ShieldCheck, title: 'A teammate reviews answers', desc: 'Sensitive answers are checked by a trained human before they reach you.' },
   { icon: Lock, title: 'Your safety comes first', desc: 'The assistant will never reveal your location or identity, or ask you to.' },
 ];
-
-// Tab-focusable elements inside the dialog, used to cycle focus (focus trap).
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
-
-// Focus trap for a single Tab / Shift+Tab press: keep focus cycling within the dialog root.
-function cycleFocusTrap(root: HTMLElement, event: KeyboardEvent) {
-  const focusable = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-    (element) => element.offsetParent !== null || element === document.activeElement,
-  );
-  if (focusable.length === 0) return;
-
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-  const active = document.activeElement;
-
-  if (event.shiftKey) {
-    if (active === first || !root.contains(active)) {
-      event.preventDefault();
-      last.focus();
-    }
-    return;
-  }
-  if (active === last || !root.contains(active)) {
-    event.preventDefault();
-    first.focus();
-  }
-}
 
 export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentModalProps) {
   const confirmRef = useRef<HTMLButtonElement | null>(null);

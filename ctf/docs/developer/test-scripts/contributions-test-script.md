@@ -517,6 +517,29 @@ The new cycle is saved and displayed with correct start/end dates and all three 
 
 ---
 
+### CONT-A10b — Opening the Drive tab early does not wipe the cycle goals
+
+**Role:** Admin
+**Surfaces:** Web (`/admin/contributions`)
+**Precondition:** Signed in as admin, with an existing cycle whose three goals are all non-zero (CONT-A10 leaves one). Note the three goal values before you start.
+
+**Steps:**
+1. Throttle the connection in browser dev tools (Network → Slow 3G) so the dashboard's data takes a few seconds to arrive. This is the whole point of the case — the bug only appears while the cycle is still loading.
+2. Load `/admin/contributions` and tap the **Drive** tab immediately, before the page finishes loading.
+3. Wait for loading to finish and look at the three goal boxes.
+4. Without editing anything, save.
+5. Reload `/apps/contributions` as a member and read the drive progress targets.
+
+**Expected:**
+- After loading finishes, the three goal boxes show the cycle's real values — not empty boxes.
+- The save leaves all three goals unchanged, matching what you noted in the precondition.
+- Empty boxes at step 3, or goals that read 0 at step 5, is the bug from #2137: the form kept its first-render empty values and the save wrote 0 over each real goal.
+- Typing 0 into a goal box on purpose and saving still stores 0. That is a valid goal, not the bug.
+
+**Result:** web ☐
+
+---
+
 ### CONT-A11 — Cycle with end before start is rejected
 
 **Role:** Admin
