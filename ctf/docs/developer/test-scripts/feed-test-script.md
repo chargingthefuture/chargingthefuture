@@ -354,7 +354,7 @@
 5. Confirm the 👍 chip appears with a count of 1 and is highlighted.
 6. Tap 👍 again to toggle it off.
 7. Confirm the chip count returns to 0 (or the chip is removed).
-8. Try to submit an emoji not in the set (e.g., 🚀) via the API directly (`POST /api/hub/messages/:postId/reactions` with `{ emoji: "🚀" }`).
+8. Try to submit an emoji not in the set (e.g., 🚀) via the API directly (`POST /api/commons/messages/:postId/reactions` with `{ emoji: "🚀" }`).
 
 **Expected:**
 - Picker shows exactly 7 emojis in the specified order.
@@ -372,7 +372,7 @@
 
 **Steps:**
 1. Find one of your own community posts.
-2. Attempt to react to it (open picker and tap an emoji, or call `POST /api/hub/messages/:postId/reactions`).
+2. Attempt to react to it (open picker and tap an emoji, or call `POST /api/commons/messages/:postId/reactions`).
 
 **Expected:**
 - The reaction is rejected. The UI does not show the picker on your own post, or the server returns an error (400/403) if called directly.
@@ -446,7 +446,7 @@
 ### Account deletion clears reactions and Hub read-state
 
 **Expected:** Deleting the account removes the member's post reactions, announcement reactions, and
-`feed_hub_last_seen` row along with the per-user state the script already covers.
+`feed_commons_last_seen` row along with the per-user state the script already covers.
 
 ## Admin walkthrough
 
@@ -611,7 +611,7 @@
 **Precondition:** Signed in as an admin.
 
 **Steps:**
-1. In the Commons composer (or via `POST /api/hub/messages`), compose a community post of 2,000 characters (well above the 1,200-character member cap).
+1. In the Commons composer (or via `POST /api/commons/messages`), compose a community post of 2,000 characters (well above the 1,200-character member cap).
 2. Submit.
 
 **Expected:**

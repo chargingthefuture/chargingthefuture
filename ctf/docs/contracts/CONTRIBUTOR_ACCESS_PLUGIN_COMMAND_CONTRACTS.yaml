@@ -349,7 +349,7 @@ contracts:
     version: 1.1.0
     description: >-
       Mint Stream live-layer credentials for the gated channel (same posture as the Commons'
-      /api/hub/join): the client opens a live connection beneath the custom UI for instant refresh
+      /api/commons/join): the client opens a live connection beneath the custom UI for instant refresh
       and typing indicators; when Stream is unconfigured the response says configured false and
       the client stays on polling. Same three-way gate as the list command - the add to the Stream
       channel only reconciles a flag-verified member into the synced membership, never grants

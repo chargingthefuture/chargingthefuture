@@ -22,7 +22,7 @@
 > **AI Q&A via `@comic`**, **peer-to-peer community posts**) rendered in a single UI.
 > This inventory is **dedicated to the AI portion only**. Announcements and peer-to-peer
 > surfaces live in `ctf-feed-feature-inventory.md` /
-> `ctf-survivor-hub-chat-feature-inventory.md`.
+> `ctf-hub-feature-inventory.md`.
 >
 > **`@comic` already exists** as a defined persona in the Commons (Hub Home) inventory (a
 > hub-owned assistive bot that introduces survivor stories, gives onboarding nudges, and
@@ -258,7 +258,7 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 - `GET /api/feed/admin/questions`, `GET /api/feed/admin/questions/export` — admin review +
   **Rasa NLU YAML export**.
 - Client-side home-chat routing in `use-home-chat.ts` (no dedicated server route;
-  `POST /api/hub/messages` is a stub).
+  `POST /api/commons/messages` is a stub).
 
 ### Implemented (backend foundation, server-only — `comic.*`)
 Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface), under
@@ -345,7 +345,7 @@ app via Ollama (`generateComicDraft`), with a deterministic template fallback wh
 unconfigured or unreachable.
 
 ### Target (`@comic`)
-- Mention routing also to ride the Hub message path (`POST /api/hub/messages`) once that stub
+- Mention routing also to ride the Hub message path (`POST /api/commons/messages`) once that stub
   is wired; today the dedicated `POST /api/comic/message` is the server entry point.
 - Auto-reply branch (above-threshold) is **deferred**. There is no model-derived confidence now
   (Rasa removed), so `forceHumanReview()` stays unconditionally true. A confidence/safety gate is
@@ -366,8 +366,11 @@ DBs converge: `comic_conversations(channel, status)`, `comic_turns(role, engine,
 
 1. `comic_conversations` — a chat thread (`id` uuid pk, `user_id` text, `asker_username` text null
    [the asker's @username snapshotted at ask time, shown in the review dashboard in place of the raw
-   user id; null for rows created before this was captured], `channel` text [hub|feed], `status` text
+   user id; null for rows created before this was captured], `channel` text [commons|feed], `status` text
    [open|closed], `created_at`, `updated_at`). Indexed on `user_id`, `created_at`.
+   `channel` was `hub|feed` until 2026-08-09; existing rows were migrated to `commons` and nothing
+   writes `hub` any more. The CHECK still accepts `hub` for one release so the deploy window cannot
+   fail an insert, and reads fold it to `commons` — see the Commons inventory's change log.
 2. `comic_turns` — one row per turn, including `grounding_entry_ids` (jsonb array, default `[]`;
    the `comic_knowledge_entries` ids injected as grounding when a bot draft was generated —
    added 2026-07-23) (`id` uuid pk, `conversation_id` uuid FK→comic_conversations,
@@ -635,7 +638,7 @@ reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the 
 3. Confidence, "approved sources," moderation, and token counts are overstated in the feed
    inventory relative to code — reconcile there (coordinate with the feed-plugin agent).
 4. Single LLM provider, no failover (carried from feed gap #1).
-5. The Hub message path (`POST /api/hub/messages`) is a stub; `@comic` routing depends on
+5. The Hub message path (`POST /api/commons/messages`) is a stub; `@comic` routing depends on
    wiring it to the Feed/comic data layer first.
 6. `@comic` persona is defined against dropped `hub_*` tables; persona + data layer must be
    reconciled with the Hub consolidation.

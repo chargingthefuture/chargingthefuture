@@ -1,7 +1,7 @@
 'use client';
 
 // Client-side live layer for the Commons (home/community) chat. The Commons keeps its custom design
-// and its own /api/hub/messages history; this only opens a Stream Chat connection beneath that UI so
+// and its own /api/commons/messages history; this only opens a Stream Chat connection beneath that UI so
 // new posts arrive immediately (instead of waiting for the 10s poll) and members see typing
 // indicators. Everything here is best-effort: if Stream is not configured or any step fails, the
 // caller silently stays on polling and the chat keeps working.
@@ -10,7 +10,7 @@ import type { Channel, StreamChat } from 'stream-chat';
 import { acquireStreamChatClient, releaseStreamChatClient } from '../shared/stream-chat-connection';
 import { reportError } from 'lib/observability/report';
 
-export type HubLiveCredentials = {
+export type CommonsLiveCredentials = {
   streamApiKey: string;
   streamToken: string;
   streamUserId: string;
@@ -22,31 +22,31 @@ export type HubLiveCredentials = {
 
 // A member currently typing in the Commons, identified by Stream user id and a display name to
 // render ("X is typing…"). The local member is never included.
-export type HubTypingUser = {
+export type CommonsTypingUser = {
   id: string;
   name: string;
 };
 
-export type HubLiveHandlers = {
+export type CommonsLiveHandlers = {
   // Fired when a new message lands on the channel or the connection recovers, so the caller can pull
   // fresh history. Debouncing/coalescing is the caller's concern.
   onActivity: () => void;
   // Fired with the current set of other members typing (already excluding the local member).
-  onTypingChange: (typing: HubTypingUser[]) => void;
+  onTypingChange: (typing: CommonsTypingUser[]) => void;
 };
 
 // A live connection handle the caller holds for the life of the chat mount. `sendTyping` /
 // `stopTyping` emit typing events as the member writes; `disconnect` tears the connection down.
-export type HubLiveConnection = {
+export type CommonsLiveConnection = {
   sendTyping: () => void;
   stopTyping: () => void;
   disconnect: () => Promise<void>;
 };
 
-function readTypingUsers(channel: Channel, selfId: string): HubTypingUser[] {
+function readTypingUsers(channel: Channel, selfId: string): CommonsTypingUser[] {
   // channel.state.typing is keyed by user id; each value carries the typing event with its user.
   const typingState = channel.state.typing ?? {};
-  const users: HubTypingUser[] = [];
+  const users: CommonsTypingUser[] = [];
   for (const event of Object.values(typingState)) {
     const user = event.user;
     if (!user || user.id === selfId) continue;
@@ -59,10 +59,10 @@ function readTypingUsers(channel: Channel, selfId: string): HubTypingUser[] {
 // Open a live Stream Chat connection to the Commons community channel and wire the activity/typing
 // handlers. Resolves to a connection handle on success, or null if anything fails — in which case the
 // caller stays on polling. The handle's disconnect must be called on unmount.
-export async function connectHubLive(
-  credentials: HubLiveCredentials,
-  handlers: HubLiveHandlers,
-): Promise<HubLiveConnection | null> {
+export async function connectCommonsLive(
+  credentials: CommonsLiveCredentials,
+  handlers: CommonsLiveHandlers,
+): Promise<CommonsLiveConnection | null> {
   let client: StreamChat | null = null;
   try {
     // Shared per-identity connection (see lib/shared/stream-chat-connection): the Commons and the
@@ -128,7 +128,7 @@ export async function connectHubLive(
   } catch (caught) {
     // Live chat silently falling back to polling looked like a slow feed for weeks, so the reason is
     // recorded even though the fallback is harmless.
-    reportError(caught, { area: 'hub', op: 'live_stream_connect' });
+    reportError(caught, { area: 'commons', op: 'live_stream_connect' });
     // Any failure (connect, watch, or otherwise) leaves the caller on polling. Release the acquired
     // connection so we never leak a hold on it; a failed acquire holds nothing.
     if (client) {

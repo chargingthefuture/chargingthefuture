@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { connectHubLive, type HubLiveConnection, type HubTypingUser } from '../../lib/hub/live-stream';
+import { connectCommonsLive, type CommonsLiveConnection, type CommonsTypingUser } from '../../lib/commons/live-stream';
 import type { GatedChannelMessage } from '../../lib/contributor-access/channel-repository';
 import type { ShellCurrentUser } from './shell-types';
 
@@ -97,7 +97,7 @@ function errorMessage(caught: unknown, fallback: string): string {
 }
 
 // Best-effort disconnect that tolerates a null connection.
-function disconnectLive(live: HubLiveConnection | null): void {
+function disconnectLive(live: CommonsLiveConnection | null): void {
   if (live) void live.disconnect();
 }
 
@@ -110,18 +110,18 @@ function startHistoryPoll(intervalMs: number, refresh: () => Promise<void>): num
   }, intervalMs);
 }
 
-type HubLiveHandlers = {
+type CommonsLiveHandlers = {
   onActivity: () => void;
-  onTypingChange: (typing: HubTypingUser[]) => void;
+  onTypingChange: (typing: CommonsTypingUser[]) => void;
 };
 
 // Open the Stream live layer when the join response is configured; otherwise there is no live layer.
 async function connectLiveIfConfigured(
   join: GatedJoinResponse,
-  handlers: HubLiveHandlers,
-): Promise<HubLiveConnection | null> {
+  handlers: CommonsLiveHandlers,
+): Promise<CommonsLiveConnection | null> {
   if (!join.configured) return null;
-  return connectHubLive(
+  return connectCommonsLive(
     {
       streamApiKey: join.streamApiKey,
       streamToken: join.streamToken,
@@ -141,8 +141,8 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
   const [isLoading, setIsLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<HubTypingUser[]>([]);
-  const liveConnectionRef = useRef<HubLiveConnection | null>(null);
+  const [typingUsers, setTypingUsers] = useState<CommonsTypingUser[]>([]);
+  const liveConnectionRef = useRef<CommonsLiveConnection | null>(null);
 
   const refreshHistory = useCallback(async () => {
     const payload = await requestJson<{ ok: true; messages: GatedChannelMessage[] }>(

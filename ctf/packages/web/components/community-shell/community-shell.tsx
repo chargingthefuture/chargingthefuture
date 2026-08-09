@@ -8,7 +8,7 @@ import { SlidersHorizontal, Settings, MessagesSquare, LayoutGrid } from 'lucide-
 import { useAuth } from '@/hooks/useAuth';
 import type { TrustUserExtension } from '../../lib/trust/types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
-import type { HubChannelInfo } from '../../lib/hub/types';
+import type { CommonsChannelInfo } from '../../lib/commons/types';
 import type { PluginSortMode, ShellCurrentUser, ShellSection, ShellStats } from './shell-types';
 import { GATED_CHANNEL_SLUG } from '../../lib/contributor-access/gated-channel-shared';
 import { WeaversBadge } from '../contributor-access/weavers-badge';
@@ -271,7 +271,7 @@ function MobileTopBar({ section, onSectionChange, isAuthenticated, isAdmin, sign
 }
 
 type ChannelSwitchRowProps = {
-  channels: HubChannelInfo[];
+  channels: CommonsChannelInfo[];
   activeChannel: string | null;
   onChannelSelect: (slug: string) => void;
   onLockedChannelClick: () => void;
@@ -346,7 +346,7 @@ type ShellMainContentProps = {
   isAdmin: boolean;
   verification: ShellVerification | null;
   loadError: string | null;
-  channels: HubChannelInfo[];
+  channels: CommonsChannelInfo[];
   activeChannel: string | null;
   onChannelSelect: (slug: string) => void;
   onLockedChannelClick: () => void;
@@ -504,7 +504,7 @@ export function CommunityShell(props: CommunityShellProps) {
   const [section, setSection] = useState<ShellSection>(initialSection);
   const [query, setQuery] = useState('');
   const [plugins, setPlugins] = useState(initialPlugins);
-  const [channels, setChannels] = useState<HubChannelInfo[]>([]);
+  const [channels, setChannels] = useState<CommonsChannelInfo[]>([]);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeApp, setActiveApp] = useState<string | null>(null);
@@ -572,12 +572,12 @@ export function CommunityShell(props: CommunityShellProps) {
 
     let canceled = false;
 
-    async function loadHubData() {
+    async function loadCommonsData() {
       try {
-        const channelsRes = await fetch('/api/hub/channels', { method: 'GET', cache: 'no-store' });
+        const channelsRes = await fetch('/api/commons/channels', { method: 'GET', cache: 'no-store' });
 
         if (channelsRes.ok) {
-          const channelsPayload = (await channelsRes.json()) as { channels: HubChannelInfo[] };
+          const channelsPayload = (await channelsRes.json()) as { channels: CommonsChannelInfo[] };
           if (!canceled) {
             const loadedChannels = channelsPayload.channels ?? [];
             setChannels(loadedChannels);
@@ -591,7 +591,7 @@ export function CommunityShell(props: CommunityShellProps) {
       }
     }
 
-    void loadHubData();
+    void loadCommonsData();
     return () => {
       canceled = true;
     };

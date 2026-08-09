@@ -215,7 +215,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('feed_membership_events', 'user_id', 'Your feed membership events.'),
       del('announcement_user_state', 'user_id', 'Your announcement read/ack state.'),
       del('announcement_reactions', 'user_id', 'Your reactions on announcements.'),
-      del('feed_hub_last_seen', 'user_id', 'When you last opened the Hub (unread-badge state).'),
+      del('feed_commons_last_seen', 'user_id', 'When you last opened the Commons (unread-badge state).'),
       del('announcement_membership_events', 'user_id', 'Your announcement membership events.'),
       del('announcement_replies', 'author_user_id', 'Your replies to announcements.'),
       // The AI-answer inference log FK-cascades with the member's questions and answers (deleted

@@ -10,7 +10,10 @@ contracts:
         required: true
       channel:
         type: string
-        enum: [hub, feed]
+        # 'hub' was renamed to 'commons' on 2026-08-09. It is still accepted on input because the
+        # route coerces every non-'feed' value to 'commons' anyway, so an older client that still
+        # sends 'hub' is stored correctly rather than rejected.
+        enum: [commons, feed, hub]
         required: false
       conversationId:
         type: string

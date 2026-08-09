@@ -309,15 +309,15 @@
       ]
     },
     {
-      "name": "hub",
+      "name": "commons",
       "type": "plugin",
       "lastReviewedAt": "2026-07-25T08:27:58.413Z",
       "lastRunIssues": 6,
       "cursor": 0,
       "partial": false,
       "paths": [
-        "ctf/packages/web/app/api/hub",
-        "ctf/packages/web/lib/hub"
+        "ctf/packages/web/app/api/commons",
+        "ctf/packages/web/lib/commons"
       ]
     },
     {

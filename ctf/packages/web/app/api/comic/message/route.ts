@@ -24,7 +24,7 @@ function parseBody(body: MessageBody): ComicMessageInput | null {
 
   return {
     body: typeof body.body === 'string' ? body.body : '',
-    channel: body.channel === 'feed' ? 'feed' : 'hub',
+    channel: body.channel === 'feed' ? 'feed' : 'commons',
     conversationId,
     consentGranted: body.consentGranted === true,
   };

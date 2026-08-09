@@ -142,7 +142,7 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
   PeerProgramming previously had no producer, so cohort messages never reached the 🔔 center even though
   the Community device-push toggle listed it. Reuses the existing backbone; no schema or contract change.
 - 2026-07-22: Deep links now reach messages older than the recent page. The Commons only loaded the
-  recent page, so an "Open" to an older message landed without the flash. `GET /api/hub/messages` gained
+  recent page, so an "Open" to an older message landed without the flash. `GET /api/commons/messages` gained
   `aroundPost` / `aroundAnnouncement` params that return a page centered on the target, and the Commons
   merges that window in alongside the recent page before scrolling to it. See the Commons
   inventory for the mechanism.

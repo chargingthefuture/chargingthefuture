@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { ShieldCheck, ArrowUpRight, MessageCircle, Send } from 'lucide-react';
-import type { HubAnnouncementReply, HubAnnouncementRepliesResponse } from '../../lib/hub/types';
+import type { CommonsAnnouncementReply, CommonsAnnouncementRepliesResponse } from '../../lib/commons/types';
 import { FEED_MAX_COMMUNITY_REPLY_LENGTH } from '../../lib/feed/constants';
 import type { ChatReactionSummary } from './shell-types';
 import { ChatReactionRow } from './chat-reaction-row';
@@ -74,7 +74,7 @@ function AnnouncementLinkedPlugins({ linkedPlugins }: { linkedPlugins?: Array<{ 
 }
 
 // A single reply within the thread.
-function AnnouncementReplyItem({ reply }: { reply: HubAnnouncementReply }) {
+function AnnouncementReplyItem({ reply }: { reply: CommonsAnnouncementReply }) {
   return (
     <div className={styles.announcementReply}>
       <div className={styles.announcementReplyMeta}>
@@ -89,7 +89,7 @@ function AnnouncementReplyItem({ reply }: { reply: HubAnnouncementReply }) {
 type AnnouncementThreadProps = {
   loading: boolean;
   loaded: boolean;
-  replies: HubAnnouncementReply[];
+  replies: CommonsAnnouncementReply[];
   error: string | null;
   replyInput: string;
   sending: boolean;
@@ -223,7 +223,7 @@ export function AnnouncementCard({
   onToggleReaction,
 }: AnnouncementCardProps) {
   const [threadOpen, setThreadOpen] = useState(false);
-  const [replies, setReplies] = useState<HubAnnouncementReply[]>([]);
+  const [replies, setReplies] = useState<CommonsAnnouncementReply[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [replyInput, setReplyInput] = useState('');
@@ -235,7 +235,7 @@ export function AnnouncementCard({
     setLoading(true);
     setError(null);
     try {
-      const payload = await requestJson<HubAnnouncementRepliesResponse>(
+      const payload = await requestJson<CommonsAnnouncementRepliesResponse>(
         `/api/announcements/${encodeURIComponent(id)}/replies`,
       );
       setReplies(payload.replies);
@@ -266,7 +266,7 @@ export function AnnouncementCard({
     setSending(true);
     setError(null);
     try {
-      const payload = await requestJson<{ ok: true; reply: HubAnnouncementReply }>(
+      const payload = await requestJson<{ ok: true; reply: CommonsAnnouncementReply }>(
         `/api/announcements/${encodeURIComponent(announcementId)}/replies`,
         {
           method: 'POST',

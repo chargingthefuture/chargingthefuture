@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/nextjs';
 import { shouldEnableWebSentry } from './sentry-config';
 
 type ReportContext = {
-  // Coarse grouping for the error (e.g. 'chyme', 'directory', 'hub').
+  // Coarse grouping for the error (e.g. 'chyme', 'directory', 'commons').
   area: string;
   // The specific operation that failed (e.g. 'join', 'list_members', 'send_message').
   op: string;

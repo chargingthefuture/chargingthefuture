@@ -1,7 +1,7 @@
 // A compact reference to the peer post this Hub message quotes (Signal-style reply).
 // Resolved server-side so the chat can render the quoted block (author + short snippet)
 // without a second fetch. Null when the message is not a reply.
-export type HubQuotedMessage = {
+export type CommonsQuotedMessage = {
   author: string;
   snippet: string;
   // The quoted post's community post id, so the chat can jump to (scroll to) the original message
@@ -12,7 +12,7 @@ export type HubQuotedMessage = {
 // An emoji reaction aggregate on a Hub peer message (community post): the emoji, the count of
 // members who reacted, and whether the requesting member is one of them. Only emojis with at
 // least one reaction appear. Mirrors the feed FeedReactionSummary.
-export type HubReactionSummary = {
+export type CommonsReactionSummary = {
   emoji: string;
   count: number;
   reactedByMe: boolean;
@@ -21,10 +21,10 @@ export type HubReactionSummary = {
 // What kind of feed item a Hub message came from. Drives how the client renders it: an
 // `announcement` shows the distinct official card (badge + optional title), while `community`
 // (peer posts) and `question` (AI Q&A) render as ordinary chat bubbles.
-export type HubMessageKind = 'announcement' | 'question' | 'community';
+export type CommonsMessageKind = 'announcement' | 'question' | 'community';
 
 // Hub-owned message types
-export type HubMessage = {
+export type CommonsMessage = {
   id: string;
   userId: string;
   username: string | null;
@@ -32,7 +32,7 @@ export type HubMessage = {
   avatarUrl: string | null;
   // Which feed channel this message came from. `community` for peer posts (the common case),
   // `announcement` for official operator posts, `question` for AI Q&A items.
-  kind: HubMessageKind;
+  kind: CommonsMessageKind;
   // The announcement's own title, rendered as a heading above the body on the official card.
   // Null for peer posts and AI answers (their `text` is the whole message).
   title: string | null;
@@ -51,10 +51,10 @@ export type HubMessage = {
   // feed item id. Null for peer posts and AI answers.
   announcementId: string | null;
   // The peer post this message quotes (Signal-style reply), or null when it is not a reply.
-  quotedMessage: HubQuotedMessage | null;
+  quotedMessage: CommonsQuotedMessage | null;
   // Emoji reactions on this message, ordered by the fixed reaction set. Populated for peer posts
   // (their community post) and for announcements; always an array, empty when there are none.
-  reactions: HubReactionSummary[];
+  reactions: CommonsReactionSummary[];
   // The number of replies on this announcement (announcements only). 0 for peer posts and AI
   // answers, which are not replied to through the announcement thread.
   replyCount: number;
@@ -63,7 +63,7 @@ export type HubMessage = {
 // One reply on an official announcement, returned by the announcement replies endpoint. `author`
 // is the display handle resolved server-side (e.g. "@farah" or a stable pseudonym) so the thread
 // renders without a second lookup. `isMine` marks the requesting member's own replies.
-export type HubAnnouncementReply = {
+export type CommonsAnnouncementReply = {
   id: string;
   author: string;
   isMine: boolean;
@@ -71,20 +71,20 @@ export type HubAnnouncementReply = {
   sentAtIso: string;
 };
 
-export type HubAnnouncementRepliesResponse = {
+export type CommonsAnnouncementRepliesResponse = {
   ok: true;
   announcementId: string;
-  replies: HubAnnouncementReply[];
+  replies: CommonsAnnouncementReply[];
 };
 
-export type HubMessagesResponse = {
+export type CommonsMessagesResponse = {
   channelId: string;
-  messages: HubMessage[];
+  messages: CommonsMessage[];
 };
 
 // The member's last-seen marker for the Hub home channel, used to draw the "New messages"
 // divider. `lastSeenAtIso` is null when the member has never been recorded.
-export type HubLastSeenResponse = {
+export type CommonsLastSeenResponse = {
   ok: true;
   lastSeenAtIso: string | null;
 };
@@ -93,7 +93,7 @@ export type HubLastSeenResponse = {
 // `configured: true` carries a real key/token/channel minted server-side. `configured: false`
 // means Stream is not set up in this environment (no API key/secret), so the client must skip the
 // live connection and stay on polling — Commons never breaks when Stream is absent.
-export type HubJoinResponse =
+export type CommonsJoinResponse =
   | {
     ok: true;
     configured: true;
@@ -111,15 +111,15 @@ export type HubJoinResponse =
 // members-only channel; 'eligible' = the contributor-gated channel (Weavers of the Commons). The
 // `role:${string}` arm keeps room for future role-scoped channels without collapsing the union to a
 // bare `string` (which would silently accept any typo).
-export type HubVisibilityScope = 'public' | 'authenticated' | 'eligible' | `role:${string}`;
+export type CommonsVisibilityScope = 'public' | 'authenticated' | 'eligible' | `role:${string}`;
 
-export type HubChannelInfo = {
+export type CommonsChannelInfo = {
   slug: string;
   displayName: string;
-  visibilityScope: HubVisibilityScope;
+  visibilityScope: CommonsVisibilityScope;
   streamChannelId: string;
 };
 
-export type HubChannelsResponse = {
-  channels: HubChannelInfo[];
+export type CommonsChannelsResponse = {
+  channels: CommonsChannelInfo[];
 };

@@ -22,12 +22,12 @@ import { ChatReactionRow } from './chat-reaction-row';
 import { CommonsFirstVisitNotice } from './commons-first-visit-notice';
 import { ComicConsentModal } from './comic-consent-modal';
 import { ContributionsGiftTrigger } from '../contributions/contributions-banner';
-import type { HubTypingUser } from '../../lib/hub/live-stream';
-import type { HubSuggestionChip } from '../../lib/concierge/hub-suggestions';
+import type { CommonsTypingUser } from '../../lib/commons/live-stream';
+import type { CommonsSuggestionChip } from '../../lib/concierge/commons-suggestions';
 import styles from './community-shell.module.css';
 import { feedPostLength } from '../../lib/feed/normalize';
 import { FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH, FEED_MAX_COMMUNITY_POST_LENGTH } from '../../lib/feed/constants';
-import { OFFICIAL_SENDER_LABEL } from '../../lib/hub/constants';
+import { OFFICIAL_SENDER_LABEL } from '../../lib/commons/constants';
 
 // Avatar glyph for a chat sender: the first letter of the sender's name, whoever they are. The
 // official house account used to get a hardcoded "SH" here; now that official posts are signed with
@@ -244,7 +244,7 @@ function mentionLabel(handle: string): string {
 
 // "X is typing…" line shown above the composer when the live connection is up and someone else is
 // typing. One name reads "X is typing…", two read "X and Y are typing…", more collapse to a count.
-function computeTypingLabel(typingUsers: HubTypingUser[]): string | null {
+function computeTypingLabel(typingUsers: CommonsTypingUser[]): string | null {
   if (typingUsers.length === 0) return null;
   if (typingUsers.length === 1) return `${typingUsers[0].name} is typing…`;
   if (typingUsers.length === 2) return `${typingUsers[0].name} and ${typingUsers[1].name} are typing…`;
@@ -795,7 +795,7 @@ function PeerMessageEntry({ msg, senderName, divider, inputRef, onJumpToQuoted, 
     <>
       {divider}
       <div className={msg.from === 'user' ? `${styles.chatRow} ${styles.chatRowUser}` : styles.chatRow}>
-        {msg.from === 'hub' ? <div className={styles.chatAvatar} aria-hidden="true">{avatarFromSender(senderName)}</div> : null}
+        {msg.from === 'commons' ? <div className={styles.chatAvatar} aria-hidden="true">{avatarFromSender(senderName)}</div> : null}
         <div className={styles.chatBubbleGroup} data-post-id={msg.communityPostId ?? undefined}>
           <span className={msg.from === 'user' ? `${styles.chatSender} ${styles.chatSenderUser}` : styles.chatSender}>{senderName}</span>
           <QuotedBlock quoted={msg.quotedMessage} onJump={onJumpToQuoted} />
@@ -920,7 +920,7 @@ type ConciergeChipRailProps = {
   mentionsOnly: boolean;
   announcementsOnly: boolean;
   notificationsOpen: boolean;
-  chips: HubSuggestionChip[];
+  chips: CommonsSuggestionChip[];
   onToggleMentions: () => void;
   onToggleAnnouncements: () => void;
   onToggleNotifications: () => void;
@@ -1013,7 +1013,7 @@ function NotificationsFilterButton({ open, onClick }: { open: boolean; onClick: 
   );
 }
 
-function SuggestionChips({ chips, onAsk }: { chips: HubSuggestionChip[]; onAsk: (question: string) => void }) {
+function SuggestionChips({ chips, onAsk }: { chips: CommonsSuggestionChip[]; onAsk: (question: string) => void }) {
   return (
     <>
       {chips.map((chip) =>

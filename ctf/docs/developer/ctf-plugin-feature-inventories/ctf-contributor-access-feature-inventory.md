@@ -55,7 +55,7 @@ no DMs) — and the **"Weavers of the Commons" badge** on Directory.
    launch. Mobile-responsive, rendered in the Directory shell tokens.
 
 4. **Eligible members see the gated channel alongside the Commons.** The Hub channel list
-   (`GET /api/hub/channels`) adds `#contributors` server-side only when `channel_open` is TRUE and
+   (`GET /api/commons/channels`) adds `#contributors` server-side only when `channel_open` is TRUE and
    the caller's eligibility flag is set (admins/moderators also see it — read access, disclosed).
    Desktop: the existing channel rail. Phone widths: a channel-pill switch row appears in the chat
    section once the member has more than one channel.
@@ -138,7 +138,7 @@ audit-trailed, same posture as the Commons hub routes — post deletions ARE aud
   `rate_limit_exceeded` whatever `replyToPostId` they send.
   Contract: `contributor-access.channel.message.create`.
 - `DELETE /api/contributor-access/channel/messages/[postId]` — soft-delete a post (same route
-  shape as the Commons' `DELETE /api/hub/messages/[postId]`): the author may delete their own
+  shape as the Commons' `DELETE /api/commons/messages/[postId]`): the author may delete their own
   post; an admin may delete any post (the moderator power the disclosure line discloses). Sets
   `deleted_at`/`deleted_by` — content hidden from every read, not erased. A non-owner attempt is
   403 with an audited deny. Both allowed paths write `contributor_access_audit_trail` under
@@ -156,7 +156,7 @@ audit-trailed, same posture as the Commons hub routes — post deletions ARE aud
   joining reconciles the member into the Stream channel, so the route requires the `x-ctf-csrf`
   header. Contract: `contributor-access.channel.join`.
 
-Cross-plugin read: `GET /api/hub/channels` (the Hub) reads `contributor_access_config` +
+Cross-plugin read: `GET /api/commons/channels` (the Commons) reads `contributor_access_config` +
 `contributor_access_eligibility` to append the `#contributors` entry server-side for eligible
 members and admins only.
 
@@ -310,7 +310,7 @@ counts still feed the score internally).
   now web-only, served by the installable web app (PWA). Historical detail (it previously shipped
   2026-07-19, issues #1680 and #1681): both member
   surfaces lived in `packages/mobile/src/features/contributor-access/`. (1) The gated channel
-  (#1681): `HubHome` reads the server-filtered `/api/hub/channels` (new `fetchHubChannels` in the
+  (#1681): `HubHome` reads the server-filtered `/api/commons/channels` (new `fetchHubChannels` in the
   hub client) and shows a `#general` / `#contributors` pill row ONLY when the response carries the
   contributors entry — no client-side eligibility logic exists, and a member without the entry
   sees the shipped single-channel Commons unchanged. `GatedChannel.tsx` binds the same member

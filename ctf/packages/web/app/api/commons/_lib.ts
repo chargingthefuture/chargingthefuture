@@ -2,25 +2,25 @@ import { NextResponse } from 'next/server';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
 
-export type HubApiIdentity = {
+export type CommonsApiIdentity = {
   userId: string;
   username: string | null;
   displayName: string;
   avatarUrl: string | null;
 };
 
-export type HubApiGate =
+export type CommonsApiGate =
   | {
     allowed: true;
     auth: AllowDecision;
-    identity: HubApiIdentity;
+    identity: CommonsApiIdentity;
   }
   | {
     allowed: false;
     response: NextResponse;
   };
 
-export async function requireHubAccess(): Promise<HubApiGate> {
+export async function requireCommonsAccess(): Promise<CommonsApiGate> {
   const authDecision = await evaluatePluginAccess({
     requireUsername: false,
     // The Hub general channel is the support surface for not-yet-verified members, so
@@ -35,7 +35,7 @@ export async function requireHubAccess(): Promise<HubApiGate> {
     };
   }
 
-  const identity: HubApiIdentity = {
+  const identity: CommonsApiIdentity = {
     userId: authDecision.userId,
     username: authDecision.username,
     displayName: buildIdentityDisplayName(authDecision.username, authDecision.userId),

@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { SlidersHorizontal } from 'lucide-react';
-import type { HubChannelInfo } from '../../lib/hub/types';
+import type { CommonsChannelInfo } from '../../lib/commons/types';
 import type { ShellStats } from './shell-types';
 import { formatScaledValue } from './shell-format';
 import styles from './community-shell.module.css';
 
 type ShellSidebarProps = {
-  channels: HubChannelInfo[];
+  channels: CommonsChannelInfo[];
   activeChannel: string | null;
   onChannelSelect: (slug: string) => void;
   // Live shell stats (member count) for the footer, so the count is real instead of hardcoded.
@@ -21,7 +21,7 @@ type ShellSidebarProps = {
 // A readable label for a channel: prefer the server-provided displayName, falling back to a
 // Title-cased version of the slug ("general-announcements" → "General Announcements") so the rail
 // never shows a raw database slug.
-function channelLabel(channel: HubChannelInfo): string {
+function channelLabel(channel: CommonsChannelInfo): string {
   // Strip any leading "#" the stored display name may carry (e.g. "#general") — the sidebar row
   // already renders its own "#" prefix, so keeping it here produced a double hash ("# #general").
   const name = channel.displayName?.trim().replace(/^#+\s*/, '');

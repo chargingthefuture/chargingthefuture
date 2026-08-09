@@ -11,7 +11,7 @@ This is a living tracker. Update the status column as work ships, and link the P
 
 1. **Commons keeps its custom design; add Stream features into it.** The Commons (the home/community
    chat) is a hand-built surface — it renders our own cards and reads from our own
-   `/api/hub/messages`, mirroring to Stream server-side. We do **not** replace it with Stream's stock
+   `/api/commons/messages`, mirroring to Stream server-side. We do **not** replace it with Stream's stock
    chat UI. Instead we add a live Stream client connection underneath the existing design and surface
    each feature within our own components. This preserves the approved Commons look (design guardrail)
    while gaining the real-time features.
@@ -77,7 +77,7 @@ not as separate topic rooms:
 
 | Surface | How it uses Stream today | Approach |
 |---|---|---|
-| Commons (home/community chat) | Custom UI over `/api/hub/messages`; mirrors to Stream server-side | (1) add features into custom design |
+| Commons (home/community chat) | Custom UI over `/api/commons/messages`; mirrors to Stream server-side | (1) add features into custom design |
 | PeerProgramming text room | Custom UI over `/api/peer-programming/messages` | (1) add features into custom design; **plus** voice (see #12) |
 | PeerProgramming session | Stream **Video** (live calls) | already live; audit for gaps |
 | TrustTransport chat | `StreamChatPanel` (list + input only) | (2) richer Stream UI |
@@ -138,7 +138,7 @@ across the relevant surfaces. A task with no dependency can run anytime / in par
 
 1. **Commons live Stream layer (foundation).** Done (branch `feat/commons-live-stream-layer`,
    2026-06-21). Added a live Stream Chat client connection beneath the existing custom Commons UI
-   (kept the design; read live events, did not swap components): `POST /api/hub/join` now mints real
+   (kept the design; read live events, did not swap components): `POST /api/commons/join` now mints real
    `ctf-feed-community` credentials, the Commons hook opens a `stream-chat` connection and refreshes
    history on `message.new`/reconnect, the 10s poll slows to a 30s backstop while live, and a subtle
    "X is typing…" line surfaces typing — all with a clean fall-back to polling when Stream is
@@ -195,7 +195,7 @@ Programming.
   Programming, with the one trigger (broadcasting cohort video to listen-in watchers) that would
   justify the `livestream` video call type.
 - 2026-06-21: Task 1 (Commons live Stream layer) shipped on branch `feat/commons-live-stream-layer`.
-  `POST /api/hub/join` mints real `ctf-feed-community` credentials (or reports `configured: false`);
+  `POST /api/commons/join` mints real `ctf-feed-community` credentials (or reports `configured: false`);
   the Commons hook opens a `stream-chat` connection, refreshes history on `message.new`/reconnect,
   slows the poll to a 30s backstop while live, and surfaces a typing indicator — falling back to
   polling when Stream is unconfigured. Read receipts, delivery status, and presence dots deferred to
