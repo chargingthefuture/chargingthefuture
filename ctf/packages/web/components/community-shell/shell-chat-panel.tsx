@@ -795,7 +795,7 @@ function PeerMessageEntry({ msg, senderName, divider, inputRef, onJumpToQuoted, 
     <>
       {divider}
       <div className={msg.from === 'user' ? `${styles.chatRow} ${styles.chatRowUser}` : styles.chatRow}>
-        {msg.from === 'hub' ? <div className={styles.chatAvatar} aria-hidden="true">{avatarFromSender(senderName)}</div> : null}
+        {msg.from === 'commons' ? <div className={styles.chatAvatar} aria-hidden="true">{avatarFromSender(senderName)}</div> : null}
         <div className={styles.chatBubbleGroup} data-post-id={msg.communityPostId ?? undefined}>
           <span className={msg.from === 'user' ? `${styles.chatSender} ${styles.chatSenderUser}` : styles.chatSender}>{senderName}</span>
           <QuotedBlock quoted={msg.quotedMessage} onJump={onJumpToQuoted} />

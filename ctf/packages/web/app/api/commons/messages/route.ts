@@ -187,7 +187,7 @@ export async function GET(request: Request) {
   } catch (error) {
     // Caught errors do not reach Sentry on their own (only unhandled ones do via
     // the Next.js onRequestError hook), so report explicitly.
-    reportError(error, { area: 'hub', op: 'read_messages' });
+    reportError(error, { area: 'commons', op: 'read_messages' });
     return NextResponse.json(
       {
         ok: false,
@@ -285,7 +285,7 @@ function mapCommonsPostError(error: unknown): NextResponse {
     );
   }
 
-  reportError(error, { area: 'hub', op: 'send_message' });
+  reportError(error, { area: 'commons', op: 'send_message' });
   return NextResponse.json(
     {
       ok: false,

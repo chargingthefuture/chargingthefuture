@@ -39,7 +39,7 @@ export async function POST() {
 
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    reportError(error, { area: 'hub', op: 'join' });
+    reportError(error, { area: 'commons', op: 'join' });
     return NextResponse.json(
       {
         ok: false,

@@ -128,7 +128,7 @@ export async function connectCommonsLive(
   } catch (caught) {
     // Live chat silently falling back to polling looked like a slow feed for weeks, so the reason is
     // recorded even though the fallback is harmless.
-    reportError(caught, { area: 'hub', op: 'live_stream_connect' });
+    reportError(caught, { area: 'commons', op: 'live_stream_connect' });
     // Any failure (connect, watch, or otherwise) leaves the caller on polling. Release the acquired
     // connection so we never leak a hold on it; a failed acquire holds nothing.
     if (client) {

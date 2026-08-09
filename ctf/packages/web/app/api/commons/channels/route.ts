@@ -48,7 +48,7 @@ export async function GET() {
 
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    reportError(error, { area: 'hub', op: 'channels' });
+    reportError(error, { area: 'commons', op: 'channels' });
     return NextResponse.json(
       {
         ok: false,

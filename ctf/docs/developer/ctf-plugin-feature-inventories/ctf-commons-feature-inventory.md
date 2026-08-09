@@ -258,10 +258,18 @@ There is no `seedHub.mjs`; the Commons channel's data layer is seeded by the Fee
       `CHECK (channel IN ('commons', 'feed'))` would fail any @comic question asked in that window
       on a constraint violation. Nothing writes `'hub'` after this ships. Tightening the list is a
       one-line follow-up once the deploy has settled.
-  - **Still not renamed, and why:** the `from: 'hub'` client-side message discriminator (internal,
-    paired with `'user'`, no rename value), the `area: 'hub'` error-reporting tag (renaming splits
-    error-grouping history), and the `design/.../survivor-hub/` mockup paths, which name real
-    directories in the deprecated design submodule.
+  - **Also renamed, after the owner overruled two calls to leave them** (same day):
+    - `from: 'hub'` → `from: 'commons'`, the client-side message discriminator paired with
+      `'user'` (`shell-types.ts`, `use-home-chat.ts`, `shell-chat-panel.tsx`). Client-only — it is
+      derived per render from whether the author is the current member, never sent to the server or
+      stored — so there is nothing to migrate.
+    - `area: 'hub'` → `area: 'commons'`, the error-reporting group on all seven Commons routes and
+      the live-stream client. The reason for keeping it was continuity of error-grouping history in
+      Sentry; the owner pointed out Sentry was not reporting for a long stretch, so there is no
+      history to preserve.
+  - **Still not renamed:** the `design/.../survivor-hub/` mockup paths, which name real directories
+    in the deprecated design submodule, and `HUB_QA`, which names an identifier in the landing-page
+    repo. Editing either would turn a correct reference into a wrong one.
   - Dated entries below keep the old names and old type names: they record what shipped at the
     time. Route *paths* in them were repointed so every reference still resolves.
 - 2026-08-09: **"Survivor Hub" retired as a name, and the "SH" avatar glyph is gone

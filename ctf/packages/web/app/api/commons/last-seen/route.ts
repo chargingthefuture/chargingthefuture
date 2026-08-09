@@ -22,7 +22,7 @@ export async function GET() {
     const response: CommonsLastSeenResponse = { ok: true, lastSeenAtIso };
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    reportError(error, { area: 'hub', op: 'read_last_seen' });
+    reportError(error, { area: 'commons', op: 'read_last_seen' });
     return NextResponse.json(
       { ok: false, message: 'Unable to read last-seen marker.' },
       { status: 503 },
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     const response: CommonsLastSeenResponse = { ok: true, lastSeenAtIso };
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    reportError(error, { area: 'hub', op: 'update_last_seen' });
+    reportError(error, { area: 'commons', op: 'update_last_seen' });
     return NextResponse.json(
       { ok: false, message: 'Unable to update last-seen marker.' },
       { status: 503 },

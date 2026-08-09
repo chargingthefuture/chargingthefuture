@@ -107,7 +107,7 @@ function formatTimeLabel(value: string | Date | null | undefined): string {
 // concierge reply sets its own actionLabel/actionSlug — never from message text.
 function buildChatMessage(
   id: string,
-  from: 'hub' | 'user',
+  from: 'commons' | 'user',
   text: string,
   time: string,
   senderLabel?: string,
@@ -122,7 +122,7 @@ function buildChatMessage(
 }
 
 function mapStoredMessage(message: CommonsMessage, currentUserId: string): ChatMessage {
-  const from = message.userId === currentUserId ? 'user' : 'hub';
+  const from = message.userId === currentUserId ? 'user' : 'commons';
   return {
     ...buildChatMessage(
       message.id,
@@ -658,7 +658,7 @@ function buildConciergeMessages(promptText: string): ChatMessage[] {
   const reply: ChatMessage = top
     ? {
       id: `concierge-a-${stamp}`,
-      from: 'hub',
+      from: 'commons',
       text: second ? `${top.blurb} (Or try ${second.name}.)` : top.blurb,
       time,
       sentAtIso,
@@ -667,7 +667,7 @@ function buildConciergeMessages(promptText: string): ChatMessage[] {
     }
     : {
       id: `concierge-a-${stamp}`,
-      from: 'hub',
+      from: 'commons',
       text: 'I’m not sure which feature fits that yet — type @comic to ask the AI Assistant, or share it with the community below.',
       time,
       sentAtIso,

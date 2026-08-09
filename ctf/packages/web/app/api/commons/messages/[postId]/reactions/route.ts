@@ -39,7 +39,7 @@ function mapCommonsReactionError(error: unknown): NextResponse {
 
   // Unexpected failure (e.g. a database error): caught errors do not reach Sentry on their
   // own, so report it. The client still gets a generic message.
-  reportError(error, { area: 'hub', op: 'toggle_reaction' });
+  reportError(error, { area: 'commons', op: 'toggle_reaction' });
   return NextResponse.json(
     { ok: false, message: 'Unable to update your reaction.' },
     { status: 503 },

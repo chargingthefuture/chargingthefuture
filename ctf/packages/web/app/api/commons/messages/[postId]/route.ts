@@ -81,7 +81,7 @@ export async function DELETE(
 
     // Unexpected failure (e.g. a database error): caught errors do not reach Sentry on their own,
     // so report it. The client still gets a generic message.
-    reportError(error, { area: 'hub', op: 'delete_post' });
+    reportError(error, { area: 'commons', op: 'delete_post' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to delete your post.' },
       { status: 503 },
