@@ -178,28 +178,31 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 ---
 
-### TR-A5b — Visibility selector in the widget (self surfaces only)
+### TR-A5b — "What members see" choice in the widget (self surfaces only)
 
 **Role:** Admin acting as any authenticated user  
 **Surfaces:** Web (desktop + mobile-responsive)  
 **Precondition:** Admin signed in.
 
 **Steps:**
-1. Open the account hub (or the community shell right rail) and find the Trust widget's "Who sees your trust signals" control.
-2. Change the dropdown to "Only you see this", then reload the page.
-3. Open another member's Directory profile and find their Trust widget (member with `public` visibility).
-4. Reset your own choice to "Members see everything".
+1. Open the account hub (or the community shell right rail) and find the Trust widget's "What members see" section.
+2. Press "Nothing", then reload the page.
+3. Press "A summary" and compare the rows shown under the buttons with what TR-A4b returns for a peer.
+4. Open another member's Directory profile and find their Trust widget (member with `public` visibility).
+5. Reset your own choice to "Everything".
 
 **Expected:**
-- On your own widget the control has a heading ("Who sees your trust signals") above a full-width dropdown, so it reads as something you can change rather than a status line.
-- The choices are ordered most open to most private and each states the outcome in plain words — **"Members see everything"**, **"Members see a summary"**, **"Only you see this"**. No choice is named after a category ("Public"/"Restricted"/"Private" must not appear as option text).
-- Below the dropdown, a sentence states what the current choice does and that you always see everything on your own card whichever one you pick. On "Only you see this" that sentence must also say admins can read the panel — the label alone would otherwise overpromise.
-- Under that, a **"What members see"** preview shows the result of the current choice: on "Members see everything", "Everything listed above, exactly as you see it."; on "Only you see this", "Nothing — this panel does not appear on your profile for them."; on "Members see a summary", the actual summary lines a member would receive.
+- Your own card body reads as two labeled sections: **"Your trust"** above your signal rows, then **"What members see"**. No third block sits between them — the old standalone effect sentence must not reappear.
+- The "Your trust" rows are your full list and do **not** change when the choice changes. That is correct; the section below is where the effect shows. Do not file the unchanged list as a bug.
+- The choice is three buttons in one row, ordered most open to most private, each completing the section heading: **"Everything"**, **"A summary"**, **"Nothing"**. It must not be a dropdown, and no button is named after a category ("Public"/"Restricted"/"Private" must not appear).
+- The selected button is visibly the selected one (accent fill and border), and the group is reachable by keyboard as a radio group labeled "What members see".
+- Under the buttons the result is rendered as the **actual rows another member receives**, not a description of them: on "Everything", your rows exactly as they appear above; on "A summary", the note "This member shares a summary of their participation, not the detail." followed by the summary rows. No "WHAT MEMBERS SEE" label appears inside that preview — that text is a section heading, and it never appears on a member's screen.
+- On "Nothing" the preview is the single line "Nothing. The Trust card does not appear on your profile for other members." — there is no card copy to show, so a sentence stands in.
+- No sentence anywhere in this section mentions admins. Admin access is a given across the app and must not be restated here.
 - The summary preview must match what the API returns for a peer (cross-check against TR-A4b) — both come from the same projection function, so any disagreement is a bug.
-- Changing it POSTs `/api/trust/visibility`, shows "Saving…" while in flight, then a "Saved" confirmation that clears itself after a few seconds. After reload the chosen value is still selected.
-- Your own evidence list above the control does **not** change when the setting changes — that is correct; the preview is where the effect shows. Do not file the unchanged list as a bug.
-- On failure (e.g. network cut), the dropdown reverts to the previous value and a short plain-language error appears under it, replacing the confirmation.
-- On **another member's** widget the row is plain text stating what they share ("This member shares everything"), never a dropdown, and no preview is shown — the route is self-scope only.
+- Pressing a button POSTs `/api/trust/visibility`, shows "Saving…" while in flight, then a "Saved" confirmation that clears itself after a few seconds. After reload the chosen button is still selected.
+- On failure (e.g. network cut), the selection reverts to the previous button and a short plain-language error appears under it, replacing the confirmation.
+- On **another member's** widget there is no "Your trust" / "What members see" split and no buttons — just plain text stating what they share ("This member shares all their trust signals") and no preview, because the route is self-scope only.
 
 **Result:** web ☐
 
