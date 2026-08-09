@@ -21,11 +21,14 @@ function fulfillmentTitle(f: SrFulfillment): string {
 // Why the composer is gone on a past conversation. A Direct Line closes for good at a terminal state
 // (rule 100) — there is no reopen. Without this, a member typed into the still-visible composer and
 // the send failed "Unauthorized" with no explanation (owner report). The canceled-but-open case also
-// says what TO do: a fresh offer opens a fresh Direct Line.
-function readOnlyNotice(f: SrFulfillment): string | null {
+// says what TO do for the requester: a fresh offer opens a fresh Direct Line. The canceled helper
+// gets only the neutral first sentence — the reopen is for other helpers, and the copy must never
+// reveal to them that the poster reopened the post (owner directive; same rule as the feed's
+// "You already offered to help" note).
+function readOnlyNotice(f: SrFulfillment, isRequester: boolean): string | null {
   if (f.status === "active") return null;
   if (f.status === "canceled") {
-    return f.requestStatus === "open"
+    return isRequester && f.requestStatus === "open"
       ? "This conversation ended when the offer was canceled and can't be reopened. The request is open again on the feed — a new offer starts a new Direct Line."
       : "This conversation ended when the offer was canceled and can't be reopened.";
   }
@@ -173,7 +176,7 @@ function ChatPane({
             streamUserId={chatCredentials.streamUserId}
             streamChannelId={chatCredentials.streamChannelId}
             accentColor={t.ACCENT}
-            readOnlyNotice={readOnlyNotice(selected)}
+            readOnlyNotice={readOnlyNotice(selected, isRequester)}
           />
         ) : (
           <div style={{ flex: 1 }} />

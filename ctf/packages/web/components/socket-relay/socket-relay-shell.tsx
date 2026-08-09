@@ -30,7 +30,7 @@ import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 
-const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", state: "", country: "", isPublic: false, priceCurrency: "FREE", priceAmount: "", requiresAmount: false };
+const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", state: "", country: "", isPublic: false, priceCurrency: "FREE", priceAmount: "", requiresAmount: false, acceptedCurrencies: [] };
 
 type MemberLocation = { city: string; state: string; country: string };
 const EMPTY_LOCATION: MemberLocation = { city: "", state: "", country: "" };
@@ -54,6 +54,7 @@ function draftFromRequest(request: SrRequest): PostDraft {
     priceCurrency: request.priceCurrency ?? "FREE",
     priceAmount: request.priceAmount != null ? String(request.priceAmount) : "",
     requiresAmount: request.priceAmount != null,
+    acceptedCurrencies: request.acceptedCurrencies ?? [],
   };
 }
 
@@ -151,6 +152,8 @@ function buildRequestBody(draft: PostDraft) {
     // The chosen value type (default 'FREE'); amount only for priced types.
     priceCurrency: draft.priceCurrency || null,
     priceAmount: parsePriceAmount(draft.priceAmount),
+    // Split settlements: every currency the poster accepts, independent of the single price above.
+    acceptedCurrencies: draft.acceptedCurrencies,
   };
 }
 

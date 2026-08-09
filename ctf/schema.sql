@@ -1579,6 +1579,17 @@ BEGIN
   END IF;
 END
 $trust_transport_requests_price_consistency$;
+-- Accepted currencies (split settlements): every currency the requester can settle the ride in,
+-- independent of the single listed price above — one row per accepted code, mirroring
+-- lighthouse_property_accepted_currencies and socket_relay_request_accepted_currencies.
+CREATE TABLE IF NOT EXISTS trust_transport_request_accepted_currencies (
+  request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  PRIMARY KEY (request_id, currency_code)
+);
+ALTER TABLE IF EXISTS trust_transport_request_accepted_currencies ADD COLUMN IF NOT EXISTS request_id UUID;
+ALTER TABLE IF EXISTS trust_transport_request_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
+CREATE INDEX IF NOT EXISTS idx_trust_transport_request_accepted_currencies_request ON trust_transport_request_accepted_currencies(request_id);
 -- === foundation_capacity_policies ===
 CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,

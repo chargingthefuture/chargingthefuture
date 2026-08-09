@@ -296,6 +296,19 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-08-09: The star count on the cycle progress bar now counts members, not rows (#2143), and
+  dismissing the banner no longer hands back the snooze date (#2144). A GitHub star earns credits at
+  most once per member ever, and the block that enforces it at submission time only looks at stars
+  that have already been confirmed — so a member who sends two before either is reviewed ends up with
+  two confirmed star rows, the second granting 0 credits. `fetchCycleProgress`
+  (`lib/contributions/repository.ts`) counted rows, so that member showed up twice and the community
+  star total read higher than the number of people who actually starred. It now counts distinct
+  members for stars (`COUNT(DISTINCT user_id) FILTER (WHERE kind = 'github_star')`). Quora comments
+  stay a row count on purpose: they are repeatable, and each confirmed comment is a separate real
+  contribution. Separately, `dismissBanner` returned `{ snoozedUntil }` from a `RETURNING` clause even
+  though the route threw it away — the command contract says the snooze length is internal and is not
+  returned to the member, so the function now returns nothing and the `RETURNING` clause is gone. No
+  member-visible change from the dismiss edit; no schema, route, or contract change from either.
 - 2026-08-07: Admin settings audit rows now record which settings the admin actually sent. The
   audit write in `app/api/contributions/admin/config/route.ts` logged every setting's resulting
   value, so a record could not show whether a knob was edited or merely carried over. The route now

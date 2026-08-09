@@ -528,11 +528,18 @@ async function fetchCycleProgress(cycleId: string | null): Promise<ProgressRow> 
     return EMPTY_PROGRESS;
   }
 
+  // Stars count members, not rows. A star is creditable once per member ever, and the goal on the
+  // progress bar is "how many people starred" — but a member can still end up with two confirmed
+  // star rows, because the block at submission time only looks at stars that are already confirmed.
+  // Send two before either is reviewed and both get confirmed, the second with 0 credits. Counting
+  // rows would show that member twice and overstate the community total, so count distinct members.
+  // Quora comments are the opposite on purpose: they are repeatable, and every confirmed comment is
+  // a real contribution, so those stay a row count.
   const result = await queryDb<ProgressRow>(
     `SELECT
        COALESCE(SUM(confirmed_amount_usd) FILTER (WHERE kind = 'gift_card'), 0)::text AS fiat_confirmed_usd,
        COUNT(*) FILTER (WHERE kind = 'quora_comment')::text AS quora_comments_confirmed,
-       COUNT(*) FILTER (WHERE kind = 'github_star')::text AS github_stars_confirmed,
+       COUNT(DISTINCT user_id) FILTER (WHERE kind = 'github_star')::text AS github_stars_confirmed,
        COUNT(DISTINCT user_id)::text AS contributor_count
      FROM contributions_submissions
      WHERE status = 'confirmed' AND cycle_id = $1`,
@@ -568,19 +575,19 @@ export async function getFundraiserSnapshot(userId: string): Promise<FundraiserS
   };
 }
 
-export async function dismissBanner(userId: string): Promise<{ snoozedUntil: string }> {
+// Returns nothing on purpose. The snooze length is an internal config knob and the command contract
+// says the member is never told how long they have been snoozed for, so there is no snooze horizon
+// here for a future caller to pass along by accident.
+export async function dismissBanner(userId: string): Promise<void> {
   const config = await getContributionsConfig();
-  const result = await queryDb<{ snoozed_until: Date }>(
+  await queryDb(
     `INSERT INTO contributions_banner_state (user_id, snoozed_until, updated_at)
      VALUES ($1, NOW() + ($2::text || ' months')::interval, NOW())
      ON CONFLICT (user_id) DO UPDATE SET
        snoozed_until = NOW() + ($2::text || ' months')::interval,
-       updated_at = NOW()
-     RETURNING snoozed_until`,
+       updated_at = NOW()`,
     [userId, String(config.bannerSnoozeMonths)],
   );
-
-  return { snoozedUntil: result.rows[0].snoozed_until.toISOString() };
 }
 
 // --- admin review ---------------------------------------------------------------------------------

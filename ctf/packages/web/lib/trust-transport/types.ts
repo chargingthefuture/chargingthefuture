@@ -43,6 +43,9 @@ export type TrustTransportRequestInput = {
   // 'BARTER', …) with a positive amount for priced types only; amount-less types carry null.
   priceCurrency: string | null;
   priceAmount: number | null;
+  // Every currency the requester accepts for settling (split settlements) — a ride settled part in
+  // ServiceCredits and part in dollars names both, independent of the single listed price above.
+  acceptedCurrencies: string[];
 };
 
 export type TrustTransportRequest = {
@@ -58,6 +61,9 @@ export type TrustTransportRequest = {
   status: TrustTransportRequestStatus;
   priceCurrency: string | null;
   priceAmount: number | null;
+  // Every currency the requester accepts (split settlements), ServiceCredits first, from
+  // trust_transport_request_accepted_currencies.
+  acceptedCurrencies: string[];
   createdAtIso: string;
   updatedAtIso: string;
   // The trip id once an offer has been accepted for this request, otherwise null. Chat is keyed by
@@ -114,6 +120,8 @@ export type TrustTransportAvailableRequest = {
   mode: TrustTransportMode;
   priceCurrency: string | null;
   priceAmount: number | null;
+  // Accepted settlement currencies, so a driver sees a split offer (e.g. ServiceCredits + USD) whole.
+  acceptedCurrencies: string[];
   createdAtIso: string;
 };
 

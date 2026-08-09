@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { ArrowUpRight, Check } from 'lucide-react';
 import type {
   Notification,
@@ -267,23 +267,34 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
   // browser, blocked permission, or push not configured). The opt-in is still saved either way.
   const [pushNote, setPushNote] = useState<string | null>(null);
 
+  // True only while this panel is on screen. Clearing the interval stops new polls, but a poll already
+  // in flight when the member closes the panel still resolves afterwards, and its result belongs to a
+  // panel that no longer exists. Same canceled-flag pattern the rest of the Commons shell uses.
+  const mountedRef = useRef(true);
+
   const load = useCallback(async () => {
     try {
       const payload = await requestJson<NotificationsResponse>('/api/notifications?limit=50');
+      if (!mountedRef.current) return;
       setItems(payload.notifications);
       setError(null);
     } catch (loadError) {
+      if (!mountedRef.current) return;
       setError(loadError instanceof Error ? loadError.message : 'Unable to load notifications.');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     void load();
     // Poll while the panel is open so a device ping that lands here shows without a manual refresh.
     const timer = setInterval(() => void load(), 20_000);
-    return () => clearInterval(timer);
+    return () => {
+      mountedRef.current = false;
+      clearInterval(timer);
+    };
   }, [load]);
 
   useEffect(() => {

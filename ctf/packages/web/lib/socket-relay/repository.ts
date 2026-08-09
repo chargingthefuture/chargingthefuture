@@ -216,6 +216,9 @@ function mapRequestRow(row: RequestRow): SocketRelayRequest {
     claimedFulfillmentId: row.claimed_fulfillment_id,
     priceCurrency: row.price_currency,
     priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
+    // The accepted-currencies set lives in a join table and is loaded separately by
+    // attachAcceptedCurrencies; mapRequestRow stays pure and defaults it to empty here.
+    acceptedCurrencies: [],
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
     expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
@@ -224,6 +227,81 @@ function mapRequestRow(row: RequestRow): SocketRelayRequest {
     // whole app reads the same expiry without a scheduled job flipping a status column.
     isExpired: row.status === 'open' && row.expires_at != null && new Date(row.expires_at).getTime() < Date.now(),
   };
+}
+
+type AcceptedCurrencyRow = { request_id: string; currency_code: string };
+
+// Ordered so ServiceCredits leads (currencies.sort_order = 0) — the platform's preferred currency
+// wherever multiple options appear — and clients can render the set in server order.
+const ACCEPTED_CURRENCIES_SQL = `
+  SELECT rac.request_id::text AS request_id, rac.currency_code
+  FROM socket_relay_request_accepted_currencies rac
+  JOIN currencies c ON c.code = rac.currency_code
+  WHERE rac.request_id = ANY($1::uuid[])
+  ORDER BY c.sort_order, rac.currency_code
+`;
+
+function mergeAcceptedCurrencies(requests: SocketRelayRequest[], rows: AcceptedCurrencyRow[]): SocketRelayRequest[] {
+  const codesByRequest = new Map<string, string[]>();
+  for (const row of rows) {
+    const codes = codesByRequest.get(row.request_id) ?? [];
+    codes.push(row.currency_code);
+    codesByRequest.set(row.request_id, codes);
+  }
+  return requests.map((request) => ({
+    ...request,
+    acceptedCurrencies: codesByRequest.get(request.id) ?? [],
+  }));
+}
+
+// Load each request's accepted currencies from socket_relay_request_accepted_currencies and attach
+// them to the mapped requests (split settlements — a post can accept several currencies, e.g.
+// ServiceCredits and USD, independent of its single listed price).
+async function attachAcceptedCurrencies(requests: SocketRelayRequest[]): Promise<SocketRelayRequest[]> {
+  const requestIds = requests.map((request) => request.id);
+  if (requestIds.length === 0) {
+    return requests;
+  }
+  const result = await queryDb<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]);
+  return mergeAcceptedCurrencies(requests, result.rows);
+}
+
+// Same as attachAcceptedCurrencies but on a transaction client, so freshly inserted rows are visible
+// inside createRequest/updateRequest.
+async function attachAcceptedCurrenciesWithClient(
+  client: PoolClient,
+  requests: SocketRelayRequest[],
+): Promise<SocketRelayRequest[]> {
+  const requestIds = requests.map((request) => request.id);
+  if (requestIds.length === 0) {
+    return requests;
+  }
+  const result = await client.query<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]);
+  return mergeAcceptedCurrencies(requests, result.rows);
+}
+
+// Validate the requested accepted-currency codes against the active currencies catalog and persist
+// them for a request. Caller is responsible for clearing existing rows first (REPLACE semantics on
+// update). Unknown or inactive codes are skipped. Runs inside the caller's transaction.
+async function replaceAcceptedCurrencies(client: PoolClient, requestId: string, codes: string[]): Promise<void> {
+  const requested = Array.from(
+    new Set(codes.filter((code): code is string => typeof code === 'string' && code.trim().length > 0).map((code) => code.trim())),
+  );
+  if (requested.length === 0) {
+    return;
+  }
+  const valid = await client.query<{ code: string }>(
+    `SELECT code FROM currencies WHERE code = ANY($1::text[]) AND is_active = TRUE`,
+    [requested],
+  );
+  for (const row of valid.rows) {
+    await client.query(
+      `INSERT INTO socket_relay_request_accepted_currencies (request_id, currency_code)
+       VALUES ($1::uuid, $2)
+       ON CONFLICT (request_id, currency_code) DO NOTHING`,
+      [requestId, row.code],
+    );
+  }
 }
 
 function mapFulfillmentRow(row: FulfillmentRow): SocketRelayFulfillment {
@@ -438,7 +516,8 @@ export async function createRequest(actorUserId: string, actorUsername: string |
     );
 
     if ((existing.rowCount ?? 0) > 0) {
-      return mapRequestRow(existing.rows[0]);
+      const [replayed] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(existing.rows[0])]);
+      return replayed;
     }
 
     const tags = normalizeTags(input.tags);
@@ -470,7 +549,10 @@ export async function createRequest(actorUserId: string, actorUsername: string |
       [created.rows[0].id, actorUserId],
     );
 
-    return mapRequestRow(created.rows[0]);
+    await replaceAcceptedCurrencies(client, created.rows[0].id, input.acceptedCurrencies);
+
+    const [withAccepted] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(created.rows[0])]);
+    return withAccepted;
   });
 
   // Best-effort presence write after the post is durably committed: a new open post makes its owner
@@ -540,7 +622,7 @@ export async function listRequests(options?: ListRequestsOptions): Promise<{ ite
   );
 
   return {
-    items: result.rows.map(mapRequestRow),
+    items: await attachAcceptedCurrencies(result.rows.map(mapRequestRow)),
     page,
     pageSize,
     total,
@@ -560,7 +642,8 @@ export async function getRequestById(requestId: string): Promise<SocketRelayRequ
     return null;
   }
 
-  return mapRequestRow(result.rows[0]);
+  const [request] = await attachAcceptedCurrencies([mapRequestRow(result.rows[0])]);
+  return request;
 }
 
 export async function updateRequest(requestId: string, actorUserId: string, isAdmin: boolean, input: SocketRelayRequestInput): Promise<SocketRelayRequest> {
@@ -625,7 +708,12 @@ export async function updateRequest(requestId: string, actorUserId: string, isAd
       [requestId, actorUserId],
     );
 
-    return mapRequestRow(result.rows[0]);
+    // Replace the accepted-currencies set: clear existing rows, then insert the validated new set.
+    await client.query('DELETE FROM socket_relay_request_accepted_currencies WHERE request_id = $1::uuid', [requestId]);
+    await replaceAcceptedCurrencies(client, requestId, input.acceptedCurrencies);
+
+    const [withAccepted] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(result.rows[0])]);
+    return withAccepted;
   });
 
   // Best-effort presence sync after the durable update: keeps presence (and its label) in step with
@@ -686,7 +774,8 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
       [requestId, actorUserId],
     );
 
-    return mapRequestRow(updated.rows[0]);
+    const [withAccepted] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(updated.rows[0])]);
+    return withAccepted;
   });
 
   // Best-effort presence write after the durable repost: the post is back to open, so its owner is
@@ -769,7 +858,8 @@ export async function claimRequest(requestId: string, actorUserId: string, actor
     if (requestRow.status !== 'open') {
       const existing = await findExistingActiveClaim(client, requestRow, actorUserId);
       if (existing) {
-        return { request: mapRequestRow(requestRow), fulfillment: existing };
+        const [replayed] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(requestRow)]);
+        return { request: replayed, fulfillment: existing };
       }
       throw new Error('request_not_claimable');
     }
@@ -807,8 +897,9 @@ export async function claimRequest(requestId: string, actorUserId: string, actor
       [requestId, actorUserId, fulfillment.rows[0].id],
     );
 
+    const [claimed] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(requestUpdate.rows[0])]);
     return {
-      request: mapRequestRow(requestUpdate.rows[0]),
+      request: claimed,
       fulfillment: mapFulfillmentRow(fulfillment.rows[0]),
     };
   });

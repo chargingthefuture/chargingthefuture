@@ -66,8 +66,19 @@ export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentMo
 
       // Enter confirms the dialog. On mobile the soft keyboard keeps focus in the chat input, so a
       // press of Return would otherwise fall through to the composer and silently re-open this same
-      // modal instead of turning the assistant on. Treat Enter as "turn it on" regardless of focus.
+      // modal instead of turning the assistant on. Treat Enter as "turn it on" — EXCEPT when a button
+      // inside the dialog already has focus. A keyboard member who tabs to "Not now" and presses
+      // Return means "not now"; granting consent there is the opposite of what they asked for. Leave
+      // those presses alone and the browser fires the focused button's own click, so "Not now" and
+      // the close button dismiss, and the confirm button confirms.
       if (event.key === 'Enter') {
+        const root = modalRef.current;
+        const active = document.activeElement;
+        const onDialogButton =
+          root !== null && active instanceof HTMLElement && root.contains(active) && active.tagName === 'BUTTON';
+        if (onDialogButton) {
+          return;
+        }
         event.preventDefault();
         onConfirm();
         return;

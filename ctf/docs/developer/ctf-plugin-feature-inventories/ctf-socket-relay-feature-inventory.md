@@ -32,6 +32,12 @@ SocketRelay is a request-and-fulfillment plugin with profile management, request
    whitespace and folds case-insensitive duplicates). Feed filter chips are derived from the tags
    actually in use, most-used first, capped at 10. The post form suggests tags already in use so
    vocabulary converges without a curated list (owner decision, 2026-06-12: guided free-form).
+5. Split settlements (2026-08-06): besides the single settlement value type + amount, the post form
+   carries an **"Accepted currencies" checkbox list** (the standardized LightHouse pattern, shared
+   `AcceptedCurrencyPicker`) naming every currency the poster accepts — so a post settled part in
+   ServiceCredits and part in dollars checks both instead of forcing a zero into one. The feed card
+   shows a compact "Accepts ServiceCredits +N" badge next to the settlement badge; ServiceCredits
+   always leads. Never a fiat-parity claim for ServiceCredits.
 
 ### 1.2 Profile Management
 
@@ -52,7 +58,10 @@ building a UI for it, unless the owner asks for a plugin-specific profile.
    re-claim (409, `SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED`) and the web feed shows a
    "You already offered to help" note in place of the "I can help" button on those posts. The
    member-facing copy is deliberately soft (owner directive): it reads as "one offer per post",
-   never as being blocked, and never reveals that the poster ended the earlier Direct Line.
+   never as being blocked, and never reveals that the poster ended the earlier Direct Line. The
+   canceled helper's ended Direct Line follows the same rule (2026-08-06): its read-only closure
+   notice says only that the conversation ended and can't be reopened — the "request is open again
+   on the feed" sentence shows to the requester alone.
 2. Fulfillment detail and “my fulfillments” views.
 3. Closure outcomes with canonical status taxonomy.
 4. **Record a favor as a regular one, without leaving SocketRelay (2026-08-03).** The Direct Line carries
@@ -102,8 +111,12 @@ User/authenticated routes:
 - `GET /api/socket-relay/requests` — member feed. Optional `?status=open` (comma-separated statuses) scopes the list to claimable posts; `?page`/`?pageSize` paginate (feed uses `status=open`, pageSize 20, with a "Load more" button). Absent/unknown `status` returns the full-status list.
 - `GET /api/socket-relay/requests/:id` — single request, members-only. Any signed-in member may view any request (no `is_public` gate); 404 for a missing request.
 - `GET /api/socket-relay/my-requests`
-- `POST /api/socket-relay/requests`
-- `PUT /api/socket-relay/requests/:id`
+- `POST /api/socket-relay/requests` — body includes optional `acceptedCurrencies: string[]` (split
+  settlements); codes are validated against the active currencies catalog, unknown/inactive codes
+  dropped. Every request read path returns the stored set as `acceptedCurrencies` (ServiceCredits
+  first).
+- `PUT /api/socket-relay/requests/:id` — same body as create; the stored accepted set is replaced
+  from the payload (clear + re-write).
 - `POST /api/socket-relay/requests/:id/repost`
 - `POST /api/socket-relay/requests/:id/fulfill` — claim a request. Rejected with 409
   (`SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED`) when the caller's earlier claim on this request was
@@ -139,7 +152,7 @@ Tables owned by this plugin:
 5. `socket_relay_fulfillment_participants` — Participant access records for fulfillment chats.
 6. `socket_relay_messages` — Participant-only chat messages on a fulfillment. The chat is transaction-scoped: after the fulfillment reaches a terminal state no new rows may be added; existing rows become read-only for the two participants for a limited window and are retained server-side for moderation/abuse evidence per the deletion contract (platform rule 100). Carries a unique index `socket_relay_messages_idempotency_uidx (fulfillment_id, sender_user_id, client_message_id)` that backs the send route's `ON CONFLICT` idempotency (without it Postgres rejects the upsert with 42P10).
 7. `socket_relay_admin_audit_trail` — Audit log for admin mutations.
-8. `socket_relay_request_accepted_currencies` — join (`request_id`, `currency_code` FK → `currencies.code`) for any currencies an offered reward accepts.
+8. `socket_relay_request_accepted_currencies` — join (`request_id`, `currency_code` FK → `currencies.code`) for every currency the post accepts (split settlements). Written by request create (insert) and update (replace: delete + insert), read by every request read path and returned as `acceptedCurrencies` (ordered by `currencies.sort_order`, so ServiceCredits leads). Rows cascade-delete with the request.
 
 Multi-currency (issue #120): SocketRelay is mutual aid and posts are free, so `socket_relay_requests`
 gains OPTIONAL `price_amount` + `price_currency` (FK → `currencies.code`) for the rare case a reward is
@@ -193,7 +206,21 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
-- 2026-08-06: **"Reopen for others" now blocks the same helper from claiming the post again (owner
+- 2026-08-06: **Split settlements — the post form now writes the accepted-currencies set (owner
+  report: had to enter zero because the form could not say "ServiceCredits + USD").** The
+  `socket_relay_request_accepted_currencies` join existed since issue #120 but nothing wrote or read
+  it. The post form now carries the standardized LightHouse-style **"Accepted currencies" checkbox
+  list** (new shared `components/shared/accepted-currency-picker.tsx`, catalog from
+  `GET /api/currencies`), independent of the single settlement + amount. Server: request
+  create/update parse `acceptedCurrencies: string[]` (trimmed, deduped; codes validated against the
+  active catalog, unknown/inactive dropped; update = clear + re-write in the same transaction), and
+  every request read path attaches the stored set (`acceptedCurrencies`, ServiceCredits first via
+  `currencies.sort_order`). The feed card adds a compact "Accepts ServiceCredits +N" badge next to
+  the settlement badge. Command contract `socket-relay.request.create` → 1.2.0 and
+  `socket-relay.request.update` → 1.1.0 (dataAccess + `socket_relay_request_accepted_currencies` +
+  `currencies`). With the real total price enterable and the accepted set named, projected and
+  actual GDP/value recognition can count the entire transaction instead of a forced zero. No new
+  route; no Android surface (web-only per rule 105).
   directive).** When a requester resolves a Direct Line with "didn't work — reopen for others"
   (`unsuccessful_reopen`), the canceled helper could immediately claim the same request again,
   re-opening the very conversation the requester had just ended. `claimRequest` now rejects a claim
@@ -471,6 +498,7 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ### Change Log
 
+- 2026-08-06: **The canceled helper's Direct Line closure notice no longer reveals the reopen (owner report).** The read-only notice on a canceled Direct Line whose request went back to `open` showed the same text to both sides, including "The request is open again on the feed — a new offer starts a new Direct Line." That contradicted the standing directive that the copy shown to a canceled helper never reveals the poster reopened the post (see §1.3; same rule the feed's "You already offered to help" note follows). The notice is now per-viewer (`readOnlyNotice` in `sr-chat.tsx` takes the viewer's role): the requester keeps the full two-sentence text; the helper sees only "This conversation ended when the offer was canceled and can't be reopened." UI copy only; no schema, route, or contract change.
 - 2026-08-03: **Root cause of the "Message Failed · Unauthorized" outage found — a Stream channel-type setting, not app code.** With the reason now shown on screen (entry below), the Direct Line reported: `SendMessage failed with error: "pending messages not enabled for this app"`. `mark_messages_pending` is switched on for the `messaging` channel type, so Stream tries to hold every message for review, but the Stream app does not have the pending-messages feature — so it refuses **every** send, from **every** member, on **every** chat that uses that channel type (SocketRelay Direct Line, LightHouse, TrustTransport, PeerProgramming, Foundation, Beacon). Nothing in this repo can cause or cure it; the repair is to turn "Mark Messages Pending" off for the channel type in the Stream dashboard. Added `ctf/packages/web/scripts/check-stream-channel-config.mjs` (`pnpm --dir ctf/packages/web run check:stream-channel-config`) which reads the channel-type settings back and names any that block sending, with `--fix` to turn the blocking setting off. Read-only without `--fix`; never prints a key or secret. No schema, route, or contract change.
 - 2026-08-03: **A refused Direct Line message now says why (owner report — the failure came back after the connection fix below).** "Message Failed · Unauthorized" is the chat library's label for *any* send Stream refuses with a 403 — not a member of the conversation, conversation frozen, sender banned, or the Stream app at a plan limit — and the library throws away Stream's own explanation, so neither the member nor the logs could tell those apart. The library also renders the composer without ever checking whether the member is allowed to post, so a conversation that can only fail still looks writable. Now: the panel reads the member's capabilities when the conversation opens (they already arrive with the existing `watch()` call — no extra request) and, when posting is not allowed, replaces the composer with a plain reason instead of a composer that is guaranteed to fail; a refused send shows the reason Stream gave, above the composer; and both are recorded with the capability list, the frozen flag, the channel id, and which Stream app answered. Server side, the SocketRelay chat route now confirms Stream really holds both participants as members of the conversation (one `queryMembers` read per open) and records a mismatch — membership is what grants the right to post, so a silent mismatch there is exactly what a refused send looks like. New shared helper `lib/shared/stream-chat-send-state.ts` (10 unit tests). Applies to every plugin chat, not only SocketRelay. No schema, route, or contract change.
 - 2026-08-02: **Direct Line send no longer fails "Message Failed · Unauthorized" (owner report).** Root cause was in the shared browser-side Stream Chat connection, not in SocketRelay itself: every chat surface shared one Stream client per API key (`StreamChat.getInstance`), while each surface signs in as its own Stream user (`socket-relay-<id>`, the Commons live layer's `feed-<id>`, etc.). Whichever surface connected last silently re-signed-in the shared client as its own user, so an open Direct Line could end up sending as a user who is not in the conversation — Stream rejects that send with a 403 and the member sees "Message Failed · Unauthorized" (the same failure earlier reported on canceled Direct Lines, which had been masked by the read-only notice rather than fixed at the root). Fixed by a new connection manager (`lib/shared/stream-chat-connection.ts`) that keeps one client **per (API key, Stream user)** — a surface can no longer re-sign-in or disconnect another surface's connection — used by both `StreamChatPanel` (all plugin chats) and the Commons live layer (`lib/hub/live-stream.ts`). No schema, route, or contract change. **Android parity — share control on each request card (#435).** The React Native feed (`SocketRelay.tsx`) now renders the shared mobile `ShareLink` under each request card's meta line, mirroring the web feed (`sr-feed.tsx`), which already shares each request. The link is an absolute deep link `${getApiBaseUrl()}/apps/socket-relay?request=<id>` (the same target the web feed copies); the mobile control copies or shares through the OS share sheet. The URL is built from the same `APP_URL` runtime config the API calls resolve against; if it is unset the card renders no share control rather than crashing. UI-only; no schema, route, or contract change. (Honoring `?request=<id>` to scroll the feed straight to the shared request — on both web and mobile — remains a follow-up; today the link opens the SocketRelay feed, auth-gated, on the destination device.)
