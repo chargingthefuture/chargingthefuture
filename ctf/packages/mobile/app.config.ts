@@ -132,7 +132,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       signInUrl: process.env.NEXT_PUBLIC_AUTH_SIGN_IN_URL,
       oauthClientId: process.env.EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID,
       updatesUrl,
-      mobileObservabilityProvider: process.env.MOBILE_OBSERVABILITY_PROVIDER || 'noop',
+      // Both keys already exist in Infisical — EXPO_SENTRY_DSN is the mobile DSN and
+      // OBSERVABILITY_PROVIDER is the shared provider switch. Neither gets a mobile-specific
+      // duplicate: a second key holding the same value is one more thing that can drift.
+      mobileObservabilityProvider: process.env.OBSERVABILITY_PROVIDER || 'sentry',
       mobileSentryDsn: process.env.EXPO_SENTRY_DSN,
       eas: {
         ...(config.extra?.eas ?? {}),

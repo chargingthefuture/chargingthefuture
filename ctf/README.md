@@ -28,9 +28,12 @@ This folder contains the rewrite monorepo scaffold for:
 
 ## Observability Provider Selection
 
-- Web: set `NEXT_PUBLIC_OBSERVABILITY_PROVIDER` to `sentry`, `signoz`, or `noop`.
-- Mobile: set `MOBILE_OBSERVABILITY_PROVIDER` to `sentry`, `signoz`, or `noop`.
-- Unknown or missing values default to `noop`.
+- One shared key selects the provider for both surfaces: set `OBSERVABILITY_PROVIDER` to `sentry`,
+  `signoz`, or `noop`.
+- The DSNs are `SENTRY_DSN` (web — server, edge, and browser) and `EXPO_SENTRY_DSN` (mobile). Both
+  already exist in Infisical; do not add `NEXT_PUBLIC_` or mobile-specific copies of them.
+- Reporting starts when a DSN is present. Unknown or missing provider values fall back to the
+  documented default for that surface.
 
 ## Structure
 
