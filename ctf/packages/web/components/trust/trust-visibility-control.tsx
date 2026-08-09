@@ -36,31 +36,36 @@ const HAIRLINE = "rgba(255,255,255,0.05)";
 // the category's rules — which is how the three got read as kinds of transaction. These say the
 // outcome instead, so no guessing is required and the three read as one scale.
 //
+// Every choice names the thing being shared — "your trust signals" — instead of pointing at it with
+// "everything" or "this". A closed dropdown shows only the selected line, with the question above it
+// scrolled away or forgotten, so a label like "Only you see this" left the member with no idea what
+// "this" was.
+//
 // The stored values are still `public` / `restricted` / `private`; only what the member reads
 // changed. Nothing here is a promise about the rest of the app — this setting governs the trust
 // panel and nothing else.
 const OPTION_LABEL: Record<TrustVisibility, string> = {
-  public: "Members see everything",
-  restricted: "Members see a summary",
-  private: "Only you see this",
+  public: "Members see all your trust signals",
+  restricted: "Members see a summary of your trust signals",
+  private: "Only you see your trust signals",
 };
 
 // Admins are named in the effect line rather than the label: they can read any member's panel, so
-// leaving it out would make "Only you see this" a claim the app does not keep.
+// leaving it out would make "Only you see your trust signals" a claim the app does not keep.
 const OPTION_EFFECT: Record<TrustVisibility, string> = {
   public: "Any signed-in member who opens your profile sees the signals listed above.",
   restricted:
     "Members see how active you are, without the detail or the dates. Enough to tell that you take part here.",
-  private: "No other member can open this panel. Admins can, as they can for every member.",
+  private: "No other member can see your trust signals. Admins can, as they can for every member.",
 };
 
 // The same three outcomes described from a viewer's side, for the read-only row on another member's
 // card. `private` is listed for completeness; that card is never rendered, because the route refuses
 // the read before there is anything to draw.
 const PEER_LABEL: Record<TrustVisibility, string> = {
-  public: "This member shares everything",
-  restricted: "This member shares a summary",
-  private: "This member keeps this to themselves",
+  public: "This member shares all their trust signals",
+  restricted: "This member shares a summary of their trust signals",
+  private: "This member keeps their trust signals private",
 };
 
 // A member's stored value should always be one of the three, but a row written before the column
@@ -122,10 +127,14 @@ function PeerPreview({ current, evidence, t }: { current: TrustVisibility; evide
         What members see
       </div>
       {current === "public" && (
-        <div style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>Everything listed above, exactly as you see it.</div>
+        <div style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
+          Every trust signal listed above, exactly as you see it.
+        </div>
       )}
       {current === "private" && (
-        <div style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>Nothing — this panel does not appear on your profile for them.</div>
+        <div style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
+          Nothing — your trust signals do not appear on your profile for them.
+        </div>
       )}
       {current === "restricted" && lines.length === 0 && (
         <div style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
