@@ -40,7 +40,11 @@ to the meeting surface; members who did not vote can still come listen in.
    before voting opens, while voting is open, for a signed-out visitor, and after the time is chosen —
    shows "We'll meet in <plugin>" with a button straight to that plugin (for example Chyme, at
    `/apps/chyme`). It no longer waits for the survey to close.
-6. **Copy the link.** Every surface has a Copy-link button (rule 130) for sharing the one event link.
+6. **A way back off the survey.** A signed-in member sees the standard top bar on the shared link —
+   back chevron, brand icon, "Mutual Time", and the bug / settings / account controls — the same bar
+   every other screen has. A signed-out visitor sees the shared back chevron next to the event name,
+   and only when there is somewhere in-app to go back to.
+7. **Copy the link.** Every surface has a Copy-link button (rule 130) for sharing the one event link.
 
 ## Admin Features
 
@@ -218,6 +222,18 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   then save." when there is neither. The day chips and slot grid moved to
   `components/mutual-time/mutual-time-slot-picker.tsx` so the voting form and the gate preview share one
   component.
+- 2026-08-09: **The shared survey link now has a way back (rule 134).** `/mutual-time/<slug>` shipped
+  with no back control at all — on a phone, and especially in the installed web app where there is no
+  browser back button, a member who opened it was stranded. It is the one screen a signed-out stranger
+  can open, so the two viewers get different chrome. A signed-in member now gets the shared
+  `MobileScreenHeader` (back chevron, brand icon, "Mutual Time", and the bug / settings / account
+  cluster), the same bar as every other screen. A signed-out visitor gets the shared
+  `BackChevronButton` beside the event name instead, and only when `useSmartBack` reports in-app
+  history: the full bar would offer them an account menu and a settings link they cannot use, and the
+  one-level-up fallback would push them to the all-apps page, which needs an account. With no in-app
+  history there is nothing in-app behind them and their browser's own back still works. No hand-rolled
+  back control — both pieces are the shared ones. `MutualTimePublic` was also split into `EventHeader`
+  and `EventBody` to stay under the complexity limit.
 
 Ordered, dependency-based (no phases). Each item done in this initial build.
 
