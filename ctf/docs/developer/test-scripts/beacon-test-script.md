@@ -156,13 +156,9 @@ there too, with `policy_status = 'allow'`.
 3. For a desktop demo: use "Share screen" to capture a desktop screen/window in the browser.
 **Expected:** Go Live flips the event out of backstage to `live` and auto-posts the "live now" notice
 to the Commons. The host stage mounts after go-live; HLS + recording start once a host is actually
-publishing (the in-browser screen-share triggers `start-broadcast`). Only the host can publish —
-viewers never can. On error, the underlying Stream message is surfaced, not a generic text.
-Watch the phone-only path specifically: a phone pushing RTMP publishes an ordinary video track, not a
-screen-share track, so it does **not** trigger `start-broadcast`. If the broadcaster app reports it is
-sending and `/apps/beacon` stays empty for more than a minute, that gap (recorded under Gaps in the
-Beacon inventory) is what you are seeing; clicking "Share screen" once from a computer on the same
-live event starts HLS + recording for the whole call and video should then appear.
+publishing — either the in-browser screen-share posting to `start-broadcast`, or Stream's
+`call.session_participant_joined` webhook when a phone's RTMP feed joins the call. Only the host can
+publish — viewers never can. On error, the underlying Stream message is surfaced, not a generic text.
 Opening the call must succeed on the first press: Beacon asks Stream to record at 720p, and a
 missing recording size is what previously made every Go Live come back with `(400)` and
 `recording quality is required when audio_only is false and recording is enabled`. Seeing that
@@ -185,6 +181,28 @@ is not configured." No banner ever shows a bare "Broadcast input unavailable." w
 API key or stream key appears in it. A Stream Chat problem alone (the host's chat registration) must
 not stop the broadcast: the event still goes live and only the host's chat name/moderator role is
 missing.
+**Result:** web ☐ mobile ☐ — notes:
+
+### BCN-A2c · A phone-only broadcast reaches viewers and produces a replay
+**Role:** admin · **Surfaces:** web (admin surface + public viewer)
+**Precondition:** a phone with a broadcaster app set up per
+`ctf/docs/developer/BEACON_PHONE_STREAMING_GUIDE.md`. **No computer touches the broadcast** — this
+case exists to prove the phone path completes on its own, so do not click "Share screen" anywhere
+during it.
+**Steps:**
+1. Create an event and press Go Live on the phone.
+2. Copy the RTMP URL + stream key into the broadcaster app and start sending.
+3. Open `/apps/beacon` signed out, on a different device, and wait up to a minute.
+4. Stop the broadcaster app and press End broadcast.
+5. Check the Commons after the recording is delivered.
+**Expected:** Video appears for the signed-out viewer without anyone sharing a screen. Behind it,
+Stream's `call.session_participant_joined` webhook fires when the phone's RTMP feed joins, the route
+starts HLS and the recording for that `live` event, and `GET /api/beacon/current` begins returning an
+`hlsPlaybackUrl`. After the event ends, `call.recording_ready` arrives and the replay is posted to the
+Commons. An empty player after a minute means egress never started — check that the webhook is
+reaching the app and that `call.session_participant_joined` is enabled in the Stream dashboard, which
+is the setting this case is really testing. Before 2026-08-10 this case failed by design: only an
+in-browser screen-share started egress.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A3 · Moderate the chat
