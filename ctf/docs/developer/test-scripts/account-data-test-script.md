@@ -81,3 +81,20 @@ routes return the auth denial, never data.
 leaves the list and a fresh full export shows zero rows for that service. Full-account deletion
 still requires typing `delete my account` (do not run this casually).
 **Result:** web ☐ — notes:
+
+## AD-6 · Deleting Commons data removes the posts, not just the author's name
+
+**Role:** member (or admin on a throwaway account) · **Precondition:** the account has posted at
+least two messages in the Commons, and one of them is still visible on the Commons chat.
+**Steps:**
+1. Open the Commons and note the exact text of your posts.
+2. Go to Account & Data and delete the Commons service (or the whole account on a throwaway
+   account).
+3. Reload the Commons in a signed-in session and scroll to where the posts were.
+4. Repeat the deletion once more, then reload again.
+**Expected:** The post text is **gone** from the Commons — not still on screen under a generic
+handle such as `user-hub-syst`, and not present with any other substituted author name. Official
+announcements from the operator stay exactly as they were. The second deletion finds nothing left to
+remove and changes nothing on screen. Replies and reactions that hung off the deleted posts are gone
+with them.
+**Result:** web ☐ — notes:
