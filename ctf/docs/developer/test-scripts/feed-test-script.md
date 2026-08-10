@@ -448,6 +448,27 @@
 **Expected:** Deleting the account removes the member's post reactions, announcement reactions, and
 `feed_commons_last_seen` row along with the per-user state the script already covers.
 
+### FD-25 — Account deletion removes the posts themselves, not just the author's name
+
+**Role:** member (or an admin on a throwaway account) | **Surface:** web
+
+**Steps:**
+1. From the account under test, post two messages in the Commons and note their exact text.
+2. Delete the Commons data from Account & Data (or delete the whole account, on a throwaway
+   account).
+3. Reload the Commons in a signed-in session and scroll to where those messages were.
+4. Run the deletion a second time and reload again.
+
+**Expected:**
+- The message text is **gone**. It must not still be on screen under a substituted author name —
+  in particular not the fallback handle `user-hub-syst`, which is what a leftover timeline copy
+  with no author resolves to.
+- Official announcements from the operator are untouched and still read normally.
+- Replies and reactions that hung off those messages are gone with them.
+- The second deletion finds nothing left to remove and changes nothing on screen.
+
+**Result:** web ☐
+
 ## Admin walkthrough
 
 ### FD-A1 — Admin page renders with real data
