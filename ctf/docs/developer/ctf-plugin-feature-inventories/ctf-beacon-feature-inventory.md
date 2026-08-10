@@ -135,8 +135,11 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   `deleteDraftBeaconEvent`. Both the deletion and a refused attempt are written to the audit trail.
 
 ### Webhook
-- `POST /api/beacon/stream-webhook` — Stream recording-ready (and call lifecycle) events; verifies the
-  Stream signature, stores `recording_url`, posts the replay to the Commons.
+- `POST /api/beacon/stream-webhook` — Stream call lifecycle events; verifies the Stream signature and
+  acts on two of them. On `call.session_participant_joined` it starts the public HLS feed and the
+  recording for the matching `live` event, which is what carries a phone-only RTMP broadcast. On
+  `call.recording_ready` it stores `recording_url` and posts the replay to the Commons. Every other
+  event is acknowledged without acting so Stream stops retrying.
 
 ## Data Model and Storage Contracts
 
@@ -217,16 +220,15 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 - Whether anonymous viewers see the live chat read-only or just a "sign in to chat" panel (lean
   read-only so the room feels alive).
 - Replay hosting: link to Stream's recording URL vs. re-hosting; start with the Stream URL.
-- **A phone-only (RTMP) broadcast may never start the public HLS feed or the recording.**
-  `POST /api/beacon/[id]/start-broadcast` is the only caller of `startBeaconBroadcastEgress`, and it
-  fires from one place: the in-browser screen-share control in `beacon-host-stage.tsx`, when a screen
-  share starts (`useHasOngoingScreenShare`). A phone pushing RTMP publishes an ordinary video track,
-  not a screen-share track, so it does not trigger that call. Whether viewers still see the broadcast
-  depends on the Stream `livestream` call-type setting for automatic HLS, which is not asserted
-  anywhere in this repo. Fallback for the admin today: open the live event on `/admin/beacon` from a
-  computer and click **Share screen** once, which starts HLS and recording for the whole call.
-  Proper fix (not implemented): start egress when RTMP ingest begins — from Stream's ingress webhook,
-  or a short retry after go-live that starts egress once media is present.
+- ~~**A phone-only (RTMP) broadcast may never start the public HLS feed or the recording.**~~ Closed
+  2026-08-10: the Stream webhook now starts egress on `call.session_participant_joined`, so any
+  publisher — RTMP from a phone or the in-browser screen-share — starts the public feed and the
+  recording. See the change log entry for that date.
+- **The phone-only path has not been exercised end to end against production Stream yet.** The fix
+  above is written against Stream's documented event name and is guarded so a non-`live` event is
+  never put back on air, but no one has yet run a broadcast from a phone with no browser involved and
+  confirmed video reaches `/apps/beacon` and a replay lands in the Commons. That run is step BCN-A2c
+  in the manual test script.
 
 ## Build Checklist (flat, ordered; dependency-named — no phases)
 
@@ -256,6 +258,27 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-08-10: **A broadcast run from a phone now reaches viewers and produces a replay.** The public
+  HLS feed and the recording are started by `startBeaconBroadcastEgress`, reached through
+  `POST /api/beacon/[id]/start-broadcast` — and the only thing that called it was the in-browser
+  screen-share control, which fires on `useHasOngoingScreenShare`. A phone pushing RTMP publishes an
+  ordinary video track, not a screen-share track, so it never triggered that call: a broadcast run
+  entirely from a phone could leave viewers in front of an empty player, and recorded nothing, so no
+  `call.recording_ready` event ever arrived and no replay was posted to the Commons. The one input
+  path the plugin was designed around (owner-locked decision 8 — the admin demos the app by streaming
+  the phone screen) was the one that did not complete.
+  `POST /api/beacon/stream-webhook` now also acts on `call.session_participant_joined` and starts
+  egress for the matching event. Stream's RTMP ingress publishes into the call as a participant, so
+  that event is the first moment media exists and egress can start; it covers the browser host too, so
+  both input paths now start the broadcast the same way. Guarded three ways: only an event whose
+  status is `live` is acted on, so neither a draft nor an ended event can be put back on air by a
+  webhook; the signature check in front of the route is unchanged; and a start that Stream refuses
+  because egress is already running is reported (`op: 'start_egress_on_participant_joined'`) and
+  acknowledged rather than retried. Only publishers join this call — viewers watch over public HLS —
+  so the event arrives once or twice per broadcast, not once per viewer. No schema, no new route, no
+  contract change. Quota-impact note:
+  `ctf/docs/quota-impact/2026-08-10-beacon-egress-on-rtmp-publisher.md`. Not yet exercised against
+  production Stream from a real phone; that run is BCN-A2c in the test script.
 - 2026-08-10: **Wrote the phone streaming guide (owner request).** The admin screen hands out an RTMP
   URL and a stream key after "Go live", but nothing in the repo said what to do with them, so the
   admin had to remember the broadcaster-app setup from one broadcast to the next. Added
