@@ -473,7 +473,7 @@ Result: web ☐
 1. Navigate to `/admin/peer-programming`.
 2. Find the "Member feedback" panel.
 
-**Expected:** The panel lists recent feedback, newest first — each row shows the author (a resolved name or a short `Member <id>` fallback), the issue type, the suggestion category, the time, and the note text. With no feedback it shows "No feedback yet." A load failure leaves the panel empty without breaking the rest of the admin page. (The admin-landing tile shows a "new to review" dot when feedback arrived since you last opened this area; opening the area clears it.)
+**Expected:** The panel lists recent feedback, newest first — each row shows the author (a resolved name or a short `Member <id>` fallback), the time, and the note text, and nothing else. In particular there are **no** category labels next to the author: the feedback box has no category picker, so `issue_type` and `suggestion_category` are the fixed string "general" on every row and used to print "general general" on each one. With no feedback it shows "No feedback yet." A load failure leaves the panel empty without breaking the rest of the admin page. (The admin-landing tile shows a "new to review" dot when feedback arrived since you last opened this area; opening the area clears it.)
 
 Result: web ☐
 
