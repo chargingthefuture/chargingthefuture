@@ -185,18 +185,34 @@ Result: web ☐
 
 ---
 
-### PP-8 — Feedback submission
+### PP-8 — Feedback submission (only after your cohort has ended)
 
 **Role:** member · **Surfaces:** web, android
 
-**Precondition:** Signed in as a member inside a cohort room.
+**Precondition:** Signed in as a member of a cohort that an admin has ended (see PP-A11). Turn single standing Cohort 1 mode OFF first — the standing cohort can never be ended, so the box never appears while that mode is on.
 
 **Steps:**
-1. Locate the feedback control (look in the room or session area — a "feedback" link or icon).
-2. Fill in the issue type and suggestion fields.
-3. Submit the feedback.
+1. While the cohort is still running, open the Cohorts tab and scroll to the bottom.
+2. Have an admin end that cohort (PP-A11), then reload the Cohorts tab.
+3. Type a note in the "Session Feedback" box and submit it.
 
-**Expected:** A success confirmation is shown. No error banner appears. (You do not need to verify database contents, but the form should reset or close after submission.)
+**Expected:** At step 1 there is **no** "Session Feedback" box — feedback is only asked for once the cohort is over. At step 2 the box appears, headed "Session Feedback" with the line "Your cohort has ended. Tell us how it went." At step 3 a success confirmation is shown, no error banner appears, and the note field clears.
+
+Result: web ☐
+
+---
+
+### PP-8b — Feedback box stays hidden when listening in on someone else's ended cohort
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Signed in as a member whose own cohort is still running. Another cohort has been ended (PP-A11) and you can reach it via its "Open room →" / listen-in link.
+
+**Steps:**
+1. Open the ended cohort you are not a member of.
+2. Scroll to the bottom of the Cohorts tab.
+
+**Expected:** No "Session Feedback" box. The box is only for reviewing your own cohort, so listening in on someone else's ended cohort never offers it.
 
 Result: web ☐
 
@@ -474,7 +490,7 @@ Result: web ☐
 2. Watch the list refresh.
 3. Open that cohort's room (via its "Open room →" link) and look at the Direct Line composer.
 
-**Expected:** The cohort row now shows an "Ended" badge and no "End cohort" button. A success notice appears. In the room, the Direct Line shows "This cohort has ended — the conversation is read-only" with no message composer. The ended cohort no longer appears in a member's "Other running cohorts" list. The standing Cohort 1 never shows an "End cohort" button.
+**Expected:** The cohort row now shows an "Ended" badge and no "End cohort" button. A success notice appears. In the room, the Direct Line shows "This cohort has ended — the conversation is read-only" with no message composer. On the Cohorts tab, a member of that cohort sees an "Ended" badge (not "Active") on their own cohort card, no "Join Session" button, and the "Session Feedback" box now appears. The ended cohort no longer appears in a member's "Other running cohorts" list. The standing Cohort 1 never shows an "End cohort" button.
 
 Result: web ☐
 
@@ -507,7 +523,7 @@ These cases must produce the same user-visible outcome on both surfaces. If the 
 | PP-3 | Listener sees read-only view with no composer |
 | PP-6 | Cohorts list shows own cohort once; listen-in opens read-only |
 | PP-7 | Member roster shows `@username` not raw UUIDs |
-| PP-8 | Feedback form submits successfully |
+| PP-8 | Feedback form is hidden until your cohort ends, then submits successfully |
 | PP-10 | Join Session launches video call (EAS build required on android) |
 | PP-12 | Member with no cohort sees empty state, not a crash |
 | PP-13 | Refresh reloads room without full-screen loading flash |
