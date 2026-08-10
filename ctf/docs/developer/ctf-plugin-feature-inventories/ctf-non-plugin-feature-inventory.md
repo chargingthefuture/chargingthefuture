@@ -298,7 +298,7 @@ An owner-curated list of real community comments, shown two ways on the public (
   `GET /api/account/services`) still read "Feed & Announcements" — the internal name of the tables —
   even though the surface those tables belong to is called the Commons everywhere a member sees it.
   The row now reads **"Commons: Feed & Announcements"**, keeping the old wording after the colon so
-  a member who remembers the previous label still recognises the row, and its one-line summary now
+  a member who remembers the previous label still recognizes the row, and its one-line summary now
   says "Your Commons posts…" instead of "Your community posts…". Copy-only, in the `name` and
   `dataSummary` fields of the `feed-announcements` entry in `lib/account/deletion-registry.ts`; the
   slug, the table list, and every delete/export behavior are unchanged.
