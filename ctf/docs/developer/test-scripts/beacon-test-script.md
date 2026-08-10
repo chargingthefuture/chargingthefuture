@@ -149,14 +149,20 @@ there too, with `policy_status = 'allow'`.
 ### BCN-A2 · Go Live (both input paths)
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
-1. For a phone demo: read the per-event RTMP ingest URL + stream key and push the phone screen from a
-   mobile broadcaster app.
-2. For a desktop demo: use "Share screen" to capture a desktop screen/window in the browser.
-3. Press Go Live.
+1. Press Go Live. The RTMP ingest URL + stream key do not exist before this press — they are minted
+   by it, so there is nothing to copy until Go Live has succeeded.
+2. For a phone demo: copy the per-event RTMP ingest URL + stream key and push the phone screen from a
+   mobile broadcaster app. Setup detail is in `ctf/docs/developer/BEACON_PHONE_STREAMING_GUIDE.md`.
+3. For a desktop demo: use "Share screen" to capture a desktop screen/window in the browser.
 **Expected:** Go Live flips the event out of backstage to `live` and auto-posts the "live now" notice
 to the Commons. The host stage mounts after go-live; HLS + recording start once a host is actually
 publishing (the in-browser screen-share triggers `start-broadcast`). Only the host can publish —
 viewers never can. On error, the underlying Stream message is surfaced, not a generic text.
+Watch the phone-only path specifically: a phone pushing RTMP publishes an ordinary video track, not a
+screen-share track, so it does **not** trigger `start-broadcast`. If the broadcaster app reports it is
+sending and `/apps/beacon` stays empty for more than a minute, that gap (recorded under Gaps in the
+Beacon inventory) is what you are seeing; clicking "Share screen" once from a computer on the same
+live event starts HLS + recording for the whole call and video should then appear.
 Opening the call must succeed on the first press: Beacon asks Stream to record at 720p, and a
 missing recording size is what previously made every Go Live come back with `(400)` and
 `recording quality is required when audio_only is false and recording is enabled`. Seeing that

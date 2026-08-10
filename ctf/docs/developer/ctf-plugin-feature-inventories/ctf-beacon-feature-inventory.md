@@ -217,6 +217,16 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 - Whether anonymous viewers see the live chat read-only or just a "sign in to chat" panel (lean
   read-only so the room feels alive).
 - Replay hosting: link to Stream's recording URL vs. re-hosting; start with the Stream URL.
+- **A phone-only (RTMP) broadcast may never start the public HLS feed or the recording.**
+  `POST /api/beacon/[id]/start-broadcast` is the only caller of `startBeaconBroadcastEgress`, and it
+  fires from one place: the in-browser screen-share control in `beacon-host-stage.tsx`, when a screen
+  share starts (`useHasOngoingScreenShare`). A phone pushing RTMP publishes an ordinary video track,
+  not a screen-share track, so it does not trigger that call. Whether viewers still see the broadcast
+  depends on the Stream `livestream` call-type setting for automatic HLS, which is not asserted
+  anywhere in this repo. Fallback for the admin today: open the live event on `/admin/beacon` from a
+  computer and click **Share screen** once, which starts HLS and recording for the whole call.
+  Proper fix (not implemented): start egress when RTMP ingest begins — from Stream's ingress webhook,
+  or a short retry after go-live that starts egress once media is present.
 
 ## Build Checklist (flat, ordered; dependency-named — no phases)
 
@@ -246,6 +256,15 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-08-10: **Wrote the phone streaming guide (owner request).** The admin screen hands out an RTMP
+  URL and a stream key after "Go live", but nothing in the repo said what to do with them, so the
+  admin had to remember the broadcaster-app setup from one broadcast to the next. Added
+  `ctf/docs/developer/BEACON_PHONE_STREAMING_GUIDE.md`: what the two values are, that they are minted
+  fresh on every "Go live" and cannot be saved and reused, how to enter them in a one-box app (URL +
+  `/` + key) versus a two-box app, landscape/720p settings to match the recording, what to check when
+  the broadcaster app will not connect or viewers see nothing, and the reminder that "End broadcast"
+  is what stops distribution. Documentation only — no code, schema, route, or contract change. While
+  writing it, the phone-only egress gap above was found and recorded under Gaps.
 - 2026-08-08: **"Go live" failed every time because the recording settings were incomplete (owner
   report).** Opening the broadcast call was rejected by Stream with a 400 and the message
   `GetOrCreateCall failed with error: "recording quality is required when audio_only is false and
