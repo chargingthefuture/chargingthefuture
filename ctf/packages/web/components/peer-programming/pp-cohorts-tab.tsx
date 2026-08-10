@@ -41,6 +41,16 @@ function FeedbackForm({ value, onChange, onSubmit, submitting, success, error }:
   );
 }
 
+// Whether to show the "Session Feedback" box. Feedback is about a cohort that is over, so the form
+// only appears once the viewer's own cohort has ended. While it is still running there is nothing to
+// look back on, and members were sending "session feedback" for a session that had not happened yet.
+// The open cohort must be the viewer's own — someone listening in on another cohort is not reviewing
+// their own experience.
+function shouldShowFeedback(room: Room | null, myCohortId: string | null): boolean {
+  if (!room?.ended || !room.cohortId) return false;
+  return room.cohortId === myCohortId;
+}
+
 function AssignedCohort({ room, memberCount, onJoin }: { room: Room; memberCount: number; onJoin: () => void }) {
   const { theme } = useTheme();
   const t = getPeerProgrammingTokens(theme);
@@ -227,11 +237,7 @@ export function PeerProgrammingCohortsTab({
   // True member count for the viewer's own cohort, from the cohort summary (the roster `members` is
   // capped for display, so it is not a reliable count). Falls back to the roster length.
   const myCohortMemberCount = cohorts.find((c) => c.id === myCohortId)?.memberCount ?? members.length;
-  // Feedback is about a cohort that is over, so the form only appears once the viewer's own cohort has
-  // ended. While it is still running there is nothing to look back on, and members were sending
-  // "session feedback" for a session that had not happened yet. Requires the open cohort to be the
-  // viewer's own — someone listening in on another cohort is not reviewing their own experience.
-  const showFeedback = Boolean(room?.ended) && Boolean(room?.cohortId) && room?.cohortId === myCohortId;
+  const showFeedback = shouldShowFeedback(room, myCohortId);
   return (
     <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 24 }}>
       <div style={{ marginBottom: 20, padding: "18px 24px", borderRadius: 16, background: `linear-gradient(135deg,${t.ACCENT}15 0%,rgba(139,92,246,0.05) 100%)`, border: `1px solid ${t.ACCENT}25` }}>
