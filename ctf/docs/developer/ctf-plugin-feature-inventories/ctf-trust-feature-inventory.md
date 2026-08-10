@@ -40,7 +40,7 @@ Trust gives the community a privacy-respecting, **non-numeric** way to gauge how
 
 ## Data Model and Storage Contracts
 
-- `trust_user_extension` — Per-user extension: `user_id`, `trust_status` (default `unverified`), `trust_evidence` (JSONB array, default `[]`), `trust_visibility` (default `public`, **dormant since 2026-08-10** — nothing writes it and no route reads it; kept to avoid a migration, to be dropped in a later schema pass), `updated_at`. No numeric trust-score column exists; the qualitative signal is derived from cross-plugin engagement, not stored as a number. `trust_evidence` is rewritten by the snapshot route (derived items) and appended-to by the admin verification route (one admin item).
+- `trust_user_extension` — Per-user extension: `user_id`, `trust_status` (default `unverified`), `trust_evidence` (JSONB array, default `[]`), `updated_at`. There is no visibility column: `trust_visibility` was dropped on 2026-08-10 with the per-member visibility choice (`ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_visibility` in `schema.sql` and `schema.demo.sql`). No numeric trust-score column exists; the qualitative signal is derived from cross-plugin engagement, not stored as a number. `trust_evidence` is rewritten by the snapshot route (derived items) and appended-to by the admin verification route (one admin item).
 - `trust_admin_audit_trail` — Audit log: `id` (UUID), `actor_user_id`, `command`, `policy_status`, `reason`, `target_user_id`, `request_id`, `metadata` (JSONB), `created_at`. Written by the snapshot and admin-verification routes, and by the trust panel reads (`trust.summary.read` on `GET /api/trust/user/self` and `GET /api/trust/user/[userId]`).
 - `trust_signal_snapshot` — Append-only derived-metrics record: `id` (UUID), `user_id`, `snapshot` (JSONB metric bundle — login*, socketRelay*, serviceCredits*, and the v4 per-plugin participation counts including `recurringActivityCounterparties`), `snapshot_type` (model version, default `cross_plugin_engagement_v4`), `created_at`. Indexed on `user_id` and `created_at`. Stores raw counts only — never a numeric trust score. User-scoped; deleted on service/account deletion.
 
@@ -178,8 +178,12 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
   everyone shares the same thing, so there was nothing to state. Contracts updated:
   `trust.visibility.update` removed from the command, access-policy, and audit contracts;
   `disclosureLevels` restated as owner_or_admin/any_other_member; the deletion contract records
-  `trust_visibility` as dormant. The column is left in place so this change needs no migration —
-  nothing writes it and no route reads it; drop it in a later schema pass.
+  the column's removal. The `trust_visibility` column is **dropped**, not left dormant: `schema.sql`
+  and `schema.demo.sql` lose it from the CREATE TABLE and gain
+  `ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_visibility`, and the field
+  is gone from `TrustUserExtension`, `TrustPeerView`, every db query, both seed scripts, and the
+  `TRUST_VISIBILITY_FORBIDDEN` error code. Leaving a dead column behind is how a decades-long project
+  accumulates junk (owner directive, 2026-08-10).
 
 - 2026-08-09: **The card is two labeled sections and the dropdown is gone.** Owner direction: the
   block read as three different ideas stacked with nothing separating them — a heading, a dropdown

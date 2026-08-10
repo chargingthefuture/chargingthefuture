@@ -29,7 +29,7 @@
 
 These checks confirm the plugin is alive. If any fail, stop and file a bug before continuing.
 
-1. **API reachable — self read.** As admin, call `GET /api/trust/user/self`. Expect HTTP 200 and a JSON body containing `trustStatus`, `trustEvidence` (array), and `trustVisibility`. No numeric score field should appear anywhere in the response.
+1. **API reachable — self read.** As admin, call `GET /api/trust/user/self`. Expect HTTP 200 and a JSON body containing `trustStatus` and `trustEvidence` (array). No numeric score field should appear anywhere in the response, and no `trustVisibility` field — that column was dropped on 2026-08-10.
    web ☐
 
 2. **Widget renders on the right rail.** Sign in as admin, open a page that embeds the Trust right-rail card (e.g. account hub or community shell). `TrustWidgetCard` should render — ShieldCheck header visible, no crash, no blank white box. Each evidence row must read as a human sentence (the `summary`, e.g. "Accepted 1 SkillsHunt submission"), **never** a raw type slug like `demo_second_owner` or `Engagement-...`. Any date shown must be a real date — **never** the literal "Invalid Date". (Regression guard: the demo seed previously wrote evidence with no `summary`/`createdAt`, which produced both symptoms.)
@@ -87,7 +87,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - **Populated state** (if the admin account has seeded upstream activity): evidence list items render (e.g. "Active on N days", "Completed N SocketRelay trades"); no hardcoded checklist items; no progress percentage; no "Trust Score" numeric card.
 - **Empty state** (if no upstream activity for this user): empty-state prompt renders without errors.
 - **Public/unauthenticated state:** marketing/visitor view renders (matches `MobileTrustPublic.tsx` design intent) — no private data shown.
-- In every state: no `MockTrust` data visible; `trustStatus`, `trustVisibility`, and `trustEvidence` fields come from `GET /api/trust/user/self`.
+- In every state: no `MockTrust` data visible; `trustStatus` and `trustEvidence` fields come from `GET /api/trust/user/self`.
 
 **Result:**
 
@@ -111,7 +111,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - No per-plugin item survives — the response must not name SkillsHunt, Chyme, LightHouse, Foundation, or any other plugin, and must not carry a per-plugin count.
 - The breadth line counts DISTINCT plugins: a member with both a SocketRelay trades item and a SocketRelay requests item counts SocketRelay once.
 - Admin caller: HTTP 200 with the full panel and `trustDisclosure: "full"`. The owner reading their own row gets `full` too.
-- The result does not depend on the stored `trust_visibility` value. Set that column by hand to `public`, `restricted`, or `private` and re-run step 1 — the response must be identical every time. A difference means the route is still reading the dormant column.
+- The response carries no `trustVisibility` field, and `trust_user_extension` has no `trust_visibility` column: `SELECT trust_visibility FROM trust_user_extension` must error with "column does not exist". Nothing in the product decides disclosure per member any more.
 - No recompute is triggered for the target (this is a plain read route); subsequent calls return the same `updatedAt`.
 - On the Directory profile the Trust card renders with the shorter list and the note "This member shares a summary of their participation, not the detail." above it. There is no "Your trust" / "What members see" split on someone else's card, and no row stating what that member chose to share — there is no such choice.
 - Each read writes a `trust.summary.read` row to `trust_admin_audit_trail` with `policy_status = allow` and reason `member_summary_read` (non-owner non-admin), `admin_summary_read`, or `self_summary_read`.
@@ -128,12 +128,12 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 **Steps:**
 1. `POST /api/trust/visibility` with body `{ "trustVisibility": "private" }` and the CSRF header.
-2. Call `GET /api/trust/user/self` and note `trustVisibility`.
-3. Grep the running build for the route: it must not exist under `app/api/trust/`.
+2. Grep the running build for the route: it must not exist under `app/api/trust/`.
+3. Run `SELECT trust_visibility FROM trust_user_extension LIMIT 1` against the database.
 
 **Expected:**
 - Step 1: HTTP 404. The route was deleted on 2026-08-10 with the per-member visibility choice; a member does not decide what others see of their trust.
-- Step 2: the value is whatever the row already held and is unchanged by step 1. Nothing in the product writes this column now.
+- Step 3: the query errors — the column was dropped in the same change, not left behind dormant.
 - No `trust.visibility.update` row appears in `trust_admin_audit_trail` — that command no longer exists in any contract.
 
 **Result:** web ☐
@@ -160,7 +160,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - Those rows must match what the API returns for a peer (cross-check against TR-A3) — both come from the same projection function, so any disagreement is a bug.
 - With no signals yet, the card shows the empty state ("No trust signals yet" plus the three onboarding steps) and no "What members see" section — there is nothing to compare.
 - On **another member's** widget there is no section split and no "What members see" block: that card already is the member view, so repeating it would print the same list twice. No "this member shares…" row appears either.
-- `POST /api/trust/visibility` returns `404`. The route is deleted; nothing writes `trust_visibility` any more.
+- `POST /api/trust/visibility` returns `404`. The route and the `trust_visibility` column are both gone.
 
 **Result:** web ☐
 
@@ -406,7 +406,7 @@ The following cases must produce consistent data across surfaces since both read
 
 | Case | What must match |
 |---|---|
-| TR-A1 | `GET /api/trust/user/self` returns the same `trustStatus`, `trustVisibility`, and `trustEvidence` content to both the web widget and the Android Trust screen for the same signed-in admin. |
+| TR-A1 | `GET /api/trust/user/self` returns the same `trustStatus` and `trustEvidence` content to both the web widget and the Android Trust screen for the same signed-in admin. |
 | TR-A2 / TR-A16 | Evidence items shown on Android (`Trust.tsx`) and in `TrustWidgetCard` (web) reflect the same underlying snapshot — same counts, same "verb N noun" phrasing. |
 | TR-A8 | After running `POST /api/trust/signal/snapshot` via the web API, the Android screen (on next load/refresh) shows the updated evidence list. |
 

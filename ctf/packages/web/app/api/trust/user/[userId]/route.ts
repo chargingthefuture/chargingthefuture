@@ -20,9 +20,6 @@ import type { TrustPeerView, TrustUserExtension } from 'lib/trust/types';
 // out a timeline of their activity. The summary answers the question without doing either, so it is
 // what every member gets about every other member.
 //
-// The stored `trust_visibility` column is no longer read by this route. It is left in place rather
-// than dropped in the same change; nothing writes to it now that POST /api/trust/visibility is gone.
-//
 // `trustDisclosure` on the response tells the client which of the two it received, so the widget can
 // label a summary as a summary instead of presenting it as the member's whole record.
 function fullView(trust: TrustUserExtension): TrustPeerView {
@@ -30,7 +27,7 @@ function fullView(trust: TrustUserExtension): TrustPeerView {
 }
 
 // Build the reduced projection from the stored evidence. Nothing else on the extension is widened:
-// the same fields a `public` profile already exposes are returned, with only the evidence narrowed.
+// only the evidence is narrowed.
 function summaryView(trust: TrustUserExtension): TrustPeerView {
   return {
     ...trust,
@@ -51,9 +48,9 @@ export async function GET(request: Request, context: unknown) {
   const viewerIsAdmin = gate.auth.isAdmin;
   const requestId = resolveRequestId(request);
 
-  // The audit contract requires a trust.summary.read event on every read of a member's trust panel,
-  // including denied reads. A failed audit write must never change the response the viewer gets, so
-  // log-and-continue on error.
+  // The audit contract requires a trust.summary.read event on every read of a member's trust panel.
+  // A failed audit write must never change the response the viewer gets, so log-and-continue on
+  // error.
   const audit = async (policyStatus: 'allow' | 'deny', reason: string) => {
     try {
       await logTrustAuditEvent({

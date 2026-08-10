@@ -10,7 +10,7 @@ policies:
     attributePolicies:
       activeSessionRequired: true
       publicSafeProjectionOnly: true
-      trustVisibilityLevelEnforced: true
+      fixedDisclosureLevelInCode: true
       noExactTimestampExposure: enforced
       viewedUserScope: same_workspace_or_public_profile
     consentRequirements:

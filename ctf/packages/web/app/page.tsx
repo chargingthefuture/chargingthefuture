@@ -29,7 +29,6 @@ function buildFallbackTrust(userId: string): TrustUserExtension {
     userId,
     trustStatus: 'unverified',
     trustEvidence: [],
-    trustVisibility: 'public',
     updatedAt: new Date().toISOString(),
   };
 }

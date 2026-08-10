@@ -1,10 +1,6 @@
 // Trust plugin types for web app
 
 export type TrustStatus = 'unverified' | 'verified' | 'flagged';
-export type TrustVisibility = 'public' | 'private' | 'restricted';
-
-export const TRUST_VISIBILITY_VALUES: readonly TrustVisibility[] = ['public', 'private', 'restricted'];
-
 // Admin-settable trust statuses (the snapshot route never changes status; only an admin can).
 export const TRUST_ADMIN_STATUS_VALUES: readonly TrustStatus[] = ['verified', 'flagged'];
 
@@ -67,15 +63,14 @@ export interface TrustUserExtension {
   userId: string;
   trustStatus: TrustStatus;
   trustEvidence: TrustEvidenceItem[];
-  trustVisibility: TrustVisibility;
   updatedAt: string;
 }
 
 // How much of a member's trust panel the viewer is being shown.
-//   full    — every derived evidence item, with its timestamp and supporting detail. The owner, an
-//             admin, and (on a `public` profile) any signed-in member get this.
+//   full    — every derived evidence item, with its timestamp and supporting detail. The owner and
+//             an admin get this.
 //   summary — headline counts only: no timestamps, no supporting detail, and the per-plugin items
-//             collapsed to a single breadth line. What a `restricted` profile shows a peer.
+//             collapsed to a single breadth line. What every other member gets.
 export type TrustDisclosure = 'full' | 'summary';
 
 // One evidence line as a viewer other than the owner sees it. `createdAt` and `details` are optional
@@ -94,7 +89,6 @@ export interface TrustPeerView {
   userId: string;
   trustStatus: TrustStatus;
   trustEvidence: TrustPeerEvidenceItem[];
-  trustVisibility: TrustVisibility;
   updatedAt: string;
   trustDisclosure: TrustDisclosure;
 }

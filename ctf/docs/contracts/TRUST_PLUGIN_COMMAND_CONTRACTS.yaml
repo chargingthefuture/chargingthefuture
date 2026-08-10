@@ -20,8 +20,6 @@ contracts:
         type: string
       trustEvidence:
         type: array
-      trustVisibility:
-        type: string
       updatedAt:
         type: string
       trustDisclosure:
@@ -88,8 +86,6 @@ contracts:
       trustEvidence:
         type: array
       trustStatus:
-        type: string
-      trustVisibility:
         type: string
     dataAccess:
       - trust_signal_snapshot
