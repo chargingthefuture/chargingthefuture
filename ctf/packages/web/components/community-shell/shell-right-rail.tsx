@@ -86,12 +86,8 @@ export function ShellRightRail({ currentUser, trust, isAuthenticated = false, si
             "Welcome, @username" plus the @username meta line below repeated the handle twice. */}
         <p className={styles.profileName}>Welcome back</p>
         <p className={styles.profileMeta}>{currentUser.username ? `@${currentUser.username}` : 'Member'}</p>
-        {/* Per-member claim only: the badge states this member passed admin-reviewed verification.
-            Members who are not (yet) verified get no badge — there is no community-wide
-            verification to fall back on. */}
-        {trust.trustStatus === 'verified' ? (
-          <span className={styles.profileBadge}>Verified member ✓</span>
-        ) : null}
+        {/* No verification badge. The platform does not vet people, so it has nothing to certify;
+            the Trust card below shows what this member has actually done, which is the real claim. */}
       </section>
 
       {/* Trust evidence panel below Welcome card */}

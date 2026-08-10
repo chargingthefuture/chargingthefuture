@@ -1,11 +1,9 @@
 import type {
   TrustEvidenceItem,
   TrustSignalMetrics,
-  TrustStatus,
   TrustUserExtension,
 } from './types';
 import {
-  applyAdminVerification,
   buildTrustEvidence,
   computeTrustSignalMetrics,
   getLatestTrustSnapshotAt,
@@ -55,7 +53,7 @@ export interface TrustSnapshotResult {
 }
 
 // Compute the caller's trust signal from real cross-plugin engagement, persist one snapshot row,
-// and refresh the derived evidence on their extension. Does NOT change trust_status (admin-only).
+// and refresh the derived evidence on their extension.
 export async function refreshTrustSignalSnapshot(userId: string): Promise<TrustSnapshotResult> {
   const nowIso = new Date().toISOString();
   const metrics = await computeTrustSignalMetrics(userId);
@@ -69,26 +67,4 @@ export async function refreshTrustSignalSnapshot(userId: string): Promise<TrustS
     snapshotId: snapshot.id,
     generatedAt: snapshot.createdAt,
   };
-}
-
-// Apply an admin verification decision: set status and append an admin evidence note.
-export async function applyTrustAdminVerification(params: {
-  targetUserId: string;
-  status: TrustStatus;
-  actorUserId: string;
-  note?: string;
-}): Promise<TrustUserExtension> {
-  const { targetUserId, status, actorUserId, note } = params;
-  const summary =
-    status === 'verified'
-      ? 'Verified by an administrator'
-      : 'Flagged for review by an administrator';
-  const adminEvidence: TrustEvidenceItem = {
-    type: 'admin-verification',
-    summary,
-    details: note && note.trim().length > 0 ? note.trim() : undefined,
-    createdAt: new Date().toISOString(),
-    createdBy: actorUserId,
-  };
-  return applyAdminVerification(targetUserId, status, adminEvidence);
 }

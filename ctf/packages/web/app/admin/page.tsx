@@ -55,8 +55,6 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/service-credits', name: 'ServiceCredits' },
   { href: '/admin/skills-hunt', name: 'SkillsHunt' },
   { href: '/admin/socket-relay', name: 'SocketRelay' },
-  // Verification review: set a member's trust status (verified / flagged) with an evidence note.
-  { href: '/admin/trust', name: 'Trust' },
   { href: '/admin/trust-transport', name: 'TrustTransport' },
   { href: '/admin/weekly-performance', name: 'Weekly Performance' },
   { href: '/admin/what-works', name: 'WhatWorks' },

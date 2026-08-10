@@ -1,9 +1,5 @@
 // Trust plugin types for web app
 
-export type TrustStatus = 'unverified' | 'verified' | 'flagged';
-// Admin-settable trust statuses (the snapshot route never changes status; only an admin can).
-export const TRUST_ADMIN_STATUS_VALUES: readonly TrustStatus[] = ['verified', 'flagged'];
-
 // The coarse, derived metrics computed for one snapshot. Real-data-only: every count comes from
 // actual rows in the upstream plugins' tables. No numeric trust score is ever produced — these are
 // raw counts used to build qualitative evidence, then persisted for audit/freshness.
@@ -61,7 +57,6 @@ export interface TrustEvidenceItem {
 
 export interface TrustUserExtension {
   userId: string;
-  trustStatus: TrustStatus;
   trustEvidence: TrustEvidenceItem[];
   updatedAt: string;
 }
@@ -87,7 +82,6 @@ export interface TrustPeerEvidenceItem {
 // widget renders one way; `trustDisclosure` tells the viewer which one they are looking at.
 export interface TrustPeerView {
   userId: string;
-  trustStatus: TrustStatus;
   trustEvidence: TrustPeerEvidenceItem[];
   updatedAt: string;
   trustDisclosure: TrustDisclosure;

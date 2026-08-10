@@ -25,31 +25,6 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: trust
-    command: trust.admin.verification.review
-    commandVersion: 1.0.0
-    purpose: trust_verification_moderation
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-    dataClassesAccessed:
-      - trust_verification_metadata
-      - trust_user_extension
-      - trust_admin_audit_trail
-    targetContext:
-      reviewerUserId: user_identifier
-      targetUserId: user_identifier
-      trustStatus: verification_status
-      note: optional_admin_note
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: trust
     command: trust.signal.snapshot.refresh
     commandVersion: 1.0.0
     purpose: trust_signal_aggregation

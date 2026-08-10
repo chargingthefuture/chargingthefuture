@@ -4405,18 +4405,19 @@ ALTER TABLE IF EXISTS peer_programming_settings ADD COLUMN IF NOT EXISTS updated
 -- === TRUST MODULE ===
 CREATE TABLE IF NOT EXISTS trust_user_extension (
   user_id TEXT PRIMARY KEY,
-  trust_status TEXT NOT NULL DEFAULT 'unverified',
   trust_evidence JSONB NOT NULL DEFAULT '[]'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS trust_status TEXT NOT NULL DEFAULT 'unverified';
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS trust_evidence JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Dropped 2026-08-10: a member never chose who sees their trust, so the column held a setting
 -- the product does not have. What another member sees is decided in code, in
 -- app/api/trust/user/[userId]/route.ts, the same way for everyone.
 ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_visibility;
+-- Dropped 2026-08-10: admin verification review was removed, so nothing set this and no surface
+-- showed it. The platform does not vet people; Trust reports what a member has actually done.
+ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_status;
 
 CREATE TABLE IF NOT EXISTS trust_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

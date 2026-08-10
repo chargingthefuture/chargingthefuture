@@ -23,7 +23,6 @@ function buildShellUser(userId: string, username: string | null): ShellCurrentUs
 function buildFallbackTrust(userId: string): TrustUserExtension {
   return {
     userId,
-    trustStatus: 'unverified',
     trustEvidence: [],
     updatedAt: new Date().toISOString(),
   };

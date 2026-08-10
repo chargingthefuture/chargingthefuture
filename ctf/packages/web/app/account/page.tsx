@@ -12,7 +12,6 @@ import { AccountHubShell } from '@/components/account/account-hub-shell';
 function buildFallbackTrust(userId: string): TrustUserExtension {
   return {
     userId,
-    trustStatus: 'unverified',
     trustEvidence: [],
     updatedAt: new Date().toISOString(),
   };
