@@ -66,7 +66,7 @@ read it, and do not keep it after the broadcast.
      slash: `<RTMP URL>/<stream key>`. Paste the URL, add `/`, then paste the key on the end.
    - Apps that show two boxes (OBS: "Server" and "Stream Key") take them separately — URL in the
      first, key in the second. Do not join them there.
-3. **Name** — anything you will recognise ("Beacon").
+3. **Name** — anything you will recognize ("Beacon").
 4. Save, and make sure the connection is ticked/active.
 5. Back in **Settings** → **Video**: set **1280x720**, 30 fps, bitrate around 2500 Kbps.
    The saved replay is recorded at 720p landscape, so **hold the phone sideways** — a portrait
