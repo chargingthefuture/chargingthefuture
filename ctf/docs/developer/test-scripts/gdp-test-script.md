@@ -58,7 +58,7 @@
 - One hero tile labeled "Members" shows a whole number greater than zero.
 - The weekly-active-members tile is absent.
 - No mock or placeholder numbers (e.g. "1,234,567") appear — the count matches what the Directory shows for total active members.
-- The line "Cumulative since June 12, 2026" appears directly under the headline Community Value Index figure (added 2026-08-06: the index is all-time from the soft launch date, never a yearly figure).
+- The line "Cumulative since June 12, 2026" appears directly under the headline Community Value Index figure (added 2026-08-06: the index is all-time from the soft launch date, never a yearly figure). The date now comes from the platform-wide launch constant (`PLATFORM_LAUNCH_DATE_ISO`), so check it still reads June 12, 2026 here and matches the oldest week offered in Weekly Performance ("Jun 8–14, 2026").
 
 Result: web ☐
 
