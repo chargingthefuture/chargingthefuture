@@ -477,8 +477,9 @@
 **Precondition:** Signed in as an admin. Seed has run.
 
 **Steps:**
-1. Navigate to `/admin/feed-announcements`.
-2. Observe the header (should include an icon + ADMIN badge).
+1. Navigate to `/admin/feed-announcements`. Reach it from `/admin` — the tile is named
+   **Commons: Feed & Announcements**.
+2. Observe the header. It reads **Commons: Feed & Announcements Admin** and includes an icon.
 3. Confirm the feed config panel shows current values from the database (render mode, enabled channels, `is_public` flag).
 4. Confirm an announcement list is shown.
 
