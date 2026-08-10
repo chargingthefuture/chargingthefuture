@@ -348,7 +348,7 @@ export function FeedAnnouncementsAdminShell({
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <MobileScreenHeader title="Feed & Announcements Admin" accent={t.ACCENT} icon={<Megaphone size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/" accent={t.ACCENT} label="Commons" />} />
+      <MobileScreenHeader title="Commons: Feed & Announcements Admin" accent={t.ACCENT} icon={<Megaphone size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/" accent={t.ACCENT} label="Commons" />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* No in-page title card here: MobileScreenHeader above already names the screen and
             carries the icon, back control, and Member view. Repeating it cost a screen of phone

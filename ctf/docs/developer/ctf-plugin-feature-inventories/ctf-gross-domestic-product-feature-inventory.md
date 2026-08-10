@@ -34,8 +34,11 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 2. An as-of anchor under the headline Community Value Index: "Cumulative since June 12, 2026" — the
    soft launch date (owner decision, 2026-08-06; the Render production deploy came slightly earlier,
    2026-05-25). The index sums all recognized exchanges from launch onward and never resets to a
-   calendar year. The date is one constant (`COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO` in
-   `ctf/packages/web/components/gdp/gdp-shared.ts`) so a corrected launch date changes in one place.
+   calendar year. The date is one platform-owned constant, `PLATFORM_LAUNCH_DATE_ISO` in
+   `ctf/packages/web/lib/platform/launch.ts` (GDP's `COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO` in
+   `ctf/packages/web/components/gdp/gdp-shared.ts` re-exports it), so a corrected launch date
+   changes in one place and every surface that counts from launch — GDP here, the Weekly
+   Performance week history — follows together.
 3. Current annual `Total GDP`, `Service GDP`, `Goods/Local GDP` with plain-language explanations.
 3. Per-capita indicators based on population baseline and selected period.
 4. Progress-to-target indicators for $300B total and $210B services goals.
@@ -353,6 +356,12 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-08-10: **Launch date moved to a platform-owned constant; no visible change to GDP.** Weekly
+  Performance needed the same launch date to floor its week history, and a plugin must not import
+  another plugin's code, so `2026-06-12` now lives in `ctf/packages/web/lib/platform/launch.ts` as
+  `PLATFORM_LAUNCH_DATE_ISO`. GDP's `COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO` re-exports it, so the
+  on-screen line still reads "Cumulative since June 12, 2026" and the two surfaces cannot drift
+  apart. No schema, route, or contract change.
 - 2026-08-06: **As-of anchor corrected to the soft launch date: "Cumulative since June 12, 2026"
   (owner decision).** The first pass anchored to the Render production deploy (2026-05-25); the
   owner identified 2026-06-12 as the actual soft launch, so the constant in `gdp-shared.ts` now

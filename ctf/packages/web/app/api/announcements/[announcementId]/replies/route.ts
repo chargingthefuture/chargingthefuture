@@ -69,6 +69,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         isMine: reply.authorUserId === gate.auth.userId,
         body: reply.body,
         sentAtIso: reply.createdAtIso,
+        editedAtIso: reply.editedAtIso,
       })),
     };
     return NextResponse.json(response, { status: 200 });
@@ -136,6 +137,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           isMine: true,
           body: text.trim(),
           sentAtIso: result.createdAtIso,
+          editedAtIso: null,
         },
       },
       { status: 201 },

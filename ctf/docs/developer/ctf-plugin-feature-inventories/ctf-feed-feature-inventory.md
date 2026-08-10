@@ -99,7 +99,10 @@ Architecture decisions in effect:
 
 ### 2.1 Central Admin Surface
 
-1. Single admin page at `/admin/feed-announcements` for Feed + Announcements controls.
+1. Single admin page at `/admin/feed-announcements` for Feed + Announcements controls. It is titled
+   **Commons: Feed & Announcements Admin**, and the `/admin` landing tile that opens it is named
+   **Commons: Feed & Announcements** — the same name the Account & Data screen gives this service,
+   so every surface calls it after the Commons.
 2. Role-gated create/edit/publish/archive actions.
 3. Moderation and publish-state controls with auditability.
 
@@ -191,12 +194,15 @@ Admin routes:
   footprint, and returns an `authors` roster (aggregate counts per member, ordered by volume) so a
   moderator can work by person rather than by post. The roster is omitted when `?author=` is set — it
   is what you use to *pick* someone, so it is dead weight once you have.
-- `GET /api/feed/admin/moderation` — admin lists member-authored Commons posts and replies for review,
-  newest first, together with the count of rows currently hidden (`listCommonsModerationQueue` +
+- `GET /api/feed/admin/moderation` — admin lists member-authored Commons posts and replies for review
+  — including replies on official announcements — newest first, together with the count of rows currently hidden (`listCommonsModerationQueue` +
   `countHiddenCommonsRows` in `lib/feed/moderation.ts`). Hidden rows are included by default so a
   moderator can find what they took down and put it back; `?hidden=1` narrows to only those. Optional
   `?limit=` clamped to 1..200. Admin-gated (`requireFeedAdminAccess`), read-only, no audit row.
 - `POST /api/feed/admin/moderation/:target/:id` — admin hides or restores one Commons post or reply.
+  `:target` is one of `post` / `reply` / `announcement-reply` / `question` / `answer`
+  (`FeedModerationTarget`); `announcement-reply` is a member's reply on an official announcement,
+  stored in `announcement_replies`.
   Body may also carry `reason`, one of `off_topic` / `suspected_bad_actor` / `spam` / `abusive` /
   `other` (`FEED_MODERATION_REASON`). Validated against that fixed set, never free text — a
   moderator's prose about a member would become a permanent unreviewable note on a survivor's
@@ -356,6 +362,17 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-08-10: **The admin surface is named after the Commons too (owner request, follow-on from the
+  Account & Data rename in #2189).** The `/admin` landing tile read "Feed Announcements" and the
+  screen header read "Feed & Announcements Admin" — neither named the surface those announcements
+  land on. The tile is now **Commons: Feed & Announcements** (matching the Account & Data service
+  row exactly) and the header is **Commons: Feed & Announcements Admin**. It still sits beside
+  **Commons Moderation**, which is the separate power over member-authored posts. Copy only —
+  `app/admin/page.tsx` and `components/feed-announcements/feed-announcements-admin-shell.tsx`; no
+  route, schema, or contract change. Test step FD-A1 updated to check the new header (and to drop
+  the "ADMIN badge" it told the tester to look for, which the shared header has not rendered since
+  the surface moved to `MobileScreenHeader`).
+- 2026-08-10: **Announcement replies became moderatable, and their authors can edit or delete them.** `FeedModerationTarget` widened to `post | reply | announcement-reply | question | answer`, so `POST /api/feed/admin/moderation/:target/:id` covers replies on official announcements with no new endpoint. `listCommonsModerationQueue` now unions `announcement_replies` (its `parentId` is the announcement — the field was renamed from `postId` because the two kinds of reply hang off different things), `listCommonsAuthors` counts them in each member's reply total, and `countHiddenCommonsRows` counts hidden ones in the reply total on `/admin/commons`. The Commons moderation screen labels them "Announcement reply" and links them to their announcement. Hide and restore only — still no admin edit anywhere. The member-side edit/delete of one's own announcement reply is documented in the Announcements inventory.
 - 2026-08-09: **Account deletion now deletes Commons posts instead of leaving them under a generic
   name (owner report).** Deleting an account removed `feed_community_posts` / `feed_questions` but
   the Commons reads `feed_items`, which holds a copy of every post and question carrying the same
