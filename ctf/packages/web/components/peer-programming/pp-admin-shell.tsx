@@ -455,8 +455,10 @@ function FeedbackRow({ t, item }: { t: Tokens; item: FeedbackItem }) {
     >
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>{feedbackAuthor(item)}</span>
-        <span style={{ fontSize: 11, color: t.ACCENT, fontWeight: 600 }}>{item.issueType}</span>
-        <span style={{ fontSize: 11, color: t.MUTED }}>{item.suggestionCategory}</span>
+        {/* issueType and suggestionCategory are deliberately not rendered. The member form has no
+            category picker — it posts the literal "general" for both — so every row showed
+            "general general", which told the admin nothing. Bring the labels back if the member
+            form ever collects real categories. */}
         <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>{formatFeedbackTime(item.createdAtIso)}</span>
       </div>
       <p style={{ fontSize: 13, color: '#D1D5DB', margin: '6px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{item.note}</p>
