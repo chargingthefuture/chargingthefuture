@@ -11,7 +11,7 @@ export interface TrustRightRailCardProps {
 export const TrustRightRailCard: React.FC<TrustRightRailCardProps> = ({ trust }) => {
   return (
     <div className="mb-4">
-      <TrustWidgetCard trust={trust} editable />
+      <TrustWidgetCard trust={trust} isOwnCard />
     </div>
   );
 };

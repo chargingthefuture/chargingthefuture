@@ -21,7 +21,7 @@ Rule 114 baseline: Trust extends the canonical profile by `user_id` and must not
   - none to canonical profile
 - Why canonical fields are needed:
   - attach trust signals to one canonical member identity
-  - support policy checks for self-service visibility changes and moderator/admin review
+  - support moderator/admin review of a member's trust state
   - render consistent identity context across plugin surfaces
 
 ## Identity Handle Baseline
@@ -46,10 +46,6 @@ Rule 114 baseline: Trust extends the canonical profile by `user_id` and must not
     - type: jsonb (array of evidence items: `{ type, summary, details?, createdAt, createdBy? }`)
     - nullable/default: non-null, default `[]`
     - purpose: qualitative, non-numeric evidence derived from real cross-plugin participation, plus admin notes
-  - field name: `trust_visibility`
-    - type: enum (`public` | `private` | `restricted`)
-    - nullable/default: non-null, default `public`
-    - purpose: reduce stalking/harassment risk by limiting who can view trust signal detail
   - field name: `member_since_at`
     - type: timestamptz
     - nullable/default: nullable, derived/backfilled from canonical account timeline when available
@@ -131,7 +127,7 @@ When user requests full account deletion:
 If user returns after service-scoped deletion:
 
 - Recreated defaults:
-  - new `trust_user_extension` with `unverified` status and `public` visibility
+  - new `trust_user_extension` with `unverified` status
   - empty or re-derived `trust_signal_snapshot`
 - Data that is not restored:
   - prior public-safe trust summary state unless re-derived from approved source systems

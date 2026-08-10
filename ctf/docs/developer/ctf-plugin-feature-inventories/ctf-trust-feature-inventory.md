@@ -6,30 +6,23 @@
 - Plugin slug: `trust`
 - Owned surfaces: `/api/trust/*` routes, `trust_*` tables, `packages/mobile/src/features/trust` (Android), trust badge/evidence panels embedded in profile/directory surfaces (web).
 - Not owned: canonical user profile (Directory), identity (Clerk), moderation backend (handled out-of-plugin via Retool tooling), and all upstream engagement/participation data (owned by the plugins Trust reads from, e.g. SocketRelay, login/auth, and other activity sources).
-- Derived, read-mostly model: Trust owns no primary participation data. It derives a **qualitative** trust signal — never a numeric score — by aggregating engagement/contribution signals from across the platform's seeded plugins (not just Directory), and persists only the per-user extension (status/evidence/visibility) and the admin audit trail.
+- Derived, read-mostly model: Trust owns no primary participation data. It derives a **qualitative** trust signal — never a numeric score — by aggregating engagement/contribution signals from across the platform's seeded plugins (not just Directory), and persists only the per-user extension (status/evidence) and the admin audit trail.
 - Humane-by-design: Trust deliberately avoids reducing a person to a number. It communicates a likelihood/standing badge (e.g. how established and safe a member appears), not a ranked numeric score.
 
 ## Intent and Outcome
 
-Trust gives the community a privacy-respecting, **non-numeric** way to gauge how established and safe a member is — i.e. the likelihood that they are a genuine, contributing participant rather than a bad actor — based on the material value and engagement they have contributed across the platform (for example: how often they log in, the number of SocketRelay trades/fulfillments they have completed, and their overall platform engagement). The signal is surfaced as a trust badge plus a supporting evidence panel and verification status on the user's profile. Admins can review/audit, and users control visibility (public, private, restricted).
+Trust gives the community a privacy-respecting, **non-numeric** way to gauge how established and safe a member is — i.e. the likelihood that they are a genuine, contributing participant rather than a bad actor — based on the material value and engagement they have contributed across the platform (for example: how often they log in, the number of SocketRelay trades/fulfillments they have completed, and their overall platform engagement). The signal is surfaced as a trust badge plus a supporting evidence panel and verification status on the user's profile. Admins can review/audit. Members do not control who sees their trust: the disclosure level is fixed in code, the same for everyone (owner spec, 2026-08-10).
 
 ## User Features
 
 1. View their trust badge (qualitative standing, not a number), evidence panel, and verification status on profile/directory surfaces.
-2. Choose what other members see of their trust signals, on their own Trust card (account hub,
-   community right rail, own Directory profile). The card body is two labeled sections: **"Your
-   trust"** — every signal the member has, always all of them, whatever the choice is — then **"What
-   members see"**, which holds the choice and its result. The choice is three buttons, not a
-   dropdown, each completing the section heading: **"Everything"** (any signed-in member who opens
-   the profile sees every signal), **"A summary"** (members see how active you are — sign-in days,
-   how many plugins you take part in, and any ServiceCredits counts — without the detail or the
-   dates), **"Nothing"** (the Trust card does not appear on the profile for other members). Under the
-   buttons, the exact rows another member would receive are rendered with the same components their
-   screen uses, so the preview is the copy they get rather than a description of it; on "Nothing" a
-   single line stands in, because a member receives no card at all. A "Saved" confirmation appears
-   when the choice is stored. The card names no admin caveat — nothing in the app is end-to-end
-   encrypted, so admin access is a given everywhere and repeating it here only crowded the section.
-   The setting governs the trust card only; it is not a platform-wide visibility switch.
+2. See, on their own Trust card (account hub, community right rail, own Directory profile), both
+   what they have and what everyone else gets. The card body is two labeled sections: **"Your
+   trust"** — every signal the member has — then **"What members see"**, which renders the exact rows
+   any other member receives, using the same components that member's screen uses. Members cannot
+   change this and there is no control on the card: what a member sees of someone else is decided in
+   code, the same way for everyone, so trust cannot be hidden by the person it describes. The second
+   section is there so a member is never guessing what is on show about them.
 3. Inspect their own trust signal snapshot via `GET /api/trust/user/self`.
 
 ## Admin Features
@@ -41,15 +34,14 @@ Trust gives the community a privacy-respecting, **non-numeric** way to gauge how
 ## API Surface and Route Map
 
 - `GET /api/trust/user/self` — Implemented. Recomputes the caller's trust signals before returning, so the panel reflects their current participation instead of a frozen snapshot that nothing refreshed. Calls `refreshTrustSignalSnapshot(userId)` (the same logic as `POST /api/trust/signal/snapshot`), persists a snapshot row, refreshes derived evidence, and returns the fresh `trust_user_extension`. Resilient: if the recompute throws, it falls back to the last stored extension so the member's own read never errors. Gated by server-side plugin authz (`evaluatePluginAccess`). The cross-user route stays a plain read (no recompute).
-- `GET /api/trust/user/[userId]` — Implemented. Returns another member's trust panel, gated by authentication AND the target's `trust_visibility`, at one of two disclosure levels reported on the response as `trustDisclosure`. `public` → `full` for any authenticated, unlocked member. `restricted` → `summary` for any other member: headline counts only, with every timestamp and supporting detail dropped and the per-plugin participation items collapsed to a single "Took part in N plugins" breadth line (`lib/trust/peer-summary.ts`). `private` → `403` for anyone but the owner or an admin. The owner (self) and admins always receive `full`, whatever the setting. A target with no extension row defaults to `public`.
-- `POST /api/trust/visibility` — Implemented. Updates the caller's own visibility (`public` | `private` | `restricted`); rejects any other value with `400`; CSRF-guarded; writes a `trust_admin_audit_trail` row. Self-scope only.
+- `GET /api/trust/user/[userId]` — Implemented. Returns another member's trust panel at one of two disclosure levels, reported on the response as `trustDisclosure`, and the level is decided here in code rather than by any member setting: the owner (self) and admins receive `full`; **every other member receives `summary`** — headline counts only, with every timestamp and supporting detail dropped and the per-plugin participation items collapsed to a single "Took part in N plugins" breadth line (`lib/trust/peer-summary.ts`). No read is refused; there is no `403` visibility path, because hiding a member's participation from other members would defeat the point of the panel.
 - `POST /api/trust/signal/snapshot` — Implemented. Recomputes the caller's trust signal (model `cross_plugin_engagement_v4`) from real cross-plugin engagement — login frequency from `login_events`; SocketRelay trades/requests; ServiceCredits received (distinct payers + undisputed completed transfers); per-plugin participation COUNTs across LightHouse, TrustTransport, SkillsHunt, LevelUp, Chyme, Directory, WhatWorks, PeerProgramming, Contributions, and Foundation (provider side); and the count of DISTINCT members with a confirmed recurring activity (`recurring_activities`, either side). Coarse COUNTs only; privacy-sensitive plugins (ClickLog, Mood, GentlePulse, Unlock, and the Foundation seeker side) are excluded — see the Trust Signal Model section. Persists a `trust_signal_snapshot` row and refreshes the caller's derived evidence. Never changes `trust_status`. CSRF-guarded; writes an audit row.
 - `POST /api/trust/admin/verification` — Implemented. Admin-only (`evaluatePluginAccess({ requiredRoles: ['admin'] })`). Sets a target user's `trust_status` to `verified` or `flagged`, appends an admin evidence item, and writes an audit row. Validates `targetUserId` and `trustStatus` (`400` on bad input). CSRF-guarded.
 
 ## Data Model and Storage Contracts
 
-- `trust_user_extension` — Per-user extension: `user_id`, `trust_status` (default `unverified`), `trust_evidence` (JSONB array, default `[]`), `trust_visibility` (default `public`), `updated_at`. No numeric trust-score column exists; the qualitative signal is derived from cross-plugin engagement, not stored as a number. `trust_evidence` is rewritten by the snapshot route (derived items) and appended-to by the admin verification route (one admin item).
-- `trust_admin_audit_trail` — Audit log: `id` (UUID), `actor_user_id`, `command`, `policy_status`, `reason`, `target_user_id`, `request_id`, `metadata` (JSONB), `created_at`. Written by the visibility, snapshot, and admin-verification routes, and by the trust panel reads (`trust.summary.read` on `GET /api/trust/user/self` and `GET /api/trust/user/[userId]`).
+- `trust_user_extension` — Per-user extension: `user_id`, `trust_status` (default `unverified`), `trust_evidence` (JSONB array, default `[]`), `updated_at`. There is no visibility column: `trust_visibility` was dropped on 2026-08-10 with the per-member visibility choice (`ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_visibility` in `schema.sql` and `schema.demo.sql`). No numeric trust-score column exists; the qualitative signal is derived from cross-plugin engagement, not stored as a number. `trust_evidence` is rewritten by the snapshot route (derived items) and appended-to by the admin verification route (one admin item).
+- `trust_admin_audit_trail` — Audit log: `id` (UUID), `actor_user_id`, `command`, `policy_status`, `reason`, `target_user_id`, `request_id`, `metadata` (JSONB), `created_at`. Written by the snapshot and admin-verification routes, and by the trust panel reads (`trust.summary.read` on `GET /api/trust/user/self` and `GET /api/trust/user/[userId]`).
 - `trust_signal_snapshot` — Append-only derived-metrics record: `id` (UUID), `user_id`, `snapshot` (JSONB metric bundle — login*, socketRelay*, serviceCredits*, and the v4 per-plugin participation counts including `recurringActivityCounterparties`), `snapshot_type` (model version, default `cross_plugin_engagement_v4`), `created_at`. Indexed on `user_id` and `created_at`. Stores raw counts only — never a numeric trust score. User-scoped; deleted on service/account deletion.
 
 ## Trust Signal Model (`cross_plugin_engagement_v4`)
@@ -113,27 +105,28 @@ numeric score is ever computed or stored. The snapshot route never changes `trus
 ## Security, Privacy, and Compliance Controls
 
 - Authentication on every route via `evaluatePluginAccess` (web Clerk headers or verified bearer token).
-- Cross-user read (`GET /api/trust/user/[userId]`) enforces the target's `trust_visibility` as a
-  disclosure level, not a single allow/deny: `public` = the full panel to any authenticated member;
-  `restricted` = the summary projection to any other member (headline counts, no timestamps, no
-  supporting detail, per-plugin items collapsed to one breadth line); `private` = owner or admin only,
-  everyone else gets `403`. The owner and admins always read the full panel. The projection lives in
-  `lib/trust/peer-summary.ts`, is covered by `lib/trust/peer-summary.test.ts`, and fails closed — an
-  evidence type it does not recognize is dropped rather than passed through.
+- Cross-user read (`GET /api/trust/user/[userId]`) sets the disclosure level in code, not from a
+  member setting: the owner and admins read the full panel; every other member reads the summary
+  projection (headline counts, no timestamps, no supporting detail, per-plugin items collapsed to one
+  breadth line). No read is refused. The projection is the privacy control — it is what keeps a
+  member's timeline and per-plugin record off other members' screens while still answering whether
+  they take part. It lives in `lib/trust/peer-summary.ts`, is covered by
+  `lib/trust/peer-summary.test.ts`, and fails closed — an evidence type it does not recognize is
+  dropped rather than passed through.
 - Admin-only gate on `POST /api/trust/admin/verification` via `evaluatePluginAccess({ requiredRoles: ['admin'] })`.
-- All three mutation routes require the same-origin CSRF confirmation header and reject cross-origin
+- Both mutation routes require the same-origin CSRF confirmation header and reject cross-origin
   mutations.
 - Humane, privacy-respecting signal: Trust never exposes or persists a numeric score; evidence is
   built from aggregate counts without exposing the underlying per-plugin records to viewers.
-- `logTrustAuditEvent` writes every visibility, snapshot, and admin-verification mutation, plus every
+- `logTrustAuditEvent` writes every snapshot and admin-verification mutation, plus every
   trust panel read (`trust.summary.read` on `GET /api/trust/user/self` and
-  `GET /api/trust/user/[userId]`, including denied cross-user reads), to `trust_admin_audit_trail`
+  `GET /api/trust/user/[userId]`), to `trust_admin_audit_trail`
   with a request id. A failed audit write is reported but never changes the caller's response.
 - No raw moderation evidence is exposed to non-admin callers.
 
 ## Web and Android Delivery Status
 
-**Web: delivered (signal-only).** The live member-facing surface is the right-rail card `components/shared/trust/TrustRightRailCard.tsx`, which renders `components/trust/TrustWidgetCard.tsx` — an inline-styled widget aligned to `design/.../survivor-hub/Trust.tsx` (blue brand palette, ShieldCheck header, real `trustEvidence` list when present, an empty state with onboarding prompts, and the visibility control `components/trust/trust-visibility-control.tsx` — on self surfaces a "What members see" section holding three buttons (Everything / A summary / Nothing), a preview built from the real evidence rows, and a "Saved" confirmation; it POSTs `/api/trust/visibility` and stays a read-only one-line row when the card shows another member). The evidence row, the summary note, and the section label live in `components/trust/trust-evidence-row.tsx` so the card and the preview render the same components. It is consumed by `account-hub-shell.tsx`, `community-shell/shell-right-rail.tsx`, `directory-profile-detail.tsx` (editable on own profile), and `lighthouse-host.tsx`. The admin surface is `/admin/trust` (`app/admin/trust/page.tsx` + `components/trust/trust-admin-shell.tsx`), a verification-review form over `POST /api/trust/admin/verification`, linked from the `/admin` landing. The signed-out marketing view is `components/trust/trust-public-shell.tsx`. The header has no Verified/Unverified status chip: the platform does not verify members, so Trust is signal-only and shows derived evidence, not a status badge. Per the real-data-only rule the design's verified-state signal buckets are omitted. Removed in the signal-only cleanup (2026-06-21): `TrustDirectoryProfilePanel.tsx`, `TrustEvidencePanel.tsx`, `TrustStatusBadge.tsx`, `TrustVisibilityBadge.tsx`, and the unused re-export `components/trust/TrustRightRailCard.tsx` — all dead after verification was dropped from the UI (no importers).
+**Web: delivered (signal-only).** The live member-facing surface is the right-rail card `components/shared/trust/TrustRightRailCard.tsx`, which renders `components/trust/TrustWidgetCard.tsx` — an inline-styled widget aligned to `design/.../survivor-hub/Trust.tsx` (blue brand palette, ShieldCheck header, real `trustEvidence` list when present, an empty state that is owner-aware — the three onboarding steps and "as you participate" wording render only on your own card, while a visitor to an empty profile is told the member has not taken part yet — and, on the member's own card only, the read-only "What members see" section `components/trust/trust-member-view.tsx`, which renders the exact rows another member receives). Nothing on the card is editable: the disclosure level is fixed in the cross-user route. The evidence row, the summary note, and the section label live in `components/trust/trust-evidence-row.tsx` so the member's own list and the member-view section render the same components. It is consumed by `account-hub-shell.tsx`, `community-shell/shell-right-rail.tsx`, `directory-profile-detail.tsx` (own profile passes `isOwnCard`), and `lighthouse-host.tsx`. The admin surface is `/admin/trust` (`app/admin/trust/page.tsx` + `components/trust/trust-admin-shell.tsx`), a verification-review form over `POST /api/trust/admin/verification`, linked from the `/admin` landing. The signed-out marketing view is `components/trust/trust-public-shell.tsx`. The header has no Verified/Unverified status chip: the platform does not verify members, so Trust is signal-only and shows derived evidence, not a status badge. Per the real-data-only rule the design's verified-state signal buckets are omitted. Removed in the signal-only cleanup (2026-06-21): `TrustDirectoryProfilePanel.tsx`, `TrustEvidencePanel.tsx`, `TrustStatusBadge.tsx`, `TrustVisibilityBadge.tsx`, and the unused re-export `components/trust/TrustRightRailCard.tsx` — all dead after verification was dropped from the UI (no importers).
 
 **Android: surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Historical detail: `Trust.tsx` under `packages/mobile/src/features/trust` had been rewritten to align with `design/.../survivor-hub/MobileTrust.tsx`, `MobileTrustEmpty.tsx`, `MobileTrustLoading.tsx`, and `MobileTrustPublic.tsx`. A new `api.ts` binds to `GET /api/trust/user/self` for real data. The screen covers all four states: loading (branded taglines), public/unauthenticated (visitor marketing view), empty (no evidence yet), and populated (evidence list). `MockTrust.tsx` is retired. Real bindings: `trustStatus`, `trustVisibility`, `trustEvidence` array (type/summary/createdAt per item). Omissions per real-data-only rule: Last Active / Activity / Transactions / Active Plugins stats from the design's Trust Score card have no backing API field and are omitted; signal-progress percentage and hardcoded checklist items are omitted (snapshot route is a stub); visibility update dropdown rendered as display-only at the time of the pixel pass. The backend for signal derivation, visibility update, and admin verification is now implemented (2026-06-08); the web client is wired to the live visibility mutation as of 2026-08-04 (Android stays retired per rule 105).
 
@@ -148,8 +141,8 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
 ## Gaps and Known Technical Debt
 
 1. ~~Signal derivation is the intended model but not yet wired: `POST /api/trust/signal/snapshot` is a stub.~~ Resolved (2026-06-08) — the snapshot route computes real cross-plugin engagement, persists a `trust_signal_snapshot` row, and refreshes derived evidence.
-2. ~~`POST /api/trust/visibility` and `POST /api/trust/admin/verification` are stubs.~~ Resolved (2026-06-08) — both implemented, validated, CSRF-guarded, and audited; admin verification is admin-only.
-3. ~~`GET /api/trust/user/[userId]` does not yet enforce the visibility setting.~~ Resolved (2026-06-08) — authentication plus `trust_visibility` enforcement (`public` open to members; `private`/`restricted` owner-or-admin only).
+2. ~~`POST /api/trust/visibility` and `POST /api/trust/admin/verification` are stubs.~~ Resolved (2026-06-08) — both implemented. `POST /api/trust/visibility` was then deleted on 2026-08-10 when the per-member visibility choice was removed; admin verification remains, admin-only, CSRF-guarded and audited.
+3. ~~`GET /api/trust/user/[userId]` does not yet enforce the visibility setting.~~ Superseded (2026-08-10) — there is no visibility setting to enforce. The route requires authentication and serves the summary projection to every member other than the owner and admins.
 4. ~~Mobile `Trust.tsx` renders mock data pending real API wiring.~~ Resolved — Android pixel pass complete (2026-05-31).
 5. Trust evidence content is rendered from a structured JSONB field on `trust_user_extension`; no rich-text schema or attachment storage contract has been published.
 6. No automated/scheduled refresh job exists for recomputing the derived signal — refresh is on-demand via the snapshot route (a future scheduled job could call the same logic).
@@ -168,6 +161,33 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
    closing if the status is ever meant to stay admin-side.
 
 ## Change Log
+
+- 2026-08-10: **The member no longer chooses; the code decides.** Owner correction against the
+  approved spec: a member never sets what other members see of their trust. Trust exists so someone
+  can tell whether the person in front of them is a real, participating member — a switch that let a
+  member hide that removes the one signal the reader needs, and the account page's job was only ever
+  to show a member their own view next to the member view. So: `GET /api/trust/user/[userId]` now
+  serves the summary projection to every member other than the owner and admins, with no `403` path
+  and no read of `trust_visibility`; `POST /api/trust/visibility` is deleted, along with
+  `setTrustVisibility` / `updateTrustVisibility` and the route's entry in the orphan-route allowlist;
+  the card's control is replaced by a read-only "What members see" section
+  (`components/trust/trust-member-view.tsx`, renamed from `trust-visibility-control.tsx`) that
+  renders the exact rows another member receives; `TrustWidgetCard`'s `editable` prop becomes
+  `isOwnCard`, since nothing on the card is editable and the flag now only decides whether the
+  comparison is drawn. The read-only "this member shares…" row on another member's card is gone —
+  everyone shares the same thing, so there was nothing to state. Contracts updated:
+  `trust.visibility.update` removed from the command, access-policy, and audit contracts;
+  `disclosureLevels` restated as owner_or_admin/any_other_member; the deletion contract records
+  the column's removal. The `trust_visibility` column is **dropped**, not left dormant: `schema.sql`
+  and `schema.demo.sql` lose it from the CREATE TABLE and gain
+  `ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_visibility`, and the field
+  is gone from `TrustUserExtension`, `TrustPeerView`, every db query, both seed scripts, and the
+  `TRUST_VISIBILITY_FORBIDDEN` error code. Leaving a dead column behind is how a decades-long project
+  accumulates junk (owner directive, 2026-08-10). The empty card is owner-aware in the same
+  change: the three onboarding steps and the "as you participate" line are a to-do list for the
+  card's owner, so on another member's empty profile they were an instruction aimed at the wrong
+  person and the card read as the visitor's own. A visitor now reads that the member has not taken
+  part anywhere yet.
 
 - 2026-08-09: **The card is two labeled sections and the dropdown is gone.** Owner direction: the
   block read as three different ideas stacked with nothing separating them — a heading, a dropdown

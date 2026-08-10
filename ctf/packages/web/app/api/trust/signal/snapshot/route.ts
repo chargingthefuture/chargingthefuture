@@ -45,7 +45,6 @@ export async function POST(request: Request) {
         metrics: result.metrics,
         trustEvidence: result.evidence,
         trustStatus: result.extension.trustStatus,
-        trustVisibility: result.extension.trustVisibility,
       },
       { status: 200 },
     );

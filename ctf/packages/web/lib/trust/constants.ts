@@ -5,7 +5,6 @@ export const TRUST_ERROR_CODE = {
   invalidPayload: 'TRUST_INVALID_PAYLOAD',
   csrfDenied: 'TRUST_CSRF_DENIED',
   notFound: 'TRUST_NOT_FOUND',
-  forbiddenVisibility: 'TRUST_VISIBILITY_FORBIDDEN',
   persistenceUnavailable: 'TRUST_PERSISTENCE_UNAVAILABLE',
 } as const;
 

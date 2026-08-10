@@ -691,10 +691,10 @@ async function seedTrust(c) {
   // the self read recompute them from real seeded activity.
   await c.query(
     `INSERT INTO trust_user_extension
-     (user_id, trust_status, trust_evidence, trust_visibility, updated_at)
+     (user_id, trust_status, trust_evidence, updated_at)
      VALUES ($1, 'verified',
        '[{"type":"engagement-skillshunt-submissions","summary":"Accepted 1 SkillsHunt submission","createdAt":"2026-05-19T00:00:00.000Z","createdBy":"trust-signal"}]'::jsonb,
-       'public', NOW())
+       NOW())
      ON CONFLICT (user_id) DO UPDATE SET
        trust_status = EXCLUDED.trust_status,
        trust_evidence = EXCLUDED.trust_evidence,
@@ -705,10 +705,10 @@ async function seedTrust(c) {
   if (OWNER2) {
     await c.query(
       `INSERT INTO trust_user_extension
-       (user_id, trust_status, trust_evidence, trust_visibility, updated_at)
+       (user_id, trust_status, trust_evidence, updated_at)
        VALUES ($1, 'verified',
          '[{"type":"engagement-lighthouse-matches","summary":"Accepted 1 LightHouse match","createdAt":"2026-05-19T00:00:00.000Z","createdBy":"trust-signal"}]'::jsonb,
-         'public', NOW())
+         NOW())
        ON CONFLICT (user_id) DO UPDATE SET
          trust_status = EXCLUDED.trust_status,
          trust_evidence = EXCLUDED.trust_evidence,
