@@ -4,10 +4,10 @@
 
 - Plugin name: `Trust`
 - Plugin slug: `trust`
-- Owned surfaces: `/api/trust/*` routes, `trust_*` tables, `packages/mobile/src/features/trust` (Android), trust badge/evidence panels embedded in profile/directory surfaces (web).
+- Owned surfaces: `/api/trust/*` routes, `trust_*` tables, `packages/mobile/src/features/trust` (Android), the trust evidence card embedded in profile/account/directory surfaces (web).
 - Not owned: canonical user profile (Directory), identity (Clerk), moderation backend (handled out-of-plugin via Retool tooling), and all upstream engagement/participation data (owned by the plugins Trust reads from, e.g. SocketRelay, login/auth, and other activity sources).
-- Derived, read-mostly model: Trust owns no primary participation data. It derives a **qualitative** trust signal — never a numeric score — by aggregating engagement/contribution signals from across the platform's seeded plugins (not just Directory), and persists only the per-user extension (status/evidence) and the admin audit trail.
-- Humane-by-design: Trust deliberately avoids reducing a person to a number. It communicates a likelihood/standing badge (e.g. how established and safe a member appears), not a ranked numeric score.
+- Derived, read-mostly model: Trust owns no primary participation data. It derives a **qualitative** trust signal — never a numeric score — by aggregating engagement/contribution signals from across the platform's seeded plugins (not just Directory), and persists only the per-user extension (evidence) and the admin audit trail.
+- Humane-by-design: Trust deliberately avoids reducing a person to a number. It shows a plain list of what a member has actually done — no badge, no status, no ranked numeric score.
 
 ## Intent and Outcome
 
@@ -164,9 +164,8 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
    column, the type, and the route that set it are all gone.
 11. Trust reports participation only, so it cannot describe a bad actor — every signal is positive,
    and the single negative input (a ServiceCredits dispute) only withholds a line rather than
-   producing one. A new member and an inactive bad actor both read "No trust signals yet". Catching
-   fraud is each plugin's own admin job, by design; whether a dedicated red-flag admin surface should
-   exist anywhere is an open product question as of 2026-08-10, and if it is built it is not Trust's.
+   producing one. A new member and an inactive bad actor both read "No trust signals yet". This is
+   the plugin's design, not a defect to fix here: catching fraud is each plugin's own admin job.
 
 ## Change Log
 
