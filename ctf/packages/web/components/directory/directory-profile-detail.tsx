@@ -407,7 +407,7 @@ function PresenceRow({ tokens: t, entry }: { tokens: DirectoryTokens; entry: Pre
 
 // The trust card (or a calm restricted note) that sits beneath the presence list.
 function TrustPanel({ tokens: t, trustState, isOwnProfile }: { tokens: DirectoryTokens; trustState: TrustState; isOwnProfile: boolean }) {
-  if (trustState.kind === "ready") return <TrustWidgetCard trust={trustState.trust} editable={isOwnProfile} />;
+  if (trustState.kind === "ready") return <TrustWidgetCard trust={trustState.trust} isOwnCard={isOwnProfile} />;
   if (trustState.kind === "withheld") {
     return (
       <div style={{ padding: "14px 16px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}` }}>

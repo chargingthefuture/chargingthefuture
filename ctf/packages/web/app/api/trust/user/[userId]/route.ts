@@ -8,16 +8,20 @@ import { reportError } from 'lib/observability/report';
 import type { TrustPeerView, TrustUserExtension } from 'lib/trust/types';
 
 // GET /api/trust/user/[userId]
-// Returns another member's trust panel, gated by authentication AND the target's visibility setting:
-//   - public     → any authenticated, unlocked member reads the full panel.
-//   - restricted → the owner and admins read the full panel; any other member reads the SUMMARY
-//                  projection (headline counts, no timestamps, per-plugin items collapsed to one
-//                  breadth line). This is the middle tier the setting is named for: a member
-//                  checking whether someone is an engaged participant gets that answer without
-//                  seeing the record behind it.
-//   - private    → only the owner (self) or an admin; everyone else is refused.
-// A refused viewer gets 403 (the row exists but is not visible to them). A non-existent target with
-// no extension row defaults to `public` (the default state), so it reads like any new member.
+// Returns another member's trust panel. What a viewer gets is decided here, in code — a member
+// cannot set it, and there is no per-member visibility choice anywhere in the product (owner spec):
+//   - the owner reading their own row, and any admin, read the full panel;
+//   - every other member reads the SUMMARY projection: headline counts, no timestamps, per-plugin
+//     items collapsed to one breadth line.
+//
+// Why one fixed rule rather than a setting. Trust exists so a member can tell whether the person
+// they are dealing with is a real, participating member. A setting that let someone hide that
+// removes the one signal the reader needs, and a setting that let someone reveal everything hands
+// out a timeline of their activity. The summary answers the question without doing either, so it is
+// what every member gets about every other member.
+//
+// The stored `trust_visibility` column is no longer read by this route. It is left in place rather
+// than dropped in the same change; nothing writes to it now that POST /api/trust/visibility is gone.
 //
 // `trustDisclosure` on the response tells the client which of the two it received, so the widget can
 // label a summary as a summary instead of presenting it as the member's whole record.
@@ -72,31 +76,16 @@ export async function GET(request: Request, context: unknown) {
     const isOwner = viewerUserId === targetUserId;
     const isPrivileged = isOwner || viewerIsAdmin;
 
-    // The owner and admins always read the full panel, whatever the setting says.
+    // The owner and admins always read the full panel.
     if (isPrivileged) {
       await audit('allow', isOwner ? 'self_summary_read' : 'admin_summary_read');
       return NextResponse.json(fullView(trust), { status: 200 });
     }
 
-    if (trust.trustVisibility === 'public') {
-      await audit('allow', 'public_summary_read');
-      return NextResponse.json(fullView(trust), { status: 200 });
-    }
-
-    if (trust.trustVisibility === 'restricted') {
-      await audit('allow', 'restricted_summary_read');
-      return NextResponse.json(summaryView(trust), { status: 200 });
-    }
-
-    await audit('deny', 'forbidden_visibility');
-    return NextResponse.json(
-      {
-        ok: false,
-        code: TRUST_ERROR_CODE.forbiddenVisibility,
-        message: 'This member limits who can view their trust details.',
-      },
-      { status: 403 },
-    );
+    // Everyone else reads the summary. There is no refused read: hiding a member's participation
+    // from other members would defeat the point of the panel.
+    await audit('allow', 'member_summary_read');
+    return NextResponse.json(summaryView(trust), { status: 200 });
   } catch (error) {
     reportError(error, { area: 'trust', op: 'user_read' });
     return NextResponse.json(

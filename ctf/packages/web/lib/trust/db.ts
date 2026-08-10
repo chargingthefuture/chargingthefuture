@@ -448,35 +448,6 @@ export async function setTrustDerivedEvidence(
   };
 }
 
-// Update only the caller's visibility setting. Upserts so a first-time member's row is created.
-export async function updateTrustVisibility(
-  userId: string,
-  visibility: TrustVisibility,
-): Promise<TrustUserExtension> {
-  const result = await queryDb<{
-    user_id: string;
-    trust_status: string;
-    trust_evidence: TrustEvidenceItem[];
-    trust_visibility: string;
-    updated_at: Date;
-  }>(
-    `INSERT INTO trust_user_extension (user_id, trust_visibility, updated_at)
-     VALUES ($1, $2, NOW())
-     ON CONFLICT (user_id) DO UPDATE
-       SET trust_visibility = EXCLUDED.trust_visibility, updated_at = NOW()
-     RETURNING user_id, trust_status, trust_evidence, trust_visibility, updated_at`,
-    [userId, visibility]
-  );
-  const row = result.rows[0];
-  return {
-    userId: row.user_id,
-    trustStatus: row.trust_status as TrustStatus,
-    trustEvidence: coerceTrustEvidence(row.trust_evidence),
-    trustVisibility: row.trust_visibility as TrustVisibility,
-    updatedAt: row.updated_at.toISOString(),
-  };
-}
-
 // Admin sets a target user's trust status (verified | flagged) and appends one admin evidence item.
 // The append is done in SQL so concurrent admin edits don't clobber each other's evidence.
 export async function applyAdminVerification(

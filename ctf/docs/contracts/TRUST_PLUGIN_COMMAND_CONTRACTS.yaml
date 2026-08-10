@@ -2,7 +2,7 @@ contracts:
   - pluginId: trust
     command: trust.summary.read
     version: 1.0.0
-    description: Read a member's trust panel (status, derived evidence, visibility). Implemented by GET /api/trust/user/self and GET /api/trust/user/[userId]; cross-user reads enforce the subject's trustVisibility at one of two disclosure levels — full for public (and always for the owner or an admin), summary for restricted. Private refuses a non-owner non-admin read.
+    description: Read a member's trust panel (status, derived evidence). Implemented by GET /api/trust/user/self and GET /api/trust/user/[userId]. The disclosure level is fixed in code, not by any member setting - the owner and admins read full, every other member reads the summary projection. No read is refused.
     inputSchema:
       subjectUserId:
         type: string
@@ -35,32 +35,6 @@ contracts:
       - trust_signal_snapshot
     purpose: trust_signal_display
     retentionClass: derived_short_lived
-    idempotency: true
-
-  - pluginId: trust
-    command: trust.visibility.update
-    version: 1.0.0
-    description: Update the caller's own trust visibility (self-scope only). Implemented by POST /api/trust/visibility.
-    inputSchema:
-      trustVisibility:
-        type: string
-        required: true
-        enum:
-          - public
-          - private
-          - restricted
-    outputSchema:
-      userId:
-        type: string
-      trustVisibility:
-        type: string
-      updatedAt:
-        type: string
-    dataAccess:
-      - trust_user_extension
-      - trust_admin_audit_trail
-    purpose: privacy_safety_preference_update
-    retentionClass: audit_long_lived
     idempotency: true
 
   - pluginId: trust
