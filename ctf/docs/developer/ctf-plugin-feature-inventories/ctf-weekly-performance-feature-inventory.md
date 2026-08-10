@@ -59,7 +59,7 @@ actually exist are listed here).
 
 Read routes (admin or approved user). Each writes a `weekly_performance_audit_trail` row on an allow decision:
 
-- `GET /api/weekly-performance/weeks` — a continuous run of weeks, newest first: every week from the current week (an ISO Monday start) back to the earliest of one year ago or the oldest tracked week, so the list never skips a week. Stored weeks keep their real status; generated weeks with no row are `open` and read live per window. Audits `weekly-performance.week.list`.
+- `GET /api/weekly-performance/weeks` — a continuous run of weeks, newest first: every week from the current week (an ISO Monday start) back to the earliest of one year ago or the oldest tracked week, so the list never skips a week. The run stops at the week containing the platform launch date (`PLATFORM_LAUNCH_DATE_ISO` = 2026-06-12, `ctf/packages/web/lib/platform/launch.ts`), so the oldest week in the list is the week of Jun 8–14, 2026 and no pre-launch week is offered — the floor applies to stored rows too, so demo/seed data cannot pull the list back past launch. Stored weeks keep their real status; generated weeks with no row are `open` and read live per window. Audits `weekly-performance.week.list`.
 - `GET /api/weekly-performance/weeks/[weekStart]` — canonical window metadata for an arbitrary week start date (`{weekStart, weekEnd, isCurrentWeek, status}`); this is the full `weekly-performance.week.get` surface (accepts any `weekStart`, validated as an ISO `YYYY-MM-DD` date), audits `weekly-performance.week.get`.
 - `GET /api/weekly-performance/current-week` — convenience read of the **current** week plus active-user count (last 7 days); also audits `weekly-performance.week.get` (it is the current-week-only projection of that command, not the parameterized surface).
 - `GET /api/weekly-performance/metrics?weekStartDate=...[&compareWeekStartDate=...]` — week metrics, or a week-over-week comparison when `compareWeekStartDate` is supplied; audits `weekly-performance.metrics.get` or `weekly-performance.comparison.get` per branch.
@@ -153,6 +153,17 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 ## 8) Change Log
 
+- 2026-08-10: **The week history now starts at the launch week (owner report).** The picker listed
+  weeks going back a year, so it offered windows from before the platform existed (Apr 2026 and
+  earlier) that could only ever read zero. `listWeeks` (`lib/weekly-performance/repository.ts`) now
+  floors both the generated run and the stored rows at the week containing the launch date, so the
+  oldest entry is the week of Jun 8–14, 2026. The launch date moved out of the GDP shell into a
+  platform-owned constant, `PLATFORM_LAUNCH_DATE_ISO` in `ctf/packages/web/lib/platform/launch.ts`;
+  GDP's `COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO` now reads that constant, so its on-screen line
+  ("Cumulative since June 12, 2026") is unchanged and both surfaces can never disagree about the
+  date. Selecting the launch week shows no week-over-week comparison, because there is no earlier
+  week to compare against — the shell already handles the oldest week that way. No schema, route,
+  or contract change.
 - 2026-07-19: **Fixed the week picker's skipped weeks and ugly mobile labels; deleted the export feature (owner report).** (1) *Week list skipped weeks.* `listWeeks` (`lib/weekly-performance/repository.ts`) previously returned only stored weeks plus the synthesized current week, so the picker jumped straight from an old stored week to the current one. It now generates a continuous run of weeks — the current week (ISO Monday start) back to the earliest of one year ago or the oldest tracked week — unioned with stored weeks so none is dropped; generated weeks with no row read `open` and compute live per window. Both web and Android benefit (shared `/weeks` route). The week **start day is unchanged** (ISO Monday, per owner: v3 does not need the V2 Saturday boundary). (2) *Ugly mobile labels.* The mobile-responsive web week selector showed the raw ISO date (`Week of 2026-07-13`); it now shows the friendly range (`Week of Jul 13–19, 2026`) via `formatWeekRange`, matching desktop. (3) *Deleted the export feature.* Removed the `GET /api/weekly-performance/export` route, every Export button/hint (desktop header, desktop sidebar "Admin Controls" box, mobile-web header button, right-rail "Export available to admins" note, Android history "CSV export is admin-only" hint), the `weekly-performance.report.export` command/access/audit contract entries, and the now-unused `WEEKLY_PERFORMANCE_EXPORT_ENABLED` flag. With export gone the shell's `isAdmin` prop had no remaining UI effect and was dropped (the page still gates admin-only). No schema change.
 - 2026-07-18: **Consolidated to a single admin surface (owner directive: "the member view should
   now be removed. Only an admin page for weekly performance").** `/admin/weekly-performance` now
